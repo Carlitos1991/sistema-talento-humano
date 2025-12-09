@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | SIGETH</title>
+
+    <!-- 1. FAVICON -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+
+    <!-- 2. FUENTES e ICONOS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 3. ESTILOS PROPIOS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+<div class="login-container" id="loginApp">
+    <div class="login-card">
+
+        <!-- HEADER CON LOGO -->
+        <div class="login-header">
+            <img src="{% static 'img/logo.png' %}" alt="Logo" class="login-logo">
+            <h2>Sistema de Gestión de Talento Humano</h2>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <!-- CAMPO USUARIO -->
+            <div class="form-group">
+                <div class="input-icon-wrapper">
+                    <i class="fa-solid fa-user input-icon-left"></i>
+                    <input type="text" name="username" class="form-control with-icon" placeholder="Nombre de usuario"
+                           required
+                           autofocus>
+                </div>
+            </div>
+            <!-- CAMPO CONTRASEÑA -->
+            <div class="form-group">
+                <!-- IMPORTANTE: El wrapper envuelve icono izq, input e icono der -->
+                <div class="input-icon-wrapper">
+                    <!-- Icono Izquierda (Candado) -->
+                    <i class="fa-solid fa-lock input-icon-left"></i>
+                    <!-- Input Password -->
+                    <input :type="passwordVisible ? 'text' : 'password'" name="password" class="form-control with-icon"
+                           placeholder="Contraseña" required>
+                    <!-- Icono Derecha (Ojo - Vue Click) -->
+                    <i class="fa toggle-password" :class="passwordVisible ? 'fa-eye-slash' : 'fa-eye'"
+                       @click="togglePassword"></i>
+                </div>
+
+                <!-- Link Olvidé Contraseña (Debajo y a la derecha) -->
+                <div class="text-right mt-2">
+                    <a href="#" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
+                </div>
+            </div>
+
+            <!-- BOTÓN DE ACCIÓN -->
+            <button type="submit" class="btn-primary">
+                Ingresar al Sistema
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- DATA ISLAND (Mensajes Django) -->
+<script id="django-messages" type="application/json">
+    [
+    {% for message in messages %}
+        {
+            "tag": "{{ message.tags }}",
+                "text": "{{ message }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+</script>
+
+<!-- LÓGICA JS EXTERNA -->
+<script src="{% static 'js/login.js' %}"></script>
+
+</body>
+</html>

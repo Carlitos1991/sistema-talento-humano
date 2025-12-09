@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Inicio{% endblock %}
+
+{% block content %}
+    <div style="padding: 2rem;">
+        <h1>Dashboard Principal</h1>
+        <p>Bienvenido, <strong>{{ user.username }}</strong>.</p>
+        <p>Has ingresado al sistema seguro.</p>
+    </div>
+{% endblock %}

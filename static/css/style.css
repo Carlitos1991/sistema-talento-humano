@@ -1,0 +1,494 @@
+/* static/css/style.css */
+
+/* =========================================
+   1. VARIABLES GLOBALES & RESET
+   ========================================= */
+:root {
+    /* Paleta Corporativa */
+    --primary-color: #1e293b; /* Azul oscuro profundo */
+    --secondary-color: #475569; /* Gris azulado medio */
+    --accent-color: #2563eb; /* Azul vibrante */
+    --accent-hover: #1d4ed8; /* Hover azul */
+    --bg-light: #f1f5f9; /* Fondo general */
+    --white: #ffffff;
+    --text-color: #334155;
+    --error: #ef4444;
+
+    /* Dimensiones Layout */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 80px; /* Un poco más ancho para que el icono respire */
+    --header-height: 64px;
+    --border-radius: 12px;
+
+    /* Sombras */
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-input: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-light);
+    color: var(--text-color);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Utilitarios */
+.d-flex {
+    display: flex;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.hidden {
+    display: none;
+}
+
+[v-cloak] {
+    display: none !important;
+}
+
+/* Oculta Vue hasta que carga */
+
+/* =========================================
+   2. LOGIN (Pantalla Completa)
+   ========================================= */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 20px;
+}
+
+.login-card {
+    background-color: var(--white);
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem 3rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-card);
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-logo {
+    max-width: 260px;
+    height: auto;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.login-header h2 {
+    color: var(--primary-color);
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.login-header p {
+    color: #64748b;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Inputs Login */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+}
+
+.input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon-left {
+    position: absolute;
+    left: 16px;
+    color: #94a3b8;
+    font-size: 1.3rem;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.form-control.with-icon {
+    padding-left: 55px;
+    padding-right: 50px;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background-color: var(--white);
+    box-shadow: var(--shadow-input);
+}
+
+.input-icon-wrapper:focus-within .input-icon-left {
+    color: var(--accent-color);
+}
+
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 1.2rem;
+    transition: color 0.2s;
+}
+
+.toggle-password:hover {
+    color: var(--accent-color);
+}
+
+.forgot-password-link {
+    font-size: 0.85rem;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-password-link:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+/* =========================================
+   3. DASHBOARD LAYOUT (CSS Grid Dinámico)
+   ========================================= */
+.layout-wrapper {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr; /* Estado normal */
+    min-height: 100vh;
+    transition: grid-template-columns 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* ESTADO COLAPSADO (Activado por Vue) */
+.layout-wrapper.is-collapsed {
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden; /* Crucial para ocultar texto */
+    white-space: nowrap;
+}
+
+.sidebar-header {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 1.2rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.sidebar-logo-img {
+    width: 32px;
+    height: auto;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+    font-weight: 700;
+    font-size: 1.2rem;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+/* Ocultar textos al colapsar */
+.layout-wrapper.is-collapsed .sidebar-brand-text,
+.layout-wrapper.is-collapsed .menu-text {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 1.5rem;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    font-size: 0.95rem;
+    overflow: hidden;
+}
+
+/* Centrar iconos cuando está colapsado */
+.layout-wrapper.is-collapsed .sidebar-menu li a {
+    justify-content: center;
+    padding: 0.9rem 0;
+}
+
+.layout-wrapper.is-collapsed .sidebar-menu li a i {
+    margin-right: 0;
+    font-size: 1.2rem;
+}
+
+.sidebar-menu li a:hover, .sidebar-menu li a.active {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-left-color: var(--accent-color);
+}
+
+.sidebar-menu li a i {
+    width: 24px;
+    margin-right: 12px;
+    text-align: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+
+/* --- NAVBAR & CONTENT --- */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-light);
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.navbar {
+    height: var(--header-height);
+    background-color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    flex-shrink: 0;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--secondary-color);
+    padding: 8px;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: #f1f5f9;
+    color: var(--accent-color);
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Notificaciones (Corregido) */
+.notification-wrapper {
+    position: relative;
+    cursor: pointer;
+    color: var(--secondary-color);
+    margin-right: 15px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.notification-badge {
+    position: absolute;
+    /* Movemos el badge más afuera para que no tape la campana */
+    top: -8px;
+    right: -12px;
+    background-color: var(--error);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 5px;
+    min-width: 18px;
+    text-align: center;
+    border-radius: 10px;
+    border: 2px solid var(--white);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* User Dropdown */
+.user-dropdown-container {
+    position: relative;
+}
+
+.user-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.user-trigger:hover {
+    background-color: #f8fafc;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+    border: 2px solid #e2e8f0;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    width: 220px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 0;
+    z-index: 100;
+    transform-origin: top right;
+    animation: scaleIn 0.2s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.7rem 1.2rem;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #f8fafc;
+    color: var(--accent-color);
+}
+
+.dropdown-divider {
+    border-top: 1px solid #e2e8f0;
+    margin: 0.5rem 0;
+}
+
+/* Footer */
+.footer {
+    padding: 1.5rem 2rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b;
+    background-color: var(--white);
+    border-top: 1px solid #e2e8f0;
+    margin-top: auto;
+}
+
+#app-content {
+    padding: 2rem;
+    flex-grow: 1;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}

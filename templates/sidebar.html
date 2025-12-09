@@ -1,0 +1,35 @@
+{% load static %}
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <img src="{% static 'img/logo.png' %}" alt="Logo" class="sidebar-logo-img">
+        <span class="sidebar-brand-text">SIGETH</span>
+    </div>
+
+    <ul class="sidebar-menu">
+        <li>
+            <a href="{% url 'core:dashboard' %}"
+               class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span class="menu-text">Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fa-solid fa-users"></i>
+                <span class="menu-text">Empleados</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span class="menu-text">Nómina</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fa-solid fa-gear"></i>
+                <span class="menu-text">Ajustes</span>
+            </a>
+        </li>
+    </ul>
+</aside>

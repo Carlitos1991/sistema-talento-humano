@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Sistema Escalable{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+
+    <!-- Fuentes y CSS Externos -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+
+    <!-- CSS Personalizado Consolidated -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- 1. PUNTO DE MONTAJE VUE (Debe envolver todo el layout) -->
+    <div id="mainLayout" v-cloak>
+
+        <!-- 2. CLASE DINÁMICA DE VUE AQUÍ -->
+        <div class="layout-wrapper" :class="{ 'is-collapsed': sidebarCollapsed }">
+
+            <!-- Sidebar -->
+            {% include 'sidebar.html' %}
+
+            <div class="main-content">
+                <!-- Navbar -->
+                {% include 'navbar.html' %}
+
+                <!-- Contenido Principal -->
+                <main id="app-content">
+                    {% block content %}{% endblock %}
+                </main>
+
+                <!-- Footer -->
+                {% include 'footer.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Base -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Inicialización Select2 (jQuery Legacy) -->
+    <script>
+        $(document).ready(function () {
+            $('.select2').select2();
+        });
+    </script>
+
+    <!-- Lógica Dashboard Limpia -->
+    <script src="{% static 'js/dashboard.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

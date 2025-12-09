@@ -1,0 +1,59 @@
+<nav class="navbar">
+    <div class="navbar-left">
+        <!-- Botón para colapsar sidebar (Futuro Vue.js) -->
+        <button class="btn-icon" @click="toggleSidebar" title="Colapsar menú">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+
+    <div class="navbar-actions">
+        <!-- 1. Notificaciones -->
+        <div class="notification-wrapper" title="Notificaciones">
+            <i class="fa-regular fa-bell fa-lg"></i>
+            <span class="notification-badge">3</span>
+        </div>
+
+        <!-- 2. Usuario Dropdown -->
+        <div class="user-dropdown-container">
+            <!-- Trigger: Foto + Nombre -->
+            <div class="user-trigger" @click="toggleUserMenu">
+                <div class="text-right hidden-mobile">
+                    <small style="display:block; line-height:1; font-size: 0.75rem; color:#64748b;">Bienvenido,</small>
+                    <span class="user-name">{{ request.user.username }}</span>
+                </div>
+                <!-- Si el usuario tiene avatar úsalo, si no, iniciales o default -->
+                {% if request.user.avatar %}
+                    <img src="{{ request.user.avatar.url }}" class="user-avatar">
+                {% else %}
+                    <div class="user-avatar">{{ request.user.username|make_list|first|upper }}</div>
+                {% endif %}
+                <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8;"></i>
+            </div>
+
+            <!-- Menú Desplegable (V-IF para mostrar/ocultar) -->
+            <div class="dropdown-menu" v-if="userMenuOpen" @mouseleave="userMenuOpen = false">
+                <div style="padding: 0.5rem 1.2rem;">
+                    <strong style="display:block; color:var(--primary-color);">{{ request.user.get_full_name|default:request.user.username }}</strong>
+                    <small style="color:#94a3b8;">Administrador</small>
+                </div>
+                <div class="dropdown-divider"></div>
+
+                <a href="#" class="dropdown-item">
+                    <i class="fa-regular fa-user"></i> Ver Perfil
+                </a>
+
+                <div class="dropdown-divider"></div>
+
+                <!-- Logout seguro con POST -->
+                <form action="{% url 'core:logout' %}" method="post" id="logout-form">
+                    {% csrf_token %}
+                    <a href="#" class="dropdown-item"
+                       onclick="document.getElementById('logout-form').submit(); return false;"
+                       style="color: var(--error, #ef4444);">
+                        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
