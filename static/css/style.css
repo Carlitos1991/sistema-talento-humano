@@ -346,6 +346,36 @@ h1, h2, h3, h4, h5, h6 {
     flex-shrink: 0;
 }
 
+.navbar .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--primary-color); /* usar var(--white) si el fondo es oscuro */
+    margin-left: -10px; /* lo acerca al borde izquierdo / sidebar */
+    margin-right: 8px;
+    cursor: pointer;
+    transition: transform 0.16s ease, background 0.16s ease;
+    z-index: 60;
+}
+
+/* Icono dentro del botón: más grande y centrado */
+.navbar .sidebar-toggle i {
+    font-size: 1.1rem; /* tamaño del icono */
+    line-height: 1;
+    display: inline-block;
+}
+
+/* Hover: pequeño desplazamiento hacia la izquierda para dar feedback */
+.navbar .sidebar-toggle:hover {
+    transform: translateX(-3px);
+    background: rgba(0, 0, 0, 0.03);
+}
+
 .navbar-actions {
     display: flex;
     align-items: center;
@@ -610,7 +640,7 @@ h1, h2, h3, h4, h5, h6 {
     color: white;
     border: none;
     box-shadow: 0 6px 14px rgba(2, 6, 23, 0.04);
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .btn-search:hover {
