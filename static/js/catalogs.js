@@ -1,3 +1,4 @@
+// File: static/js/catalogs.js
 (function () {
   if (typeof Vue === 'undefined') {
     console.error('Vue no está cargado. Incluye Vue 3 antes de este script.');
@@ -5,6 +6,9 @@
   }
   const { createApp } = Vue;
   const app = createApp({
+    // Evita el warning "Component is missing template or render function"
+    render() { return null; },
+
     data() { return { visible: false }; },
     methods: {
       overlay() { return document.querySelector('.modal-overlay'); },
@@ -30,8 +34,9 @@
     },
     mounted() { this.bind(); }
   });
+
   const mountPoint = document.createElement('div');
   mountPoint.id = 'catalog-modal-vue-app';
   document.body.appendChild(mountPoint);
-  app.mount('#catalog-modal-vue-app');
+  app.mount(mountPoint);
 })();
