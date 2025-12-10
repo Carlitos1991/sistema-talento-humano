@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mi Perfil | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h2>Mi Perfil</h2>
+        <p class="text-muted">Actualiza tu información personal y credenciales</p>
+    </div>
+
+    <!-- FORMULARIO -->
+    <form method="post" enctype="multipart/form-data" class="profile-grid">
+        {% csrf_token %}
+
+        <!-- COLUMNA IZQUIERDA: Avatar -->
+        <div class="card profile-card-main">
+            <div class="profile-avatar-wrapper">
+                <!-- Lógica visual del avatar -->
+                {% if user.avatar %}
+                    <img src="{{ user.avatar.url }}" alt="Avatar" id="avatarPreview">
+                    <div id="avatarPlaceholder" class="avatar-placeholder hidden">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                {% else %}
+                    <img src="" alt="Preview" id="avatarPreview" class="hidden"
+                         style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    <div class="avatar-placeholder" id="avatarPlaceholder">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                {% endif %}
+
+                <!-- Botón Cámara -->
+                <label for="id_avatar" class="btn-icon-edit" title="Cambiar Foto" style="cursor: pointer;">
+                    <i class="fa-solid fa-camera"></i>
+                </label>
+            </div>
+
+            <!-- Input Real Oculto -->
+            <div class="hidden">
+                {{ form.avatar }}
+            </div>
+
+            <h3 class="profile-name">{{ user.get_full_name|default:user.username }}</h3>
+            <p class="profile-role">
+                {% if user.is_superuser %}Administrador{% else %}Colaborador{% endif %}
+            </p>
+
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <strong>{{ user.date_joined|date:"d M Y" }}</strong>
+                    <span>Miembro desde</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Datos -->
+        <div class="card profile-details">
+            <div class="card-header">
+                <h4>Información Personal</h4>
+            </div>
+
+            <div class="details-form-grid">
+                <!-- Nombres -->
+                <div class="form-group">
+                    <label class="form-label">Nombres</label>
+                    {{ form.first_name }}
+                </div>
+
+                <!-- Apellidos -->
+                <div class="form-group">
+                    <label class="form-label">Apellidos</label>
+                    {{ form.last_name }}
+                </div>
+
+                <!-- Cédula -->
+                <div class="form-group">
+                    <label class="form-label">Cédula / DNI</label>
+                    {{ form.cedula }}
+                    {% if form.cedula.errors %}
+                        <small style="color:red;">{{ form.cedula.errors.0 }}</small>
+                    {% endif %}
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label class="form-label">Correo Electrónico</label>
+                    {{ form.email }}
+                </div>
+            </div>
+
+            <div class="card-footer text-right">
+                <button type="submit" class="btn-primary" style="width: auto; padding: 0.8rem 2rem;">
+                    <i class="fa-solid fa-save margin-r-10"></i> Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // FIX DE SEGURIDAD: Esperar a que el DOM cargue y verificar existencia
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('id_avatar');
+
+            if (fileInput) {
+                fileInput.addEventListener('change', function (e) {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+
+                        reader.onload = function (e) {
+                            const preview = document.getElementById('avatarPreview');
+                            const placeholder = document.getElementById('avatarPlaceholder');
+
+                            if (preview) {
+                                preview.src = e.target.result;
+                                preview.classList.remove('hidden');
+                                // Aseguramos que se vea
+                                preview.style.display = 'block';
+                            }
+
+                            if (placeholder) {
+                                placeholder.classList.add('hidden');
+                                placeholder.style.display = 'none';
+                            }
+                        }
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

@@ -9,8 +9,8 @@
         <li>
             <a href="{% url 'core:dashboard' %}"
                class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span class="menu-text">Dashboard</span>
+                <i class="fa-solid fa-home"></i>
+                <span class="menu-text">Inicio</span>
             </a>
         </li>
         <li>
@@ -29,6 +29,12 @@
             <a href="#">
                 <i class="fa-solid fa-gear"></i>
                 <span class="menu-text">Ajustes</span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'core:catalog_list' %}" class="{% if 'catalogs' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-list-check"></i>
+                <span class="menu-text">Catálogos</span>
             </a>
         </li>
     </ul>

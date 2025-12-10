@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Catálogos | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión de Catálogos</h1>
+            <p>Administra la información de catálogos del sistema.</p>
+        </div>
+        {% if perms.core.add_catalog %}
+            <button id="btn-add-catalog"
+                    data-modal-target="catalog-modal"
+                    data-url="#"
+                    class="btn btn-create">
+                <i class="fas fa-plus"></i> Nuevo Catálogo
+            </button>
+        {% endif %}
+    </div>
+    <!-- 2. Estadísticas -->
+    <div class="stats-row">
+        <div class="stat-card color-one">
+            <div class="stat-left">
+                <h3>Total</h3>
+                <div class="number"> 3{{ total_catalogs }}</div>
+            </div>
+            <i class="fas fa-book-open stat-icon"></i>
+        </div>
+        <div class="stat-card color-two">
+            <div class="stat-left"><h3>Activos</h3>
+                <div class="number">3{{ active_catalogs }}</div>
+            </div>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </div>
+        <div class="stat-card color-three">
+            <div class="stat-left"><h3>Inactivos</h3>
+                <div class="number">3{{ inactive_catalogs }}</div>
+            </div>
+            <i class="fas fa-times-circle stat-icon"></i>
+        </div>
+    </div>
+    <!-- 3. Contenedor principal Tabla (AJAX) -->
+    <div class="content-table">
+        <div class="table-controls">
+            <button data-modal-target="advanced-search-modal" class="btn btn-search">
+                <i class="fas fa-search"></i> Búsqueda Avanzada
+            </button>
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="table-search" class="input-field" placeholder="Buscar en la tabla">
+            </div>
+        </div>
+        <!-- Zona de recarga AJAX (Solo tabla) -->
+        <div id="table-content-wrapper">
+            {% include 'core/catalogs/partials/partial_catalog_table.html' %}
+        </div>
+    </div>
+{% endblock %}
