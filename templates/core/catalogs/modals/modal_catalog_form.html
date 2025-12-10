@@ -1,10 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+<!-- html -->
+<div class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="catalog-modal-title">
+    <div class="modal-card" id="catalog-modal">
+        <header class="modal-header">
+            <h2 id="catalog-modal-title">Nuevo Catálogo</h2>
+            <button type="button" class="modal-close" data-modal-close="catalog-modal" aria-label="Cerrar">&times;
+            </button>
+        </header>
+        <div class="modal-body">
+            <form id="catalog-form" action="#" method="post">
+                <div class="form-row">
+                    <label for="id_name">Nombre</label>
+                    <input id="id_name" name="name" type="text"/>
+                </div>
+                <div class="form-row">
+                    <label for="id_code">Código</label>
+                    <input id="id_code" name="code" type="text"/>
+                </div>
+                <div class="form-actions">
+                    <button type="button" data-modal-close="catalog-modal" class="btn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
