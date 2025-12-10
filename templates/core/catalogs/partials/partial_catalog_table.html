@@ -3,8 +3,9 @@
     <table>
         <thead>
         <tr>
-            <th><i class="fa-solid fa-list-ol"></i> Nro.</th>
-            <th><i class="fas fa-phone"></i> Nombre</th>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
+            <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
             {#            {% if can_edit or can_manage_user %}#}
             <th><i class="fas fa-cogs"></i> Acciones</th>
             {#            {% endif %}#}
@@ -15,33 +16,48 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ catalog.name }}</td>
+                <td>{% if catalog.is_active %}
+                    <span class="status-badge active">Activo</span>
+                {% else %}
+                    <span class="status-badge inactive">Inactivo</span>
+                {% endif %}</td>
                 {#                {% if can_edit or can_manage_user %}#}
                 <td>
                     <div class="actions-wrapper">
                         <!-- Botón Editar -->
-                        {% if can_edit %}
-                            <button class="btn-icon btn-info btn-edit-person"
+                        {#                        {% if can_edit %}#}
+                        <button class="btn-icon btn-create-action"
+                                data-url="#"
+                                title="Agregar Item">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="btn-icon btn-list-action"
+                                data-url="#"
+                                title="Listar Items">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button class="btn-icon btn-views-action"
+                                data-url="#"
+                                title="Editar">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+                        {#                        {% endif %}#}
+                        <!-- Botón Toggle (Solo si puede editar) -->
+                        {#                        {% if can_edit %}#}
+                        {% if catalog.is_active %}
+                            <button class="btn-icon btn-delete-action"
                                     data-url="#"
-                                    title="Editar">
-                                <i class="fas fa-eye"></i>
+                                    title="Dar de Baja">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        {% else %}
+                            <button class="btn-icon btn-restore btn-toggle-status"
+                                    data-url="#"
+                                    title="Reactivar">
+                                <i class="fas fa-undo"></i>
                             </button>
                         {% endif %}
-                        <!-- Botón Toggle (Solo si puede editar) -->
-                        {% if can_edit %}
-                            {% if catalog.is_active %}
-                                <button class="btn-icon btn-delete btn-toggle-status"
-                                        data-url="#"
-                                        title="Dar de Baja">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            {% else %}
-                                <button class="btn-icon btn-restore btn-toggle-status"
-                                        data-url="#"
-                                        title="Reactivar">
-                                    <i class="fas fa-undo"></i>
-                                </button>
-                            {% endif %}
-                        {% endif %}
+                        {#                        {% endif %}#}
                     </div>
                 </td>
                 {#                {% endif %}#}

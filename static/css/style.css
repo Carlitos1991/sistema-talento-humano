@@ -5,18 +5,18 @@
    ========================================= */
 :root {
     /* Paleta Corporativa */
-    --primary-color: #1e293b; /* Azul oscuro profundo */
-    --secondary-color: #475569; /* Gris azulado medio */
-    --accent-color: #28af23; /* Azul vibrante */
-    --accent-hover: #6eba6b; /* Hover azul */
-    --bg-light: #f1f5f9; /* Fondo general */
+    --primary-color: #1e293b;
+    --secondary-color: #475569;
+    --accent-color: #28af23;
+    --accent-hover: #6eba6b;
+    --bg-light: #f1f5f9;
     --white: #ffffff;
     --text-color: #334155;
     --error: #ef4444;
 
     /* Dimensiones Layout */
     --sidebar-width: 260px;
-    --sidebar-collapsed-width: 80px; /* Un poco más ancho para que el icono respire */
+    --sidebar-collapsed-width: 80px;
     --header-height: 64px;
     --border-radius: 12px;
 
@@ -24,6 +24,7 @@
     --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-card: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     --shadow-input: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    --table-btn-transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
 }
 
 * {
@@ -33,7 +34,6 @@
 body {
     font-family: 'Inter', 'Roboto', sans-serif;
     font-size: 1rem;
-    letter-spacing: normal;
     line-height: 1.6;
     margin: 0;
     padding: 0;
@@ -47,7 +47,7 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     margin-top: 0;
     margin-bottom: 0.75rem;
-    letter-spacing: -0.01em; /* Solo en títulos, no en texto normal */
+    letter-spacing: -0.01em;
     line-height: 1.3;
 }
 
@@ -61,14 +61,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 [v-cloak] {
     display: none !important;
 }
-
-/* Oculta Vue hasta que carga */
 
 /* =========================================
    2. LOGIN (Pantalla Completa)
@@ -228,16 +226,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* =========================================
-   3. DASHBOARD LAYOUT (CSS Grid Dinámico)
+   3. DASHBOARD LAYOUT
    ========================================= */
 .layout-wrapper {
     display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr; /* Estado normal */
+    grid-template-columns: var(--sidebar-width) 1fr;
     min-height: 100vh;
     transition: grid-template-columns 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* ESTADO COLAPSADO (Activado por Vue) */
 .layout-wrapper.is-collapsed {
     grid-template-columns: var(--sidebar-collapsed-width) 1fr;
 }
@@ -247,7 +244,7 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--primary-color);
     color: #fff;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden; /* Crucial para ocultar texto */
+    overflow: hidden;
     white-space: nowrap;
 }
 
@@ -275,7 +272,6 @@ h1, h2, h3, h4, h5, h6 {
     transition: opacity 0.2s;
 }
 
-/* Ocultar textos al colapsar */
 .layout-wrapper.is-collapsed .sidebar-brand-text,
 .layout-wrapper.is-collapsed .menu-text {
     opacity: 0;
@@ -301,7 +297,6 @@ h1, h2, h3, h4, h5, h6 {
     overflow: hidden;
 }
 
-/* Centrar iconos cuando está colapsado */
 .layout-wrapper.is-collapsed .sidebar-menu li a {
     justify-content: center;
     padding: 0.9rem 0;
@@ -312,7 +307,8 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.2rem;
 }
 
-.sidebar-menu li a:hover, .sidebar-menu li a.active {
+.sidebar-menu li a:hover,
+.sidebar-menu li a.active {
     background-color: rgba(255, 255, 255, 0.05);
     color: #fff;
     border-left-color: var(--accent-color);
@@ -325,7 +321,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.1rem;
     flex-shrink: 0;
 }
-
 
 /* --- NAVBAR & CONTENT --- */
 .main-content {
@@ -351,29 +346,13 @@ h1, h2, h3, h4, h5, h6 {
     flex-shrink: 0;
 }
 
-.btn-icon {
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: var(--secondary-color);
-    padding: 8px;
-    border-radius: 5px;
-    transition: background 0.2s;
-}
-
-.btn-icon:hover {
-    background-color: #f1f5f9;
-    color: var(--accent-color);
-}
-
 .navbar-actions {
     display: flex;
     align-items: center;
     gap: 20px;
 }
 
-/* Notificaciones (Corregido) */
+/* Notificaciones */
 .notification-wrapper {
     position: relative;
     cursor: pointer;
@@ -385,7 +364,6 @@ h1, h2, h3, h4, h5, h6 {
 
 .notification-badge {
     position: absolute;
-    /* Movemos el badge más afuera para que no tape la campana */
     top: -8px;
     right: -12px;
     background-color: var(--error);
@@ -505,7 +483,11 @@ h1, h2, h3, h4, h5, h6 {
     margin: 0 auto;
 }
 
-/* Agregados para el Perfil */
+/* =========================================
+   4. COMPONENTES
+   ========================================= */
+
+/* Errores y mensajes */
 .text-error {
     color: var(--error);
     font-size: 0.8rem;
@@ -519,12 +501,7 @@ h1, h2, h3, h4, h5, h6 {
     border-top: 1px solid #f1f5f9;
 }
 
-/* Ocultar inputs de archivo nativos feos */
-.hidden {
-    display: none !important;
-}
-
-/* Placeholder cuando no hay foto */
+/* Avatar placeholders */
 .avatar-placeholder {
     width: 100%;
     height: 100%;
@@ -537,7 +514,21 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 50%;
 }
 
-/* --- Cabecera de Página --- */
+.avatar-placeholder-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Cabecera de Página */
 .header-card {
     display: flex;
     align-items: center;
@@ -562,7 +553,9 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 0.25rem;
 }
 
-/*BOTONES*/
+/* =========================================
+   5. BOTONES
+   ========================================= */
 .btn {
     padding: 0.5rem 1rem;
     font-weight: bold;
@@ -576,71 +569,163 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 0.2s;
 }
 
-
 .btn-create {
-    display: inline-flex; /* Alinea perfectamente el icono y texto */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px; /* Espacio entre icono y texto */
-
-    color: white; /* Texto blanco forzado */
-
-    /* 1. TAMAÑO Y TEXTO MÁS GRANDE */
-    padding: 0.85rem 0.85rem; /* Más relleno = Botón más grande */
-    font-size: 14px; /* Letra más grande */
-    font-weight: 800; /* Letra negrita */
+    gap: 10px;
+    color: white;
+    padding: 0.85rem;
+    font-size: 14px;
+    font-weight: 800;
     letter-spacing: 0.03em;
-
-    border: none;
-    border-radius: 10px; /* Bordes redondeados  */
+    border-radius: 10px;
     cursor: pointer;
-    text-decoration: none; /* Por si es un enlace <a> */
-
-    /* 2. PREPARACIÓN PARA LA ANIMACIÓN */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra inicial suave */
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animación fluida */
-}
-
-.btn-create {
-    border-color: white;
-    background-color: #069800FF; /* Tu color azul  */
+    text-decoration: none;
+    background-color: #069800;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
 }
 
 .btn-create:hover {
-    background-color: #069800FF;
-
-    /* 3. EL EFECTO DE LEVITACIÓN */
-    transform: translateY(-3px) scale(1.02); /* Se mueve hacia arriba 4px y crece un pelín */
-
-    /* Sombra más grande y difusa para simular altura */
+    transform: translateY(-3px) scale(1.02);
     box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.2);
 }
 
 .btn-create:active {
-    transform: translateY(-1px); /* Baja un poco */
+    transform: translateY(-1px);
     box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
 .btn-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
     background-color: #088dbf;
+    color: white;
+    border: none;
+    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.04);
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
 }
 
 .btn-search:hover {
-    background-color: #088dbf;
-
-    /* 3. EL EFECTO DE LEVITACIÓN */
-    transform: translateY(-3px) scale(1.02); /* Se mueve hacia arriba 4px y crece un pelín */
-
-    /* Sombra más grande y difusa para simular altura */
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.07);
 }
 
 .btn-search:active {
-    transform: translateY(-1px); /* Baja un poco */
-    box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
 }
 
-/* --- Fila de Estadísticas --- */
+/* --------------------------------------------------
+   Optimización: botones de acción en tablas (DRY)
+   - Centra los botones y el encabezado de acciones
+   - Unifica propiedades comunes para evitar repetición
+   - Mejora transiciones y contraste sólo para los botones de la tabla
+   -------------------------------------------------- */
+
+/* variables locales para botones de tabla */
+:root {
+    --table-btn-size: 40px;
+    --table-btn-radius: 50%;
+    --table-btn-shadow: 0 6px 14px rgba(2, 6, 23, 0.06);
+    --table-btn-transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
+}
+
+/* Centrar encabezado de acciones en la tabla (última columna suele ser acciones) */
+.table-container thead th.actions,
+.table-container thead th:last-child {
+    text-align: center;
+}
+
+/* Base común para todos los botones de acción en la tabla (sin tocar otros botones del sistema) */
+.btn-create-action,
+.btn-views-action,
+.btn-delete-action,
+.btn-list-action {
+    display: inline-flex;
+    width: var(--table-btn-size);
+    height: var(--table-btn-size);
+    border-radius: var(--table-btn-radius);
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    border: none;
+    box-shadow: var(--table-btn-shadow);
+    cursor: pointer;
+    font-size: 1.05rem;
+    transition: var(--table-btn-transition);
+    padding: 0;
+}
+
+/* Icono dentro del botón: siempre blanco y centrado */
+.btn-create-action i,
+.btn-views-action i,
+.btn-delete-action i,
+.btn-list-action i,
+.btn-create-action svg,
+.btn-views-action svg,
+.btn-delete-action svg,
+.btn-list-action svg {
+    color: #ffffff;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+/* Fondos específicos (solo colores de botones de la tabla) */
+.btn-create-action {
+    background: linear-gradient(to right, #0ba542, #009e36);
+}
+
+.btn-views-action {
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+}
+
+.btn-delete-action {
+    background: linear-gradient(to right, #c64939, #6c051d);
+}
+
+.btn-list-action {
+    background: linear-gradient(to right, rgba(46, 149, 230, 0.78), #082d7c);
+}
+
+/* Hover/active más sutil y lento (según petición) */
+.btn-create-action:hover,
+.btn-views-action:hover,
+.btn-delete-action:hover,
+.btn-list-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.1);
+}
+
+.btn-create-action:active,
+.btn-views-action:active,
+.btn-delete-action:active,
+.btn-list-action:active {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.08);
+}
+
+/* Ajuste visual para pantallas pequeñas */
+@media (max-width: 480px) {
+    .btn-create-action,
+    .btn-views-action,
+    .btn-delete-action,
+    .btn-list-action {
+        width: 36px;
+        height: 36px;
+        font-size: 0.95rem;
+    }
+}
+
+/* =========================================
+   6. ESTADÍSTICAS
+   ========================================= */
 .stats-row {
     display: flex;
     gap: 1.5rem;
@@ -655,78 +740,53 @@ h1, h2, h3, h4, h5, h6 {
     padding: 1.5rem;
     border-radius: 0.5rem;
     background-color: white;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    border-left-width: 5px;
-    border-left-style: solid;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border-left: 5px solid;
     cursor: pointer;
     transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
-    will-change: transform, box-shadow;
 }
 
-.stat-card:focus-visible {
-    transform: translateY(-3px) scale(1.005);
-    box-shadow: 0 7px 16px rgba(16, 24, 40, 0.09), 0 3px 6px rgba(16, 24, 40, 0.04);
-    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+.stat-card:hover {
+    transform: translateY(-4px) scale(1.005);
+    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08), 0 4px 8px rgba(16, 24, 40, 0.04);
 }
 
 .stat-card .stat-icon {
-    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s;
+    font-size: 2.25rem;
+    margin-right: 0.75rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .stat-card:hover .stat-icon {
     transform: translateY(-2px) scale(1.03);
 }
 
-.stat-card:hover .stat-icon {
-    transform: translateY(-3px) scale(1.06);
-}
-
-.stat-card:hover {
-    transform: translateY(-4px) scale(1.005); /* menos elevación y casi sin escala */
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08), 0 4px 8px rgba(16, 24, 40, 0.04); /* sombra más suave */
-}
-
-@media (max-width: 480px) {
-    .stat-card:hover {
-        transform: translateY(-2px) scale(1.002);
-        box-shadow: 0 6px 12px rgba(16, 24, 40, 0.07);
-    }
-
-    .stat-card:hover .stat-icon {
-        transform: translateY(-1px) scale(1.02);
-    }
-}
-
-
-.stat-card .stat-icon {
-    font-size: 2.25rem; /* icono más grande */
-    margin-right: 0.75rem;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .stat-card .number {
-    font-size: 1.75rem; /* número más grande */
+    font-size: 1.75rem;
     font-weight: 800;
     line-height: 1;
     color: var(--primary-color);
 }
 
 .stat-card h3 {
-    color: #55585e; /* gris */
-    font-size: 0.85rem; /* más pequeño */
+    color: #55585e;
+    font-size: 0.85rem;
     font-weight: 800;
-    text-transform: uppercase; /* convertir a mayúsculas */
-    margin: 0; /* asegurar espaciado consistente */
+    text-transform: uppercase;
+    margin: 0;
 }
 
+/* Colores de stats */
 .stat-card.color-one {
     border-left-color: #3b82f6;
 }
 
-.stat-card.color-one .number, .stat-card.color-one .stat-icon {
+.stat-card.color-one .number,
+.stat-card.color-one .stat-icon {
     color: #3b82f6;
 }
 
@@ -734,7 +794,8 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: #22c55e;
 }
 
-.stat-card.color-two .number, .stat-card.color-two .stat-icon {
+.stat-card.color-two .number,
+.stat-card.color-two .stat-icon {
     color: #22c55e;
 }
 
@@ -742,7 +803,8 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: #f97316;
 }
 
-.stat-card.color-three .number, .stat-card.color-three .stat-icon {
+.stat-card.color-three .number,
+.stat-card.color-three .stat-icon {
     color: #f97316;
 }
 
@@ -750,7 +812,8 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: #9333ea;
 }
 
-.stat-card.color-four .number, .stat-card.color-four .stat-icon {
+.stat-card.color-four .number,
+.stat-card.color-four .stat-icon {
     color: #9333ea;
 }
 
@@ -758,7 +821,8 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: #3ac5d1;
 }
 
-.stat-card.color-five .number, .stat-card.color-five .stat-icon {
+.stat-card.color-five .number,
+.stat-card.color-five .stat-icon {
     color: #3ac5d1;
 }
 
@@ -766,11 +830,22 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: #605f5f;
 }
 
-.stat-card.color-six .number, .stat-card.color-six .stat-icon {
+.stat-card.color-six .number,
+.stat-card.color-six .stat-icon {
     color: #605f5f;
 }
 
-/*Tablas*/
+/* =========================================
+   7. TABLAS
+   ========================================= */
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
 .table-container {
     overflow-x: auto;
     border: 1px solid #e5e7eb;
@@ -782,53 +857,92 @@ h1, h2, h3, h4, h5, h6 {
 .table-container table {
     width: 100%;
     border-collapse: collapse;
-    border-spacing: 0;
+}
+
+.table-container thead {
+    background: linear-gradient(180deg, #046f9f 0%, #034d75 100%);
+}
+
+.table-container thead th {
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    white-space: nowrap;
+    text-align: left;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+}
+
+.table-container thead th i {
+    display: inline-block;
+    vertical-align: middle; /* cambiado de text-top a middle para centrar iconos con el texto */
+    margin-right: 0.5rem;
+    font-size: 0.95rem;
+}
+
+/* Si usas un th específico para acciones, quita el margen del icono para que quede centrado visualmente */
+.table-container thead th.actions i,
+.table-container thead th:last-child i {
+    margin-right: 0;
+}
+
+.table-container td {
+    padding: 0.5rem 1.5rem;
+    vertical-align: middle;
+    text-align: left;
+    border-bottom: 1px solid #eef2f5;
+    color: #374151;
+    font-size: 0.95rem;
+    transition: background 0.18s ease;
+}
+
+.table-container tbody td:first-child {
+    font-weight: 700;
+    font-family: ui-monospace, monospace;
 }
 
 .table-container tbody tr:last-child td {
     border-bottom: none;
 }
 
-
-.table-container thead {
-    /* color de fondo general si quieres uno uniforme; puedes comentar o eliminar esta línea si vas a usar clases por columna */
-    background: linear-gradient(180deg, #046f9f 0%, #034d75 100%);
+.table-container tbody tr:hover {
+    background-color: #f9fafb;
 }
 
-.table-container thead th {
-    color: #ffffff; /* color del texto por defecto */
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 0.75rem 1.5rem;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
-    white-space: nowrap;
-    text-align: left; /* alinear a la izquierda el contenido del TH horizontalmente */
-    vertical-align: middle;
+/* Centrar botones dentro de las celdas de acciones (tbody) */
+.table-container tbody td.actions,
+.table-container tbody td:last-child {
+    /* Usar flex para centrar exactamente los elementos hijos (mejor que text-align) */
+    display: flex;
+    justify-content: center; /* centra horizontalmente */
+    align-items: center; /* centra verticalmente */
+    vertical-align: middle; /* fallback para navegadores antiguos */
+    gap: 6px;
+    min-height: 50px
 }
 
-.table-container thead th i {
-    display: inline-block;
-    vertical-align: text-top; /* hace que el icono vaya hacia arriba en vez de centrar */
-    margin-right: 0.5rem; /* espacio entre icono y texto */
-    transform: none; /* por si hay transform aplicado */
-    position: relative;
-    top: 0;
-    font-size: 0.95rem;
-    color: inherit;
+/* Forzar que actions-wrapper ocupe el espacio necesario y centre sus hijos */
+.table-container tbody td.actions .actions-wrapper,
+.table-container tbody td:last-child .actions-wrapper {
+    display: inline-flex; /* mantenemos inline-flex para que el tamaño sea el del contenido */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
-tbody tr:first-child td {
-    border-top: 1px solid #e5e7eb;
+/* Reglas específicas y de alta prioridad para garantizar centrado de botones en <td> de acciones */
+.table-container tbody td.actions > .actions-wrapper,
+.table-container tbody td:last-child > .actions-wrapper {
+    width: 100%; /* ocupar todo el ancho de la celda */
+    display: flex; /* fuerza el comportamiento en bloque */
+    justify-content: center; /* centra horizontalmente */
+    align-items: center; /* centra verticalmente */
 }
 
-th {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #4b5563;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
+/* Encabezados ordenables */
 th a {
     text-decoration: none;
     color: inherit;
@@ -849,44 +963,66 @@ th a.active .sort-icon {
     color: #1f2937;
 }
 
-td {
-    font-size: 0.875rem;
-    color: #374151;
-}
-
-td.actions {
-    white-space: nowrap; /* Los botones siempre en una línea */
-    display: flex;
-    gap: 4px; /* Espacio entre botones */
-    justify-content: center;
-}
-
-tbody tr:hover {
-    background-color: #f9fafb;
-}
-
+/* Status badges */
 .status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.85rem;
-    font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: center;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    min-width: 40px;
+    line-height: 1;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.avatar-placeholder-sm {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    display: flex;
+.status-badge.active {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Acciones en tabla */
+.actions-wrapper {
+    display: inline-flex;
+    gap: 6px;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 0.75rem;
-    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.actions-wrapper .btn-icon {
+    padding: 6px 8px;
+    border-radius: 52px;
+    font-size: 1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.actions-wrapper .btn-icon i {
+    -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.08);
+    text-shadow: 0 0 0.6px rgba(0, 0, 0, 0.03);
+}
+
+.actions-wrapper .btn-icon i,
+.actions-wrapper .btn-icon svg {
+    /* Icono más grande */
+    font-size: 1.2rem; /* aumenta para hacerlo más grande */
+    font-weight: 800; /* si la fuente lo soporta, lo hace más "grueso" */
+}
+
+.actions-wrapper .btn-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(2, 6, 23, 0.06);
 }
 
 .no-results-message {
@@ -896,23 +1032,15 @@ tbody tr:hover {
     color: #6b7280;
 }
 
-.table-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    width: 100%;
-    gap: 1rem;
-}
-
-/*Buscador*/
+/* =========================================
+   8. BUSCADOR
+   ========================================= */
 .search-box {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     width: 100%;
-    max-width: 520px; /* más ancho por defecto */
-    margin: 0;
+    max-width: 520px;
     position: relative;
 }
 
@@ -932,17 +1060,16 @@ tbody tr:hover {
     position: relative;
     z-index: 1;
     width: 100%;
-    padding: 0.62rem 1rem 0.62rem 2.8rem; /* espacio para el icono */
-    border-radius: 999px; /* forma tipo "pill" */
+    padding: 0.62rem 1rem 0.62rem 2.8rem;
+    border-radius: 999px;
     border: 1px solid #e6eef5;
     background-color: var(--white);
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
     font-size: 0.95rem;
     color: var(--text-color);
-    transition: box-shadow 0.22s ease, transform 0.18s ease, border-color 0.18s ease;
+    transition: box-shadow 0.22s ease, border-color 0.18s ease;
 }
 
-/* Placeholder y foco */
 .search-box input::placeholder,
 .search-box .form-control::placeholder {
     color: #9ca3af;
@@ -955,58 +1082,34 @@ tbody tr:hover {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 8px 26px rgba(14, 165, 233, 0.08);
-    transform: none;
 }
 
-/* Botón de búsqueda (a la derecha o izquierdo según markup) */
-.btn-search {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.55rem 0.9rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    cursor: pointer;
-    transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.18s;
-    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.04);
-}
+/* =========================================
+   9. RESPONSIVE
+   ========================================= */
+@media (max-width: 768px) {
+    .stats-row {
+        flex-direction: column;
+    }
 
-/* Si usas .btn-search como input icono + botón, lo dejamos más neutro */
-.btn-search {
-    background-color: #088dbf;
-    color: white;
-    border: none;
-}
+    .table-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-/* Hover / active */
-.btn-search:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.07);
-    opacity: 0.98;
-}
-
-.btn-search:active {
-    transform: translateY(0);
-}
-
-/* Si el icono del buscador está fuera (por ejemplo botón dentro del mismo contenedor),
-   alinearlo correctamente */
-.search-box .icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border-radius: 999px;
-    background: transparent;
-}
-
-/* Responsive: adaptar en pantallas pequeñas */
-@media (max-width: 720px) {
     .search-box {
         max-width: 100%;
-        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-card:hover {
+        transform: translateY(-2px) scale(1.002);
+        box-shadow: 0 6px 12px rgba(16, 24, 40, 0.07);
+    }
+
+    .stat-card:hover .stat-icon {
+        transform: translateY(-1px) scale(1.02);
     }
 
     .search-box input,
