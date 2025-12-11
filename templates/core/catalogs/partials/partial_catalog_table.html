@@ -6,76 +6,58 @@
             <th><i class="fa-solid fa-list-ol"></i></th>
             <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
             <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
-            {#            {% if can_edit or can_manage_user %}#}
             <th><i class="fas fa-cogs"></i> Acciones</th>
-            {#            {% endif %}#}
         </tr>
         </thead>
         <tbody id="table-body">
+        <!-- 1. FILAS DE DATOS -->
         {% for catalog in catalogs %}
-            <tr>
+            <tr class="catalog-row">
                 <td>{{ forloop.counter }}</td>
                 <td>{{ catalog.name }}</td>
-                <td>{% if catalog.is_active %}
-                    <span class="status-badge active">Activo</span>
-                {% else %}
-                    <span class="status-badge inactive">Inactivo</span>
-                {% endif %}</td>
-                {#                {% if can_edit or can_manage_user %}#}
+                <td>
+                    {% if catalog.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
                 <td>
                     <div class="actions-wrapper">
-                        <!-- Botón Editar -->
-                        {#                        {% if can_edit %}#}
-                        <button class="btn-icon btn-create-action"
-                                data-url="#"
-                                title="Agregar Item">
-                            <i class="fas fa-plus"></i>
+                        <button class="btn-icon btn-create-action" title="Agregar Item"><i class="fas fa-plus"></i>
                         </button>
-                        <button class="btn-icon btn-list-action"
-                                data-url="#"
-                                title="Listar Items">
-                            <i class="fas fa-list"></i>
+                        <button class="btn-icon btn-list-action" title="Listar Items"><i class="fas fa-list"></i>
                         </button>
                         <button type="button" class="btn-icon btn-views-action"
-                                onclick="openEditCatalog({{ catalog.id }})"
-                                title="Editar">
-                            <i class="fas fa-pencil"></i>
+                                onclick="openEditCatalog({{ catalog.id }})" title="Editar"><i class="fas fa-pencil"></i>
                         </button>
-                        {#                        {% endif %}#}
-                        <!-- Botón Toggle (Solo si puede editar) -->
-                        {#                        {% if can_edit %}#}
+
                         <button type="button"
                                 class="btn-icon {% if catalog.is_active %}btn-delete-action{% else %}btn-restore-action{% endif %}"
                                 onclick="toggleCatalogStatus({{ catalog.id }}, '{{ catalog.name }}', {{ catalog.is_active|yesno:'true,false' }})"
                                 title="{% if catalog.is_active %}Desactivar{% else %}Activar{% endif %}">
-
-                            {% if catalog.is_active %}
-                                <!-- Icono de Papelera (si está activo) -->
-                                <i class="fas fa-trash-alt"></i>
-                            {% else %}
-                                <!-- Icono de Restaurar/Check (si está inactivo) -->
-                                <i class="fas fa-undo-alt"></i>
-                            {% endif %}
+                            <i class="fas {% if catalog.is_active %}fa-trash-alt{% else %}fa-undo-alt{% endif %}"></i>
                         </button>
-                        {#                        {% endif %}#}
                     </div>
-                </td>
-                {#                {% endif %}#}
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="3" class="no-results-message">
-                    <i class="fas fa-inbox"></i>
-                    <p>No se encontraron registros recientes.</p>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-</div>
 
-<!-- PAGINATION CLIENT-SIDE -->
-<div class="table-footer">
-    <div class="pagination-info" id="client-info">Cargando...</div>
-    <div class="pagination" id="client-pagination"></div>
+    {# Overlay absolute para mensajes "no resultados" o BD vacía #}
+    {% comment %} Si la BD está vacía mostramos el mensaje de inbox; si hay registros el overlay queda oculto y lo muestra JS cuando no hay coincidencias de búsqueda. {% endcomment %}
+    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}" aria-hidden="{% if catalogs %}true{% else %}false{% endif %}">
+        {% if not catalogs %}
+            <div class="no-results-content">
+                <i class="fas fa-inbox no-results-icon"></i>
+                <p class="no-results-text">No hay catálogos registrados en el sistema.</p>
+            </div>
+        {% else %}
+            <div class="no-results-content hidden" id="no-results-placeholder">
+                <i class="fas fa-search no-results-icon"></i>
+                <p class="no-results-text">No se encontraron resultados.</p>
+            </div>
+        {% endif %}
+    </div>
 </div>

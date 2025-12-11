@@ -57,7 +57,7 @@ class CatalogListView(LoginRequiredMixin, ListView):
     model = Catalog
     template_name = 'core/catalogs/catalog_list.html'
     context_object_name = 'catalogs'
-    paginate_by = 10
+    # paginate_by = 10
 
     def get_queryset(self):
         query = self.request.GET.get('q')

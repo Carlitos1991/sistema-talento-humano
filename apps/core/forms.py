@@ -40,11 +40,10 @@ class CatalogForm(forms.ModelForm):
 
     class Meta:
         model = Catalog
-        fields = ['name', 'code', 'is_active']  # Ajusta según tu modelo real
+        fields = ['name', 'code']  # Ajusta según tu modelo real
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'v-model': 'form.name'}),
             'code': forms.TextInput(attrs={'class': 'form-control', 'v-model': 'form.code'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'toggle-checkbox', 'id': 'loc_is_active'}),
         }
 
     def clean_code(self):

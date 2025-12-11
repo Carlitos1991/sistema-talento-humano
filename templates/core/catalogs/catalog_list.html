@@ -40,21 +40,40 @@
         </div>
     </div>
     <!-- 3. Contenedor principal Tabla (AJAX) -->
-    <div class="content-table">
-        <div class="table-controls">
-            <button data-modal-target="advanced-search-modal" class="btn btn-search">
-                <i class="fas fa-search"></i> Búsqueda Avanzada
-            </button>
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="table-search" class="input-field" placeholder="Buscar en la tabla">
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <button data-modal-target="advanced-search-modal" class="btn btn-search">
+                    <i class="fas fa-search"></i> Búsqueda Avanzada
+                </button>
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field"
+                           placeholder="Buscar en la tabla">
+                </div>
+            </div>
+            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+            <div id="table-content-wrapper">
+                {% include 'core/catalogs/partials/partial_catalog_table.html' %}
+            </div>
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <!-- Los números de página se inyectarán aquí o simplificamos -->
+                    <li>
+                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                    </li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
             </div>
         </div>
-        <!-- Zona de recarga AJAX (Solo tabla) -->
-        <div id="table-content-wrapper">
-            {% include 'core/catalogs/partials/partial_catalog_table.html' %}
-        </div>
     </div>
+
 {% endblock %}
 {% block modals %}
     {% include 'core/catalogs/modals/modal_catalog_form.html' %}
