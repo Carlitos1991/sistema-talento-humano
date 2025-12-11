@@ -53,10 +53,20 @@ class ProfileView(LoginRequiredMixin, UpdateView):
 
 # --- 4. CATÁLOGOS ---
 # --- 4.1 LISTA DE CATÁLOGOS ---
+def get_catalog_stats_dict():
+    """Retorna un diccionario con las estadísticas actuales de Catálogos."""
+    return {
+        'total': Catalog.objects.count(),
+        'active': Catalog.objects.filter(is_active=True).count(),
+        'inactive': Catalog.objects.filter(is_active=False).count(),
+    }
+
+
 class CatalogListView(LoginRequiredMixin, ListView):
     model = Catalog
     template_name = 'core/catalogs/catalog_list.html'
     context_object_name = 'catalogs'
+
     # paginate_by = 10
 
     def get_queryset(self):
@@ -65,11 +75,15 @@ class CatalogListView(LoginRequiredMixin, ListView):
 
         if query:
             qs = qs.filter(name__icontains=query)
-        return qs.order_by('-created_at')[:50]
+        return qs.order_by('-created_at')[:200]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CatalogForm()
+        stats = get_catalog_stats_dict()
+        context['stats_total'] = stats['total']
+        context['stats_active'] = stats['active']
+        context['stats_inactive'] = stats['inactive']
         return context
 
 
@@ -83,10 +97,12 @@ class CatalogCreateView(LoginRequiredMixin, CreateView):
         form = self.get_form()
         if form.is_valid():
             catalog = form.save()
+            stats = get_catalog_stats_dict()
             return JsonResponse({
                 'success': True,
                 'message': 'Catálogo creado correctamente.',
-                'data': {'id': catalog.id, 'name': catalog.name}  # Para actualizar lista sin recargar
+                'data': {'id': catalog.id, 'name': catalog.name, 'new_stats': stats}
+                # Para actualizar lista sin recargar
             })
         else:
             return JsonResponse({
@@ -146,8 +162,9 @@ def catalog_toggle_status(request, pk):
     catalog.toggle_status()
 
     status_label = "activado" if catalog.is_active else "desactivado"
-
+    stats = get_catalog_stats_dict()
     return JsonResponse({
         'success': True,
-        'message': f'El catálogo "{catalog.name}" ha sido {status_label} correctamente.'
+        'message': f'El catálogo "{catalog.name}" ha sido {status_label} correctamente.',
+        'new_stats': stats
     })

@@ -22,19 +22,19 @@
         <div class="stat-card color-one">
             <div class="stat-left">
                 <h3>Total</h3>
-                <div class="number"> 3{{ total_catalogs }}</div>
+                <div class="number" id="stat-total"> {{ stats_total|default:"0" }}</div>
             </div>
             <i class="fas fa-book-open stat-icon"></i>
         </div>
         <div class="stat-card color-two">
             <div class="stat-left"><h3>Activos</h3>
-                <div class="number">3{{ active_catalogs }}</div>
+                <div class="number" id="stat-active">{{ stats_active|default:"0" }}</div>
             </div>
             <i class="fas fa-check-circle stat-icon"></i>
         </div>
         <div class="stat-card color-three">
             <div class="stat-left"><h3>Inactivos</h3>
-                <div class="number">3{{ inactive_catalogs }}</div>
+                <div class="number" id="stat-inactive">{{ stats_inactive|default:"0" }}</div>
             </div>
             <i class="fas fa-times-circle stat-icon"></i>
         </div>
@@ -62,7 +62,6 @@
                     <li>
                         <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
                     </li>
-                    <!-- Los números de página se inyectarán aquí o simplificamos -->
                     <li>
                         <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
                     </li>

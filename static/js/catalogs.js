@@ -9,14 +9,15 @@
  */
 window.toggleCatalogStatus = async (id, name, isActive) => {
     const actionVerb = isActive ? 'Desactivar' : 'Activar';
-    const confirmButtonColor = isActive ? '#dc2626' : '#10b981';
+    const confirmColor = isActive ? '#dc2626' : '#10b981'; // Rojo o Verde
 
+    // 1. Confirmación con SweetAlert2
     const result = await Swal.fire({
         title: `¿${actionVerb} catálogo?`,
         text: `Vas a ${actionVerb.toLowerCase()} el catálogo "${name}".`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: confirmButtonColor,
+        confirmButtonColor: confirmColor,
         cancelButtonColor: '#64748b',
         confirmButtonText: `Sí, ${actionVerb.toLowerCase()}`,
         cancelButtonText: 'Cancelar'
@@ -24,10 +25,12 @@ window.toggleCatalogStatus = async (id, name, isActive) => {
 
     if (result.isConfirmed) {
         try {
+            // Preparar datos para el POST
             const formData = new FormData();
             const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
             formData.append('csrfmiddlewaretoken', token);
 
+            // 2. Petición AJAX
             const response = await fetch(`/settings/catalogs/toggle/${id}/`, {
                 method: 'POST',
                 body: formData,
@@ -37,6 +40,7 @@ window.toggleCatalogStatus = async (id, name, isActive) => {
             const data = await response.json();
 
             if (data.success) {
+                // Notificación de éxito
                 Swal.fire({
                     icon: 'success',
                     title: '¡Actualizado!',
@@ -44,6 +48,8 @@ window.toggleCatalogStatus = async (id, name, isActive) => {
                     timer: 1500,
                     showConfirmButton: false
                 });
+
+                // Recargar la página para reflejar los cambios
                 setTimeout(() => location.reload(), 1500);
             } else {
                 Swal.fire('Error', data.message || 'No se pudo cambiar el estado', 'error');
@@ -396,3 +402,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initTableSearch, 50);
     }
 });
+
+/**
+ * Función Global para actualizar los contadores del Dashboard
+ * Recibe un objeto: { total: int, active: int, inactive: int }
+ */
+window.updateDashboardStats = function (stats) {
+    if (!stats) return;
+
+    const elTotal = document.getElementById('stat-total');
+    const elActive = document.getElementById('stat-active');
+    const elInactive = document.getElementById('stat-inactive');
+
+    // Animación simple de actualización (opcional)
+    if (elTotal) elTotal.textContent = stats.total;
+    if (elActive) elActive.textContent = stats.active;
+    if (elInactive) elInactive.textContent = stats.inactive;
+};

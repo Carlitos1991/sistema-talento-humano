@@ -31,7 +31,6 @@
                         <button type="button" class="btn-icon btn-views-action"
                                 onclick="openEditCatalog({{ catalog.id }})" title="Editar"><i class="fas fa-pencil"></i>
                         </button>
-
                         <button type="button"
                                 class="btn-icon {% if catalog.is_active %}btn-delete-action{% else %}btn-restore-action{% endif %}"
                                 onclick="toggleCatalogStatus({{ catalog.id }}, '{{ catalog.name }}', {{ catalog.is_active|yesno:'true,false' }})"
