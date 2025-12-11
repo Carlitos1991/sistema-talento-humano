@@ -9,6 +9,8 @@ from .forms import CatalogForm
 from .forms import UserProfileForm
 from .models import Catalog
 from .models import User
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
 
 
 # --- 1. LOGIN & AUTH ---
@@ -49,7 +51,8 @@ class ProfileView(LoginRequiredMixin, UpdateView):
         return super().form_invalid(form)
 
 
-# --- 4. LISTA DE CATÁLOGOS ---
+# --- 4. CATÁLOGOS ---
+# --- 4.1 LISTA DE CATÁLOGOS ---
 class CatalogListView(LoginRequiredMixin, ListView):
     model = Catalog
     template_name = 'core/catalogs/catalog_list.html'
@@ -70,6 +73,7 @@ class CatalogListView(LoginRequiredMixin, ListView):
         return context
 
 
+# --- 4.2 CREAR CATÁLOGOS ---
 class CatalogCreateView(LoginRequiredMixin, CreateView):
     model = Catalog
     form_class = CatalogForm
@@ -89,3 +93,61 @@ class CatalogCreateView(LoginRequiredMixin, CreateView):
                 'success': False,
                 'errors': form.errors
             }, status=400)
+
+
+# --- 4.3 Vista para OBTENER datos (JSON) ---
+def catalog_detail_json(request, pk):
+    """Retorna los datos de un catálogo específico para editar"""
+    catalog = get_object_or_404(Catalog, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': catalog.id,
+            'name': catalog.name,
+            'code': catalog.code,
+            'is_active': catalog.is_active
+        }
+    })
+
+
+# --- 4.4 EDITAR CATÁLOGOS ---
+class CatalogUpdateView(LoginRequiredMixin, UpdateView):
+    model = Catalog
+    form_class = CatalogForm
+    template_name = 'core/catalogs/modals/modal_catalog_form.html'
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()  # Obtener la instancia a editar
+        form = self.get_form()
+
+        if form.is_valid():
+            catalog = form.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Catálogo actualizado correctamente.',
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+
+
+@require_POST  # Por seguridad, solo permitimos POST
+def catalog_toggle_status(request, pk):
+    """Alterna el estado (Activo/Inactivo) de un catálogo"""
+    # Verificamos que el usuario esté logueado (puedes usar decorador login_required también)
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+
+    catalog = get_object_or_404(Catalog, pk=pk)
+
+    # Usamos el método de tu modelo BaseModel
+    catalog.toggle_status()
+
+    status_label = "activado" if catalog.is_active else "desactivado"
+
+    return JsonResponse({
+        'success': True,
+        'message': f'El catálogo "{catalog.name}" ha sido {status_label} correctamente.'
+    })

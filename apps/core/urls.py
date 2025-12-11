@@ -19,5 +19,8 @@ urlpatterns = [
     path('profile/', views.ProfileView.as_view(), name='profile'),
     # --- Catalogs ---
     path('settings/catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
-    path('create/', views.CatalogCreateView.as_view(), name='catalog_create'),
+    path('settings/catalogs/create/', views.CatalogCreateView.as_view(), name='catalog_create'),
+    path('settings/catalogs/detail/<int:pk>/', views.catalog_detail_json, name='catalog_detail'),
+    path('settings/catalogs/update/<int:pk>/', views.CatalogUpdateView.as_view(), name='catalog_update'),
+    path('settings/catalogs/toggle/<int:pk>/', views.catalog_toggle_status, name='catalog_toggle'),
 ]

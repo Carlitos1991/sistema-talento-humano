@@ -36,27 +36,27 @@
                                 title="Listar Items">
                             <i class="fas fa-list"></i>
                         </button>
-                        <button class="btn-icon btn-views-action"
-                                data-url="#"
+                        <button type="button" class="btn-icon btn-views-action"
+                                onclick="openEditCatalog({{ catalog.id }})"
                                 title="Editar">
                             <i class="fas fa-pencil"></i>
                         </button>
                         {#                        {% endif %}#}
                         <!-- Botón Toggle (Solo si puede editar) -->
                         {#                        {% if can_edit %}#}
-                        {% if catalog.is_active %}
-                            <button class="btn-icon btn-delete-action"
-                                    data-url="#"
-                                    title="Dar de Baja">
+                        <button type="button"
+                                class="btn-icon {% if catalog.is_active %}btn-delete-action{% else %}btn-restore-action{% endif %}"
+                                onclick="toggleCatalogStatus({{ catalog.id }}, '{{ catalog.name }}', {{ catalog.is_active|yesno:'true,false' }})"
+                                title="{% if catalog.is_active %}Desactivar{% else %}Activar{% endif %}">
+
+                            {% if catalog.is_active %}
+                                <!-- Icono de Papelera (si está activo) -->
                                 <i class="fas fa-trash-alt"></i>
-                            </button>
-                        {% else %}
-                            <button class="btn-icon btn-restore btn-toggle-status"
-                                    data-url="#"
-                                    title="Reactivar">
-                                <i class="fas fa-undo"></i>
-                            </button>
-                        {% endif %}
+                            {% else %}
+                                <!-- Icono de Restaurar/Check (si está inactivo) -->
+                                <i class="fas fa-undo-alt"></i>
+                            {% endif %}
+                        </button>
                         {#                        {% endif %}#}
                     </div>
                 </td>

@@ -768,6 +768,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-create-action,
 .btn-views-action,
 .btn-delete-action,
+.btn-restore-action,
 .btn-list-action {
     display: inline-flex;
     width: var(--table-btn-size);
@@ -788,9 +789,11 @@ h1, h2, h3, h4, h5, h6 {
 .btn-create-action i,
 .btn-views-action i,
 .btn-delete-action i,
+.btn-restore-action i,
 .btn-list-action i,
 .btn-create-action svg,
 .btn-views-action svg,
+.btn-restore-action svg,
 .btn-delete-action svg,
 .btn-list-action svg {
     color: #ffffff;
@@ -810,6 +813,9 @@ h1, h2, h3, h4, h5, h6 {
 .btn-delete-action {
     background: linear-gradient(to right, #c64939, #6c051d);
 }
+.btn-restore-action {
+    background: linear-gradient(to right, #3ac5d1, #0ecad6);
+}
 
 .btn-list-action {
     background: linear-gradient(to right, rgba(46, 149, 230, 0.78), #082d7c);
@@ -818,6 +824,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Hover/active más sutil y lento (según petición) */
 .btn-create-action:hover,
 .btn-views-action:hover,
+.btn-restore-action:hover,
 .btn-delete-action:hover,
 .btn-list-action:hover {
     transform: translateY(-2px);
@@ -827,6 +834,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-create-action:active,
 .btn-views-action:active,
 .btn-delete-action:active,
+.btn-restore-action:active,
 .btn-list-action:active {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(2, 6, 23, 0.08);
@@ -837,6 +845,7 @@ h1, h2, h3, h4, h5, h6 {
     .btn-create-action,
     .btn-views-action,
     .btn-delete-action,
+    .btn-restore-action,
     .btn-list-action {
         width: 36px;
         height: 36px;

@@ -5,20 +5,28 @@
             {% csrf_token %}
 
             <div class="modal-container" id="catalog-modal" tabindex="-1" role="document">
-                {#            header#}
                 <div class="modal-header">
-                    <h2 id="catalog-modal-title">Gestión de Catálogo</h2>
+                    <h2 id="catalog-modal-title">[[ modalTitle ]]</h2>
                     <button type="button" class="btn-close-modal" @click="closeModal">
                         <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
                 </div>
-                {#body#}
+
                 <div class="modal-body">
+                    <!-- CAMPO CÓDIGO -->
                     <div class="form-group">
-                        <label for="{{ form.code.id_for_label }}" class="form-label"><i
-                                class="fa-solid fa-barcode"></i> {{ form.code.label }}(*)</label>
-                        <input class="input-field uppercase-input" id="id_code" name="code" type="text"
-                               v-model="form.code" placeholder="Ej: DEP" required/>
+                        <label for="{{ form.code.id_for_label }}" class="form-label">
+                            <i class="fa-solid fa-barcode"></i> {{ form.code.label }}(*)
+                        </label>
+
+                        <!-- CORRECCIÓN AQUÍ: Agregado el : '' al final del style y quitado el readonly duplicado -->
+                        <input class="input-field uppercase-input"
+                               id="id_code" name="code" type="text"
+                               v-model="form.code"
+                               :readonly="isEditing"
+                               :style="isEditing ? 'background-color: #e9ecef; cursor: not-allowed;' : ''"
+                               placeholder="Ej: DEP" required/>
+
                         <div class="error-message-container" v-if="errors.code">
                             <span class="text-danger small" v-for="(error, index) in errors.code" :key="index">
                                 <i class="fas fa-exclamation-circle"></i> [[ error ]]
@@ -26,9 +34,12 @@
                         </div>
                         <p class="form-hint">Código único (Solo lectura al editar).</p>
                     </div>
+
+                    <!-- CAMPO NOMBRE -->
                     <div class="form-group">
-                        <label for="{{ form.name.id_for_label }}"><i
-                                class="fa-solid fa-folder-closed"></i> {{ form.name.label }}(*)</label>
+                        <label for="{{ form.name.id_for_label }}">
+                            <i class="fa-solid fa-folder-closed"></i> {{ form.name.label }}(*)
+                        </label>
                         <input class="input-field uppercase-input" id="id_name" name="name" type="text"
                                v-model="form.name" placeholder="Ej: DEPARTAMENTOS" required/>
                         <div class="error-message-container" v-if="errors.name">
@@ -36,12 +47,10 @@
                                 <i class="fas fa-exclamation-circle"></i> [[ error ]]
                             </span>
                         </div>
-                        <p class="form-hint">Nombre
-                            descriptivo del catálogo.</p>
+                        <p class="form-hint">Nombre descriptivo del catálogo.</p>
                     </div>
-                    {#                footer#}
                     <div class="modal-footer">
-                        <button type="button" data-modal-close="catalog-modal" class="btn-cancel" @click="closeModal">
+                        <button type="button" class="btn-cancel" @click="closeModal">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
