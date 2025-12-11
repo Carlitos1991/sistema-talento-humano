@@ -19,4 +19,5 @@ urlpatterns = [
     path('profile/', views.ProfileView.as_view(), name='profile'),
     # --- Catalogs ---
     path('settings/catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
+    path('create/', views.CatalogCreateView.as_view(), name='catalog_create'),
 ]

@@ -1,10 +1,14 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.http import JsonResponse
 from django.urls import reverse_lazy
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView
+from django.views.generic import CreateView
+from django.views.generic import TemplateView, ListView, UpdateView
+from .forms import CatalogForm
 from .forms import UserProfileForm
-from .models import User, Catalog
+from .models import Catalog
+from .models import User
 
 
 # --- 1. LOGIN & AUTH ---
@@ -59,3 +63,29 @@ class CatalogListView(LoginRequiredMixin, ListView):
         if query:
             qs = qs.filter(name__icontains=query)
         return qs.order_by('-created_at')[:50]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = CatalogForm()
+        return context
+
+
+class CatalogCreateView(LoginRequiredMixin, CreateView):
+    model = Catalog
+    form_class = CatalogForm
+    template_name = 'core/catalogs/modals/modal_catalog_form.html'  # Solo renderiza el form si es GET
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            catalog = form.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Catálogo creado correctamente.',
+                'data': {'id': catalog.id, 'name': catalog.name}  # Para actualizar lista sin recargar
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)

@@ -10,10 +10,9 @@
             <p>Administra la información de catálogos del sistema.</p>
         </div>
         {#        {% if perms.core.add_catalog %}#}
-        <button id="btn-add-catalog" type="button"
-                data-modal-open="catalog-modal" aria-controls="catalog-modal" aria-expanded="false"
-                data-url="#"
-                class="btn btn-create">
+        <button id="btn-add-catalog" type="button" data-modal-open="catalog-modal"
+                aria-controls="catalog-modal" aria-expanded="false" data-url="#"
+                class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-catalog-form">
             <i class="fas fa-plus"></i> Nuevo Catálogo
         </button>
         {#        {% endif %}#}
@@ -56,6 +55,8 @@
             {% include 'core/catalogs/partials/partial_catalog_table.html' %}
         </div>
     </div>
+{% endblock %}
+{% block modals %}
     {% include 'core/catalogs/modals/modal_catalog_form.html' %}
 {% endblock %}
 {% block extra_js %}

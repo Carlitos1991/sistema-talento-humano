@@ -1,42 +1,90 @@
-// File: static/js/catalogs.js
-(function () {
-  if (typeof Vue === 'undefined') {
-    console.error('Vue no está cargado. Incluye Vue 3 antes de este script.');
-    return;
-  }
-  const { createApp } = Vue;
-  const app = createApp({
-    // Evita el warning "Component is missing template or render function"
-    render() { return null; },
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Definimos el ID del Wrapper (NO del overlay)
+    const MOUNT_ID = '#catalog-create-app';
 
-    data() { return { visible: false }; },
-    methods: {
-      overlay() { return document.querySelector('.modal-overlay'); },
-      open() {
-        const o = this.overlay(); if (!o) return;
-        o.classList.remove('hidden'); this.visible = true;
-        const first = o.querySelector('input, textarea, select, button'); if (first) first.focus();
-      },
-      close() {
-        const o = this.overlay(); if (!o) return;
-        o.classList.add('hidden'); this.visible = false;
-      },
-      bind() {
-        document.querySelectorAll('[data-modal-open="catalog-modal"]').forEach(btn => {
-          btn.addEventListener('click', e => { e.preventDefault(); this.open(); });
-        });
-        document.querySelectorAll('[data-modal-close="catalog-modal"]').forEach(btn => {
-          btn.addEventListener('click', e => { e.preventDefault(); this.close(); });
-        });
-        const o = this.overlay();
-        if (o) o.addEventListener('click', e => { if (e.target === o) this.close(); });
-      }
-    },
-    mounted() { this.bind(); }
-  });
+    if (document.querySelector(MOUNT_ID)) {
+        const {createApp} = Vue;
 
-  const mountPoint = document.createElement('div');
-  mountPoint.id = 'catalog-modal-vue-app';
-  document.body.appendChild(mountPoint);
-  app.mount(mountPoint);
-})();
+        // Guardamos la instancia en una constante para usarla luego
+        const app = createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    isVisible: false, // Controla la visibilidad
+                    form: {
+                        name: '',
+                        code: '',
+                        is_active: true
+                    },
+                    errors: {}
+                }
+            },
+            methods: {
+                openModal() {
+                    this.isVisible = true; // Quita la clase 'hidden'
+                    this.errors = {}; // Limpia errores viejos
+                },
+                closeModal() {
+                    this.isVisible = false; // Pone la clase 'hidden'
+                },
+                async submitCatalog() {
+                    this.errors = {};
+
+                    const formData = new FormData();
+                    formData.append('name', this.form.name);
+                    formData.append('code', this.form.code);
+                    formData.append('is_active', this.form.is_active ? 'True' : 'False');
+
+                    // Obtener Token CSRF
+                    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+                    if (token) formData.append('csrfmiddlewaretoken', token.value);
+
+                    try {
+                        const response = await fetch('/create/', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Guardado!',
+                                text: data.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            // Limpiar y cerrar
+                            this.form.name = '';
+                            this.form.code = '';
+                            this.closeModal();
+
+                            // Recargar página para ver cambios
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            this.errors = data.errors;
+                            Swal.fire({icon: 'error', title: 'Error', text: 'Revisa el formulario'});
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        Swal.fire('Error', 'Error de servidor', 'error');
+                    }
+                }
+            }
+        });
+
+        // 2. MONTAMOS LA APP
+        const vm = app.mount(MOUNT_ID);
+
+        // 3. PUENTE DE EVENTOS (Vanilla JS -> Vue)
+        // Buscamos el botón "Nuevo Catálogo" que está FUERA de esta app de Vue
+        const btnOpen = document.getElementById('btn-add-catalog');
+        if (btnOpen) {
+            btnOpen.addEventListener('click', (e) => {
+                e.preventDefault();
+                vm.openModal(); // Llamamos al método dentro de Vue
+            });
+        }
+    }
+});
