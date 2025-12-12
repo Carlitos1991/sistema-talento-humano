@@ -149,6 +149,7 @@ class CatalogUpdateView(LoginRequiredMixin, UpdateView):
             }, status=400)
 
 
+# --- 4.5 cambiar estado ---
 @require_POST  # Por seguridad, solo permitimos POST
 def catalog_toggle_status(request, pk):
     """Alterna el estado (Activo/Inactivo) de un catálogo"""
@@ -170,6 +171,7 @@ def catalog_toggle_status(request, pk):
     })
 
 
+# --- 5. ITEMS DE CATÁLOGO  ---
 class CatalogItemCreateView(LoginRequiredMixin, CreateView):
     model = CatalogItem
     form_class = CatalogItemForm
@@ -207,3 +209,58 @@ class CatalogItemCreateView(LoginRequiredMixin, CreateView):
                 'success': False,
                 'errors': form.errors
             }, status=400)
+
+
+def item_list_json(request, catalog_id):
+    """Devuelve los items de un catálogo específico"""
+    items = CatalogItem.objects.filter(catalog_id=catalog_id).order_by('code')
+    data = []
+    for item in items:
+        data.append({
+            'id': item.id,
+            'code': item.code,
+            'name': item.name,
+            'is_active': item.is_active
+        })
+    return JsonResponse({'success': True, 'data': data})
+
+
+def item_detail_json(request, pk):
+    """Para cargar el formulario de edición de item"""
+    item = get_object_or_404(CatalogItem, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': item.id,
+            'catalog_id': item.catalog_id,
+            'name': item.name,
+            'code': item.code
+        }
+    })
+
+
+class CatalogItemUpdateView(LoginRequiredMixin, UpdateView):
+    model = CatalogItem
+    form_class = CatalogItemForm
+    template_name = 'core/catalogs/modals/modal_item_form.html'
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            item = form.save()
+            return JsonResponse({'success': True, 'message': 'Item actualizado correctamente.'})
+        else:
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def item_toggle_status(request, pk):
+    """Activar/Inactivar Item"""
+    item = get_object_or_404(CatalogItem, pk=pk)
+    item.toggle_status()
+    return JsonResponse({
+        'success': True,
+        'message': f'Item "{item.name}" {"activado" if item.is_active else "desactivado"}.',
+        'is_active': item.is_active
+    })

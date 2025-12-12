@@ -19,20 +19,20 @@
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">
-        <div class="stat-card color-one">
+        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
             <div class="stat-left">
                 <h3>Total</h3>
                 <div class="number" id="stat-total"> {{ stats_total|default:"0" }}</div>
             </div>
             <i class="fas fa-book-open stat-icon"></i>
         </div>
-        <div class="stat-card color-two">
+        <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-active">
             <div class="stat-left"><h3>Activos</h3>
                 <div class="number" id="stat-active">{{ stats_active|default:"0" }}</div>
             </div>
             <i class="fas fa-check-circle stat-icon"></i>
         </div>
-        <div class="stat-card color-three">
+        <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-inactive">
             <div class="stat-left"><h3>Inactivos</h3>
                 <div class="number" id="stat-inactive">{{ stats_inactive|default:"0" }}</div>
             </div>
@@ -77,6 +77,7 @@
 {% block modals %}
     {% include 'core/catalogs/modals/modal_catalog_form.html' %}
     {% include 'core/catalogs/modals/modal_item_form.html' %}
+    {% include 'core/catalogs/modals/modal_item_list.html' %}
 {% endblock %}
 {% block extra_js %}
     <script src="{% static 'js/catalogs.js' %}"></script>

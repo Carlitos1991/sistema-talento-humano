@@ -24,6 +24,10 @@ urlpatterns = [
     path('settings/catalogs/update/<int:pk>/', views.CatalogUpdateView.as_view(), name='catalog_update'),
     path('settings/catalogs/toggle/<int:pk>/', views.catalog_toggle_status, name='catalog_toggle'),
 
-    #     items
+    # --- ITEMS ---
+    path('settings/items/list/<int:catalog_id>/', views.item_list_json, name='item_list'),
     path('settings/items/create/', views.CatalogItemCreateView.as_view(), name='item_create'),
+    path('settings/items/detail/<int:pk>/', views.item_detail_json, name='item_detail'),
+    path('settings/items/update/<int:pk>/', views.CatalogItemUpdateView.as_view(), name='item_update'),
+    path('settings/items/toggle/<int:pk>/', views.item_toggle_status, name='item_toggle'),
 ]

@@ -3,87 +3,76 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // =========================================================
-    // 1. GESTIÓN DE LA TABLA (Buscador, Paginación y DOM)
+    // 1. GESTIÓN DE LA TABLA PRINCIPAL (Buscador, Paginación y DOM)
     // =========================================================
-
-    // Referencias globales para la tabla
     const tableBody = document.getElementById('table-body');
     const searchInput = document.getElementById('table-search');
     const overlay = document.querySelector('.no-results-overlay');
     const searchMsg = document.getElementById('no-results-placeholder');
     const emptyDbMsg = document.querySelector('.empty-db-msg');
-    // Estado de la tabla
+
     const pageSize = 10;
     let currentPage = 1;
-    let allRows = Array.from(document.querySelectorAll('tr.catalog-row')); // Copia viva de las filas
-    let filteredRows = allRows; // Filas filtradas actualmente
+    let allRows = Array.from(document.querySelectorAll('tr.catalog-row'));
+    let filteredRows = allRows;
+    let currentSearchTerm = '';
+    let currentStatusFilter = 'all';
 
-    /**
-     * Renderiza la tabla (Controla visibilidad y paginación)
-     */
+    function applyFilters() {
+        allRows = Array.from(document.querySelectorAll('tr.catalog-row'));
+        filteredRows = allRows.filter(row => {
+            const rowStatus = row.dataset.status;
+            if (currentStatusFilter !== 'all' && rowStatus !== currentStatusFilter) return false;
+            if (currentSearchTerm && !row.innerText.toLowerCase().includes(currentSearchTerm)) return false;
+            return true;
+        });
+        currentPage = 1;
+        renderTable();
+    }
+
     function renderTable() {
         const totalRows = filteredRows.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
-
-        // Validar pagina actual
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
 
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
 
-        // 1. Ocultar TODAS las filas primero
         allRows.forEach(row => row.style.display = 'none');
-
-        // 2. Lógica de Overlay y Mensajes
-        const isSearchActive = searchInput && searchInput.value.trim() !== '';
         const isDatabaseReallyEmpty = allRows.length === 0;
 
         if (totalRows === 0) {
-            // --- ESCENARIO: NO HAY FILAS QUE MOSTRAR ---
             if (overlay) overlay.classList.remove('hidden');
-
-            if (isSearchActive && !isDatabaseReallyEmpty) {
-                // Caso A: Hay datos en BD, pero la búsqueda falló -> Mostrar Lupa
+            if (!isDatabaseReallyEmpty) {
                 if (emptyDbMsg) emptyDbMsg.classList.add('hidden');
                 if (searchMsg) searchMsg.classList.remove('hidden');
             } else {
-                // Caso B: La BD está vacía -> Mostrar Inbox
                 if (emptyDbMsg) emptyDbMsg.classList.remove('hidden');
                 if (searchMsg) searchMsg.classList.add('hidden');
             }
-
         } else {
-            // --- ESCENARIO: HAY FILAS VISIBLES ---
             if (overlay) overlay.classList.add('hidden');
-
-            // Resetear mensajes para la próxima
-            if (searchMsg) searchMsg.classList.add('hidden');
-
-            // Mostrar el bloque de filas correspondiente
-            filteredRows.slice(start, end).forEach(row => {
-                row.style.display = '';
-            });
+            filteredRows.slice(start, end).forEach(row => row.style.display = '');
         }
-
-        updatePaginationUI(totalRows, totalPages, start, end);
+        updatePaginationUI(totalRows, totalPages);
     }
 
-    function updatePaginationUI(totalRows, totalPages, start, end) {
+    function updatePaginationUI(totalRows, totalPages) {
         const pageInfo = document.getElementById('page-info');
         const pageDisplay = document.getElementById('current-page-display');
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
 
         if (pageInfo) {
-            const startLabel = totalRows > 0 ? start + 1 : 0;
-            pageInfo.textContent = `Mostrando ${startLabel}-${Math.min(end, totalRows)} de ${totalRows}`;
+            const startLabel = totalRows > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+            const endLabel = Math.min(currentPage * pageSize, totalRows);
+            pageInfo.textContent = `Mostrando ${startLabel}-${endLabel} de ${totalRows}`;
         }
         if (pageDisplay) pageDisplay.textContent = currentPage;
 
         if (btnPrev) {
             btnPrev.disabled = (currentPage === 1);
-            // Clonamos el nodo para limpiar eventos viejos o asignamos onclick directo
             btnPrev.onclick = () => {
                 if (currentPage > 1) {
                     currentPage--;
@@ -102,61 +91,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Filtra la tabla en tiempo real
-     */
-    function filterTable(query) {
-        const term = query.toLowerCase().trim();
-
-        // Volvemos a leer allRows por si se agregó algo nuevo
-        allRows = Array.from(document.querySelectorAll('tr.catalog-row'));
-
-        if (!term) {
-            filteredRows = allRows;
-        } else {
-            filteredRows = allRows.filter(row => row.innerText.toLowerCase().includes(term));
-        }
-
-        currentPage = 1; // Reset a pag 1
-        renderTable();
-    }
-
-    // Listener del Buscador
     if (searchInput) {
         let timeout = null;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(() => filterTable(e.target.value), 100); // 100ms delay
+            timeout = setTimeout(() => {
+                currentSearchTerm = e.target.value.toLowerCase().trim();
+                applyFilters();
+            }, 100);
         });
     }
 
-    // =========================================================
-    // 2. MANIPULACIÓN DEL DOM (Insertar/Editar filas sin recargar)
-    // =========================================================
+    window.filterByStatus = function (status) {
+        currentStatusFilter = status;
+        const cards = {
+            'all': document.getElementById('card-filter-all'),
+            'true': document.getElementById('card-filter-active'),
+            'false': document.getElementById('card-filter-inactive')
+        };
+        Object.values(cards).forEach(c => {
+            if (c) c.classList.add('opacity-low');
+        });
+        const selected = cards[status];
+        if (selected) selected.classList.remove('opacity-low');
+        applyFilters();
+    };
 
-    /**
-     * Construye e inserta una nueva fila al inicio de la tabla
-     */
+    // =========================================================
+    // 2. DOM MANIPULATION (Insertar / Actualizar)
+    // =========================================================
     window.insertNewRow = function (data) {
         if (!tableBody) return;
-
-        // Construir URL dinámicamente para el toggle
         const toggleUrl = `/settings/catalogs/toggle/${data.id}/`;
-
         const newRowHTML = `
-            <tr class="catalog-row" id="row-${data.id}">
+            <tr class="catalog-row" id="row-${data.id}" data-status="true">
                 <td><span class="badge-new" style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:0.8em;">Nuevo</span></td>
                 <td class="catalog-name-cell">${data.name}</td>
-                <td>
-                    <span id="badge-${data.id}" class="status-badge active">Activo</span>
-                </td>
+                <td><span id="badge-${data.id}" class="status-badge active">Activo</span></td>
                 <td>
                     <div class="actions-wrapper">
                         <button type="button" class="btn-icon btn-create-action" 
                                 onclick="openCreateItem(${data.id}, '${data.name}')" title="Agregar Item">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button class="btn-icon btn-list-action" title="Listar Items">
+                        <button class="btn-icon btn-list-action" title="Listar Items"
+                                onclick="openListItems(${data.id}, '${data.name}')">
                             <i class="fas fa-list"></i>
                         </button>
                         <button type="button" class="btn-icon btn-views-action"
@@ -172,37 +151,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
             </tr>
         `;
-
-        // Insertar al inicio del tbody
         tableBody.insertAdjacentHTML('afterbegin', newRowHTML);
-
-        // Actualizar la lista de filas y re-renderizar
-        allRows = Array.from(document.querySelectorAll('tr.catalog-row'));
-        filterTable(searchInput ? searchInput.value : '');
+        applyFilters();
     };
 
-    /**
-     * Actualiza una fila existente
-     */
     window.updateRowDOM = function (id, newName) {
         const row = document.getElementById(`row-${id}`);
         if (row) {
             const nameCell = row.querySelector('.catalog-name-cell');
-            if (nameCell) {
-                nameCell.textContent = newName;
-                // Efecto visual de actualización (parpadeo amarillo suave)
-                nameCell.style.transition = 'background-color 0.5s';
-                nameCell.style.backgroundColor = '#fef08a';
-                setTimeout(() => nameCell.style.backgroundColor = 'transparent', 1000);
-            }
+            if (nameCell) nameCell.textContent = newName;
         }
     };
-
 
     // =========================================================
     // 3. FUNCIONES GLOBALES (Toggle y Stats)
     // =========================================================
-
     window.updateDashboardStats = function (stats) {
         if (!stats) return;
         const elTotal = document.getElementById('stat-total');
@@ -234,14 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const formData = new FormData();
                 formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-
                 const response = await fetch(url, {
                     method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
                 const data = await response.json();
 
                 if (data.success) {
-                    // Feedback discreto
                     const Toast = Swal.mixin({
                         toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
                     });
@@ -249,8 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (data.new_stats) window.updateDashboardStats(data.new_stats);
 
-                    // ACTUALIZAR DOM INMEDIATAMENTE
+                    const row = document.getElementById(`row-${catalogId}`);
                     const badge = document.getElementById(`badge-${catalogId}`);
+
                     if (isCurrentlyActive) {
                         icon.className = 'fas fa-toggle-off text-danger';
                         btnElement.title = "Activar";
@@ -258,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             badge.className = 'status-badge inactive';
                             badge.textContent = 'Inactivo';
                         }
+                        if (row) row.dataset.status = "false";
                     } else {
                         icon.className = 'fas fa-toggle-on text-success';
                         btnElement.title = "Desactivar";
@@ -265,7 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             badge.className = 'status-badge active';
                             badge.textContent = 'Activo';
                         }
+                        if (row) row.dataset.status = "true";
                     }
+                    applyFilters();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }
@@ -284,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.querySelector(CATALOG_MOUNT_ID)) {
         const {createApp} = Vue;
-
         const appCatalog = createApp({
             delimiters: ['[[', ']]'],
             data() {
@@ -318,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.isVisible = true;
                         }
                     } catch (error) {
-                        Swal.fire('Error', 'No se cargaron los datos', 'error');
+                        Swal.fire('Error', 'Error al cargar datos', 'error');
                     }
                 },
                 async submitCatalog() {
@@ -338,10 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = await response.json();
 
                         if (data.success) {
-                            // 1. CERRAR MODAL INMEDIATAMENTE
                             this.closeModal();
-
-                            // 2. MOSTRAR TOAST (No bloqueante)
                             const Toast = Swal.mixin({
                                 toast: true,
                                 position: 'top-end',
@@ -350,15 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 timerProgressBar: true
                             });
                             Toast.fire({icon: 'success', title: data.message});
-
-                            // 3. ACTUALIZAR STATS
                             if (data.data && data.data.new_stats) window.updateDashboardStats(data.data.new_stats);
-
-                            // 4. ACTUALIZAR TABLA (Sin recargar)
                             if (this.isEditing) {
                                 window.updateRowDOM(this.currentId, this.form.name.toUpperCase());
                             } else {
-                                // En creación, data.data debe traer {id: 1, name: 'X'}
                                 window.insertNewRow(data.data);
                             }
                         } else {
@@ -372,8 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         const vmCatalog = appCatalog.mount(CATALOG_MOUNT_ID);
-
-        // Puentes HTML -> Vue
         const btnNew = document.getElementById('btn-add-catalog');
         if (btnNew) btnNew.addEventListener('click', (e) => {
             e.preventDefault();
@@ -384,34 +338,176 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =========================================================
-    // 5. MODAL ITEMS (Hijos)
+    // 5. APP VUE: LISTAR ITEMS (CON BUSCADOR Y PAGINACIÓN)
     // =========================================================
-    const ITEM_MOUNT_ID = '#item-create-app';
-    if (document.querySelector(ITEM_MOUNT_ID)) {
+    const ITEM_LIST_MOUNT = '#item-list-app';
+    let vmItemList = null;
+
+    if (document.querySelector(ITEM_LIST_MOUNT)) {
         const {createApp} = Vue;
-        const appItem = createApp({
+        const appList = createApp({
             delimiters: ['[[', ']]'],
             data() {
                 return {
                     isVisible: false,
-                    parentCatalogId: null,
-                    parentCatalogName: '',
-                    form: {name: '', code: ''},
-                    errors: {}
+                    catalogId: null,
+                    catalogName: '',
+                    items: [],
+
+                    // --- Estado para Paginación y Búsqueda ---
+                    searchQuery: '',
+                    currentPage: 1,
+                    pageSize: 5 // Cantidad de items por página en el modal
+                }
+            },
+            computed: {
+                // Filtra items por búsqueda
+                filteredItems() {
+                    const term = this.searchQuery.toLowerCase().trim();
+                    if (!term) return this.items;
+                    return this.items.filter(item =>
+                        item.name.toLowerCase().includes(term) ||
+                        item.code.toLowerCase().includes(term)
+                    );
+                },
+                // Calcula total páginas
+                totalPages() {
+                    return Math.ceil(this.filteredItems.length / this.pageSize) || 1;
+                },
+                // Obtiene el slice actual
+                paginatedItems() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    return this.filteredItems.slice(start, end);
+                },
+                // Etiqueta "Mostrando X-Y de Z"
+                paginationLabel() {
+                    const total = this.filteredItems.length;
+                    if (total === 0) return '0 de 0';
+                    const start = (this.currentPage - 1) * this.pageSize + 1;
+                    const end = Math.min(this.currentPage * this.pageSize, total);
+                    return `Mostrando ${start}-${end} de ${total}`;
+                }
+            },
+            methods: {
+                async open(id, name) {
+                    this.catalogId = id;
+                    this.catalogName = name;
+                    this.searchQuery = ''; // Resetear búsqueda
+                    this.currentPage = 1;  // Resetear página
+                    this.isVisible = true;
+                    await this.fetchItems();
+                },
+                closeModal() {
+                    this.isVisible = false;
+                    this.items = [];
+                },
+                async fetchItems() {
+                    if (!this.catalogId) return;
+                    try {
+                        const res = await fetch(`/settings/items/list/${this.catalogId}/`);
+                        const data = await res.json();
+                        if (data.success) {
+                            this.items = data.data;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+                // --- Paginación ---
+                prevPage() {
+                    if (this.currentPage > 1) this.currentPage--;
+                },
+                nextPage() {
+                    if (this.currentPage < this.totalPages) this.currentPage++;
+                },
+                // --- Acciones ---
+                openCreateFromList() {
+                    if (window.vmItemForm) {
+                        window.vmItemForm.openCreate(this.catalogId, this.catalogName, true);
+                    }
+                },
+                editItem(itemId) {
+                    if (window.vmItemForm) {
+                        window.vmItemForm.openEdit(itemId, true);
+                    }
+                },
+                async toggleItem(item) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                        const res = await fetch(`/settings/items/toggle/${item.id}/`, {
+                            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            item.is_active = data.is_active;
+                            const Toast = Swal.mixin({
+                                toast: true, position: 'top-end', showConfirmButton: false, timer: 2000
+                            });
+                            Toast.fire({icon: 'success', title: data.message});
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            }
+        });
+        vmItemList = appList.mount(ITEM_LIST_MOUNT);
+        window.openListItems = (id, name) => {
+            vmItemList.open(id, name);
+        };
+    }
+
+
+    // =========================================================
+    // 6. APP VUE: FORMULARIO ITEM (CREAR / EDITAR)
+    // =========================================================
+    const ITEM_FORM_MOUNT = '#item-create-app';
+
+    if (document.querySelector(ITEM_FORM_MOUNT)) {
+        const {createApp} = Vue;
+        const appItemForm = createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    isVisible: false, isEditing: false, isFromList: false,
+                    parentCatalogId: null, parentCatalogName: '', currentId: null,
+                    form: {name: '', code: ''}, errors: {}
                 }
             },
             computed: {
                 modalTitle() {
-                    return `Nuevo Item para: ${this.parentCatalogName}`;
+                    return this.isEditing ? 'Editar Item' : `Nuevo Item para: ${this.parentCatalogName}`;
                 }
             },
             methods: {
-                open(catalogId, catalogName) {
+                openCreate(catalogId, catalogName, fromList = false) {
+                    this.isEditing = false;
+                    this.currentId = null;
                     this.parentCatalogId = catalogId;
                     this.parentCatalogName = catalogName;
+                    this.isFromList = fromList;
                     this.form = {name: '', code: ''};
                     this.errors = {};
                     this.isVisible = true;
+                },
+                async openEdit(itemId, fromList = false) {
+                    this.isEditing = true;
+                    this.currentId = itemId;
+                    this.isFromList = fromList;
+                    this.errors = {};
+                    try {
+                        const res = await fetch(`/settings/items/detail/${itemId}/`);
+                        const result = await res.json();
+                        if (result.success) {
+                            this.form = result.data;
+                            this.parentCatalogId = result.data.catalog_id;
+                            this.isVisible = true;
+                        }
+                    } catch (e) {
+                        Swal.fire('Error', 'No se pudieron cargar datos', 'error');
+                    }
                 },
                 closeModal() {
                     this.isVisible = false;
@@ -419,30 +515,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 async submitItem() {
                     this.errors = {};
                     const formData = new FormData();
-                    formData.append('catalog_id', this.parentCatalogId);
+                    if (!this.isEditing) formData.append('catalog_id', this.parentCatalogId);
                     formData.append('name', this.form.name);
                     formData.append('code', this.form.code);
                     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
+                    let url = '/settings/items/create/';
+                    if (this.isEditing) url = `/settings/items/update/${this.currentId}/`;
+
                     try {
-                        const response = await fetch('/settings/items/create/', {
+                        const response = await fetch(url, {
                             method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
                         });
                         const data = await response.json();
 
                         if (data.success) {
-                            this.closeModal(); // Cerrar inmediato
-
+                            this.closeModal();
                             const Toast = Swal.mixin({
-                                toast: true,
-                                position: 'top-end',
-                                showConfirmButton: false,
-                                timer: 3000,
-                                timerProgressBar: true
+                                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
                             });
-                            Toast.fire({icon: 'success', title: 'Item creado correctamente'});
+                            Toast.fire({icon: 'success', title: this.isEditing ? 'Item Actualizado' : 'Item Creado'});
 
-                            // Aquí no necesitamos actualizar la tabla principal, ya que los items no se ven en el listado
+                            if (this.isFromList && vmItemList) {
+                                vmItemList.catalogId = this.parentCatalogId;
+                                await vmItemList.fetchItems();
+                            }
                         } else {
                             this.errors = data.errors || {};
                             if (data.message && !data.errors) Swal.fire('Error', data.message, 'error');
@@ -453,10 +550,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        const vmItem = appItem.mount(ITEM_MOUNT_ID);
-        window.openCreateItem = (catalogId, catalogName) => vmItem.open(catalogId, catalogName);
+        window.vmItemForm = appItemForm.mount(ITEM_FORM_MOUNT);
+        window.openCreateItem = (catalogId, catalogName) => {
+            window.vmItemForm.openCreate(catalogId, catalogName, false);
+        };
     }
 
-    // Inicializar tabla al cargar la página
+    // Inicializar tabla y filtros
+    window.filterByStatus('all');
     renderTable();
 });

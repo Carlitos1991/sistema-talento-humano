@@ -968,12 +968,16 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     border-left: 5px solid;
     cursor: pointer;
-    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
 }
 
 .stat-card:hover {
-    transform: translateY(-4px) scale(1.005);
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08), 0 4px 8px rgba(16, 24, 40, 0.04);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.opacity-low {
+    opacity: 0.4; /* Las tarjetas no seleccionadas se verán tenues */
 }
 
 .stat-card .stat-icon {
@@ -1081,7 +1085,7 @@ h1, h2, h3, h4, h5, h6 {
     min-height: 400px; /* ALTO MÍNIMO: Evita que la tabla se "encoja" al buscar */
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     overflow: hidden; /* Para que el overlay no se salga */
 }
 
@@ -1375,6 +1379,21 @@ th a.active .sort-icon {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+.modal-container-medium {
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: white;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    min-height: 200px;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1393,7 +1412,8 @@ th a.active .sort-icon {
     display: none !important;
 }
 
-.modal-header {
+.modal-header,
+.modal-header-medium {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1401,6 +1421,7 @@ th a.active .sort-icon {
     background-color: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
 }
+
 
 .modal-close {
     background: transparent;
@@ -1444,6 +1465,16 @@ th a.active .sort-icon {
     box-sizing: border-box;
 }
 
+.modal-header-medium,
+.modal-footer-medium {
+    max-width: 900px; /* menos ancho que el modal principal */
+    width: calc(100% - 2rem); /* margen lateral interno */
+    margin: 0 auto; /* centrar dentro del modal */
+    padding-left: 1rem; /* reducir padding lateral */
+    padding-right: 1rem;
+    box-sizing: border-box;
+}
+
 .modal-footer {
     margin-top: auto; /* empuja el footer al fondo */
     border-top: 1px solid #e2e8f0; /* mantiene la línea divisora */
@@ -1469,6 +1500,11 @@ th a.active .sort-icon {
     gap: 0.6rem;
 }
 
+#item-modal-overlay {
+    z-index: 1100; /* Mayor que el modal estándar */
+    background-color: rgba(0, 0, 0, 0.6); /* Un poco más oscuro para resaltar foco */
+}
+
 .form-hint,
 .error-message {
     margin-top: 0.25rem; /* menos separación arriba */
@@ -1482,7 +1518,7 @@ th a.active .sort-icon {
     min-height: 400px; /* IMPORTANTE: Mantiene la altura aunque filtres todo */
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
 

@@ -12,7 +12,7 @@
         <tbody id="table-body">
         {% for catalog in catalogs %}
             <!-- ID ÚNICO PARA LA FILA: row-ID -->
-            <tr class="catalog-row" id="row-{{ catalog.id }}">
+            <tr class="catalog-row" id="row-{{ catalog.id }}" data-status="{{ catalog.is_active|yesno:'true,false' }}">
                 <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
 
                 <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
@@ -34,7 +34,9 @@
                             <i class="fas fa-plus"></i>
                         </button>
 
-                        <button class="btn-icon btn-list-action" title="Listar Items">
+                        <button class="btn-icon btn-list-action"
+                                title="Listar Items"
+                                onclick="openListItems({{ catalog.id }}, '{{ catalog.name|escapejs }}')">
                             <i class="fas fa-list"></i>
                         </button>
 

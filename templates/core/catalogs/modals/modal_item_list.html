@@ -1,0 +1,121 @@
+<div id="item-list-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+        <div class="modal-container-medium"
+             style="max-width: 900px; min-height: 500px; display: flex; flex-direction: column;">
+
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <h2>Items de: [[ catalogName ]]</h2>
+                <button type="button" class="btn-close-modal" @click="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column;">
+
+                <!-- CONTROLES: BUSCADOR Y BOTÓN NUEVO -->
+                <div class="table-controls"
+                     style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+
+                    <!-- Buscador (Estilo idéntico al principal) -->
+                    <div class="search-box" style="margin-left: 0; flex-grow: 1; max-width: 300px;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text"
+                               v-model="searchQuery"
+                               class="input-field"
+                               placeholder="Buscar items..."
+                               @input="currentPage = 1"> <!-- Reset página al escribir -->
+                    </div>
+
+                    <!-- Botón Nuevo Item -->
+                    <button class="btn btn-create" @click="openCreateFromList" style="margin-left: 15px;">
+                        <i class="fas fa-plus"></i> Nuevo Item
+                    </button>
+                </div>
+
+                <!-- TABLA CON SCROLL -->
+                <div class="table-container" style="flex: 1; overflow-y: auto; min-height: 250px;">
+                    <table class="w-100">
+                        <thead>
+                        <tr>
+                            <th style="width: 20%;">Código</th>
+                            <th style="width: 40%;">Nombre</th>
+                            <th style="width: 20%;">Estado</th>
+                            <th style="width: 20%;">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- Iteramos sobre paginatedItems (los filtrados y paginados) -->
+                        <tr v-for="item in paginatedItems" :key="item.id">
+                            <td>[[ item.code ]]</td>
+                            <td>[[ item.name ]]</td>
+                            <td>
+                                    <span class="status-badge"
+                                          :class="item.is_active ? 'active' : 'inactive'">
+                                        [[ item.is_active ? 'Activo' : 'Inactivo' ]]
+                                    </span>
+                            </td>
+                            <td>
+                                <div class="actions-wrapper">
+                                    <button class="btn-icon btn-views-action"
+                                            @click="editItem(item.id)" title="Editar">
+                                        <i class="fas fa-pencil"></i>
+                                    </button>
+
+                                    <button class="btn-icon"
+                                            @click="toggleItem(item)"
+                                            :title="item.is_active ? 'Desactivar' : 'Activar'">
+                                        <i class="fas"
+                                           :class="item.is_active ? 'fa-toggle-on text-success' : 'fa-toggle-off text-danger'">
+                                        </i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- MENSAJES DE ESTADO (Empty States) -->
+
+                    <!-- Caso 1: No hay items en la base de datos para este catálogo -->
+                    <div v-if="items.length === 0" class="no-results-content" style="padding: 40px;">
+                        <i class="fas fa-inbox no-results-icon"></i>
+                        <p class="text-muted">No hay items registrados en este catálogo.</p>
+                    </div>
+
+                    <!-- Caso 2: Hay items, pero la búsqueda no encontró nada -->
+                    <div v-if="items.length > 0 && paginatedItems.length === 0" class="no-results-content"
+                         style="padding: 40px;">
+                        <i class="fas fa-search no-results-icon"></i>
+                        <p class="text-muted">No se encontraron coincidencias.</p>
+                    </div>
+                </div>
+
+                <!-- PAGINACIÓN (Solo si hay items en total) -->
+                <div class="pagination-container" v-if="items.length > 0" style="margin-top: 15px;">
+                    <span class="pagination-info">[[ paginationLabel ]]</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button class="page-btn"
+                                    :disabled="currentPage === 1"
+                                    @click="prevPage">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </li>
+                        <li>
+                            <span style="padding: 0 10px; font-weight: bold;">[[ currentPage ]]</span>
+                        </li>
+                        <li>
+                            <button class="page-btn"
+                                    :disabled="currentPage === totalPages"
+                                    @click="nextPage">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
