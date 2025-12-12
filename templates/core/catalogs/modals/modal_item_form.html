@@ -1,10 +1,61 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<div id="item-create-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }"
+         id="item-modal-overlay" role="dialog" aria-modal="true">
+        <form @submit.prevent="submitItem" id="form-create-item">
+            {% csrf_token %}
 
-</body>
-</html>
+            <div class="modal-container" id="item-modal" tabindex="-1" role="document">
+                <div class="modal-header">
+                    <h2 id="item-modal-title">[[ modalTitle ]]</h2>
+                    <button type="button" class="btn-close-modal" @click="closeModal">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- CAMPO CÓDIGO -->
+                    <div class="form-group">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">
+                            <i class="fa-solid fa-barcode"></i> {{ form.code.label }}(*)
+                        </label>
+
+                        <input class="input-field uppercase-input"
+                               id="id_code" name="code" type="text"
+                               v-model="form.code"
+                               :readonly="isEditing"
+                               :style="isEditing ? 'background-color: #e9ecef; cursor: not-allowed;' : ''"
+                               placeholder="Ej: TH" required/>
+
+                        <div class="error-message-container" v-if="errors.code">
+                            <span class="text-danger small" v-for="(error, index) in errors.code" :key="index">
+                                <i class="fas fa-exclamation-circle"></i> [[ error ]]
+                            </span>
+                        </div>
+                        <p class="form-hint">Código único (Solo lectura al editar).</p>
+                    </div>
+
+                    <!-- CAMPO NOMBRE -->
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}">
+                            <i class="fa-solid fa-folder-closed"></i> {{ form.name.label }}(*)
+                        </label>
+                        <input class="input-field uppercase-input" id="id_name" name="name" type="text"
+                               v-model="form.name" placeholder="Ej: TALENTO HUMANO" required/>
+                        <div class="error-message-container" v-if="errors.name">
+                            <span class="text-danger small" v-for="(error, index) in errors.name" :key="index">
+                                <i class="fas fa-exclamation-circle"></i> [[ error ]]
+                            </span>
+                        </div>
+                        <p class="form-hint">Nombre descriptivo del ítem.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel" @click="closeModal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

@@ -10,32 +10,46 @@
         </tr>
         </thead>
         <tbody id="table-body">
-        <!-- 1. FILAS DE DATOS -->
         {% for catalog in catalogs %}
-            <tr class="catalog-row">
-                <td>{{ forloop.counter }}</td>
-                <td>{{ catalog.name }}</td>
+            <!-- ID ÚNICO PARA LA FILA: row-ID -->
+            <tr class="catalog-row" id="row-{{ catalog.id }}">
+                <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
+
+                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
+                <td class="catalog-name-cell">{{ catalog.name }}</td>
+
                 <td>
-                    {% if catalog.is_active %}
-                        <span class="status-badge active">Activo</span>
-                    {% else %}
-                        <span class="status-badge inactive">Inactivo</span>
-                    {% endif %}
+                    <!-- ID ÚNICO PARA EL BADGE -->
+                    <span id="badge-{{ catalog.id }}"
+                          class="status-badge {% if catalog.is_active %}active{% else %}inactive{% endif %}">
+                    {% if catalog.is_active %}Activo{% else %}Inactivo{% endif %}
+                </span>
                 </td>
+
                 <td>
                     <div class="actions-wrapper">
-                        <button class="btn-icon btn-create-action" title="Agregar Item"><i class="fas fa-plus"></i>
+                        <button type="button" class="btn-icon btn-create-action"
+                                onclick="openCreateItem({{ catalog.id }}, '{{ catalog.name|escapejs }}')"
+                                title="Agregar Item">
+                            <i class="fas fa-plus"></i>
                         </button>
-                        <button class="btn-icon btn-list-action" title="Listar Items"><i class="fas fa-list"></i>
+
+                        <button class="btn-icon btn-list-action" title="Listar Items">
+                            <i class="fas fa-list"></i>
                         </button>
+
                         <button type="button" class="btn-icon btn-views-action"
-                                onclick="openEditCatalog({{ catalog.id }})" title="Editar"><i class="fas fa-pencil"></i>
+                                onclick="openEditCatalog({{ catalog.id }})"
+                                title="Editar">
+                            <i class="fas fa-pencil"></i>
                         </button>
+
+                        <!-- Toggle Button con TODOS los datos necesarios -->
                         <button type="button"
-                                class="btn-icon {% if catalog.is_active %}btn-delete-action{% else %}btn-restore-action{% endif %}"
-                                onclick="toggleCatalogStatus({{ catalog.id }}, '{{ catalog.name }}', {{ catalog.is_active|yesno:'true,false' }})"
+                                class="btn-icon"
+                                onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
                                 title="{% if catalog.is_active %}Desactivar{% else %}Activar{% endif %}">
-                            <i class="fas {% if catalog.is_active %}fa-trash-alt{% else %}fa-undo-alt{% endif %}"></i>
+                            <i class="fas {% if catalog.is_active %}fa-toggle-on text-success{% else %}fa-toggle-off text-danger{% endif %}"></i>
                         </button>
                     </div>
                 </td>
@@ -46,7 +60,8 @@
 
     {# Overlay absolute para mensajes "no resultados" o BD vacía #}
     {% comment %} Si la BD está vacía mostramos el mensaje de inbox; si hay registros el overlay queda oculto y lo muestra JS cuando no hay coincidencias de búsqueda. {% endcomment %}
-    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}" aria-hidden="{% if catalogs %}true{% else %}false{% endif %}">
+    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}"
+         aria-hidden="{% if catalogs %}true{% else %}false{% endif %}">
         {% if not catalogs %}
             <div class="no-results-content">
                 <i class="fas fa-inbox no-results-icon"></i>

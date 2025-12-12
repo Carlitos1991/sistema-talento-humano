@@ -1,6 +1,6 @@
 # apps/core/forms.py
 from django import forms
-from .models import User, Catalog
+from .models import User, Catalog, CatalogItem
 
 
 class BaseFormMixin:
@@ -40,6 +40,33 @@ class CatalogForm(forms.ModelForm):
 
     class Meta:
         model = Catalog
+        fields = ['name', 'code']  # Ajusta según tu modelo real
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'v-model': 'form.name'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'v-model': 'form.code'}),
+        }
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code:
+            return code.upper()
+        return code
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            return name.upper()
+        return name
+
+
+class CatalogItemForm(forms.ModelForm):
+    """
+    Formulario para creación y edición de Items.
+    Mantiene el control total de los campos y validaciones backend.
+    """
+
+    class Meta:
+        model = CatalogItem
         fields = ['name', 'code']  # Ajusta según tu modelo real
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'v-model': 'form.name'}),

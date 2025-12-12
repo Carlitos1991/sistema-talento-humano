@@ -5,9 +5,9 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.views.generic import TemplateView, ListView, UpdateView
-from .forms import CatalogForm
+from .forms import CatalogForm, CatalogItemForm
 from .forms import UserProfileForm
-from .models import Catalog
+from .models import Catalog, CatalogItem
 from .models import User
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
@@ -168,3 +168,42 @@ def catalog_toggle_status(request, pk):
         'message': f'El catálogo "{catalog.name}" ha sido {status_label} correctamente.',
         'new_stats': stats
     })
+
+
+class CatalogItemCreateView(LoginRequiredMixin, CreateView):
+    model = CatalogItem
+    form_class = CatalogItemForm
+    template_name = 'core/catalogs/modals/modal_item_form.html'  # Solo renderiza el form si es GET
+
+    def post(self, request, *args, **kwargs):
+        catalog_id = request.POST.get('catalog_id')
+        if not catalog_id:
+            return JsonResponse({'success': False, 'message': 'Falta el ID del catálogo.'}, status=400)
+        catalog = get_object_or_404(Catalog, pk=catalog_id)
+        form = self.get_form()
+        if form.is_valid():
+            code = form.cleaned_data.get('code')
+            if CatalogItem.objects.filter(catalog=catalog, code=code).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'code': ['Ya existe un item con este código en este catálogo.']}
+                }, status=400)
+
+            try:
+                # 3. Guardado con asignación del padre
+                item = form.save(commit=False)
+                item.catalog = catalog
+                item.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Item creado en "{catalog.name}".',
+                    'data': {'id': item.id, 'name': item.name}
+                })
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
