@@ -1,5 +1,6 @@
 {% load static %}
-<aside class="sidebar">
+<!-- AQUÍ: :class para que el CSS sepa si está colapsado -->
+<aside class="sidebar" :class="{ 'collapsed': sidebarCollapsed }">
     <div class="sidebar-header">
         <img src="{% static 'img/logo.png' %}" alt="Logo" class="sidebar-logo-img">
         <span class="sidebar-brand-text">SIGETH</span>
@@ -25,17 +26,26 @@
                 <span class="menu-text">Nómina</span>
             </a>
         </li>
-        <li>
-            <a href="#">
+
+        <!-- MENÚ PADRE -->
+        <li class="has-submenu" :class="{ 'open': activeSubmenu === 'settings' }">
+            <a href="#" class="submenu-toggle" @click.prevent="toggleSubmenu('settings')">
                 <i class="fa-solid fa-gear"></i>
                 <span class="menu-text">Ajustes</span>
+                <i class="fa-solid fa-chevron-right chevron-icon"></i>
             </a>
-        </li>
-        <li>
-            <a href="{% url 'core:catalog_list' %}" class="{% if 'catalogs' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-list-check"></i>
-                <span class="menu-text">Catálogos</span>
-            </a>
+
+            <!-- SUBMENÚ -->
+            <!-- AQUÍ: || sidebarCollapsed es OBLIGATORIO para que el HTML exista y el CSS hover funcione -->
+            <ul class="submenu" v-show="activeSubmenu === 'settings'">
+                <li class="submenu-title">Ajustes</li> <!-- Título del flotante -->
+                <li>
+                    <a href="{% url 'core:catalog_list' %}">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span class="menu-text">Catálogos</span>
+                    </a>
+                </li>
+            </ul>
         </li>
     </ul>
 </aside>

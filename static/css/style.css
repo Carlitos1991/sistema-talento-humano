@@ -226,6 +226,10 @@ h1, h2, h3, h4, h5, h6 {
 /* =========================================
    3. DASHBOARD LAYOUT
    ========================================= */
+/* =========================================
+   3. DASHBOARD LAYOUT & SIDEBAR (CONSOLIDADO)
+   ========================================= */
+
 .layout-wrapper {
     display: grid;
     grid-template-columns: var(--sidebar-width) 1fr;
@@ -237,13 +241,23 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: var(--sidebar-collapsed-width) 1fr;
 }
 
-/* --- SIDEBAR --- */
+/* --- SIDEBAR BASE --- */
 .sidebar {
     background-color: var(--primary-color);
     color: #fff;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden;
     white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: width 0.3s ease;
+    /* Por defecto, si no está colapsado, scroll vertical */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 0;
 }
 
 .sidebar-header {
@@ -253,7 +267,7 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0 1.2rem;
     background-color: rgba(0, 0, 0, 0.2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden;
+    flex-shrink: 0; /* Evita que se aplaste */
 }
 
 .sidebar-logo-img {
@@ -266,21 +280,18 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-brand-text {
     font-weight: 700;
     font-size: 1.2rem;
-    opacity: 1;
     transition: opacity 0.2s;
 }
 
-.layout-wrapper.is-collapsed .sidebar-brand-text,
-.layout-wrapper.is-collapsed .menu-text {
-    opacity: 0;
-    pointer-events: none;
-    display: none;
-}
-
+/* --- MENU ITEMS --- */
 .sidebar-menu {
     list-style: none;
     padding: 0;
     margin: 1rem 0;
+}
+
+.sidebar-menu li {
+    position: relative; /* Necesario para posicionar submenús */
 }
 
 .sidebar-menu li a {
@@ -292,17 +303,6 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 0.2s;
     border-left: 3px solid transparent;
     font-size: 0.95rem;
-    overflow: hidden;
-}
-
-.layout-wrapper.is-collapsed .sidebar-menu li a {
-    justify-content: center;
-    padding: 0.9rem 0;
-}
-
-.layout-wrapper.is-collapsed .sidebar-menu li a i {
-    margin-right: 0;
-    font-size: 1.2rem;
 }
 
 .sidebar-menu li a:hover,
@@ -320,16 +320,190 @@ h1, h2, h3, h4, h5, h6 {
     flex-shrink: 0;
 }
 
+.sidebar-menu .chevron-icon {
+    margin-left: auto;
+    font-size: 0.8em;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-menu li.open .chevron-icon {
+    transform: rotate(90deg);
+}
+
+/* --- SUBMENU (ESTILO NORMAL ACORDEÓN) --- */
+.sidebar-menu .submenu {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    overflow: hidden; /* Para animación suave de altura si usaras JS, o ocultar contenido */
+}
+
+.sidebar-menu .submenu .submenu-title {
+    display: none; /* Oculto en modo normal */
+}
+
+.sidebar-menu .submenu li a {
+    padding-left: 50px;
+    font-size: 0.9em;
+    color: #cbd5e1;
+}
+
+.sidebar-menu .submenu li a:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-menu .submenu li a.active-child {
+    color: #fff;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #10b981;
+}
+
+
+/* =========================================================
+   MODO COLAPSADO (AQUÍ ESTÁ LA MAGIA)
+   ========================================================= */
+
+/* 1. Ajustes del contenedor sidebar */
+.sidebar.collapsed {
+    overflow: visible !important; /* PERMITIR QUE LOS MENÚS SALGAN */
+}
+
+.sidebar.collapsed .sidebar-brand-text,
+.sidebar.collapsed .menu-text,
+.sidebar.collapsed .chevron-icon {
+    display: none !important;
+}
+
+.sidebar.collapsed .sidebar-menu li a {
+    justify-content: center;
+    padding: 0.9rem 0;
+}
+
+.sidebar.collapsed .sidebar-menu li a i {
+    margin-right: 0;
+    font-size: 1.3rem;
+}
+
+.layout-wrapper.is-collapsed .sidebar-menu li a {
+    justify-content: center;
+    padding: 0.9rem 0;
+}
+
+.layout-wrapper.is-collapsed .sidebar-menu li a i {
+    margin-right: 0;
+    font-size: 1.3rem;
+}
+
+.layout-wrapper.is-collapsed .sidebar-brand-text,
+.layout-wrapper.is-collapsed .menu-text,
+.layout-wrapper.is-collapsed .chevron-icon {
+    display: none; /* Ocultar textos y flechas */
+}
+
+/* 3. AL HACER HOVER: Mostrar el submenú como TARJETA FLOTANTE */
+.sidebar.collapsed .has-submenu:hover .submenu {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 0;
+
+    /* Estilos de Tarjeta */
+    min-width: 220px;
+    background: var(--white);
+    border-radius: 0 8px 8px 0;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 99999;
+    border: 1px solid #e2e8f0;
+    border-left: none;
+    padding: 5px 0;
+}
+
+/* 4. Título del Menú Flotante (Barra Gris) */
+.sidebar.collapsed .has-submenu:hover .submenu .submenu-title {
+    display: none !important;
+    padding: 12px 15px;
+    background: #f1f5f9;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0 8px 0 0; /* Esquina superior derecha redondeada */
+    margin: 0;
+}
+
+/* 5. Items del Menú Flotante */
+.sidebar.collapsed .has-submenu:hover .submenu li a {
+    color: var(--text-color) !important; /* Texto oscuro */
+    padding: 10px 20px;
+    justify-content: flex-start; /* Alinear izquierda */
+    border-left: none;
+}
+
+.sidebar.collapsed .has-submenu:hover .submenu li a .menu-text {
+    display: inline-block !important;
+    margin-left: 0;
+    font-size: 0.9rem;
+}
+
+.sidebar.collapsed .has-submenu:hover .submenu li a i {
+    color: #94a3b8;
+    margin-right: 12px;
+    font-size: 1rem;
+    width: auto;
+}
+
+.sidebar.collapsed .has-submenu:hover .submenu::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -10px;
+    width: 10px;
+    height: 100%;
+    background: transparent;
+    z-index: -1;
+}
+
+/* Hover en items flotantes */
+.sidebar.collapsed .has-submenu:hover .submenu li a:hover {
+    background: #f8fafc;
+    color: var(--accent-color) !important;
+}
+
+.sidebar.collapsed .has-submenu:hover .submenu li a:hover i {
+    color: var(--accent-color);
+}
+
+/* Flechita decorativa ("Speech bubble") */
+.sidebar.collapsed .has-submenu:hover .submenu::before {
+    content: "";
+    position: absolute;
+    top: 18px; /* Ajustar a la altura del icono padre */
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    background: #ffffff; /* BLANCO */
+    transform: rotate(45deg);
+    border-left: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 100000;
+}
+
+
 /* --- NAVBAR & CONTENT --- */
 .main-content {
     display: flex;
     flex-direction: column;
     background-color: var(--bg-light);
-    height: 100vh;
-    overflow: hidden;
+    height: 140vh;
     width: 100%;
     transition: all 0.3s ease;
+
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0;
     margin: 0;
 }
@@ -517,27 +691,28 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
     max-width: 1600px;
     margin: 0 auto;
+    height: calc(100vh - var(--header-height));
     overflow-y: auto;
     overflow-x: hidden;
     scroll-behavior: smooth;
 }
 
 #app-content::-webkit-scrollbar {
-    width: 8px; /* Más delgado y elegante */
+    width: 14px;
 }
 
 #app-content::-webkit-scrollbar-track {
-    background: #f1f5f9; /* Color de fondo del carril (gris muy claro) */
+    background: #e2e8f0; /* Color de fondo del carril (gris muy claro) */
 }
 
 #app-content::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1; /* Color de la barra (gris suave) */
-    border-radius: 4px; /* Bordes redondeados */
-    border: 2px solid #f1f5f9; /* Espacio alrededor de la barra para efecto flotante */
+    background-color: #94a3b8; /* Color de la barra (gris suave) */
+    border-radius: 6px; /* Bordes redondeados */
+    border: 3px solid #e2e8f0; /* Espacio alrededor de la barra para efecto flotante */
 }
 
 #app-content::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8; /* Color un poco más oscuro al pasar el mouse */
+    background-color: #64748b; /* Color un poco más oscuro al pasar el mouse */
 }
 
 /* =========================================
@@ -1467,8 +1642,9 @@ th a.active .sort-icon {
 
 .modal-header-medium,
 .modal-footer-medium {
-    max-width: 900px; /* menos ancho que el modal principal */
-    width: calc(100% - 2rem); /* margen lateral interno */
+    max-width: 900px;
+    /*
+       width: calc(100% - 2rem); /* margen lateral interno */
     margin: 0 auto; /* centrar dentro del modal */
     padding-left: 1rem; /* reducir padding lateral */
     padding-right: 1rem;
