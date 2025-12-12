@@ -57,21 +57,16 @@
         {% endfor %}
         </tbody>
     </table>
+    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}">
+        <div class="no-results-content empty-db-msg {% if not catalogs %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-inbox no-results-icon"></i>
+            <p class="no-results-text">No hay catálogos registrados.</p>
+        </div>
 
-    {# Overlay absolute para mensajes "no resultados" o BD vacía #}
-    {% comment %} Si la BD está vacía mostramos el mensaje de inbox; si hay registros el overlay queda oculto y lo muestra JS cuando no hay coincidencias de búsqueda. {% endcomment %}
-    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}"
-         aria-hidden="{% if catalogs %}true{% else %}false{% endif %}">
-        {% if not catalogs %}
-            <div class="no-results-content">
-                <i class="fas fa-inbox no-results-icon"></i>
-                <p class="no-results-text">No hay catálogos registrados en el sistema.</p>
-            </div>
-        {% else %}
-            <div class="no-results-content hidden" id="no-results-placeholder">
-                <i class="fas fa-search no-results-icon"></i>
-                <p class="no-results-text">No se encontraron resultados.</p>
-            </div>
-        {% endif %}
+        <!-- Mensaje 2: Búsqueda sin coincidencias -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
     </div>
 </div>

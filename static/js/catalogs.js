@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableBody = document.getElementById('table-body');
     const searchInput = document.getElementById('table-search');
     const overlay = document.querySelector('.no-results-overlay');
-
+    const searchMsg = document.getElementById('no-results-placeholder');
+    const emptyDbMsg = document.querySelector('.empty-db-msg');
     // Estado de la tabla
     const pageSize = 10;
     let currentPage = 1;
@@ -21,32 +22,50 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renderiza la tabla (Controla visibilidad y paginación)
      */
     function renderTable() {
-        // 1. Validar rangos de página
         const totalRows = filteredRows.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
+
+        // Validar pagina actual
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
 
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
 
-        // 2. Ocultar TODAS las filas primero (Reset)
+        // 1. Ocultar TODAS las filas primero
         allRows.forEach(row => row.style.display = 'none');
 
-        // 3. Lógica de Overlay (Mensajes de vacío)
+        // 2. Lógica de Overlay y Mensajes
+        const isSearchActive = searchInput && searchInput.value.trim() !== '';
+        const isDatabaseReallyEmpty = allRows.length === 0;
+
         if (totalRows === 0) {
-            // No hay resultados (ni por búsqueda ni en BD)
+            // --- ESCENARIO: NO HAY FILAS QUE MOSTRAR ---
             if (overlay) overlay.classList.remove('hidden');
+
+            if (isSearchActive && !isDatabaseReallyEmpty) {
+                // Caso A: Hay datos en BD, pero la búsqueda falló -> Mostrar Lupa
+                if (emptyDbMsg) emptyDbMsg.classList.add('hidden');
+                if (searchMsg) searchMsg.classList.remove('hidden');
+            } else {
+                // Caso B: La BD está vacía -> Mostrar Inbox
+                if (emptyDbMsg) emptyDbMsg.classList.remove('hidden');
+                if (searchMsg) searchMsg.classList.add('hidden');
+            }
+
         } else {
-            // Si hay resultados, ocultar overlay y mostrar el slice correspondiente
+            // --- ESCENARIO: HAY FILAS VISIBLES ---
             if (overlay) overlay.classList.add('hidden');
 
+            // Resetear mensajes para la próxima
+            if (searchMsg) searchMsg.classList.add('hidden');
+
+            // Mostrar el bloque de filas correspondiente
             filteredRows.slice(start, end).forEach(row => {
-                row.style.display = ''; // table-row
+                row.style.display = '';
             });
         }
 
-        // 4. Actualizar Info Paginación UI
         updatePaginationUI(totalRows, totalPages, start, end);
     }
 
