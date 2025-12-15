@@ -36,13 +36,18 @@
             </a>
 
             <!-- SUBMENÚ -->
-            <!-- AQUÍ: || sidebarCollapsed es OBLIGATORIO para que el HTML exista y el CSS hover funcione -->
             <ul class="submenu" v-show="activeSubmenu === 'settings'">
-                <li class="submenu-title">Ajustes</li> <!-- Título del flotante -->
+                <li class="submenu-title">Ajustes</li>
                 <li>
                     <a href="{% url 'core:catalog_list' %}">
                         <i class="fa-solid fa-list-check"></i>
                         <span class="menu-text">Catálogos</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'core:location_list' %}">
+                        <i class="fa-solid fa-map-location"></i>
+                        <span class="menu-text">Ubicaciones</span>
                     </a>
                 </li>
             </ul>

@@ -1,10 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
+            <th><i class="fa-duotone fa-solid fa-sitemap"></i> Nivel</th>
+            <th><i class="fa-duotone fa-solid fa-indent"></i> Padre</th>
+            <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
+            <th><i class="fas fa-cogs"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for location in locations %}
+            <!-- ID ÚNICO PARA LA FILA: row-ID -->
+            <tr class="location-row" id="row-{{ location.id }}"
+                data-status="{{ location.is_active|yesno:'true,false' }}">
+                <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
 
-</body>
-</html>
+                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
+                <td>
+                    {% if location.level < 4 %}
+                        <!-- Es un link para ver sus hijos -->
+                        <a href="#" class="link"
+                           data-filter-parent="{{ location.pk }}"
+                           title="Ver contenido de {{ location.name }}">
+                            {{ location.name }}
+                        </a>
+                    {% else %}
+                        <span>{{ location.name }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="status-badge general">{{ location.level_label }}</span>
+                </td>
+                <td>
+                    {% if location.parent %}
+                        <a href="#"
+                           data-filter-parent="{{ location.parent.parent_id|default:'ROOT' }}"
+                           title="Volver al listado superior">
+                            {{ location.parent.name }}
+                        </a>
+                    {% else %}
+                        <span>- Raíz -</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <!-- ID ÚNICO PARA EL BADGE -->
+                    <span id="badge-{{ location.id }}"
+                          class="status-badge {% if location.is_active %}active{% else %}inactive{% endif %}">
+                    {% if location.is_active %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                </td>
+
+                <td>
+                    <div class="actions-wrapper">
+                        <button type="button" class="btn-icon btn-create-action"
+                                onclick="openCreateItem({{ location.id }}, '{{ location.name|escapejs }}')"
+                                title="Agregar dependencia de {{ location.name }}">
+                            <i class="fas fa-plus"></i>
+                        </button>
+
+                        <button type="button" class="btn-icon btn-views-action"
+                                onclick="openEditCatalog({{ location.id }})"
+                                title="Editar">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+
+                        <!-- Toggle Button con TODOS los datos necesarios -->
+                        <button type="button"
+                                class="btn-icon"
+                                onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' location.id %}', '{{ location.name|escapejs }}', {{ location.id }})"
+                                title="{% if location.is_active %}Desactivar{% else %}Activar{% endif %}">
+                            <i class="fas {% if location.is_active %}fa-toggle-on text-success{% else %}fa-toggle-off text-danger{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="no-results-overlay {% if locations %}hidden{% endif %}">
+        <div class="no-results-content empty-db-msg {% if not locations %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-inbox no-results-icon"></i>
+            <p class="no-results-text">No hay ubicaciones registradas.</p>
+        </div>
+
+        <!-- Mensaje 2: Búsqueda sin coincidencias -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+    </div>
+</div>

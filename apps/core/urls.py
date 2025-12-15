@@ -30,4 +30,9 @@ urlpatterns = [
     path('settings/items/detail/<int:pk>/', views.item_detail_json, name='item_detail'),
     path('settings/items/update/<int:pk>/', views.CatalogItemUpdateView.as_view(), name='item_update'),
     path('settings/items/toggle/<int:pk>/', views.item_toggle_status, name='item_toggle'),
+
+    # --- Locations ---
+    path('settings/locations/', views.LocationListView.as_view(), name='location_list'),
+    path('settings/locations/create/', views.LocationCreateView.as_view(), name='location_create'),
+    path('settings/locations/update/<int:pk>/', views.LocationUpdateView.as_view(), name='location_update'),
 ]

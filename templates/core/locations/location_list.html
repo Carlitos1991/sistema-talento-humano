@@ -1,10 +1,87 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Ubicaciones | SIGETH{% endblock %}
 
-</body>
-</html>
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión de Ubicaciones</h1>
+            <p>Administra la estructura geográfica.</p>
+        </div>
+        {#        {% if perms.core.add_catalog %}#}
+        <button id="btn-add-location" type="button" data-modal-open="location-modal"
+                aria-controls="location-modal" aria-expanded="false" data-url="#"
+                class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-location-form">
+            <i class="fas fa-plus"></i> Nuevo Ubicación
+        </button>
+        {#        {% endif %}#}
+    </div>
+    <!-- 2. Estadísticas -->
+    <div class="stats-row">
+        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-country">
+            <div class="stat-left">
+                <h3>Paises</h3>
+                <div class="number" id="stat-country"> {{ stats_country|default:"0" }}</div>
+            </div>
+            <i class="fa-solid fa-earth-americas stat-icon"></i>
+        </div>
+        <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-province">
+            <div class="stat-left"><h3>Provincias</h3>
+                <div class="number" id="stat-province">{{ stats_province|default:"0" }}</div>
+            </div>
+            <i class="fa-regular fa-map stat-icon"></i>
+        </div>
+        <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-city">
+            <div class="stat-left"><h3>Ciudades</h3>
+                <div class="number" id="stat-city">{{ stats_city|default:"0" }}</div>
+            </div>
+            <i class="fa-solid fa-city stat-icon"></i>
+
+        </div>
+        <div class="stat-card color-four" onclick="filterByStatus('false')" id="card-filter-parish">
+            <div class="stat-left"><h3>Parroquias</h3>
+                <div class="number" id="stat-parish">{{ stats_parish|default:"0" }}</div>
+            </div>
+            <i class="fa-solid fa-location-dot stat-icon"></i>
+        </div>
+    </div>
+    <!-- 3. Contenedor principal Tabla (AJAX) -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field"
+                           placeholder="Buscar en la tabla">
+                </div>
+            </div>
+            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+            <div id="table-content-wrapper">
+                {% include 'core/locations/partials/partial_location_table.html' %}
+            </div>
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li>
+                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                    </li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block modals %}
+    {% include 'core/locations/modals/modal_location_form.html' %}
+    {% include 'core/locations/modals/modal_children_form.html' %}
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/locations.js' %}"></script>
+{% endblock %}

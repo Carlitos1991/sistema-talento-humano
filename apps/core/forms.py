@@ -1,6 +1,6 @@
 # apps/core/forms.py
 from django import forms
-from .models import User, Catalog, CatalogItem
+from .models import User, Catalog, CatalogItem, Location
 
 
 class BaseFormMixin:
@@ -78,6 +78,33 @@ class CatalogItemForm(forms.ModelForm):
         if code:
             return code.upper()
         return code
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name:
+            return name.upper()
+        return name
+
+
+class LocationForm(forms.ModelForm):
+    """
+    Formulario para creación y edición de Catálogos.
+    Mantiene el control total de los campos y validaciones backend.
+    """
+
+    class Meta:
+        model = Location
+        fields = ['name', 'level', 'parent']  # Ajusta según tu modelo real
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'input-field uppercase-input', 'id': 'loc_name'}),
+            'level': forms.NumberInput(attrs={'class': 'input-field', 'id': 'loc_level', 'min': '1'}),
+            'parent': forms.Select(attrs={'class': 'input-field select2-field', 'id': 'loc_parent'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['parent'].queryset = Location.objects.filter(is_active=True).order_by('level', 'name')
+        self.fields['parent'].empty_label = "--------- (Raíz) ---------"
 
     def clean_name(self):
         name = self.cleaned_data.get('name')

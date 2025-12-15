@@ -5,9 +5,9 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.views.generic import TemplateView, ListView, UpdateView
-from .forms import CatalogForm, CatalogItemForm
+from .forms import CatalogForm, CatalogItemForm, LocationForm
 from .forms import UserProfileForm
-from .models import Catalog, CatalogItem
+from .models import Catalog, CatalogItem, Location
 from .models import User
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
@@ -264,3 +264,82 @@ def item_toggle_status(request, pk):
         'message': f'Item "{item.name}" {"activado" if item.is_active else "desactivado"}.',
         'is_active': item.is_active
     })
+
+
+# Ubicaciones
+def get_location_stats_dict():
+    """Retorna un diccionario con las estadísticas actuales de Catálogos."""
+    return {
+        'country': Location.objects.filter(level=1).count(),
+        'province': Location.objects.filter(level=2).count(),
+        'city': Location.objects.filter(level=3).count(),
+        'parish': Location.objects.filter(level=4).count(),
+    }
+
+
+class LocationListView(LoginRequiredMixin, ListView):
+    model = Location
+    template_name = 'core/locations/location_list.html'
+    context_object_name = 'locations'
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        qs = Location.objects.all()
+
+        if query:
+            qs = qs.filter(name__icontains=query)
+        return qs.order_by('-created_at')[:200]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = LocationForm()
+        stats = get_location_stats_dict()
+        context['stats_country'] = stats['country']
+        context['stats_province'] = stats['province']
+        context['stats_city'] = stats['city']
+        context['stats_parish'] = stats['parish']
+        return context
+
+
+class LocationCreateView(LoginRequiredMixin, CreateView):
+    model = Location
+    form_class = LocationForm
+    template_name = 'core/locations/modals/modal_location_form.html'
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            location = form.save()
+            stats = get_location_stats_dict()
+            return JsonResponse({
+                'success': True,
+                'message': 'Ubicación creada correctamente.',
+                'data': {'id': location.id, 'name': location.name, 'new_stats': stats}
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+
+
+class LocationUpdateView(LoginRequiredMixin, UpdateView):
+    model = Location
+    form_class = LocationForm
+    template_name = 'core/locations/modals/modal_location_form.html'
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()  # Obtener la instancia a editar
+        form = self.get_form()
+
+        if form.is_valid():
+            location = form.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Ubicación actualizada correctamente.',
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)

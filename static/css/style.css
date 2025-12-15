@@ -422,6 +422,11 @@ h1, h2, h3, h4, h5, h6 {
     padding: 5px 0;
 }
 
+.sidebar.collapsed .submenu {
+    display: none !important;
+}
+
+
 /* 4. Título del Menú Flotante (Barra Gris) */
 .sidebar.collapsed .has-submenu:hover .submenu .submenu-title {
     display: none !important;
@@ -887,6 +892,12 @@ h1, h2, h3, h4, h5, h6 {
     color: #64748b;
     font-size: 1rem;
     font-weight: 500;
+}
+
+.link {
+    color: #004dba;
+    text-decoration: none;
+    font-weight: 600;
 }
 
 /* =========================================
@@ -1400,6 +1411,11 @@ th a.active .sort-icon {
 .status-badge.inactive {
     background-color: #fee2e2;
     color: #991b1b;
+}
+
+.status-badge.general {
+    background-color: #8ddde3;
+    color: #0547e4;
 }
 
 /* Acciones en tabla */

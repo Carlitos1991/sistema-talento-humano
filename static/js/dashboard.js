@@ -6,36 +6,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('mainLayout')) {
         createApp({
             setup() {
-                // 1. LEER ESTADO GUARDADO (LocalStorage)
-                // Si no existe, por defecto es false (expandido)
+                // 1. Cargar estado desde LocalStorage
                 const storedState = localStorage.getItem('sidebar_collapsed') === 'true';
-
-                // Inicializamos la variable reactiva con el valor guardado
                 const sidebarCollapsed = ref(storedState);
                 const userMenuOpen = ref(false);
 
-                // Lógica para determinar qué menú está activo según la URL actual
-                const currentPath = window.location.pathname;
-                const activeSubmenu = ref(
-                    currentPath.includes('/settings/') ? 'settings' : null
-                );
+                // 2. CAMBIO: Inicializar SIEMPRE en null (Cerrado)
+                // Antes verificaba la URL, ahora forzamos a que empiece cerrado.
+                const activeSubmenu = ref(null);
 
-                // --- FUNCIÓN TOGGLE SIDEBAR (MODIFICADA) ---
+                // --- Función Toggle Sidebar ---
                 const toggleSidebar = () => {
                     sidebarCollapsed.value = !sidebarCollapsed.value;
-
-                    // 2. GUARDAR EL NUEVO ESTADO EN EL NAVEGADOR
                     localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value);
 
-                    // Al colapsar, forzamos cierre de menús para limpieza visual
-                    if (sidebarCollapsed.value) {
-                        activeSubmenu.value = null;
-                    } else {
-                        // Opcional: Al expandir, si estamos en una sección, reabrirla
-                        if (currentPath.includes('/settings/')) {
-                            activeSubmenu.value = 'settings';
-                        }
-                    }
+                    // Al colapsar o expandir, cerramos cualquier menú abierto
+                    // para mantener la interfaz limpia hasta que el usuario haga clic.
+                    activeSubmenu.value = null;
                 };
 
                 const toggleUserMenu = () => {
@@ -46,12 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     userMenuOpen.value = false;
                 };
 
+                // Función Toggle Submenú (Click en la flecha/texto "Ajustes")
                 const toggleSubmenu = (menuName) => {
-                    // Si está colapsado, no hacemos nada (el CSS hover se encarga)
+                    // Si está colapsado, no permitimos abrir el acordeón manualmente
+                    // (El CSS se encarga del menú flotante)
                     if (sidebarCollapsed.value) {
                         return;
                     }
-                    // Comportamiento acordeón normal
+
+                    // Comportamiento normal: Abrir/Cerrar al hacer clic
                     activeSubmenu.value = activeSubmenu.value === menuName ? null : menuName;
                 };
 
