@@ -1,5 +1,3 @@
-/* static/js/dashboard.js */
-
 document.addEventListener('DOMContentLoaded', () => {
     const {createApp, ref} = Vue;
 
@@ -12,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userMenuOpen = ref(false);
 
                 // 2. CAMBIO: Inicializar SIEMPRE en null (Cerrado)
-                // Antes verificaba la URL, ahora forzamos a que empiece cerrado.
                 const activeSubmenu = ref(null);
 
                 // --- Función Toggle Sidebar ---
@@ -21,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value);
 
                     // Al colapsar o expandir, cerramos cualquier menú abierto
-                    // para mantener la interfaz limpia hasta que el usuario haga clic.
                     activeSubmenu.value = null;
                 };
 
@@ -33,10 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     userMenuOpen.value = false;
                 };
 
-                // Función Toggle Submenú (Click en la flecha/texto "Ajustes")
+                // Función Toggle Submenú
                 const toggleSubmenu = (menuName) => {
-                    // Si está colapsado, no permitimos abrir el acordeón manualmente
-                    // (El CSS se encarga del menú flotante)
                     if (sidebarCollapsed.value) {
                         return;
                     }

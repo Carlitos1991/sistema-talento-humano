@@ -9,7 +9,7 @@ from .forms import CatalogForm, CatalogItemForm, LocationForm
 from .forms import UserProfileForm
 from .models import Catalog, CatalogItem, Location
 from .models import User
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 
@@ -172,6 +172,7 @@ def catalog_toggle_status(request, pk):
 
 
 # --- 5. ITEMS DE CATÁLOGO  ---
+# --- 5.1 CREAR ITEMS ---
 class CatalogItemCreateView(LoginRequiredMixin, CreateView):
     model = CatalogItem
     form_class = CatalogItemForm
@@ -239,6 +240,7 @@ def item_detail_json(request, pk):
     })
 
 
+# --- 5.2 ACTUALIZAR ITEMS ---
 class CatalogItemUpdateView(LoginRequiredMixin, UpdateView):
     model = CatalogItem
     form_class = CatalogItemForm
@@ -254,6 +256,7 @@ class CatalogItemUpdateView(LoginRequiredMixin, UpdateView):
             return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+# --- 5.3 CAMBIAR ESTADO ITEMS ---
 @require_POST
 def item_toggle_status(request, pk):
     """Activar/Inactivar Item"""
@@ -266,7 +269,7 @@ def item_toggle_status(request, pk):
     })
 
 
-# Ubicaciones
+# --- 6. UBICACIONES ---
 def get_location_stats_dict():
     """Retorna un diccionario con las estadísticas actuales de Catálogos."""
     return {
@@ -277,28 +280,70 @@ def get_location_stats_dict():
     }
 
 
+# --- 6.1 LISTA DE UBICACIONES ---
 class LocationListView(LoginRequiredMixin, ListView):
     model = Location
     template_name = 'core/locations/location_list.html'
     context_object_name = 'locations'
 
     def get_queryset(self):
+        level = self.request.GET.get('level')
+        parent_id = self.request.GET.get('parent_id')
         query = self.request.GET.get('q')
-        qs = Location.objects.all()
+
+        qs = Location.objects.all().order_by('name')
+
+        if parent_id:
+            qs = qs.filter(parent_id=parent_id)
+        elif level and level != 'all':
+            qs = qs.filter(level=level)
+        else:
+            if not query:
+                qs = qs.filter(level=1)
 
         if query:
             qs = qs.filter(name__icontains=query)
-        return qs.order_by('-created_at')[:200]
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = LocationForm()
-        stats = get_location_stats_dict()
-        context['stats_country'] = stats['country']
-        context['stats_province'] = stats['province']
-        context['stats_city'] = stats['city']
-        context['stats_parish'] = stats['parish']
+
+        # Stats
+        base_stats = Location.objects.filter(is_active=True)
+        context['stats_country'] = base_stats.filter(level=1).count()
+        context['stats_province'] = base_stats.filter(level=2).count()
+        context['stats_city'] = base_stats.filter(level=3).count()
+        context['stats_parish'] = base_stats.filter(level=4).count()
+
+        # --- LÓGICA DE NIVEL VISUAL (Para iluminar los stats) ---
+        parent_id = self.request.GET.get('parent_id')
+        level = self.request.GET.get('level')
+
+        current_display_level = '1'  # Por defecto Paises
+
+        if parent_id:
+            # Si estamos filtrando por padre, estamos viendo el nivel de sus hijos.
+            # Buscamos al padre para saber su nivel + 1
+            try:
+                parent = Location.objects.get(pk=parent_id)
+                current_display_level = str(parent.level + 1)
+            except Location.DoesNotExist:
+                pass
+        elif level and level != 'all':
+            current_display_level = str(level)
+
+        context['current_display_level'] = current_display_level
+
         return context
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            return render(request, 'core/locations/partials/partial_location_table.html', context)
+        return super().get(request, *args, **kwargs)
 
 
 class LocationCreateView(LoginRequiredMixin, CreateView):
@@ -343,3 +388,39 @@ class LocationUpdateView(LoginRequiredMixin, UpdateView):
                 'success': False,
                 'errors': form.errors
             }, status=400)
+
+
+def location_detail_json(request, pk):
+    """
+    Retorna los datos de una ubicación.
+    Útil para editar y para calcular el nivel de una nueva ubicación hija.
+    """
+    location = get_object_or_404(Location, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': location.id,
+            'name': location.name,
+            'level': location.level,
+            'parent': location.parent_id,
+            'parent_name': location.parent.name if location.parent else None
+        }
+    })
+
+
+@require_POST
+def location_toggle_status(request, pk):
+    """Alterna el estado de una Ubicación"""
+    location = get_object_or_404(Location, pk=pk)
+    location.toggle_status()
+
+    status_label = "activada" if location.is_active else "desactivada"
+
+    # Recalculamos estadísticas para devolverlas si fuera necesario
+    stats = get_location_stats_dict()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'La ubicación "{location.name}" ha sido {status_label} correctamente.',
+        'new_stats': stats
+    })

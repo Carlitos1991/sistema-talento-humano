@@ -1,10 +1,66 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<div id="location-create-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" id="location-modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>[[ modalTitle ]]</h2>
+                <button type="button" class="btn-close-modal" @click="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
-</body>
-</html>
+            <form @submit.prevent="submitLocation">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <!-- Campo Nombre -->
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            <i class="fa-solid fa-signature"></i> {{ form.name.label }} (*)
+                        </label>
+                        {{ form.name }}
+                        <div class="error-message-container" v-if="errors.name">
+                            <span class="text-error" v-for="err in errors.name">[[ err ]]</span>
+                        </div>
+                    </div>
+
+                    <!-- Campo Padre -->
+                    <div class="form-group" v-if="form.level > 1">
+                        <label class="form-label">
+                            <i class="fa-solid fa-arrow-up-from-bracket"></i> Pertenece a (Padre)
+                        </label>
+                        <!-- Input visual (Nombre del padre: ECUADOR...) -->
+                        <input type="text"
+                               class="input-field"
+                               :value="parentNameDisplay"
+                               readonly
+                               style="background-color: #f8fafc; color: #64748b; font-weight: 600; cursor: not-allowed;">
+
+                        <!-- Input oculto para el ID -->
+                        <input type="hidden" v-model="form.parent">
+                    </div>
+                    <!-- Campo Nivel -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fa-solid fa-layer-group"></i> Nivel Jerárquico
+                        </label>
+                        <!-- Input visual (Texto: País, Provincia...) -->
+                        <input type="text"
+                               class="input-field"
+                               :value="levelLabel"
+                               readonly
+                               style="background-color: #f8fafc; color: #64748b; font-weight: 600; cursor: not-allowed;">
+
+                        <!-- Input oculto para enviar el valor real (1, 2, 3...) -->
+                        <input type="hidden" v-model="form.level">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

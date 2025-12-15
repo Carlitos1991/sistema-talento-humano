@@ -1,7 +1,9 @@
+/* static/js/locations.js */
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // =========================================================
-    // 1. GESTIÓN DE LA TABLA PRINCIPAL (Buscador, Paginación y DOM)
+    // 1. GESTIÓN DE LA TABLA PRINCIPAL
     // =========================================================
     const tableBody = document.getElementById('table-body');
     const searchInput = document.getElementById('table-search');
@@ -14,13 +16,52 @@ document.addEventListener('DOMContentLoaded', () => {
     let allRows = Array.from(document.querySelectorAll('tr.location-row'));
     let filteredRows = allRows;
     let currentSearchTerm = '';
-    let currentStatusFilter = 'all';
 
-    function applyFilters() {
-        allRows = Array.from(document.querySelectorAll('tr.location-row'));
+    // Estado global de filtros
+    let currentFilters = {
+        level: 'all',
+        parent_id: null,
+        q: '',
+        page: 1
+    };
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+
+    // Función para iluminar las tarjetas (Stats)
+    function updateStatsUI(activeLevel) {
+        const cards = {
+            '1': document.getElementById('card-filter-1'),
+            '2': document.getElementById('card-filter-2'),
+            '3': document.getElementById('card-filter-3'),
+            '4': document.getElementById('card-filter-4')
+        };
+
+        Object.keys(cards).forEach(key => {
+            const card = cards[key];
+            if (card) {
+                // Si el nivel coincide, quitamos la opacidad
+                if (String(activeLevel) === String(key)) {
+                    card.classList.remove('opacity-low');
+                } else {
+                    // Si no coincide, lo ponemos tenue
+                    card.classList.add('opacity-low');
+                }
+            }
+        });
+    }
+
+    // --- FUNCIÓN DE FILTRADO LOCAL (Buscador) ---
+    function applyLocalSearch() {
         filteredRows = allRows.filter(row => {
-            const rowStatus = row.dataset.status;
-            if (currentStatusFilter !== 'all' && rowStatus !== currentStatusFilter) return false;
             if (currentSearchTerm && !row.innerText.toLowerCase().includes(currentSearchTerm)) return false;
             return true;
         });
@@ -28,9 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable();
     }
 
+    // --- FUNCIÓN DE RENDERIZADO (Paginación) ---
     function renderTable() {
         const totalRows = filteredRows.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
+
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
 
@@ -38,11 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = start + pageSize;
 
         allRows.forEach(row => row.style.display = 'none');
-        const isDatabaseReallyEmpty = allRows.length === 0;
+        const isListEmpty = allRows.length === 0;
 
         if (totalRows === 0) {
             if (overlay) overlay.classList.remove('hidden');
-            if (!isDatabaseReallyEmpty) {
+
+            if (!isListEmpty) {
                 if (emptyDbMsg) emptyDbMsg.classList.add('hidden');
                 if (searchMsg) searchMsg.classList.remove('hidden');
             } else {
@@ -90,179 +134,138 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (searchInput) {
-        let timeout = null;
+        let timeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 currentSearchTerm = e.target.value.toLowerCase().trim();
-                applyFilters();
+                applyLocalSearch();
             }, 100);
         });
     }
 
-    window.filterByStatus = function (status) {
-        currentStatusFilter = status;
-        const cards = {
-            'all': document.getElementById('card-filter-all'),
-            'true': document.getElementById('card-filter-active'),
-            'false': document.getElementById('card-filter-inactive')
-        };
-        Object.values(cards).forEach(c => {
-            if (c) c.classList.add('opacity-low');
-        });
-        const selected = cards[status];
-        if (selected) selected.classList.remove('opacity-low');
-        applyFilters();
-    };
-
     // =========================================================
-    // 2. DOM MANIPULATION (Insertar / Actualizar)
+    // 2. LÓGICA DE CARGA BACKEND (AJAX)
     // =========================================================
-    window.insertNewRow = function (data) {
-        if (!tableBody) return;
-        const toggleUrl = `/settings/locations/toggle/${data.id}/`;
-        const newRowHTML = `
-            <tr class="location-row" id="row-${data.id}" data-status="true">
-                <td><span class="badge-new" style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:0.8em;">Nuevo</span></td>
-                <td class="location-name-cell">${data.name}</td>
-                <td><span id="badge-${data.id}" class="status-badge active">Activo</span></td>
-                <td>
-                    <div class="actions-wrapper">
-                        <button type="button" class="btn-icon btn-create-action" 
-                                onclick="openCreateItem(${data.id}, '${data.name}')" title="Agregar Item">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="btn-icon btn-list-action" title="Listar Items"
-                                onclick="openListItems(${data.id}, '${data.name}')">
-                            <i class="fas fa-list"></i>
-                        </button>
-                        <button type="button" class="btn-icon btn-views-action"
-                                onclick="openEditLocation(${data.id})" title="Editar">
-                            <i class="fas fa-pencil"></i>
-                        </button>
-                        <button type="button" class="btn-icon"
-                                onclick="toggleLocationStatus(this, '${toggleUrl}', '${data.name}', ${data.id})"
-                                title="Desactivar">
-                            <i class="fas fa-toggle-on text-success"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-        tableBody.insertAdjacentHTML('afterbegin', newRowHTML);
-        applyFilters();
-    };
 
-    window.updateRowDOM = function (id, newName) {
-        const row = document.getElementById(`row-${id}`);
-        if (row) {
-            const nameCell = row.querySelector('.location-name-cell');
-            if (nameCell) nameCell.textContent = newName;
+    async function loadLocations() {
+        const params = new URLSearchParams();
+
+        if (currentFilters.parent_id) {
+            params.append('parent_id', currentFilters.parent_id);
+        } else if (currentFilters.level && currentFilters.level !== 'all') {
+            params.append('level', currentFilters.level);
         }
-    };
 
-    // =========================================================
-    // 3. FUNCIONES GLOBALES (Toggle y Stats)
-    // =========================================================
-    window.updateDashboardStats = function (stats) {
-        if (!stats) return;
-        const elTotal = document.getElementById('stat-total');
-        const elActive = document.getElementById('stat-active');
-        const elInactive = document.getElementById('stat-inactive');
-        if (elTotal) elTotal.textContent = stats.total;
-        if (elActive) elActive.textContent = stats.active;
-        if (elInactive) elInactive.textContent = stats.inactive;
-    };
+        if (currentFilters.q) params.append('q', currentFilters.q);
+        // Siempre pedimos página 1 al backend porque la paginación real la hacemos en frontend (híbrido)
+        // o si quisieras paginación backend, aquí iría currentFilters.page
 
-    window.toggleLocationStatus = async (btnElement, url, name, locationId) => {
-        const icon = btnElement.querySelector('i');
-        const isCurrentlyActive = icon.classList.contains('fa-toggle-on');
-        const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
-        const confirmColor = isCurrentlyActive ? '#dc2626' : '#10b981';
+        const url = `/settings/locations/?${params.toString()}`;
 
-        const result = await Swal.fire({
-            title: `¿${actionVerb} catálogo?`,
-            text: `Vas a ${actionVerb.toLowerCase()} "${name}".`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: confirmColor,
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sí, cambiar',
-            cancelButtonText: 'Cancelar'
-        });
+        try {
+            const response = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            if (response.ok) {
+                const html = await response.text();
+                const wrapper = document.getElementById('table-content-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = html;
 
-        if (result.isConfirmed) {
-            try {
-                const formData = new FormData();
-                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                const response = await fetch(url, {
-                    method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const data = await response.json();
+                    // REINICIALIZAR FILAS LOCALES
+                    allRows = Array.from(document.querySelectorAll('tr.location-row'));
+                    filteredRows = allRows;
+                    currentPage = 1;
+                    renderTable();
 
-                if (data.success) {
-                    const Toast = Swal.mixin({
-                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
-                    });
-                    Toast.fire({icon: 'success', title: data.message});
-
-                    if (data.new_stats) window.updateDashboardStats(data.new_stats);
-
-                    const row = document.getElementById(`row-${locationId}`);
-                    const badge = document.getElementById(`badge-${locationId}`);
-
-                    if (isCurrentlyActive) {
-                        icon.className = 'fas fa-toggle-off text-danger';
-                        btnElement.title = "Activar";
-                        if (badge) {
-                            badge.className = 'status-badge inactive';
-                            badge.textContent = 'Inactivo';
-                        }
-                        if (row) row.dataset.status = "false";
-                    } else {
-                        icon.className = 'fas fa-toggle-on text-success';
-                        btnElement.title = "Desactivar";
-                        if (badge) {
-                            badge.className = 'status-badge active';
-                            badge.textContent = 'Activo';
-                        }
-                        if (row) row.dataset.status = "true";
+                    // ACTUALIZAR CARDS SEGÚN RESPUESTA DEL SERVER
+                    const levelIndicator = document.getElementById('server-level-indicator');
+                    if (levelIndicator && levelIndicator.value) {
+                        updateStatsUI(levelIndicator.value);
                     }
-                    applyFilters();
-                } else {
-                    Swal.fire('Error', data.message, 'error');
                 }
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'Error de conexión', 'error');
             }
+        } catch (error) {
+            console.error('Error loading locations:', error);
         }
+    }
+
+    // --- FUNCIONES GLOBALES DE FILTRADO ---
+
+    window.filterByParent = function (parentId) {
+        currentFilters.level = null;
+        currentFilters.parent_id = parentId;
+        loadLocations();
+    };
+
+    window.filterByLevel = function (level) {
+        currentFilters.level = level;
+        currentFilters.parent_id = null; // Resetear padre para ver listado completo de ese nivel
+
+        // CORRECCIÓN DEL ERROR AQUÍ: Usamos 'key' consistentemente
+        const cards = {
+            '1': document.getElementById('card-filter-1'),
+            '2': document.getElementById('card-filter-2'),
+            '3': document.getElementById('card-filter-3'),
+            '4': document.getElementById('card-filter-4')
+        };
+        Object.keys(cards).forEach(key => {
+            const card = cards[key];
+            if (card) {
+                if (level === 'all' || level === key) { // Ahora 'key' existe
+                    card.classList.remove('opacity-low');
+                } else {
+                    card.classList.add('opacity-low');
+                }
+            }
+        });
+
+        loadLocations();
     };
 
 
     // =========================================================
-    // 4. MODALES VUE (Crear/Editar Catálogo)
+    // 3. MODAL VUE (Crear/Editar)
     // =========================================================
-    const CATALOG_MOUNT_ID = '#location-create-app   ';
+    const LOCATION_MOUNT_ID = '#location-create-app';
 
-    if (document.querySelector(CATALOG_MOUNT_ID)) {
+    if (document.querySelector(LOCATION_MOUNT_ID)) {
         const {createApp} = Vue;
-        const appCatalog = createApp({
+
+        const appLocation = createApp({
             delimiters: ['[[', ']]'],
             data() {
-                return {isVisible: false, isEditing: false, currentId: null, form: {name: '', code: ''}, errors: {}}
+                return {
+                    isVisible: false, isEditing: false, currentId: null,
+                    parentNameDisplay: '',
+                    form: {name: '', level: 1, parent: ''},
+                    errors: {}
+                }
             },
             computed: {
                 modalTitle() {
-                    return this.isEditing ? 'Editar Catálogo' : 'Nuevo Catálogo';
+                    if (this.isEditing) return 'Editar Ubicación';
+                    if (this.form.level === 1) return `Nuevo PAÍS`;
+                    return `Nueva ${this.levelLabel} de ${this.parentNameDisplay}`;
+                },
+                levelLabel() {
+                    const map = {1: 'PAÍS', 2: 'PROVINCIA', 3: 'CIUDAD', 4: 'PARROQUIA'};
+                    return map[this.form.level] || 'UBICACIÓN';
                 }
             },
             methods: {
-                openCreate() {
+                openCreate(parentData = null) {
                     this.isEditing = false;
                     this.currentId = null;
-                    this.form = {name: '', code: ''};
                     this.errors = {};
+                    if (parentData) {
+                        let nextLevel = parseInt(parentData.level) + 1;
+                        if (nextLevel > 4) nextLevel = 4;
+                        this.form = {name: '', level: nextLevel, parent: parentData.id};
+                        this.parentNameDisplay = parentData.name;
+                    } else {
+                        this.form = {name: '', level: 1, parent: ''};
+                        this.parentNameDisplay = '- Raíz -';
+                    }
                     this.isVisible = true;
                 },
                 closeModal() {
@@ -276,285 +279,114 @@ document.addEventListener('DOMContentLoaded', () => {
                         const response = await fetch(`/settings/locations/detail/${id}/`);
                         const result = await response.json();
                         if (result.success) {
-                            this.form = result.data;
+                            this.form = result.data; // {name, level, parent}
+                            this.parentNameDisplay = result.data.parent_name || 'Sin Padre';
                             this.isVisible = true;
-                        }
-                    } catch (error) {
-                        Swal.fire('Error', 'Error al cargar datos', 'error');
-                    }
-                },
-                async submitCatalog() {
-                    this.errors = {};
-                    const formData = new FormData();
-                    formData.append('name', this.form.name);
-                    formData.append('code', this.form.code);
-                    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-
-                    let url = '/settings/locations/create/';
-                    if (this.isEditing && this.currentId) url = `/settings/locations/update/${this.currentId}/`;
-
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        const data = await response.json();
-
-                        if (data.success) {
-                            this.closeModal();
-                            const Toast = Swal.mixin({
-                                toast: true,
-                                position: 'top-end',
-                                showConfirmButton: false,
-                                timer: 3000,
-                                timerProgressBar: true
-                            });
-                            Toast.fire({icon: 'success', title: data.message});
-                            if (data.data && data.data.new_stats) window.updateDashboardStats(data.data.new_stats);
-                            if (this.isEditing) {
-                                window.updateRowDOM(this.currentId, this.form.name.toUpperCase());
-                            } else {
-                                window.insertNewRow(data.data);
-                            }
-                        } else {
-                            this.errors = data.errors;
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        Swal.fire('Error', 'Error de servidor', 'error');
-                    }
-                }
-            }
-        });
-        const vmCatalog = appCatalog.mount(CATALOG_MOUNT_ID);
-        const btnNew = document.getElementById('btn-add-location');
-        if (btnNew) btnNew.addEventListener('click', (e) => {
-            e.preventDefault();
-            vmCatalog.openCreate();
-        });
-        window.openEditCatalog = (id) => vmCatalog.loadAndOpenEdit(id);
-    }
-
-
-    // =========================================================
-    // 5. APP VUE: LISTAR ITEMS (CON BUSCADOR Y PAGINACIÓN)
-    // =========================================================
-    const ITEM_LIST_MOUNT = '#item-list-app';
-    let vmItemList = null;
-
-    if (document.querySelector(ITEM_LIST_MOUNT)) {
-        const {createApp} = Vue;
-        const appList = createApp({
-            delimiters: ['[[', ']]'],
-            data() {
-                return {
-                    isVisible: false,
-                    locationId: null,
-                    locationName: '',
-                    items: [],
-
-                    // --- Estado para Paginación y Búsqueda ---
-                    searchQuery: '',
-                    currentPage: 1,
-                    pageSize: 5 // Cantidad de items por página en el modal
-                }
-            },
-            computed: {
-                // Filtra items por búsqueda
-                filteredItems() {
-                    const term = this.searchQuery.toLowerCase().trim();
-                    if (!term) return this.items;
-                    return this.items.filter(item =>
-                        item.name.toLowerCase().includes(term) ||
-                        item.code.toLowerCase().includes(term)
-                    );
-                },
-                // Calcula total páginas
-                totalPages() {
-                    return Math.ceil(this.filteredItems.length / this.pageSize) || 1;
-                },
-                // Obtiene el slice actual
-                paginatedItems() {
-                    const start = (this.currentPage - 1) * this.pageSize;
-                    const end = start + this.pageSize;
-                    return this.filteredItems.slice(start, end);
-                },
-                // Etiqueta "Mostrando X-Y de Z"
-                paginationLabel() {
-                    const total = this.filteredItems.length;
-                    if (total === 0) return '0 de 0';
-                    const start = (this.currentPage - 1) * this.pageSize + 1;
-                    const end = Math.min(this.currentPage * this.pageSize, total);
-                    return `Mostrando ${start}-${end} de ${total}`;
-                }
-            },
-            methods: {
-                async open(id, name) {
-                    this.locationId = id;
-                    this.locationName = name;
-                    this.searchQuery = ''; // Resetear búsqueda
-                    this.currentPage = 1;  // Resetear página
-                    this.isVisible = true;
-                    await this.fetchItems();
-                },
-                closeModal() {
-                    this.isVisible = false;
-                    this.items = [];
-                },
-                async fetchItems() {
-                    if (!this.locationId) return;
-                    try {
-                        const res = await fetch(`/settings/items/list/${this.locationId}/`);
-                        const data = await res.json();
-                        if (data.success) {
-                            this.items = data.data;
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-                },
-                // --- Paginación ---
-                prevPage() {
-                    if (this.currentPage > 1) this.currentPage--;
-                },
-                nextPage() {
-                    if (this.currentPage < this.totalPages) this.currentPage++;
-                },
-                // --- Acciones ---
-                openCreateFromList() {
-                    if (window.vmItemForm) {
-                        window.vmItemForm.openCreate(this.locationId, this.locationName, true);
-                    }
-                },
-                editItem(itemId) {
-                    if (window.vmItemForm) {
-                        window.vmItemForm.openEdit(itemId, true);
-                    }
-                },
-                async toggleItem(item) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                        const res = await fetch(`/settings/items/toggle/${item.id}/`, {
-                            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            item.is_active = data.is_active;
-                            const Toast = Swal.mixin({
-                                toast: true, position: 'top-end', showConfirmButton: false, timer: 2000
-                            });
-                            Toast.fire({icon: 'success', title: data.message});
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-            }
-        });
-        vmItemList = appList.mount(ITEM_LIST_MOUNT);
-        window.openListItems = (id, name) => {
-            vmItemList.open(id, name);
-        };
-    }
-
-
-    // =========================================================
-    // 6. APP VUE: FORMULARIO ITEM (CREAR / EDITAR)
-    // =========================================================
-    const ITEM_FORM_MOUNT = '#item-create-app';
-
-    if (document.querySelector(ITEM_FORM_MOUNT)) {
-        const {createApp} = Vue;
-        const appItemForm = createApp({
-            delimiters: ['[[', ']]'],
-            data() {
-                return {
-                    isVisible: false, isEditing: false, isFromList: false,
-                    parentCatalogId: null, parentCatalogName: '', currentId: null,
-                    form: {name: '', code: ''}, errors: {}
-                }
-            },
-            computed: {
-                modalTitle() {
-                    return this.isEditing ? 'Editar Item' : `Nuevo Item para: ${this.parentCatalogName}`;
-                }
-            },
-            methods: {
-                openCreate(locationId, locationName, fromList = false) {
-                    this.isEditing = false;
-                    this.currentId = null;
-                    this.parentCatalogId = locationId;
-                    this.parentCatalogName = locationName;
-                    this.isFromList = fromList;
-                    this.form = {name: '', code: ''};
-                    this.errors = {};
-                    this.isVisible = true;
-                },
-                async openEdit(itemId, fromList = false) {
-                    this.isEditing = true;
-                    this.currentId = itemId;
-                    this.isFromList = fromList;
-                    this.errors = {};
-                    try {
-                        const res = await fetch(`/settings/items/detail/${itemId}/`);
-                        const result = await res.json();
-                        if (result.success) {
-                            this.form = result.data;
-                            this.parentCatalogId = result.data.location_id;
-                            this.isVisible = true;
-                        }
-                    } catch (e) {
-                        Swal.fire('Error', 'No se pudieron cargar datos', 'error');
-                    }
-                },
-                closeModal() {
-                    this.isVisible = false;
-                },
-                async submitItem() {
-                    this.errors = {};
-                    const formData = new FormData();
-                    if (!this.isEditing) formData.append('location_id', this.parentCatalogId);
-                    formData.append('name', this.form.name);
-                    formData.append('code', this.form.code);
-                    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-
-                    let url = '/settings/items/create/';
-                    if (this.isEditing) url = `/settings/items/update/${this.currentId}/`;
-
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        const data = await response.json();
-
-                        if (data.success) {
-                            this.closeModal();
-                            const Toast = Swal.mixin({
-                                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
-                            });
-                            Toast.fire({icon: 'success', title: this.isEditing ? 'Item Actualizado' : 'Item Creado'});
-
-                            if (this.isFromList && vmItemList) {
-                                vmItemList.locationId = this.parentCatalogId;
-                                await vmItemList.fetchItems();
-                            }
-                        } else {
-                            this.errors = data.errors || {};
-                            if (data.message && !data.errors) Swal.fire('Error', data.message, 'error');
                         }
                     } catch (e) {
                         Swal.fire('Error', 'Error de conexión', 'error');
                     }
+                },
+                async submitLocation() {
+                    this.errors = {};
+                    const formData = new FormData();
+                    formData.append('name', this.form.name);
+                    formData.append('level', this.form.level);
+                    if (this.form.parent) formData.append('parent', this.form.parent);
+                    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+                    let url = '/settings/locations/create/';
+                    if (this.isEditing) url = `/settings/locations/update/${this.currentId}/`;
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.closeModal();
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Guardado!',
+                                text: data.message,
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            // Recargar página para asegurar consistencia
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            this.errors = data.errors;
+                        }
+                    } catch (e) {
+                        Swal.fire('Error', 'Error interno', 'error');
+                    }
                 }
             }
         });
-        window.vmItemForm = appItemForm.mount(ITEM_FORM_MOUNT);
-        window.openCreateItem = (locationId, locationName) => {
-            window.vmItemForm.openCreate(locationId, locationName, false);
+
+        const vmLocation = appLocation.mount(LOCATION_MOUNT_ID);
+
+        // Puentes Globales
+        const btnNew = document.getElementById('btn-add-location');
+        if (btnNew) btnNew.addEventListener('click', (e) => {
+            e.preventDefault();
+            vmLocation.openCreate();
+        });
+
+        window.openCreateChildLocation = async (parentId) => {
+            try {
+                const response = await fetch(`/settings/locations/detail/${parentId}/`);
+                const result = await response.json();
+                if (result.success) vmLocation.openCreate(result.data);
+            } catch (error) {
+                Swal.fire('Error', 'Error al validar padre', 'error');
+            }
         };
+
+        window.openEditLocation = (id) => vmLocation.loadAndOpenEdit(id);
     }
 
-    // Inicializar tabla y filtros
-    window.filterByStatus('all');
+    // Toggle Status Global (con reload)
+    window.toggleLocationStatus = async (btnElement, url, name) => {
+        const result = await Swal.fire({
+            title: '¿Cambiar estado?',
+            text: `Vas a modificar el estado de "${name}"`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+                const response = await fetch(url, {
+                    method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // TOAST DE ÉXITO (AL CAMBIAR ESTADO)
+                    Toast.fire({
+                        icon: 'success',
+                        title: '¡Estado Actualizado!',
+                        text: data.message
+                    });
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
+
     renderTable();
 });

@@ -96,9 +96,11 @@ class LocationForm(forms.ModelForm):
         model = Location
         fields = ['name', 'level', 'parent']  # Ajusta según tu modelo real
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'input-field uppercase-input', 'id': 'loc_name'}),
-            'level': forms.NumberInput(attrs={'class': 'input-field', 'id': 'loc_level', 'min': '1'}),
-            'parent': forms.Select(attrs={'class': 'input-field select2-field', 'id': 'loc_parent'}),
+            'name': forms.TextInput(
+                attrs={'class': 'input-field', 'v-model': 'form.name', 'placeholder': 'Nombre de la ubicación'}),
+            'level': forms.NumberInput(attrs={
+                'class': 'input-field', 'v-model': 'form.level', 'min': '1', 'max': '4'}),
+            'parent': forms.Select(attrs={'class': 'input-field', 'v-model': 'form.parent'}),
         }
 
     def __init__(self, *args, **kwargs):

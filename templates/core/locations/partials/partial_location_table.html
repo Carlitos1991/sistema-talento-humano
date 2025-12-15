@@ -1,5 +1,6 @@
 {% load static %}
 <div class="table-container">
+    <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
     <table>
         <thead>
         <tr>
@@ -16,15 +17,12 @@
             <!-- ID ÚNICO PARA LA FILA: row-ID -->
             <tr class="location-row" id="row-{{ location.id }}"
                 data-status="{{ location.is_active|yesno:'true,false' }}">
-                <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
-
-                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
+                <td>{{ forloop.counter }} {{ page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
                     {% if location.level < 4 %}
-                        <!-- Es un link para ver sus hijos -->
-                        <a href="#" class="link"
-                           data-filter-parent="{{ location.pk }}"
-                           title="Ver contenido de {{ location.name }}">
+                        <a href="#" class="link fw-bold text-primary"
+                           onclick="filterByParent({{ location.id }}); return false;"
+                           title="Ver dependencias de {{ location.name }}">
                             {{ location.name }}
                         </a>
                     {% else %}
@@ -36,13 +34,21 @@
                 </td>
                 <td>
                     {% if location.parent %}
-                        <a href="#"
-                           data-filter-parent="{{ location.parent.parent_id|default:'ROOT' }}"
-                           title="Volver al listado superior">
-                            {{ location.parent.name }}
-                        </a>
+                        {% if location.parent.parent_id %}
+                            <a href="#" class="link text-secondary"
+                               onclick="filterByParent({{ location.parent.parent_id }}); return false;"
+                               title="Subir a {{ location.parent.parent.name }}">
+                                <i class="fa-solid fa-turn-up fa-flip-horizontal"></i> {{ location.parent.name }}
+                            </a>
+                        {% else %}
+                            <a href="#" class="link text-secondary"
+                               onclick="filterByLevel('1'); return false;"
+                               title="Volver al listado de Países">
+                                <i class="fa-solid fa-turn-up fa-flip-horizontal"></i> {{ location.parent.name }}
+                            </a>
+                        {% endif %}
                     {% else %}
-                        <span>- Raíz -</span>
+                        <span class="text-muted fst-italic">- Raíz -</span>
                     {% endif %}
                 </td>
                 <td>
@@ -55,14 +61,15 @@
 
                 <td>
                     <div class="actions-wrapper">
-                        <button type="button" class="btn-icon btn-create-action"
-                                onclick="openCreateItem({{ location.id }}, '{{ location.name|escapejs }}')"
-                                title="Agregar dependencia de {{ location.name }}">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
+                        {% if location.level < 4 %}
+                            <button type="button" class="btn-icon btn-create-action"
+                                    onclick="openCreateChildLocation({{ location.id }})"
+                                    title="Agregar sub-ubicación">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        {% endif %}
                         <button type="button" class="btn-icon btn-views-action"
-                                onclick="openEditCatalog({{ location.id }})"
+                                onclick="openEditLocation({{ location.id }})"
                                 title="Editar">
                             <i class="fas fa-pencil"></i>
                         </button>
@@ -70,7 +77,7 @@
                         <!-- Toggle Button con TODOS los datos necesarios -->
                         <button type="button"
                                 class="btn-icon"
-                                onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' location.id %}', '{{ location.name|escapejs }}', {{ location.id }})"
+                                onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}', {{ location.id }})"
                                 title="{% if location.is_active %}Desactivar{% else %}Activar{% endif %}">
                             <i class="fas {% if location.is_active %}fa-toggle-on text-success{% else %}fa-toggle-off text-danger{% endif %}"></i>
                         </button>

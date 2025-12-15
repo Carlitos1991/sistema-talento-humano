@@ -9,37 +9,40 @@
             <h1>Gestión de Ubicaciones</h1>
             <p>Administra la estructura geográfica.</p>
         </div>
-        {#        {% if perms.core.add_catalog %}#}
-        <button id="btn-add-location" type="button" data-modal-open="location-modal"
-                aria-controls="location-modal" aria-expanded="false" data-url="#"
-                class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-location-form">
-            <i class="fas fa-plus"></i> Nuevo Ubicación
+        <button id="btn-add-location" type="button" class="btn btn-create"
+                data-bs-toggle="modal" data-bs-target="#modal-location-form">
+            <i class="fas fa-plus"></i> Nueva Ubicación
         </button>
-        {#        {% endif %}#}
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">
-        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-country">
+        <!-- Nivel 1: Países -->
+        <div class="stat-card color-one" onclick="filterByLevel('1')" id="card-filter-1">
             <div class="stat-left">
                 <h3>Paises</h3>
-                <div class="number" id="stat-country"> {{ stats_country|default:"0" }}</div>
+                <div class="number" id="stat-country">{{ stats_country|default:"0" }}</div>
             </div>
             <i class="fa-solid fa-earth-americas stat-icon"></i>
         </div>
-        <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-province">
+
+        <!-- Nivel 2: Provincias -->
+        <div class="stat-card color-two" onclick="filterByLevel('2')" id="card-filter-2">
             <div class="stat-left"><h3>Provincias</h3>
                 <div class="number" id="stat-province">{{ stats_province|default:"0" }}</div>
             </div>
             <i class="fa-regular fa-map stat-icon"></i>
         </div>
-        <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-city">
+
+        <!-- Nivel 3: Ciudades -->
+        <div class="stat-card color-three" onclick="filterByLevel('3')" id="card-filter-3">
             <div class="stat-left"><h3>Ciudades</h3>
                 <div class="number" id="stat-city">{{ stats_city|default:"0" }}</div>
             </div>
             <i class="fa-solid fa-city stat-icon"></i>
-
         </div>
-        <div class="stat-card color-four" onclick="filterByStatus('false')" id="card-filter-parish">
+
+        <!-- Nivel 4: Parroquias -->
+        <div class="stat-card color-four" onclick="filterByLevel('4')" id="card-filter-4">
             <div class="stat-left"><h3>Parroquias</h3>
                 <div class="number" id="stat-parish">{{ stats_parish|default:"0" }}</div>
             </div>
