@@ -273,10 +273,10 @@ def item_toggle_status(request, pk):
 def get_location_stats_dict():
     """Retorna un diccionario con las estadísticas actuales de Catálogos."""
     return {
-        'country': Location.objects.filter(level=1).count(),
-        'province': Location.objects.filter(level=2).count(),
-        'city': Location.objects.filter(level=3).count(),
-        'parish': Location.objects.filter(level=4).count(),
+        'country': Location.objects.filter(level=1, is_active=True).count(),
+        'province': Location.objects.filter(level=2, is_active=True).count(),
+        'city': Location.objects.filter(level=3, is_active=True).count(),
+        'parish': Location.objects.filter(level=4, is_active=True).count(),
     }
 
 
@@ -379,9 +379,11 @@ class LocationUpdateView(LoginRequiredMixin, UpdateView):
 
         if form.is_valid():
             location = form.save()
+            stats = get_location_stats_dict()
             return JsonResponse({
                 'success': True,
                 'message': 'Ubicación actualizada correctamente.',
+                'data': {'id': location.id, 'name': location.name, 'new_stats': stats}
             })
         else:
             return JsonResponse({
