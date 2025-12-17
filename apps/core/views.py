@@ -345,6 +345,19 @@ class LocationListView(LoginRequiredMixin, ListView):
             return render(request, 'core/locations/partials/partial_location_table.html', context)
         return super().get(request, *args, **kwargs)
 
+    def render_to_response(self, context, **response_kwargs):
+        """
+        Sobrescribimos esto para devolver JSON si se solicita,
+        usado por los selectores en cascada.
+        """
+        if self.request.GET.get('format') == 'json' or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Solo si estamos pidiendo datos para selects (filtrado por padre)
+            if self.request.GET.get('parent_id'):
+                data = list(self.object_list.values('id', 'name'))
+                return JsonResponse(data, safe=False)
+
+        return super().render_to_response(context, **response_kwargs)
+
 
 class LocationCreateView(LoginRequiredMixin, CreateView):
     model = Location

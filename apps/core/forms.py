@@ -28,7 +28,7 @@ class BaseFormMixin:
 class UserProfileForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'cedula', 'avatar']
+        fields = ['first_name', 'last_name', 'email']
         # Definimos etiquetas en español si el modelo no las tiene (el tuyo ya las tiene)
 
 

@@ -1,0 +1,67 @@
+<form method="post" @submit.prevent="submitForm">
+    {% csrf_token %}
+    <div class="modal-header-medium"> <!-- Nota: Usar clase medium para más ancho -->
+        <h3 class="modal-title">
+            <i class="fa-solid fa-users-gear"></i>
+            <span v-text="isEditing ? 'Configurar Rol' : 'Nuevo Rol'"></span>
+        </h3>
+        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+    </div>
+
+    <div class="modal-body-content">
+        <!-- Nombre del Rol -->
+        <div class="form-group mb-4">
+            <label class="form-label font-bold">Nombre del Rol</label>
+            {{ form.name }}
+            <span class="text-error" v-if="errors.name" v-text="errors.name[0]"></span>
+        </div>
+
+        <h4 class="mb-3 text-primary border-bottom pb-2">Asignación de Permisos</h4>
+
+        <!-- Matriz de Permisos -->
+        <div class="permissions-matrix">
+            {% for model_name, permissions in form.get_permission_matrix.items %}
+                <div class="permission-group mb-3 p-3 border rounded bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="m-0 font-bold text-secondary">{{ model_name }}</h5>
+                        <button type="button" class="btn-sm btn-link text-decoration-none"
+                                onclick="toggleGroupCheckboxes(this)">Marcar todos
+                        </button>
+                    </div>
+
+                    <div class="permissions-grid"
+                         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                        {% for perm in permissions %}
+                            <div class="form-check">
+                                <input class="form-check-input perm-checkbox" type="checkbox"
+                                       name="permissions" value="{{ perm.id }}" id="perm_{{ perm.id }}">
+                                <label class="form-check-label small" for="perm_{{ perm.id }}">
+                                    {{ perm.name }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="modal-footer-medium">
+        <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+        <button type="submit" class="btn-save">
+            <i class="fa-solid fa-save"></i> Guardar Rol
+        </button>
+    </div>
+</form>
+
+<!-- Pequeño script helper inline (o mover a JS global) solo para UI de checkboxes -->
+<script>
+    function toggleGroupCheckboxes(btn) {
+        const group = btn.closest('.permission-group');
+        const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(c => c.checked);
+
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        btn.innerText = allChecked ? "Marcar todos" : "Desmarcar todos";
+    }
+</script>

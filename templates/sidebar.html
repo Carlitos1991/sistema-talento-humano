@@ -15,6 +15,14 @@
             </a>
         </li>
         <li>
+            <!-- Usamos 'in' para que se mantenga activo en crear/editar también -->
+            <a href="{% url 'person:person_list' %}"
+               class="{% if 'person' in request.resolver_match.app_name %}active{% endif %}">
+                <i class="fa-solid fa-users"></i>
+                <span class="menu-text">Personas</span>
+            </a>
+        </li>
+        <li>
             <a href="#">
                 <i class="fa-solid fa-users"></i>
                 <span class="menu-text">Empleados</span>
@@ -38,6 +46,18 @@
             <!-- SUBMENÚ -->
             <ul class="submenu" v-show="activeSubmenu === 'settings'">
                 <li class="submenu-title">Ajustes</li>
+                <li>
+                    <a href="#"> <!-- -->
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span class="menu-text">Usuarios Sistema</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#"> <!-- -->
+                        <i class="fa-solid fa-user-lock"></i>
+                        <span class="menu-text">Roles y Permisos</span>
+                    </a>
+                </li>
                 <li>
                     <a href="{% url 'core:catalog_list' %}">
                         <i class="fa-solid fa-list-check"></i>

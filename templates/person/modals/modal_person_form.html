@@ -1,0 +1,137 @@
+<!-- Modal Custom CSS -->
+<!-- 'hidden' viene de style.css (display: none !important) -->
+<div id="modalPersonOverlay" class="modal-overlay hidden">
+
+    <!-- Contenedor Medium (definido en style.css) -->
+    <div class="modal-container-medium animate-scale-in">
+
+        <form id="personFormHtml" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
+
+            <div class="modal-header-medium">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-user-circle"></i>
+                    <span v-text="isEditing ? 'Editar Ficha Personal' : 'Registrar Nueva Persona'"></span>
+                </h3>
+                <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+            </div>
+
+            <div class="modal-body-content">
+                <!-- SECCIÓN 1: FOTO E IDENTIFICACIÓN -->
+                <div class="d-flex" style="gap: 2rem; margin-bottom: 2rem;">
+                    <!-- Columna Foto -->
+                    <div style="width: 140px; text-align: center;">
+                        <div style="position: relative; display: inline-block;">
+                            <!-- Preview Circular -->
+                            <div class="avatar-preview-container"
+                                 style="width: 130px; height: 130px; border-radius: 50%; overflow: hidden; border: 3px solid #f1f5f9; display: flex; align-items: center; justify-content: center; background: white;">
+                                <img v-if="photoPreview" :src="photoPreview" style="width: 100%; height: 100%; object-fit: cover;">
+                                <i v-else class="fa-solid fa-camera fa-3x" style="color: #cbd5e1;"></i>
+                            </div>
+
+                            <!-- Botón "Fake" para subir foto -->
+                            <label for="id_photo"
+                                   style="position: absolute; bottom: 0; right: 0; background: var(--primary-color); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
+                                <i class="fa-solid fa-camera"></i>
+                            </label>
+                        </div>
+                        <!-- El input real de Django (Oculto visualmente pero funcional) -->
+                        <div style="height: 0; overflow: hidden; width: 0;">
+                            {{ form.photo }}
+                        </div>
+                    </div>
+
+                    <!-- Columna Datos -->
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Identidad</h4>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label small">Tipo Documento <span class="text-danger">*</span></label>
+                                {{ form.document_type }}
+                                <span class="text-error" v-if="errors.document_type" v-text="errors.document_type[0]"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label small">Número Documento <span class="text-danger">*</span></label>
+                                {{ form.document_number }}
+                                <span class="text-error" v-if="errors.document_number" v-text="errors.document_number[0]"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label small">Nombres <span class="text-danger">*</span></label>
+                                {{ form.first_name }}
+                                <span class="text-error" v-if="errors.first_name" v-text="errors.first_name[0]"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label small">Apellidos <span class="text-danger">*</span></label>
+                                {{ form.last_name }}
+                                <span class="text-error" v-if="errors.last_name" v-text="errors.last_name[0]"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: DATOS PERSONALES -->
+                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Información Personal</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label small">Fecha Nacimiento <span class="text-danger">*</span></label>
+                        {{ form.birth_date }}
+                        <span class="text-error" v-if="errors.birth_date" v-text="errors.birth_date[0]"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Género</label>
+                        {{ form.gender }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Estado Civil</label>
+                        {{ form.marital_status }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Email</label>
+                        {{ form.email }}
+                        <span class="text-error" v-if="errors.email" v-text="errors.email[0]"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Teléfono</label>
+                        {{ form.phone_number }}
+                    </div>
+                     <div class="form-group">
+                        <label class="form-label small">Tipo Sangre</label>
+                        {{ form.blood_type }}
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: UBICACIÓN -->
+                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Dirección Domiciliaria</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label small">País</label>
+                        {{ form.country }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Provincia</label>
+                        {{ form.province }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Cantón</label>
+                        {{ form.canton }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label small">Parroquia</label>
+                        {{ form.parish }}
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label small">Referencia / Calle Principal</label>
+                        {{ form.address_reference }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium">
+                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-save"></i> Guardar Ficha
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

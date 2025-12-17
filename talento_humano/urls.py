@@ -8,6 +8,8 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.core.urls')),
+    path('person/', include('apps.person.urls')),
+    path('security/', include('apps.security.urls')),
 ]
 
 # Configuración para servir archivos media en desarrollo

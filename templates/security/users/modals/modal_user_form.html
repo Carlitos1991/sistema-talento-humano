@@ -1,0 +1,71 @@
+<form method="post" @submit.prevent="submitForm">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <i class="fa-solid fa-user-shield"></i>
+            <span v-text="isEditing ? 'Editar Usuario' : 'Nuevo Usuario'"></span>
+        </h3>
+        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Campos Generales -->
+        <div class="form-group mb-3">
+            <label class="form-label">Cédula</label>
+            {{ form.cedula }}
+            <span class="text-error" v-if="errors.cedula" v-text="errors.cedula[0]"></span>
+        </div>
+
+        <div class="row">
+            <div class="col-6 form-group">
+                <label class="form-label">Nombres</label>
+                {{ form.first_name }}
+            </div>
+            <div class="col-6 form-group">
+                <label class="form-label">Apellidos</label>
+                {{ form.last_name }}
+            </div>
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Nombre de Usuario</label>
+            {{ form.username }}
+            <span class="text-error" v-if="errors.username" v-text="errors.username[0]"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label class="form-label">Email</label>
+            {{ form.email }}
+        </div>
+
+        <!-- Password (Manejo visual condicional) -->
+        <div class="form-group mb-3 p-3 bg-light rounded border">
+            <label class="form-label font-bold">Seguridad</label>
+            <div class="input-icon-wrapper">
+                 {{ form.password }}
+                 <i class="fa-solid fa-lock input-icon-left"></i>
+            </div>
+            <small class="text-muted" v-if="isEditing">Dejar en blanco para mantener la contraseña actual.</small>
+            <span class="text-error" v-if="errors.password" v-text="errors.password[0]"></span>
+        </div>
+
+        <!-- Roles (Select2) -->
+        <div class="form-group mb-3">
+            <label class="form-label">Roles Asignados</label>
+            {{ form.groups }}
+            <span class="text-error" v-if="errors.groups" v-text="errors.groups[0]"></span>
+        </div>
+
+        <div class="form-check mt-3">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" class="form-check-label">Usuario Activo</label>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+        <button type="submit" class="btn-save">
+            <i class="fa-solid fa-save"></i> Guardar
+        </button>
+    </div>
+</form>

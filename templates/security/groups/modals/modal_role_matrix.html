@@ -1,0 +1,105 @@
+<form method="post" @submit.prevent="submitForm" id="roleForm">
+    {% csrf_token %}
+    <div class="modal-header-medium">
+        <h3 class="modal-title">Crear Nuevo Perfil</h3>
+        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+    </div>
+
+    <div class="modal-body-content">
+        <!-- 1. Nombre -->
+        <div class="form-group mb-4">
+            <label class="font-bold text-dark">Nombre del Rol <span class="text-danger">*</span></label>
+            {{ form.name }}
+            <span class="text-error" v-if="errors.name" v-text="errors.name[0]"></span>
+        </div>
+
+        <!-- 2. Plantillas Rápidas (Radio Buttons) -->
+        <div class="p-3 mb-4 rounded" style="background-color: #f1f5f9; border: 1px solid #e2e8f0;">
+            <label class="font-bold mb-2 d-block text-secondary small uppercase">Plantillas Rápidas:</label>
+            <div class="d-flex gap-4">
+                <label class="d-flex align-items-center gap-2 cursor-pointer">
+                    <input type="radio" name="template" onclick="applyTemplate('admin')">
+                    <span class="badge bg-success text-white">Administrador Total</span>
+                </label>
+                <label class="d-flex align-items-center gap-2 cursor-pointer">
+                    <input type="radio" name="template" onclick="applyTemplate('editor')">
+                    <span class="badge bg-primary text-white">Analista / Editor</span>
+                </label>
+                <label class="d-flex align-items-center gap-2 cursor-pointer">
+                    <input type="radio" name="template" onclick="applyTemplate('read')">
+                    <span class="badge bg-secondary text-white">Solo Lectura</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 3. Matriz de Permisos (Tabla) -->
+        <div class="table-responsive border rounded">
+            <table class="table w-100 table-striped m-0">
+                <thead class="bg-primary text-white">
+                    <tr>
+                        <th class="p-3">MÓDULO</th>
+                        <th class="text-center p-3" width="15%">VER</th>
+                        <th class="text-center p-3" width="15%">CREAR</th>
+                        <th class="text-center p-3" width="15%">EDITAR</th>
+                        <th class="text-center p-3" width="15%">BORRAR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model_name, perms in form.get_permission_matrix.items %}
+                    <tr>
+                        <td class="p-3 font-bold text-dark">{{ model_name }}</td>
+
+                        <!-- VIEW -->
+                        <td class="text-center align-middle">
+                            {% if perms.view %}
+                                <input type="checkbox" name="permissions[]" value="{{ perms.view.id }}" class="perm-check perm-view form-check-input" style="width: 1.3em; height: 1.3em;">
+                            {% endif %}
+                        </td>
+                        <!-- ADD -->
+                        <td class="text-center align-middle">
+                            {% if perms.add %}
+                                <input type="checkbox" name="permissions[]" value="{{ perms.add.id }}" class="perm-check perm-add form-check-input" style="width: 1.3em; height: 1.3em;">
+                            {% endif %}
+                        </td>
+                        <!-- CHANGE -->
+                        <td class="text-center align-middle">
+                            {% if perms.change %}
+                                <input type="checkbox" name="permissions[]" value="{{ perms.change.id }}" class="perm-check perm-change form-check-input" style="width: 1.3em; height: 1.3em;">
+                            {% endif %}
+                        </td>
+                        <!-- DELETE -->
+                        <td class="text-center align-middle">
+                            {% if perms.delete %}
+                                <input type="checkbox" name="permissions[]" value="{{ perms.delete.id }}" class="perm-check perm-delete form-check-input" style="width: 1.3em; height: 1.3em;">
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal-footer-medium bg-white">
+        <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+        <button type="submit" class="btn-save">
+            <i class="fa-solid fa-save"></i> Guardar Perfil
+        </button>
+    </div>
+</form>
+
+<script>
+    // Lógica JS Vainilla para las plantillas rápidas
+    function applyTemplate(type) {
+        // Resetear todos
+        document.querySelectorAll('.perm-check').forEach(el => el.checked = false);
+
+        if (type === 'admin') {
+            document.querySelectorAll('.perm-check').forEach(el => el.checked = true);
+        } else if (type === 'editor') {
+            document.querySelectorAll('.perm-view, .perm-add, .perm-change').forEach(el => el.checked = true);
+        } else if (type === 'read') {
+            document.querySelectorAll('.perm-view').forEach(el => el.checked = true);
+        }
+    }
+</script>

@@ -1,0 +1,155 @@
+{% load static %}
+<div class="table-container">
+    <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
+    <table>
+        <thead>
+        <tr>
+            <th>
+                <a href="#">
+                    <i class="far fa-id-card header-icon"></i> Empleado
+                </a>
+            </th>
+            <th><i class="far fa-envelope header-icon"></i> Email</th>
+            <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
+            <th class="text-center"><i class="far fa-calendar-alt header-icon"></i> Fecha Nac.</th>
+            <th class="text-center"><i class="fas fa-building header-icon"></i> Rol de usuario</th>
+            <th class="text-center"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for person in people %}
+            <!-- ID ÚNICO PARA LA FILA: row-ID -->
+            <tr class="location-row" id="row-{{ person.id }}"
+                data-status="{{ person.is_active|yesno:'true,false' }}">
+                <td>{{ forloop.counter }} {{ page_obj.start_index|add:forloop.counter0 }}</td>
+                <td>
+                    <div class="person-info">
+                        {% if person.photo %}
+                            <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                        {% else %}
+                            <div class="person-avatar-placeholder">
+                                {{ person.first_name|first }}{{ person.last_name|first }}
+                            </div>
+                        {% endif %}
+                        <div class="person-details">
+                            <h4>{{ person.last_name }} {{ person.first_name }}</h4>
+                            <p><i class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>{{ person.email|default:"--" }}</td>
+                <td>{{ person.phone_number|default:"--" }}</td>
+                <td class="text-center">
+                    {% if person.birth_date %}
+                        <span class="code-tag">{{ person.birth_date|date:"d M Y"|upper }}</span>
+                    {% else %}--{% endif %}
+                </td>
+                <td class="text-center">
+                    {% if person.user %}
+                        {% if person.user.groups.exists %}
+                            <!-- Itera los roles y los muestra como badges azules -->
+                            {% for group in person.user.groups.all %}
+                                <span class="status-badge status-badge-user-role">
+                                    {{ group.name }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="status-badge badge-neutral">SIN ASIGNAR</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="status-badge status-badge-no-account">
+                            SIN CUENTA
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if person.person_status %}
+                        {% if person.person_status.code == 'REGISTERED' %}
+                            <span class="status-badge status-badge-registered">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'BUDGET_ASSIGNED' %}
+                            <span class="status-badge status-badge-budget-assigned">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'EMPLOYEE' %}
+                            <span class="status-badge status-badge-employee">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'WORKER' %}
+                            <span class="status-badge status-badge-worker">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'CONTRACT' %}
+                            <span class="status-badge status-badge-contract">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'PROFESSIONAL' %}
+                            <span class="status-badge status-badge-professional">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'EX_EMPLOYEE' %}
+                            <span class="status-badge status-badge-ex-employee">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'EX_WORKER' %}
+                            <span class="status-badge status-badge-ex-worker">{{ person.person_status.name }}</span>
+                        {% elif person.person_status.code == 'RETIRED' %}
+                            <span class="status-badge status-badge-retired">{{ person.person_status.name }}</span>
+                        {% else %}
+                            <span class="status-badge badge-neutral">{{ person.person_status.name }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="status-badge status-badge-no-status">SIN ESTADO</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <div class="actions-wrapper">
+
+                        <!-- Botón Editar -->
+                        {% if can_edit %}
+                            <button class="btn-icon btn-info btn-edit-person"
+                                    data-url="{% url 'person:update' person.pk %}"
+                                    title="Editar">
+                                <i class="fas fa-eye"></i>
+                                <!-- Cambié a ojo si es solo ver, o lápiz si es editar -->
+                            </button>
+                        {% endif %}
+
+                        <!-- Botón Usuario -->
+                        {% if can_manage_user %}
+                            <button class="btn-icon btn-user-action btn-manage-user"
+                                    data-url="{% url 'person:manage_user' person.pk %}"
+                                    title="Gestionar Usuario"
+                                    style="background: linear-gradient(to right, #4f46e5, #4338ca);">
+                                {% if person.user %}
+                                    <i class="fas fa-user-check"></i>
+                                {% else %}
+                                    <i class="fas fa-user-plus"></i>
+                                {% endif %}
+                            </button>
+                        {% endif %}
+
+                        <!-- Botón Toggle (Solo si puede editar) -->
+                        {% if can_edit %}
+                            {% if person.is_active %}
+                                <button class="btn-icon btn-delete btn-toggle-status"
+                                        data-url="{% url 'person:toggle_status' person.pk %}"
+                                        title="Dar de Baja">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            {% else %}
+                                <button class="btn-icon btn-restore btn-toggle-status"
+                                        data-url="{% url 'person:toggle_status' person.pk %}"
+                                        title="Reactivar">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="no-results-overlay {% if persons %}hidden{% endif %}">
+        <div class="no-results-content empty-db-msg {% if not persons %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-inbox no-results-icon"></i>
+            <p class="no-results-text">No hay personas registradas.</p>
+        </div>
+
+        <!-- Mensaje 2: Búsqueda sin coincidencias -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+    </div>
+</div>

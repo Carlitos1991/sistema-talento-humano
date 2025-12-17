@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Directorio de Personas | SIGETH{% endblock %}
+
+{% block content %}
+    <div id="personApp">
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1>Gestión de Personas</h1>
+                <p>Gestión de fichas personales, empleados y usuarios del sistema.</p>
+            </div>
+            <button type="button" class="btn btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> Nueva Persona
+            </button>
+        </div>
+        <!-- 2. Estadísticas -->
+        <div class="stats-row">
+            <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+                <div class="stat-left">
+                    <h3>Total</h3>
+                    <div class="number" id="stat-total"> {{ stats_total|default:"0" }}</div>
+                </div>
+                <i class="fas fa-book-open stat-icon"></i>
+            </div>
+            <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-active">
+                <div class="stat-left"><h3>Activos</h3>
+                    <div class="number" id="stat-active">{{ stats_active|default:"0" }}</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+            <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-inactive">
+                <div class="stat-left"><h3>Inactivos</h3>
+                    <div class="number" id="stat-inactive">{{ stats_inactive|default:"0" }}</div>
+                </div>
+                <i class="fas fa-times-circle stat-icon"></i>
+            </div>
+        </div>
+        <!-- 3. Contenedor principal Tabla (AJAX) -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <button data-modal-target="advanced-search-modal" class="btn btn-search">
+                        <i class="fas fa-search"></i> Búsqueda Avanzada
+                    </button>
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <<input type="text" id="searchInput" class="form-control" placeholder="Buscar por cédula o nombre...">
+                    </div>
+                </div>
+                <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+                <div id="tableContainer">
+                    {% include 'person/partials/partial_person_table.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block modals %}
+    {% include 'person/modals/modal_person_form.html' %}
+    {% include 'person/modals/modal_credentials.html' %}
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/person.js' %}"></script>
+{% endblock %}

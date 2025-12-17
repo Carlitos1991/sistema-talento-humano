@@ -43,11 +43,9 @@ class BaseModel(models.Model):
 
 class User(AbstractUser):
     """
-    Custom User Model.
+    Modelo de Usuario técnico.
+    Se encarga SOLO de la autenticación (username, password, permisos).
     """
-    cedula = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="Cédula")
-    avatar = models.ImageField(upload_to='users/avatars/', null=True, blank=True, verbose_name="Imagen de Perfil")
-
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
