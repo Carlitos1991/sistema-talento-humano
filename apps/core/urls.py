@@ -37,4 +37,5 @@ urlpatterns = [
     path('settings/locations/detail/<int:pk>/', views.location_detail_json, name='location_detail'),
     path('settings/locations/update/<int:pk>/', views.LocationUpdateView.as_view(), name='location_update'),
     path('settings/locations/toggle/<int:pk>/', views.location_toggle_status, name='location_toggle'),
+    path('api/locations/', views.LocationJsonView.as_view(), name='location_list_json'),
 ]

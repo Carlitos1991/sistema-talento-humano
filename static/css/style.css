@@ -326,6 +326,22 @@ h1, h2, h3, h4, h5, h6 {
     transition: transform 0.3s ease;
 }
 
+.sidebar-menu li.open .submenu {
+    display: block;
+    animation: fadeIn 0.3s ease; /* Opcional: para que no aparezca de golpe */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .sidebar-menu li.open .chevron-icon {
     transform: rotate(90deg);
 }
@@ -336,7 +352,7 @@ h1, h2, h3, h4, h5, h6 {
     padding-left: 0;
     margin: 0;
     background-color: rgba(0, 0, 0, 0.2);
-    overflow: hidden; /* Para animación suave de altura si usaras JS, o ocultar contenido */
+    display: none;
 }
 
 .sidebar-menu .submenu .submenu-title {

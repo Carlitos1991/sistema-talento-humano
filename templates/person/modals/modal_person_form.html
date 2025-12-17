@@ -5,8 +5,8 @@
     <!-- Contenedor Medium (definido en style.css) -->
     <div class="modal-container-medium animate-scale-in">
 
-        <form id="personFormHtml" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
-
+        <form id="personFormHtml" method="POST" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
+            {% csrf_token %}
             <div class="modal-header-medium">
                 <h3 class="modal-title">
                     <i class="fa-solid fa-user-circle"></i>
@@ -24,7 +24,8 @@
                             <!-- Preview Circular -->
                             <div class="avatar-preview-container"
                                  style="width: 130px; height: 130px; border-radius: 50%; overflow: hidden; border: 3px solid #f1f5f9; display: flex; align-items: center; justify-content: center; background: white;">
-                                <img v-if="photoPreview" :src="photoPreview" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img v-if="photoPreview" :src="photoPreview"
+                                     style="width: 100%; height: 100%; object-fit: cover;">
                                 <i v-else class="fa-solid fa-camera fa-3x" style="color: #cbd5e1;"></i>
                             </div>
 
@@ -42,18 +43,23 @@
 
                     <!-- Columna Datos -->
                     <div style="flex: 1;">
-                        <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Identidad</h4>
+                        <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
+                            Identidad</h4>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
-                                <label class="form-label small">Tipo Documento <span class="text-danger">*</span></label>
+                                <label class="form-label small">Tipo Documento <span
+                                        class="text-danger">*</span></label>
                                 {{ form.document_type }}
-                                <span class="text-error" v-if="errors.document_type" v-text="errors.document_type[0]"></span>
+                                <span class="text-error" v-if="errors.document_type"
+                                      v-text="errors.document_type[0]"></span>
                             </div>
                             <div class="form-group">
-                                <label class="form-label small">Número Documento <span class="text-danger">*</span></label>
+                                <label class="form-label small">Número Documento <span
+                                        class="text-danger">*</span></label>
                                 {{ form.document_number }}
-                                <span class="text-error" v-if="errors.document_number" v-text="errors.document_number[0]"></span>
+                                <span class="text-error" v-if="errors.document_number"
+                                      v-text="errors.document_number[0]"></span>
                             </div>
                             <div class="form-group">
                                 <label class="form-label small">Nombres <span class="text-danger">*</span></label>
@@ -70,7 +76,8 @@
                 </div>
 
                 <!-- SECCIÓN 2: DATOS PERSONALES -->
-                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Información Personal</h4>
+                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
+                    Información Personal</h4>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
                     <div class="form-group">
                         <label class="form-label small">Fecha Nacimiento <span class="text-danger">*</span></label>
@@ -94,14 +101,15 @@
                         <label class="form-label small">Teléfono</label>
                         {{ form.phone_number }}
                     </div>
-                     <div class="form-group">
+                    <div class="form-group">
                         <label class="form-label small">Tipo Sangre</label>
                         {{ form.blood_type }}
                     </div>
                 </div>
 
                 <!-- SECCIÓN 3: UBICACIÓN -->
-                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">Dirección Domiciliaria</h4>
+                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
+                    Dirección Domiciliaria</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label class="form-label small">País</label>

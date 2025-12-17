@@ -1,10 +1,9 @@
 <nav class="navbar">
     <div class="navbar-left">
-        <!-- Botón para colapsar sidebar (Futuro Vue.js) -->
-        <button class="sidebar-toggle" @click="toggleSidebar" title="Colapsar menú">
+        <!-- JS Vanilla detecta el click en la clase 'sidebar-toggle' -->
+        <button class="sidebar-toggle" title="Colapsar menú">
             <i class="fa-solid fa-bars"></i>
         </button>
-{#        <button ><i class="fas fa-bars"></i></button\>#}
     </div>
 
     <div class="navbar-actions">
@@ -16,13 +15,14 @@
 
         <!-- 2. Usuario Dropdown -->
         <div class="user-dropdown-container">
-            <!-- Trigger: Foto + Nombre -->
-            <div class="user-trigger" @click="toggleUserMenu">
+
+            <!-- JS Vanilla detecta el click en la clase 'user-trigger' -->
+            <div class="user-trigger">
                 <div class="text-right hidden-mobile">
                     <small style="display:block; line-height:1; font-size: 0.75rem; color:#64748b;">Bienvenido,</small>
                     <span class="user-name">{{ request.user.username }}</span>
                 </div>
-                <!-- Si el usuario tiene avatar úsalo, si no, iniciales o default -->
+
                 {% if request.user.avatar %}
                     <img src="{{ request.user.avatar.url }}" class="user-avatar">
                 {% else %}
@@ -31,13 +31,9 @@
                 <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8;"></i>
             </div>
 
-            <!-- Menú Desplegable (V-IF para mostrar/ocultar) -->
-            <div class="dropdown-menu" v-if="userMenuOpen" @mouseleave="userMenuOpen = false">
-                <div style="padding: 0.5rem 1.2rem;">
-                    <strong style="display:block; color:var(--primary-color);">{{ request.user.get_full_name|default:request.user.username }}</strong>
-                    <small style="color:#94a3b8;">Administrador</small>
-                </div>
-                <div class="dropdown-divider"></div>
+            <!-- IMPORTANTE: Agregada clase 'hidden' por defecto.
+                 Quitamos v-if y @mouseleave que eran de Vue. -->
+            <div class="dropdown-menu hidden">
 
                 <a href="{% url 'core:profile' %}" class="dropdown-item">
                     <i class="fa-regular fa-user"></i> Ver Perfil

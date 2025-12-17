@@ -11,7 +11,7 @@ from .models import Catalog, CatalogItem, Location
 from .models import User
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
-
+from django.views.generic import View
 
 # --- 1. LOGIN & AUTH ---
 class CustomLoginView(LoginView):
@@ -439,3 +439,18 @@ def location_toggle_status(request, pk):
         'message': f'La ubicación "{location.name}" ha sido {status_label} correctamente.',
         'new_stats': stats
     })
+
+
+class LocationJsonView(View):
+    """Retorna ubicaciones filtradas por padre para los selectores en cascada"""
+
+    def get(self, request):
+        parent_id = request.GET.get('parent_id')
+        if parent_id:
+            locations = Location.objects.filter(parent_id=parent_id, is_active=True).order_by('name')
+        else:
+            # Si no hay padre, retornamos nivel 1 (Países)
+            locations = Location.objects.filter(level=1, is_active=True).order_by('name')
+
+        data = [{'id': loc.id, 'name': loc.name} for loc in locations]
+        return JsonResponse(data, safe=False)

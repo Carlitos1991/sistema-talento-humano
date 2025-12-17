@@ -1,54 +1,106 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const {createApp, ref} = Vue;
+/* static/js/dashboard.js */
 
-    if (document.getElementById('mainLayout')) {
-        createApp({
-            setup() {
-                // 1. Cargar estado desde LocalStorage
-                const storedState = localStorage.getItem('sidebar_collapsed') === 'true';
-                const sidebarCollapsed = ref(storedState);
-                const userMenuOpen = ref(false);
-
-                // 2. CAMBIO: Inicializar SIEMPRE en null (Cerrado)
-                const activeSubmenu = ref(null);
-
-                // --- Función Toggle Sidebar ---
-                const toggleSidebar = () => {
-                    sidebarCollapsed.value = !sidebarCollapsed.value;
-                    localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value);
-
-                    // Al colapsar o expandir, cerramos cualquier menú abierto
-                    activeSubmenu.value = null;
-                };
-
-                const toggleUserMenu = () => {
-                    userMenuOpen.value = !userMenuOpen.value;
-                };
-
-                const closeUserMenu = () => {
-                    userMenuOpen.value = false;
-                };
-
-                // Función Toggle Submenú
-                const toggleSubmenu = (menuName) => {
-                    if (sidebarCollapsed.value) {
-                        return;
-                    }
-
-                    // Comportamiento normal: Abrir/Cerrar al hacer clic
-                    activeSubmenu.value = activeSubmenu.value === menuName ? null : menuName;
-                };
-
-                return {
-                    sidebarCollapsed,
-                    toggleSidebar,
-                    userMenuOpen,
-                    toggleUserMenu,
-                    closeUserMenu,
-                    activeSubmenu,
-                    toggleSubmenu
-                };
+// ==========================================
+// 1. UTILIDADES GLOBALES (No tocar)
+// ==========================================
+window.getCookie = function (name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-        }).mount('#mainLayout');
+        }
+    }
+    return cookieValue;
+};
+
+// Configuración Global de Toast
+if (typeof Swal !== 'undefined') {
+    window.Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+}
+
+// ==========================================
+// 2. LÓGICA DEL LAYOUT (Vanilla JS)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+
+    const wrapper = document.querySelector('.layout-wrapper');
+    const toggleBtn = document.querySelector('.sidebar-toggle'); // Asegúrate que tu botón en navbar tenga esta clase
+    const sidebar = document.querySelector('.sidebar');
+
+    // 1. Recuperar estado del Sidebar
+    const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+    if (isCollapsed && wrapper) {
+        wrapper.classList.add('is-collapsed');
+        if (sidebar) sidebar.classList.add('collapsed');
+    }
+
+    // 2. Evento Toggle Sidebar
+    if (toggleBtn && wrapper) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            wrapper.classList.toggle('is-collapsed');
+
+            // Guardar estado
+            const collapsed = wrapper.classList.contains('is-collapsed');
+            if (sidebar) sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar_collapsed', collapsed);
+        });
+    }
+
+    // 3. Manejo de Submenús (Acordeón)
+    const menuItems = document.querySelectorAll('.has-submenu > a');
+    menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            // Si el sidebar está colapsado, no hacemos acordeón (se usa hover CSS)
+            if (wrapper.classList.contains('is-collapsed')) return;
+
+            e.preventDefault();
+            const parentLi = item.parentElement;
+
+            // Cerrar otros abiertos
+            document.querySelectorAll('.sidebar-menu li.open').forEach(li => {
+                if (li !== parentLi) li.classList.remove('open');
+            });
+
+            // Toggle actual
+            parentLi.classList.toggle('open');
+        });
+    });
+
+    // 4. User Dropdown (Si existe)
+    const userTrigger = document.querySelector('.user-trigger');
+    const dropdownMenu = document.querySelector('.dropdown-menu'); // Asegúrate de tener clases unicas si hay varios
+
+    if (userTrigger && dropdownMenu) {
+        // Toggle click
+        userTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('hidden'); // O la clase que uses para mostrar/ocultar
+            // Si usas style.display en tu css:
+            // dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Click fuera para cerrar
+        document.addEventListener('click', (e) => {
+            if (!userTrigger.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.add('hidden');
+                // dropdownMenu.style.display = 'none';
+            }
+        });
     }
 });

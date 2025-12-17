@@ -1,6 +1,10 @@
 {% load static %}
-<!-- AQUÍ: :class para que el CSS sepa si está colapsado -->
-<aside class="sidebar" :class="{ 'collapsed': sidebarCollapsed }">
+<aside class="sidebar" id="mainSidebar">
+    <script>
+        if (localStorage.getItem('sidebar_collapsed') === 'true') {
+            document.getElementById('mainSidebar').classList.add('collapsed');
+        }
+    </script>
     <div class="sidebar-header">
         <img src="{% static 'img/logo.png' %}" alt="Logo" class="sidebar-logo-img">
         <span class="sidebar-brand-text">SIGETH</span>
@@ -35,25 +39,26 @@
             </a>
         </li>
 
-        <!-- MENÚ PADRE -->
-        <li class="has-submenu" :class="{ 'open': activeSubmenu === 'settings' }">
-            <a href="#" class="submenu-toggle" @click.prevent="toggleSubmenu('settings')">
+        <!-- MENÚ PADRE: Ajustes -->
+        <!-- Quitamos :class y @click. El JS detecta la clase 'has-submenu' -->
+        <li class="has-submenu">
+            <a href="#">
                 <i class="fa-solid fa-gear"></i>
                 <span class="menu-text">Ajustes</span>
                 <i class="fa-solid fa-chevron-right chevron-icon"></i>
             </a>
 
-            <!-- SUBMENÚ -->
-            <ul class="submenu" v-show="activeSubmenu === 'settings'">
+            <!-- SUBMENÚ: Quitamos v-show. El CSS lo muestra cuando el li padre tiene clase 'open' -->
+            <ul class="submenu">
                 <li class="submenu-title">Ajustes</li>
                 <li>
-                    <a href="#"> <!-- -->
+                    <a href="#">
                         <i class="fa-solid fa-user-shield"></i>
                         <span class="menu-text">Usuarios Sistema</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#"> <!-- -->
+                    <a href="#">
                         <i class="fa-solid fa-user-lock"></i>
                         <span class="menu-text">Roles y Permisos</span>
                     </a>

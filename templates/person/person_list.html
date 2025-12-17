@@ -3,7 +3,14 @@
 {% block title %}Directorio de Personas | SIGETH{% endblock %}
 
 {% block content %}
-    <div id="personApp">
+    <div id="personApp" data-urls='{
+        "list": "{% url "person:person_list" %}",
+        "create": "{% url "person:person_create" %}",
+        "update": "{% url "person:person_update" 0 %}",
+        "detail": "{% url "person:person_detail" 0 %}",
+        "locations": "{% url "core:location_list_json" %}",
+        "createCredentials": "{% url "security:user_create_credentials" 0 %}"
+    }'>
         <!-- 1. Header -->
         <div class="header-card">
             <div>
@@ -14,6 +21,7 @@
                 <i class="fas fa-plus"></i> Nueva Persona
             </button>
         </div>
+
         <!-- 2. Estadísticas -->
         <div class="stats-row">
             <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
@@ -36,7 +44,8 @@
                 <i class="fas fa-times-circle stat-icon"></i>
             </div>
         </div>
-        <!-- 3. Contenedor principal Tabla (AJAX) -->
+
+        <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
@@ -45,22 +54,22 @@
                     </button>
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <<input type="text" id="searchInput" class="form-control" placeholder="Buscar por cédula o nombre...">
+                        <input type="text" id="searchInput" class="form-control"
+                               placeholder="Buscar por cédula o nombre...">
                     </div>
                 </div>
-                <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+
                 <div id="tableContainer">
                     {% include 'person/partials/partial_person_table.html' %}
                 </div>
+
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
                     <ul class="pagination-list">
                         <li>
                             <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
                         </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                        </li>
+                        <li><span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span></li>
                         <li>
                             <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
                         </li>
@@ -68,13 +77,13 @@
                 </div>
             </div>
         </div>
-    </div>
+        {% include 'person/modals/modal_person_form.html' %}
+        {% include 'person/modals/modal_credentials.html' %}
+
+    </div> <!-- Fin de #personApp -->
 
 {% endblock %}
-{% block modals %}
-    {% include 'person/modals/modal_person_form.html' %}
-    {% include 'person/modals/modal_credentials.html' %}
-{% endblock %}
+
 {% block extra_js %}
     <script src="{% static 'js/person.js' %}"></script>
 {% endblock %}
