@@ -46,6 +46,7 @@ class User(AbstractUser):
     Modelo de Usuario técnico.
     Se encarga SOLO de la autenticación (username, password, permisos).
     """
+
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
@@ -100,7 +101,7 @@ class CatalogItem(BaseModel):
         unique_together = ('catalog', 'code')
 
     def __str__(self):
-        return f"{self.catalog.name} - {self.name}"
+        return f" {self.name}"
 
 
 class Location(BaseModel):

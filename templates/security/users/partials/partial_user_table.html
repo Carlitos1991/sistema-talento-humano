@@ -1,10 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="far fa-user"></i>Empleado</th>
+            <th><i class="far fa-envelope header-icon"></i> Email</th>
+            <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
+            <th><i class="fas fa-building header-icon"></i> Rol de usuario</th>
+            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th><i class="fas fa-cogs header-icon"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for person in persons %}
+            <tr class="catalog-row" id="row-{{ person.id }}" data-status="{{ person.is_active|yesno:'true,false' }}">
+                <td>{{ forloop.counter }}</td>
 
-</body>
-</html>
+                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
+                <td>
+                    <div class="person-info">
+                        {% if person.photo %}
+                            <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                        {% else %}
+                            <div class="person-avatar-placeholder">
+                                {{ person.first_name|first }}{{ person.last_name|first }}
+                            </div>
+                        {% endif %}
+                        <div class="person-details">
+                            <!-- Invertí el orden habitual: Nombre Apellido -->
+                            <h4>{{ person.first_name }} {{ person.last_name }}</h4>
+                            <p><i class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}</p>
+                        </div>
+                    </div>
+                </td>
+
+                <td>{{ person.email|default:"--" }}</td>
+                <td>{{ person.phone_number|default:"--" }}</td>
+                <td class="text-center">
+                    {% if person.user %}
+                        {% if person.user.groups.exists %}
+                            {% for group in person.user.groups.all %}
+                                <span class="status-badge status-badge-user-role">
+                                    {{ group.name }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="status-badge badge-neutral">SIN ROL</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="status-badge status-badge-no-account">
+                            SIN CUENTA
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <!-- Tu lógica de estados está bien, la dejo igual -->
+                    {% if person.person_status %}
+                        <span class="status-badge badge-neutral">{{ person.person_status.name }}</span>
+                    {% else %}
+                        <span class="status-badge status-badge-no-status">SIN ESTADO</span>
+                    {% endif %}
+                </td>
+
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <!-- CORRECCIÓN 2: Uso de perms nativos de Django si 'can_edit' no existe en contexto -->
+                        <!-- Si pasas can_edit desde la vista, déjalo así. Si no, usa perms.person.change_person -->
+
+                        <button class="btn-icon btn-info btn-edit-person"
+                                data-url="{% url 'person:person_update' person.pk %}"
+                                title="Editar">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+
+                        <button class="btn-icon btn-user-action btn-manage-user"
+                                data-url="·"
+                                title="Gestionar Usuario"
+                                style="background: linear-gradient(to right, #4f46e5, #4338ca);">
+                            {% if person.user %}
+                                <i class="fas fa-user-check"></i>
+                            {% else %}
+                                <i class="fas fa-user-plus"></i>
+                            {% endif %}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="no-results-overlay {% if persons %}hidden{% endif %}">
+        <!-- Mensaje 2: Búsqueda sin coincidencias -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+    </div>
+</div>

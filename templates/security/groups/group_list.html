@@ -1,10 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Roles | SIGETH{% endblock %}
 
-</body>
-</html>
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Perfiles de Acceso </h1>
+            <p>Configuración de roles y permisos del sistema</p>
+        </div>
+        <button id="btn-add-role" type="button" class="btn btn-create">
+            <i class="fas fa-plus"></i> Nuevo Rol
+        </button>
+    </div>
+    <!-- 3. Contenedor principal Tabla (AJAX) -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field"
+                           placeholder="Buscar en la tabla">
+                </div>
+            </div>
+            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+            <div id="table-content-wrapper">
+                {% include 'security/groups/partials/partial_group_table.html' %}
+            </div>
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li>
+                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                    </li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block modals %}
+    {% include 'security/groups/modals/modal_role_matrix.html' %}
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/roles.js' %}"></script>
+{% endblock %}

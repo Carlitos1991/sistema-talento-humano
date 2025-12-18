@@ -4,15 +4,20 @@
         <form @submit.prevent="submitItem" id="form-create-item">
             {% csrf_token %}
 
-            <div class="modal-container" id="item-modal" tabindex="-1" role="document">
-                <div class="modal-header">
-                    <h2 id="item-modal-title">[[ modalTitle ]]</h2>
-                    <button type="button" class="btn-close-modal" @click="closeModal">
+            <div class="modal-container animate-scale-in" id="item-modal" tabindex="-1" role="document">
+
+                <!-- HEADER CORREGIDO -->
+                <div class="modal-header modal-header-gradient">
+                    <h3 class="modal-title text-white" id="item-modal-title">
+                        <i class="fa-solid fa-tag me-2"></i> [[ modalTitle ]]
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
                         <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
                 </div>
 
-                <div class="modal-body">
+                <!-- BODY con estilo gris suave -->
+                <div class="modal-body modal-body-custom">
                     <!-- CAMPO CÓDIGO -->
                     <div class="form-group">
                         <label for="{{ form.code.id_for_label }}" class="form-label">
@@ -36,7 +41,7 @@
 
                     <!-- CAMPO NOMBRE -->
                     <div class="form-group">
-                        <label for="{{ form.name.id_for_label }}">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
                             <i class="fa-solid fa-folder-closed"></i> {{ form.name.label }}(*)
                         </label>
                         <input class="input-field uppercase-input" id="id_name" name="name" type="text"
@@ -48,12 +53,14 @@
                         </div>
                         <p class="form-hint">Nombre descriptivo del ítem.</p>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-cancel" @click="closeModal">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
-                    </div>
+                </div>
+
+                <!-- FOOTER centrado y espaciado -->
+                <div class="modal-footer modal-footer-spaced">
+                    <button type="button" class="btn-cancel" @click="closeModal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
                 </div>
             </div>
         </form>

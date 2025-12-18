@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
             };
 
+
             // --- MODALES ACTIONS ---
             // CORRECCIÓN PRINCIPAL: Buscar el elemento DOM DENTRO de la función
             const openCreateModal = () => {
@@ -259,12 +260,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            // Helpers UI
+           // Helpers UI
             const showModal = (el) => {
-                if (el) el.classList.remove('hidden');
+                if(el) {
+                    el.classList.remove('hidden');
+                    document.body.classList.add('no-scroll'); // <--- NUEVO: Bloquea fondo
+                }
             };
             const hideModal = (el) => {
-                if (el) el.classList.add('hidden');
+                if(el) {
+                    el.classList.add('hidden');
+                    // Solo quitamos no-scroll si NO hay otros modales abiertos
+                    // (Por si abres credenciales encima de editar)
+                    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+                    if (openModals.length === 0) {
+                        document.body.classList.remove('no-scroll'); // <--- NUEVO: Desbloquea
+                    }
+                }
             };
 
             const handlePhotoChange = (e) => {

@@ -1,10 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 50px;"><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-solid fa-user-shield"></i> Nombre del Perfil / Rol</th>
+            <th class="text-center"><i class="fa-solid fa-users"></i> Usuarios Asignados</th>
+            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for role in roles %}
+            <tr class="catalog-row" id="row-{{ role.id }}">
+                <td>{{ forloop.counter }}</td>
 
-</body>
-</html>
+                <td>
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Icono decorativo para el rol -->
+                        <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0284c7; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <span class="font-bold text-primary" style="font-size: 0.95rem;">{{ role.name }}</span>
+                    </div>
+                </td>
+
+                <td class="text-center">
+                    {% if role.user_set.count > 0 %}
+                        <span class="status-badge active" style="background-color: #dbeafe; color: #1e40af;">
+                            {{ role.user_set.count }} Usuarios
+                        </span>
+                    {% else %}
+                        <span class="status-badge" style="background-color: #f1f5f9; color: #64748b;">
+                            Sin Usuarios
+                        </span>
+                    {% endif %}
+                </td>
+
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        <!-- Botón Editar -->
+                        <button class="btn-icon btn-views-action btn-edit-role"
+                                data-url="{% url 'security:role_update' role.pk %}"
+                                title="Configurar Permisos">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Mensajes de Estado (Vacío / Búsqueda) -->
+    <div class="no-results-overlay {% if roles %}hidden{% endif %}">
+
+        <!-- Caso 1: Búsqueda sin éxito -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron roles con ese nombre.</p>
+        </div>
+
+        <!-- Caso 2: Base de datos vacía -->
+        <div class="no-results-content {% if not roles %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-shield-cat no-results-icon"></i>
+            <p class="no-results-text">No hay roles definidos en el sistema.</p>
+        </div>
+    </div>
+</div>

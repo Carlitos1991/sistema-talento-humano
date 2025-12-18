@@ -1,20 +1,30 @@
 <div id="location-create-app" v-cloak>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" id="location-modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2>[[ modalTitle ]]</h2>
-                <button type="button" class="btn-close-modal" @click="closeModal">
-                    <i class="fas fa-times"></i>
+        <div class="modal-container animate-scale-in">
+
+            <!-- HEADER CORREGIDO -->
+            <!-- 1. Agregamos 'modal-header-gradient' para asegurar el fondo -->
+            <div class="modal-header modal-header-gradient">
+                <!-- 2. Cambiamos h2 por h3 y agregamos 'modal-title text-white' -->
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-map-pin me-2"></i> [[ modalTitle ]]
+                </h3>
+                <!-- 3. Agregamos 'text-white-opacity' al botón -->
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                    &times;
                 </button>
             </div>
 
             <form @submit.prevent="submitLocation">
-                <div class="modal-body">
+
+                <!-- BODY con padding y estilo limpio -->
+                <div class="modal-body-content modal-body-custom">
                     {% csrf_token %}
+
                     <!-- Campo Nombre -->
                     <div class="form-group">
                         <label for="{{ form.name.id_for_label }}" class="form-label">
-                            <i class="fa-solid fa-signature"></i> {{ form.name.label }} (*)
+                            {{ form.name.label }} <span class="text-danger">*</span>
                         </label>
                         {{ form.name }}
                         <div class="error-message-container" v-if="errors.name">
@@ -22,41 +32,37 @@
                         </div>
                     </div>
 
-                    <!-- Campo Padre -->
-                    <div class="form-group" v-if="form.level > 1">
+                    <!-- Campo Padre (Solo lectura visual) -->
+                    <div class="form-group mt-3" v-if="form.level > 1">
                         <label class="form-label">
-                            <i class="fa-solid fa-arrow-up-from-bracket"></i> Pertenece a (Padre)
+                            Pertenece a (Padre)
                         </label>
-                        <!-- Input visual (Nombre del padre: ECUADOR...) -->
                         <input type="text"
                                class="input-field"
                                :value="parentNameDisplay"
                                readonly
-                               style="background-color: #f8fafc; color: #64748b; font-weight: 600; cursor: not-allowed;">
-
-                        <!-- Input oculto para el ID -->
+                               style="background-color: #e2e8f0; color: #475569; cursor: not-allowed;">
                         <input type="hidden" v-model="form.parent">
                     </div>
-                    <!-- Campo Nivel -->
-                    <div class="form-group">
+
+                    <!-- Campo Nivel (Solo lectura visual) -->
+                    <div class="form-group mt-3">
                         <label class="form-label">
-                            <i class="fa-solid fa-layer-group"></i> Nivel Jerárquico
+                            Nivel Jerárquico
                         </label>
-                        <!-- Input visual (Texto: País, Provincia...) -->
                         <input type="text"
                                class="input-field"
                                :value="levelLabel"
                                readonly
-                               style="background-color: #f8fafc; color: #64748b; font-weight: 600; cursor: not-allowed;">
-
-                        <!-- Input oculto para enviar el valor real (1, 2, 3...) -->
+                               style="background-color: #e2e8f0; color: #475569; cursor: not-allowed;">
                         <input type="hidden" v-model="form.level">
                     </div>
                 </div>
 
-                <div class="modal-footer">
+                <!-- FOOTER espaciado igual que en Personas -->
+                <div class="modal-footer modal-footer-spaced">
                     <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                    <button type="submit" class="btn-save">
+                    <button type="submit" class="btn-save shadow-md">
                         <i class="fas fa-save"></i> Guardar
                     </button>
                 </div>

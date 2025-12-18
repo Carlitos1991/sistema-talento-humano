@@ -1,143 +1,284 @@
-<!-- Modal Custom CSS -->
-<!-- 'hidden' viene de style.css (display: none !important) -->
+<!-- templates/person/modals/modal_person_form.html -->
+
 <div id="modalPersonOverlay" class="modal-overlay hidden">
 
-    <!-- Contenedor Medium (definido en style.css) -->
     <div class="modal-container-medium animate-scale-in">
 
         <form id="personFormHtml" method="POST" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
             {% csrf_token %}
-            <div class="modal-header-medium">
-                <h3 class="modal-title">
-                    <i class="fa-solid fa-user-circle"></i>
-                    <span v-text="isEditing ? 'Editar Ficha Personal' : 'Registrar Nueva Persona'"></span>
+
+            <!-- HEADER -->
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-user-pen me-2"></i>
+                    <span v-text="isEditing ? ' Editar Datos' : ' Nueva Persona'"></span>
                 </h3>
-                <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
             </div>
 
-            <div class="modal-body-content">
-                <!-- SECCIÓN 1: FOTO E IDENTIFICACIÓN -->
-                <div class="d-flex" style="gap: 2rem; margin-bottom: 2rem;">
-                    <!-- Columna Foto -->
-                    <div style="width: 140px; text-align: center;">
-                        <div style="position: relative; display: inline-block;">
-                            <!-- Preview Circular -->
-                            <div class="avatar-preview-container"
-                                 style="width: 130px; height: 130px; border-radius: 50%; overflow: hidden; border: 3px solid #f1f5f9; display: flex; align-items: center; justify-content: center; background: white;">
-                                <img v-if="photoPreview" :src="photoPreview"
-                                     style="width: 100%; height: 100%; object-fit: cover;">
-                                <i v-else class="fa-solid fa-camera fa-3x" style="color: #cbd5e1;"></i>
-                            </div>
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom">
 
-                            <!-- Botón "Fake" para subir foto -->
-                            <label for="id_photo"
-                                   style="position: absolute; bottom: 0; right: 0; background: var(--primary-color); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
-                                <i class="fa-solid fa-camera"></i>
+                <!-- 1. IDENTIDAD -->
+                <div class="form-section-card">
+                    <!-- TÍTULO: Solo una vez, arriba del todo -->
+                    <h5 class="section-title"><i class="fa-regular fa-id-card"></i> Identidad</h5>
+
+                    <!-- Contenedor Flex -->
+                    <div class="d-flex flex-wrap gap-3 align-items-center">
+
+                        <!-- FOTO -->
+                        <div class="photo-uploader-wrapper">
+                            <label for="id_photo" class="photo-upload-label" title="Clic para subir foto">
+                                <div class="photo-preview-box">
+                                    <img v-if="photoPreview" :src="photoPreview">
+                                    <div v-else class="placeholder-icon">
+                                        <i class="fa-solid fa-camera mb-1" style="font-size: 1.5rem;"></i>
+                                        <span style="font-size: 0.7rem;">Foto</span>
+                                    </div>
+                                    <div class="photo-hover-overlay">
+                                        <i class="fa-solid fa-upload"></i>
+                                    </div>
+                                </div>
                             </label>
+                            <div class="hidden">{{ form.photo }}</div>
                         </div>
-                        <!-- El input real de Django (Oculto visualmente pero funcional) -->
-                        <div style="height: 0; overflow: hidden; width: 0;">
-                            {{ form.photo }}
-                        </div>
-                    </div>
 
-                    <!-- Columna Datos -->
-                    <div style="flex: 1;">
-                        <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
-                            Identidad</h4>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div class="form-group">
-                                <label class="form-label small">Tipo Documento <span
-                                        class="text-danger">*</span></label>
-                                {{ form.document_type }}
-                                <span class="text-error" v-if="errors.document_type"
-                                      v-text="errors.document_type[0]"></span>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label small">Número Documento <span
-                                        class="text-danger">*</span></label>
-                                {{ form.document_number }}
-                                <span class="text-error" v-if="errors.document_number"
-                                      v-text="errors.document_number[0]"></span>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label small">Nombres <span class="text-danger">*</span></label>
-                                {{ form.first_name }}
-                                <span class="text-error" v-if="errors.first_name" v-text="errors.first_name[0]"></span>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label small">Apellidos <span class="text-danger">*</span></label>
-                                {{ form.last_name }}
-                                <span class="text-error" v-if="errors.last_name" v-text="errors.last_name[0]"></span>
+                        <!-- INPUTS: Agregamos w-100 para forzar ancho total -->
+                        <div class="flex-grow-1 w-100">
+                            <div class="grid-2-cols">
+                                <div class="form-group">
+                                    <label class="form-label">Tipo Documento <span class="text-danger">*</span></label>
+                                    {{ form.document_type }}
+                                    <span class="text-error" v-if="errors.document_type"
+                                          v-text="errors.document_type[0]"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número Documento <span
+                                            class="text-danger">*</span></label>
+                                    {{ form.document_number }}
+                                    <span class="text-error" v-if="errors.document_number"
+                                          v-text="errors.document_number[0]"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nombres <span class="text-danger">*</span></label>
+                                    {{ form.first_name }}
+                                    <span class="text-error" v-if="errors.first_name"
+                                          v-text="errors.first_name[0]"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Apellidos <span class="text-danger">*</span></label>
+                                    {{ form.last_name }}
+                                    <span class="text-error" v-if="errors.last_name"
+                                          v-text="errors.last_name[0]"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: DATOS PERSONALES -->
-                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
-                    Información Personal</h4>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label class="form-label small">Fecha Nacimiento <span class="text-danger">*</span></label>
-                        {{ form.birth_date }}
-                        <span class="text-error" v-if="errors.birth_date" v-text="errors.birth_date[0]"></span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Género</label>
-                        {{ form.gender }}
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Estado Civil</label>
-                        {{ form.marital_status }}
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Email</label>
-                        {{ form.email }}
-                        <span class="text-error" v-if="errors.email" v-text="errors.email[0]"></span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Teléfono</label>
-                        {{ form.phone_number }}
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Tipo Sangre</label>
-                        {{ form.blood_type }}
+                <!-- 2. INFORMACIÓN PERSONAL -->
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-regular fa-user"></i> Información Personal</h5>
+                    <div class="grid-3-cols">
+                        <div class="form-group">
+                            <label class="form-label">Fecha Nacimiento <span class="text-danger">*</span></label>
+                            {{ form.birth_date }}
+                            <span class="text-error" v-if="errors.birth_date" v-text="errors.birth_date[0]"></span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Género</label>
+                            {{ form.gender }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado Civil</label>
+                            {{ form.marital_status }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Personal</label>
+                            {{ form.email }}
+                            <span class="text-error" v-if="errors.email" v-text="errors.email[0]"></span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Teléfono / Celular</label>
+                            {{ form.phone_number }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tipo Sangre</label>
+                            {{ form.blood_type }}
+                        </div>
                     </div>
                 </div>
-
-                <!-- SECCIÓN 3: UBICACIÓN -->
-                <h4 style="color: var(--secondary-color); border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase;">
-                    Dirección Domiciliaria</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
-                        <label class="form-label small">País</label>
-                        {{ form.country }}
+                <!-- 3. UBICACIÓN -->
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Domicilio</h5>
+                    <div class="grid-4-cols">
+                        <div class="form-group">
+                            <label class="form-label">País</label>
+                            {{ form.country }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Provincia</label>
+                            {{ form.province }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cantón</label>
+                            {{ form.canton }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Parroquia</label>
+                            {{ form.parish }}
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label small">Provincia</label>
-                        {{ form.province }}
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Cantón</label>
-                        {{ form.canton }}
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label small">Parroquia</label>
-                        {{ form.parish }}
-                    </div>
-                    <div class="form-group" style="grid-column: span 2;">
-                        <label class="form-label small">Referencia / Calle Principal</label>
+                    <div class="form-group mt-3">
+                        <label class="form-label">Calle Principal / Referencia</label>
                         {{ form.address_reference }}
                     </div>
                 </div>
+
+                <!-- 4. CONTACTO DE EMERGENCIA (NUEVO) -->
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-truck-medical"></i> Contacto de Emergencia</h5>
+                    <div class="grid-3-cols">
+                        <div class="form-group">
+                            <label class="form-label">Nombre del Contacto</label>
+                            {{ form.emergency_contact_name }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Teléfono</label>
+                            {{ form.emergency_contact_phone }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Parentesco</label>
+                            {{ form.emergency_contact_relationship }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SALUD E INCLUSIÓN (NUEVO - Discapacidad y Sustitutos) -->
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-hands-holding-circle"></i> Salud e Inclusión</h5>
+
+                    <!-- Contenedor vertical estricto -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+                        <!-- FILA 1: DISCAPACIDAD -->
+                        <div class="w-100">
+                            <!-- Cabecera -->
+                            <div class="toggle-header" :class="{ 'active-header': form.has_disability }">
+                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
+                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
+                                         style="width: 32px; height: 32px;">
+                                        <i class="fa-brands fa-accessible-icon text-primary"></i>
+                                    </div>
+                                    <span>¿Tiene Discapacidad?</span>
+                                </span>
+                                <label class="toggle-switch">
+                                    {{ form.has_disability }}
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Contenido -->
+                            <div v-show="form.has_disability" class="toggle-content">
+                                <div class="grid-2-cols">
+                                    <div class="form-group">
+                                        <label class="form-label small">Tipo de Discapacidad <span
+                                                class="text-danger">*</span></label>
+                                        {{ form.disability_type }}
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Porcentaje (%) <span
+                                                class="text-danger">*</span></label>
+                                        {{ form.disability_percentage }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 2: ENFERMEDAD CATASTRÓFICA -->
+                        <div class="w-100">
+                            <div class="toggle-header" :class="{ 'active-header': form.has_catastrophic_illness }">
+                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
+                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
+                                         style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-heart-pulse text-danger"></i>
+                                    </div>
+                                    <span>¿Tiene Enfermedad Catastrófica?</span>
+                                </span>
+                                <label class="toggle-switch">
+                                    {{ form.has_catastrophic_illness }}
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <div v-show="form.has_catastrophic_illness" class="toggle-content">
+                                <div class="form-group">
+                                    <label class="form-label small">Descripción / Diagnóstico <span class="text-danger">*</span></label>
+                                    {{ form.catastrophic_illness_description }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FILA 3: SUSTITUTO -->
+                        <div class="w-100">
+                            <div class="toggle-header" :class="{ 'active-header': form.is_substitute }">
+                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
+                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
+                                         style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-people-arrows text-success"></i>
+                                    </div>
+                                    <span>¿Es Sustituto?</span>
+                                </span>
+                                <label class="toggle-switch">
+                                    {{ form.is_substitute }}
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <div v-show="form.is_substitute" class="toggle-content">
+                                <div class="alert alert-info small mb-3 p-2 border rounded bg-light text-muted">
+                                    <i class="fa-solid fa-info-circle me-1"></i> Ingrese los datos de la persona con
+                                    discapacidad a quien sustituye.
+                                </div>
+                                <div class="grid-3-cols mb-3">
+                                    <div class="form-group">
+                                        <label class="form-label small">Cédula Familiar</label>
+                                        {{ form.substitute_family_member_id }}
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Nombre Familiar</label>
+                                        {{ form.substitute_family_member_name }}
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Parentesco</label>
+                                        {{ form.substitute_family_member_relationship }}
+                                    </div>
+                                </div>
+                                <div class="grid-2-cols">
+                                    <div class="form-group">
+                                        <label class="form-label small">Discapacidad Familiar</label>
+                                        {{ form.substitute_family_member_disability_type }}
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Porcentaje Familiar (%)</label>
+                                        {{ form.substitute_family_member_disability_percentage }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
             </div>
 
-            <div class="modal-footer-medium">
+            <!-- FOOTER -->
+            <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save">
-                    <i class="fa-solid fa-save"></i> Guardar Ficha
+                <button type="submit" class="btn-save shadow-md">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
                 </button>
             </div>
         </form>

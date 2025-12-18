@@ -44,7 +44,9 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Importante: Configurar formato de fecha para que funcione en edición
+        self.fields['has_disability'].widget.attrs.update({'v-model': 'form.has_disability'})
+        self.fields['has_catastrophic_illness'].widget.attrs.update({'v-model': 'form.has_catastrophic_illness'})
+        self.fields['is_substitute'].widget.attrs.update({'v-model': 'form.is_substitute'})
         self.fields['birth_date'].input_formats = ['%Y-%m-%d']
 
         # 1. LOGICA: Preseleccionar "CEDULA" solo al Crear (sin PK)

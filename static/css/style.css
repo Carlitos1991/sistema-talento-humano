@@ -57,6 +57,10 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
 }
 
+.align-items-center {
+    align-items: center;
+}
+
 .text-right {
     text-align: right;
 }
@@ -829,7 +833,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .text-danger {
-    color: #dc2626; /* Rojo intenso profesional */
+    color: #ef4444;
+    margin-left: 2px;
 }
 
 .small {
@@ -1001,6 +1006,11 @@ h1, h2, h3, h4, h5, h6 {
 .btn-close-modal:focus {
     outline: none;
     box-shadow: none;
+}
+
+.modal-body-custom {
+    background-color: #f8fafc; /* Gris muy suave */
+    padding: 1.5rem;
 }
 
 .btn-cancel {
@@ -1356,22 +1366,22 @@ h1, h2, h3, h4, h5, h6 {
 /* Centrar botones dentro de las celdas de acciones (tbody) */
 .table-container tbody td.actions,
 .table-container tbody td:last-child {
-    /* Usar flex para centrar exactamente los elementos hijos (mejor que text-align) */
-    display: flex;
-    justify-content: center; /* centra horizontalmente */
-    align-items: center; /* centra verticalmente */
-    vertical-align: middle; /* fallback para navegadores antiguos */
-    gap: 6px;
-    min-height: 50px;
+    display: table-cell !important; /* Forzar comportamiento de celda */
+    text-align: center; /* Centrar el contenido horizontalmente */
+    vertical-align: middle; /* Centrar verticalmente */
+    white-space: nowrap; /* Evitar que los botones bajen de línea */
+    width: 1%; /* Truco: Que la columna ocupe el mínimo espacio necesario */
+    padding: 0.5rem;
 }
 
 /* Forzar que actions-wrapper ocupe el espacio necesario y centre sus hijos */
 .table-container tbody td.actions .actions-wrapper,
 .table-container tbody td:last-child .actions-wrapper {
-    display: inline-flex; /* mantenemos inline-flex para que el tamaño sea el del contenido */
+    display: inline-flex; /* Flex en línea para que responda al text-align: center */
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px; /* Espacio entre botones */
+    width: auto;
 }
 
 /* Reglas específicas y de alta prioridad para garantizar centrado de botones en <td> de acciones */
@@ -1572,11 +1582,11 @@ th a.active .sort-icon {
 
 /*MODALES*/
 .modal-container {
-    padding-top: 0; /* controlamos spacing en header/footer individualmente */
-    padding-bottom: 0;
+    padding: 0 !important; /* <--- ESTO ELIMINA EL BORDE BLANCO */
+
     background-color: white;
     width: 100%;
-    max-width: 500px; /* Ancho por defecto */
+    max-width: 500px; /* Ancho estándar pequeño */
     max-height: 90vh;
     min-height: 200px;
     border-radius: 0.75rem;
@@ -1587,11 +1597,11 @@ th a.active .sort-icon {
 }
 
 .modal-container-medium {
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 !important;
+
     background-color: white;
     width: 100%;
-    max-width: 800px;
+    max-width: 1050px;
     max-height: 90vh;
     min-height: 200px;
     border-radius: 0.75rem;
@@ -1621,12 +1631,16 @@ th a.active .sort-icon {
 
 .modal-header,
 .modal-header-medium {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 1.25rem 2rem;
+    box-sizing: border-box;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 2rem;
-    background-color: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
 }
 
 
@@ -1672,16 +1686,6 @@ th a.active .sort-icon {
     box-sizing: border-box;
 }
 
-.modal-header-medium,
-.modal-footer-medium {
-    max-width: 900px;
-    /*
-       width: calc(100% - 2rem); /* margen lateral interno */
-    margin: 0 auto; /* centrar dentro del modal */
-    padding-left: 1rem; /* reducir padding lateral */
-    padding-right: 1rem;
-    box-sizing: border-box;
-}
 
 .modal-footer {
     margin-top: auto; /* empuja el footer al fondo */
@@ -1712,6 +1716,17 @@ th a.active .sort-icon {
 #item-modal-overlay {
     z-index: 1100; /* Mayor que el modal estándar */
     background-color: rgba(0, 0, 0, 0.6); /* Un poco más oscuro para resaltar foco */
+}
+
+/* Bloquear scroll del body cuando hay modal */
+body.no-scroll {
+    overflow: hidden !important;
+    height: 100vh; /* Asegura que no se mueva */
+}
+
+/* Evitar el "rebote" del scroll dentro del modal */
+.modal-body-content {
+    overscroll-behavior: contain;
 }
 
 .form-hint,
@@ -1832,4 +1847,590 @@ th a.active .sort-icon {
     align-items: center !important;
     gap: 0.25rem !important;
     line-height: 1.2 !important;
+}
+
+/* static/css/style.css - AGREGAR AL FINAL */
+
+/* --- MEJORAS VISUALES MODAL --- */
+
+/* Tarjetas Blancas dentro del modal gris */
+.form-section-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 0.5rem;
+}
+
+/* Grids Responsivos */
+.grid-2-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.grid-3-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.grid-4-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .grid-2-cols, .grid-3-cols, .grid-4-cols {
+        grid-template-columns: 1fr; /* Una columna en móvil */
+    }
+}
+
+/* Estilo Input Mejorado */
+.input-field, select.input-field, textarea.input-field {
+    background-color: #fcfcfc;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.9rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.input-field:focus {
+    background-color: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+    display: block;
+}
+
+/* Uploader de Foto Moderno */
+.photo-uploader-wrapper {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    align-self: center;
+    margin-right: 2rem !important;
+    margin-bottom: 0;
+}
+
+@media (max-width: 576px) {
+    .photo-uploader-wrapper {
+        margin-right: 0 !important;
+        margin-bottom: 1rem; /* Pasamos el espacio abajo porque la foto quedará arriba */
+    }
+}
+
+.photo-upload-label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.photo-preview-box {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    border: 2px dashed #cbd5e1;
+    background: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; /* Para posicionar el overlay */
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.photo-upload-label:hover .photo-preview-box {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.photo-preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder-icon {
+    text-align: center;
+    color: #94a3b8;
+    transition: color 0.2s;
+}
+
+.placeholder-icon i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.photo-upload-label:hover .placeholder-icon {
+    color: #3b82f6;
+}
+
+.placeholder-icon span {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.photo-hover-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.photo-upload-label:hover .photo-hover-overlay {
+    opacity: 1;
+}
+
+.modal-footer-spaced {
+    background-color: #ffffff;
+    padding: 1.5rem 2rem 2rem 2rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* Botón flotante para editar foto */
+.btn-upload-trigger {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    background-color: #3b82f6;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 2px solid white;
+    transition: transform 0.2s;
+}
+
+.btn-upload-trigger:hover {
+    transform: scale(1.1);
+    background-color: #2563eb;
+}
+
+/* Margen superior helpers */
+.mt-3 {
+    margin-top: 1rem !important;
+}
+
+.gap-4 {
+    gap: 1.5rem !important;
+}
+
+.modal-header-gradient {
+    background: linear-gradient(to right, #1e293b, #334155);
+    border-bottom: none;
+    color: white;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+.text-white-opacity {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.text-white-opacity:hover {
+    color: #ffffff !important;
+    opacity: 1;
+}
+
+/* --- TOGGLE SWITCH MODERN (Estilo iOS) --- */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+/* Ocultar el checkbox original de Django */
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* El deslizador */
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1; /* Gris apagado */
+    transition: .3s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Estado Activo */
+input:checked + .toggle-slider {
+    background-color: #10b981; /* Verde éxito */
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* --- ANIMACIÓN DESPLEGABLE (Accordion) --- */
+.expandable-container {
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Estilo para el encabezado del toggle */
+.toggle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    cursor: pointer; /* Para que parezca clicable */
+    transition: background-color 0.2s;
+}
+
+.toggle-header:hover {
+    background-color: #f1f5f9;
+}
+
+/* Cuando está activo, quitamos el borde inferior radius para pegarlo al contenido */
+.toggle-header.active-header {
+    background-color: #f0fdf4; /* Verde muy suave */
+    border-color: #bbf7d0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+}
+
+/* Contenido interno */
+.toggle-content {
+    background-color: #fff;
+    border: 1px solid #bbf7d0; /* Borde verde suave */
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem; /* Espacio si hay varios seguidos */
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Forzar que los grupos de formulario ocupen todo el ancho de su celda */
+.grid-2-cols .form-group,
+.grid-3-cols .form-group,
+.grid-4-cols .form-group {
+    width: 100%;
+}
+
+/* Forzar que los inputs y selects dentro de los grupos sean del 100% */
+.form-group input,
+.form-group select,
+.form-group textarea,
+.input-field {
+    width: 100% !important; /* Importante para sobrescribir defaults */
+    box-sizing: border-box; /* Para que el padding no rompa el ancho */
+    max-width: 100%;
+}
+
+/* Asegurar que el contenedor flexible ocupe el espacio */
+.flex-grow-1 {
+    flex-grow: 1;
+    min-width: 0; /* Truco de Flexbox para evitar desbordes */
+}
+
+/* Utilidad para ancho completo */
+.w-100 {
+    width: 100% !important;
+}
+
+/* Table Styles dentro del modal */
+.font-weight-500 {
+    font-weight: 500;
+    color: #334155;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.bg-success-subtle {
+    background-color: #dcfce7;
+}
+
+.bg-primary-subtle {
+    background-color: #dbeafe;
+}
+
+.bg-secondary-subtle {
+    background-color: #f1f5f9;
+}
+
+/* Checkboxes un poco más grandes para facilidad */
+.form-check-input {
+    width: 1.2em;
+    height: 1.2em;
+    cursor: pointer;
+}
+
+/* static/css/style.css - AGREGAR AL FINAL */
+
+/* --- ESTILOS MATRIZ DE ROLES --- */
+
+/* 1. Selector de Plantillas (Chips) */
+.template-selector-box {
+    /* Diseño Flex Vertical y Centrado */
+    display: flex;
+    flex-direction: column; /* Apilar: Título arriba, botones abajo */
+    align-items: center; /* Centrar horizontalmente */
+    justify-content: center;
+    text-align: center; /* Asegurar que el texto esté centrado */
+
+    /* Espaciado */
+    gap: 1rem; /* Espacio entre el título y los botones */
+    padding: 1.5rem; /* Relleno interno generoso */
+    margin-top: 0.5rem;
+    margin-bottom: 2.5rem !important; /* Espacio externo inferior */
+
+    /* Estilo Visual */
+    background-color: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+}
+
+.template-label {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: 100%; /* Ocupar todo el ancho para asegurar el centro */
+}
+
+.template-options {
+    display: flex;
+    justify-content: center; /* Centrar los botones en la fila */
+    flex-wrap: wrap; /* Si no caben, bajan ordenadamente */
+    gap: 15px; /* Espacio entre botones */
+    width: 100%;
+}
+
+.template-chip {
+    cursor: pointer;
+    position: relative;
+}
+
+.template-chip input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.template-chip span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #475569;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.template-chip:hover span {
+    background-color: #f1f5f9;
+}
+
+/* Chips Activos (Seleccionados) */
+.template-chip input:checked + span {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* 2. Tarjetas de Módulo */
+.permissions-scroll-area {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 5px; /* Evita que el scroll tape contenido */
+}
+
+.module-permission-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.module-header {
+    background-color: #334155; /* Gris oscuro azulado */
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.btn-toggle-all {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-toggle-all:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 3. Tabla Interna */
+.table-permissions th {
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table-permissions td {
+    padding: 0.75rem !important;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    text-align: center; /* Centralizamos el contenido de la celda */
+    position: relative;
+}
+
+.table-permissions td .form-check-input {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Posicionamiento perfecto al centro */
+    margin: 0; /* Quitamos márgenes que puedan estar estorbando */
+}
+
+.table-permissions tr:last-child td {
+    border-bottom: none;
+}
+
+.table-permissions tr:hover {
+    background-color: #f8fafc;
+}
+
+/* 4. Checkboxes Personalizados */
+.custom-checkbox {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+    accent-color: #2563eb; /* Azul primario */
+}
+
+/* Checkbox de borrar en rojo (opcional) */
+.delete-check {
+    accent-color: #ef4444;
+}
+
+/* Empty State */
+.empty-permissions-state {
+    text-align: center;
+    padding: 2rem;
+    background: #fff;
+    border: 2px dashed #e2e8f0;
+    border-radius: 8px;
+    color: #94a3b8;
+}
+
+.empty-permissions-state i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #f59e0b;
+}
+
+/* 1. Separar el Input "Nombre del Rol" de las Plantillas */
+#role-modal-app .form-group {
+    margin-bottom: 2rem !important; /* Aumentamos el espacio inferior */
+}
+
+/* 2. Separar el bloque "Plantillas Rápidas" de la Matriz */
+.template-selector-box {
+    margin-top: 0.5rem; /* Un poco de aire arriba */
+    margin-bottom: 2.5rem !important; /* Mucho aire abajo para separar de la tabla */
+}
+
+/* 3. Asegurar que el título de la matriz tenga su espacio */
+.section-title {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
 }

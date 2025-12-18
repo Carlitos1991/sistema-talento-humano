@@ -3,92 +3,110 @@ from django import forms
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from apps.core.forms import BaseFormMixin
-from apps.core.models import User
-from apps.person.models import Person  # Importamos desde tu nueva app
 
 
 class RoleForm(BaseFormMixin, forms.ModelForm):
-    """
-    Formulario para Roles que genera la MATRIZ DE PERMISOS.
-    """
-
     class Meta:
         model = Group
         fields = ['name']
-        labels = {'name': 'Nombre del Rol'}
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'Ej: ANALISTA_TTHH', 'class': 'form-control uppercase-input'})
+            'name': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'Ej: ANALISTA_TTHH'
+            })
+        }
+        labels = {'name': 'Nombre del Rol'}
+
+    def get_grouped_permissions(self):
+        """
+        Organiza los permisos por 'Aplicación' o 'Módulo' para pintar la tabla.
+        Retorna un diccionario: { 'Nombre Módulo': [ {modelo: 'Persona', perms: {view, add, change, delete}} ] }
+        """
+        # 1. Definimos qué apps queremos gestionar (para no traer basura de Django interno)
+        # Ajusta esto a los nombres reales de tus apps en settings
+        target_apps = {
+            'person': 'Gestión de Personal',
+            'core': 'Sistema y Usuarios',  # Aquí están User, Catalog, Location
+            'auth': 'Seguridad (Roles)',  # Aquí está el modelo Group
         }
 
-    def get_permission_matrix(self):
-        """
-        Retorna: { 'Nombre Modulo': {'view': perm, 'add': perm, 'change': perm, 'delete': perm} }
-        """
-        # Apps que queremos gestionar en la matriz
-        target_apps = ['core', 'person', 'security']
-        content_types = ContentType.objects.filter(app_label__in=target_apps)
+        grouped_data = {}
 
-        matrix = {}
-        for ct in content_types:
-            model_name = ct.model_class()._meta.verbose_name_plural.title()
-            perms = Permission.objects.filter(content_type=ct)
-            if not perms.exists(): continue
+        for app_label, verbose_name in target_apps.items():
+            # Obtener ContentTypes de esa app
+            content_types = ContentType.objects.filter(app_label=app_label)
 
-            matrix[model_name] = {
-                'view': perms.filter(codename__startswith='view_').first(),
-                'add': perms.filter(codename__startswith='add_').first(),
-                'change': perms.filter(codename__startswith='change_').first(),
-                'delete': perms.filter(codename__startswith='delete_').first(),
-            }
-        return matrix
+            module_models = []
+
+            for ct in content_types:
+                # Obtener permisos para este modelo
+                perms = Permission.objects.filter(content_type=ct)
+                if not perms.exists():
+                    continue
+
+                # Estructura para la fila de la tabla
+                model_data = {
+                    'name': ct.model_class()._meta.verbose_name_plural.title(),
+                    'perms': {
+                        'view': perms.filter(codename__startswith='view_').first(),
+                        'add': perms.filter(codename__startswith='add_').first(),
+                        'change': perms.filter(codename__startswith='change_').first(),
+                        'delete': perms.filter(codename__startswith='delete_').first(),
+                    }
+                }
+                module_models.append(model_data)
+
+            if module_models:
+                grouped_data[verbose_name] = module_models
+
+        return grouped_data
 
 
 class CredentialCreationForm(BaseFormMixin, forms.Form):
-    """
-    Formulario para crear credenciales a una Persona existente.
-    """
     username = forms.CharField(
-        label="Nombre de Usuario",
-        widget=forms.TextInput(attrs={'placeholder': 'Ej: jdoe', 'class': 'lowercase-input'})
+        label="Usuario",
+        widget=forms.TextInput(attrs={'class': 'input-field lowercase-input', 'placeholder': 'ej: juan.perez'})
     )
     password = forms.CharField(
         label="Contraseña",
-        widget=forms.PasswordInput(attrs={'placeholder': 'Contraseña segura'})
+        widget=forms.PasswordInput(attrs={'class': 'input-field', 'placeholder': '******'})
     )
     role = forms.ModelChoiceField(
         queryset=Group.objects.all(),
         label="Rol / Perfil",
-        empty_label="Seleccione un Rol..."
+        empty_label="-- Seleccione Rol --",
+        widget=forms.Select(attrs={'class': 'input-field select2-field'})
     )
 
     def __init__(self, person_id=None, *args, **kwargs):
+        self.person_id = person_id
         super().__init__(*args, **kwargs)
-        if person_id:
-            self.person = Person.objects.get(pk=person_id)
 
     def clean_username(self):
         username = self.cleaned_data['username'].lower()
         if User.objects.filter(username=username).exists():
-            raise forms.ValidationError("Este usuario ya existe.")
+            raise forms.ValidationError("Este nombre de usuario ya está en uso.")
         return username
 
     def save(self):
         data = self.cleaned_data
+        person = Person.objects.get(pk=self.person_id)
+
         # 1. Crear Usuario
         user = User.objects.create_user(
             username=data['username'],
             password=data['password'],
-            # Copiamos datos de la persona al usuario por compatibilidad
-            email=self.person.email,
-            first_name=self.person.first_name,
-            last_name=self.person.last_name
+            email=person.email,
+            first_name=person.first_name,
+            last_name=person.last_name
         )
 
         # 2. Asignar Rol
-        user.groups.add(data['role'])
+        if data['role']:
+            user.groups.add(data['role'])
 
         # 3. Vincular a la Persona
-        self.person.user = user
-        self.person.save()
+        person.user = user
+        person.save()
 
         return user
