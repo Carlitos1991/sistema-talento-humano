@@ -31,12 +31,22 @@ class UserListView(LoginRequiredMixin, ListView):
         if status == 'active':
             qs = qs.filter(user__is_active=True)
         elif status == 'inactive':
-            # Incluimos usuarios inactivos.
             qs = qs.filter(user__is_active=False)
         elif status == 'no_account':
             qs = qs.filter(user__isnull=True)
 
         return qs[:200]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['creds_form'] = CredentialCreationForm()
+        context['stats_total'] = Person.objects.count()
+        # Activos (Tienen usuario y is_active=True)
+        context['stats_active'] = Person.objects.filter(user__is_active=True).count()
+        # Inactivos (Tienen usuario y is_active=False)
+        context['stats_inactive'] = Person.objects.filter(user__is_active=False).count()
+
+        return context
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -127,12 +137,18 @@ class RoleUpdateView(LoginRequiredMixin, UpdateView):
 class CreateUserForPersonView(LoginRequiredMixin, View):
 
     def post(self, request, person_id):
-        # Esta vista requiere el formulario CredentialCreationForm
-        # Asegúrate de importarlo o definirlo si no lo has hecho
         from .forms import CredentialCreationForm
-
-        form = CredentialCreationForm(person_id, request.POST)
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'message': 'Credenciales generadas y asignadas.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        
+        try:
+            form = CredentialCreationForm(person_id, request.POST)
+            if form.is_valid():
+                form.save()
+                return JsonResponse({'success': True, 'message': 'Credenciales generadas y asignadas.'})
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False, 
+                'errors': {'__all__': [f'Error del servidor: {str(e)}']}
+            }, status=500)

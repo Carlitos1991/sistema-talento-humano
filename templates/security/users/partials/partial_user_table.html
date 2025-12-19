@@ -55,11 +55,22 @@
                     {% endif %}
                 </td>
                 <td class="text-center">
-                    <!-- Tu lógica de estados está bien, la dejo igual -->
-                    {% if person.person_status %}
-                        <span class="status-badge badge-neutral">{{ person.person_status.name }}</span>
+                    {% if person.user %}
+                        {% if person.user.is_active %}
+                            <span class="status-badge active">
+                <i class="fa-solid fa-check-circle me-1"></i> Activo
+                    </span>
+                        {% else %}
+                            <span class="status-badge inactive">
+                        <i class="fa-solid fa-ban me-1"></i> Inactivo
+                    </span>
+                        {% endif %}
                     {% else %}
-                        <span class="status-badge status-badge-no-status">SIN ESTADO</span>
+                        <!-- Caso: No tiene usuario asociado -->
+                        <span class="status-badge"
+                              style="background-color: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">
+                        <i class="fa-solid fa-user-slash me-1"></i> Sin Cuenta
+                        </span>
                     {% endif %}
                 </td>
 
@@ -75,7 +86,8 @@
                         </button>
 
                         <button class="btn-icon btn-user-action btn-manage-user"
-                                data-url="·"
+                                data-url="{% url 'security:user_create_credentials' person.pk %}"
+                                data-name="{{ person.first_name }} {{ person.last_name }}"
                                 title="Gestionar Usuario"
                                 style="background: linear-gradient(to right, #4f46e5, #4338ca);">
                             {% if person.user %}

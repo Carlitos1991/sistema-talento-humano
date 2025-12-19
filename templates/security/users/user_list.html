@@ -9,32 +9,34 @@
             <h1>Gestión de Usuarios</h1>
             <p>Configuración de usuarios, roles y permisos del sistema.</p>
         </div>
-        <button id="btn-add-catalog" type="button" data-modal-open="catalog-modal"
-                aria-controls="catalog-modal" aria-expanded="false" data-url="#"
-                class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-catalog-form">
+        <button class="btn btn-create" style="opacity: 0.5; cursor: not-allowed;"
+                title="Vaya a Personas para crear un usuario">
             <i class="fas fa-plus"></i> Nuevo Usuario
         </button>
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">
+        <!-- TOTAL -->
         <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
             <div class="stat-left">
                 <h3>Total</h3>
-                <div class="number" id="stat-total"> {{ stats_total|default:"0" }}</div>
+                <div class="number">{{ stats_total|default:"0" }}</div>
             </div>
-            <i class="fas fa-book-open stat-icon"></i>
+            <i class="fas fa-users stat-icon"></i>
         </div>
-        <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-active">
+        <!-- ACTIVOS -->
+        <div class="stat-card color-two opacity-low" onclick="filterByStatus('active')" id="card-filter-active">
             <div class="stat-left"><h3>Activos</h3>
-                <div class="number" id="stat-active">{{ stats_active|default:"0" }}</div>
+                <div class="number">{{ stats_active|default:"0" }}</div>
             </div>
-            <i class="fas fa-check-circle stat-icon"></i>
+            <i class="fas fa-user-check stat-icon"></i>
         </div>
-        <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-inactive">
+        <!-- INACTIVOS -->
+        <div class="stat-card color-three opacity-low" onclick="filterByStatus('inactive')" id="card-filter-inactive">
             <div class="stat-left"><h3>Inactivos</h3>
-                <div class="number" id="stat-inactive">{{ stats_inactive|default:"0" }}</div>
+                <div class="number">{{ stats_inactive|default:"0" }}</div>
             </div>
-            <i class="fas fa-times-circle stat-icon"></i>
+            <i class="fas fa-user-slash stat-icon"></i>
         </div>
     </div>
     <!-- 3. Contenedor principal Tabla (AJAX) -->
@@ -73,10 +75,9 @@
 
 {% endblock %}
 {% block modals %}
-    {% include 'core/catalogs/modals/modal_catalog_form.html' %}
-    {% include 'core/catalogs/modals/modal_item_form.html' %}
-    {% include 'core/catalogs/modals/modal_item_list.html' %}
+    {% include 'security/users/modals/modal_create_credentials.html' %}
 {% endblock %}
 {% block extra_js %}
-    <script src="{% static 'js/catalogs.js' %}"></script>
+    <script src="{% static 'js/users.js' %}"></script>
+    <script src="{% static 'js/credentials.js' %}"></script>
 {% endblock %}
