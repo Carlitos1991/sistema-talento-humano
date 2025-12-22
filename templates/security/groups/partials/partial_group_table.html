@@ -6,7 +6,9 @@
             <th style="width: 50px;"><i class="fa-solid fa-list-ol"></i></th>
             <th><i class="fa-solid fa-user-shield"></i> Nombre del Perfil / Rol</th>
             <th class="text-center"><i class="fa-solid fa-users"></i> Usuarios Asignados</th>
-            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+            {% if perms.auth.change_group or perms.auth.delete_group %}
+                <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody id="table-body">
@@ -35,19 +37,20 @@
                         </span>
                     {% endif %}
                 </td>
-
-                <td class="actions text-center">
-                    <div class="actions-wrapper">
-                        <!-- Botón Editar -->
-                        {% if perms.auth.change_group %}
-                            <button class="btn-icon btn-views-action btn-edit-role"
-                                    data-url="{% url 'security:role_update' role.pk %}"
-                                    title="Configurar Permisos">
-                                <i class="fas fa-pencil"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
+                {% if perms.auth.change_group or perms.auth.delete_group %}
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Botón Editar -->
+                            {% if perms.auth.change_group %}
+                                <button class="btn-icon btn-views-action btn-edit-role"
+                                        data-url="{% url 'security:role_update' role.pk %}"
+                                        title="Configurar Permisos">
+                                    <i class="fas fa-pencil"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>

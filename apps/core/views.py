@@ -179,10 +179,11 @@ def catalog_toggle_status(request, pk):
 
 # --- 5. ITEMS DE CATÁLOGO  ---
 # --- 5.1 CREAR ITEMS ---
-class CatalogItemCreateView(LoginRequiredMixin, CreateView):
+class CatalogItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = CatalogItem
     form_class = CatalogItemForm
     template_name = 'core/catalogs/modals/modal_item_form.html'  # Solo renderiza el form si es GET
+    permission_required = 'core.add_catalogitem'
 
     def post(self, request, *args, **kwargs):
         catalog_id = request.POST.get('catalog_id')
@@ -247,10 +248,11 @@ def item_detail_json(request, pk):
 
 
 # --- 5.2 ACTUALIZAR ITEMS ---
-class CatalogItemUpdateView(LoginRequiredMixin, UpdateView):
+class CatalogItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = CatalogItem
     form_class = CatalogItemForm
     template_name = 'core/catalogs/modals/modal_item_form.html'
+    permission_required = 'security.change_catalogitem'
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -264,6 +266,7 @@ class CatalogItemUpdateView(LoginRequiredMixin, UpdateView):
 
 # --- 5.3 CAMBIAR ESTADO ITEMS ---
 @require_POST
+@permission_required('core.change_catalogitem', raise_exception=True)
 def item_toggle_status(request, pk):
     """Activar/Inactivar Item"""
     item = get_object_or_404(CatalogItem, pk=pk)
@@ -287,10 +290,11 @@ def get_location_stats_dict():
 
 
 # --- 6.1 LISTA DE UBICACIONES ---
-class LocationListView(LoginRequiredMixin, ListView):
+class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Location
     template_name = 'core/locations/location_list.html'
     context_object_name = 'locations'
+    permission_required = 'core.view_location'
 
     def get_queryset(self):
         level = self.request.GET.get('level')
@@ -365,10 +369,11 @@ class LocationListView(LoginRequiredMixin, ListView):
         return super().render_to_response(context, **response_kwargs)
 
 
-class LocationCreateView(LoginRequiredMixin, CreateView):
+class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Location
     form_class = LocationForm
     template_name = 'core/locations/modals/modal_location_form.html'
+    permission_required = 'core.create_location'
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -387,10 +392,11 @@ class LocationCreateView(LoginRequiredMixin, CreateView):
             }, status=400)
 
 
-class LocationUpdateView(LoginRequiredMixin, UpdateView):
+class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Location
     form_class = LocationForm
     template_name = 'core/locations/modals/modal_location_form.html'
+    permission_required = 'core.change_location'
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()  # Obtener la instancia a editar
@@ -430,6 +436,7 @@ def location_detail_json(request, pk):
 
 
 @require_POST
+@permission_required('core.change_location', raise_exception=True)
 def location_toggle_status(request, pk):
     """Alterna el estado de una Ubicación"""
     location = get_object_or_404(Location, pk=pk)

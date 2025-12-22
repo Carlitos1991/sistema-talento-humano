@@ -9,7 +9,9 @@
             <th><i class="fa-duotone fa-solid fa-sitemap"></i> Nivel</th>
             <th><i class="fa-duotone fa-solid fa-indent"></i> Padre</th>
             <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
-            <th><i class="fas fa-cogs"></i> Acciones</th>
+            {% if perms.core.add_location or perms.core.change_location %}
+                <th><i class="fas fa-cogs"></i> Acciones</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody id="table-body">
@@ -58,45 +60,46 @@
                     {% if location.is_active %}Activo{% else %}Inactivo{% endif %}
                     </span>
                 </td>
-
-                <td>
-                    <div class="actions-wrapper">
-                        {% if location.level < 4 and perms.core.add_location %}
-                            <button type="button" class="btn-icon btn-create-action"
-                                    onclick="openCreateChildLocation({{ location.id }})"
-                                    title="Agregar sub-ubicación">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        {% endif %}
-                        {% if perms.core.change_location %}
-                            <button type="button" class="btn-icon btn-views-action"
-                                    onclick="openEditLocation({{ location.id }})"
-                                    title="Editar">
-                                <i class="fas fa-pencil"></i>
-                            </button>
-                        {% endif %}
-                        <!-- Toggle Button con TODOS los datos necesarios -->
-                        {% if perms.core.change_location %}
-                            {% if location.is_active %}
-                                <!-- ESTADO ACTIVO: Rojo -->
-                                <button type="button"
-                                        class="btn-icon btn-delete-action"
-                                        onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
-                                        title="Desactivar">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                            {% else %}
-                                <!-- ESTADO INACTIVO: Verde -->
-                                <button type="button"
-                                        class="btn-icon btn-create-action"
-                                        onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
-                                        title="Activar">
-                                    <i class="fas fa-toggle-on"></i>
+                {% if perms.core.add_location or perms.core.change_location %}
+                    <td>
+                        <div class="actions-wrapper">
+                            {% if location.level < 4 and perms.core.add_location %}
+                                <button type="button" class="btn-icon btn-create-action"
+                                        onclick="openCreateChildLocation({{ location.id }})"
+                                        title="Agregar sub-ubicación">
+                                    <i class="fas fa-plus"></i>
                                 </button>
                             {% endif %}
-                        {% endif %}
-                    </div>
-                </td>
+                            {% if perms.core.change_location %}
+                                <button type="button" class="btn-icon btn-views-action"
+                                        onclick="openEditLocation({{ location.id }})"
+                                        title="Editar">
+                                    <i class="fas fa-pencil"></i>
+                                </button>
+                            {% endif %}
+                            <!-- Toggle Button con TODOS los datos necesarios -->
+                            {% if perms.core.change_location %}
+                                {% if location.is_active %}
+                                    <!-- ESTADO ACTIVO: Rojo -->
+                                    <button type="button"
+                                            class="btn-icon btn-delete-action"
+                                            onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
+                                            title="Desactivar">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                {% else %}
+                                    <!-- ESTADO INACTIVO: Verde -->
+                                    <button type="button"
+                                            class="btn-icon btn-create-action"
+                                            onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
+                                            title="Activar">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>

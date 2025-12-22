@@ -9,7 +9,9 @@
             <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
             <th><i class="fas fa-building header-icon"></i> Rol de usuario</th>
             <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            <th><i class="fas fa-cogs header-icon"></i> Acciones</th>
+            {% if perms.person.change_person or perms.core.change_user or perms.core.add_user %}
+                <th><i class="fas fa-cogs header-icon"></i> Acciones</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody id="table-body">
@@ -72,38 +74,39 @@
                         </span>
                     {% endif %}
                 </td>
-
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if perms.core.change_user or perms.core.add_user %}
-                            <button class="btn-icon btn-list-action btn-manage-user"
-                                    data-url="{% url 'security:user_create_credentials' person.pk %}"
-                                    data-name="{{ person.first_name }} {{ person.last_name }}"
-                                    title="Gestionar Usuario">
-                                {% if person.user %}
-                                    <i class="fas fa-user-pen"></i>
-                                {% else %}
-                                    <i class="fas fa-user-plus"></i>
-                                {% endif %}
-                            </button>
-                        {% endif %}
-                        {% if person.user and perms.core.change_user %}
-                            {% if person.user.is_active %}
-                                <button class="btn-icon btn-delete-action"
-                                        onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
-                                        title="Desactivar Acceso">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                            {% else %}
-                                <button class="btn-icon btn-create-action"
-                                        onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', false)"
-                                        title="Activar Acceso">
-                                    <i class="fas fa-toggle-on"></i>
+                {% if perms.person.change_person or perms.core.change_user or perms.core.add_user %}
+                    <td class="actions">
+                        <div class="actions-wrapper">
+                            {% if perms.core.change_user or perms.core.add_user %}
+                                <button class="btn-icon btn-list-action btn-manage-user"
+                                        data-url="{% url 'security:user_create_credentials' person.pk %}"
+                                        data-name="{{ person.first_name }} {{ person.last_name }}"
+                                        title="Gestionar Usuario">
+                                    {% if person.user %}
+                                        <i class="fas fa-user-pen"></i>
+                                    {% else %}
+                                        <i class="fas fa-user-plus"></i>
+                                    {% endif %}
                                 </button>
                             {% endif %}
-                        {% endif %}
-                    </div>
-                </td>
+                            {% if person.user and perms.core.change_user %}
+                                {% if person.user.is_active %}
+                                    <button class="btn-icon btn-delete-action"
+                                            onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
+                                            title="Desactivar Acceso">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn-icon btn-create-action"
+                                            onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', false)"
+                                            title="Activar Acceso">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>

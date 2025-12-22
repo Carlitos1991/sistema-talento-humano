@@ -1,5 +1,5 @@
 # apps/person/views.py
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -7,11 +7,13 @@ from django.views.generic import ListView, CreateView, UpdateView
 from .models import Person
 from .forms import PersonForm
 
-class PersonListView(LoginRequiredMixin, ListView):
+
+class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Person
     template_name = 'person/person_list.html'
     context_object_name = 'people'
     paginate_by = 10
+    permission_required = 'person.view_person'
 
     def get_queryset(self):
         qs = Person.objects.select_related('document_type', 'user').all().order_by('last_name')
@@ -26,7 +28,7 @@ class PersonListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = PersonForm() # Para renderizar el modal vacío
+        context['form'] = PersonForm()  # Para renderizar el modal vacío
         return context
 
     def get(self, request, *args, **kwargs):
@@ -37,29 +39,31 @@ class PersonListView(LoginRequiredMixin, ListView):
         return super().get(request, *args, **kwargs)
 
 
-class PersonCreateView(LoginRequiredMixin, CreateView):
+class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Person
     form_class = PersonForm
     template_name = 'person/modals/modal_person_form.html'
+    permission_required = 'person.create_person'
 
     def post(self, request, *args, **kwargs):
         # Nota: request.FILES es necesario para la foto
-        form = PersonForm(request.POST, request.FILES) 
+        form = PersonForm(request.POST, request.FILES)
         if form.is_valid():
             person = form.save()
             return JsonResponse({
                 'success': True,
                 'message': 'Persona registrada correctamente.',
                 # Devolvemos datos útiles por si quieres actualizar la tabla via JS sin recargar
-                'data': {'id': person.id, 'full_name': person.full_name} 
+                'data': {'id': person.id, 'full_name': person.full_name}
             })
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
-class PersonUpdateView(LoginRequiredMixin, UpdateView):
+class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Person
     form_class = PersonForm
     template_name = 'person/modals/modal_person_form.html'
+    permission_required = 'change.view_person'
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -90,6 +94,6 @@ def person_detail_json(request, pk):
         'address_reference': p.address_reference,
         'phone_number': p.phone_number,
         # Si hay foto, enviamos la URL, si no null
-        'photo_url': p.photo.url if p.photo else None 
+        'photo_url': p.photo.url if p.photo else None
     }
     return JsonResponse({'success': True, 'data': data})

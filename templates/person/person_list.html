@@ -17,9 +17,11 @@
                 <h1>Gestión de Personas</h1>
                 <p>Gestión de fichas personales, empleados y usuarios del sistema.</p>
             </div>
-            <button type="button" class="btn btn-create" @click="openCreateModal">
-                <i class="fas fa-plus"></i> Nueva Persona
-            </button>
+            {% if perms.person.add_person %}
+                <button type="button" class="btn btn-create" @click="openCreateModal">
+                    <i class="fas fa-plus"></i> Nueva Persona
+                </button>
+            {% endif %}
         </div>
 
         <!-- 2. Estadísticas -->

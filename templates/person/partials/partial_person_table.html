@@ -11,7 +11,9 @@
             <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
             <th class="text-center"><i class="fas fa-building header-icon"></i> Rol de usuario</th>
             <th class="text-center"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
+            {% if perms.person.change_person or perms.person.delete_person %}
+                <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody id="table-body">
@@ -66,30 +68,31 @@
                         <span class="status-badge status-badge-no-status">SIN ESTADO</span>
                     {% endif %}
                 </td>
+                {% if perms.person.change_person or perms.person.delete_person %}
+                    <td>
+                        <div class="actions-wrapper">
+                            <!-- CORRECCIÓN 2: Uso de perms nativos de Django si 'can_edit' no existe en contexto -->
+                            <!-- Si pasas can_edit desde la vista, déjalo así. Si no, usa perms.person.change_person -->
 
-                <td>
-                    <div class="actions-wrapper">
-                        <!-- CORRECCIÓN 2: Uso de perms nativos de Django si 'can_edit' no existe en contexto -->
-                        <!-- Si pasas can_edit desde la vista, déjalo así. Si no, usa perms.person.change_person -->
+                            <button class="btn-icon btn-info btn-edit-person"
+                                    data-url="{% url 'person:person_update' person.pk %}"
+                                    title="Editar">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
 
-                        <button class="btn-icon btn-info btn-edit-person"
-                                data-url="{% url 'person:person_update' person.pk %}"
-                                title="Editar">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>
-
-                        <button class="btn-icon btn-user-action btn-manage-user"
-                                data-url="{% url 'security:user_create_credentials' person.pk %}"
-                                title="Gestionar Usuario"
-                                style="background: linear-gradient(to right, #4f46e5, #4338ca);">
-                            {% if person.user %}
-                                <i class="fas fa-user-check"></i>
-                            {% else %}
-                                <i class="fas fa-user-plus"></i>
-                            {% endif %}
-                        </button>
-                    </div>
-                </td>
+                            <button class="btn-icon btn-user-action btn-manage-user"
+                                    data-url="{% url 'security:user_create_credentials' person.pk %}"
+                                    title="Gestionar Usuario"
+                                    style="background: linear-gradient(to right, #4f46e5, #4338ca);">
+                                {% if person.user %}
+                                    <i class="fas fa-user-check"></i>
+                                {% else %}
+                                    <i class="fas fa-user-plus"></i>
+                                {% endif %}
+                            </button>
+                        </div>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>
