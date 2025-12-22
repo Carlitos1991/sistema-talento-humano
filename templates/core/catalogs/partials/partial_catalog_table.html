@@ -28,41 +28,45 @@
 
                 <td>
                     <div class="actions-wrapper">
-                        <button type="button" class="btn-icon btn-create-action"
-                                onclick="openCreateItem({{ catalog.id }}, '{{ catalog.name|escapejs }}')"
-                                title="Agregar Item">
-                            <i class="fas fa-plus"></i>
-                        </button>
-
-                        <button class="btn-icon btn-list-action"
-                                title="Listar Items"
-                                onclick="openListItems({{ catalog.id }}, '{{ catalog.name|escapejs }}')">
-                            <i class="fas fa-list"></i>
-                        </button>
-
-                        <button type="button" class="btn-icon btn-views-action"
-                                onclick="openEditCatalog({{ catalog.id }})"
-                                title="Editar">
-                            <i class="fas fa-pencil"></i>
-                        </button>
-
-                        <!-- Toggle Button con TODOS los datos necesarios -->
-                        {% if catalog.is_active %}
-                            <!-- ESTADO ACTIVO: Botón Rojo (Delete Action) -->
-                            <button type="button"
-                                    class="btn-icon btn-delete-action"
-                                    onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
-                                    title="Desactivar">
-                                <i class="fas fa-power-off"></i>
+                        {% if perms.core.add_catalogitem %}
+                            <button type="button" class="btn-icon btn-create-action"
+                                    onclick="openCreateItem({{ catalog.id }}, '{{ catalog.name|escapejs }}')"
+                                    title="Agregar Item">
+                                <i class="fas fa-plus"></i>
                             </button>
-                        {% else %}
-                            <!-- ESTADO INACTIVO: Botón Verde (Create Action) -->
-                            <button type="button"
-                                    class="btn-icon btn-create-action"
-                                    onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
-                                    title="Activar">
-                                <i class="fas fa-toggle-on"></i>
+                        {% endif %}
+                        {% if perms.core.view_catalogitem %}
+                            <button class="btn-icon btn-list-action"
+                                    title="Listar Items"
+                                    onclick="openListItems({{ catalog.id }}, '{{ catalog.name|escapejs }}')">
+                                <i class="fas fa-list"></i>
                             </button>
+                        {% endif %}
+                        {% if perms.core.change_catalog %}
+                            <button type="button" class="btn-icon btn-views-action"
+                                    onclick="openEditCatalog({{ catalog.id }})"
+                                    title="Editar">
+                                <i class="fas fa-pencil"></i>
+                            </button>
+                        {% endif %}
+                        {% if perms.core.change_catalog %}
+                            {% if catalog.is_active %}
+                                <!-- ESTADO ACTIVO: Botón Rojo (Delete Action) -->
+                                <button type="button"
+                                        class="btn-icon btn-delete-action"
+                                        onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                        title="Desactivar">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            {% else %}
+                                <!-- ESTADO INACTIVO: Botón Verde (Create Action) -->
+                                <button type="button"
+                                        class="btn-icon btn-create-action"
+                                        onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                        title="Activar">
+                                    <i class="fas fa-toggle-on"></i>
+                                </button>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </td>

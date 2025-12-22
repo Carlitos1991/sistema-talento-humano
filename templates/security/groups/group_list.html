@@ -9,9 +9,11 @@
             <h1>Perfiles de Acceso </h1>
             <p>Configuración de roles y permisos del sistema</p>
         </div>
-        <button id="btn-add-role" type="button" class="btn btn-create">
-            <i class="fas fa-plus"></i> Nuevo Rol
-        </button>
+        {% if perms.auth.add_group %}
+            <button id="btn-add-role" type="button" class="btn btn-create">
+                <i class="fas fa-plus"></i> Nuevo Rol
+            </button>
+        {% endif %}
     </div>
     <!-- 3. Contenedor principal Tabla (AJAX) -->
     <div id="table-app">

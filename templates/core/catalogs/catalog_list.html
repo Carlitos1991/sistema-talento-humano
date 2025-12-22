@@ -9,13 +9,13 @@
             <h1>Gestión de Catálogos</h1>
             <p>Administra la información de catálogos del sistema.</p>
         </div>
-        {#        {% if perms.core.add_catalog %}#}
-        <button id="btn-add-catalog" type="button" data-modal-open="catalog-modal"
-                aria-controls="catalog-modal" aria-expanded="false" data-url="#"
-                class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-catalog-form">
-            <i class="fas fa-plus"></i> Nuevo Catálogo
-        </button>
-        {#        {% endif %}#}
+        {% if perms.core.add_catalog %}
+            <button id="btn-add-catalog" type="button" data-modal-open="catalog-modal"
+                    aria-controls="catalog-modal" aria-expanded="false" data-url="#"
+                    class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-catalog-form">
+                <i class="fas fa-plus"></i> Nuevo Catálogo
+            </button>
+        {% endif %}
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">
@@ -57,7 +57,7 @@
                 {% include 'core/catalogs/partials/partial_catalog_table.html' %}
             </div>
             <div class="pagination-container" id="js-pagination">
-                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
                 <ul class="pagination-list">
                     <li>
                         <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>

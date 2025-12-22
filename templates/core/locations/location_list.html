@@ -9,10 +9,12 @@
             <h1>Gestión de Ubicaciones</h1>
             <p>Administra la estructura geográfica.</p>
         </div>
-        <button id="btn-add-location" type="button" class="btn btn-create"
-                data-bs-toggle="modal" data-bs-target="#modal-location-form">
-            <i class="fas fa-plus"></i> Nueva Ubicación
-        </button>
+        {% if perms.core.add_location %}
+            <button id="btn-add-location" type="button" class="btn btn-create"
+                    data-bs-toggle="modal" data-bs-target="#modal-location-form">
+                <i class="fas fa-plus"></i> Nueva Ubicación
+            </button>
+        {% endif %}
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">

@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.http import JsonResponse
 from django.urls import reverse_lazy
@@ -12,6 +12,8 @@ from .models import User
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 from django.views.generic import View
+from django.contrib.auth.decorators import permission_required
+
 
 # --- 1. LOGIN & AUTH ---
 class CustomLoginView(LoginView):
@@ -62,10 +64,11 @@ def get_catalog_stats_dict():
     }
 
 
-class CatalogListView(LoginRequiredMixin, ListView):
+class CatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Catalog
     template_name = 'core/catalogs/catalog_list.html'
     context_object_name = 'catalogs'
+    permission_required = 'core.view_catalog'
 
     # paginate_by = 10
 
@@ -88,10 +91,11 @@ class CatalogListView(LoginRequiredMixin, ListView):
 
 
 # --- 4.2 CREAR CATÁLOGOS ---
-class CatalogCreateView(LoginRequiredMixin, CreateView):
+class CatalogCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Catalog
     form_class = CatalogForm
     template_name = 'core/catalogs/modals/modal_catalog_form.html'  # Solo renderiza el form si es GET
+    permission_required = 'core.add_catalog'
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -127,10 +131,11 @@ def catalog_detail_json(request, pk):
 
 
 # --- 4.4 EDITAR CATÁLOGOS ---
-class CatalogUpdateView(LoginRequiredMixin, UpdateView):
+class CatalogUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Catalog
     form_class = CatalogForm
     template_name = 'core/catalogs/modals/modal_catalog_form.html'
+    permission_required = 'core.change_catalog'
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()  # Obtener la instancia a editar
@@ -151,6 +156,7 @@ class CatalogUpdateView(LoginRequiredMixin, UpdateView):
 
 # --- 4.5 cambiar estado ---
 @require_POST  # Por seguridad, solo permitimos POST
+@permission_required('core.change_catalog', raise_exception=True)
 def catalog_toggle_status(request, pk):
     """Alterna el estado (Activo/Inactivo) de un catálogo"""
     # Verificamos que el usuario esté logueado (puedes usar decorador login_required también)

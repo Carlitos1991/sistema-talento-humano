@@ -75,17 +75,19 @@
 
                 <td class="actions">
                     <div class="actions-wrapper">
-                        <button class="btn-icon btn-list-action btn-manage-user"
-                                data-url="{% url 'security:user_create_credentials' person.pk %}"
-                                data-name="{{ person.first_name }} {{ person.last_name }}"
-                                title="Gestionar Usuario">
-                            {% if person.user %}
-                                <i class="fas fa-user-pen"></i>
-                            {% else %}
-                                <i class="fas fa-user-plus"></i>
-                            {% endif %}
-                        </button>
-                        {% if person.user %}
+                        {% if perms.core.change_user or perms.core.add_user %}
+                            <button class="btn-icon btn-list-action btn-manage-user"
+                                    data-url="{% url 'security:user_create_credentials' person.pk %}"
+                                    data-name="{{ person.first_name }} {{ person.last_name }}"
+                                    title="Gestionar Usuario">
+                                {% if person.user %}
+                                    <i class="fas fa-user-pen"></i>
+                                {% else %}
+                                    <i class="fas fa-user-plus"></i>
+                                {% endif %}
+                            </button>
+                        {% endif %}
+                        {% if person.user and perms.core.change_user %}
                             {% if person.user.is_active %}
                                 <button class="btn-icon btn-delete-action"
                                         onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
@@ -106,6 +108,15 @@
         {% endfor %}
         </tbody>
     </table>
+    <div id="pagination-metadata" class="hidden"
+         data-total="{{ page_obj.paginator.count }}"
+         data-page="{{ page_obj.number }}"
+         data-pages="{{ page_obj.paginator.num_pages }}"
+         data-start="{{ page_obj.start_index }}"
+         data-end="{{ page_obj.end_index }}"
+         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
+         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    </div>
     <div class="no-results-overlay {% if persons %}hidden{% endif %}">
         <!-- Mensaje 2: Búsqueda sin coincidencias -->
         <div class="no-results-content hidden" id="no-results-placeholder">

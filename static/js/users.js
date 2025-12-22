@@ -1,27 +1,59 @@
+/* static/js/users.js */
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // ---------------------------------------------------------
-    // 1. LÓGICA DE LA TABLA (AJAX)
+    // 1. VARIABLES Y ESTADO GLOBAL
     // ---------------------------------------------------------
     const tableContainer = document.getElementById('table-content-wrapper');
     const quickSearchInput = document.getElementById('table-search');
 
-    // Función principal de carga
-    window.fetchUsers = function (params = {}) {
-        const url = new URL(window.location.href);
+    // Referencias de Paginación
+    const pageInfo = document.getElementById('page-info');
+    const pageDisplay = document.getElementById('current-page-display');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
 
-        if (params.reset) {
-            url.search = '';
+    // Estado actual de filtros (Para mantener la memoria al paginar)
+    let currentFilters = {
+        q: '',
+        page: 1,
+        status: '',
+        cedula: '',
+        first_name: '',
+        last_name: '',
+        role: ''
+    };
+
+    // ---------------------------------------------------------
+    // 2. LÓGICA DE CARGA (AJAX)
+    // ---------------------------------------------------------
+
+    // Función Maestra: Actualiza filtros y recarga tabla
+    window.fetchUsers = function (newParams = {}) {
+
+        // 1. Si es reset, limpiar todo
+        if (newParams.reset) {
+            currentFilters = {
+                q: '', page: 1, status: '', cedula: '', first_name: '', last_name: '', role: ''
+            };
+            if (quickSearchInput) quickSearchInput.value = '';
+        } else {
+            // 2. Mezclar nuevos parámetros con los actuales
+            Object.assign(currentFilters, newParams);
         }
 
-        Object.keys(params).forEach(key => {
-            if (params[key]) {
-                url.searchParams.set(key, params[key]);
+        // 3. Construir URL con todos los filtros actuales
+        const url = new URL(window.location.href);
+        Object.keys(currentFilters).forEach(key => {
+            if (currentFilters[key]) {
+                url.searchParams.set(key, currentFilters[key]);
             } else {
                 url.searchParams.delete(key);
             }
         });
 
+        // 4. Petición AJAX
         fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
@@ -29,37 +61,99 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(html => {
                 if (tableContainer) {
                     tableContainer.innerHTML = html;
+                    // Al insertar el HTML nuevo, leemos los datos para actualizar el paginador
+                    updatePaginationUI();
                 }
             })
             .catch(err => console.error("Error cargando usuarios:", err));
     };
 
-    // Listener Búsqueda Rápida
+    // ---------------------------------------------------------
+    // 3. ACTUALIZAR INTERFAZ DE PAGINACIÓN
+    // ---------------------------------------------------------
+    function updatePaginationUI() {
+        // Buscar el div oculto que viene en el HTML parcial
+        const meta = document.getElementById('pagination-metadata');
+        if (!meta) return;
+
+        // Leer datos del HTML
+        const total = parseInt(meta.dataset.total) || 0;
+        const start = parseInt(meta.dataset.start) || 0;
+        const end = parseInt(meta.dataset.end) || 0;
+        const page = parseInt(meta.dataset.page) || 1;
+        const hasNext = meta.dataset.hasNext === 'true';
+        const hasPrev = meta.dataset.hasPrev === 'true';
+
+        // Sincronizar estado local
+        currentFilters.page = page;
+
+        // 1. Actualizar Texto "Mostrando X-Y de Z"
+        if (pageInfo) {
+            if (total === 0) {
+                pageInfo.textContent = "Sin resultados";
+            } else {
+                pageInfo.textContent = `Mostrando ${start}-${end} de ${total}`;
+            }
+        }
+
+        // 2. Actualizar número central
+        if (pageDisplay) {
+            pageDisplay.textContent = page;
+        }
+
+        // 3. Estado de botones
+        if (btnPrev) btnPrev.disabled = !hasPrev;
+        if (btnNext) btnNext.disabled = !hasNext;
+    }
+
+    // ---------------------------------------------------------
+    // 4. LISTENERS DE PAGINACIÓN
+    // ---------------------------------------------------------
+    if (btnPrev) {
+        btnPrev.addEventListener('click', () => {
+            if (!btnPrev.disabled) {
+                window.fetchUsers({page: currentFilters.page - 1});
+            }
+        });
+    }
+
+    if (btnNext) {
+        btnNext.addEventListener('click', () => {
+            if (!btnNext.disabled) {
+                window.fetchUsers({page: currentFilters.page + 1});
+            }
+        });
+    }
+
+    // ---------------------------------------------------------
+    // 5. BÚSQUEDA RÁPIDA
+    // ---------------------------------------------------------
     if (quickSearchInput) {
         quickSearchInput.addEventListener('input', debounce((e) => {
-            window.fetchUsers({q: e.target.value, cedula: '', role: '', first_name: '', last_name: '', status: ''});
+            // Al buscar, reseteamos filtros avanzados y volvemos a pág 1
+            window.fetchUsers({
+                q: e.target.value,
+                page: 1,
+                cedula: '', role: '', first_name: '', last_name: '', status: ''
+            });
         }, 500));
     }
 
-    // Filtro de Tarjetas (Stats)
+    // Filtro por Estado (Tarjetas)
     window.filterByStatus = function (status) {
-        // Gestión visual de opacidad en tarjetas
+        // Efecto Visual
         const cards = {
             'all': document.getElementById('card-filter-all'),
             'active': document.getElementById('card-filter-active'),
             'inactive': document.getElementById('card-filter-inactive')
         };
-
-        // Reset visual: poner todas opacas
         Object.values(cards).forEach(c => {
             if (c) c.classList.add('opacity-low')
         });
-
-        // Activar la seleccionada
         if (cards[status]) cards[status].classList.remove('opacity-low');
 
-        // Carga AJAX
-        window.fetchUsers({status: status === 'all' ? '' : status});
+        // Lógica: Filtramos y volvemos a página 1
+        window.fetchUsers({status: status === 'all' ? '' : status, page: 1});
     };
 
     function debounce(func, timeout = 300) {
@@ -73,10 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---------------------------------------------------------
-    // 2. LÓGICA DEL MODAL DE BÚSQUEDA (VUE 3)
+    // 6. MODAL BÚSQUEDA AVANZADA (VUE)
     // ---------------------------------------------------------
     const searchMountEl = document.getElementById('advanced-search-app');
-
     if (searchMountEl) {
         const {createApp, ref} = Vue;
 
@@ -84,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
             delimiters: ['[[', ']]'],
             setup() {
                 const isVisible = ref(false);
-
                 const open = () => {
                     isVisible.value = true;
                 };
@@ -95,13 +187,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const applySearch = () => {
                     const form = document.getElementById('advancedSearchForm');
                     const formData = new FormData(form);
-                    const params = {};
+
+                    // Resetear página y búsqueda rápida al aplicar filtro avanzado
+                    const params = {page: 1, q: ''};
+
                     formData.forEach((value, key) => {
                         params[key] = value;
                     });
 
                     if (quickSearchInput) quickSearchInput.value = '';
-                    params['q'] = '';
 
                     window.fetchUsers(params);
                     closeModal();
@@ -109,41 +203,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const clearFilters = () => {
                     const form = document.getElementById('advancedSearchForm');
-                    const clearFilters = () => {
-                        const form = document.getElementById('advancedSearchForm');
-                        if (form) form.reset();
-
-                        // --- CORRECCIÓN AQUÍ ---
-                        // Resetear el select del filtro por su nuevo ID
-                        if (typeof $ !== 'undefined') {
-                            $('#id_filter_role').val(null).trigger('change');
-                        }
-
-                        window.fetchUsers({reset: true});
-                        closeModal();
-                    };
                     if (form) form.reset();
-                    // Resetear Select2 si existe (requiere jQuery)
-                    if (typeof $ !== 'undefined') $('.select2-filter').val(null).trigger('change');
+
+                    // Resetear Select2 si existe
+                    if (typeof $ !== 'undefined') {
+                        $('#id_filter_role').val(null).trigger('change');
+                    }
 
                     window.fetchUsers({reset: true});
                     closeModal();
                 };
 
                 window.searchActions = {open};
-
                 return {isVisible, open, closeModal, applySearch, clearFilters};
             }
         }).mount('#advanced-search-app');
     }
 
     // ---------------------------------------------------------
-    // 3. CAMBIO DE ESTADO
+    // 7. TOGGLE USER STATUS (Activar/Desactivar)
     // ---------------------------------------------------------
     window.toggleUserStatus = function (personId, name, currentStatusIsActive) {
         const action = currentStatusIsActive ? "desactivar" : "activar";
 
-        // Seleccionamos la clase CSS basada en el estado (definida en style.css)
+        // Clases CSS para el botón de SweetAlert (sin estilos inline)
         const btnClass = currentStatusIsActive ? 'btn-swal-danger' : 'btn-swal-success';
 
         Swal.fire({
@@ -152,8 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
             icon: 'warning',
             showCancelButton: true,
 
-            // OPTIMIZACIÓN: Delegamos el estilo al CSS
-            buttonsStyling: false, // Desactiva estilos inline de SweetAlert
+            // Configuración de estilos limpios
+            buttonsStyling: false,
             customClass: {
                 confirmButton: `swal2-confirm ${btnClass}`,
                 cancelButton: 'swal2-cancel btn-swal-cancel',
@@ -184,25 +267,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Notificación
                     if (window.Toast) window.Toast.fire({icon: 'success', title: data.message});
                     else Swal.fire('Éxito', data.message, 'success');
 
-                    // Actualizar Stats
+                    // Actualizar contadores visuales (Stats)
                     if (data.new_stats) {
                         updateStat('card-filter-all', data.new_stats.total);
                         updateStat('card-filter-active', data.new_stats.active);
                         updateStat('card-filter-inactive', data.new_stats.inactive);
                     }
 
-                    // Recargar Tabla
-                    if (typeof window.fetchUsers === 'function') {
-                        const currentSearch = document.getElementById('table-search')?.value || '';
-                        window.fetchUsers({q: currentSearch});
-                    } else {
-                        location.reload();
-                    }
-
+                    // Recargar tabla manteniendo filtros
+                    window.fetchUsers();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }
@@ -213,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // Helper para actualizar el número en las tarjetas
     function updateStat(id, value) {
         const el = document.getElementById(id);
         if (el) {
@@ -220,4 +297,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (num) num.textContent = value;
         }
     }
+
+    // =========================================================
+    // 8. INICIALIZACIÓN
+    // =========================================================
+    // Ejecutar esto al cargar la página para leer el estado inicial del paginador
+    updatePaginationUI();
 });

@@ -39,11 +39,13 @@
                 <td class="actions text-center">
                     <div class="actions-wrapper">
                         <!-- Botón Editar -->
-                        <button class="btn-icon btn-views-action btn-edit-role"
-                                data-url="{% url 'security:role_update' role.pk %}"
-                                title="Configurar Permisos">
-                            <i class="fas fa-pencil"></i>
-                        </button>
+                        {% if perms.auth.change_group %}
+                            <button class="btn-icon btn-views-action btn-edit-role"
+                                    data-url="{% url 'security:role_update' role.pk %}"
+                                    title="Configurar Permisos">
+                                <i class="fas fa-pencil"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
