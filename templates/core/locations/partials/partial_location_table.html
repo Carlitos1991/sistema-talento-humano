@@ -75,12 +75,23 @@
                         </button>
 
                         <!-- Toggle Button con TODOS los datos necesarios -->
-                        <button type="button"
-                                class="btn-icon"
-                                onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}', {{ location.id }})"
-                                title="{% if location.is_active %}Desactivar{% else %}Activar{% endif %}">
-                            <i class="fas {% if location.is_active %}fa-toggle-on text-success{% else %}fa-toggle-off text-danger{% endif %}"></i>
-                        </button>
+                        {% if location.is_active %}
+                            <!-- ESTADO ACTIVO: Rojo -->
+                            <button type="button"
+                                    class="btn-icon btn-delete-action"
+                                    onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
+                                    title="Desactivar">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        {% else %}
+                            <!-- ESTADO INACTIVO: Verde -->
+                            <button type="button"
+                                    class="btn-icon btn-create-action"
+                                    onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
+                                    title="Activar">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 </td>
             </tr>

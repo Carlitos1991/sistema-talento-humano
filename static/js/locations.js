@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // B. Actualiza los NÚMEROS de las tarjetas (Nuevo)
+    // B. Actualiza los NÚMEROS de las tarjetas
     window.updateDashboardCounters = function (stats) {
         if (!stats) return;
         const elCountry = document.getElementById('stat-country');
@@ -60,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const elCity = document.getElementById('stat-city');
         const elParish = document.getElementById('stat-parish');
 
-        // Animación simple o asignación directa
         if (elCountry) elCountry.textContent = stats.country;
         if (elProvince) elProvince.textContent = stats.province;
         if (elCity) elCity.textContent = stats.city;
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. LÓGICA DE CARGA DE DATOS (AJAX)
     // =========================================================
 
-    // Función Maestra: Recarga la tabla manteniendo el contexto actual
     window.loadLocations = async function () {
         const params = new URLSearchParams();
 
@@ -82,9 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentFilters.q) params.append('q', currentFilters.q);
-        // Enviamos la página actual para mantener la posición si fuera paginación backend
-        // Como es híbrido (backend filtra todo, frontend pagina), pedimos todo el set filtrado.
-        // Si usas paginación Django completa, descomenta: params.append('page', currentFilters.page);
 
         const url = `/settings/locations/?${params.toString()}`;
 
@@ -97,10 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (wrapper) {
                     wrapper.innerHTML = html;
 
-                    // Reinicializar lógica local de tabla
                     rebindTableLogic();
 
-                    // Leer el nivel que devolvió el backend para iluminar la tarjeta correcta
                     const levelIndicator = document.getElementById('server-level-indicator');
                     if (levelIndicator && levelIndicator.value) {
                         updateStatsHighlight(levelIndicator.value);
@@ -113,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- LÓGICA LOCAL DE TABLA (Paginación JS y Buscador JS) ---
-    // Esta función se llama cada vez que el HTML de la tabla cambia
     let allRows = [];
     let filteredRows = [];
     const pageSize = 10;
@@ -121,12 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function rebindTableLogic() {
         allRows = Array.from(document.querySelectorAll('tr.location-row'));
         filteredRows = allRows;
-        // Al recargar datos, volvemos a aplicar el buscador local si había texto
+
         if (currentSearchTerm) {
             applyLocalSearch();
         } else {
-            // Si no hay búsqueda, mostramos la página que estaba (o la 1 si cambió el contexto drásticamente)
-            // Para simplificar tras editar, mantenemos página 1, o podrías guardar page en currentFilters
             currentFilters.page = 1;
             renderTable();
         }
@@ -155,10 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = (page - 1) * pageSize;
         const end = start + pageSize;
 
-        // Ocultar todo
         allRows.forEach(row => row.style.display = 'none');
 
-        // Mensajes UI
         const overlay = document.querySelector('.no-results-overlay');
         const searchMsg = document.getElementById('no-results-placeholder');
         const emptyDbMsg = document.querySelector('.empty-db-msg');
@@ -214,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Buscador Input
     if (searchInput) {
         let timeout;
         searchInput.addEventListener('input', (e) => {
@@ -226,14 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- ACCIONES DE FILTRO (Stats y Links) ---
+    // --- ACCIONES DE FILTRO ---
 
     window.filterByParent = function (parentId) {
         currentFilters.level = null;
         currentFilters.parent_id = parentId;
         currentFilters.page = 1;
 
-        // Reset visual de cards (opaco todo)
         const cards = document.querySelectorAll('.stat-card');
         cards.forEach(c => c.classList.add('opacity-low'));
 
@@ -244,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFilters.level = level;
         currentFilters.parent_id = null;
         currentFilters.page = 1;
-        updateStatsHighlight(level); // Iluminar tarjeta inmediatamente
+        updateStatsHighlight(level);
         loadLocations();
     };
 
@@ -332,20 +318,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (data.success) {
                             this.closeModal();
-
-                            // 1. Mostrar Toast
                             Toast.fire({
                                 icon: 'success',
                                 title: this.isEditing ? '¡Actualizado!' : '¡Creado!',
                                 text: data.message
                             });
-
-                            // 2. Actualizar contadores si vienen en la respuesta
                             if (data.data && data.data.new_stats) {
                                 window.updateDashboardCounters(data.data.new_stats);
                             }
-
-                            // 3. Recargar SOLO la tabla (mantiene contexto)
                             window.loadLocations();
 
                         } else {
@@ -380,21 +360,43 @@ document.addEventListener('DOMContentLoaded', () => {
         window.openEditLocation = (id) => vmLocation.loadAndOpenEdit(id);
     }
 
-    // Toggle Status Global (SIN RELOAD)
+    // Toggle Status Global (SIN RELOAD, OPTIMIZADO CSS)
     window.toggleLocationStatus = async (btnElement, url, name) => {
+        // 1. Detectar si está activo actualmente
+        // Si el botón tiene la clase roja (btn-delete-action), es que está ACTIVO.
+        const isCurrentlyActive = btnElement.classList.contains('btn-delete-action');
+
+        // 2. Configurar textos
+        const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
+
+        // 3. Configurar clase de color (Rojo si vamos a desactivar, Verde si vamos a activar)
+        // Estas clases ya las definimos en tu style.css
+        const btnClass = isCurrentlyActive ? 'btn-swal-danger' : 'btn-swal-success';
+
         const result = await Swal.fire({
-            title: '¿Cambiar estado?',
-            text: `Vas a modificar el estado de "${name}"`,
+            title: `¿${actionVerb} ubicación?`,
+            text: `Vas a cambiar el estado de "${name}"`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            confirmButtonText: 'Sí'
+
+            // OPTIMIZACIÓN CSS (Igual que en usuarios y catálogos)
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: `swal2-confirm ${btnClass}`,
+                cancelButton: 'swal2-cancel btn-swal-cancel',
+                popup: 'swal2-popup'
+            },
+
+            confirmButtonText: `Sí, ${actionVerb.toLowerCase()}`,
+            cancelButtonText: 'Cancelar'
         });
 
         if (result.isConfirmed) {
             try {
                 const formData = new FormData();
                 formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+                // Petición AJAX
                 const response = await fetch(url, {
                     method: 'POST',
                     body: formData,
@@ -403,21 +405,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (data.success) {
-                    // 1. Toast
+                    // Notificación Toast
                     Toast.fire({icon: 'success', title: '¡Estado Actualizado!', text: data.message});
 
-                    // 2. Stats
+                    // Actualizar Stats
                     if (data.new_stats) {
                         window.updateDashboardCounters(data.new_stats);
                     }
 
-                    // 3. Tabla (Mantiene contexto)
+                    // Recargar Tabla (Esto actualizará el botón visualmente a rojo/verde según el nuevo estado)
                     window.loadLocations();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }
             } catch (e) {
                 console.error(e);
+                Swal.fire('Error', 'Error de conexión', 'error');
             }
         }
     };

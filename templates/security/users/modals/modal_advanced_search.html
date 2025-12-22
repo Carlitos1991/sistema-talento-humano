@@ -1,0 +1,59 @@
+<div id="advanced-search-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 700px;">
+
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-magnifying-glass-plus me-2"></i> Búsqueda Avanzada
+                </h3>
+                <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <form id="advancedSearchForm" @submit.prevent="applySearch">
+
+                    <!-- Fila 1: Identificación y Estado -->
+                    <div class="row mb-3">
+                        <div class="col-6 form-group">
+                            <label class="form-label font-bold">Cédula / Identificación</label>
+                            {{ filter_form.cedula }}
+                        </div>
+                        <div class="col-6 form-group">
+                            <label class="form-label font-bold">Estado del Usuario</label>
+                            {{ filter_form.status }}
+                        </div>
+                    </div>
+
+                    <!-- Fila 2: Nombres y Apellidos -->
+                    <div class="row mb-3">
+                        <div class="col-6 form-group">
+                            <label class="form-label">Nombres</label>
+                            {{ filter_form.first_name }}
+                        </div>
+                        <div class="col-6 form-group">
+                            <label class="form-label">Apellidos</label>
+                            {{ filter_form.last_name }}
+                        </div>
+                    </div>
+
+                    <!-- Fila 3: Rol -->
+                    <div class="form-group mb-4">
+                        <label class="form-label font-bold">Rol de Usuario</label>
+                        {{ filter_form.role }}
+                        <small class="text-muted">Busca usuarios que pertenezcan a este grupo.</small>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" @click="clearFilters">
+                    <i class="fa-solid fa-eraser"></i> Limpiar Filtros
+                </button>
+                <button type="button" class="btn-save" @click="applySearch">
+                    <i class="fa-solid fa-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

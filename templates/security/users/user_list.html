@@ -9,10 +9,6 @@
             <h1>Gestión de Usuarios</h1>
             <p>Configuración de usuarios, roles y permisos del sistema.</p>
         </div>
-        <button class="btn btn-create" style="opacity: 0.5; cursor: not-allowed;"
-                title="Vaya a Personas para crear un usuario">
-            <i class="fas fa-plus"></i> Nuevo Usuario
-        </button>
     </div>
     <!-- 2. Estadísticas -->
     <div class="stats-row">
@@ -43,8 +39,8 @@
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls">
-                <button data-modal-target="advanced-search-modal" class="btn btn-search">
-                    <i class="fas fa-search"></i> Búsqueda Avanzada
+                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">
+                    <i class="fas fa-sliders-h"></i> Filtros Avanzados
                 </button>
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
@@ -76,6 +72,7 @@
 {% endblock %}
 {% block modals %}
     {% include 'security/users/modals/modal_create_credentials.html' %}
+    {% include 'security/users/modals/modal_advanced_search.html' %}
 {% endblock %}
 {% block extra_js %}
     <script src="{% static 'js/users.js' %}"></script>

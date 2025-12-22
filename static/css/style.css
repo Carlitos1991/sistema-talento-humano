@@ -523,11 +523,9 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     flex-direction: column;
     background-color: var(--bg-light);
-    height: 140vh;
+    min-height: 100vh;
     width: 100%;
     transition: all 0.3s ease;
-
-    overflow-y: auto;
     overflow-x: hidden;
     padding: 0;
     margin: 0;
@@ -699,24 +697,31 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Footer */
 .footer {
-    flex-shrink: 0;
-    padding: 0.5rem 0.6rem;
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    padding: 0.75rem 2rem;
     text-align: center;
     font-size: 0.85rem;
     color: #64748b;
     background-color: var(--white);
     border-top: 1px solid #e2e8f0;
-    margin-top: auto;
-    z-index: 10;
+    z-index: 30;
+    transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.layout-wrapper.is-collapsed .footer {
+    left: var(--sidebar-collapsed-width);
 }
 
 #app-content {
     padding: 1.5rem;
-    flex-grow: 1;
+    padding-bottom: 4rem; /* Espacio para el footer fijo */
+    flex: 1 1 auto;
     width: 100%;
     max-width: 1600px;
     margin: 0 auto;
-    height: calc(100vh - var(--header-height));
     overflow-y: auto;
     overflow-x: hidden;
     scroll-behavior: smooth;
@@ -959,14 +964,15 @@ select.input-field {
 }
 
 .btn-create {
+    font-family: 'Inter', 'Roboto', sans-serif;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 15px;
     color: white;
     padding: 0.85rem;
-    font-size: 14px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: bold;
     letter-spacing: 0.03em;
     border-radius: 10px;
     cursor: pointer;
@@ -1579,6 +1585,17 @@ th a.active .sort-icon {
     }
 }
 
+@media (max-width: 768px) {
+    .grid-2-cols {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+.cursor-not-allowed {
+    cursor: not-allowed !important;
+}
+
 @media (max-width: 480px) {
     .stat-card:hover {
         transform: translateY(-2px) scale(1.002);
@@ -1879,8 +1896,13 @@ body.no-scroll {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 1.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.25rem !important;
+}
+
+.form-section-card:last-child {
+    margin-bottom: 0 !important;
 }
 
 .section-title {
@@ -1889,28 +1911,32 @@ body.no-scroll {
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 1.5rem;
     border-bottom: 2px solid #f1f5f9;
+    margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;
+}
+
+.form-section-card .form-group {
+    margin-bottom: 0.5rem;
 }
 
 /* Grids Responsivos */
 .grid-2-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    display: grid !important; /* Forzamos comportamiento Grid */
+    grid-template-columns: 1fr 1fr; /* Dos columnas de igual tamaño */
+    gap: 2rem !important; /* ESPACIO OBLIGATORIO ENTRE COLUMNAS (32px) */
+    width: 100%; /* Ocupar todo el ancho disponible */
+    align-items: start;
 }
 
 .grid-3-cols {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
 }
 
 .grid-4-cols {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
 }
 
 @media (max-width: 768px) {
@@ -2178,6 +2204,8 @@ input:checked + .toggle-slider:before {
 .grid-3-cols .form-group,
 .grid-4-cols .form-group {
     width: 100%;
+    min-width: 0; /* Truco CSS para evitar que el grid se rompa con inputs largos */
+    margin-bottom: 0;
 }
 
 /* Forzar que los inputs y selects dentro de los grupos sean del 100% */
@@ -2801,7 +2829,7 @@ textarea.is-valid:focus,
     line-height: 1.2;
 }
 
-/* Mejorar botones del modal - Texto más empresarial */
+/* Texto más empresarial */
 .btn-cancel,
 .btn-save {
     font-family: 'Inter', 'Roboto', sans-serif;
@@ -2879,6 +2907,7 @@ textarea.is-valid:focus,
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    margin-bottom: 2rem;
 }
 
 .alert-info i {
@@ -2945,6 +2974,124 @@ textarea.is-valid:focus,
     }
 
     .grid-2-cols {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
     }
+}
+
+/* =========================================
+   SWEETALERT2 PERSONALIZADO MEJORADO
+   ========================================= */
+
+/* 1. Contenedor de botones: Espaciado uniforme */
+.swal2-actions {
+    gap: 0.5rem !important; /* Aumenta la separación entre botones */
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: 1.5rem !important;
+}
+
+/* 2. Eliminar el borde/sombra de enfoque nativo de SweetAlert */
+.swal2-styled:focus {
+    box-shadow: none !important;
+}
+
+/* 3. Estilos Base para botones del modal (común) */
+.swal2-confirm, .swal2-cancel {
+    font-family: 'Inter', 'Roboto', sans-serif !important;
+    letter-spacing: 0.01em !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    padding: 12px 28px !important; /* Botones más grandes */
+    min-width: 140px !important;
+    border: none !important; /* Elimina borde negro */
+    outline: none !important; /* Elimina linea de foco */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Efecto Hover General */
+.swal2-confirm:hover, .swal2-cancel:hover {
+    transform: translateY(-2px);
+}
+
+/* 4. Botón Confirmar VERDE (Success) */
+.swal2-confirm.btn-swal-success {
+    background: linear-gradient(to right, #0ba542, #009e36) !important;
+    color: white !important;
+}
+
+.swal2-confirm.btn-swal-success:hover {
+    box-shadow: 0 8px 15px rgba(11, 165, 66, 0.3) !important;
+}
+
+/* 5. Botón Confirmar ROJO (Danger) */
+.swal2-confirm.btn-swal-danger {
+    background: linear-gradient(to right, #c64939, #6c051d) !important;
+    color: white !important;
+}
+
+.swal2-confirm.btn-swal-danger:hover {
+    box-shadow: 0 8px 15px rgba(198, 73, 57, 0.3) !important;
+}
+
+/* 6. Botón Cancelar GRIS */
+.swal2-cancel.btn-swal-cancel {
+    background: #64748b !important;
+    color: white !important;
+    margin: 0 !important; /* El espaciado lo maneja el padre .swal2-actions */
+}
+
+.swal2-cancel.btn-swal-cancel:hover {
+    background: #475569 !important;
+    box-shadow: 0 8px 15px rgba(100, 116, 139, 0.3) !important;
+}
+
+/* 7. Ajustes del contenedor del Modal (Popup) */
+.swal2-popup {
+    border-radius: 16px !important;
+    padding: 2rem !important; /* Más espacio interno */
+    font-family: 'Inter', sans-serif !important;
+}
+
+.swal2-title {
+    font-size: 1.6rem !important;
+    color: var(--primary-color) !important;
+}
+
+.swal2-html-container {
+    font-size: 1rem !important;
+    color: var(--secondary-color) !important;
+}
+
+/* 7. Ajustes del Texto y Contenedor del Modal */
+.swal2-popup {
+    border-radius: 16px !important;
+    padding: 1.5rem !important; /* Padding equilibrado */
+    font-family: 'Inter', sans-serif !important;
+    width: 28em !important; /* Ancho un poco más compacto */
+}
+
+.swal2-title {
+    font-size: 1.35rem !important; /* Reducido para que no grite */
+    color: var(--primary-color) !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.swal2-html-container {
+    font-size: 0.95rem !important; /* Tamaño de texto estándar (no gigante) */
+    color: var(--secondary-color) !important;
+    line-height: 1.5 !important;
+    font-weight: 400 !important;
+}
+
+/* Icono un poco más sutil */
+.swal2-icon {
+    font-size: 0.8rem !important; /* Escala el icono hacia abajo ligeramente */
+    margin-bottom: 1rem !important;
 }

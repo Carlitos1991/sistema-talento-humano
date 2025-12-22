@@ -66,36 +66,40 @@
                     </span>
                         {% endif %}
                     {% else %}
-                        <!-- Caso: No tiene usuario asociado -->
-                        <span class="status-badge"
-                              style="background-color: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">
-                        <i class="fa-solid fa-user-slash me-1"></i> Sin Cuenta
+                        <!--  No tiene usuario asociado -->
+                        <span class="status-badge status-badge-no-account">
+                            SIN CUENTA
                         </span>
                     {% endif %}
                 </td>
 
                 <td class="actions">
                     <div class="actions-wrapper">
-                        <!-- CORRECCIÓN 2: Uso de perms nativos de Django si 'can_edit' no existe en contexto -->
-                        <!-- Si pasas can_edit desde la vista, déjalo así. Si no, usa perms.person.change_person -->
-
-                        <button class="btn-icon btn-info btn-edit-person"
-                                data-url="{% url 'person:person_update' person.pk %}"
-                                title="Editar">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>
-
-                        <button class="btn-icon btn-user-action btn-manage-user"
+                        <button class="btn-icon btn-list-action btn-manage-user"
                                 data-url="{% url 'security:user_create_credentials' person.pk %}"
                                 data-name="{{ person.first_name }} {{ person.last_name }}"
-                                title="Gestionar Usuario"
-                                style="background: linear-gradient(to right, #4f46e5, #4338ca);">
+                                title="Gestionar Usuario">
                             {% if person.user %}
-                                <i class="fas fa-user-check"></i>
+                                <i class="fas fa-user-pen"></i>
                             {% else %}
                                 <i class="fas fa-user-plus"></i>
                             {% endif %}
                         </button>
+                        {% if person.user %}
+                            {% if person.user.is_active %}
+                                <button class="btn-icon btn-delete-action"
+                                        onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
+                                        title="Desactivar Acceso">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            {% else %}
+                                <button class="btn-icon btn-create-action"
+                                        onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', false)"
+                                        title="Activar Acceso">
+                                    <i class="fas fa-toggle-on"></i>
+                                </button>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 </td>
             </tr>

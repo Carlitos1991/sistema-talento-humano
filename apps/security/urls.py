@@ -16,4 +16,5 @@ urlpatterns = [
     # Credenciales
     path('users/create-credentials/<int:person_id>/', views.CreateUserForPersonView.as_view(),
          name='user_create_credentials'),
+    path('users/toggle/<int:pk>/', views.UserToggleStatusView.as_view(), name='user_toggle_status'),
 ]

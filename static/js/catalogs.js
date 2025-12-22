@@ -123,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.insertNewRow = function (data) {
         if (!tableBody) return;
         const toggleUrl = `/settings/catalogs/toggle/${data.id}/`;
+
+        // Se inserta con la clase 'btn-delete-action' (Rojo/Activo) por defecto para nuevos items
         const newRowHTML = `
             <tr class="catalog-row" id="row-${data.id}" data-status="true">
                 <td><span class="badge-new" style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:0.8em;">Nuevo</span></td>
@@ -142,10 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 onclick="openEditCatalog(${data.id})" title="Editar">
                             <i class="fas fa-pencil"></i>
                         </button>
-                        <button type="button" class="btn-icon"
+                        
+                        <button type="button" class="btn-icon btn-delete-action"
                                 onclick="toggleCatalogStatus(this, '${toggleUrl}', '${data.name}', ${data.id})"
                                 title="Desactivar">
-                            <i class="fas fa-toggle-on text-success"></i>
+                            <i class="fas fa-power-off"></i>
                         </button>
                     </div>
                 </td>
@@ -177,18 +180,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.toggleCatalogStatus = async (btnElement, url, name, catalogId) => {
+        // 1. Identificar elementos
         const icon = btnElement.querySelector('i');
-        const isCurrentlyActive = icon.classList.contains('fa-toggle-on');
+
+        // 2. Detectar estado ACTUAL visualmente
+        // Si tiene la clase 'btn-delete-action' (Rojo), es que actualmente está ACTIVO.
+        const isCurrentlyActive = btnElement.classList.contains('btn-delete-action');
+
+        // 3. Configurar textos y colores para la ALERTA
         const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
-        const confirmColor = isCurrentlyActive ? '#dc2626' : '#10b981';
+        // Usamos las clases CSS para la alerta, no colores HEX
+        const btnSwalClass = isCurrentlyActive ? 'btn-swal-danger' : 'btn-swal-success';
 
         const result = await Swal.fire({
             title: `¿${actionVerb} catálogo?`,
             text: `Vas a ${actionVerb.toLowerCase()} "${name}".`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: confirmColor,
-            cancelButtonColor: '#64748b',
+
+            // Estilos CSS para SweetAlert
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: `swal2-confirm ${btnSwalClass}`,
+                cancelButton: 'swal2-cancel btn-swal-cancel',
+                popup: 'swal2-popup'
+            },
+
             confirmButtonText: 'Sí, cambiar',
             cancelButtonText: 'Cancelar'
         });
@@ -203,34 +220,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (data.success) {
+                    // Notificación Toast
                     const Toast = Swal.mixin({
                         toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
                     });
                     Toast.fire({icon: 'success', title: data.message});
 
+                    // Actualizar Stats Dashboard
                     if (data.new_stats) window.updateDashboardStats(data.new_stats);
 
+                    // Referencias a la fila y badge
                     const row = document.getElementById(`row-${catalogId}`);
                     const badge = document.getElementById(`badge-${catalogId}`);
 
+                    // =====================================================
+                    // INTERCAMBIO DE CLASES (ROJO <-> VERDE)
+                    // =====================================================
                     if (isCurrentlyActive) {
-                        icon.className = 'fas fa-toggle-off text-danger';
+                        // CASO: Estaba ACTIVO (Rojo), pasó a INACTIVO.
+                        // El botón debe volverse VERDE (listo para activar).
+
+                        btnElement.classList.remove('btn-delete-action'); // Quitar Rojo
+                        btnElement.classList.add('btn-create-action');    // Poner Verde
+
+                        // Cambiar icono a "Switch On" (indicando que se puede encender)
+                        icon.className = 'fas fa-toggle-on';
                         btnElement.title = "Activar";
+
+                        // Actualizar Badge de la tabla
                         if (badge) {
                             badge.className = 'status-badge inactive';
                             badge.textContent = 'Inactivo';
                         }
+                        // Actualizar atributo de datos para filtros
                         if (row) row.dataset.status = "false";
+
                     } else {
-                        icon.className = 'fas fa-toggle-on text-success';
+                        // CASO: Estaba INACTIVO (Verde), pasó a ACTIVO.
+                        // El botón debe volverse ROJO (listo para desactivar).
+
+                        btnElement.classList.remove('btn-create-action'); // Quitar Verde
+                        btnElement.classList.add('btn-delete-action');    // Poner Rojo
+
+                        // Cambiar icono a "Power Off" (indicando apagar)
+                        icon.className = 'fas fa-power-off';
                         btnElement.title = "Desactivar";
+
                         if (badge) {
                             badge.className = 'status-badge active';
                             badge.textContent = 'Activo';
                         }
                         if (row) row.dataset.status = "true";
                     }
+
+                    // Reaplicar filtros por si el usuario está filtrando por estado
                     applyFilters();
+
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }

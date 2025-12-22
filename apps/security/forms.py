@@ -95,7 +95,10 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
         queryset=Group.objects.all(),
         label="Rol / Perfil",
         empty_label="-- Seleccione Rol --",
-        widget=forms.Select(attrs={'class': 'input-field select2-field'}),
+        widget=forms.Select(attrs={
+            'class': 'input-field select2-field',
+            'id': 'id_input_role'
+        }),
         error_messages={'required': 'Debes seleccionar un rol.'}
     )
     is_active = forms.BooleanField(
@@ -119,19 +122,20 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
 
     def clean_username(self):
         username = self.cleaned_data['username'].lower()
-        # Validar si existe (solo si estamos creando uno nuevo)
-        # Nota: Si es update, la validación cambia. Por ahora asumimos creación.
-        if not self.person_id:  # Caso raro sin persona
-            if User.objects.filter(username=username).exists():
-                raise forms.ValidationError("Este nombre de usuario ya está en uso.")
-        else:
-            # Verificar si OTRO usuario ya tiene este username
-            person = Person.objects.get(pk=self.person_id)
-            if person.user and person.user.username == username:
-                return username  # Es el mismo usuario, todo bien
+        person = Person.objects.get(pk=self.person_id)
+        if person.user:
+            # Si el username enviado es diferente al actual, verificamos que no esté ocupado por otro
+            if person.user.username != username:
+                # Opcional: Si quieres prohibir totalmente cambiar el username, descomenta esto:
+                # raise forms.ValidationError("No se puede modificar el nombre de usuario.")
 
+                if User.objects.filter(username=username).exists():
+                    raise forms.ValidationError("Este nombre de usuario ya está en uso por otra persona.")
+
+            # Si es usuario nuevo (CREACIÓN)
+        else:
             if User.objects.filter(username=username).exists():
-                raise forms.ValidationError("Este nombre de usuario ya está en uso.")
+                raise forms.ValidationError("Este nombre de usuario ya existe.")
 
         return username
 
@@ -139,9 +143,14 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm_password = cleaned_data.get("confirm_password")
+        person = Person.objects.get(pk=self.person_id)
+        if not person.user and not password:
+            self.add_error('password', "La contraseña es obligatoria para nuevos usuarios.")
 
-        if password and confirm_password and password != confirm_password:
-            self.add_error('confirm_password', "Las contraseñas no coinciden.")
+            # Validación: Coincidencia
+        if password or confirm_password:
+            if password != confirm_password:
+                self.add_error('confirm_password', "Las contraseñas no coinciden.")
 
         return cleaned_data
 
@@ -151,21 +160,26 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
 
         # Lógica Upsert (Crear o Actualizar)
         if person.user:
+            # --- ACTUALIZAR ---
             user = person.user
+            # El username se actualiza (o se mantiene igual si el input estaba readonly y envió el mismo valor)
             user.username = data['username']
-            if data['password']:  # Solo cambiamos si escribió algo
+
+            # Solo cambiamos contraseña si el usuario escribió algo
+            if data['password']:
                 user.set_password(data['password'])
+
             user.is_active = data['is_active']
             user.is_staff = data['is_staff']
-            user.email = person.email  # Sincronizar email
+            user.email = person.email
             user.save()
 
-            # Actualizar grupos
-            user.groups.clear()  # Limpiamos anteriores (regla de negocio simple: un solo rol principal)
+            # Actualizar Rol
+            user.groups.clear()
             if data['role']:
                 user.groups.add(data['role'])
         else:
-            # Crear Nuevo
+            # --- CREAR NUEVO ---
             user = User.objects.create_user(
                 username=data['username'],
                 password=data['password'],
@@ -182,3 +196,39 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
             person.save()
 
         return user
+
+
+class UserFilterForm(forms.Form):
+    cedula = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 1104...'})
+    )
+    first_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Nombres'})
+    )
+    last_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Apellidos'})
+    )
+    role = forms.ModelChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        empty_label="Todos los Roles",
+        widget=forms.Select(attrs={
+            'class': 'input-field select2-filter',
+            'id': 'id_filter_role'
+        })
+        # Nota: select2-filter para inicializarlo en JS
+    )
+    STATUS_CHOICES = [
+        ('', 'Todos los Estados'),
+        ('active', 'Activos'),
+        ('inactive', 'Inactivos (Con Cuenta)'),
+        ('no_account', 'Sin Cuenta de Usuario'),
+    ]
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'input-field'})
+    )

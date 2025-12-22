@@ -47,12 +47,23 @@
                         </button>
 
                         <!-- Toggle Button con TODOS los datos necesarios -->
-                        <button type="button"
-                                class="btn-icon"
-                                onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
-                                title="{% if catalog.is_active %}Desactivar{% else %}Activar{% endif %}">
-                            <i class="fas {% if catalog.is_active %}fa-toggle-on text-success{% else %}fa-toggle-off text-danger{% endif %}"></i>
-                        </button>
+                        {% if catalog.is_active %}
+                            <!-- ESTADO ACTIVO: Botón Rojo (Delete Action) -->
+                            <button type="button"
+                                    class="btn-icon btn-delete-action"
+                                    onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                    title="Desactivar">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        {% else %}
+                            <!-- ESTADO INACTIVO: Botón Verde (Create Action) -->
+                            <button type="button"
+                                    class="btn-icon btn-create-action"
+                                    onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                    title="Activar">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
