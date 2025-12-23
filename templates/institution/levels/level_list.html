@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Niveles Jerárquicos | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1>Niveles Jerárquicos</h1>
+            <p>Definición de la estructura de mando (Direcciones, Jefaturas, etc).</p>
+        </div>
+        {% if perms.institution.add_organizationallevel %}
+            <button id="btn-add-level" type="button" class="btn btn-create">
+                <i class="fas fa-plus"></i> Nuevo Nivel
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+            <div class="stat-left"><h3>Total</h3>
+                <div class="number" id="stat-total">{{ total|default:"0" }}</div>
+            </div>
+            <i class="fas fa-layer-group stat-icon"></i>
+        </div>
+        <div class="stat-card color-two opacity-low" onclick="filterByStatus('true')" id="card-filter-active">
+            <div class="stat-left"><h3>Activos</h3>
+                <div class="number" id="stat-active">{{ active|default:"0" }}</div>
+            </div>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </div>
+        <div class="stat-card color-three opacity-low" onclick="filterByStatus('false')" id="card-filter-inactive">
+            <div class="stat-left"><h3>Inactivos</h3>
+                <div class="number" id="stat-inactive">{{ inactive|default:"0" }}</div>
+            </div>
+            <i class="fas fa-times-circle stat-icon"></i>
+        </div>
+    </div>
+
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field" placeholder="Buscar nivel...">
+                </div>
+            </div>
+            <div id="table-content-wrapper">
+                {% include 'institution/levels/partials/partial_level_table.html' %}
+            </div>
+            <!-- Paginación Simple JS -->
+            <div class="pagination-container">
+                <span class="pagination-info" id="page-info">Cargando...</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    {% include 'institution/levels/modals/modal_level_form.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/levels.js' %}"></script>
+{% endblock %}

@@ -10,7 +10,11 @@ urlpatterns = [
     path('', include('apps.core.urls')),
     path('person/', include('apps.person.urls')),
     path('security/', include('apps.security.urls')),
+    path('institution/', include('apps.institution.urls')),
+
 ]
+
+
 
 # Configuración para servir archivos media en desarrollo
 if settings.DEBUG:

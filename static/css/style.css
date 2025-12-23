@@ -141,6 +141,52 @@ h1, h2, h3, h4, h5, h6 {
     display: block;
 }
 
+/* Sistema de Grid Row */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: calc(-0.5 * 1rem);
+    margin-left: calc(-0.5 * 1rem);
+}
+
+.row > * {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-right: calc(1rem * 0.5);
+    padding-left: calc(1rem * 0.5);
+}
+
+/* Espaciado entre columnas */
+.row.g-3 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+    margin-right: calc(-0.5 * var(--bs-gutter-x));
+    margin-left: calc(-0.5 * var(--bs-gutter-x));
+}
+
+.row.g-3 > * {
+    padding-right: calc(var(--bs-gutter-x) * 0.5);
+    padding-left: calc(var(--bs-gutter-x) * 0.5);
+    margin-top: var(--bs-gutter-y);
+}
+
+/* Columnas */
+.col-md-4 {
+    flex: 0 0 auto;
+    width: 33.33333333%;
+}
+
+.col-md-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+.col-md-12 {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
 .input-icon-wrapper {
     position: relative;
     display: flex;
@@ -2517,9 +2563,12 @@ input:checked + .toggle-slider:before {
 /* --- Flecha del select --- */
 .select2-container--default .select2-selection--single .select2-selection__arrow {
     height: 100%;
-    right: 0.75rem;
+    right: 12px; /* Un poco más a la izquierda */
     top: 50%;
     transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .select2-container--default .select2-selection--single .select2-selection__arrow b {
@@ -2527,15 +2576,16 @@ input:checked + .toggle-slider:before {
 }
 
 .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow::before {
-    content: "▴";
+    content: "▲";
     color: #475569;
     font-size: 0.75rem;
 }
 
 .select2-container--default .select2-selection--single .select2-selection__arrow::before {
-    content: "▾";
-    color: #475569;
-    font-size: 0.75rem;
+    content: "▼"; /* Usamos un caracter más estándar */
+    color: #64748b;
+    font-size: 0.75rem; /* AUMENTADO (Antes 0.75rem) */
+    font-family: sans-serif; /* Asegura que se renderice bien */
 }
 
 /* --- Placeholder --- */

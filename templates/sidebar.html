@@ -18,6 +18,34 @@
                 <span class="menu-text">Inicio</span>
             </a>
         </li>
+        {% if perms.institution.view_administrativeunit or perms.institution.view_organizationallevel %}
+            <li class="has-submenu">
+                <a href="#">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span class="menu-text">Organigrama</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="submenu-title">Ajustes</li>
+                    {% if perms.institution.view_organizationallevel %}
+                        <li>
+                            <a href="{% url 'institution:level_list' %}">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <span class="menu-text">Niveles Jerárquicos</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.institution.view_administrativeunit %}
+                        <li>
+                            <a href="{% url 'institution:unit_list' %}">
+                                <i class="fa-solid fa-folder-tree"></i>
+                                <span class="menu-text">Estructura</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         {% if perms.person.view_person %}
             <li>
                 <a href="{% url 'person:person_list' %}"
@@ -28,8 +56,7 @@
             </li>
         {% endif %}
 
-        <!-- MENÚ PADRE: Ajustes -->
-        <!-- Quitamos :class y @click. El JS detecta la clase 'has-submenu' -->
+        <!--  Ajustes -->
         {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location %}
             <li class="has-submenu">
                 <a href="#">

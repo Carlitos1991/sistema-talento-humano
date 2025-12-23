@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Organigrama | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Estructura Organizacional</h1>
+            <p>Gestión de direcciones, departamentos y unidades administrativas.</p>
+        </div>
+        {% if perms.institution.add_administrativeunit %}
+        <button id="btn-add-unit" type="button" class="btn btn-create">
+            <i class="fas fa-sitemap"></i> Nueva Unidad
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- 2. Estadísticas -->
+    <div class="stats-row">
+        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+            <div class="stat-left">
+                <h3>Total</h3>
+                <div class="number" id="stat-total">{{ total|default:"0" }}</div>
+            </div>
+            <i class="fas fa-building stat-icon"></i>
+        </div>
+        <div class="stat-card color-two opacity-low" onclick="filterByStatus('true')" id="card-filter-active">
+            <div class="stat-left"><h3>Activas</h3>
+                <div class="number" id="stat-active">{{ active|default:"0" }}</div>
+            </div>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </div>
+        <div class="stat-card color-three opacity-low" onclick="filterByStatus('false')" id="card-filter-inactive">
+            <div class="stat-left"><h3>Inactivas</h3>
+                <div class="number" id="stat-inactive">{{ inactive|default:"0" }}</div>
+            </div>
+            <i class="fas fa-times-circle stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- 3. Tabla AJAX -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field" placeholder="Buscar unidad o jefe...">
+                </div>
+            </div>
+            
+            <div id="table-content-wrapper">
+                {% include 'institution/partials/partial_unit_table.html' %}
+            </div>
+            
+            <!-- Paginación -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li><button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button></li>
+                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
+                    <li><button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    {% include 'institution/modals/modal_unit_form.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/institution.js' %}"></script>
+{% endblock %}

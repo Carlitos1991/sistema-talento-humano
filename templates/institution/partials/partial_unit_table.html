@@ -1,0 +1,109 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-solid fa-building"></i> Unidad Administrativa</th>
+            <th><i class="fa-solid fa-layer-group"></i> Nivel</th>
+            <th><i class="fa-solid fa-user-tie"></i> Jefe Inmediato</th>
+            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
+
+            {% if perms.institution.change_administrativeunit %}
+            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for unit in units %}
+            <tr class="unit-row" id="row-{{ unit.id }}" data-status="{{ unit.is_active|yesno:'true,false' }}">
+                <td>{{ forloop.counter }}</td>
+
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-primary">{{ unit.name }}</span>
+                        {% if unit.parent %}
+                            <small class="text-muted"><i class="fa-solid fa-turn-up fa-rotate-90 me-1"></i> {{ unit.parent.name }}</small>
+                        {% else %}
+                            <small class="text-muted fst-italic">Dependencia Principal</small>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <td>
+                    <span class="status-badge general">{{ unit.level.name }}</span>
+                </td>
+
+                <td>
+                    {% if unit.boss %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-placeholder-sm" style="font-size: 0.7rem; width: 24px; height: 24px;">
+                                {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+                            </div>
+                            <span>{{ unit.boss.person.last_name }} {{ unit.boss.person.first_name }}</span>
+                        </div>
+                    {% else %}
+                        <span class="status-badge badge-neutral">SIN ASIGNAR</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <span id="badge-{{ unit.id }}" class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
+                        {% if unit.is_active %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                </td>
+
+                {% if perms.institution.change_administrativeunit %}
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        <!-- Editar -->
+                        <button class="btn-icon btn-views-action"
+                                onclick="openEditUnit({{ unit.id }})"
+                                title="Editar Unidad">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+
+                        <!-- Toggle Status (Estilo Correcto) -->
+                        {% if unit.is_active %}
+                            <button class="btn-icon btn-delete-action"
+                                    onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
+                                    title="Desactivar">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        {% else %}
+                            <button class="btn-icon btn-create-action"
+                                    onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
+                                    title="Activar">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Metadatos Paginación -->
+    <div id="pagination-metadata" class="hidden"
+         data-total="{{ page_obj.paginator.count }}"
+         data-page="{{ page_obj.number }}"
+         data-start="{{ page_obj.start_index }}"
+         data-end="{{ page_obj.end_index }}"
+         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
+         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    </div>
+
+    <!-- Empty State -->
+    <div class="no-results-overlay {% if units %}hidden{% endif %}">
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+        <div class="no-results-content empty-db-msg {% if not units %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-sitemap no-results-icon"></i>
+            <p class="no-results-text">No hay unidades administrativas registradas.</p>
+        </div>
+    </div>
+</div>

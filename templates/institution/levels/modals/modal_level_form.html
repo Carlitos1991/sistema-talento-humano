@@ -1,0 +1,45 @@
+<div id="level-modal-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 500px;">
+            <form @submit.prevent="submitForm" id="levelForm">
+                {% csrf_token %}
+                <div class="modal-header-medium modal-header-gradient">
+                    <h3 class="modal-title text-white">
+                        <i class="fa-solid fa-layer-group me-2"></i>
+                        <span v-text="isEditing ? 'Editar Nivel' : 'Nuevo Nivel'"></span>
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;
+                    </button>
+                </div>
+
+                <div class="modal-body-content modal-body-custom">
+                    <div v-if="errors.__all__" class="alert alert-danger mb-3">
+                        <span v-for="err in errors.__all__">[[ err ]]</span>
+                    </div>
+
+                    <div class="form-section-card">
+                        <!-- Solo mostramos el nombre -->
+                        <div class="form-group mb-3">
+                            <label class="form-label">Nombre del Nivel <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
+                        </div>
+
+                        <!-- Mensaje informativo -->
+                        <div class="alert alert-info mt-3 mb-0" style="font-size: 0.85rem;">
+                            <i class="fa-solid fa-circle-info me-2"></i>
+                            El orden jerárquico se asignará automáticamente.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-medium modal-footer-spaced">
+                    <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                    <button type="submit" class="btn-save shadow-md">
+                        <i class="fa-solid fa-save me-2"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

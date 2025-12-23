@@ -1,0 +1,73 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-arrow-down-1-9"></i> Orden</th>
+            <th><i class="fa-solid fa-tag"></i> Nombre del Nivel</th>
+            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
+            {% if perms.institution.change_organizationallevel %}
+            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for lvl in levels %}
+            <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}">
+                <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
+                <td>{{ lvl.name }}</td>
+                <td>
+                    <span id="badge-{{ lvl.id }}" class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
+                        {% if lvl.is_active %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                </td>
+
+                {% if perms.institution.change_organizationallevel %}
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})" title="Editar">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+
+                        {% if lvl.is_active %}
+                            <button class="btn-icon btn-delete-action"
+                                    onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                    title="Desactivar">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        {% else %}
+                            <button class="btn-icon btn-create-action"
+                                    onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                    title="Activar">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Metadatos Paginación -->
+    <div id="pagination-metadata" class="hidden"
+         data-total="{{ page_obj.paginator.count }}"
+         data-page="{{ page_obj.number }}"
+         data-start="{{ page_obj.start_index }}"
+         data-end="{{ page_obj.end_index }}"
+         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
+         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    </div>
+
+    <div class="no-results-overlay {% if levels %}hidden{% endif %}">
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+        <div class="no-results-content empty-db-msg {% if not levels %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-layer-group no-results-icon"></i>
+            <p class="no-results-text">No hay niveles definidos.</p>
+        </div>
+    </div>
+</div>

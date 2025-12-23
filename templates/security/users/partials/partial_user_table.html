@@ -9,7 +9,7 @@
             <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
             <th><i class="fas fa-building header-icon"></i> Rol de usuario</th>
             <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            {% if perms.person.change_person or perms.core.change_user or perms.core.add_user %}
+            {% if perms.core.change_user or perms.core.add_user %}
                 <th><i class="fas fa-cogs header-icon"></i> Acciones</th>
             {% endif %}
         </tr>
@@ -74,7 +74,7 @@
                         </span>
                     {% endif %}
                 </td>
-                {% if perms.person.change_person or perms.core.change_user or perms.core.add_user %}
+                {% if perms.core.change_user or perms.core.add_user %}
                     <td class="actions">
                         <div class="actions-wrapper">
                             {% if perms.core.change_user or perms.core.add_user %}
