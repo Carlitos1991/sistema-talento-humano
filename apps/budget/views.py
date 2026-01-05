@@ -9,14 +9,9 @@ from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, Pr
 
 # --- 1. ENDPOINT PARA CASCADA (JSON) ---
 class HierarchyOptionsJsonView(LoginRequiredMixin, View):
-    """
-    Vista única para manejar la cascada:
-    Program -> Subprogram -> Project -> Activity
-    """
-
     def get(self, request):
         parent_id = request.GET.get('parent_id')
-        target_type = request.GET.get('target_type')  # 'subprogram', 'project', 'activity'
+        target_type = request.GET.get('target_type')
 
         if not parent_id or not parent_id.isdigit():
             return JsonResponse({'results': []})
@@ -24,18 +19,21 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
         parent_id = int(parent_id)
         results = []
 
+        # Agregamos 'code' al values para enviarlo al frontend
         if target_type == 'subprogram':
-            qs = Subprogram.objects.filter(program_id=parent_id).values('id', 'code', 'name')
-            results = [{'id': x['id'], 'text': f"{x['code']} - {x['name']}"} for x in qs]
-
+            qs = Subprogram.objects.filter(program_id=parent_id, is_active=True).values('id', 'code', 'name')
         elif target_type == 'project':
-            qs = Project.objects.filter(subprogram_id=parent_id).values('id', 'code', 'name')
-            results = [{'id': x['id'], 'text': f"{x['code']} - {x['name']}"} for x in qs]
-
+            qs = Project.objects.filter(subprogram_id=parent_id, is_active=True).values('id', 'code', 'name')
         elif target_type == 'activity':
-            qs = Activity.objects.filter(project_id=parent_id).values('id', 'code', 'name')
-            results = [{'id': x['id'], 'text': f"{x['code']} - {x['name']}"} for x in qs]
+            qs = Activity.objects.filter(project_id=parent_id, is_active=True).values('id', 'code', 'name')
+        else:
+            return JsonResponse({'results': []})
 
+        # Se envia el 'code' por separado para facilitar la concatenación en JS
+        results = [
+            {'id': x['id'], 'text': f"{x['code']} - {x['name']}", 'code': x['code']}
+            for x in qs
+        ]
         return JsonResponse({'results': results})
 
 
@@ -167,6 +165,7 @@ class StructureBaseListView(LoginRequiredMixin, ListView):
 
 class ProgramListView(StructureBaseListView):
     model = Program
+    template_name = 'budget/program_list.html'
 
     def get_queryset(self): return self.get_queryset_logic(Program.objects.all())
 
@@ -174,7 +173,8 @@ class ProgramListView(StructureBaseListView):
         ctx = super().get_context_data(**kwargs)
         qs = Program.objects.all()
         ctx.update({
-            'model_type': 'program', 'level_title': 'Programas', 'level_desc': 'Gestión de Programas',
+            'model_type': 'program', 'level_title': 'Programas', 'level_title_singular': 'Programa',
+            'level_desc': 'Gestión de Programas',
             'nav_url_name': 'budget:subprogram_list',  # El siguiente nivel
             'total': qs.count(), 'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count()
@@ -184,6 +184,7 @@ class ProgramListView(StructureBaseListView):
 
 class SubprogramListView(StructureBaseListView):
     model = Subprogram
+    template_name = 'budget/subprogram_list.html'
 
     def get_queryset(self):
         return self.get_queryset_logic(Subprogram.objects.filter(program_id=self.kwargs['program_id']))
@@ -195,7 +196,7 @@ class SubprogramListView(StructureBaseListView):
         qs = Subprogram.objects.filter(program=parent)
         ctx.update({
             'parent': parent, 'model_type': 'subprogram', 'level_title': 'Subprogramas',
-            'nav_url_name': 'budget:project_list',  # El siguiente nivel
+            'nav_url_name': 'budget:project_list', 'level_title_singular': 'Subprograma',
             'total': qs.count(), 'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count()
         })
@@ -204,6 +205,7 @@ class SubprogramListView(StructureBaseListView):
 
 class ProjectListView(StructureBaseListView):
     model = Project
+    template_name = 'budget/project_list.html'
 
     def get_queryset(self):
         return self.get_queryset_logic(Project.objects.filter(subprogram_id=self.kwargs['subprogram_id']))
@@ -214,7 +216,7 @@ class ProjectListView(StructureBaseListView):
         qs = Project.objects.filter(subprogram=parent)
         ctx.update({
             'parent': parent, 'model_type': 'project', 'level_title': 'Proyectos',
-            'nav_url_name': 'budget:activity_list',  # El siguiente nivel
+            'nav_url_name': 'budget:activity_list', 'level_title_singular': 'Proyecto',
             'total': qs.count(), 'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count()
         })
@@ -223,6 +225,7 @@ class ProjectListView(StructureBaseListView):
 
 class ActivityListView(StructureBaseListView):
     model = Activity
+    template_name = 'budget/activity_list.html'
 
     def get_queryset(self):
         return self.get_queryset_logic(Activity.objects.filter(project_id=self.kwargs['project_id']))
@@ -233,7 +236,7 @@ class ActivityListView(StructureBaseListView):
         qs = Activity.objects.filter(project=parent)
         ctx.update({
             'parent': parent, 'model_type': 'activity', 'level_title': 'Actividades',
-            'nav_url_name': None,  # No hay más niveles
+            'nav_url_name': None, 'level_title_singular': 'Actividad',
             'total': qs.count(), 'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count()
         })
@@ -244,6 +247,12 @@ class ActivityListView(StructureBaseListView):
 
 class StructureCreateView(LoginRequiredMixin, View):
     def get(self, request, model_type, parent_id):
+        titles = {
+            'program': 'Programa',
+            'subprogram': 'Subprograma',
+            'project': 'Proyecto',
+            'activity': 'Actividad'
+        }
         forms_map = {
             'program': (ProgramForm, None),
             'subprogram': (SubprogramForm, 'program'),
@@ -251,14 +260,13 @@ class StructureCreateView(LoginRequiredMixin, View):
             'activity': (ActivityForm, 'project'),
         }
         form_class, field_name = forms_map[model_type]
-        form_class, field_name = forms_map[model_type]
         form = form_class()
         if field_name and int(parent_id) > 0:
             block_parent_field(form, field_name, parent_id)
 
         return render(request, 'budget/modals/modal_structure_form.html', {
             'form': form, 'model_type': model_type, 'parent_id': parent_id, 'pk': 0, 'is_editing': False,
-            'title': f"Nuevo {model_type.capitalize()}"
+            'title': f"Nuevo {titles[model_type]}"
         })
 
     def post(self, request, model_type, parent_id):
@@ -279,6 +287,12 @@ class StructureUpdateView(LoginRequiredMixin, View):
             'project': (Project, ProjectForm, 'subprogram'),
             'activity': (Activity, ActivityForm, 'project'),
         }
+        titles = {
+            'program': 'Programa',
+            'subprogram': 'Subprograma',
+            'project': 'Proyecto',
+            'activity': 'Actividad'
+        }
         model_class, form_class, field_name = config[model_type]
         obj = get_object_or_404(model_class, pk=pk)
         form = form_class(instance=obj)
@@ -288,7 +302,7 @@ class StructureUpdateView(LoginRequiredMixin, View):
 
         return render(request, 'budget/modals/modal_structure_form.html', {
             'form': form, 'model_type': model_type, 'pk': pk, 'is_editing': True, 'parent_id': 0,
-            'title': f"Editar {model_type.capitalize()}"
+            'title': f"Nuevo {titles[model_type]}"
         })
 
     def post(self, request, model_type, pk):

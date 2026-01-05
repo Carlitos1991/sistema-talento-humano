@@ -1,11 +1,6 @@
 {% extends 'budget/program_list.html' %}
 {% block back_button %}
-    <!-- parent es un Proyecto, regresamos a la lista de proyectos del subprograma abuelo -->
     <a href="{% url 'budget:project_list' parent.subprogram.id %}" class="btn btn-search">
         <i class="fas fa-chevron-left"></i> Volver a Proyectos
     </a>
-{% endblock %}
-
-{% block child_navigation %}
-    <!-- Nivel final, no hay navegación hija -->
 {% endblock %}

@@ -11,10 +11,11 @@
                 <small class="text-white-opacity">Padre: {{ parent.code }} - {{ parent.name }}</small>
             {% endif %}
         </div>
-        <div class="d-flex gap-2">
-            {% block back_button %}{% endblock %} <!-- ESTO DEBE ESTAR AQUÍ -->
+        <div class="header-actions">
+            {% block back_button %}{% endblock %}
+
             <button onclick="openCreateStructure('{{ model_type }}', {{ parent.id|default:0 }})" class="btn btn-create">
-                <i class="fas fa-plus-circle"></i> Nuevo {{ model_type|capfirst }}
+                <i class="fas fa-plus-circle"></i> Nuevo {{ level_title_singular }}
             </button>
         </div>
     </div>
@@ -31,14 +32,12 @@
             <div class="stat-left"><h3>Activos</h3>
                 <div class="number">{{ active }}</div>
             </div>
-            <i class="fas fa-check-circle stat-icon"></i>
         </div>
         <div class="stat-card color-three opacity-low" onclick="filterStructureByStatus('inactive')"
              id="card-struct-inactive">
             <div class="stat-left"><h3>Inactivos</h3>
                 <div class="number">{{ inactive }}</div>
             </div>
-            <i class="fas fa-power-off stat-icon"></i>
         </div>
     </div>
     <!-- 3. Tabla AJAX -->

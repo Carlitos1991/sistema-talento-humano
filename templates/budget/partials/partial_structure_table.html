@@ -1,12 +1,13 @@
+<!-- templates/budget/partials/partial_structure_table.html -->
 {% load static %}
 <div class="table-container">
     <table>
         <thead>
         <tr>
-            <th><i class="fa-solid fa-hashtag"></i>Código</th>
-            <th><i class="fa-solid fa-briefcase"></i>Nombre</th>
-            <th><i class="fa-regular fa-circle-check"></i>Estado</th>
-            <th><i class="fa-solid fa-gears"></i>Acciones</th>
+            <th><i class="fa-solid fa-hashtag"></i> Código</th>
+            <th><i class="fa-solid fa-briefcase"></i> Nombre</th>
+            <th><i class="fa-regular fa-circle-check"></i> Estado</th>
+            <th><i class="fa-solid fa-gears"></i> Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -21,8 +22,9 @@
                         {{ item.is_active|yesno:"Activo,Inactivo" }}
                     </span>
                 </td>
-                <td class="actions text-center">
+                <td>
                     <div class="actions-wrapper">
+                        <!-- NAVEGACIÓN DINÁMICA: Usa nav_url_name de la vista -->
                         {% if nav_url_name %}
                             <a href="{% url nav_url_name item.id %}" class="btn-icon btn-list-action"
                                title="Ver Siguiente Nivel">
@@ -47,12 +49,12 @@
             </tr>
         {% empty %}
             <tr>
-                <div class="no-results-overlay {% if lines %}hidden{% endif %}">
+                <td colspan="4">
                     <div class="no-results-content">
                         <i class="fas fa-search no-results-icon"></i>
-                        <p class="no-results-text">No se encontraron areas/programas.</p>
+                        <p class="no-results-text">No se encontraron registros.</p>
                     </div>
-                </div>
+                </td>
             </tr>
         {% endfor %}
         </tbody>

@@ -3188,3 +3188,60 @@ textarea.is-valid:focus,
     font-size: 0.8rem !important; /* Escala el icono hacia abajo ligeramente */
     margin-bottom: 1rem !important;
 }
+
+/* static/css/style.css */
+
+/* Contenedor de acciones en el header */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Botón Regresar personalizado */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+.btn-back:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--white);
+    transform: translateX(-4px);
+    color: var(--white);
+}
+
+.btn-back i {
+    font-size: 0.8rem;
+}
+
+.actions-wrapper a.btn-icon {
+    text-decoration: none !important;
+    outline: none;
+}
+
+.actions-wrapper a.btn-icon:hover {
+    text-decoration: none !important;
+}
+
+/* Forzar mayúsculas visuales en formularios de estructura */
+.modal-body-custom input[type="text"],
+.modal-body-custom textarea {
+    text-transform: uppercase;
+}
+
+/* Asegurar que el placeholder no se vea afectado (opcional) */
+.modal-body-custom input[type="text"]::placeholder {
+    text-transform: none;
+}

@@ -4,8 +4,18 @@ from apps.core.models import CatalogItem
 from .models import BudgetLine, Program, Subprogram, Project, Activity
 
 
+class UppercaseFormMixin:
+    """Mixin para convertir todos los CharField y TextField a mayúsculas automáticamente"""
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field_name, value in cleaned_data.items():
+            if isinstance(value, str):
+                cleaned_data[field_name] = value.strip().upper()
+        return cleaned_data
+
+
 class BudgetLineForm(BaseFormMixin, forms.ModelForm):
-    # Campos auxiliares para la cascada (No se guardan en BudgetLine, sirven para filtrar Activity)
     program = forms.ModelChoiceField(queryset=Program.objects.filter(is_active=True), label="Área / Programa",
                                      required=False)
     subprogram = forms.ModelChoiceField(queryset=Subprogram.objects.none(), label="Subprograma", required=False)
@@ -34,7 +44,8 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         self.fields['subprogram'].queryset = Subprogram.objects.none()
         self.fields['project'].queryset = Project.objects.none()
         self.fields['activity'].queryset = Activity.objects.none()
-
+        self.fields['code'].widget.attrs['readonly'] = True
+        self.fields['code'].widget.attrs['class'] = 'input-field readonly-styled'
         # 2. Lógica de Python para repoblar combos en caso de error o edición
         # Esto asegura que si falla la validación, los combos no se vacíen
 
@@ -86,28 +97,28 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         return data
 
 
-class ProgramForm(BaseFormMixin, forms.ModelForm):
+class ProgramForm(UppercaseFormMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Program
-        fields = ['code', 'name', 'is_active']
+        fields = ['code', 'name']
 
 
-class SubprogramForm(BaseFormMixin, forms.ModelForm):
+class SubprogramForm(UppercaseFormMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Subprogram
-        fields = ['program', 'code', 'name', 'is_active']
+        fields = ['program', 'code', 'name']
 
 
-class ProjectForm(BaseFormMixin, forms.ModelForm):
+class ProjectForm(UppercaseFormMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['subprogram', 'code', 'name', 'is_active']
+        fields = ['subprogram', 'code', 'name']
 
 
-class ActivityForm(BaseFormMixin, forms.ModelForm):
+class ActivityForm(UppercaseFormMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Activity
-        fields = ['project', 'code', 'name', 'is_active']
+        fields = ['project', 'code', 'name']
 
 
 def block_parent_field(form, field_name, parent_id):
