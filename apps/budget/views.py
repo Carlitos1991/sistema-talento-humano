@@ -138,66 +138,109 @@ class BudgetUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     # --- 5. Estructura de partida ---
 
 
-class ProgramListView(LoginRequiredMixin, ListView):
-    model = Program
+# --- VISTAS DE ESTRUCTURA (LISTADOS) ---
+# apps/budget/views.py
+
+class StructureBaseListView(LoginRequiredMixin, ListView):
     template_name = 'budget/program_list.html'
     context_object_name = 'items'
 
+    def get_queryset_logic(self, queryset):
+        q = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+        return queryset.order_by('code')
+
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Renderizamos la tabla pasando todo el contexto necesario para los enlaces
+            return render(request, 'budget/partials/partial_structure_table.html', context)
+        return super().get(request, *args, **kwargs)
+
+
+class ProgramListView(StructureBaseListView):
+    model = Program
+
+    def get_queryset(self): return self.get_queryset_logic(Program.objects.all())
+
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_type'] = 'program'
-        context['level_title'] = 'Programas'
-        return context
+        ctx = super().get_context_data(**kwargs)
+        qs = Program.objects.all()
+        ctx.update({
+            'model_type': 'program', 'level_title': 'Programas', 'level_desc': 'Gestión de Programas',
+            'nav_url_name': 'budget:subprogram_list',  # El siguiente nivel
+            'total': qs.count(), 'active': qs.filter(is_active=True).count(),
+            'inactive': qs.filter(is_active=False).count()
+        })
+        return ctx
 
 
-class SubprogramListView(LoginRequiredMixin, ListView):
+class SubprogramListView(StructureBaseListView):
     model = Subprogram
-    template_name = 'budget/subprogram_list.html'
-    context_object_name = 'items'
 
     def get_queryset(self):
-        return Subprogram.objects.filter(program_id=self.kwargs['program_id'])
+        return self.get_queryset_logic(Subprogram.objects.filter(program_id=self.kwargs['program_id']))
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['parent'] = get_object_or_404(Program, id=self.kwargs['program_id'])
-        context['model_type'] = 'subprogram'
-        return context
+        ctx = super().get_context_data(**kwargs)
+        # IMPORTANTE: Asegúrate que el ID en la URL existe en la DB
+        parent = get_object_or_404(Program, id=self.kwargs['program_id'])
+        qs = Subprogram.objects.filter(program=parent)
+        ctx.update({
+            'parent': parent, 'model_type': 'subprogram', 'level_title': 'Subprogramas',
+            'nav_url_name': 'budget:project_list',  # El siguiente nivel
+            'total': qs.count(), 'active': qs.filter(is_active=True).count(),
+            'inactive': qs.filter(is_active=False).count()
+        })
+        return ctx
 
 
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(StructureBaseListView):
     model = Project
-    template_name = 'budget/project_list.html'
-    context_object_name = 'items'
 
     def get_queryset(self):
-        return Project.objects.filter(subprogram_id=self.kwargs['subprogram_id'])
+        return self.get_queryset_logic(Project.objects.filter(subprogram_id=self.kwargs['subprogram_id']))
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # IMPORTANTE: El padre de un Proyecto es un Subprograma
-        context['parent'] = get_object_or_404(Subprogram, id=self.kwargs['subprogram_id'])
-        context['model_type'] = 'project'
-        return context
+        ctx = super().get_context_data(**kwargs)
+        parent = get_object_or_404(Subprogram, id=self.kwargs['subprogram_id'])
+        qs = Project.objects.filter(subprogram=parent)
+        ctx.update({
+            'parent': parent, 'model_type': 'project', 'level_title': 'Proyectos',
+            'nav_url_name': 'budget:activity_list',  # El siguiente nivel
+            'total': qs.count(), 'active': qs.filter(is_active=True).count(),
+            'inactive': qs.filter(is_active=False).count()
+        })
+        return ctx
 
 
-class ActivityListView(LoginRequiredMixin, ListView):
+class ActivityListView(StructureBaseListView):
     model = Activity
-    template_name = 'budget/activity_list.html'
-    context_object_name = 'items'
 
     def get_queryset(self):
-        return Activity.objects.filter(project_id=self.kwargs['project_id'])
+        return self.get_queryset_logic(Activity.objects.filter(project_id=self.kwargs['project_id']))
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # El padre de una Actividad es un Proyecto
-        context['parent'] = get_object_or_404(Project, id=self.kwargs['project_id'])
-        context['model_type'] = 'activity'
-        return context
+        ctx = super().get_context_data(**kwargs)
+        parent = get_object_or_404(Project, id=self.kwargs['project_id'])
+        qs = Activity.objects.filter(project=parent)
+        ctx.update({
+            'parent': parent, 'model_type': 'activity', 'level_title': 'Actividades',
+            'nav_url_name': None,  # No hay más niveles
+            'total': qs.count(), 'active': qs.filter(is_active=True).count(),
+            'inactive': qs.filter(is_active=False).count()
+        })
+        return ctx
 
 
-# --- VISTA GENÉRICA PARA MODALES (CREAR/EDITAR ESTRUCTURA) ---
+# --- VISTAS DE ACCIÓN (MODALES Y TOGGLE) ---
 
 class StructureCreateView(LoginRequiredMixin, View):
     def get(self, request, model_type, parent_id):
@@ -208,15 +251,13 @@ class StructureCreateView(LoginRequiredMixin, View):
             'activity': (ActivityForm, 'project'),
         }
         form_class, field_name = forms_map[model_type]
+        form_class, field_name = forms_map[model_type]
         form = form_class()
-
-        if field_name and parent_id != 0:
+        if field_name and int(parent_id) > 0:
             block_parent_field(form, field_name, parent_id)
 
         return render(request, 'budget/modals/modal_structure_form.html', {
-            'form': form,
-            'model_type': model_type,
-            'parent_id': parent_id,
+            'form': form, 'model_type': model_type, 'parent_id': parent_id, 'pk': 0, 'is_editing': False,
             'title': f"Nuevo {model_type.capitalize()}"
         })
 
@@ -226,5 +267,48 @@ class StructureCreateView(LoginRequiredMixin, View):
         form = forms_map[model_type](request.POST)
         if form.is_valid():
             form.save()
-            return JsonResponse({'success': True, 'message': 'Registro creado correctamente'})
+            return JsonResponse({'success': True, 'message': 'Creado correctamente'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class StructureUpdateView(LoginRequiredMixin, View):
+    def get(self, request, model_type, pk):
+        config = {
+            'program': (Program, ProgramForm, None),
+            'subprogram': (Subprogram, SubprogramForm, 'program'),
+            'project': (Project, ProjectForm, 'subprogram'),
+            'activity': (Activity, ActivityForm, 'project'),
+        }
+        model_class, form_class, field_name = config[model_type]
+        obj = get_object_or_404(model_class, pk=pk)
+        form = form_class(instance=obj)
+
+        if field_name:
+            block_parent_field(form, field_name, None)
+
+        return render(request, 'budget/modals/modal_structure_form.html', {
+            'form': form, 'model_type': model_type, 'pk': pk, 'is_editing': True, 'parent_id': 0,
+            'title': f"Editar {model_type.capitalize()}"
+        })
+
+    def post(self, request, model_type, pk):
+        config = {
+            'program': (Program, ProgramForm), 'subprogram': (Subprogram, SubprogramForm),
+            'project': (Project, ProjectForm), 'activity': (Activity, ActivityForm),
+        }
+        model_class, form_class = config[model_type]
+        obj = get_object_or_404(model_class, pk=pk)
+        form = form_class(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'success': True, 'message': 'Actualizado correctamente'})
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class StructureToggleView(LoginRequiredMixin, View):
+    def post(self, request, model_type, pk):
+        models_map = {'program': Program, 'subprogram': Subprogram, 'project': Project, 'activity': Activity}
+        obj = get_object_or_404(models_map[model_type], pk=pk)
+        obj.is_active = not obj.is_active
+        obj.save()
+        return JsonResponse({'success': True, 'message': f'Registro {"activado" if obj.is_active else "desactivado"}'})

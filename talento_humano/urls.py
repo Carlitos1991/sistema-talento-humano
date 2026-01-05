@@ -13,6 +13,7 @@ urlpatterns = [
     path('institution/', include('apps.institution.urls')),
     path('budget/', include('apps.budget.urls')),
 
+
 ]
 
 # Configuración para servir archivos media en desarrollo

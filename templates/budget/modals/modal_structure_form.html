@@ -1,14 +1,15 @@
-<!-- templates/budget/modals/modal_structure_form.html -->
 <div class="modal-overlay hidden">
     <div class="modal-container">
         <div class="modal-header-medium modal-header-gradient">
             <h3 class="modal-title text-white">
                 <i class="fa-solid fa-sitemap me-2"></i> {{ title }}
             </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
+            </button>
         </div>
 
-        <form onsubmit="submitStructureForm(event, '{{ model_type }}', {{ parent_id }})">
+        <form onsubmit="submitStructureForm(event, '{{ model_type }}',
+                {% if is_editing %}{{ pk }}{% else %}{{ parent_id }}{% endif %}, {{ is_editing|yesno:'true,false' }})">
             {% csrf_token %}
             <div class="modal-body-content modal-body-custom">
                 <div class="form-section-card">
@@ -23,7 +24,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
                 <button type="submit" class="btn-save shadow-md"><i class="fas fa-save"></i> Guardar</button>

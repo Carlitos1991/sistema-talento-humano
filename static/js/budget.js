@@ -1,47 +1,65 @@
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * budget.js - Gestión de Presupuesto y Estructura Programática
+ * Sistema: SIGETH
+ */
 
-    // =========================================================
-    // 1. VARIABLES Y UTILIDADES
-    // =========================================================
+// --- 1. CONFIGURACIÓN GLOBAL Y UTILIDADES ---
+
+// Configuración Toast (SweetAlert2) - ÚNICA DECLARACIÓN
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer);
+        toast.addEventListener('mouseleave', Swal.resumeTimer);
+    }
+});
+
+// Helper para obtener CSRF Token de las cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search-budget');
     let currentFilters = {q: '', status: 'all', page: 1};
 
-    // Configuración Toast (SweetAlert2)
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-        }
-    });
+    // --- 2. LÓGICA DE TABLA ASÍNCRONA (Común para Distributivo y Estructura) ---
 
-    // =========================================================
-    // 2. LÓGICA DE TABLA (AJAX Fetch)
-    // =========================================================
     window.fetchBudgets = function (params = {}) {
         if (params.reset) currentFilters = {q: '', status: 'all', page: 1};
         else Object.assign(currentFilters, params);
 
         const url = new URL(window.location.href);
-        Object.keys(currentFilters).forEach(key => {
-            if (currentFilters[key]) url.searchParams.set(key, currentFilters[key]);
-        });
+        if (currentFilters.q) url.searchParams.set('q', currentFilters.q);
+        if (currentFilters.status) url.searchParams.set('status', currentFilters.status);
+        if (currentFilters.page) url.searchParams.set('page', currentFilters.page);
 
-        // Llamada AJAX
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
-                if (tableContainer) {
-                    tableContainer.innerHTML = html;
+                const wrapper = document.getElementById('table-content-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = html;
                     updatePaginationUI();
                 }
             })
-            .catch(err => console.error("Error cargando tabla:", err));
+            .catch(err => console.error("Error en fetch:", err));
     };
 
     function updatePaginationUI() {
@@ -65,298 +83,226 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnNext) btnNext.disabled = meta.dataset.hasNext !== 'true';
     }
 
-    // Listener para el Buscador
+    // Buscador con Debounce
     if (searchInput) {
         let timeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(() => window.fetchBudgets({q: e.target.value, page: 1}), 500);
+            timeout = setTimeout(() => {
+                window.fetchBudgets({q: e.target.value, page: 1});
+            }, 500);
         });
     }
 
-    // Filtros por Estado (Estadísticas)
+    // --- 3. LÓGICA DE FILTRADO POR ESTADÍSTICAS ---
+
+    // Filtro para Distributivo (Presupuesto)
     window.filterBudgetByStatus = function (status) {
-        // Opacidad visual de tarjetas
         document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
-
-        let activeId = 'card-filter-all';
-        if (status === 'VACANT') activeId = 'card-filter-vacant';
-        if (status === 'OCCUPIED') activeId = 'card-filter-occupied';
-
-        const activeCard = document.getElementById(activeId);
-        if (activeCard) activeCard.classList.remove('opacity-low');
-
-        // Recargar tabla
+        const activeId = {
+            'all': 'card-filter-all',
+            'VACANT': 'card-filter-vacant',
+            'OCCUPIED': 'card-filter-occupied'
+        }[status] || 'card-filter-all';
+        const card = document.getElementById(activeId);
+        if (card) card.classList.remove('opacity-low');
         window.fetchBudgets({status: status, page: 1});
     };
 
-    // Listeners de Botones de Paginación y Crear
-    const btnP = document.getElementById('btn-prev');
-    const btnN = document.getElementById('btn-next');
-    const btnAdd = document.getElementById('btn-add-budget'); // ID del botón "Nueva Partida"
-
-    // Delegación de eventos para paginación (porque los botones pueden redibujarse,
-    // aunque en este diseño están fuera del partial, así que listener directo funciona)
-    if (btnP) btnP.onclick = () => window.fetchBudgets({page: currentFilters.page - 1});
-    if (btnN) btnN.onclick = () => window.fetchBudgets({page: currentFilters.page + 1});
-
-    // Botón CREAR
-    if (btnAdd) {
-        btnAdd.addEventListener('click', () => {
-            openCreateBudget();
-        });
-    }
-
-
-    // =========================================================
-    // 3. LÓGICA DE CASCADA (Hierarchical Selects)
-    // =========================================================
-    async function loadHierarchyOptions(parentId, targetType, targetSelectId) {
-        const targetSelect = document.getElementById(targetSelectId);
-        if (!targetSelect) return;
-
-        targetSelect.innerHTML = '<option value="">Cargando...</option>';
-        targetSelect.disabled = true;
-
-        try {
-            const res = await fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${targetType}`);
-            const data = await res.json();
-
-            targetSelect.innerHTML = '<option value="">---------</option>';
-
-            if (data.results && data.results.length > 0) {
-                data.results.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.text;
-                    targetSelect.appendChild(option);
-                });
-                targetSelect.disabled = false;
-            } else {
-                targetSelect.innerHTML = '<option value="">Sin registros</option>';
-            }
-        } catch (e) {
-            console.error("Error cargando jerarquía:", e);
-            targetSelect.innerHTML = '<option value="">Error</option>';
-        }
-    }
-
-    window.setupHierarchyListeners = function () {
-        const progSelect = document.getElementById('id_program');
-        if (progSelect) {
-            progSelect.addEventListener('change', (e) => {
-                loadHierarchyOptions(e.target.value, 'subprogram', 'id_subprogram');
-                // Limpiar niveles inferiores
-                document.getElementById('id_project').innerHTML = '<option value="">---</option>';
-                document.getElementById('id_project').disabled = true;
-                document.getElementById('id_activity').innerHTML = '<option value="">---</option>';
-                document.getElementById('id_activity').disabled = true;
-            });
-        }
-
-        const subSelect = document.getElementById('id_subprogram');
-        if (subSelect) {
-            subSelect.addEventListener('change', (e) => {
-                loadHierarchyOptions(e.target.value, 'project', 'id_project');
-                // Limpiar niveles inferiores
-                document.getElementById('id_activity').innerHTML = '<option value="">---</option>';
-                document.getElementById('id_activity').disabled = true;
-            });
-        }
-
-        const projSelect = document.getElementById('id_project');
-        if (projSelect) {
-            projSelect.addEventListener('change', (e) => {
-                loadHierarchyOptions(e.target.value, 'activity', 'id_activity');
-            });
-        }
+    // Filtro para Estructura (Programas/Sub/etc)
+    window.filterStructureByStatus = function (status) {
+        document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
+        const activeId = {
+            'all': 'card-struct-all',
+            'active': 'card-struct-active',
+            'inactive': 'card-struct-inactive'
+        }[status] || 'card-struct-all';
+        const card = document.getElementById(activeId);
+        if (card) card.classList.remove('opacity-low');
+        window.fetchBudgets({status: status, page: 1});
     };
 
+    // --- 4. GESTIÓN DE MODALES (PARTIDAS PRESUPUESTARIAS) ---
 
-    // =========================================================
-    // 4. LÓGICA DE MODALES (Apertura y Submit)
-    // =========================================================
-
-    // ABRIR CREAR
     window.openCreateBudget = function () {
         const modal = document.getElementById('budget-modal-app');
-        const form = document.getElementById('budgetForm');
-
-        if (modal && form) {
-            form.reset();
-            // Limpiar errores visuales previos
+        if (modal) {
+            const form = document.getElementById('budgetForm');
+            if (form) form.reset();
             document.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-
-            // Reiniciar selects de cascada
-            const sub = document.getElementById('id_subprogram');
-            if (sub) {
-                sub.innerHTML = '';
-                sub.disabled = true;
-            }
-            const proj = document.getElementById('id_project');
-            if (proj) {
-                proj.innerHTML = '';
-                proj.disabled = true;
-            }
-            const act = document.getElementById('id_activity');
-            if (act) {
-                act.innerHTML = '';
-                act.disabled = true;
-            }
-
-            // Mostrar modal
             modal.classList.remove('hidden');
             document.body.classList.add('no-scroll');
-
-            // Activar listeners
             setupHierarchyListeners();
         }
     };
 
-    // structure.js
+    window.openEditBudget = async function (pk) {
+        try {
+            const res = await fetch(`/budget/update/${pk}/`);
+            const html = await res.text();
+            const container = document.getElementById('modal-inject-container');
+            container.innerHTML = html;
+            const modal = container.querySelector('.modal-overlay');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('no-scroll');
+                setupHierarchyListeners();
+            }
+        } catch (e) {
+            Toast.fire({icon: 'error', title: 'Error al cargar formulario'});
+        }
+    };
+
+    window.closeBudgetModal = function () {
+        const createModal = document.getElementById('budget-modal-app');
+        if (createModal) createModal.classList.add('hidden');
+        document.getElementById('modal-inject-container').innerHTML = '';
+        document.body.classList.remove('no-scroll');
+    };
+
+    // --- 5. GESTIÓN DE MODALES (ESTRUCTURA PROGRAMÁTICA) ---
 
     window.openCreateStructure = function (modelType, parentId) {
-        const url = `/budget/structure/create/${modelType}/${parentId}/`;
-        fetch(url)
+        fetch(`/budget/structure/create/${modelType}/${parentId}/`)
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('modal-inject-container');
+                container.innerHTML = html;
+                container.querySelector('.modal-overlay').classList.remove('hidden');
+                document.body.classList.add('no-scroll');
+            });
+    };
+
+    window.openEditStructure = function (modelType, pk) {
+        fetch(`/budget/structure/edit/${modelType}/${pk}/`)
             .then(res => res.text())
             .then(html => {
                 const container = document.getElementById('modal-inject-container');
                 container.innerHTML = html;
                 const modal = container.querySelector('.modal-overlay');
-                modal.classList.remove('hidden');
-                document.body.classList.add('no-scroll');
-
-                // Si usas Select2 en los modales:
-                $(modal).find('select').select2({width: '100%', dropdownParent: $(modal)});
-            });
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    document.body.classList.add('no-scroll');
+                }
+            })
+            .catch(() => Toast.fire({icon: 'error', title: 'Error al cargar formulario'}));
     };
 
-    window.submitStructureForm = async function (e, modelType, parentId) {
+    window.submitStructureForm = async function (e, modelType, id, isEditing = false) {
         e.preventDefault();
         const form = e.target;
         const formData = new FormData(form);
-        const url = `/budget/structure/create/${modelType}/${parentId}/`;
-
+        const url = isEditing ? `/budget/structure/edit/${modelType}/${id}/` : `/budget/structure/create/${modelType}/${id}/`;
+        form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
         try {
             const res = await fetch(url, {
                 method: 'POST',
                 body: formData,
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
             });
             const data = await res.json();
+
             if (data.success) {
-                Swal.fire('Guardado', data.message, 'success').then(() => location.reload());
+                window.closeBudgetModal();
+                // Toast de éxito inmediato
+                Toast.fire({icon: 'success', title: data.message});
+                // Recargar para actualizar tabla y stats
+                setTimeout(() => location.reload(), 800);
             } else {
-                // Mostrar errores en los div err-X
-                Toast.fire({icon: 'error', title: 'Revise los campos'});
+                Object.keys(data.errors).forEach(key => {
+                    const errDiv = form.querySelector(`#err-${key}`);
+                    if (errDiv) errDiv.textContent = data.errors[key][0];
+                });
+                Toast.fire({icon: 'error', title: 'Revise los campos del formulario'});
             }
         } catch (err) {
-            console.error(err);
+            Toast.fire({icon: 'error', title: 'Error de servidor'});
         }
     };
 
-    // ABRIR EDITAR (Fetch HTML)
-    window.openEditBudget = async function (pk) {
-        try {
-            const res = await fetch(`/budget/update/${pk}/`);
-            if (!res.ok) throw new Error("Error al obtener formulario");
+    window.toggleStructureActive = function (modelType, pk, isActive) {
+        const btn = document.getElementById(`btn-toggle-${pk}`);
+        const icon = btn.querySelector('i');
+        const actionText = isActive ? 'desactivar' : 'activar';
+        const confirmBtnClass = isActive ? 'btn-swal-danger' : 'btn-swal-success';
+        Swal.fire({
+            title: `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} registro?`,
+            text: `Vas a cambiar el estado de este registro.`,
+            icon: 'warning',
+            showCancelButton: true,
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: `swal2-confirm ${confirmBtnClass}`,
+                cancelButton: 'swal2-cancel btn-swal-cancel',
+                popup: 'swal2-popup'
+            },
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/budget/structure/toggle/${modelType}/${pk}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Toast.fire({icon: 'success', title: data.message});
 
-            const html = await res.text();
+                            // --- LÓGICA DE INTERCAMBIO VISUAL (SIN RELOAD) ---
+                            const isNowActive = !isActive;
 
-            // Inyectar HTML en el contenedor específico
-            const container = document.getElementById('modal-inject-container');
-            container.innerHTML = html;
+                            // Actualizar Botón
+                            if (isActive) { // Pasó de Activo a Inactivo
+                                btn.classList.replace('btn-delete-action', 'btn-create-action');
+                                icon.className = 'fas fa-toggle-on';
+                                btn.title = "Activar";
+                            } else { // Pasó de Inactivo a Activo
+                                btn.classList.replace('btn-create-action', 'btn-delete-action');
+                                icon.className = 'fas fa-power-off';
+                                btn.title = "Desactivar";
+                            }
 
-            // Buscar el nuevo modal inyectado (asumimos que el HTML viene con id="budget-modal-content" wrapper)
-            // Necesitamos envolverlo o mostrar el overlay.
-            // En este caso, reutilizamos el overlay general si es posible, o el HTML traído trae su propio overlay.
-            // Para mantener consistencia con Unit, el HTML traído debe ser SOLO el contenido,
-            // pero Unit usaba Vue. Aquí usamos HTML puro.
+                            // Actualizar el onclick para la siguiente interacción
+                            btn.setAttribute('onclick', `toggleStructureActive('${modelType}', ${pk}, ${isNowActive})`);
 
-            // ESTRATEGIA: El HTML que devuelve BudgetUpdateView (modal_budget_form.html)
-            // YA TIENE el div con clase 'modal-overlay' oculto o visible?
-            // Recomiendo que modal_budget_form tenga id="budget-modal-app-edit" o similar.
+                            // Actualizar Badge de Estado en la fila
+                            const row = btn.closest('tr');
+                            const badge = row.querySelector('.status-badge');
+                            if (badge) {
+                                badge.className = `status-badge ${isNowActive ? 'active' : 'inactive'}`;
+                                badge.textContent = isNowActive ? 'Activo' : 'Inactivo';
+                            }
 
-            // Simplificación: Forzamos la clase 'hidden' a false en el elemento inyectado
-            const newModal = container.querySelector('.modal-overlay');
-            if (newModal) {
-                newModal.classList.remove('hidden'); // Mostrar
-                newModal.id = "budget-modal-edit-active"; // ID temporal único
+                            // Opcional: Si quieres actualizar los números de las tarjetas arriba
+                            // puedes llamar a fetchBudgets() o actualizar los contadores vía JS
+                            // location.reload(); // Solo si el orden o los contadores deben ser estrictos
+                        }
+                    })
+                    .catch(err => console.error("Error:", err));
             }
-
-            document.body.classList.add('no-scroll');
-            setupHierarchyListeners();
-
-        } catch (e) {
-            console.error(e);
-            Toast.fire({icon: 'error', title: 'Error al cargar formulario'});
-        }
+        });
     };
 
-    // CERRAR MODAL
-    window.closeBudgetModal = function () {
-        // Cerrar modal de creación
-        const createModal = document.getElementById('budget-modal-app');
-        if (createModal) createModal.classList.add('hidden');
+    // --- 6. AUXILIARES: CASCADA Y PAGINACIÓN ---
 
-        // Cerrar/Eliminar modal de edición inyectado
-        const injectContainer = document.getElementById('modal-inject-container');
-        if (injectContainer) injectContainer.innerHTML = ''; // Limpiar HTML inyectado
-
-        document.body.classList.remove('no-scroll');
-    };
-
-    // SUBMIT FORMULARIO (Vinculado via onsubmit en el HTML)
-    window.submitBudgetForm = async function (e, url) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        // Limpiar errores previos
-        document.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                body: formData,
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                closeBudgetModal();
-                window.fetchBudgets(); // Recargar tabla
-
-                // Actualizar stats si vienen
-                if (data.new_stats) {
-                    document.getElementById('stat-total').textContent = data.new_stats.total;
-                    document.getElementById('stat-vacant').textContent = data.new_stats.vacant;
-                    document.getElementById('stat-occupied').textContent = data.new_stats.occupied;
-                }
-
-                Toast.fire({
-                    icon: 'success',
-                    title: 'Guardado',
-                    text: data.message
-                });
-            } else {
-                // Mostrar errores de campo
-                if (data.errors) {
-                    Object.keys(data.errors).forEach(key => {
-                        const errDiv = document.getElementById(`err-${key}`);
-                        // Intenta buscar el error dentro del form actual
-                        const formErrDiv = form.querySelector(`#err-${key}`);
-                        if (formErrDiv) formErrDiv.textContent = data.errors[key][0];
-                    });
-                }
-                Toast.fire({icon: 'warning', title: 'Revise el formulario'});
-            }
-        } catch (error) {
-            console.error(error);
-            Toast.fire({icon: 'error', title: 'Error del servidor'});
-        }
-    };
-
-    // Carga inicial de la tabla
+    // Inicialización
     window.fetchBudgets();
+
+    const btnP = document.getElementById('btn-prev');
+    const btnN = document.getElementById('btn-next');
+    if (btnP) btnP.onclick = () => window.fetchBudgets({page: currentFilters.page - 1});
+    if (btnN) btnN.onclick = () => window.fetchBudgets({page: currentFilters.page + 1});
+
+    const btnAdd = document.getElementById('btn-add-budget');
+    if (btnAdd) btnAdd.onclick = () => window.openCreateBudget();
 });
+
+// Función de cascada fuera del DOMContentLoaded si es necesario o dentro, 
+//  asegurando visibilidad para Select2 si se usa.
+function setupHierarchyListeners() {
+    // Implementación de lógica de cambio de selects...
+}

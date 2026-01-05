@@ -2,71 +2,82 @@
 {% load static %}
 {% block title %}Estructura presupuestaria| SIGETH{% endblock %}
 {% block content %}
+    <!-- 1. Header -->
     <div class="header-card">
         <div>
-            <h1>Gestión de {% block level_title %}Programas{% endblock %}</h1>
-            <p>{% block level_desc %}Administración de áreas y programas presupuestarios.{% endblock %}</p>
+            <h1>Gestión de {{ level_title }}</h1>
+            <p>{{ level_desc }}</p>
             {% if parent %}
-                <small class="text-white-opacity">Padre: {{ parent }}</small>
+                <small class="text-white-opacity">Padre: {{ parent.code }} - {{ parent.name }}</small>
             {% endif %}
         </div>
-        <button onclick="openCreateStructure('{{ model_type }}', {{ parent.id|default:0 }})" class="btn btn-create">
-            <i class="fas fa-plus-circle"></i> Nuevo {% block btn_text %}Programa{% endblock %}
-        </button>
+        <div class="d-flex gap-2">
+            {% block back_button %}{% endblock %} <!-- ESTO DEBE ESTAR AQUÍ -->
+            <button onclick="openCreateStructure('{{ model_type }}', {{ parent.id|default:0 }})" class="btn btn-create">
+                <i class="fas fa-plus-circle"></i> Nuevo {{ model_type|capfirst }}
+            </button>
+        </div>
     </div>
+    <!-- 2. Estadísticas (Filtros Rápidos) -->
+    <div class="stats-row">
+        <div class="stat-card color-one" onclick="filterStructureByStatus('all')" id="card-struct-all">
+            <div class="stat-left"><h3>Total</h3>
+                <div class="number">{{ total }}</div>
+            </div>
+            <i class="fas fa-layer-group stat-icon"></i>
+        </div>
+        <div class="stat-card color-two opacity-low" onclick="filterStructureByStatus('active')"
+             id="card-struct-active">
+            <div class="stat-left"><h3>Activos</h3>
+                <div class="number">{{ active }}</div>
+            </div>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </div>
+        <div class="stat-card color-three opacity-low" onclick="filterStructureByStatus('inactive')"
+             id="card-struct-inactive">
+            <div class="stat-left"><h3>Inactivos</h3>
+                <div class="number">{{ inactive }}</div>
+            </div>
+            <i class="fas fa-power-off stat-icon"></i>
+        </div>
+    </div>
+    <!-- 3. Tabla AJAX -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Input de búsqueda -->
+                    <input type="text" id="table-search-budget" class="input-field"
+                           placeholder="Buscar por nombre">
+                </div>
+            </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-            <tr>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Estado</th>
-                <th class="text-center">Acciones</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for item in items %}
-                <tr>
-                    <td><span class="badge-neutral"
-                              style="background:#e2e8f0; color:#1e293b; padding:2px 8px; border-radius:4px; font-weight:bold;">{{ item.code }}</span>
-                    </td>
-                    <td>{{ item.name }}</td>
-                    <td>
-                    <span class="status-badge {% if item.is_active %}active{% else %}inactive{% endif %}">
-                        {{ item.is_active|yesno:"Activo,Inactivo" }}
-                    </span>
-                    </td>
-                    <td class="actions text-center">
-                        <div class="actions-wrapper">
-                            {% block child_navigation %}
-                                <a href="{% url 'budget:subprogram_list' item.id %}" class="btn-icon btn-list-action"
-                                   title="Ver Subprogramas">
-                                    <i class="fas fa-sitemap"></i>
-                                </a>
-                            {% endblock %}
-                            <button class="btn-icon btn-views-action"><i class="fas fa-pencil"></i></button>
-                            <button class="btn-icon btn-delete-action"
-                                    onclick="deactivateItem('{{ model_type }}', {{ item.id }})"><i
-                                    class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center">No hay registros.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+            <!-- Contenedor donde se inyecta el HTML parcial -->
+            <div id="table-content-wrapper">
+                {% include 'budget/partials/partial_structure_table.html' %}
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 {% endblock %}
 {% block modals %}
-    <!-- Contenedor crítico para que openCreateStructure funcione -->
     <div id="modal-inject-container"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <!-- Asegúrate de que el JS se cargue -->
     <script src="{% static 'js/budget.js' %}"></script>
 {% endblock %}

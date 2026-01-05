@@ -110,9 +110,9 @@ class ActivityForm(BaseFormMixin, forms.ModelForm):
         fields = ['project', 'code', 'name', 'is_active']
 
 
-# Helper para bloquear el campo padre
 def block_parent_field(form, field_name, parent_id):
-    if parent_id:
-        form.fields[field_name].initial = parent_id
+    if field_name in form.fields:
+        if parent_id:
+            form.fields[field_name].initial = parent_id
         form.fields[field_name].widget.attrs['readonly'] = True
-        form.fields[field_name].widget.attrs['style'] = 'pointer-events: none; background-color: #f1f5f9;'
+        form.fields[field_name].widget.attrs['style'] = 'pointer-events: none; background-color: #f1f5f9; opacity: 0.8;'

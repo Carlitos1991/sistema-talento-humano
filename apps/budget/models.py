@@ -11,6 +11,7 @@ from apps.employee.models import Employee
 class Program(BaseModel):
     code = models.CharField(verbose_name="Código", max_length=20, unique=True, db_index=True)
     name = models.CharField(verbose_name="Nombre", max_length=255)
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         ordering = ['code']
@@ -26,6 +27,7 @@ class Subprogram(BaseModel):
                                 related_name='subprograms')
     code = models.CharField(verbose_name="Código", max_length=20, db_index=True)
     name = models.CharField(verbose_name="Nombre", max_length=255)
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         ordering = ['code']
@@ -42,6 +44,7 @@ class Project(BaseModel):
                                    related_name='projects')
     code = models.CharField(verbose_name="Código", max_length=20, db_index=True)
     name = models.CharField(verbose_name="Nombre", max_length=255)
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         ordering = ['code']
@@ -57,6 +60,7 @@ class Activity(BaseModel):
     project = models.ForeignKey(Project, verbose_name='Proyecto', on_delete=models.PROTECT, related_name='activities')
     code = models.CharField(verbose_name="Código", max_length=20, db_index=True)
     name = models.CharField(verbose_name="Nombre", max_length=255)
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         ordering = ['code']

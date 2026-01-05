@@ -1,15 +1,13 @@
 {% extends 'budget/program_list.html' %}
-{% block level_title %}Proyectos{% endblock %}
-{% block level_desc %}Proyectos del subprograma: {{ parent.code }} - {{ parent.name }}{% endblock %}
-{% block btn_text %}Proyecto{% endblock %}
-
 {% block back_button %}
-    <a href="{% url 'budget:subprogram_list' parent.program.id %}" class="btn-search"><i class="fas fa-arrow-left"></i>
-        Volver a Subprogramas</a>
+    <!-- parent es un Subprograma, regresamos a la lista de subprogramas del programa abuelo -->
+    <a href="{% url 'budget:subprogram_list' parent.program.id %}" class="btn btn-search">
+        <i class="fas fa-chevron-left"></i> Volver a Subprogramas
+    </a>
 {% endblock %}
 
 {% block child_navigation %}
     <a href="{% url 'budget:activity_list' item.id %}" class="btn-icon btn-list-action" title="Ver Actividades">
-        <i class="fas fa-tasks"></i>
+        <i class="fas fa-tasks"></i> <!-- Cambiado icono y título -->
     </a>
 {% endblock %}

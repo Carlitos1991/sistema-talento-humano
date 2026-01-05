@@ -1,15 +1,12 @@
 {% extends 'budget/program_list.html' %}
-{% block level_title %}Subprogramas{% endblock %}
-{% block level_desc %}Subprogramas del programa: {{ parent.code }} - {{ parent.name }}{% endblock %}
-{% block btn_text %}Subprograma{% endblock %}
-
 {% block back_button %}
-    <a href="{% url 'budget:program_list' %}" class="btn-search"><i class="fas fa-arrow-left"></i> Volver a
-        Programas</a>
+    <a href="{% url 'budget:program_list' %}" class="btn btn-search">
+        <i class="fas fa-chevron-left"></i> Volver a Programas
+    </a>
 {% endblock %}
 
 {% block child_navigation %}
     <a href="{% url 'budget:project_list' item.id %}" class="btn-icon btn-list-action" title="Ver Proyectos">
-        <i class="fas fa-folder-tree"></i>
+        <i class="fas fa-folder-tree"></i> <!-- Cambiado icono y título -->
     </a>
 {% endblock %}

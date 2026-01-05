@@ -1,0 +1,60 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-hashtag"></i>Código</th>
+            <th><i class="fa-solid fa-briefcase"></i>Nombre</th>
+            <th><i class="fa-regular fa-circle-check"></i>Estado</th>
+            <th><i class="fa-solid fa-gears"></i>Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in items %}
+            <tr>
+                <td><span class="badge-neutral"
+                          style="background:#e2e8f0; color:#1e293b; padding:2px 8px; border-radius:4px; font-weight:bold;">{{ item.code }}</span>
+                </td>
+                <td>{{ item.name }}</td>
+                <td>
+                    <span class="status-badge {% if item.is_active %}active{% else %}inactive{% endif %}">
+                        {{ item.is_active|yesno:"Activo,Inactivo" }}
+                    </span>
+                </td>
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        {% if nav_url_name %}
+                            <a href="{% url nav_url_name item.id %}" class="btn-icon btn-list-action"
+                               title="Ver Siguiente Nivel">
+                                <i class="fas {% if model_type == 'program' %}fa-sitemap{% elif model_type == 'subprogram' %}fa-folder-tree{% else %}fa-tasks{% endif %}"></i>
+                            </a>
+                        {% endif %}
+
+                        <button class="btn-icon btn-views-action"
+                                onclick="openEditStructure('{{ model_type }}', {{ item.id }})" title="Editar">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+
+                        <button id="btn-toggle-{{ item.id }}"
+                                type="button"
+                                class="btn-icon {% if item.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                onclick="toggleStructureActive('{{ model_type }}', {{ item.id }}, {{ item.is_active|yesno:'true,false' }})"
+                                title="{% if item.is_active %}Desactivar{% else %}Activar{% endif %}">
+                            <i class="fas {% if item.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <div class="no-results-overlay {% if lines %}hidden{% endif %}">
+                    <div class="no-results-content">
+                        <i class="fas fa-search no-results-icon"></i>
+                        <p class="no-results-text">No se encontraron areas/programas.</p>
+                    </div>
+                </div>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
