@@ -1718,17 +1718,17 @@ th a.active .sort-icon {
 }
 
 .modal-overlay {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.32);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2rem);
-    z-index: 1000;
-    transition: opacity .18s ease;
-    opacity: 1;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important; /* Toda la pantalla */
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex !important;
+    justify-content: center !important; /* Centrado horizontal */
+    align-items: center !important; /* Centrado vertical */
+    z-index: 9999 !important;
 }
 
 .hidden {
@@ -3244,4 +3244,53 @@ textarea.is-valid:focus,
 /* Asegurar que el placeholder no se vea afectado (opcional) */
 .modal-body-custom input[type="text"]::placeholder {
     text-transform: none;
+}
+
+.readonly-styled {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #64748b !important;
+    font-weight: 700 !important;
+    cursor: not-allowed;
+    letter-spacing: 0.05em;
+}
+
+.modal-container-xl {
+    width: 90% !important;
+    max-width: 1200px !important;
+    background-color: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    /* Eliminamos márgenes automáticos o relativos al padre */
+    margin: 0 !important;
+    animation: zoomIn 0.2s ease-out;
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Badge del Código Dinámico */
+.budget-code-badge {
+    margin-left: 15px;
+    padding: 6px 16px;
+    background-color: #0f172a;
+    color: #38bdf8;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1.2rem;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1.5px;
 }

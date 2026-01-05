@@ -25,15 +25,16 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         model = BudgetLine
         fields = [
             'program', 'subprogram', 'project', 'activity',  # Jerarquía
-            'number_individual', 'code', 'status_item', 'remuneration',  # Identificación
+            'code', 'status_item', 'remuneration',  # Identificación
             'regime_item', 'group_item', 'category_item', 'position_item', 'grade_item', 'spending_type_item',
             # Clasificación
             'observation'
         ]
         widgets = {
-            'number_individual': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 1050'}),
-            'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 51.01.05'}),
-            'remuneration': forms.NumberInput(attrs={'class': 'input-field', 'step': '0.01'}),
+            'number_individual': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 0001'}),
+            'code': forms.TextInput(
+                attrs={'class': 'input-field', 'placeholder': 'El código se genera automáticamente'}),
+            'remuneration': forms.NumberInput(attrs={'class': 'input-field', 'step': '0.01', 'placeholder': 'Ej: 901'}),
             'observation': forms.Textarea(attrs={'class': 'input-field', 'rows': 2}),
         }
 
@@ -46,10 +47,16 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         self.fields['activity'].queryset = Activity.objects.none()
         self.fields['code'].widget.attrs['readonly'] = True
         self.fields['code'].widget.attrs['class'] = 'input-field readonly-styled'
-        # 2. Lógica de Python para repoblar combos en caso de error o edición
-        # Esto asegura que si falla la validación, los combos no se vacíen
-
-        # A. Si hay datos POST (intento de envío o cambio de cascada)
+        self.fields['code'].widget.attrs.update({
+            'readonly': 'readonly',
+            'class': 'input-field readonly-styled',
+            'id': 'id_code'
+        })
+        self.fields['spending_type_item'].widget.attrs['disabled'] = True
+        self.fields['regime_item'].widget.attrs['disabled'] = True
+        self.fields['spending_type_item'].queryset = CatalogItem.objects.filter(
+            catalog__code='BUDGET_SPENDING_TYPE', is_active=True
+        )
         if 'program' in self.data:
             try:
                 program_id = int(self.data.get('program'))
