@@ -100,9 +100,20 @@ function initBudgetFormCascades() {
 
     // 2. Extracción de Código (Toma lo que está antes del " - ")
     const getCodePart = ($el) => {
-        const text = $el.find('option:selected').text();
-        if (!text || text.includes('---------') || text.trim() === "") return '';
-        return text.split(' - ')[0].trim();
+        const selectedOption = $el.find('option:selected')[0];
+        if (!selectedOption || selectedOption.value === "" || selectedOption.text.includes('---------')) return '';
+
+        // 1. Intentar obtenerlo desde el atributo data-code (inyectado por fetchChildren)
+        if (selectedOption.dataset.code) return selectedOption.dataset.code;
+
+        // 2. Intentar parsear el texto si viene como "1.01 - NOMBRE"
+        const text = selectedOption.text;
+        if (text.includes(' - ')) return text.split(' - ')[0].trim();
+
+        // 3. Si no tiene guion (como los catálogos), es posible que el VALUE sea el ID,
+        // pero necesitamos el código. Como Senior fix, si el texto no tiene código,
+        // devolveremos un marcador para que sepas que falta configurar ese ítem.
+        return text.trim();
     };
 
     // 3. Actualizar Código Completo (6 niveles)
@@ -124,75 +135,63 @@ function initBudgetFormCascades() {
     // 4. Carga de datos AJAX (Hierarchy API)
     const fetchChildren = async (parentId, type, $targetSelect) => {
         if (!parentId) {
-            $targetSelect.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change');
+            $targetSelect.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change.select2');
             return;
         }
-
         try {
             const res = await fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${type}`);
             const data = await res.json();
-
-            // Limpiar y llenar
             $targetSelect.empty().append('<option value="">---------</option>');
 
-            if (data.results && data.results.length > 0) {
-                data.results.forEach(item => {
-                    // item.text viene como "CODIGO - NOMBRE" desde la vista
-                    const newOption = new Option(item.text, item.id, false, false);
-                    $targetSelect.append(newOption);
-                });
-                $targetSelect.prop('disabled', false);
-            } else {
-                $targetSelect.prop('disabled', true);
-            }
+            data.results.forEach(item => {
+                const opt = new Option(item.text, item.id);
+                // INYECTAMOS EL CÓDIGO PURO EN EL DATASET
+                opt.setAttribute('data-code', item.code);
+                $targetSelect.append(opt);
+            });
 
-            // CRUCIAL: Notificar a Select2 que el contenido cambió
-            $targetSelect.trigger('change.select2');
+            $targetSelect.prop('disabled', false).trigger('change.select2');
         } catch (e) {
-            console.error("Error cargando jerarquía:", e);
+            console.error(e);
         }
     };
 
     // --- LISTENERS (Usando el evento de Select2) ---
 
-    $program.on('select2:select change', function() {
-        fetchChildren($(this).val(), 'subprogram', $subprogram);
-        // Reset hijos profundos
-        [$project, $activity].forEach($el => $el.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change'));
+    $program.on('change', () => {
+        fetchChildren($program.val(), 'subprogram', $subprogram);
         updateFullCode();
     });
 
-    $subprogram.on('select2:select change', function() {
-        fetchChildren($(this).val(), 'project', $project);
-        $activity.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change');
+    $subprogram.on('change', () => {
+        fetchChildren($subprogram.val(), 'project', $project);
         updateFullCode();
     });
 
-    $project.on('select2:select change', function() {
-        fetchChildren($(this).val(), 'activity', $activity);
+    $project.on('change', () => {
+        fetchChildren($project.val(), 'activity', $activity);
         updateFullCode();
     });
 
-    $activity.on('select2:select change', function() {
-        const hasVal = !!$(this).val();
+    $activity.on('change', () => {
+        const hasVal = !!$activity.val();
         $spending.prop('disabled', !hasVal).trigger('change.select2');
         updateFullCode();
     });
 
-    $spending.on('select2:select change', function() {
-        const hasVal = !!$(this).val();
+    $spending.on('change', () => {
+        const hasVal = !!$spending.val();
         $regime.prop('disabled', !hasVal).trigger('change.select2');
         updateFullCode();
     });
 
-    $regime.on('select2:select change', updateFullCode);
+    $regime.on('change', updateFullCode);
 
-    // Inicializar estado por si es edición
     updateFullCode();
 }
 
 // Vinculación global
-window.setupHierarchyListeners = function() {
+window.setupHierarchyListeners = function () {
     initBudgetFormCascades();
 };
 // --- 5. FUNCIONES GLOBALES DE MODALES ---

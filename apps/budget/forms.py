@@ -54,9 +54,8 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         })
         self.fields['spending_type_item'].widget.attrs['disabled'] = True
         self.fields['regime_item'].widget.attrs['disabled'] = True
-        self.fields['spending_type_item'].queryset = CatalogItem.objects.filter(
-            catalog__code='BUDGET_SPENDING_TYPE', is_active=True
-        )
+        self.fields['spending_type_item'].label_from_instance = lambda obj: f"{obj.code} - {obj.name}"
+        self.fields['regime_item'].label_from_instance = lambda obj: f"{obj.code} - {obj.name}"
         if 'program' in self.data:
             try:
                 program_id = int(self.data.get('program'))
