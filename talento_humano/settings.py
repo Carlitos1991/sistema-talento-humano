@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.person',
     'apps.employee',
     'apps.institution',
+    'apps.budget',
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

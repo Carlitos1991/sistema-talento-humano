@@ -5,12 +5,13 @@
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
             <th><i class="fa-solid fa-building"></i> Unidad Administrativa</th>
+            <th><i class="fa-solid fa-building"></i> Depende de</th>
             <th><i class="fa-solid fa-layer-group"></i> Nivel</th>
             <th><i class="fa-solid fa-user-tie"></i> Jefe Inmediato</th>
             <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
 
             {% if perms.institution.change_administrativeunit %}
-            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
             {% endif %}
         </tr>
         </thead>
@@ -22,10 +23,14 @@
                 <td>
                     <div class="d-flex flex-column">
                         <span class="fw-bold text-primary">{{ unit.name }}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column">
                         {% if unit.parent %}
-                            <small class="text-muted"><i class="fa-solid fa-turn-up fa-rotate-90 me-1"></i> {{ unit.parent.name }}</small>
+                            <span class="fw-bold text-primary">{{ unit.parent.name }}</span>
                         {% else %}
-                            <small class="text-muted fst-italic">Dependencia Principal</small>
+                            <span class="fw-bold text-primary">-Raíz-</span>
                         {% endif %}
                     </div>
                 </td>
@@ -48,37 +53,38 @@
                 </td>
 
                 <td>
-                    <span id="badge-{{ unit.id }}" class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
+                    <span id="badge-{{ unit.id }}"
+                          class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
                         {% if unit.is_active %}Activo{% else %}Inactivo{% endif %}
                     </span>
                 </td>
 
                 {% if perms.institution.change_administrativeunit %}
-                <td class="actions text-center">
-                    <div class="actions-wrapper">
-                        <!-- Editar -->
-                        <button class="btn-icon btn-views-action"
-                                onclick="openEditUnit({{ unit.id }})"
-                                title="Editar Unidad">
-                            <i class="fas fa-pencil"></i>
-                        </button>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Editar -->
+                            <button class="btn-icon btn-views-action"
+                                    onclick="openEditUnit({{ unit.id }})"
+                                    title="Editar Unidad">
+                                <i class="fas fa-pencil"></i>
+                            </button>
 
-                        <!-- Toggle Status (Estilo Correcto) -->
-                        {% if unit.is_active %}
-                            <button class="btn-icon btn-delete-action"
-                                    onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
-                                    title="Desactivar">
-                                <i class="fas fa-power-off"></i>
-                            </button>
-                        {% else %}
-                            <button class="btn-icon btn-create-action"
-                                    onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
-                                    title="Activar">
-                                <i class="fas fa-toggle-on"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
+                            <!-- Toggle Status (Estilo Correcto) -->
+                            {% if unit.is_active %}
+                                <button class="btn-icon btn-delete-action"
+                                        onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
+                                        title="Desactivar">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            {% else %}
+                                <button class="btn-icon btn-create-action"
+                                        onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
+                                        title="Activar">
+                                    <i class="fas fa-toggle-on"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
                 {% endif %}
             </tr>
         {% endfor %}

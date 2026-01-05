@@ -1,3 +1,5 @@
+<!-- En modal_unit_form.html -->
+
 <div id="unit-modal-app" v-cloak>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
         <div class="modal-container-medium animate-scale-in" style="max-width: 800px;">
@@ -39,7 +41,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Unidad Padre (Dependencia)</label>
-                                <div :class="{ 'opacity-50': isParentDisabled, 'pointer-events-none': isParentDisabled }">
+                                <div :class="{ 'opacity-50': isParentDisabled }">
                                     {{ form.parent }}
                                 </div>
                                 <div class="text-error" v-if="errors.parent">[[ errors.parent[0] ]]</div>

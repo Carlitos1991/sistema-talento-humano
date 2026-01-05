@@ -13,30 +13,31 @@ from .forms import AdministrativeUnitForm, OrganizationalLevelForm
 
 
 class ParentOptionsJsonView(LoginRequiredMixin, View):
-    """Retorna las unidades disponibles para ser padre según el nivel seleccionado."""
-
     def get(self, request):
         level_id = request.GET.get('level_id')
 
-        if not level_id:
+        # Validación básica
+        if not level_id or not str(level_id).isdigit():
             return JsonResponse({'results': []})
 
         try:
-            # Obtenemos el objeto nivel para saber su orden
-            current_level = OrganizationalLevel.objects.get(pk=level_id)
-            target_order = current_level.level_order - 1
+            current_level = OrganizationalLevel.objects.get(pk=int(level_id))
 
-            # Si el nivel seleccionado es 1 (o el menor), no tiene padres (es raíz)
-            if target_order < 1:
-                return JsonResponse({'results': []})  # Frontend interpretará esto como raíz
-
-            # Buscamos unidades del nivel superior inmediato
+            # Si es el nivel 1 (Raíz), no hay padres posibles.
+            if current_level.level_order <= 1:
+                return JsonResponse({'results': []})
             parents = AdministrativeUnit.objects.filter(
-                level__level_order=target_order,
+                level__level_order__lt=current_level.level_order,
                 is_active=True
-            ).values('id', 'name').distinct().order_by('name')
+            ).select_related('level').order_by('level__level_order', 'name')
 
-            results = [{'id': p['id'], 'text': p['name']} for p in parents]
+            results = []
+            for p in parents:
+                results.append({
+                    'id': p.id,
+                    'text': f"{p.name} ➝ {p.level.name}"
+                })
+
             return JsonResponse({'results': results})
 
         except OrganizationalLevel.DoesNotExist:

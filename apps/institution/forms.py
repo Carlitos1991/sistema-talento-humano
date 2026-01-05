@@ -22,6 +22,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             }),
             'boss': forms.Select(attrs={
                 'class': 'input-field select2-ajax',
+                'data-placeholder': 'Escriba para buscar empleado...',
             }),
             'code': forms.TextInput(attrs={
                 'class': 'input-field',
@@ -59,7 +60,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
 
         # Configurar queryset de boss - VACIO para carga con AJAX
         self.fields['boss'].queryset = Employee.objects.none()
-        self.fields['boss'].empty_label = "-- Buscar empleado --"
+        self.fields['boss'].required = False
         
         # Si estamos editando y hay un jefe asignado, cargarlo
         if self.instance.pk and self.instance.boss:

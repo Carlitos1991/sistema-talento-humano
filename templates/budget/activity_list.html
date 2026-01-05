@@ -1,0 +1,11 @@
+{% extends 'budget/program_list.html' %}
+{% block level_title %}Actividades{% endblock %}
+{% block level_desc %}Actividades del proyecto: {{ parent.code }} - {{ parent.name }}{% endblock %}
+{% block btn_text %}Actividad{% endblock %}
+
+{% block back_button %}
+    <a href="{% url 'budget:project_list' parent.subprogram.id %}" class="btn-search"><i class="fas fa-arrow-left"></i>
+        Volver a Proyectos</a>
+{% endblock %}
+
+{% block child_navigation %}{% endblock %} <!-- Último nivel -->

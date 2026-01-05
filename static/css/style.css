@@ -1371,11 +1371,33 @@ select.input-field {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    overflow: hidden; /* Para que el overlay no se salga */
+    overflow-x: auto; /* Scroll horizontal cuando sea necesario */
+    overflow-y: hidden;
+}
+
+/* Scrollbar horizontal personalizado - SIEMPRE VISIBLE */
+.table-container::-webkit-scrollbar {
+    height: 10px;
+    background: #f1f1f1;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 5px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 .table-container table {
     width: 100%;
+    min-width: 1100px; /* Aumentado para forzar scroll en pantallas medianas */
     border-collapse: collapse;
     position: relative;
 }
@@ -1751,7 +1773,26 @@ th a.active .sort-icon {
 .modal-body-content {
     padding: 2rem;
     overflow-y: auto;
-    max-height: calc(85vh - 180px);
+    max-height: calc(90vh - 200px);
+}
+
+/* Mostrar scrollbar siempre visible */
+.modal-body-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.modal-body-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.modal-body-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 #modal-body-content {
@@ -1978,11 +2019,13 @@ body.no-scroll {
 .grid-3-cols {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; /* Espacio entre columnas */
 }
 
 .grid-4-cols {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    gap: 1rem; /* Espacio entre columnas */
 }
 
 @media (max-width: 768px) {

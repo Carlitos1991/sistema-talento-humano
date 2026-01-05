@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Partidas Presupuestarias | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Distributivo Presupuestario</h1>
+            <p>Gestión de partidas, escalas salariales y ocupación de cargos.</p>
+        </div>
+        {% if perms.budget.add_budgetline %}
+            <!-- Este botón abrirá el modal que definimos antes -->
+            <button id="btn-add-budget" type="button" class="btn btn-create">
+                <i class="fas fa-plus-circle"></i> Nueva Partida
+            </button>
+        {% endif %}
+    </div>
+
+    <!-- 2. Estadísticas (Filtros Rápidos) -->
+    <div class="stats-row">
+        <!-- Filtro: TODOS -->
+        <div class="stat-card color-one" onclick="filterBudgetByStatus('all')" id="card-filter-all">
+            <div class="stat-left">
+                <h3>Total Partidas</h3>
+                <div class="number" id="stat-total">{{ total|default:"0" }}</div>
+            </div>
+            <i class="fas fa-layer-group stat-icon"></i>
+        </div>
+
+        <!-- Filtro: VACANTES -->
+        <div class="stat-card color-two opacity-low" onclick="filterBudgetByStatus('VACANT')" id="card-filter-vacant">
+            <div class="stat-left">
+                <h3>Vacantes</h3>
+                <div class="number" id="stat-vacant">{{ vacant|default:"0" }}</div>
+            </div>
+            <i class="fas fa-user-slash stat-icon"></i>
+        </div>
+
+        <!-- Filtro: OCUPADAS -->
+        <div class="stat-card color-three opacity-low" onclick="filterBudgetByStatus('OCCUPIED')"
+             id="card-filter-occupied">
+            <div class="stat-left">
+                <h3>Ocupadas</h3>
+                <div class="number" id="stat-occupied">{{ occupied|default:"0" }}</div>
+            </div>
+            <i class="fas fa-user-check stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- 3. Tabla AJAX -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Input de búsqueda -->
+                    <input type="text" id="table-search-budget" class="input-field"
+                           placeholder="Buscar por partida, cargo, custodio o cédula...">
+                </div>
+            </div>
+
+            <!-- Contenedor donde se inyecta el HTML parcial -->
+            <div id="table-content-wrapper">
+                {% include 'budget/partials/partial_budget_table.html' %}
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+<!-- Bloque para Inyección de Modales -->
+{% block modals %}
+    <!-- Contenedor para inyectar el HTML del modal al editar -->
+    <div id="modal-inject-container"></div>
+
+    <!-- Modal de Creación (Renderizado inicialmente vacío u oculto) -->
+    <div id="budget-modal-app" class="modal-overlay hidden">
+        {% include 'budget/modals/modal_budget_form.html' with is_editing=False %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/budget.js' %}"></script>
+{% endblock %}

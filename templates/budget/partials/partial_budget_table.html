@@ -1,0 +1,114 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-hashtag"></i> Partida</th>
+            <th><i class="fa-solid fa-sitemap"></i> Estructura / Actividad</th>
+            <th><i class="fa-solid fa-briefcase"></i> Cargo Estructural</th>
+            <th><i class="fa-solid fa-money-bill-wave"></i> Remuneración</th>
+            <th><i class="fa-solid fa-user"></i> Custodio Actual</th>
+            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
+            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for line in lines %}
+            <tr>
+                <!-- Columna 1: Partida Individual -->
+                <td>
+                    <span class="fw-bold text-primary">{{ line.number_individual|default:"S/N" }}</span>
+                </td>
+
+                <!-- Columna 2: Estructura -->
+                <td>
+                    <div class="d-flex flex-column text-xs">
+                        <span class="text-muted"
+                              title="Área/Programa">{{ line.activity.project.subprogram.program.code }}</span>
+                        <span class="fw-bold text-dark" title="Actividad">{{ line.activity.code }}</span>
+                    </div>
+                </td>
+
+                <!-- Columna 3: Cargo -->
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold">{{ line.position_item.name|default:"POR DEFINIR" }}</span>
+                        <small class="text-muted">{{ line.group_item.name|default:"-" }}</small>
+                    </div>
+                </td>
+
+                <!-- Columna 4: RMU -->
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="badge-neutral"
+                              style="font-size: 0.75rem;">{{ line.regime_item.name|truncatechars:10 }}</span>
+                        <span class="fw-bold text-success mt-1">$ {{ line.remuneration }}</span>
+                    </div>
+                </td>
+
+                <!-- Columna 5: Custodio -->
+                <td>
+                    {% if line.current_employee %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-placeholder-sm" style="font-size: 0.7rem; width: 24px; height: 24px;">
+                                {{ line.current_employee.person.first_name|first }}{{ line.current_employee.person.last_name|first }}
+                            </div>
+                            <span>{{ line.current_employee.person.last_name }} {{ line.current_employee.person.first_name }}</span>
+                        </div>
+                    {% else %}
+                        <span class="status-badge badge-neutral">VACANTE</span>
+                    {% endif %}
+                </td>
+
+                <!-- Columna 6: Estado -->
+                <td>
+                    {% if line.status_item.code == 'OCCUPIED' %}
+                        <span class="status-badge active">Ocupada</span>
+                    {% elif line.status_item.code == 'VACANT' %}
+                        <span class="status-badge inactive">Vacante</span>
+                    {% else %}
+                        <span class="status-badge general">{{ line.status_item.name }}</span>
+                    {% endif %}
+                </td>
+
+                <!-- Columna 7: Acciones -->
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        {% if perms.budget.change_budgetline %}
+                            <button class="btn-icon btn-views-action"
+                                    onclick="openEditBudget({{ line.id }})"
+                                    title="Editar Partida">
+                                <i class="fas fa-pencil"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Botón Historial (Futuro) -->
+                        <button class="btn-icon btn-secondary-action"
+                                title="Ver Historial">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Metadatos Paginación -->
+    <div id="pagination-metadata" class="hidden"
+         data-total="{{ page_obj.paginator.count }}"
+         data-page="{{ page_obj.number }}"
+         data-start="{{ page_obj.start_index }}"
+         data-end="{{ page_obj.end_index }}"
+         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
+         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    </div>
+
+    <!-- Empty State -->
+    <div class="no-results-overlay {% if lines %}hidden{% endif %}">
+        <div class="no-results-content">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron partidas presupuestarias.</p>
+        </div>
+    </div>
+</div>

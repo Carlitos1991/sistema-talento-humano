@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('table-search');
     let currentFilters = {q: '', status: 'all', page: 1};
 
-    // Configuración Toast (Superior Derecha)
+    // Configuración Toast
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -19,9 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // =========================================================
     // 1. LÓGICA DE TABLA
-    // =========================================================
     window.fetchUnits = function (params = {}) {
         if (params.reset) currentFilters = {q: '', status: 'all', page: 1};
         else Object.assign(currentFilters, params);
@@ -49,10 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pageInfo = document.getElementById('page-info');
         if (pageInfo) pageInfo.textContent = total == 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total}`;
-
         const pageDisplay = document.getElementById('current-page-display');
         if (pageDisplay) pageDisplay.textContent = page;
-
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
         if (btnPrev) btnPrev.disabled = meta.dataset.hasPrev !== 'true';
@@ -74,119 +70,109 @@ document.addEventListener('DOMContentLoaded', () => {
         window.fetchUnits({status: status, page: 1});
     };
 
-    // =========================================================
-    // 2. LÓGICA DEL MODAL (Vue + jQuery Select2)
-    // =========================================================
+    // 2. LÓGICA DEL MODAL
+    let shouldLoadParentsOnLevelChange = true;
 
-    // Función Global para cargar padres (CASCADA)
     async function loadParents(levelId, preselectedParentId = null) {
         const parentSelect = $('#id_parent');
+
+        // Destruir para limpiar
+        if (parentSelect.data('select2')) {
+            parentSelect.select2('destroy');
+        }
         parentSelect.empty();
 
+        let isDisabled = true;
+        let placeholderText = "--- Seleccione Nivel Primero ---";
+
         if (!levelId) {
-            parentSelect.append(new Option("--- Seleccione un Nivel Primero ---", "", true, true));
-            parentSelect.prop('disabled', true);
-            return;
-        }
+            parentSelect.append(new Option(placeholderText, "", true, true));
+        } else {
+            try {
+                const res = await fetch(`/institution/api/parents/?level_id=${levelId}`);
+                const data = await res.json();
 
-        try {
-            const res = await fetch(`/institution/api/parents/?level_id=${levelId}`);
-            const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    // Si tiene padres (Nivel > 1), habilitamos
+                    isDisabled = false;
+                    placeholderText = "--- Seleccione Unidad Padre ---";
+                    parentSelect.append(new Option(placeholderText, "", true, !preselectedParentId));
 
-            if (data.results && data.results.length > 0) {
-                // TIENE PADRES
-                parentSelect.append(new Option("--- Seleccione Unidad Padre ---", "", true, !preselectedParentId));
+                    data.results.forEach(item => {
+                        const isSelected = String(item.id) === String(preselectedParentId);
+                        parentSelect.append(new Option(item.text, item.id, isSelected, isSelected));
+                    });
+                } else {
+                    // Si es raíz (Nivel 1), deshabilitamos y mostramos mensaje
+                    placeholderText = "--- Es una unidad raíz (No requiere padre) ---";
+                    parentSelect.append(new Option(placeholderText, "", true, true));
+                }
 
-                data.results.forEach(item => {
-                    const isSelected = String(item.id) === String(preselectedParentId);
-                    parentSelect.append(new Option(item.text, item.id, isSelected, isSelected));
-                });
-
-                parentSelect.prop('disabled', false);
-            } else {
-                // ES RAÍZ
-                parentSelect.append(new Option("--- Es una unidad raíz ---", "", true, true));
-                parentSelect.prop('disabled', true);
+            } catch (e) {
+                console.error('Error en loadParents:', e);
+                placeholderText = "Error al cargar datos";
+                parentSelect.append(new Option(placeholderText, "", true, true));
             }
-            parentSelect.trigger('change');
-
-        } catch (e) {
-            console.error(e);
-            parentSelect.append(new Option("Error al cargar", "", true, true));
         }
+
+        parentSelect.prop('disabled', isDisabled);
+
+        parentSelect.select2({
+            dropdownParent: $('#unit-modal-app'),
+            width: '100%',
+            placeholder: placeholderText,
+            language: {noResults: () => "No se encontraron resultados"}
+        });
+
+        document.dispatchEvent(new CustomEvent('parent-state-changed', {
+            detail: {disabled: isDisabled}
+        }));
     }
 
-    // Inicializador de Select2
     function initializeSelects() {
-        // A. JEFE INMEDIATO (AJAX) - Optimizado para 5000+ empleados
-        // Destruir si existe para evitar duplicados
-        if ($('#id_boss').data('select2')) {
-            $('#id_boss').select2('destroy');
-        }
-
+        // A. Boss
+        if ($('#id_boss').data('select2')) $('#id_boss').select2('destroy');
         $('#id_boss').select2({
             dropdownParent: $('#unit-modal-app'),
             width: '100%',
             allowClear: true,
+            placeholder: 'Escriba para buscar empleado...',
+            minimumInputLength: 1,
             ajax: {
                 url: '/institution/api/employees/search/',
                 dataType: 'json',
                 delay: 300,
-                data: function (params) {
-                    return {
-                        term: params.term || '',
-                        page: params.page || 1
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.results || []
-                    };
-                },
+                data: (params) => ({term: params.term || '', page: params.page || 1}),
+                processResults: (data) => ({results: data.results || []}),
                 cache: true
             },
-            placeholder: 'Escriba para buscar por nombre o cédula...',
-            minimumInputLength: 0,
             language: {
                 noResults: () => "No se encontraron empleados",
                 searching: () => "Buscando...",
-                inputTooShort: () => "Escriba al menos 2 caracteres",
-                loadingMore: () => "Cargando más resultados..."
-            },
-            escapeMarkup: function(markup) { return markup; },
-            templateResult: function(employee) {
-                if (employee.loading) return employee.text;
-                return employee.text;
-            },
-            templateSelection: function(employee) {
-                return employee.text || employee.id;
+                inputTooShort: () => "Escriba al menos 1 carácter"
             }
         });
 
-        // B. NIVEL
-        if ($('#id_level').data('select2')) {
-            $('#id_level').select2('destroy');
-        }
-        
+        // B. Level
+        if ($('#id_level').data('select2')) $('#id_level').select2('destroy');
         $('#id_level').select2({
             dropdownParent: $('#unit-modal-app'),
             width: '100%',
             placeholder: "Seleccione Nivel"
-        }).off('change').on('change', function () {
-            // .off() evita acumulación de eventos
-            loadParents($(this).val());
+        }).on('change', function () {
+            if (shouldLoadParentsOnLevelChange) {
+                loadParents($(this).val());
+            }
         });
 
-        // C. PADRE
-        if ($('#id_parent').data('select2')) {
-            $('#id_parent').select2('destroy');
-        }
-        
+        // C. Parent
+        if ($('#id_parent').data('select2')) $('#id_parent').select2('destroy');
         $('#id_parent').select2({
             dropdownParent: $('#unit-modal-app'),
             width: '100%',
             placeholder: "--- Seleccione Nivel Primero ---"
         });
+        $('#id_parent').select2('enable', false);
     }
 
     // APP VUE
@@ -199,10 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentId = ref(null);
                 const errors = ref({});
                 const formEl = 'unitForm';
-
-                // Variable para control visual
                 const isParentDisabled = ref(true);
 
+                const handleParentStateChange = (e) => {
+                    isParentDisabled.value = e.detail.disabled;
+                };
+                document.addEventListener('parent-state-changed', handleParentStateChange);
+
+                // --- ABRIR CREAR ---
                 const openCreate = async () => {
                     isEditing.value = false;
                     currentId.value = null;
@@ -210,23 +200,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     isParentDisabled.value = true;
 
                     document.getElementById(formEl).reset();
-
                     isVisible.value = true;
                     document.body.classList.add('no-scroll');
 
-                    // Esperar a que Vue renderice el DOM antes de activar Select2
                     await nextTick();
-
-                    // Resetear Selects visualmente
-                    $('#id_level').val(null).trigger('change');
-                    $('#id_parent').val(null).trigger('change');
-                    $('#id_boss').val(null).trigger('change');
-
-                    // Inicializar plugins
                     initializeSelects();
-                    loadParents(null);
+
+                    // Aseguramos que el nivel esté HABILITADO al crear
+                    $('#id_level').prop('disabled', false);
+
+                    shouldLoadParentsOnLevelChange = true;
+                    $('#id_level').val(null).trigger('change');
+                    $('#id_boss').val(null).trigger('change');
+                    await loadParents(null);
                 };
 
+                // --- ABRIR EDITAR ---
                 const openEdit = async (id) => {
                     isEditing.value = true;
                     currentId.value = id;
@@ -238,37 +227,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (result.success) {
                             const d = result.data;
-                            const form = document.getElementById(formEl);
 
+                            isVisible.value = true;
+                            document.body.classList.add('no-scroll');
+                            await nextTick();
+                            initializeSelects();
+
+                            // Llenar datos texto
+                            const form = document.getElementById(formEl);
                             form.querySelector('[name=name]').value = d.name;
                             form.querySelector('[name=code]').value = d.code || '';
                             form.querySelector('[name=address]').value = d.address || '';
                             form.querySelector('[name=phone]').value = d.phone || '';
 
-                            isVisible.value = true;
-                            document.body.classList.add('no-scroll');
+                            // --- LÓGICA DE NIVEL BLOQUEADO ---
+                            shouldLoadParentsOnLevelChange = false;
 
-                            // Esperar DOM
-                            await nextTick();
-                            initializeSelects();
+                            // 1. Establecer valor
+                            $('#id_level').val(d.level).trigger('change');
+
+                            // 2. Bloquear el combo de Nivel (Requirement: Read-only on edit)
+                            $('#id_level').prop('disabled', true);
+
+                            // 3. Cargar padres (loadParents manejará si el 2do combo se habilita o no)
+                            await loadParents(d.level, d.parent);
+
+                            shouldLoadParentsOnLevelChange = true;
 
                             // Llenar Jefe
                             if (d.boss_data) {
-                                const option = new Option(d.boss_data.text, d.boss_data.id, true, true);
-                                $('.select2-ajax').append(option).trigger('change');
+                                if ($('#id_boss').find(`option[value="${d.boss_data.id}"]`).length === 0) {
+                                    $('#id_boss').append(new Option(d.boss_data.text, d.boss_data.id, true, true));
+                                }
+                                $('#id_boss').val(d.boss_data.id).trigger('change');
                             } else {
-                                $('.select2-ajax').val(null).trigger('change');
+                                $('#id_boss').val(null).trigger('change');
                             }
-
-                            // Llenar Nivel y cargar padres
-                            $('#id_level').val(d.level).trigger('change.select2');
-                            await loadParents(d.level, d.parent);
-
-                            // Actualizar estado variable reactiva
-                            isParentDisabled.value = $('#id_parent').prop('disabled');
                         }
                     } catch (e) {
-                        console.error(e);
+                        console.error('Error en openEdit:', e);
                         Toast.fire({icon: 'error', title: 'Error al cargar datos'});
                     }
                 };
@@ -279,10 +276,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const submitForm = async () => {
+                    // --- TRUCO IMPORTANTE ---
+                    // Al editar, el nivel está disabled. Los campos disabled NO se envían en FormData.
+                    // Django dará error de validación. Debemos habilitarlo temporalmente.
+                    const wasLevelDisabled = $('#id_level').prop('disabled');
+                    if (wasLevelDisabled) {
+                        $('#id_level').prop('disabled', false);
+                    }
+
                     const formData = new FormData(document.getElementById(formEl));
 
-                    // Limpieza si está deshabilitado
-                    if ($('#id_parent').prop('disabled')) {
+                    // Restauramos el estado disabled si estaba bloqueado
+                    if (wasLevelDisabled) {
+                        $('#id_level').prop('disabled', true);
+                    }
+
+                    // Limpieza del padre si está deshabilitado
+                    if ($('#id_parent').select2('enable') === false) {
                         formData.delete('parent');
                     }
 
@@ -311,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             Toast.fire({icon: 'warning', title: 'Revise el formulario'});
                         }
                     } catch (e) {
+                        console.error('Error en submitForm:', e);
                         Toast.fire({icon: 'error', title: 'Error del servidor'});
                     }
                 };
@@ -318,12 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.openCreateUnit = openCreate;
                 window.openEditUnit = openEdit;
 
-                // CORRECCIÓN PRINCIPAL: Retornar isParentDisabled
                 return {
                     isVisible,
                     isEditing,
                     errors,
-                    isParentDisabled, // <--- ESTO FALTABA
+                    isParentDisabled,
                     closeModal,
                     submitForm
                 };
@@ -331,9 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).mount('#unit-modal-app');
     }
 
-    // =========================================
     // 3. TOGGLE STATUS
-    // =========================================
     window.toggleUnitStatus = async (btnElement, url, name) => {
         const isCurrentlyActive = btnElement.classList.contains('btn-delete-action');
         const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
@@ -381,7 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stat-inactive').textContent = stats.inactive;
     }
 
-    // Inicializar listeners Paginación
     const btnP = document.getElementById('btn-prev');
     const btnN = document.getElementById('btn-next');
     const btnA = document.getElementById('btn-add-unit');
@@ -390,6 +397,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnN) btnN.onclick = () => window.fetchUnits({page: currentFilters.page + 1});
     if (btnA) btnA.onclick = () => window.openCreateUnit();
 
-    // Carga inicial
     window.fetchUnits();
 });

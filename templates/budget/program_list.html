@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Estructura presupuestaria| SIGETH{% endblock %}
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1>Gestión de {% block level_title %}Programas{% endblock %}</h1>
+            <p>{% block level_desc %}Administración de áreas y programas presupuestarios.{% endblock %}</p>
+            {% if parent %}
+                <small class="text-white-opacity">Padre: {{ parent }}</small>
+            {% endif %}
+        </div>
+        <button onclick="openCreateStructure('{{ model_type }}', {{ parent.id|default:0 }})" class="btn btn-create">
+            <i class="fas fa-plus-circle"></i> Nuevo {% block btn_text %}Programa{% endblock %}
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in items %}
+                <tr>
+                    <td><span class="badge-neutral"
+                              style="background:#e2e8f0; color:#1e293b; padding:2px 8px; border-radius:4px; font-weight:bold;">{{ item.code }}</span>
+                    </td>
+                    <td>{{ item.name }}</td>
+                    <td>
+                    <span class="status-badge {% if item.is_active %}active{% else %}inactive{% endif %}">
+                        {{ item.is_active|yesno:"Activo,Inactivo" }}
+                    </span>
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            {% block child_navigation %}
+                                <a href="{% url 'budget:subprogram_list' item.id %}" class="btn-icon btn-list-action"
+                                   title="Ver Subprogramas">
+                                    <i class="fas fa-sitemap"></i>
+                                </a>
+                            {% endblock %}
+                            <button class="btn-icon btn-views-action"><i class="fas fa-pencil"></i></button>
+                            <button class="btn-icon btn-delete-action"
+                                    onclick="deactivateItem('{{ model_type }}', {{ item.id }})"><i
+                                    class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay registros.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+{% block modals %}
+    <!-- Contenedor crítico para que openCreateStructure funcione -->
+    <div id="modal-inject-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Asegúrate de que el JS se cargue -->
+    <script src="{% static 'js/budget.js' %}"></script>
+{% endblock %}
