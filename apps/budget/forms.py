@@ -1,5 +1,6 @@
 from django import forms
 from core.forms import BaseFormMixin
+from core.models import CatalogItem
 from .models import BudgetLine, Program, Subprogram, Project, Activity
 
 
@@ -132,3 +133,43 @@ def block_parent_field(form, field_name, parent_id):
             form.fields[field_name].initial = parent_id
         form.fields[field_name].widget.attrs['readonly'] = True
         form.fields[field_name].widget.attrs['style'] = 'pointer-events: none; background-color: #f1f5f9; opacity: 0.8;'
+
+
+class AssignIndividualNumberForm(forms.Form):
+    number = forms.IntegerField(
+        label="Número de Partida Individual",
+        min_value=1,
+        max_value=9999,
+        widget=forms.NumberInput(attrs={
+            'class': 'input-field',
+            'placeholder': 'Ej: 1, 25, 150',
+            'id': 'id_individual_number_input'
+        })
+    )
+
+    def clean_number(self):
+        number = self.cleaned_data['number']
+        formatted_number = str(number).zfill(4)
+        if BudgetLine.objects.filter(number_individual=formatted_number).exists():
+            raise forms.ValidationError("Este número ya ha sido asignado a otra partida.")
+        return formatted_number
+
+
+class BudgetChangeStatusForm(forms.Form):
+    new_status = forms.ModelChoiceField(
+        queryset=CatalogItem.objects.filter(
+            catalog__code='BUDGET_STATUS'
+        ).exclude(code__in=['LIBRE', 'OCUPADA']),
+        label="Nuevo Estado",
+        empty_label="Seleccione un estado",
+        widget=forms.Select(attrs={'class': 'input-field select2-field'})
+    )
+    observation = forms.CharField(
+        label="Observaciones",
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'input-field',
+            'rows': 3,
+            'placeholder': 'Observaciones sobre el cambio de estado...'
+        })
+    )

@@ -4,10 +4,12 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.http import JsonResponse
 from django.db.models import Q
-
+from datetime import date
 from core.models import CatalogItem
+from employee.models import Employee
 from .models import BudgetLine, Program, Subprogram, Project, Activity
-from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field
+from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
+    AssignIndividualNumberForm, BudgetChangeStatusForm
 
 
 # --- 1. ENDPOINT PARA CASCADA (JSON) ---
@@ -62,12 +64,11 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'budget.view_budgetline'
 
     def get_queryset(self):
-        # Optimización masiva: Traemos toda la info relacionada en una sola query
         qs = BudgetLine.objects.select_related(
             'activity__project__subprogram__program',
             'current_employee__person',
             'status_item', 'position_item', 'regime_item'
-        ).all().order_by('code')
+        ).all().order_by('number_individual')
 
         q = self.request.GET.get('q')
         status = self.request.GET.get('status')
@@ -346,3 +347,133 @@ class StructureToggleView(LoginRequiredMixin, View):
         obj.is_active = not obj.is_active
         obj.save()
         return JsonResponse({'success': True, 'message': f'Registro {"activado" if obj.is_active else "desactivado"}'})
+
+
+class AssignIndividualNumberView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'budget.change_budgetline'
+
+    def get(self, request, pk):
+        budget_line = get_object_or_404(BudgetLine, pk=pk)
+        form = AssignIndividualNumberForm()
+        return render(request, 'budget/modals/modal_assign_individual_number.html', {
+            'form': form,
+            'budget_line': budget_line
+        })
+
+    def post(self, request, pk):
+        budget_line = get_object_or_404(BudgetLine, pk=pk)
+
+        if budget_line.number_individual:
+            return JsonResponse({'success': False, 'message': 'Esta partida ya tiene un número individual asignado.'},
+                                status=400)
+
+        form = AssignIndividualNumberForm(request.POST)
+        if form.is_valid():
+            budget_line.number_individual = form.cleaned_data['number']
+            budget_line.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'Número {budget_line.number_individual} asignado correctamente.'
+            })
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+def search_employee_by_cedula(request):
+    cedula = request.GET.get('q', '')
+    try:
+        # Buscamos en el modelo Employee que está relacionado con Person
+        emp = Employee.objects.select_related('person').get(person__identification=cedula)
+
+        # Validar si ya tiene una partida (Relación inversa de BudgetLine)
+        has_budget = hasattr(emp, 'current_budget_line') and emp.current_budget_line.exists()
+
+        return JsonResponse({
+            'success': True,
+            'id': emp.id,
+            'full_name': f"{emp.person.last_name} {emp.person.first_name}",
+            'email': emp.person.email or 'Sin correo registrado',
+            'has_budget': has_budget
+        })
+    except Employee.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Empleado no encontrado.'})
+
+
+class BudgetAssignEmployeeView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        return render(request, 'budget/modals/modal_budget_assign_employee.html', {'line': line})
+
+    def post(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        employee_id = request.POST.get('employee_id')
+        observation = request.POST.get('observation', '')
+
+        if not employee_id:
+            return JsonResponse({'success': False, 'message': 'Debe seleccionar un empleado.'}, status=400)
+
+        # 1. Asignar empleado y cambiar estado
+        try:
+            status_occupied = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
+            line.current_employee_id = employee_id
+            line.status_item = status_occupied
+            line.observation = observation  # Opcional: concatenar historial
+            line.save()
+
+            return JsonResponse({'success': True, 'message': 'Empleado asignado correctamente.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+class BudgetReleaseView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        return render(request, 'budget/modals/modal_budget_release.html', {'line': line})
+
+    def post(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        reason = request.POST.get('observation', '')
+
+        try:
+            status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+
+            # Registrar en historial antes de borrar
+            line.observation = f"{line.observation or ''}\n--- Liberada ({date.today()}): {reason}".strip()
+            line.current_employee = None  # Liberar persona
+            line.status_item = status_libre
+            line.save()
+
+            return JsonResponse({'success': True, 'message': 'Partida liberada y disponible.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+class BudgetChangeStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'budget.change_budgetline'
+
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        form = BudgetChangeStatusForm()
+        return render(request, 'budget/modals/modal_budget_change_status.html', {
+            'form': form,
+            'line': line
+        })
+
+    def post(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        form = BudgetChangeStatusForm(request.POST)
+
+        if form.is_valid():
+            new_status = form.cleaned_data['new_status']
+            observation = form.cleaned_data['observation']
+
+            # Registrar cambio en el historial
+            line.status_item = new_status
+            today_str = date.today().strftime('%d/%m/%Y')
+            log_entry = f"\n[{today_str}] CAMBIO ESTADO: {new_status.name}. Obs: {observation}"
+            line.observation = (line.observation or "") + log_entry
+
+            line.save()
+            return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente.'})
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)

@@ -4,7 +4,7 @@
         <thead>
         <tr>
             <th><i class="fa-solid fa-hashtag"></i> Partida</th>
-            <th><i class="fa-solid fa-sitemap"></i> Estructura / Actividad</th>
+            <th><i class="fa-solid fa-sitemap"></i> Areá / Programa</th>
             <th><i class="fa-solid fa-briefcase"></i> Cargo:</th>
             <th><i class="fa-solid fa-money-bill-wave"></i> Remuneración</th>
             <th><i class="fa-solid fa-user"></i> Empleado</th>
@@ -23,15 +23,15 @@
                 <!-- Columna 2: Estructura -->
                 <td>
                     <div class="d-flex flex-column text-xs">
-                        <span class="text-muted"
-                        <span class="fw-bold text-dark" title="Actividad">{{ line.code }}</span>
+                        <span class="fw-bold text-dark"
+                              title="Actividad">{{ line.activity.project.subprogram.program.name }}</span>
                     </div>
                 </td>
 
                 <!-- Columna 3: Cargo -->
                 <td>
                     <div class="d-flex flex-column">
-                        <span class="fw-bold">{{ line.position_item.name|default:"POR DEFINIR" }}</span>
+                        <span class="status-badge active">{{ line.position_item.name|default:"POR DEFINIR" }}</span>
                     </div>
                 </td>
 
@@ -46,30 +46,67 @@
                 <td>
                     {% if line.current_employee %}
                         <div class="d-flex align-items-center gap-2">
-                            <div class="avatar-placeholder-sm" style="font-size: 0.7rem; width: 24px; height: 24px;">
-                                {{ line.current_employee.person.first_name|first }}{{ line.current_employee.person.last_name|first }}
-                            </div>
-                            <span>{{ line.current_employee.person.last_name }} {{ line.current_employee.person.first_name }}</span>
+                            <span class="text-xs fw-bold">{{ line.current_employee.full_name }}</span>
                         </div>
                     {% else %}
-                        <span class="status-badge badge-neutral">Sin asignar</span>
+                        <span class="status-badge badge-neutral">SIN ASIGNAR</span>
                     {% endif %}
                 </td>
 
                 <!-- Columna 6: Estado -->
                 <td>
-                    {% if line.status_item.code == 'OCCUPIED' %}
-                        <span class="status-badge active">Ocupada</span>
-                    {% elif line.status_item.code == 'VACANT' %}
-                        <span class="status-badge inactive">Vacante</span>
-                    {% else %}
-                        <span class="status-badge general">{{ line.status_item.name }}</span>
-                    {% endif %}
+                    {% with code=line.status_item.code %}
+                        <span class="status-badge {{ code|lower }}">
+                        {% if code == 'LIBRE' %}
+                            <i class="fa-solid fa-lock-open"></i>
+                        {% elif code == 'OCUPADA' %}
+                            <i class="fa-solid fa-user-check"></i>
+                        {% elif code == 'CONCURSO' %}
+                            <i class="fa-solid fa-file-signature"></i>
+                        {% elif code == 'LITIGIO' %}
+                            <i class="fa-solid fa-gavel"></i>
+                        {% elif code == 'INACTIVA' %}
+                            <i class="fa-solid fa-ban"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                            {{ line.status_item.name }}
+                    </span>
+                    {% endwith %}
                 </td>
 
                 <!-- Columna 7: Acciones -->
                 <td class="actions text-center">
                     <div class="actions-wrapper">
+                        {% if not line.number_individual %}
+                            <button class="btn-icon btn-create-action"
+                                    onclick="openAssignNumberModal({{ line.id }})"
+                                    title="Asignar Número Individual"
+                                    style="background: linear-gradient(to right, #0d9488, #14b8a6);">
+                                <i class="fa-solid fa-hashtag"></i>
+                            </button>
+                        {% endif %}
+                        {% if line.current_employee %}
+                            <!-- Botón Liberar (Rojo) -->
+                            <button class="btn-icon btn-delete-action" onclick="openReleaseModal({{ line.id }})"
+                                    title="Liberar Partida">
+                                <i class="fa-solid fa-user-minus"></i>
+                            </button>
+                        {% else %}
+                            <!-- Botón Asignar (Azul) -->
+                            <button class="btn-icon" style="background: #2563eb; color:white;"
+                                    onclick="openAssignEmployeeModal({{ line.id }})" title="Asignar Persona">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </button>
+                        {% endif %}
+                        {% if not line.current_employee %}
+                            <button class="btn-icon"
+                                    onclick="openChangeStatusModal({{ line.id }})"
+                                    title="Pasar a Concurso/Litigio/Inactiva"
+                                    style="background: linear-gradient(to right, #6366f1, #818cf8); color: white;">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        {% endif %}
                         {% if perms.budget.change_budgetline %}
                             <button class="btn-icon btn-views-action"
                                     onclick="openEditBudget({{ line.id }})"
@@ -77,6 +114,8 @@
                                 <i class="fas fa-pencil"></i>
                             </button>
                         {% endif %}
+
+
 
                         <!-- Botón Historial (Futuro) -->
                         <button class="btn-icon btn-secondary-action"

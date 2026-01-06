@@ -21,5 +21,9 @@ urlpatterns = [
          name='structure_create'),
     path('structure/edit/<str:model_type>/<int:pk>/', views.StructureUpdateView.as_view(), name='structure_edit'),
     path('structure/toggle/<str:model_type>/<int:pk>/', views.StructureToggleView.as_view(), name='structure_toggle'),
+    path('assign-number/<int:pk>/', views.AssignIndividualNumberView.as_view(), name='assign_individual_number'),
+    path('assign-employee/<int:pk>/', views.BudgetAssignEmployeeView.as_view(), name='budget_assign_employee'),
+    path('release/<int:pk>/', views.BudgetReleaseView.as_view(), name='budget_release'),
+    path('change-status/<int:pk>/', views.BudgetChangeStatusView.as_view(), name='budget_change_status'),
 
 ]

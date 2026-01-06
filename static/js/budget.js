@@ -190,6 +190,25 @@ function initBudgetFormCascades() {
     updateFullCode();
 }
 
+window.filterStructureByStatus = function (status) {
+    // UI: Manejo visual de opacidad en las tarjetas
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
+
+    // Mapeo de IDs según el HTML que tienes
+    const activeId = {
+        'all': 'card-struct-all',
+        'active': 'card-struct-active',
+        'inactive': 'card-struct-inactive'
+    }[status] || 'card-struct-all';
+
+    const card = document.getElementById(activeId);
+    if (card) card.classList.remove('opacity-low');
+
+    // Lógica: Llamar a la función universal de carga con el nuevo filtro
+    if (window.fetchBudgets) {
+        window.fetchBudgets({status: status, page: 1});
+    }
+};
 window.filterBudgetByStatus = function (status) {
     // 1. Manejo visual de las tarjetas (Opacidad)
     const allCards = [
@@ -246,8 +265,17 @@ window.openEditBudget = async function (pk) {
 };
 
 window.closeBudgetModal = function () {
-    document.getElementById('budget-modal-app').classList.add('hidden');
-    document.getElementById('modal-inject-container').innerHTML = '';
+    // 1. Intentar cerrar el modal estático (usado en creación de partidas)
+    const staticModal = document.getElementById('budget-modal-app');
+    if (staticModal) {
+        staticModal.classList.add('hidden');
+    }
+
+    // 2. Limpiar el contenedor de inyección (usado en edición y estructura)
+    const injectContainer = document.getElementById('modal-inject-container');
+    if (injectContainer) {
+        injectContainer.innerHTML = '';
+    }
     document.body.classList.remove('no-scroll');
 };
 
@@ -337,4 +365,269 @@ window.toggleStructureActive = function (modelType, pk, isActive) {
             });
         }
     });
+};
+window.openAssignNumberModal = function (pk) {
+    fetch(`/budget/assign-number/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            const container = document.getElementById('modal-inject-container');
+            container.innerHTML = html;
+            container.querySelector('.modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
+};
+
+window.submitAssignNumberForm = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    // Limpiar errores
+    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
+
+    try {
+        const res = await fetch(`/budget/assign-number/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            window.closeBudgetModal();
+            Toast.fire({icon: 'success', title: data.message});
+            // Recargamos la tabla para que el botón desaparezca y se vea el número
+            window.fetchBudgets();
+        } else {
+            if (data.errors) {
+                Object.keys(data.errors).forEach(key => {
+                    const errDiv = form.querySelector(`#err-${key}`);
+                    if (errDiv) errDiv.textContent = data.errors[key][0];
+                });
+            } else {
+                Toast.fire({icon: 'error', title: data.message});
+            }
+        }
+    } catch (err) {
+        Toast.fire({icon: 'error', title: 'Error de servidor'});
+    }
+};
+window.openAssignEmployeeModal = function (pk) {
+    fetch(`/budget/assign-employee/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            const container = document.getElementById('modal-inject-container');
+            container.innerHTML = html;
+            container.querySelector('.modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
+};
+
+window.searchEmployee = async function () {
+    // 1. Obtener elementos del DOM
+    const cedulaInput = document.getElementById('search-cedula');
+    const resultCard = document.getElementById('search-result-card');
+    const btnSubmit = document.getElementById('btn-submit-assign');
+    const resName = document.getElementById('res-name');
+    const resEmail = document.getElementById('res-email');
+    const resPhoto = document.getElementById('res-photo');
+    const hiddenId = document.getElementById('selected-employee-id');
+
+    if (!cedulaInput.value || cedulaInput.value.length < 10) {
+        return Toast.fire({icon: 'warning', title: 'Ingrese una cédula válida'});
+    }
+
+    try {
+        const response = await fetch(`/employee/api/search/?q=${cedulaInput.value}`);
+        const data = await response.json();
+
+        if (data.success) {
+            // 2. Poblar datos
+            resName.textContent = data.full_name;
+            resEmail.textContent = data.email;
+            hiddenId.value = data.id;
+
+            // 3. Manejar Foto
+            if (data.photo_url) {
+                resPhoto.innerHTML = `<img src="${data.photo_url}" class="person-avatar" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">`;
+            } else {
+                resPhoto.innerHTML = `<div class="person-avatar-placeholder" style="width:50px; height:50px; border-radius:50%; background:#3b82f6; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${data.full_name.charAt(0)}</div>`;
+            }
+
+            // 4. Mostrar y Habilitar
+            resultCard.classList.remove('hidden');
+            btnSubmit.disabled = false;
+            Toast.fire({icon: 'success', title: 'Empleado verificado'});
+
+        } else {
+            // Si el empleado no existe o ya tiene partida
+            resultCard.classList.add('hidden');
+            btnSubmit.disabled = true;
+            Swal.fire({
+                title: 'Atención',
+                text: data.message,
+                icon: 'warning',
+                confirmButtonText: 'Entendido',
+                customClass: {confirmButton: 'btn-save'},
+                buttonsStyling: false
+            });
+        }
+    } catch (e) {
+        console.error("Error en búsqueda:", e);
+        Toast.fire({icon: 'error', title: 'Error de comunicación con el servidor'});
+    }
+};
+
+window.submitAssignEmployee = async function (e, pk) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    try {
+        const res = await fetch(`/budget/assign-employee/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            window.closeBudgetModal();
+            Toast.fire({icon: 'success', title: data.message});
+            window.fetchBudgets(); // Recargar tabla
+        } else {
+            Swal.fire('Error', data.message, 'error');
+        }
+    } catch (e) {
+        Toast.fire({icon: 'error', title: 'Error de servidor'});
+    }
+};
+// apps/budget/static/js/budget.js
+
+// 1. Corregir configuración de SweetAlert global (Idioma)
+const swalConfig = {
+    confirmButtonText: 'Aceptar',
+    cancelButtonText: 'Cancelar', // Forzamos español
+    customClass: {
+        confirmButton: 'btn-save',
+        cancelButton: 'btn-cancel'
+    },
+    buttonsStyling: false
+};
+
+// 2. Modificar buscador para mostrar la foto
+window.searchEmployee = async function () {
+    const cedula = document.getElementById('search-cedula').value;
+    const resultCard = document.getElementById('search-result-card');
+    const btnSubmit = document.getElementById('btn-submit-assign');
+    const resPhoto = document.getElementById('res-photo'); // Elemento img
+
+    // ... validación de cédula igual ...
+
+    try {
+        const response = await fetch(`/employee/api/search/?q=${cedula}`);
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('res-name').textContent = data.full_name;
+            document.getElementById('res-email').textContent = data.email;
+            document.getElementById('selected-employee-id').value = data.id;
+
+            // Lógica de Foto: Si no hay, usar iniciales o placeholder
+            if (data.photo_url) {
+                resPhoto.innerHTML = `<img src="${data.photo_url}" class="person-avatar" alt="Foto">`;
+            } else {
+                resPhoto.innerHTML = `<div class="person-avatar-placeholder">${data.full_name.charAt(0)}</div>`;
+            }
+
+            resultCard.classList.remove('hidden');
+            btnSubmit.disabled = false;
+        } else {
+            // SweetAlert corregido a español
+            Swal.fire({
+                title: 'No disponible',
+                text: data.message,
+                icon: 'warning',
+                confirmButtonText: 'Entendido'
+            });
+            resultCard.classList.add('hidden');
+        }
+    } catch (e) { /* error */
+    }
+};
+
+// 3. Acción de Liberar Partida
+window.openReleaseModal = function (pk) {
+    fetch(`/budget/release/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            const container = document.getElementById('modal-inject-container');
+            container.innerHTML = html;
+            container.querySelector('.modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
+};
+
+window.submitReleaseForm = async function (e, pk) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    try {
+        const res = await fetch(`/budget/release/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.closeBudgetModal();
+            Toast.fire({icon: 'success', title: data.message});
+            window.fetchBudgets();
+        }
+    } catch (e) { /* error */
+    }
+};
+
+window.openChangeStatusModal = function (pk) {
+    fetch(`/budget/change-status/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            const container = document.getElementById('modal-inject-container');
+            container.innerHTML = html;
+            // Inicializar Select2 en el nuevo modal
+            $(container).find('.select2-field').select2({
+                width: '100%',
+                dropdownParent: $(container).find('.modal-overlay')
+            });
+            container.querySelector('.modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
+};
+
+window.submitChangeStatusForm = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
+
+    try {
+        const res = await fetch(`/budget/change-status/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            window.closeBudgetModal();
+            Toast.fire({icon: 'success', title: data.message});
+            window.fetchBudgets();
+        } else {
+            Object.keys(data.errors).forEach(key => {
+                const errDiv = document.getElementById(`err-${key}`);
+                if (errDiv) errDiv.textContent = data.errors[key][0];
+            });
+        }
+    } catch (err) {
+        Toast.fire({icon: 'error', title: 'Error de servidor'});
+    }
 };

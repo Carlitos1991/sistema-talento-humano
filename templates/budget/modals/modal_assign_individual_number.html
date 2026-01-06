@@ -1,0 +1,56 @@
+<div class="modal-overlay">
+    <div class="modal-container" style="width: 550px; margin: auto;">
+        <div class="modal-header-medium modal-header-gradient"
+             style="background: linear-gradient(to right, #0d9488, #14b8a6);">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-hashtag me-2"></i> Asignar Número de Partida Individual
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
+            </button>
+        </div>
+
+        <form onsubmit="submitAssignNumberForm(event, {{ budget_line.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-content modal-body-custom">
+
+                <div class="alert-info mb-3">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span><strong>Código de Partida:</strong> {{ budget_line.code }}</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"># Número de Partida Individual <span class="text-danger">*</span></label>
+                    {{ form.number }}
+                    <small class="form-hint">Ingrese un número entre 1 y 9999</small>
+                    <div class="text-error" id="err-number"></div>
+                </div>
+
+                <div class="form-section-card" style="background-color: #f0fdfa; border-color: #5eead4;">
+                    <h6 class="section-title" style="color: #0f766e; border-bottom-color: #99f6e4;">
+                        <i class="fa-solid fa-lightbulb"></i> Formato automático:
+                    </h6>
+                    <ul class="small" style="color: #134e4a; padding-left: 1.2rem;">
+                        <li>Si digita <strong>1-9</strong> → Se guardará como <strong>000X</strong></li>
+                        <li>Si digita <strong>10-99</strong> → Se guardará como <strong>00XX</strong></li>
+                        <li>Si digita <strong>100-999</strong> → Se guardará como <strong>0XXX</strong></li>
+                    </ul>
+                </div>
+
+                <div class="form-section-card"
+                     style="background-color: #fffbeb; border-color: #fcd34d; margin-top: 1rem;">
+                    <p class="small mb-0" style="color: #92400e;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Importante:</strong> Este número es
+                        único y se lo puede asignar una sola vez.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
+                <button type="submit" class="btn-save" style="background: #0d9488;">
+                    <i class="fa-solid fa-check-double"></i> Asignar Número
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

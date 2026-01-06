@@ -1,0 +1,63 @@
+<div class="modal-overlay">
+    <div class="modal-container-medium" style="width: 600px; margin: auto;">
+        <div class="modal-header-medium modal-header-gradient"
+             style="background: linear-gradient(to right, #dc2626, #ef4444);">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-user-minus me-2"></i> Liberar Partida Presupuestaria
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
+            </button>
+        </div>
+
+        <form onsubmit="submitReleaseForm(event, {{ line.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-content modal-body-custom">
+
+                <!-- Datos Partida -->
+                <div class="form-section-card" style="background: #fdf2f2; border-color: #fee2e2;">
+                    <div class="row small">
+                        <div class="col-6"><strong>Código:</strong> {{ line.code }}</div>
+                        <div class="col-6"><strong># Individual:</strong> {{ line.number_individual }}</div>
+                        <div class="col-12 mt-1"><strong>Cargo:</strong> {{ line.position_item.name }}</div>
+                    </div>
+                </div>
+
+                <!-- Datos Empleado Actual -->
+                <div class="form-section-card mt-3" style="border-left: 5px solid #3b82f6;">
+                    <div class="person-info">
+                        {% if line.current_employee.person.photo %}
+                            <img src="{{ line.current_employee.person.photo.url }}" class="person-avatar"
+                                 style="width:50px; height:50px;">
+                        {% else %}
+                            <div class="person-avatar-placeholder"
+                                 style="width:50px; height:50px;">{{ line.current_employee.person.first_name|first }}</div>
+                        {% endif %}
+                        <div class="person-details">
+                            <h4 class="mb-0 text-primary">{{ line.current_employee.full_name }}</h4>
+                            <p class="text-muted small mb-0">
+                                Cédula: {{ line.current_employee.person.document_number }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Razón de Liberación (Opcional)</label>
+                    <textarea name="observation" class="input-field" rows="2"
+                              placeholder="Ej: Renuncia, Traslado..."></textarea>
+                </div>
+
+                <div class="alert-info mt-3" style="background: #fff5f5; border-color: #feb2b2; color: #c53030;">
+                    <i class="fas fa-exclamation-triangle"></i> Al liberar, la partida cambiará a
+                    estado <strong>LIBRE</strong>.
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
+                <button type="submit" class="btn-save" style="background: #dc2626;">
+                    <i class="fas fa-user-slash"></i> Liberar Partida
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

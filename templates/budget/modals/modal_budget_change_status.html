@@ -1,0 +1,47 @@
+<div class="modal-overlay">
+    <div class="modal-container" style="width: 550px; margin: auto;">
+        <div class="modal-header-medium modal-header-gradient" style="background: linear-gradient(to right, #6366f1, #818cf8);">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-arrows-rotate me-2"></i> Cambiar Estado de Partida
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+        </div>
+
+        <form onsubmit="submitChangeStatusForm(event, {{ line.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-content modal-body-custom">
+
+                <!-- Info de la Partida -->
+                <div class="form-section-card" style="background: #f8fafc; border-color: #e2e8f0;">
+                    <div class="grid-2-cols">
+                        <div class="small"><strong>Código:</strong><br>{{ line.code }}</div>
+                        <div class="small"><strong># Individual:</strong><br>{{ line.number_individual|default:"S/N" }}</div>
+                        <div class="small mt-2"><strong>Cargo:</strong><br>{{ line.position_item.name|truncatechars:30 }}</div>
+                        <div class="small mt-2"><strong>Estado Actual:</strong><br>
+                            <span class="status-badge general">{{ line.status_item.name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label font-weight-bold">Nuevo Estado *</label>
+                    {{ form.new_status }}
+                    <div class="text-error" id="err-new_status"></div>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Observaciones</label>
+                    {{ form.observation }}
+                    <small class="form-hint"><i class="fas fa-info-circle"></i> Explique brevemente el motivo del cambio.</small>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
+                <button type="submit" class="btn-save" style="background: #4f46e5;">
+                    <i class="fas fa-check me-2"></i> Cambiar Estado
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

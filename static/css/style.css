@@ -1514,15 +1514,14 @@ th a.active .sort-icon {
 .status-badge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    padding: 0.22rem 0.6rem;
-    border-radius: 999px;
-    min-width: 40px;
-    line-height: 1;
-    font-size: 0.9rem;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
     font-weight: 700;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
 }
 
 .status-badge.active {
@@ -1539,7 +1538,31 @@ th a.active .sort-icon {
     background-color: #8ddde3;
     color: #0547e4;
 }
-
+.status-badge.libre {
+    background-color: #bbf7d0;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+.status-badge.ocupada {
+    background-color: #fde68a;
+    color: #92400e;
+    border-color: #fde68a;
+}
+.status-badge.concurso {
+    background-color: #f3e8ff;
+    color: #7e22ce;
+    border-color: #e9d5ff;
+}
+.status-badge.litigio {
+    background-color: #0ecad6;
+    color: #0a355c;
+    border-color: #0ecad6;
+}
+.status-badge.inactiva {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
 /* Acciones en tabla */
 .actions-wrapper {
     display: inline-flex;
