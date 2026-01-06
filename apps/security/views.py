@@ -7,7 +7,7 @@ from django.shortcuts import render, get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, View, ListView, UpdateView
-from apps.person.models import Person
+from person.models import Person
 from .forms import RoleForm, UserFilterForm, CredentialCreationForm
 
 

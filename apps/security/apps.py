@@ -3,5 +3,5 @@ from django.apps import AppConfig
 
 class SecurityConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.security'
+    name = 'security'
     verbose_name = 'Seguridad y Accesos'

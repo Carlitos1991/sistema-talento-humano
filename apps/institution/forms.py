@@ -1,6 +1,6 @@
 from django import forms
-from apps.core.forms import BaseFormMixin
-from apps.employee.models import Employee
+from core.forms import BaseFormMixin
+from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel
 
 

@@ -1,12 +1,11 @@
-# apps/person/forms.py
 from datetime import date
 
 from django import forms
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 
-from apps.core.forms import BaseFormMixin
-from apps.core.models import User, CatalogItem, Location
+from core.forms import BaseFormMixin
+from core.models import User, CatalogItem, Location
 from .models import Person
 
 

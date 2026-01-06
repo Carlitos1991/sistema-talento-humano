@@ -2,9 +2,9 @@
 from django import forms
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from apps.core.forms import BaseFormMixin
-from apps.core.models import User
-from apps.person.models import Person
+from core.forms import BaseFormMixin
+from core.models import User
+from person.models import Person
 
 
 class RoleForm(BaseFormMixin, forms.ModelForm):

@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings  # IMPORTANTE: Usar settings, no el User model directo
-from apps.core.models import BaseModel, CatalogItem, Location
+from core.models import BaseModel, CatalogItem, Location
 from datetime import date
 
 

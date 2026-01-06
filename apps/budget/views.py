@@ -1,8 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.http import JsonResponse
 from django.db.models import Q
+
+from core.models import CatalogItem
 from .models import BudgetLine, Program, Subprogram, Project, Activity
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field
 
@@ -103,7 +106,20 @@ class BudgetCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         form = self.get_form()
         if form.is_valid():
-            form.save()
+            obj = form.save(commit=False)
+            try:
+                status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+                obj.status_item = status_libre
+            except CatalogItem.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'status_item': ['El estado "LIBRE" no está configurado en el sistema.']}
+                }, status=400)
+            try:
+                obj.full_clean()
+            except ValidationError as e:
+                return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
+            obj.save()
             return JsonResponse({
                 'success': True,
                 'message': 'Partida presupuestaria creada.',

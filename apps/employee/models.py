@@ -1,9 +1,8 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from apps.core.models import BaseModel, CatalogItem
-from apps.person.models import Person
-# Aquí SÍ podemos importar AdministrativeUnit porque institution no importa models de employee directamente
-from apps.institution.models import AdministrativeUnit
+from core.models import BaseModel, CatalogItem
+from person.models import Person
+from institution.models import AdministrativeUnit
 
 
 class Employee(BaseModel):

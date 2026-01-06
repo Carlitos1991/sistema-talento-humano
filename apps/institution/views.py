@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
-from apps.employee.models import Employee
+from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm
 

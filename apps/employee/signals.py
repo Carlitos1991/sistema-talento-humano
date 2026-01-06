@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from apps.person.models import Person
-from apps.employee.models import Employee
+from person.models import Person
+from employee.models import Employee
 
 @receiver(post_save, sender=Person)
 def create_employee_profile(sender, instance, created, **kwargs):

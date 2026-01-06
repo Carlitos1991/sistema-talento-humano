@@ -9,8 +9,7 @@
             </button>
         </div>
 
-        <form id="budgetForm" onsubmit="submitBudgetForm(event, '
-                {% if is_editing %}{% url 'budget:budget_update' form.instance.pk %}{% else %}{% url 'budget:budget_create' %}{% endif %}')">
+        <form id="budgetForm" method="POST" onsubmit="submitBudgetForm(event, '{% if is_editing %}{% url 'budget:budget_update' form.instance.pk %}{% else %}{% url 'budget:budget_create' %}{% endif %}')">
             {% csrf_token %}
 
             <!-- Campo oculto para enviar el código a Django -->

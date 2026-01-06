@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from apps.core.models import BaseModel, CatalogItem
-from apps.employee.models import Employee
+from core.models import BaseModel, CatalogItem
+from employee.models import Employee
 
 
 # ==========================================
@@ -95,7 +95,6 @@ class BudgetLine(BaseModel):
         blank=True, null=True, related_name='current_budget_line'
     )
 
-    # --- CORRECCIÓN DE RELATED_NAMES AQUÍ ---
     # Cada ForeignKey a CatalogItem debe tener un 'related_name' único
 
     status_item = models.ForeignKey(
@@ -160,12 +159,12 @@ class BudgetLine(BaseModel):
         return f'{self.number_individual or "S/N"} - {position}'
 
     def clean(self):
-        if self.status_item and self.status_item.code == 'VACANT' and self.current_employee:
-            raise ValidationError("Una partida con estado VACANTE no puede tener un empleado asignado.")
+        if hasattr(self, 'status_item') and self.status_item:
+            if self.status_item.code == 'VACANT' and self.current_employee:
+                raise ValidationError("Una partida con estado VACANTE no puede tener un empleado asignado.")
 
-        if self.remuneration < 0:
+        if self.remuneration and self.remuneration < 0:
             raise ValidationError("La remuneración no puede ser negativa.")
 
     def save(self, *args, **kwargs):
-        self.full_clean()
         super().save(*args, **kwargs)

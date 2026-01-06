@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 class EmployeeConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.employee'
+    name = 'employee'
 
     def ready(self):
-        import apps.employee.signals  # Importar signals aquí
+        import employee.signals

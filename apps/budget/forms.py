@@ -1,6 +1,5 @@
 from django import forms
-from apps.core.forms import BaseFormMixin
-from apps.core.models import CatalogItem
+from core.forms import BaseFormMixin
 from .models import BudgetLine, Program, Subprogram, Project, Activity
 
 
@@ -25,7 +24,7 @@ class BudgetLineForm(BaseFormMixin, forms.ModelForm):
         model = BudgetLine
         fields = [
             'program', 'subprogram', 'project', 'activity',  # Jerarquía
-            'code', 'status_item', 'remuneration',  # Identificación
+            'code', 'remuneration',  # Identificación
             'regime_item', 'group_item', 'category_item', 'position_item', 'grade_item', 'spending_type_item',
             # Clasificación
             'observation'
