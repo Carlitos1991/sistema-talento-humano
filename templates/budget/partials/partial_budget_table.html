@@ -24,8 +24,7 @@
                 <td>
                     <div class="d-flex flex-column text-xs">
                         <span class="text-muted"
-                              title="Área/Programa">{{ line.activity.project.subprogram.program.code }}</span>
-                        <span class="fw-bold text-dark" title="Actividad">{{ line.activity.code }}</span>
+                        <span class="fw-bold text-dark" title="Actividad">{{ line.code }}</span>
                     </div>
                 </td>
 
@@ -33,15 +32,12 @@
                 <td>
                     <div class="d-flex flex-column">
                         <span class="fw-bold">{{ line.position_item.name|default:"POR DEFINIR" }}</span>
-                        <small class="text-muted">{{ line.group_item.name|default:"-" }}</small>
                     </div>
                 </td>
 
                 <!-- Columna 4: RMU -->
                 <td>
                     <div class="d-flex flex-column">
-                        <span class="badge-neutral"
-                              style="font-size: 0.75rem;">{{ line.regime_item.name|truncatechars:10 }}</span>
                         <span class="fw-bold text-success mt-1">$ {{ line.remuneration }}</span>
                     </div>
                 </td>
@@ -56,7 +52,7 @@
                             <span>{{ line.current_employee.person.last_name }} {{ line.current_employee.person.first_name }}</span>
                         </div>
                     {% else %}
-                        <span class="status-badge badge-neutral">VACANTE</span>
+                        <span class="status-badge badge-neutral">Sin asignar</span>
                     {% endif %}
                 </td>
 

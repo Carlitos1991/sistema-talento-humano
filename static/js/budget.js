@@ -190,6 +190,31 @@ function initBudgetFormCascades() {
     updateFullCode();
 }
 
+window.filterBudgetByStatus = function (status) {
+    // 1. Manejo visual de las tarjetas (Opacidad)
+    const allCards = [
+        'card-filter-all',
+        'card-filter-libre',
+        'card-filter-ocupada',
+        'card-filter-concurso',
+        'card-filter-litigio',
+        'card-filter-inactiva'
+    ];
+
+    allCards.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('opacity-low');
+    });
+
+    // 2. Resaltar la tarjeta seleccionada
+    const activeId = status === 'all' ? 'card-filter-all' : `card-filter-${status.toLowerCase()}`;
+    const activeCard = document.getElementById(activeId);
+    if (activeCard) activeCard.classList.remove('opacity-low');
+
+    // 3. Ejecutar la recarga de la tabla vía AJAX con el nuevo estado
+    // Asumiendo que fetchBudgets ya maneja el parámetro 'status' en el objeto currentFilters
+    window.fetchBudgets({status: status, page: 1});
+};
 // Vinculación global
 window.setupHierarchyListeners = function () {
     initBudgetFormCascades();

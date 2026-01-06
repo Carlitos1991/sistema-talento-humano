@@ -42,10 +42,14 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
 
 # --- 2. ESTADÍSTICAS (Python Calculation) ---
 def get_budget_stats():
+    qs = BudgetLine.objects.all()
     return {
-        'total': BudgetLine.objects.count(),
-        'vacant': BudgetLine.objects.filter(status_item__code='VACANT').count(),
-        'occupied': BudgetLine.objects.filter(status_item__code='OCCUPIED').count(),
+        'total': qs.count(),
+        'concurso': qs.filter(status_item__code='CONCURSO').count(),
+        'inactiva': qs.filter(status_item__code='INACTIVA').count(),
+        'libre': qs.filter(status_item__code='LIBRE').count(),
+        'litigio': qs.filter(status_item__code='LITIGIO').count(),
+        'ocupada': qs.filter(status_item__code='OCUPADA').count(),
     }
 
 
