@@ -10,14 +10,14 @@
             <p>Gestión de partidas, escalas salariales y ocupación de cargos.</p>
         </div>
         {% if perms.budget.add_budgetline %}
-            <button id="btn-add-budget" type="button" class="btn btn-create">
+            <button id="btn-add-budget" type="button" class="btn btn-create" onclick="openCreateBudget()">
                 <i class="fas fa-plus-circle"></i> Nueva Partida
             </button>
         {% endif %}
     </div>
 
     <!-- 2. Estadísticas (Filtros Rápidos) -->
-    <div class="stats-row" >
+    <div class="stats-row">
         <!-- TODOS -->
         <div class="stat-card color-one" onclick="filterBudgetByStatus('all')" id="card-filter-all">
             <div class="stat-left">

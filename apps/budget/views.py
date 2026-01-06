@@ -47,11 +47,11 @@ def get_budget_stats():
     qs = BudgetLine.objects.all()
     return {
         'total': qs.count(),
-        'concurso': qs.filter(status_item__code='CONCURSO').count(),
-        'inactiva': qs.filter(status_item__code='INACTIVA').count(),
         'libre': qs.filter(status_item__code='LIBRE').count(),
-        'litigio': qs.filter(status_item__code='LITIGIO').count(),
         'ocupada': qs.filter(status_item__code='OCUPADA').count(),
+        'concurso': qs.filter(status_item__code='CONCURSO').count(),
+        'litigio': qs.filter(status_item__code='LITIGIO').count(),
+        'inactiva': qs.filter(status_item__code='INACTIVA').count(),
     }
 
 
@@ -364,7 +364,8 @@ class AssignIndividualNumberView(LoginRequiredMixin, PermissionRequiredMixin, Vi
         budget_line = get_object_or_404(BudgetLine, pk=pk)
 
         if budget_line.number_individual:
-            return JsonResponse({'success': False, 'message': 'Esta partida ya tiene un número individual asignado.'},
+            return JsonResponse({'success': False, 'message': 'Esta partida ya tiene un número individual asignado.',
+                                 'new_stats': get_budget_stats()},
                                 status=400)
 
         form = AssignIndividualNumberForm(request.POST)
@@ -408,9 +409,11 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
         line = get_object_or_404(BudgetLine, pk=pk)
         employee_id = request.POST.get('employee_id')
         observation = request.POST.get('observation', '')
-
+        line.save()
         if not employee_id:
-            return JsonResponse({'success': False, 'message': 'Debe seleccionar un empleado.'}, status=400)
+            return JsonResponse(
+                {'success': False, 'message': 'Debe seleccionar un empleado.', 'new_stats': get_budget_stats()},
+                status=400)
 
         # 1. Asignar empleado y cambiar estado
         try:
@@ -420,7 +423,8 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
             line.observation = observation  # Opcional: concatenar historial
             line.save()
 
-            return JsonResponse({'success': True, 'message': 'Empleado asignado correctamente.'})
+            return JsonResponse(
+                {'success': True, 'message': 'Empleado asignado correctamente.', 'new_stats': get_budget_stats()})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
@@ -443,7 +447,8 @@ class BudgetReleaseView(LoginRequiredMixin, View):
             line.status_item = status_libre
             line.save()
 
-            return JsonResponse({'success': True, 'message': 'Partida liberada y disponible.'})
+            return JsonResponse(
+                {'success': True, 'message': 'Partida liberada y disponible.', 'new_stats': get_budget_stats()})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
@@ -474,6 +479,7 @@ class BudgetChangeStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
             line.observation = (line.observation or "") + log_entry
 
             line.save()
-            return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente.'})
+            return JsonResponse(
+                {'success': True, 'message': 'Estado actualizado correctamente.', 'new_stats': get_budget_stats()})
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
