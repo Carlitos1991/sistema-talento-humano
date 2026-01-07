@@ -1,0 +1,63 @@
+<div class="modal-overlay">
+    <div class="modal-container-xl">
+        <div class="modal-header-medium modal-header-gradient" style="background: #0515c1;">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-users-viewfinder me-2"></i> Historial de Ocupantes
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+        </div>
+
+        <div class="modal-body-content modal-body-custom">
+            <div class="timeline-container">
+                {% for entry in history %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if entry.is_current %}status-actual{% else %}status-finalizado{% endif %}"></div>
+                        <div class="history-card">
+                            <div class="person-info">
+                                {% if entry.employee.person.photo %}
+                                    <img src="{{ entry.employee.person.photo.url }}" class="person-avatar" style="width:60px; height:60px;">
+                                {% else %}
+                                    <div class="person-avatar-placeholder" style="width:60px; height:60px;">{{ entry.employee.person.first_name|first }}</div>
+                                {% endif %}
+                                <div class="person-details">
+                                    <h4 class="mb-0 text-primary">{{ entry.employee.full_name }}</h4>
+                                    <span class="small text-muted"><i class="fas fa-id-card me-1"></i>{{ entry.employee.person.document_number }}</span>
+                                </div>
+                            </div>
+
+                            <div class="grid-2-cols mt-3 border-top pt-3">
+                                <div>
+                                    <label class="label-muted">Fecha Inicio</label>
+                                    <span class="value-bold text-success"><i class="fas fa-calendar-check me-1"></i>{{ entry.start_date|date:"d/m/Y" }}</span>
+                                </div>
+                                <div>
+                                    <label class="label-muted">Fecha Fin</label>
+                                    <span class="value-bold {% if entry.is_current %}text-primary{% else %}text-danger{% endif %}">
+                                        {% if entry.is_current %}<i class="fas fa-infinity me-1"></i>En curso{% else %}<i class="fas fa-calendar-times me-1"></i>{{ entry.end_date|date:"d/m/Y" }}{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {% if entry.observation %}
+                                <div class="mt-2 p-2 rounded" style="background:#fffbeb; border: 1px solid #fef3c7; font-size:0.8rem;">
+                                    <strong><i class="fas fa-comment"></i> Observación:</strong> {{ entry.observation }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="history-footer-stats mx-4 mb-4">
+            <div>
+                <div class="h3 mb-0">{{ total_assignments }}</div>
+                <div class="small opacity-80 uppercase">Total de Asignaciones</div>
+            </div>
+            <div style="border-left: 1px solid rgba(255,255,255,0.2);">
+                <div class="h3 mb-0">{{ line.created_at|timesince }}</div>
+                <div class="small opacity-80 uppercase">Antigüedad Partida</div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -26,5 +26,7 @@ urlpatterns = [
     path('release/<int:pk>/', views.BudgetReleaseView.as_view(), name='budget_release'),
     path('change-status/<int:pk>/', views.BudgetChangeStatusView.as_view(), name='budget_change_status'),
     path('detail/<int:pk>/', views.BudgetDetailView.as_view(), name='budget_detail'),
+    path('history/changes/<int:pk>/', views.BudgetChangesHistoryView.as_view(), name='history_changes'),
+    path('history/occupants/<int:pk>/', views.BudgetOccupantsHistoryView.as_view(), name='history_occupants'),
 
 ]

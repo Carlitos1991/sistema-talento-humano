@@ -15,14 +15,16 @@
                 <i class="fas fa-chevron-left"></i> Regresar
             </a>
             <button onclick="window.openEditBudget({{ line.pk }})" class="btn btn-save"
-                    style="background: linear-gradient(to right, #fbbf24, #f59e0b);}">
+                    style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
                 <i class="fas fa-edit"></i> Editar Datos
             </button>
-            <button onclick="window.openEditBudget({{ line.pk }})" class="btn btn-save" style="background: linear-gradient(to right, #0515c1, #1a37ca);}">
-                <i class="fas fa-timeline"></i> Historial
+            <button onclick="window.openChangesHistory({{ line.pk }})" class="btn btn-save"
+                    style="background: linear-gradient(to right, #0515c1, #1a37ca);">
+                <i class="fas fa-timeline"></i> Historial de Cambios
             </button>
-            <button onclick="window.openEditBudget({{ line.pk }})" class="btn-save" style="background: linear-gradient(to right, #61bd93, #118f5f)">
-                <i class="fas fa-clock-rotate-left"></i> Historial de empleados
+            <button onclick="window.openOccupantsHistory({{ line.pk }})" class="btn-save"
+                    style="background: linear-gradient(to right, #61bd93, #118f5f)">
+                <i class="fas fa-clock-rotate-left"></i> Historial de Empleados
             </button>
         </div>
     </div>
@@ -164,4 +166,7 @@
 
 {% block modals %}
     <div id="modal-inject-container"></div>
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/budget.js' %}"></script>
 {% endblock %}

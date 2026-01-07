@@ -1,0 +1,58 @@
+<div class="modal-overlay">
+    <div class="modal-container-xl">
+        <div class="modal-header-medium modal-header-gradient" style="background: #334155;">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i> Historial de Cambios - Partida {{ line.number_individual|default:line.code }}
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+        </div>
+
+        <div class="modal-body-content modal-body-custom">
+            <!-- Header resumido -->
+            <div class="alert-info mb-4" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b;">
+                <div class="grid-3-cols">
+                    <div class="small"><strong>Código:</strong> {{ line.code }}</div>
+                    <div class="small"><strong>Cargo:</strong> {{ line.position_item.name }}</div>
+                    <div class="small"><strong>Estado:</strong> {{ line.status_item.name }}</div>
+                </div>
+            </div>
+
+            <div class="timeline-container">
+                {% for log in history %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="history-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge-neutral"><i class="fas fa-edit me-1"></i> {{ log.get_modification_type_display }}</span>
+                                <span class="small text-muted">{{ log.modification_date|date:"d/m/Y H:i" }}</span>
+                            </div>
+
+                            <div class="diff-grid mb-3">
+                                <div class="diff-old small text-center">
+                                    <label class="label-muted" style="color:inherit">ANTERIOR</label>
+                                    <strong>{{ log.old_value|default:"(Vacío)" }}</strong>
+                                </div>
+                                <i class="fas fa-arrow-right text-muted"></i>
+                                <div class="diff-new small text-center">
+                                    <label class="label-muted" style="color:inherit">NUEVO</label>
+                                    <strong>{{ log.new_value }}</strong>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-placeholder-sm" style="width:24px; height:24px; font-size: 0.6rem;">{{ log.modified_by.first_name|first }}</div>
+                                <span class="small fw-bold">{{ log.modified_by.get_full_name }}</span>
+                                <span class="text-muted small">• {{ log.reason|default:"Sin razón especificada" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="no-results-content">No hay registros de cambios para esta partida.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeBudgetModal()" class="btn-cancel">Cerrar</button>
+        </div>
+    </div>
+</div>

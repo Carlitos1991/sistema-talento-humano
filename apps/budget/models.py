@@ -167,6 +167,34 @@ class BudgetLine(BaseModel):
             raise ValidationError("La remuneración no puede ser negativa.")
 
     def save(self, *args, **kwargs):
+        user = kwargs.pop('modified_by', None)
+
+        if self.pk:
+            # Obtenemos la versión anterior de la base de datos
+            old_obj = BudgetLine.objects.get(pk=self.pk)
+
+            # Lista de campos a auditar
+            fields_to_watch = {
+                'remuneration': 'Remuneración',
+                'position_item': 'Cargo Estructural',
+                'status_item': 'Estado',
+            }
+
+            for field, label in fields_to_watch.items():
+                old_val = getattr(old_obj, field)
+                new_val = getattr(self, field)
+
+                if old_val != new_val:
+                    BudgetModificationHistory.objects.create(
+                        budget_line=self,
+                        modified_by=user,
+                        modification_type='UPDATE',
+                        field_name=label,
+                        old_value=str(old_val),
+                        new_value=str(new_val),
+                        reason="Cambio desde el formulario de edición"
+                    )
+
         super().save(*args, **kwargs)
 
 

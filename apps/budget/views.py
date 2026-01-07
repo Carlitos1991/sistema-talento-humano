@@ -7,7 +7,8 @@ from django.db.models import Q
 from datetime import date
 from core.models import CatalogItem
 from employee.models import Employee
-from .models import BudgetLine, Program, Subprogram, Project, Activity
+from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetModificationHistory, \
+    BudgetAssignmentHistory
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
     AssignIndividualNumberForm, BudgetChangeStatusForm
 
@@ -144,16 +145,22 @@ class BudgetUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         self.object = self.get_object()
         form = self.get_form()
         # Renderizamos el HTML del formulario completo
-        return render(request, self.template_name, {'form': form, 'is_editing': True})
+        return render(request, self.template_name, {'form': form, 'is_editing': True, 'is_dynamic': True})
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
         if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'message': 'Partida actualizada correctamente.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            # Pasamos modified_by para que el modelo guarde el historial
+            obj = form.save(commit=False)
+            obj.save(modified_by=request.user)
 
+            return JsonResponse({
+                'success': True,
+                'message': 'Partida actualizada correctamente.',
+                'new_stats': get_budget_stats()
+            })
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     # --- 5. Estructura de partida ---
 
 
@@ -408,23 +415,27 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
     def post(self, request, pk):
         line = get_object_or_404(BudgetLine, pk=pk)
         employee_id = request.POST.get('employee_id')
-        observation = request.POST.get('observation', '')
-        line.save()
-        if not employee_id:
-            return JsonResponse(
-                {'success': False, 'message': 'Debe seleccionar un empleado.', 'new_stats': get_budget_stats()},
-                status=400)
+        observation = request.POST.get('observation', 'Asignación inicial')
 
-        # 1. Asignar empleado y cambiar estado
         try:
             status_occupied = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
+
+            # 1. Crear el registro en Historial de Asignaciones
+            BudgetAssignmentHistory.objects.create(
+                budget_line=line,
+                employee_id=employee_id,
+                start_date=date.today(),
+                is_current=True,
+                observation=observation
+            )
+
+            # 2. Actualizar la Partida
             line.current_employee_id = employee_id
             line.status_item = status_occupied
-            line.observation = observation  # Opcional: concatenar historial
-            line.save()
+            line.save(modified_by=request.user)  # Pasamos el usuario para la auditoría
 
-            return JsonResponse(
-                {'success': True, 'message': 'Empleado asignado correctamente.', 'new_stats': get_budget_stats()})
+            return JsonResponse({'success': True, 'message': 'Persona asignada y registro histórico creado.',
+                                 'new_stats': get_budget_stats()})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
@@ -436,16 +447,22 @@ class BudgetReleaseView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         line = get_object_or_404(BudgetLine, pk=pk)
-        reason = request.POST.get('observation', '')
+        reason = request.POST.get('observation', 'Liberación de partida')
 
         try:
-            status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+            # 1. "Cerrar" la asignación actual en el historial
+            history = BudgetAssignmentHistory.objects.filter(budget_line=line, is_current=True).first()
+            if history:
+                history.end_date = date.today()
+                history.is_current = false
+                history.observation = reason
+                history.save()
 
-            # Registrar en historial antes de borrar
-            line.observation = f"{line.observation or ''}\n--- Liberada ({date.today()}): {reason}".strip()
-            line.current_employee = None  # Liberar persona
+            # 2. Resetear la Partida
+            status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+            line.current_employee = None
             line.status_item = status_libre
-            line.save()
+            line.save(modified_by=request.user)
 
             return JsonResponse(
                 {'success': True, 'message': 'Partida liberada y disponible.', 'new_stats': get_budget_stats()})
@@ -498,5 +515,30 @@ class BudgetDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             'current_employee__person',
             'status_item', 'position_item', 'regime_item',
             'group_item', 'category_item', 'grade_item', 'spending_type_item',
-            'created_by', 'updated_by'  # Asumiendo que tu BaseModel tiene estos campos
+            'created_by', 'updated_by'
         )
+
+
+class BudgetChangesHistoryView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        history = line.modifications.all().select_related('modified_by')
+        return render(request, 'budget/modals/modal_budget_changes_history.html', {
+            'line': line,
+            'history': history
+        })
+
+
+class BudgetOccupantsHistoryView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        history = line.assignments.all().select_related('employee__person')
+
+        # Cálculo de totales para el footer del modal
+        total_assignments = history.count()
+
+        return render(request, 'budget/modals/modal_budget_occupants_history.html', {
+            'line': line,
+            'history': history,
+            'total_assignments': total_assignments
+        })

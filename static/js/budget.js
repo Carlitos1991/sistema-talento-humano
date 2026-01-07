@@ -98,16 +98,16 @@ window.refreshStatsUI = function (stats) {
 /**
  * Manejador universal de éxito para todas las acciones de presupuesto
  */
-window.handleActionSuccess = function(data) {
+window.handleActionSuccess = function (data) {
     if (data.success) {
         window.closeBudgetModal();
-        Toast.fire({ icon: 'success', title: data.message });
+        Toast.fire({icon: 'success', title: data.message});
 
-        // Si la URL contiene "detail", recargamos la página completa para actualizar el diseño
+        // Si estoy en la página de detalle, debo recargar para ver el historial y cambios
         if (window.location.pathname.includes('/detail/')) {
             setTimeout(() => location.reload(), 1000);
         } else {
-            // Si estamos en la lista, solo refrescamos la tabla asíncronamente
+            // Si estoy en la lista, solo refresco la tabla asíncrona
             if (window.fetchBudgets) window.fetchBudgets();
             if (data.new_stats) window.refreshStatsUI(data.new_stats);
         }
@@ -201,12 +201,36 @@ window.openCreateBudget = () => {
         initBudgetFormCascades();
     }
 };
-window.openEditBudget = async (pk) => {
-    const res = await fetch(`/budget/update/${pk}/`);
-    document.getElementById('modal-inject-container').innerHTML = await res.text();
-    document.querySelector('#modal-inject-container .modal-overlay').classList.remove('hidden');
-    document.body.classList.add('no-scroll');
-    initBudgetFormCascades();
+window.openEditBudget = async function (pk) {
+    const container = document.getElementById('modal-inject-container');
+    if (!container) return console.error("Falta el contenedor modal-inject-container");
+
+    try {
+        const res = await fetch(`/budget/update/${pk}/`);
+        if (!res.ok) throw new Error("Error al cargar el servidor");
+
+        const html = await res.text();
+        container.innerHTML = html;
+
+        // Quitamos el 'hidden' de cualquier overlay inyectado
+        const modalOverlay = container.querySelector('.modal-overlay');
+        if (modalOverlay) {
+            modalOverlay.classList.remove('hidden');
+            // IMPORTANTE: Aseguramos que se vea (algunos navegadores necesitan flex)
+            modalOverlay.style.display = 'flex';
+        }
+
+        document.body.classList.add('no-scroll');
+
+        // RE-INICIALIZAR CASCADAS (Vital para que el modal de edición funcione)
+        if (typeof initBudgetFormCascades === 'function') {
+            initBudgetFormCascades();
+        }
+
+    } catch (e) {
+        console.error(e);
+        Toast.fire({icon: 'error', title: 'No se pudo abrir el editor'});
+    }
 };
 
 // --- 5. MODALES Y ACCIONES (DISTRIBUTIVO) ---
@@ -220,42 +244,43 @@ window.openCreateBudget = function () {
     }
 };
 
-window.openEditBudget = async function (pk) {
-    try {
-        const res = await fetch(`/budget/update/${pk}/`);
-        const html = await res.text();
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        const modal = container.querySelector('.modal-overlay');
-        if (modal) {
-            modal.classList.remove('hidden');
-            document.body.classList.add('no-scroll');
-            initBudgetFormCascades();
-        }
-    } catch (e) {
-        Toast.fire({icon: 'error', title: 'Error al cargar formulario'});
-    }
-};
+window.submitBudgetForm = async function (e, url) {
+    e.preventDefault(); // CRUCIAL: Detiene el envío tradicional y el error 405
 
-window.submitBudgetForm = async (e, url) => {
-    e.preventDefault();
-    const res = await fetch(url, {
-        method: 'POST',
-        body: new FormData(e.target),
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-    });
-    const data = await res.json();
-    if (data.success) {
-        window.closeBudgetModal();
-        Toast.fire({icon: 'success', title: data.message});
-        window.fetchBudgets();
-        if (data.new_stats) window.refreshStatsUI(data.new_stats);
-    } else {
-        e.target.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-        Object.keys(data.errors).forEach(k => {
-            const el = document.getElementById(`err-${k}`);
-            if (el) el.textContent = data.errors[k][0];
+    const form = e.target;
+    const formData = new FormData(form);
+
+    // Limpiar mensajes de error previos
+    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
         });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            Object.keys(errorData.errors).forEach(key => {
+                const errDiv = document.getElementById(`err-${key}`);
+                if (errDiv) errDiv.textContent = errorData.errors[key][0];
+            });
+            return Toast.fire({icon: 'error', title: 'Verifique los errores en el formulario'});
+        }
+
+        const data = await res.json();
+        // Llamamos al manejador universal de éxito que ya definimos
+        if (window.handleActionSuccess) {
+            window.handleActionSuccess(data);
+        }
+
+    } catch (err) {
+        console.error("Error en submit:", err);
+        Toast.fire({icon: 'error', title: 'Error crítico de conexión'});
     }
 };
 
@@ -461,4 +486,23 @@ document.addEventListener('click', (e) => {
 // Inicialización de cascadas si es necesario (para modales inyectados se llama al abrir)
 window.setupHierarchyListeners = function () {
     initBudgetFormCascades();
+};
+window.openChangesHistory = function (pk) {
+    fetch(`/budget/history/changes/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('modal-inject-container').innerHTML = html;
+            document.querySelector('#modal-inject-container .modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
+};
+
+window.openOccupantsHistory = function (pk) {
+    fetch(`/budget/history/occupants/${pk}/`)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('modal-inject-container').innerHTML = html;
+            document.querySelector('#modal-inject-container .modal-overlay').classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+        });
 };
