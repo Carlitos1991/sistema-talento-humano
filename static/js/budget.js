@@ -297,12 +297,45 @@ window.openAssignNumberModal = (pk) => {
 
 window.submitAssignNumberForm = async (e, pk) => {
     e.preventDefault();
-    const res = await fetch(`/budget/assign-number/${pk}/`, {
-        method: 'POST',
-        body: new FormData(e.target),
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-    });
-    window.handleActionSuccess(await res.json());
+    
+    try {
+        const res = await fetch(`/budget/assign-number/${pk}/`, {
+            method: 'POST',
+            body: new FormData(e.target),
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            // Manejar error 400 o cualquier otro error
+            if (data.errors) {
+                // Mostrar errores de validación del formulario
+                let errorMsg = 'Errores en el formulario:\n';
+                Object.keys(data.errors).forEach(key => {
+                    if (Array.isArray(data.errors[key])) {
+                        errorMsg += `${data.errors[key].join(', ')}\n`;
+                    } else {
+                        errorMsg += `${data.errors[key]}\n`;
+                    }
+                });
+                Toast.fire({icon: 'error', title: errorMsg});
+            } else if (data.message) {
+                // Mostrar mensaje de error personalizado
+                Toast.fire({icon: 'error', title: data.message});
+            } else {
+                Toast.fire({icon: 'error', title: 'Error al asignar el número individual'});
+            }
+            return;
+        }
+        
+        // Si todo está bien, manejar el éxito
+        window.handleActionSuccess(data);
+        
+    } catch (error) {
+        console.error('Error en submitAssignNumberForm:', error);
+        Toast.fire({icon: 'error', title: 'Error de conexión con el servidor'});
+    }
 };
 
 window.openAssignEmployeeModal = (pk) => {
