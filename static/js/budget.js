@@ -98,14 +98,19 @@ window.refreshStatsUI = function (stats) {
 /**
  * Manejador universal de éxito para todas las acciones de presupuesto
  */
-window.handleActionSuccess = function (data) {
+window.handleActionSuccess = function(data) {
     if (data.success) {
         window.closeBudgetModal();
-        Toast.fire({icon: 'success', title: data.message});
-        // Recargar tabla asíncronamente
-        window.fetchBudgets();
-        // Actualizar contadores asíncronamente
-        if (data.new_stats) window.refreshStatsUI(data.new_stats);
+        Toast.fire({ icon: 'success', title: data.message });
+
+        // Si la URL contiene "detail", recargamos la página completa para actualizar el diseño
+        if (window.location.pathname.includes('/detail/')) {
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            // Si estamos en la lista, solo refrescamos la tabla asíncronamente
+            if (window.fetchBudgets) window.fetchBudgets();
+            if (data.new_stats) window.refreshStatsUI(data.new_stats);
+        }
     }
 };
 

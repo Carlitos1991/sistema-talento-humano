@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from core.models import BaseModel, CatalogItem
+from core.models import BaseModel, CatalogItem, User
 from employee.models import Employee
 
 
@@ -160,11 +160,98 @@ class BudgetLine(BaseModel):
 
     def clean(self):
         if hasattr(self, 'status_item') and self.status_item:
-            if self.status_item.code == 'VACANT' and self.current_employee:
-                raise ValidationError("Una partida con estado VACANTE no puede tener un empleado asignado.")
+            if self.status_item.code == 'LIBRE' and self.current_employee:
+                raise ValidationError("Una partida con estado LIBRE no puede tener un empleado asignado.")
 
         if self.remuneration and self.remuneration < 0:
             raise ValidationError("La remuneración no puede ser negativa.")
 
     def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+
+# ==========================================
+# 3. HISTORIALES Y TRAZABILIDAD
+# ==========================================
+
+class BudgetModificationHistory(models.Model):
+    """
+    Rastrea cambios en la estructura de la partida.
+    """
+    budget_line = models.ForeignKey(BudgetLine, on_delete=models.PROTECT, verbose_name='Partida',
+                                    related_name='modifications')
+    modification_date = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Modificación')
+    modified_by = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='Modificado por',
+                                    related_name='budget_modifications', null=True, blank=True)
+
+    # Tipo de modificación
+    modification_type = models.CharField(max_length=50, verbose_name='Tipo de Modificación',
+                                         blank=True, null=True,
+                                         choices=[
+                                             ('CREATE', 'Creación'),
+                                             ('UPDATE', 'Actualización'),
+                                             ('STATUS_CHANGE', 'Cambio de Estado'),
+                                             ('ASSIGNMENT', 'Asignación de Persona'),
+                                             ('RELEASE', 'Liberación de Persona'),
+                                         ])
+
+    field_name = models.CharField(max_length=100, verbose_name='Campo modificado', blank=True, null=True)
+    old_value = models.TextField(verbose_name='Valor anterior', blank=True, null=True)
+    new_value = models.TextField(verbose_name='Valor nuevo', blank=True, null=True)
+    reason = models.TextField(verbose_name="Motivo del Cambio", blank=True, null=True)
+
+    class Meta:
+        ordering = ['-modification_date']
+        verbose_name = 'Historial de Modificación'
+        verbose_name_plural = 'Historiales de Modificaciones'
+
+    def __str__(self):
+        return f"{self.modification_type} - {self.budget_line.code} ({self.modification_date.strftime('%d/%m/%Y')})"
+
+
+class BudgetAssignmentHistory(models.Model):
+    """
+    Rastrea qué personas han ocupado esta partida y cuándo.
+    """
+    budget_line = models.ForeignKey(BudgetLine, on_delete=models.PROTECT, verbose_name='Partida',
+                                    related_name='assignments')
+    employee = models.ForeignKey(Employee, on_delete=models.PROTECT, verbose_name='Empleado',
+                                 related_name='budget_history')
+
+    start_date = models.DateField(verbose_name='Fecha Inicio')
+    end_date = models.DateField(verbose_name='Fecha Fin', blank=True, null=True)
+
+    is_current = models.BooleanField(default=False, verbose_name="Es asignación actual")
+    observation = models.TextField(verbose_name="Observación de salida", blank=True, null=True)
+
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = 'Historial de Asignación'
+        verbose_name_plural = 'Historiales de Asignaciones'
+
+    def __str__(self):
+        return f"{self.employee} en {self.budget_line} ({self.start_date})"
+
+    def clean(self):
+        """
+        Validación para asegurar que un empleado no tenga dos partidas activas simultáneamente.
+        """
+        from django.core.exceptions import ValidationError
+
+        if self.is_current and not self.end_date:
+            # Buscar si este empleado ya tiene otra asignación activa
+            existing_assignment = BudgetAssignmentHistory.objects.filter(
+                employee=self.employee,
+                is_current=True,
+                end_date__isnull=True
+            ).exclude(pk=self.pk).first()
+
+            if existing_assignment:
+                partida_info = existing_assignment.budget_line.number_individual or existing_assignment.budget_line.code
+                raise ValidationError({
+                    'employee': f'Este empleado ya tiene asignada la partida {partida_info}. Debe liberar primero esa partida.'
+                })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
         super().save(*args, **kwargs)

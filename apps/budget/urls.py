@@ -25,5 +25,6 @@ urlpatterns = [
     path('assign-employee/<int:pk>/', views.BudgetAssignEmployeeView.as_view(), name='budget_assign_employee'),
     path('release/<int:pk>/', views.BudgetReleaseView.as_view(), name='budget_release'),
     path('change-status/<int:pk>/', views.BudgetChangeStatusView.as_view(), name='budget_change_status'),
+    path('detail/<int:pk>/', views.BudgetDetailView.as_view(), name='budget_detail'),
 
 ]

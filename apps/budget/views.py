@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, View
+from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
 from django.db.models import Q
 from datetime import date
@@ -483,3 +483,20 @@ class BudgetChangeStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 {'success': True, 'message': 'Estado actualizado correctamente.', 'new_stats': get_budget_stats()})
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class BudgetDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = BudgetLine
+    template_name = 'budget/budget_detail.html'
+    context_object_name = 'line'
+    permission_required = 'budget.view_budgetline'
+
+    def get_queryset(self):
+        # Optimización masiva para evitar N+1
+        return super().get_queryset().select_related(
+            'activity__project__subprogram__program',
+            'current_employee__person',
+            'status_item', 'position_item', 'regime_item',
+            'group_item', 'category_item', 'grade_item', 'spending_type_item',
+            'created_by', 'updated_by'  # Asumiendo que tu BaseModel tiene estos campos
+        )

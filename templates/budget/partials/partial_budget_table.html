@@ -107,21 +107,12 @@
                                 <i class="fa-solid fa-arrows-rotate"></i>
                             </button>
                         {% endif %}
-                        {% if perms.budget.change_budgetline %}
-                            <button class="btn-icon btn-views-action"
-                                    onclick="openEditBudget({{ line.id }})"
-                                    title="Editar Partida">
-                                <i class="fas fa-pencil"></i>
-                            </button>
-                        {% endif %}
-
-
-
-                        <!-- Botón Historial (Futuro) -->
-                        <button class="btn-icon btn-secondary-action"
-                                title="Ver Historial">
-                            <i class="fas fa-history"></i>
-                        </button>
+                        <a href="{% url 'budget:budget_detail' line.id %}"
+                           class="btn-icon"
+                           style="background: linear-gradient(to right, #475569, #64748b); color: white;"
+                           title="Ver Detalle Completo">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
                     </div>
                 </td>
             </tr>

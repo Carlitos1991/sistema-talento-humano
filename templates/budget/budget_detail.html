@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Partida | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-file-invoice-dollar me-2"></i> Detalle de Partida</h1>
+            <p>Información técnica y trazabilidad de la partida presupuestaria.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'budget:budget_list' %}" class="btn-back">
+                <i class="fas fa-chevron-left"></i> Regresar
+            </a>
+            <button onclick="window.openEditBudget({{ line.pk }})" class="btn btn-save"
+                    style="background: linear-gradient(to right, #fbbf24, #f59e0b);}">
+                <i class="fas fa-edit"></i> Editar Datos
+            </button>
+            <button onclick="window.openEditBudget({{ line.pk }})" class="btn btn-save" style="background: linear-gradient(to right, #0515c1, #1a37ca);}">
+                <i class="fas fa-timeline"></i> Historial
+            </button>
+            <button onclick="window.openEditBudget({{ line.pk }})" class="btn-save" style="background: linear-gradient(to right, #61bd93, #118f5f)">
+                <i class="fas fa-clock-rotate-left"></i> Historial de empleados
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. KPIs (Ajuste de código pequeño) -->
+    <div class="stats-row">
+        <div class="stat-card color-one readonly">
+            <div class="stat-left">
+                <h3>Cargo</h3>
+                <div class="budget-code-badge-small">{{ line.position_item|lower }}</div>
+            </div>
+            <i class="fa-solid fa-briefcase stat-icon"></i>
+        </div>
+        <div class="stat-card color-two readonly">
+            <div class="stat-left">
+                <h3>Remuneración</h3>
+                <div class="number">{{ line.remuneration }}</div>
+            </div>
+            <i class="fa-solid fa-dollar-sign stat-icon"></i>
+        </div>
+        <div class="stat-card color-three readonly">
+            <div class="stat-left">
+                <h3>Partida Individual</h3>
+                <div class="number">{{ line.number_individual|default:"S/N" }}</div>
+            </div>
+            <i class="fa-solid fa-hashtag stat-icon"></i>
+        </div>
+        <div class="stat-card color-four readonly">
+            <div class="stat-left">
+                <h3>Estado Actual</h3>
+                <div class="mt-2">
+                    <span class="status-badge {{ line.status_item.code|lower }}">
+                        {{ line.status_item.name }}
+                    </span>
+                </div>
+            </div>
+            <i class="fa-solid fa-circle-check stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- 3. Rejilla Superior: Estructura y Ocupante (ALTURAS IGUALADAS) -->
+    <div class="detail-top-grid">
+
+        <div class="form-section-card">
+            <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Programática</h6>
+            <div class="grid-2-cols mt-3">
+                <div class="mb-3">
+                    <span class="label-muted">Programa</span>
+                    <span class="value-bold">{{ line.activity.project.subprogram.program }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="label-muted">Subprograma</span>
+                    <span class="value-bold">{{ line.activity.project.subprogram }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="label-muted">Proyecto</span>
+                    <span class="value-bold">{{ line.activity.project }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="label-muted">Actividad</span>
+                    <span class="value-bold">{{ line.activity }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section-card card-static-short">
+            <h6 class="section-title"><i class="fas fa-user-tie"></i> Ocupante Actual</h6>
+            <div class="occupant-content">
+                {% if line.current_employee %}
+                    {% if line.current_employee.person.photo %}
+                        <img src="{{ line.current_employee.person.photo.url }}" class="avatar-md">
+                    {% else %}
+                        <div class="avatar-placeholder-md">
+                            {{ line.current_employee.person.first_name|first }}
+                        </div>
+                    {% endif %}
+                    <h4 class="value-bold mb-1">{{ line.current_employee.full_name }}</h4>
+                    <span class="status-badge active">{{ line.current_employee.person.document_number }}</span>
+                {% else %}
+                    <div class="text-center">
+                        <i class="fas fa-user-clock fa-2x text-muted opacity-20 mb-2"></i>
+                        <p class="label-muted mb-2">PARTIDA SIN OCUPANTE</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Especificaciones de Partida -->
+    <div class="form-section-card">
+        <h6 class="section-title"><i class="fas fa-fingerprint"></i> Especificaciones de Partida</h6>
+        <div class="grid-3-cols mt-4">
+            <div><span class="label-muted">Código Presupuestario</span>
+                <span class="text-highlight-large">{{ line.code }}</span></div>
+            <div><span class="label-muted">Gasto</span><span
+                    class="value-bold">{{ line.spending_type_item.name|default:"-" }}</span></div>
+            <div><span class="label-muted">Régimen</span><span
+                    class="value-bold">{{ line.regime_item.name|default:"-" }}</span></div>
+            <div><span class="label-muted">Grado</span><span
+                    class="value-bold">{{ line.grade_item.name|default:"-" }}</span></div>
+            <div><span class="label-muted">Grupo</span><span
+                    class="value-bold">{{ line.group_item.name|default:"-" }}</span></div>
+            <div><span class="label-muted">Categoría</span><span
+                    class="value-bold">{{ line.category_item.name|default:"-" }}</span></div>
+        </div>
+    </div>
+
+    <!-- 5. Rejilla Inferior: Bitácora y Auditoría (DOS COLUMNAS) -->
+    <div class="detail-bottom-wrapper">
+        <div class="form-section-card">
+            <h6 class="section-title"><i class="fas fa-history"></i> Bitácora de Observaciones</h6>
+            <div class="log-scroll-box">
+                {{ line.observation|default:"No existen registros históricos." }}
+            </div>
+        </div>
+
+        <div class="form-section-card">
+            <h6 class="section-title"><i class="fas fa-shield-halved"></i> Auditoría</h6>
+            <div class="audit-row-item">
+                <span class="text-muted">Fecha Creación:</span>
+                <span class="value-bold">{{ line.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="audit-row-item">
+                <span class="text-muted">Última Modificación:</span>
+                <span class="value-bold">{{ line.updated_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="mt-3">
+                <span class="label-muted">Responsable del Registro:</span>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <div class="avatar-placeholder-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                        {{ line.updated_by.first_name|first }}{{ line.updated_by.last_name|first }}
+                    </div>
+                    <span class="value-bold mb-0">{{ line.updated_by.get_full_name|default:"SISTEMA"|upper }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div id="modal-inject-container"></div>
+{% endblock %}
