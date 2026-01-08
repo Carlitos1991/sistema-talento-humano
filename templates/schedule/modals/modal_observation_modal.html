@@ -1,0 +1,84 @@
+<!-- apps/schedule/templates/schedule/modals/modal_observation_form.html -->
+<div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-container-medium shadow-card">
+        <!-- Botón Cerrar -->
+        <button type="button" @click="closeModal" class="btn-close-modal-refined" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                <h2 class="header-title-main">
+                    [[ isEdit ? 'Configuración de Evento' : 'Nuevo Feriado / Observación' ]]
+                </h2>
+            </div>
+        </div>
+
+        <form id="observationForm" @submit.prevent="saveObservation">
+            {% csrf_token %}
+            <div class="modal-body-scrolled">
+
+                <!-- Sección única: Datos del Evento -->
+                <div class="section-card-standard border-left-primary">
+                    <h4 class="section-title">
+                        <i class="fas fa-info-circle text-primary"></i> INFORMACIÓN GENERAL
+                    </h4>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Nombre del Evento</label>
+                            <input type="text" v-model="form.name" class="form-control uppercase-input"
+                                   required placeholder="Ej: FERIADO POR CANTONIZACIÓN">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Tipo de Registro</label>
+                            <select v-model="form.is_holiday" class="form-control" required>
+                                <option :value="true">Feriado (No Laborable)</option>
+                                <option :value="false">Observación (Jornada Especial)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card-standard">
+                    <h4 class="section-title">
+                        <i class="fas fa-calendar-alt text-primary"></i> VIGENCIA DEL EVENTO
+                    </h4>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Fecha de Inicio</label>
+                            <input type="date" v-model="form.start_date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Fecha de Fin</label>
+                            <input type="date" v-model="form.end_date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label font-weight-700">Descripción / Motivo</label>
+                        <textarea v-model="form.description" class="form-control" rows="2"
+                                  placeholder="Detalle adicional sobre el feriado u observación..."></textarea>
+                    </div>
+                </div>
+
+                <div class="alert-info mt-2">
+                    <i class="fas fa-globe-americas"></i>
+                    <p class="small mb-0">Este evento se aplicará de forma <strong>global</strong> a todos los empleados registrados en el sistema.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" @click="closeModal" class="btn-cancel">
+                    <i class="fas fa-times-circle"></i> DESCARTAR
+                </button>
+                <button type="submit" class="btn-save" :disabled="loading">
+                    <i v-if="loading" class="fas fa-circle-notch fa-spin"></i>
+                    <i v-else class="fas fa-check-circle"></i>
+                    [[ isEdit ? 'ACTUALIZAR REGISTRO' : 'GUARDAR REGISTRO' ]]
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

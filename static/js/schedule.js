@@ -15,23 +15,85 @@ const scheduleApp = createApp({
                 {key: 'friday', label: 'VIE'}, {key: 'saturday', label: 'SÁB'},
                 {key: 'sunday', label: 'DOM'}
             ],
+            // INICIALIZACIÓN SEGURA:
+            stats: {total: 0, active: 0, inactive: 0},
             form: {
-                id: null,
-                name: '',
-                late_tolerance_minutes: 15,
-                daily_hours: 0,
-                morning_start: '08:00',
-                morning_end: '13:00',
-                morning_crosses_midnight: false,
-                afternoon_start: '',
-                afternoon_end: '',
-                afternoon_crosses_midnight: false,
+                id: null, name: '', late_tolerance_minutes: 15, daily_hours: 0,
+                morning_start: '08:00', morning_end: '13:00', morning_crosses_midnight: false,
+                afternoon_start: '', afternoon_end: '', afternoon_crosses_midnight: false,
                 monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
                 saturday: false, sunday: false
             }
         }
     },
     methods: {
+        // Cargar estadísticas desde los atributos data del HTML
+        loadInitialStats() {
+            const container = document.getElementById('schedule-app');
+            if (container) {
+                this.stats.total = parseInt(container.dataset.total) || 0;
+                this.stats.active = parseInt(container.dataset.active) || 0;
+                this.stats.inactive = parseInt(container.dataset.inactive) || 0;
+            }
+        },
+
+        autoCalculateHours() {
+            let totalHours = 0;
+            // Cálculo Primera Jornada
+            if (this.form.morning_start && this.form.morning_end) {
+                totalHours += this.calculateDiff(
+                    this.form.morning_start,
+                    this.form.morning_end,
+                    this.form.morning_crosses_midnight
+                );
+            }
+            // Cálculo Segunda Jornada (solo si tiene ambos valores)
+            if (this.form.afternoon_start && this.form.afternoon_end) {
+                totalHours += this.calculateDiff(
+                    this.form.afternoon_start,
+                    this.form.afternoon_end,
+                    this.form.afternoon_crosses_midnight
+                );
+            }
+            // Redondear a 2 decimales y evitar valores negativos
+            this.form.daily_hours = Math.max(0, parseFloat(totalHours.toFixed(2)));
+        },
+
+        calculateDiff(start, end, crossesMidnight) {
+            // Validar formato HH:mm
+            if (!start || !end) return 0;
+
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+
+            let startDate = new Date(2000, 0, 1, h1, m1);
+            let endDate = new Date(2000, 0, 1, h2, m2);
+
+            if (crossesMidnight || endDate <= startDate) {
+                // Si cruza medianoche, sumamos un día
+                endDate.setDate(endDate.getDate() + 1);
+            }
+
+            const diffMs = endDate - startDate;
+            return diffMs / (1000 * 60 * 60); // Retorna horas decimales
+        },
+
+        async fetchTable() {
+            // IMPORTANTE: No limpiar this.stats aquí para evitar el parpadeo a 0
+            const params = new URLSearchParams(this.filters).toString();
+            try {
+                const response = await fetch(`/schedule/partial-table/?${params}`);
+                const data = await response.json();
+                document.getElementById('table-content-wrapper').innerHTML = data.table_html;
+
+                // Solo actualizar stats si el servidor los envía
+                if (data.stats) {
+                    this.stats = data.stats;
+                }
+            } catch (error) {
+                console.error("Error fetching table:", error);
+            }
+        },
         openCreateModal() {
             this.isEdit = false;
             this.resetForm();
@@ -132,33 +194,34 @@ const scheduleApp = createApp({
         },
 
         async toggleStatus(id, currentStatus) {
-            const action = currentStatus ? 'dar de BAJA' : 'dar de ALTA';
+            const status = String(currentStatus) === 'true';
+            const action = status ? 'dar de BAJA' : 'dar de ALTA';
             const color = currentStatus ? '#ef4444' : '#22c55e'; // Rojo o Verde
 
             const result = await Swal.fire({
                 title: `¿Confirma ${action}?`,
-                text: currentStatus ? "El horario dejará de estar disponible para nuevos empleados." : "El horario volverá a estar disponible.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: color,
-                confirmButtonText: `Sí, ${action}`,
-                cancelButtonText: 'Cancelar'
+                confirmButtonColor: status ? '#c64939' : '#0ba542',
+                confirmButtonText: 'Sí, confirmar'
             });
 
             if (result.isConfirmed) {
-                const url = currentStatus ? `/schedule/deactivate/${id}/` : `/schedule/activate/${id}/`;
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {'X-CSRFToken': getCookie('csrftoken')}
+                const url = status ? `/schedule/deactivate/${id}/` : `/schedule/activate/${id}/`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Actualizado',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
                     });
-                    const data = await response.json();
-                    if (data.success) {
-                        this.showToast('success', data.message);
-                        this.fetchTable(); // Recarga solo el fragmento de la tabla
-                    }
-                } catch (error) {
-                    this.showToast('error', 'No se pudo cambiar el estado');
+                    this.fetchTable();
                 }
             }
         },
@@ -170,12 +233,27 @@ const scheduleApp = createApp({
         closeModal() {
             this.showModal = false;
         },
+        filterByStatus(status) {
+            this.filters.is_active = status;
+            this.fetchTable();
+        },
 
         async fetchTable() {
+            // Construimos los parámetros de búsqueda
             const params = new URLSearchParams(this.filters).toString();
-            const response = await fetch(`/schedule/partial-table/?${params}`);
-            const data = await response.json();
-            document.getElementById('table-content-wrapper').innerHTML = data.table_html;
+            try {
+                const response = await fetch(`/schedule/partial-table/?${params}`);
+                const data = await response.json();
+
+                document.getElementById('table-content-wrapper').innerHTML = data.table_html;
+
+                // Solo actualizamos si el servidor envió stats nuevos
+                if (data.stats) {
+                    this.stats = data.stats;
+                }
+            } catch (error) {
+                console.error("Error fetching table:", error);
+            }
         },
 
         debouncedSearch() {
@@ -184,8 +262,7 @@ const scheduleApp = createApp({
         }
     },
     mounted() {
-        // Al cargar, calculamos horas si hay datos
-        this.autoCalculateHours();
+        this.loadInitialStats();
     }
 });
 
@@ -204,4 +281,4 @@ function getCookie(name) {
     return cookieValue;
 }
 
-scheduleApp.mount('#schedule-app');
+window.scheduleInstance = scheduleApp.mount('#schedule-app');

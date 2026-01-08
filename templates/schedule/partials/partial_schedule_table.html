@@ -48,14 +48,16 @@
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper">
-                        <button class="btn-views-action" @click="openEditModal({{ schedule.id }})" title="Editar">
+                        <button class="btn-views-action"
+                                onclick="scheduleInstance.openEditModal({{ schedule.id }})"
+                                title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button class="{% if schedule.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                                @click="toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
+                                onclick="scheduleInstance.toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
                                 title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
 
-                            <i class="fas {% if schedule.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                            <i class="fas {% if schedule.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
                         </button>
                     </div>
                 </td>

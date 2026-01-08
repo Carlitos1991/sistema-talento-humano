@@ -20,12 +20,10 @@ class ScheduleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_form'] = ScheduleSearchForm()
-        # Stats basadas en el BaseModel (is_active)
-        qs = Schedule.objects.all()
-        context['total_count'] = qs.count()
-        context['active_count'] = qs.filter(is_active=True).count()
-        context['inactive_count'] = qs.filter(is_active=False).count()
+        all_schedules = Schedule.objects.all()
+        context['total_schedules'] = all_schedules.count()
+        context['active_schedules'] = all_schedules.filter(is_active=True).count()
+        context['inactive_schedules'] = all_schedules.filter(is_active=False).count()
         return context
 
 
@@ -107,53 +105,108 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
         name = request.GET.get('name', '')
         is_active = request.GET.get('is_active', '')
 
+        # 1. Queryset filtrado para la tabla
         queryset = Schedule.objects.all().order_by('-created_at')
+
         if name:
             queryset = queryset.filter(name__icontains=name)
+
         if is_active == 'true':
             queryset = queryset.filter(is_active=True)
         elif is_active == 'false':
             queryset = queryset.filter(is_active=False)
 
+        # 2. Cálculo de estadísticas (SIEMPRE sobre el total de la base)
+        all_schedules = Schedule.objects.all()
+        stats_data = {
+            'total': all_schedules.count(),
+            'active': all_schedules.filter(is_active=True).count(),
+            'inactive': all_schedules.filter(is_active=False).count(),
+        }
+
+        # 3. Renderizado del fragmento HTML
         html = render_to_string('schedule/partials/partial_schedule_table.html', {
             'schedules': queryset[:50]
         }, request=request)
-        return JsonResponse({'table_html': html})
+
+        # 4. Respuesta JSON con HTML y Stats
+        return JsonResponse({
+            'table_html': html,
+            'stats': stats_data
+        })
 
 
 class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ScheduleObservation
     template_name = 'schedule/observation_list.html'
-    context_object_name = 'observations'
     permission_required = 'schedule.can_manage_observations'
-
-    def get_queryset(self):
-        # Filtramos por los últimos feriados registrados
-        return ScheduleObservation.objects.all().order_by('-start_date')[:50]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_form'] = ObservationSearchForm()
-
-        # Stats para las tarjetas superiores
         qs = ScheduleObservation.objects.all()
         context.update({
             'total_count': qs.count(),
             'holiday_count': qs.filter(is_holiday=True).count(),
-            'observation_count': qs.filter(is_holiday=False).count(),
+            'special_count': qs.filter(is_holiday=False).count(),
         })
         return context
 
 
-class ObservationCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'schedule.can_manage_observations'
+class ObservationTablePartialView(LoginRequiredMixin, View):
+    def get(self, request):
+        queryset = ScheduleObservation.objects.all().order_by('-start_date')
 
+        # Filtros
+        name = request.GET.get('name', '')
+        is_holiday = request.GET.get('is_holiday', '')
+
+        if name: queryset = queryset.filter(name__icontains=name)
+        if is_holiday: queryset = queryset.filter(is_holiday=(is_holiday == 'true'))
+
+        stats = {
+            'total': ScheduleObservation.objects.count(),
+            'holiday': ScheduleObservation.objects.filter(is_holiday=True).count(),
+            'special': ScheduleObservation.objects.filter(is_holiday=False).count(),
+        }
+
+        html = render_to_string('schedule/partials/partial_observation_table.html', {
+            'observations': queryset[:50]
+        }, request=request)
+        return JsonResponse({'table_html': html, 'stats': stats})
+
+
+class ObservationCreateView(LoginRequiredMixin, View):
     def post(self, request):
         form = ScheduleObservationForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                instance = form.save(commit=False)
-                instance.created_by = request.user
-                instance.save()
-            return JsonResponse({'success': True, 'message': 'Registro guardado exitosamente'})
+                observation = form.save(commit=False)
+                observation.created_by = request.user
+                observation.save()
+            return JsonResponse({'success': True, 'message': 'Registrado correctamente'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class ObservationDetailAPIView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        obs = get_object_or_404(ScheduleObservation, pk=pk)
+        return JsonResponse({
+            'success': True,
+            'observation': {
+                'id': obs.id,
+                'name': obs.name,
+                'description': obs.description or '',
+                'start_date': obs.start_date.isoformat(),
+                'end_date': obs.end_date.isoformat(),
+                'is_holiday': obs.is_holiday,
+            }
+        })
+
+
+class ObservationToggleStatusView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        obs = get_object_or_404(ScheduleObservation, pk=pk)
+        obs.is_active = not obs.is_active
+        obs.updated_by = request.user
+        obs.save()
+        return JsonResponse({'success': True, 'message': 'Estado actualizado'})

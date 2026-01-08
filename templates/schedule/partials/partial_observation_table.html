@@ -1,0 +1,45 @@
+<!-- apps/schedule/templates/schedule/partials/partial_observation_table.html -->
+<table class="table-modern">
+    <thead>
+        <tr>
+            <th>Evento</th>
+            <th>Desde</th>
+            <th>Hasta</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th class="actions">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for obs in observations %}
+        <tr>
+            <td><strong>{{ obs.name }}</strong></td>
+            <td>{{ obs.start_date|date:"d/m/Y" }}</td>
+            <td>{{ obs.end_date|date:"d/m/Y" }}</td>
+            <td>
+                <span class="status-badge {% if obs.is_holiday %}ocupada{% else %}concurso{% endif %}">
+                    {{ obs.is_holiday|yesno:"Feriado,Observación" }}
+                </span>
+            </td>
+            <td>
+                <span class="status-badge {% if obs.is_active %}active{% else %}inactive{% endif %}">
+                    {{ obs.is_active|yesno:"Activo,Inactivo" }}
+                </span>
+            </td>
+            <td class="actions">
+                <div class="actions-wrapper">
+                    <button class="btn-views-action" onclick="observationInstance.openEditModal({{ obs.id }})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="{% if obs.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                            onclick="observationInstance.toggleStatus({{ obs.id }})">
+                        <i class="fas {% if obs.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">No hay registros</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

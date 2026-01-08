@@ -14,21 +14,6 @@ const Toast = Swal.mixin({
     timerProgressBar: true,
 });
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     if (window.fetchBudgets) window.fetchBudgets();
     const searchInput = document.getElementById('table-search-budget');
@@ -64,7 +49,7 @@ function updatePaginationUI() {
     const meta = document.getElementById('pagination-metadata');
     if (!meta) return;
     const pageInfo = document.getElementById('page-info');
-    if (pageInfo) pageInfo.textContent = meta.dataset.total == 0 ? "Sin resultados" : `Mostrando ${meta.dataset.start}-${meta.dataset.end} de ${meta.dataset.total}`;
+    if (pageInfo) pageInfo.textContent = meta.dataset.total === 0 ? "Sin resultados" : `Mostrando ${meta.dataset.start}-${meta.dataset.end} de ${meta.dataset.total}`;
 
     document.getElementById('btn-prev').disabled = meta.dataset.hasPrev !== 'true';
     document.getElementById('btn-next').disabled = meta.dataset.hasNext !== 'true';
@@ -80,7 +65,7 @@ window.refreshStatsUI = function (stats) {
     keys.forEach(key => {
         const element = document.getElementById(`stat-${key}`);
         if (element) {
-            if (element.textContent != stats[key]) {
+            if (element.textContent !== stats[key]) {
                 element.textContent = stats[key];
                 // Efecto visual de pulso
                 element.style.transform = 'scale(1.2)';

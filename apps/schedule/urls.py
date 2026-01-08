@@ -12,5 +12,9 @@ urlpatterns = [
     path('activate/<int:pk>/', views.ScheduleActivateView.as_view(), name='schedule_activate'),
     path('deactivate/<int:pk>/', views.ScheduleDeactivateView.as_view(), name='schedule_deactivate'),
     path('observations/', views.ObservationListView.as_view(), name='observation_list'),
+    path('observations/partial-table/', views.ObservationTablePartialView.as_view(), name='observation_partial_table'),
     path('observations/create/', views.ObservationCreateView.as_view(), name='observation_create'),
+    path('observations/detail/<int:pk>/', views.ObservationDetailAPIView.as_view(), name='observation_detail_api'),
+    path('observations/toggle-status/<int:pk>/', views.ObservationToggleStatusView.as_view(),
+         name='observation_toggle_status'),
 ]

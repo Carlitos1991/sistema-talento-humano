@@ -76,7 +76,6 @@ class ScheduleObservation(BaseModel):
     start_date = models.DateField(verbose_name='Desde')
     end_date = models.DateField(verbose_name='Hasta')
     is_holiday = models.BooleanField(default=True, verbose_name='Es Feriado')
-    applies_to_all = models.BooleanField(default=True, verbose_name='Aplica a Todos')
 
     class Meta:
         db_table = 'schedule_observation'
@@ -86,11 +85,3 @@ class ScheduleObservation(BaseModel):
 
     def __str__(self):
         return f"{self.name} ({self.start_date})"
-
-class ScheduleObservationEmployee(models.Model):
-    observation = models.ForeignKey(ScheduleObservation, on_delete=models.CASCADE, related_name='affected_employees')
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'schedule_observation_employee'
-        unique_together = ['observation', 'employee']

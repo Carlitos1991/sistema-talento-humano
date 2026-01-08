@@ -31,7 +31,7 @@ class ScheduleObservationForm(forms.ModelForm):
         model = ScheduleObservation
         fields = [
             'name', 'description', 'start_date', 'end_date',
-            'is_holiday', 'applies_to_all', 'is_active'
+            'is_holiday', 'is_active'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del feriado/observación'}),
@@ -39,7 +39,6 @@ class ScheduleObservationForm(forms.ModelForm):
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'is_holiday': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'applies_to_all': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
