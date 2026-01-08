@@ -57,23 +57,24 @@ class ScheduleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
-class ScheduleDetailAPIView(LoginRequiredMixin, View):
-    """Retorna los datos de un horario para el formulario de edición en Vue"""
+class ScheduleDetailAPIView(View):
+    """Retorna los datos de un horario en JSON para cargar el formulario de edición"""
 
     def get(self, request, pk):
         schedule = get_object_or_404(Schedule, pk=pk)
         data = {
             'id': schedule.id,
             'name': schedule.name,
-            'description': schedule.description,
+            'late_tolerance_minutes': schedule.late_tolerance_minutes,
+            'daily_hours': float(schedule.daily_hours),
             'morning_start': schedule.morning_start.strftime('%H:%M'),
             'morning_end': schedule.morning_end.strftime('%H:%M'),
             'morning_crosses_midnight': schedule.morning_crosses_midnight,
+            # Manejo de nulos para la segunda jornada
             'afternoon_start': schedule.afternoon_start.strftime('%H:%M') if schedule.afternoon_start else '',
             'afternoon_end': schedule.afternoon_end.strftime('%H:%M') if schedule.afternoon_end else '',
             'afternoon_crosses_midnight': schedule.afternoon_crosses_midnight,
-            'late_tolerance_minutes': schedule.late_tolerance_minutes,
-            'daily_hours': float(schedule.daily_hours),
+            # Días
             'monday': schedule.monday, 'tuesday': schedule.tuesday, 'wednesday': schedule.wednesday,
             'thursday': schedule.thursday, 'friday': schedule.friday, 'saturday': schedule.saturday,
             'sunday': schedule.sunday,
@@ -81,22 +82,22 @@ class ScheduleDetailAPIView(LoginRequiredMixin, View):
         return JsonResponse({'success': True, 'schedule': data})
 
 
-class ScheduleActivateView(LoginRequiredMixin, View):
+class ScheduleActivateView(View):
     def post(self, request, pk):
-        schedule = get_object_or_404(Schedule, pk=pk)
-        schedule.is_active = True
-        schedule.updated_by = request.user
-        schedule.save()
-        return JsonResponse({'success': True, 'message': 'Horario activado'})
+        instance = get_object_or_404(Schedule, pk=pk)
+        instance.is_active = True
+        instance.updated_by = request.user
+        instance.save()
+        return JsonResponse({'success': True, 'message': 'Horario dado de ALTA correctamente'})
 
 
-class ScheduleDeactivateView(LoginRequiredMixin, View):
+class ScheduleDeactivateView(View):
     def post(self, request, pk):
-        schedule = get_object_or_404(Schedule, pk=pk)
-        schedule.is_active = False
-        schedule.updated_by = request.user
-        schedule.save()
-        return JsonResponse({'success': True, 'message': 'Horario desactivado'})
+        instance = get_object_or_404(Schedule, pk=pk)
+        instance.is_active = False
+        instance.updated_by = request.user
+        instance.save()
+        return JsonResponse({'success': True, 'message': 'Horario dado de BAJA correctamente'})
 
 
 class ScheduleTablePartialView(LoginRequiredMixin, View):

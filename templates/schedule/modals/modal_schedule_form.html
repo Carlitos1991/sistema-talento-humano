@@ -1,118 +1,154 @@
-<div id="schedule-create-app" v-cloak>
-    <div class="modal-container-medium">
-        <div class="modal-header-gradient">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-clock text-white"></i>
-                <h3 class="text-white">[[ isEdit ? 'Actualizar Horario' : 'Nuevo Horario Institucional' ]]</h3>
+<!-- apps/schedule/templates/schedule/modals/modal_schedule_form.html -->
+<div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-container-medium shadow-card">
+
+        <!-- Botón de Cerrar (X) -->
+        <button type="button" @click="closeModal" class="btn-close-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Cabecera Compacta -->
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h2 class="header-title-main">
+                    [[ isEdit ? 'Configuración de Horario' : 'Nuevo Registro de Horario' ]]
+                </h2>
             </div>
-            <button type="button" @click="closeModal" class="btn-close-modal text-white">&times;</button>
         </div>
 
+        <!-- Formulario (Ahora es el contenedor Flex) -->
         <form id="scheduleForm" @submit.prevent="saveSchedule">
-            <div class="modal-body-custom">
-                <!-- 1. Datos Generales -->
-                <div class="form-section-card">
-                    <h4 class="section-title"><i class="fas fa-file-signature"></i> Información Básica</h4>
-                    <div class="grid-2-cols">
+            {% csrf_token %}
+
+            <!-- Cuerpo con Scroll -->
+            <div class="modal-body-scrolled">
+
+                <!-- Sección 1: Identificación -->
+                <div class="section-card-standard border-left-primary">
+                    <h4 class="section-title">
+                        <i class="fas fa-id-card text-primary"></i> IDENTIFICACIÓN Y CARGA HORARIA
+                    </h4>
+                    <div class="grid-3-cols">
                         <div class="form-group">
-                            <label class="form-label">Nombre del Horario <span class="text-danger">*</span></label>
-                            <input type="text" v-model="form.name" class="input-field" required placeholder="Ej: MATUTINO ADMINISTRATIVO">
+                            <label class="form-label font-weight-700">Nombre del Horario <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" name="name" v-model="form.name"
+                                   class="form-control uppercase-input" required
+                                   placeholder="EJ: ADMINISTRATIVO">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Tolerancia Atraso (Minutos)</label>
-                            <input type="number" v-model="form.late_tolerance_minutes" class="input-field" min="0">
+                            <label class="form-label font-weight-700">Tolerancia Atraso (Min)</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-hourglass-half input-icon-left"></i>
+                                <input type="number" name="late_tolerance_minutes" v-model="form.late_tolerance_minutes"
+                                       class="form-control with-icon" required min="0">
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group mt-3">
-                        <label class="form-label">Descripción / Observaciones</label>
-                        <textarea v-model="form.description" class="input-field" rows="2"></textarea>
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Horas Diarias (Auto)</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-calculator input-icon-left"></i>
+                                <input type="number" step="0.01" name="daily_hours" v-model="form.daily_hours"
+                                       class="form-control with-icon bg-readonly text-primary-bold"
+                                       readonly>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 2. Configuración de Turnos -->
-                <div class="form-section-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="section-title mb-0"><i class="fas fa-business-time"></i> Jornadas de Trabajo</h4>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="small font-weight-bold">¿Habilitar Segunda Jornada?</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" v-model="isSplitShift">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
+                <!-- Sección 2: Jornadas -->
+                <div class="section-card-standard">
+                    <h4 class="section-title">
+                        <i class="fas fa-business-time text-primary"></i> ESTRUCTURA DE JORNADAS
+                    </h4>
 
-                    <!-- Primera Jornada -->
-                    <div class="bg-primary-subtle p-3 rounded mb-3">
-                        <p class="small font-weight-bold mb-2">PRIMERA JORNADA (OBLIGATORIA)</p>
-                        <div class="grid-3-cols">
-                            <div class="form-group">
-                                <label class="form-label">Inicio J1</label>
-                                <input type="time" v-model="form.morning_start" class="input-field" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Fin J1</label>
-                                <input type="time" v-model="form.morning_end" class="input-field" required>
-                            </div>
-                            <div class="form-group d-flex align-items-end pb-1">
-                                <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" v-model="form.morning_crosses_midnight">
-                                    <span class="small">Cruza medianoche</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Segunda Jornada (Reactiva) -->
-                    <transition name="fade">
-                        <div v-if="isSplitShift" class="bg-success-subtle p-3 rounded">
-                            <p class="small font-weight-bold mb-2 text-success">SEGUNDA JORNADA (OPCIONAL)</p>
-                            <div class="grid-3-cols">
-                                <div class="form-group">
-                                    <label class="form-label">Inicio J2</label>
-                                    <input type="time" v-model="form.afternoon_start" :required="isSplitShift" class="input-field">
+                    <div class="grid-2-cols">
+                        <!-- Mañana -->
+                        <div class="shift-card morning">
+                            <div class="shift-header"><i class="fas fa-sun"></i> PRIMERA JORNADA</div>
+                            <div class="shift-body">
+                                <div class="grid-2-cols gap-2">
+                                    <div class="form-group">
+                                        <label class="small font-weight-700 text-muted">ENTRADA</label>
+                                        <input type="time" name="morning_start" v-model="form.morning_start"
+                                               @change="autoCalculateHours" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="small font-weight-700 text-muted">SALIDA</label>
+                                        <input type="time" name="morning_end" v-model="form.morning_end"
+                                               @change="autoCalculateHours" class="form-control" required>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Fin J2</label>
-                                    <input type="time" v-model="form.afternoon_end" :required="isSplitShift" class="input-field">
-                                </div>
-                                <div class="form-group d-flex align-items-end pb-1">
-                                    <label class="d-flex align-items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" v-model="form.afternoon_crosses_midnight">
-                                        <span class="small">Cruza medianoche</span>
+                                <div class="mt-3 p-2 bg-light rounded text-center">
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
+                                        <input type="checkbox" name="morning_crosses_midnight"
+                                               v-model="form.morning_crosses_midnight" @change="autoCalculateHours"
+                                               class="custom-checkbox">
+                                        <span class="small font-weight-600">Cruza medianoche</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
-                    </transition>
+
+                        <!-- Tarde -->
+                        <div class="shift-card afternoon">
+                            <div class="shift-header"><i class="fas fa-moon"></i> SEGUNDA JORNADA</div>
+                            <div class="shift-body">
+                                <div class="grid-2-cols gap-2">
+                                    <div class="form-group">
+                                        <label class="small font-weight-700 text-muted">ENTRADA</label>
+                                        <input type="time" name="afternoon_start" v-model="form.afternoon_start"
+                                               @change="autoCalculateHours" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="small font-weight-700 text-muted">SALIDA</label>
+                                        <input type="time" name="afternoon_end" v-model="form.afternoon_end"
+                                               @change="autoCalculateHours" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="mt-3 p-2 bg-light rounded text-center">
+                                    <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
+                                        <input type="checkbox" name="afternoon_crosses_midnight"
+                                               v-model="form.afternoon_crosses_midnight" @change="autoCalculateHours"
+                                               class="custom-checkbox">
+                                        <span class="small font-weight-600">Cruza medianoche</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 3. Días Laborales y Horas Totales -->
-                <div class="form-section-card">
-                    <h4 class="section-title"><i class="fas fa-calendar-check"></i> Programación Semanal</h4>
-                    <div class="grid-2-cols align-items-center">
-                        <div class="d-flex justify-content-between px-3">
-                            <label v-for="day in days" :key="day.key" class="text-center">
-                                <span class="d-block small font-weight-bold">[[ day.label ]]</span>
-                                <input type="checkbox" v-model="form[day.key]" class="form-check-input">
+                <!-- Sección 3: Programación Semanal -->
+                <div class="section-card-standard">
+                    <h4 class="section-title justify-content-center">
+                        <i class="fas fa-calendar-check text-primary"></i> PROGRAMACIÓN SEMANAL
+                    </h4>
+                    <div class="d-flex justify-content-center">
+                        <div class="days-matrix">
+                            <label v-for="day in days" :key="day.key" class="day-item"
+                                   :class="{'active': form[day.key]}">
+                                <input type="checkbox" v-model="form[day.key]" class="hidden">
+                                <span class="day-label">[[ day.label.charAt(0) ]]</span>
+                                <input type="hidden" :name="day.key" :value="form[day.key]">
                             </label>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Horas Laborales por Día <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" v-model="form.daily_hours" class="input-field" required>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer-spaced">
+            <!-- Footer Fijo con Botones Normalizados -->
+            <div class="modal-footer-fixed">
                 <button type="button" @click="closeModal" class="btn-cancel">
-                    <i class="fas fa-times"></i> Cancelar
+                    <i class="fas fa-times-circle"></i> CANCELAR
                 </button>
                 <button type="submit" class="btn-save" :disabled="loading">
-                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
-                    <i v-else class="fas fa-save"></i>
-                    [[ isEdit ? 'Guardar Cambios' : 'Registrar Horario' ]]
+                    <i v-if="loading" class="fas fa-circle-notch fa-spin"></i>
+                    <i v-else class="fas fa-check-circle"></i>
+                    [[ isEdit ? 'ACTUALIZAR HORARIO' : 'GUARDAR HORARIO' ]]
                 </button>
             </div>
         </form>

@@ -2071,7 +2071,11 @@ body.no-scroll {
 .grid-3-cols {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem; /* Espacio entre columnas */
+    gap: 1rem;
+}
+
+.justify-content-center {
+    justify-content: center;
 }
 
 .grid-4-cols {
@@ -3695,4 +3699,368 @@ textarea.is-valid:focus,
     padding: 1.5rem;
     border-radius: 12px;
     text-align: center;
+}
+
+/* --- MEJORAS MODAL HORARIOS --- */
+
+.border-left-primary {
+    border-left: 5px solid var(--primary-color) !important;
+}
+
+/* Cards de Turnos */
+.shift-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.shift-card.disabled {
+    background: #f8fafc;
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.shift-header {
+    padding: 8px 15px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shift-card.morning .shift-header {
+    background: #3b82f6;
+}
+
+/* Azul */
+.shift-card.afternoon .shift-header {
+    background: #10b981;
+}
+
+/* Verde */
+
+.shift-body {
+    padding: 15px;
+    min-height: 100px;
+}
+
+/* Matriz de Días */
+.days-matrix {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
+.day-item {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    user-select: none;
+}
+
+.day-item:hover {
+    border-color: var(--accent-color);
+    background: #f0fdf4;
+}
+
+.day-item.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.day-label {
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+
+/* Checkboxes personalizados */
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.font-weight-700 {
+    font-weight: 700;
+}
+
+.font-weight-800 {
+    font-weight: 800;
+}
+
+.btn-close-modal {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.5rem;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.btn-close-modal:hover {
+    background: var(--error); /* Color rojo al pasar el mouse */
+    transform: rotate(90deg);
+    color: white;
+}
+
+.btn-close-modal i {
+    font-size: 1.1rem;
+}
+
+/* 2. Alineación de Alturas en el Grid */
+.grid-2-cols, .grid-3-cols {
+    align-items: flex-start; /* Alinea los elementos al inicio */
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Fuerza a que ocupen el mismo espacio vertical */
+}
+
+.form-label {
+    min-height: 20px; /* Asegura que si un label es más largo no rompa la altura */
+    margin-bottom: 8px;
+}
+
+/* 3. Refinamiento de Iconos en Inputs */
+.input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.input-icon-left {
+    position: absolute;
+    left: 14px;
+    font-size: 1rem !important; /* Tamaño controlado */
+    color: #94a3b8;
+    z-index: 5;
+    width: 20px;
+    text-align: center;
+}
+
+.form-control.with-icon {
+    padding-left: 42px !important; /* Espacio exacto para el icono */
+    height: 45px; /* Altura estandarizada para todos los inputs */
+}
+
+/* 4. Títulos de Sección con mejor espaciado */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+/* 5. Mejora visual de las Shift Cards */
+.shift-card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    border: 1px solid #eef2f6;
+}
+
+.shift-header {
+    letter-spacing: 0.05em;
+    padding: 10px 15px;
+}
+
+/* --- AJUSTES DE SCROLL Y SIMETRÍA --- */
+
+/* Contenedor del Modal: Asegura que no crezca más que la pantalla */
+.modal-container-medium {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    position: relative;
+}
+
+#scheduleForm {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Importante para que el scroll interno funcione */
+    height: 100%;
+}
+
+/* Cuerpo del Modal: Aquí activamos el scroll */
+.modal-body-custom {
+    flex: 1; /* Ocupa el espacio disponible */
+    overflow-y: auto; /* Scroll vertical si el contenido sobrepasa */
+    padding-right: 10px; /* Espacio para que el scroll no tape el contenido */
+}
+
+/* Estilo del Scrollbar (Personalizado) */
+.modal-body-custom::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body-custom::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    border: 2px solid #f1f5f9;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* Forzar simetría en las Shift Cards */
+.shift-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.shift-body {
+    flex: 1;
+}
+
+.modal-header-refined {
+    padding: 1rem 2rem; /* Altura reducida */
+    background: linear-gradient(to right, #1e293b, #334155);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.header-content-group {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem; /* Espacio exacto entre icono y texto */
+}
+
+.header-icon-circle {
+    background: rgba(255, 255, 255, 0.15);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.header-icon-circle i {
+    font-size: 1.1rem;
+    color: white;
+}
+
+.header-title-main {
+    color: white;
+    font-size: 1.25rem; /* Un poco más pequeño para elegancia */
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1; /* Asegura centrado vertical perfecto respecto al círculo */
+}
+
+/* Cuerpo y secciones con padding estándar */
+.modal-body-scrolled {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 2.5rem 1.5rem;
+    background-color: #f8fafc;
+}
+
+.section-card-standard {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* Footer fijo estándar */
+.modal-footer-fixed {
+    flex: 0 0 auto; /* No crece, no se encoge */
+    background-color: white;
+    border-top: 1px solid #edf2f7;
+    padding: 1.25rem 2.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+.btn-close-modal-refined {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.btn-close-modal-refined:hover {
+    background: #ef4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+.modal-footer-fixed .btn-cancel,
+.modal-footer-fixed .btn-save {
+    height: 46px; /* Altura fija para evitar el estiramiento del screenshot */
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Clases de utilidad adicionales */
+.bg-readonly {
+    background-color: #f1f5f9 !important;
+}
+
+.text-primary-bold {
+    color: var(--primary-color);
+    font-weight: 800;
 }

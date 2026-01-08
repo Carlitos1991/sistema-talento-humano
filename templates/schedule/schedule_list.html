@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Schedules | SIGETH{% endblock %}
+{% block title %}Horarios | SIGETH{% endblock %}
 
 {% block content %}
     <div id="schedule-app" v-cloak>
@@ -67,12 +67,10 @@
                         </li>
                     </ul>
                 </div>
+                {% include 'schedule/modals/modal_schedule_form.html' %}
             </div>
         </div>
     </div>
-{% endblock %}
-{% block modals %}
-    {% include 'schedule/modals/modal_schedule_form.html' %}
 {% endblock %}
 {% block extra_js %}
     <script src="{% static 'js/schedule.js' %}"></script>

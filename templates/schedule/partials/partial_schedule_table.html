@@ -23,9 +23,9 @@
                 </td>
                 <td>
                 <span class="badge-time">
-                    <i class="fa-regular fa-sun"></i> {{ schedule.morning_start|time:"H:i" }} - {{ schedule.morning_end|time:"H:i" }}
+                   <i class="fa-regular fa-clock"></i> {{ schedule.morning_start|time:"H:i" }} - {{ schedule.morning_end|time:"H:i" }}
                     {% if schedule.morning_crosses_midnight %}
-                        <i class="fa-solid fa-moon text-warning" title="Cruza medianoche"></i>{% endif %}
+                    {% endif %}
                 </span>
                 </td>
                 <td>
@@ -39,18 +39,8 @@
                         <span class="text-muted small">--- Continua ---</span>
                     {% endif %}
                 </td>
-                <td>
-                    <div class="days-badges">
-                        <span class="day-dot {% if schedule.monday %}active{% endif %}">L</span>
-                        <span class="day-dot {% if schedule.tuesday %}active{% endif %}">M</span>
-                        <span class="day-dot {% if schedule.wednesday %}active{% endif %}">X</span>
-                        <span class="day-dot {% if schedule.thursday %}active{% endif %}">J</span>
-                        <span class="day-dot {% if schedule.friday %}active{% endif %}">V</span>
-                        <span class="day-dot {% if schedule.saturday %}active{% endif %}">S</span>
-                        <span class="day-dot {% if schedule.sunday %}active{% endif %}">D</span>
-                    </div>
-                </td>
                 <td><strong>{{ schedule.daily_hours }}</strong></td>
+                <td><strong>{{ schedule.late_tolerance_minutes }}</strong></td>
                 <td>
                 <span class="status-badge {% if schedule.is_active %}active{% else %}inactive{% endif %}">
                     {{ schedule.is_active|yesno:"Activo,Inactivo" }}
@@ -61,10 +51,11 @@
                         <button class="btn-views-action" @click="openEditModal({{ schedule.id }})" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-delete-action"
-                                @click="toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'false,true' }})"
-                                title="{{ schedule.is_active|yesno:'Desactivar,Activar' }}">
-                            <i class="fas {% if schedule.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                        <button class="{% if schedule.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                @click="toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
+                                title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
+
+                            <i class="fas {% if schedule.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
                         </button>
                     </div>
                 </td>
