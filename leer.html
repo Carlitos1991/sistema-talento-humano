@@ -1,8 +1,1415 @@
-<!-- File: templates/core/catalogs/modals/modal_catalog_form.html -->
-<!-- (plantilla Django: incluye esto antes de </body>) -->
-{% load static %}
+{% block extra_js %}
+    <script src="{% static 'js/sweetalert2@11.js' %}"></script>
+    <script>
+        let currentBiometricId = null;
 
+        function getCSRFToken() {
+            const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (tokenInput) {
+                return tokenInput.value;
+            }
 
-<!-- Incluir Vue 3 y tu script (mantener antes de cerrar body) -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="{% static 'js/vue/catalogModal.js' %}"></script>
+            // Si no existe, intentar desde las cookies
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='));
+
+            if (cookieValue) {
+                return cookieValue.split('=')[1];
+            }
+
+            console.error('CSRF token no encontrado');
+            return '';
+        }
+
+        // Cambiar estado activo/inactivo
+        function toggleStatus(biometricId, button) {
+            fetch(`/biometric/biometricos/${biometricId}/cambiar-estado/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update button appearance
+                        const icon = button.querySelector('i');
+                        const text = button.querySelector('span');
+
+                        if (data.new_state) {
+                            button.classList.remove('inactive');
+                            button.classList.add('active');
+                            icon.className = 'fa fa-check-circle';
+                            text.textContent = 'Activo';
+                        } else {
+                            button.classList.remove('active');
+                            button.classList.add('inactive');
+                            icon.className = 'fa fa-times-circle';
+                            text.textContent = 'Inactivo';
+                        }
+
+                        // Show success message
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: data.message,
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Error al cambiar el estado',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                });
+        }
+
+        // Verificar conexión con el dispositivo
+        function checkConnection(biometricId, deviceName) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Verificando conexión...',
+                html: `<p>Probando conexión con <strong>${deviceName}</strong></p>
+                       <p class="text-muted">Por favor espere...</p>`,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/biometric/biometricos/${biometricId}/probar-conexion/`)
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+
+                    if (data.success) {
+                        // Conexión exitosa - mostrar información del dispositivo
+                        let deviceInfoHtml = `
+                            <div style="text-align: left; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                                <h4 style="color: #28a745; margin-bottom: 15px;">
+                                    <i class="fa fa-check-circle"></i> ${data.message}
+                                </h4>
+                        `;
+
+                        if (data.device_info) {
+                            deviceInfoHtml += `
+                                <div style="margin-top: 10px;">
+                                    <p style="margin: 8px 0;"><strong>Dispositivo:</strong> ${data.device_info.deviceName || 'N/A'}</p>
+                                    <p style="margin: 8px 0;"><strong>Plataforma:</strong> ${data.device_info.platform || 'N/A'}</p>
+                                    <p style="margin: 8px 0;"><strong>Número de Serie:</strong> ${data.device_info.serialNumber || 'N/A'}</p>
+                                    <p style="margin: 8px 0;"><strong>Versión Firmware:</strong> ${data.device_info.firmwareVersion || 'N/A'}</p>
+                                    <p style="margin: 8px 0;"><strong>Usuarios Registrados:</strong> ${data.device_info.userCount || 'N/A'}</p>
+                                </div>
+                            `;
+                        }
+
+                        deviceInfoHtml += `</div>`;
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Conexión Exitosa!',
+                            html: deviceInfoHtml,
+                            width: '600px',
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#28a745'
+                        });
+                    } else {
+                        // Conexión fallida - mostrar detalles del error
+                        let errorHtml = `
+                            <div style="text-align: left; background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
+                                <h4 style="color: #856404; margin-bottom: 10px;">
+                                    <i class="fa fa-exclamation-triangle"></i> ${data.message}
+                                </h4>
+                        `;
+
+                        if (data.error_details) {
+                            errorHtml += `
+                                <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 5px;">
+                                    <p style="margin: 0; color: #721c24; font-size: 14px;">
+                                        <strong>Detalle del error:</strong><br>
+                                        ${data.error_details}
+                                    </p>
+                                </div>
+                            `;
+                        }
+
+                        errorHtml += `
+                                <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px;">
+                                    <p style="margin: 5px 0; font-size: 13px;"><strong>Posibles soluciones:</strong></p>
+                                    <ul style="margin: 10px 0; padding-left: 20px; font-size: 13px;">
+                                        <li>Verifique que el dispositivo esté encendido</li>
+                                        <li>Confirme que la dirección IP y puerto sean correctos</li>
+                                        <li>Asegúrese de que el dispositivo esté en la misma red</li>
+                                        <li>Verifique que no haya un firewall bloqueando la conexión</li>
+                                        <li>Compruebe que el dispositivo sea compatible con ZKTeco</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            html: errorHtml,
+                            width: '650px',
+                            confirmButtonText: 'Entendido',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.close();
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Inesperado',
+                        html: `
+                            <p>Ocurrió un error al verificar la conexión.</p>
+                            <p class="text-muted" style="font-size: 12px;">Error: ${error.message}</p>
+                        `,
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#dc3545'
+                    });
+                });
+        }
+
+        // Cargar marcaciones desde el dispositivo
+        function loadAttendance(biometricId, deviceName) {
+            // Confirmar acción
+            Swal.fire({
+                title: '¿Cargar marcaciones?',
+                html: `
+                    <p>Se cargarán todas las marcaciones del dispositivo:</p>
+                    <p><strong>${deviceName}</strong></p>
+                    <p class="text-muted" style="font-size: 13px; margin-top: 10px;">
+                        Solo se guardarán las marcaciones de empleados con identificador biométrico registrado.
+                    </p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#6f42c1',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fa fa-download"></i> Cargar Marcaciones',
+                cancelButtonText: 'Cancelar',
+                width: '500px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Mostrar loading
+                    Swal.fire({
+                        title: 'Cargando marcaciones...',
+                        html: `
+                            <p>Conectando con <strong>${deviceName}</strong></p>
+                            <p class="text-muted">Por favor espere, esto puede tomar varios segundos...</p>
+                        `,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Llamar al endpoint para cargar marcaciones
+                    fetch(`/biometric/biometricos/${biometricId}/cargar-marcaciones/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            Swal.close();
+
+                            if (data.success) {
+                                // Éxito - mostrar resultados detallados
+                                let resultHtml = `
+                                    <div style="text-align: left; background: #d4edda; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                        <h4 style="color: #155724; margin-bottom: 15px;">
+                                            <i class="fa fa-check-circle"></i> Carga Exitosa
+                                        </h4>
+                                        <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                                            <p style="margin: 8px 0;"><strong>Dispositivo:</strong> ${deviceName}</p>
+                                            <p style="margin: 8px 0;"><strong>Fecha de carga:</strong> ${data.load_date}</p>
+                                            <hr style="margin: 10px 0; border-color: #c3e6cb;">
+                                            <p style="margin: 8px 0; color: #28a745; font-size: 18px;">
+                                                <strong><i class="fa fa-check"></i> ${data.records_loaded} marcaciones cargadas</strong>
+                                            </p>
+                                `;
+
+                                if (data.records_skipped > 0) {
+                                    resultHtml += `
+                                        <p style="margin: 8px 0; color: #856404;">
+                                            <i class="fa fa-exclamation-triangle"></i> ${data.records_skipped} marcaciones omitidas
+                                        </p>
+                                        <p style="margin: 8px 0; font-size: 12px; color: #666;">
+                                            (Sin empleado asociado en el sistema)
+                                        </p>
+                                    `;
+
+                                    // Mostrar IDs no encontrados si están disponibles
+                                    if (data.ids_not_found && data.ids_not_found.length > 0) {
+                                        resultHtml += `
+                                            <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 3px solid #ffc107;">
+                                                <p style="margin: 5px 0; font-size: 13px; color: #856404;">
+                                                    <strong>IDs biométricos no encontrados:</strong><br>
+                                                    <code style="background: white; padding: 5px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+                                                        ${data.ids_not_found.join(', ')}
+                                                    </code>
+                                                </p>
+                                                <p style="margin: 5px 0; font-size: 12px; color: #666;">
+                                                    Verifique que estos IDs estén configurados en Datos Institucionales de los empleados.
+                                                </p>
+                                            </div>
+                                        `;
+                                    }
+                                }
+
+                                resultHtml += `
+                                            <p style="margin: 8px 0;"><strong>Total en dispositivo:</strong> ${data.total_records}</p>
+                                            <p style="margin: 8px 0;"><strong>ID de Carga:</strong> #${data.load_id}</p>
+                                        </div>
+                                    </div>
+                                `;
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Marcaciones Cargadas!',
+                                    html: resultHtml,
+                                    width: '600px',
+                                    confirmButtonText: 'Cerrar',
+                                    confirmButtonColor: '#28a745'
+                                });
+                            } else {
+                                // Error - mostrar detalles
+                                let errorHtml = `
+                                    <div style="text-align: left; background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                        <h4 style="color: #721c24; margin-bottom: 10px;">
+                                            <i class="fa fa-exclamation-circle"></i> ${data.message}
+                                        </h4>
+                                `;
+
+                                if (data.error_details) {
+                                    errorHtml += `
+                                        <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 5px;">
+                                            <p style="margin: 0; color: #721c24; font-size: 14px;">
+                                                <strong>Detalle:</strong><br>
+                                                ${data.error_details}
+                                            </p>
+                                        </div>
+                                    `;
+                                }
+
+                                if (data.records_found !== undefined && data.records_found === 0) {
+                                    errorHtml += `
+                                        <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                                            <p style="margin: 5px 0; font-size: 13px; color: #856404;">
+                                                <strong>Nota:</strong> El dispositivo no tiene marcaciones registradas.
+                                            </p>
+                                        </div>
+                                    `;
+                                }
+
+                                errorHtml += `</div>`;
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Cargar',
+                                    html: errorHtml,
+                                    width: '600px',
+                                    confirmButtonText: 'Cerrar',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error Inesperado',
+                                html: `
+                                    <p>Ocurrió un error al cargar las marcaciones.</p>
+                                    <p class="text-muted" style="font-size: 12px;">Error: ${error.message}</p>
+                                `,
+                                confirmButtonText: 'Cerrar',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        });
+                }
+            });
+        }
+
+        // Listar usuarios del biométrico
+        function listUsers(biometricId, deviceName) {
+            // Guardar el ID del biométrico actual
+            currentBiometricId = biometricId;
+
+            // Mostrar el nombre del dispositivo
+            document.getElementById('userListDeviceName').textContent = deviceName;
+
+            // Mostrar modal con loading
+            document.getElementById('userListModal').style.display = 'flex';
+            document.getElementById('userListLoading').style.display = 'block';
+            document.getElementById('userListContent').style.display = 'none';
+
+            // Llamar al endpoint para obtener usuarios
+            fetch(`/biometric/biometricos/${biometricId}/listar-usuarios/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('userListLoading').style.display = 'none';
+
+                    if (data.success) {
+                        const users = data.users;
+                        const tbody = document.getElementById('userListTableBody');
+                        tbody.innerHTML = '';
+
+                        // Actualizar total de usuarios
+                        document.getElementById('totalUsers').textContent = users.length;
+
+                        if (users.length === 0) {
+                            // Mostrar mensaje de lista vacía
+                            document.getElementById('emptyUserList').style.display = 'block';
+                            document.getElementById('userListContent').style.display = 'block';
+                        } else {
+                            document.getElementById('emptyUserList').style.display = 'none';
+
+                            // Crear filas de la tabla
+                            users.forEach(user => {
+                                const row = document.createElement('tr');
+
+                                // ID Usuario (mostrar user_id que es el identificador biométrico)
+                                const tdId = document.createElement('td');
+                                tdId.innerHTML = `<strong>${user.user_id}</strong> <span style="color: #999; font-size: 11px;">(UID: ${user.uid})</span>`;
+                                row.appendChild(tdId);
+
+                                // Nombre
+                                const tdName = document.createElement('td');
+                                tdName.textContent = user.name || 'Sin nombre';
+                                row.appendChild(tdName);
+
+                                // Rostro
+                                const tdFace = document.createElement('td');
+                                tdFace.style.textAlign = 'center';
+                                tdFace.innerHTML = user.has_face
+                                    ? '<i class="fa fa-check verification-icon has-verification"></i>'
+                                    : '<i class="fa fa-times verification-icon no-verification"></i>';
+                                row.appendChild(tdFace);
+
+                                // Contraseña
+                                const tdPassword = document.createElement('td');
+                                tdPassword.style.textAlign = 'center';
+                                tdPassword.innerHTML = user.has_password
+                                    ? '<i class="fa fa-check verification-icon has-verification"></i>'
+                                    : '<i class="fa fa-times verification-icon no-verification"></i>';
+                                row.appendChild(tdPassword);
+
+                                // Empleado Asociado
+                                const tdEmployee = document.createElement('td');
+                                if (user.in_system && user.employee_name) {
+                                    tdEmployee.innerHTML = `<span class="employee-badge">${user.employee_name}</span>`;
+                                } else {
+                                    tdEmployee.innerHTML = `<span class="employee-badge not-found">No encontrado</span>`;
+                                }
+                                row.appendChild(tdEmployee);
+
+                                // Acciones
+                                const tdActions = document.createElement('td');
+                                tdActions.style.textAlign = 'center';
+                                const deleteBtn = document.createElement('button');
+                                deleteBtn.className = 'btn-delete-user';
+                                deleteBtn.innerHTML = '<i class="fa fa-trash"></i> Eliminar';
+                                deleteBtn.onclick = () => deleteUserFromDevice(biometricId, user.uid, user.name || 'Sin nombre');
+                                tdActions.appendChild(deleteBtn);
+                                row.appendChild(tdActions);
+
+                                tbody.appendChild(row);
+                            });
+
+                            document.getElementById('userListContent').style.display = 'block';
+                        }
+                    } else {
+                        // Error al obtener usuarios
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            html: `
+                                <p>${data.message}</p>
+                                ${data.error_details ? `<p class="text-muted" style="font-size: 12px;">${data.error_details}</p>` : ''}
+                            `,
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#dc3545'
+                        });
+                        closeUserListModal();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('userListLoading').style.display = 'none';
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Inesperado',
+                        html: `
+                            <p>Ocurrió un error al obtener la lista de usuarios.</p>
+                            <p class="text-muted" style="font-size: 12px;">Error: ${error.message}</p>
+                        `,
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    closeUserListModal();
+                });
+        }
+
+        // Cerrar modal de lista de usuarios
+        function closeUserListModal() {
+            document.getElementById('userListModal').style.display = 'none';
+        }
+
+        // Eliminar usuario del biométrico
+        function deleteUserFromDevice(biometricId, userId, userName) {
+            Swal.fire({
+                title: '¿Eliminar usuario?',
+                html: `
+                    <p>¿Está seguro que desea eliminar este usuario del dispositivo biométrico?</p>
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                        <p style="margin: 5px 0;"><strong>ID Usuario:</strong> ${userId}</p>
+                        <p style="margin: 5px 0;"><strong>Nombre:</strong> ${userName}</p>
+                    </div>
+                    <p class="text-danger" style="font-size: 13px; margin-top: 15px;">
+                        <i class="fa fa-exclamation-triangle"></i> Esta acción no se puede deshacer.
+                    </p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fa fa-trash"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                width: '500px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Mostrar loading
+                    Swal.fire({
+                        title: 'Eliminando usuario...',
+                        html: '<p>Por favor espere...</p>',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Llamar al endpoint para eliminar usuario
+                    fetch(`/biometric/biometricos/${biometricId}/eliminar-usuario/${userId}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            Swal.close();
+
+                            if (data.success) {
+                                // Éxito - mostrar mensaje y recargar lista
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Usuario Eliminado!',
+                                    html: `
+                                        <p>${data.message}</p>
+                                        <div style="margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 5px;">
+                                            <p style="margin: 0; color: #155724; font-size: 13px;">
+                                                <strong>ID:</strong> ${userId} - <strong>Nombre:</strong> ${userName}
+                                            </p>
+                                        </div>
+                                    `,
+                                    confirmButtonText: 'Cerrar',
+                                    confirmButtonColor: '#28a745',
+                                    timer: 3000
+                                }).then(() => {
+                                    // Recargar la lista de usuarios
+                                    const deviceName = document.getElementById('userListDeviceName').textContent;
+                                    listUsers(biometricId, deviceName);
+                                });
+                            } else {
+                                // Error
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al Eliminar',
+                                    html: `
+                                        <p>${data.message}</p>
+                                        ${data.error_details ? `<p class="text-muted" style="font-size: 12px;">${data.error_details}</p>` : ''}
+                                    `,
+                                    confirmButtonText: 'Cerrar',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error Inesperado',
+                                html: `
+                                    <p>Ocurrió un error al eliminar el usuario.</p>
+                                    <p class="text-muted" style="font-size: 12px;">Error: ${error.message}</p>
+                                `,
+                                confirmButtonText: 'Cerrar',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        });
+                }
+            });
+        }
+
+        // Variables globales para registros
+        let allRecords = [];
+
+        // Ver marcaciones del biométrico
+        function viewRecords(biometricId, deviceName, location) {
+            // Guardar el ID del biométrico actual
+            currentBiometricId = biometricId;
+
+            // Mostrar el nombre del dispositivo
+            document.getElementById('recordsDeviceName').textContent = deviceName;
+
+            // Mostrar modal con loading
+            document.getElementById('recordsModal').style.display = 'flex';
+            document.getElementById('recordsLoading').style.display = 'block';
+            document.getElementById('recordsContent').style.display = 'none';
+
+            // Llamar al endpoint para obtener marcaciones del dispositivo
+            fetch(`/biometric/biometricos/${biometricId}/ver-marcaciones/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('recordsLoading').style.display = 'none';
+
+                    if (data.success) {
+                        allRecords = data.records; // Guardar para filtrado
+
+                        // Actualizar estadísticas
+                        document.getElementById('totalRecords').textContent = data.total_records;
+                        document.getElementById('recordsInSystem').textContent = data.records_in_system;
+                        document.getElementById('recordsNotInSystem').textContent = data.records_not_in_system;
+                        document.getElementById('uniqueUsers').textContent = data.unique_users;
+
+                        if (data.total_records === 0) {
+                            // Mostrar mensaje de lista vacía
+                            document.getElementById('emptyRecordsList').style.display = 'block';
+                            document.getElementById('recordsContent').style.display = 'block';
+                        } else {
+                            document.getElementById('emptyRecordsList').style.display = 'none';
+
+                            // Mostrar todos los registros
+                            displayRecords(allRecords);
+
+                            document.getElementById('recordsContent').style.display = 'block';
+                        }
+                    } else {
+                        // Error al obtener marcaciones
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            html: `
+                                <p>${data.message}</p>
+                                ${data.error_details ? `<p class="text-muted" style="font-size: 12px;">${data.error_details}</p>` : ''}
+                            `,
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#dc3545'
+                        });
+                        closeRecordsModal();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('recordsLoading').style.display = 'none';
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Inesperado',
+                        html: `
+                            <p>Ocurrió un error al obtener las marcaciones.</p>
+                            <p class="text-muted" style="font-size: 12px;">Error: ${error.message}</p>
+                        `,
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    closeRecordsModal();
+                });
+        }
+
+        // Mostrar registros en la tabla
+        function displayRecords(records) {
+            const tbody = document.getElementById('recordsTableBody');
+            tbody.innerHTML = '';
+
+            if (records.length === 0) {
+                document.getElementById('emptyRecordsList').style.display = 'block';
+                tbody.closest('.table-responsive').style.display = 'none';
+            } else {
+                document.getElementById('emptyRecordsList').style.display = 'none';
+                tbody.closest('.table-responsive').style.display = 'block';
+
+                records.forEach((record, index) => {
+                    const row = document.createElement('tr');
+
+                    // Resaltar si no está en sistema
+                    if (!record.in_system) {
+                        row.style.backgroundColor = '#fff3cd';
+                    }
+
+                    // Número
+                    const tdNum = document.createElement('td');
+                    tdNum.textContent = index + 1;
+                    row.appendChild(tdNum);
+
+                    // ID Biométrico
+                    const tdBioId = document.createElement('td');
+                    tdBioId.innerHTML = `<strong>${record.user_id}</strong>`;
+                    row.appendChild(tdBioId);
+
+                    // Empleado
+                    const tdEmployee = document.createElement('td');
+                    if (record.in_system) {
+                        tdEmployee.innerHTML = `<span class="employee-badge">${record.employee_name}</span>`;
+                    } else {
+                        tdEmployee.innerHTML = `<span class="employee-badge not-found">${record.employee_name}</span>`;
+                    }
+                    row.appendChild(tdEmployee);
+
+                    // Estado en sistema
+                    const tdStatus = document.createElement('td');
+                    if (record.in_system) {
+                        tdStatus.innerHTML = '<i class="fa fa-check-circle" style="color: #28a745;"></i> Registrado';
+                    } else {
+                        tdStatus.innerHTML = '<i class="fa fa-exclamation-triangle" style="color: #ffc107;"></i> No encontrado';
+                    }
+                    row.appendChild(tdStatus);
+
+                    // Fecha/Hora de marcación
+                    const tdTimestamp = document.createElement('td');
+                    tdTimestamp.textContent = record.timestamp;
+                    row.appendChild(tdTimestamp);
+
+                    // Tipo de marcación
+                    const tdPunch = document.createElement('td');
+                    let punchText = '';
+                    switch (record.punch) {
+                        case 0:
+                            punchText = '<span style="color: #28a745;">Entrada</span>';
+                            break;
+                        case 1:
+                            punchText = '<span style="color: #dc3545;">Salida</span>';
+                            break;
+                        case 2:
+                            punchText = '<span style="color: #17a2b8;">Inicio Break</span>';
+                            break;
+                        case 3:
+                            punchText = '<span style="color: #ffc107;">Fin Break</span>';
+                            break;
+                        case 4:
+                            punchText = '<span style="color: #6c757d;">Inicio Overtime</span>';
+                            break;
+                        case 5:
+                            punchText = '<span style="color: #6c757d;">Fin Overtime</span>';
+                            break;
+                        default:
+                            punchText = `<span style="color: #6c757d;">Tipo ${record.punch}</span>`;
+                    }
+                    tdPunch.innerHTML = punchText;
+                    row.appendChild(tdPunch);
+
+                    // Estado de verificación
+                    const tdVerification = document.createElement('td');
+                    tdVerification.style.textAlign = 'center';
+                    let verificationText = '';
+                    switch (record.status) {
+                        case 0:
+                            verificationText = '<i class="fa fa-fingerprint" style="color: #667eea;" title="Huella"></i>';
+                            break;
+                        case 1:
+                            verificationText = '<i class="fa fa-keyboard-o" style="color: #6c757d;" title="Contraseña"></i>';
+                            break;
+                        case 2:
+                            verificationText = '<i class="fa fa-credit-card" style="color: #f5576c;" title="Tarjeta"></i>';
+                            break;
+                        case 3:
+                            verificationText = '<i class="fa fa-id-card" style="color: #43e97b;" title="Tarjeta + Contraseña"></i>';
+                            break;
+                        case 4:
+                            verificationText = '<i class="fa fa-hand-paper-o" style="color: #f093fb;" title="Palma"></i>';
+                            break;
+                        case 15:
+                            verificationText = '<i class="fa fa-user-circle" style="color: #4facfe;" title="Facial"></i>';
+                            break;
+                        default:
+                            verificationText = `<span style="color: #6c757d;">-</span>`;
+                    }
+                    tdVerification.innerHTML = verificationText;
+                    row.appendChild(tdVerification);
+
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        // Filtrar registros
+        function filterRecords() {
+            const searchTerm = document.getElementById('recordsSearch').value.toLowerCase();
+
+            if (searchTerm === '') {
+                displayRecords(allRecords);
+            } else {
+                const filtered = allRecords.filter(record => {
+                    return record.employee_name.toLowerCase().includes(searchTerm) ||
+                        record.user_id.toLowerCase().includes(searchTerm);
+                });
+                displayRecords(filtered);
+            }
+        }
+
+        // Permitir filtrar con Enter
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('recordsSearch');
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function (event) {
+                    if (event.key === 'Enter') {
+                        filterRecords();
+                    }
+                });
+            }
+        });
+
+        // Cerrar modal de marcaciones
+        function closeRecordsModal() {
+            document.getElementById('recordsModal').style.display = 'none';
+            allRecords = [];
+            document.getElementById('recordsSearch').value = '';
+        }
+
+        // Open time update modal
+        function openTimeUpdateModal(biometricId, deviceName) {
+            currentBiometricId = biometricId;
+            document.getElementById('deviceName').textContent = deviceName;
+            document.getElementById('currentDeviceTime').textContent = 'Cargando...';
+
+            // Set server time
+            const now = new Date();
+            document.getElementById('serverTime').textContent = formatDateTime(now);
+
+            // Set default custom time
+            document.getElementById('customDateTime').value = formatDateTimeLocal(now);
+
+            // Show modal
+            document.getElementById('timeUpdateModal').style.display = 'flex';
+
+            // Get device time
+            fetch(`/biometric/biometricos/${biometricId}/obtener-hora/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('currentDeviceTime').textContent = data.device_time;
+                    } else {
+                        document.getElementById('currentDeviceTime').textContent = 'Error: ' + data.message;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('currentDeviceTime').textContent = 'Error al obtener hora';
+                    console.error('Error:', error);
+                });
+        }
+
+        // Close modal
+        function closeTimeUpdateModal() {
+            document.getElementById('timeUpdateModal').style.display = 'none';
+            currentBiometricId = null;
+        }
+
+        // Update device time
+        function updateDeviceTime() {
+            if (!currentBiometricId) return;
+
+            const timeOption = document.querySelector('input[name="timeOption"]:checked').value;
+            let timeToSend = null;
+
+            if (timeOption === 'custom') {
+                const customTime = document.getElementById('customDateTime').value;
+                if (!customTime) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atención',
+                        text: 'Por favor seleccione una fecha y hora'
+                    });
+                    return;
+                }
+                // Convert datetime-local to format expected by backend (mantener hora local)
+                // El formato del input datetime-local es: "2025-11-07T17:30"
+                // Necesitamos convertirlo a: "2025-11-07 17:30:00"
+                timeToSend = customTime.replace('T', ' ') + ':00';
+            }
+
+            // Show loading
+            Swal.fire({
+                title: 'Actualizando hora...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            if (timeToSend) {
+                formData.append('new_time', timeToSend);
+            }
+
+            fetch(`/biometric/biometricos/${currentBiometricId}/actualizar-hora/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Éxito',
+                            text: data.message,
+                            timer: 3000
+                        });
+                        closeTimeUpdateModal();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.close();
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error de conexión al actualizar la hora'
+                    });
+                });
+        }
+
+        // Format datetime for display
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Format datetime for input[type="datetime-local"]
+        function formatDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        // Toggle custom time input
+        document.addEventListener('DOMContentLoaded', function () {
+            const timeOptions = document.querySelectorAll('input[name="timeOption"]');
+            timeOptions.forEach(option => {
+                option.addEventListener('change', function () {
+                    const customInput = document.getElementById('customTimeInput');
+                    if (this.value === 'custom') {
+                        customInput.style.display = 'block';
+                    } else {
+                        customInput.style.display = 'none';
+                    }
+                });
+            });
+
+            // Close modal when clicking outside
+            window.onclick = function (event) {
+                const timeModal = document.getElementById('timeUpdateModal');
+                const userListModal = document.getElementById('userListModal');
+                const recordsModal = document.getElementById('recordsModal');
+                const biometricFormModal = document.getElementById('biometricFormModal');
+
+                if (event.target === timeModal) {
+                    closeTimeUpdateModal();
+                }
+
+                if (event.target === userListModal) {
+                    closeUserListModal();
+                }
+
+                if (event.target === recordsModal) {
+                    closeRecordsModal();
+                }
+
+                if (event.target === biometricFormModal) {
+                    closeBiometricFormModal();
+                }
+            };
+        });
+
+        // Función para abrir modal de crear biométrico
+        function openCreateModal() {
+            document.getElementById('formModalTitle').innerHTML = '<i class="fa fa-desktop"></i> Nuevo Biométrico';
+            document.getElementById('biometricForm').reset();
+            document.getElementById('biometric_id').value = '';
+            document.getElementById('submitBtn').innerHTML = '<i class="fa fa-save"></i> Guardar';
+            document.getElementById('biometricFormModal').style.display = 'flex';
+        }
+
+        // Función para abrir modal de editar biométrico
+        function openEditModal(id) {
+            document.getElementById('formModalTitle').innerHTML = '<i class="fa fa-pencil"></i> Editar Biométrico';
+            document.getElementById('submitBtn').innerHTML = '<i class="fa fa-save"></i> Actualizar';
+
+            // Cargar datos del biométrico
+            fetch(`/biometric/biometricos/${id}/get-data/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('biometric_id').value = data.biometric.id;
+                        document.getElementById('name').value = data.biometric.name;
+                        document.getElementById('location').value = data.biometric.location;
+                        document.getElementById('ip_adress').value = data.biometric.ip_adress;
+                        document.getElementById('port').value = data.biometric.port;
+                        document.getElementById('serie').value = data.biometric.serie || '';
+                        document.getElementById('model').value = data.biometric.model || '';
+                        document.getElementById('state').value = data.biometric.state ? 'true' : 'false';
+                        document.getElementById('biometricFormModal').style.display = 'flex';
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo cargar los datos', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Error al cargar los datos del biométrico', 'error');
+                });
+        }
+
+        // Función para cerrar modal de formulario
+        function closeBiometricFormModal() {
+            document.getElementById('biometricFormModal').style.display = 'none';
+        }
+
+        // Manejar envío del formulario de biométrico
+        document.getElementById('biometricForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const biometricId = document.getElementById('biometric_id').value;
+            const url = biometricId
+                ? `/biometric/biometricos/${biometricId}/update-ajax/`
+                : '/biometric/biometricos/create-ajax/';
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: data.message,
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Error al guardar', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Error al procesar la solicitud', 'error');
+                });
+        });
+
+        // Función para filtrar usuarios en el modal
+        function filterUsers() {
+            const searchValue = document.getElementById('userSearchInput').value.toLowerCase();
+            const tableBody = document.getElementById('userListTableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const userId = row.cells[0].textContent.toLowerCase();
+                const userName = row.cells[1].textContent.toLowerCase();
+
+                if (userId.includes(searchValue) || userName.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+
+        // ========================================================================
+        // FUNCIONES PARA SUBIR MARCACIONES MANUALES (.DAT)
+        // ========================================================================
+
+        function openUploadModal(biometricId, biometricName) {
+            currentBiometricId = biometricId;
+            document.getElementById('uploadDeviceName').textContent = biometricName;
+            const modal = document.getElementById('uploadModal');
+            modal.style.display = 'flex'; // Usar flex para centrar el modal
+
+            // Resetear el formulario
+            document.getElementById('datFile').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('btnUpload').disabled = true;
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').style.display = 'none';
+            currentBiometricId = null;
+        }
+
+        // Detectar cuando se selecciona un archivo
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('datFile');
+            if (fileInput) {
+                fileInput.addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            const content = event.target.result;
+                            const lines = content.trim().split('\n');
+
+                            // Mostrar preview
+                            document.getElementById('fileContent').textContent = lines.slice(0, 10).join('\n') +
+                                (lines.length > 10 ? '\n...' : '');
+                            document.getElementById('totalRecords').textContent = lines.length;
+                            document.getElementById('filePreview').style.display = 'block';
+                            document.getElementById('btnUpload').disabled = false;
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+            }
+        });
+
+        function uploadAttendanceFile() {
+            const fileInput = document.getElementById('datFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                Swal.fire('Error', 'Por favor selecciona un archivo', 'error');
+                return;
+            }
+
+            if (!currentBiometricId) {
+                Swal.fire('Error', 'No se ha seleccionado un biométrico', 'error');
+                return;
+            }
+
+            // Mostrar loading
+            Swal.fire({
+                title: 'Procesando archivo...',
+                html: 'Por favor espera mientras se procesan las marcaciones',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Crear FormData para enviar el archivo
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('biometric_id', currentBiometricId);
+
+            // Enviar al servidor
+            fetch(`/biometric/biometricos/${currentBiometricId}/subir-marcaciones/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            html: `
+                            <p>${data.message}</p>
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: left;">
+                                <p style="margin: 5px 0;"><strong>📊 Procesadas:</strong> ${data.procesadas || 0}</p>
+                                <p style="margin: 5px 0;"><strong>✅ Guardadas:</strong> ${data.guardadas || 0}</p>
+                                <p style="margin: 5px 0;"><strong>⏭️ Duplicadas:</strong> ${data.duplicadas || 0}</p>
+                                ${data.errores ? `<p style="margin: 5px 0; color: #dc3545;"><strong>❌ Errores:</strong> ${data.errores}</p>` : ''}
+                            </div>
+                        `,
+                            showConfirmButton: true
+                        }).then(() => {
+                            closeUploadModal();
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Error al procesar el archivo', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Error al procesar la solicitud', 'error');
+                });
+        }
+
+        function uploadAttendanceFile() {
+            const file = document.getElementById('datFile').files[0];
+            const fd = new FormData();
+            fd.append('file', file);
+            Swal.fire({title: 'Procesando...', didOpen: () => Swal.showLoading()});
+            fetch(`/biometric/biometricos/${currentBiometricId}/subir-marcaciones/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCSRFToken()},
+                body: fd
+            })
+                .then(r => r.json())
+                .then(data => {
+                    Swal.fire('USB', `Procesadas: ${data.procesadas} | Guardadas: ${data.guardadas}`, 'success');
+                    closeUploadModal();
+                });
+        }
+
+        function openMigrationModal() {
+            document.getElementById('migrationModal').style.display = 'flex';
+            clearMigrationTable();
+        }
+
+        function closeMigrationModal() {
+            document.getElementById('migrationModal').style.display = 'none';
+        }
+
+        function clearMigrationTable() {
+            document.getElementById('migrationStep2').style.display = 'none';
+            document.getElementById('migrationTableBody').innerHTML = '';
+            document.getElementById('btnMigrateExecute').disabled = true;
+            document.getElementById('btnMigrateExecute').style.opacity = '0.5';
+            document.getElementById('btnMigrateExecute').style.cursor = 'not-allowed';
+        }
+
+        // 1. Cargar usuarios del Origen (Reutiliza tu endpoint listar-usuarios)
+        function loadSourceUsers() {
+            const sourceId = document.getElementById('source_bio').value;
+            if (!sourceId) {
+                Swal.fire('Atención', 'Seleccione primero un dispositivo de origen', 'warning');
+                return;
+            }
+
+            // UI Loading
+            document.getElementById('migrationLoading').style.display = 'block';
+            document.getElementById('migrationStep2').style.display = 'none';
+
+            fetch(`/biometric/biometricos/${sourceId}/listar-usuarios/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('migrationLoading').style.display = 'none';
+
+                    if (data.success) {
+                        populateMigrationTable(data.users);
+                    } else {
+                        Swal.fire('Error', 'No se pudieron cargar los usuarios: ' + (data.message || 'Error desconocido'), 'error');
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('migrationLoading').style.display = 'none';
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                    console.error(err);
+                });
+        }
+
+        // 2. Llenar la tabla
+        function populateMigrationTable(users) {
+            const tbody = document.getElementById('migrationTableBody');
+            tbody.innerHTML = '';
+
+            if (!users || users.length === 0) {
+                Swal.fire('Info', 'Este dispositivo está vacío', 'info');
+                return;
+            }
+
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+
+                // Iconos informativos
+                let icons = '';
+                if (user.has_face) icons += '<i class="fa fa-smile-o" title="Rostro" style="margin-right:8px; color:#28a745;"></i>';
+                if (user.has_password) icons += '<i class="fa fa-key" title="Clave" style="color:#ffc107;"></i>';
+
+                // Determinar nombre a mostrar
+                let displayName = user.name;
+                let subText = '';
+                if (user.in_system && user.employee_name) {
+                    subText = `<br><small class="text-primary">${user.employee_name}</small>`;
+                }
+
+                tr.innerHTML = `
+                <td style="text-align: center;">
+                    <input type="checkbox" class="user-check" value="${user.user_id}" onchange="updateMigrateButton()" style="transform: scale(1.2); cursor: pointer;">
+                </td>
+                <td><strong>${user.user_id}</strong></td>
+                <td>${displayName || 'Sin Nombre'} ${subText}</td>
+                <td class="text-center">${icons}</td>
+            `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('migrationStep2').style.display = 'block';
+        }
+
+        // 3. Seleccionar Todo
+        function toggleAllMigration(source) {
+            const checkboxes = document.querySelectorAll('.user-check');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+            updateMigrateButton();
+        }
+
+        // 4. Actualizar estado del botón Migrar
+        function updateMigrateButton() {
+            const selected = document.querySelectorAll('.user-check:checked').length;
+            document.getElementById('countSelected').textContent = selected + ' seleccionados';
+
+            const btn = document.getElementById('btnMigrateExecute');
+            if (selected > 0) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+
+        // 5. EJECUTAR MIGRACIÓN (POST al servidor)
+        function executeMigration() {
+            const sourceId = document.getElementById('source_bio').value;
+            const targetId = document.getElementById('target_bio').value;
+
+            // Obtener IDs seleccionados
+            const selectedUsers = [];
+            document.querySelectorAll('.user-check:checked').forEach(cb => {
+                selectedUsers.push(cb.value);
+            });
+
+            if (!targetId) {
+                Swal.fire('Atención', 'Seleccione el dispositivo Destino', 'warning');
+                return;
+            }
+            if (sourceId === targetId) {
+                Swal.fire('Error', 'El origen y destino no pueden ser el mismo', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: `¿Migrar ${selectedUsers.length} usuarios?`,
+                html: "Se copiarán datos, huellas y rostros al destino.<br><small class='text-danger'>Si el usuario ya existe en el destino, se sobrescribirá.</small>",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa fa-rocket"></i> Sí, Migrar',
+                confirmButtonColor: '#28a745',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // Loading UI
+                    Swal.fire({
+                        title: 'Migrando...',
+                        html: 'Procesando usuarios uno por uno.<br>Por favor no cierre esta ventana.',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
+                    const formData = new FormData();
+                    formData.append('source_id', sourceId);
+                    formData.append('target_id', targetId);
+
+                    // Agregar cada usuario seleccionado
+                    selectedUsers.forEach(id => {
+                        formData.append('users[]', id);
+                    });
+
+                    fetch("{% url 'biometric:migrate_users' %}", {
+                        method: 'POST',
+                        headers: {'X-CSRFToken': getCSRFToken()},
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            Swal.close();
+                            if (data.success) {
+                                closeMigrationModal();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Migración Exitosa!',
+                                    html: data.message.replace(/\n/g, '<br>'), // Formatear saltos de línea
+                                });
+                            } else {
+                                Swal.fire('Error', data.message, 'error');
+                            }
+                        })
+                        .catch(err => {
+                            Swal.close();
+                            Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
+                        });
+                }
+            });
+        }
+
+        // Función auxiliar para obtener CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+    </script>
+{% endblock %}
+

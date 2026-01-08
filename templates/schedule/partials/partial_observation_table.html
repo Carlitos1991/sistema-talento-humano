@@ -1,45 +1,53 @@
-<!-- apps/schedule/templates/schedule/partials/partial_observation_table.html -->
-<table class="table-modern">
-    <thead>
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
         <tr>
-            <th>Evento</th>
-            <th>Desde</th>
-            <th>Hasta</th>
-            <th>Tipo</th>
-            <th>Estado</th>
-            <th class="actions">Acciones</th>
+            <th><i class="fas fa-font header-icon"></i> Nombre del Evento</th>
+            <th><i class="fas fa-calendar-day header-icon"></i> Vigencia</th>
+            <th><i class="fas fa-tag header-icon"></i> Tipo</th>
+            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
         </tr>
-    </thead>
-    <tbody>
+        </thead>
+        <tbody>
         {% for obs in observations %}
-        <tr>
-            <td><strong>{{ obs.name }}</strong></td>
-            <td>{{ obs.start_date|date:"d/m/Y" }}</td>
-            <td>{{ obs.end_date|date:"d/m/Y" }}</td>
-            <td>
-                <span class="status-badge {% if obs.is_holiday %}ocupada{% else %}concurso{% endif %}">
-                    {{ obs.is_holiday|yesno:"Feriado,Observación" }}
-                </span>
-            </td>
-            <td>
-                <span class="status-badge {% if obs.is_active %}active{% else %}inactive{% endif %}">
-                    {{ obs.is_active|yesno:"Activo,Inactivo" }}
-                </span>
-            </td>
-            <td class="actions">
-                <div class="actions-wrapper">
-                    <button class="btn-views-action" onclick="observationInstance.openEditModal({{ obs.id }})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="{% if obs.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                            onclick="observationInstance.toggleStatus({{ obs.id }})">
-                        <i class="fas {% if obs.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
+            <tr>
+                <td><strong>{{ obs.name }}</strong></td>
+                <td>
+                    <span class="small font-weight-700">{{ obs.start_date|date:"d/m/Y" }}</span>
+                    <i class="fas fa-arrow-right mx-1 small text-muted"></i>
+                    <span class="small font-weight-700">{{ obs.end_date|date:"d/m/Y" }}</span>
+                </td>
+                <td>
+                    <span class="status-badge {% if obs.is_holiday %}ocupada{% else %}concurso{% endif %}">
+                        {{ obs.is_holiday|yesno:"Feriado,Especial" }}
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge {% if obs.is_active %}active{% else %}inactive{% endif %}">
+                        {{ obs.is_active|yesno:"Activo,Inactivo" }}
+                    </span>
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <button class="btn-views-action" onclick="observationInstance.openEditModal({{ obs.id }})"
+                                title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="{% if obs.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                onclick="observationInstance.toggleStatus({{ obs.id }}, {{ obs.is_active|yesno:'true,false' }})"
+                                title="{{ obs.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
+                            <i class="fas {% if obs.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-center">No hay registros</td></tr>
+            <tr>
+                <td colspan="5" class="text-center p-4">No se encontraron registros.</td>
+            </tr>
         {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>

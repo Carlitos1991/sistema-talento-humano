@@ -57,7 +57,7 @@
                                 onclick="scheduleInstance.toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
                                 title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
 
-                            <i class="fas {% if schedule.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                            <i class="fas {% if schedule.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
                         </button>
                     </div>
                 </td>

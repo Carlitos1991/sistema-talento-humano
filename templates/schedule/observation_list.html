@@ -1,41 +1,67 @@
 {% extends 'base.html' %}
 {% load static %}
-
-{% block title %} Feriados y Observaciones | SIGETH {% endblock %}
+{% block title %}Observations | SIGETH{% endblock %}
 
 {% block content %}
-<div class="header-card">
-    <div>
-        <h1><i class="fa-solid fa-umbrella-beach mr-2"></i> Feriados y Observaciones</h1>
-        <p>Gestione los días no laborables o jornadas especiales de la institución.</p>
-    </div>
-    <div class="header-actions">
-        <button class="btn-create" onclick="openObservationModal()">
-            <i class="fa-solid fa-plus"></i> NUEVO REGISTRO
-        </button>
-    </div>
-</div>
+    <div id="observation-app" v-cloak
+         data-total="{{ total_obs|default:0 }}"
+         data-holiday="{{ holiday_obs|default:0 }}"
+         data-special="{{ special_obs|default:0 }}">
 
-<div class="stats-row">
-    <div class="stat-card color-five">
-        <div class="stat-icon"><i class="fa-solid fa-calendar-star"></i></div>
-        <div>
-            <div class="number">{{ total_count }}</div>
-            <h3>Total Eventos</h3>
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-umbrella-beach"></i> Feriados y Observaciones</h1>
+                <p>Gestione los días no laborables o jornadas especiales de la institución.</p>
+            </div>
+            <button class="btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> NUEVO REGISTRO
+            </button>
         </div>
-    </div>
-    <div class="stat-card color-two">
-        <div class="stat-icon"><i class="fa-solid fa-flag"></i></div>
-        <div>
-            <div class="number">{{ holiday_count }}</div>
-            <h3>Feriados</h3>
-        </div>
-    </div>
-</div>
 
-<div class="table-container">
-    <div class="p-4 text-center">
-        <p class="text-muted">Módulo de observaciones en construcción. La tabla se mostrará aquí.</p>
+        <!-- Cards con efectos de opacidad similares a Horarios -->
+        <div class="stats-row">
+            <div class="stat-card color-one" @click="filterByStatus('')"
+                 :class="{'opacity-low': filters.is_holiday !== ''}">
+                <div class="stat-left"><h3>TOTAL</h3>
+                    <div class="number">[[ stats.total ]]</div>
+                </div>
+                <i class="fas fa-calendar-alt stat-icon"></i>
+            </div>
+            <div class="stat-card color-two" @click="filterByStatus('true')"
+                 :class="{'opacity-low': filters.is_holiday !== 'true'}">
+                <div class="stat-left"><h3>FERIADOS</h3>
+                    <div class="number">[[ stats.holiday ]]</div>
+                </div>
+                <i class="fas fa-sun stat-icon"></i>
+            </div>
+            <div class="stat-card color-four" @click="filterByStatus('false')"
+                 :class="{'opacity-low': filters.is_holiday !== 'false'}">
+                <div class="stat-left"><h3>ESPECIALES</h3>
+                    <div class="number">[[ stats.special ]]</div>
+                </div>
+                <i class="fas fa-star stat-icon"></i>
+            </div>
+        </div>
+
+        <div class="table-app mt-3">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" v-model="filters.name" @input="debouncedSearch" class="input-field"
+                               placeholder="Buscar por nombre del evento...">
+                    </div>
+                </div>
+                <div id="table-content-wrapper">
+                    {% include 'schedule/partials/partial_observation_table.html' %}
+                </div>
+            </div>
+        </div>
+
+        {% include 'schedule/modals/modal_observation_modal.html' %}
     </div>
-</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/observation.js' %}"></script>
 {% endblock %}

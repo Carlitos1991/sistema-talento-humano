@@ -140,33 +140,39 @@ class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     model = ScheduleObservation
     template_name = 'schedule/observation_list.html'
     permission_required = 'schedule.can_manage_observations'
+    context_object_name = 'observations'
+
+    def get_queryset(self):
+        return ScheduleObservation.objects.all().order_by('-start_date')[:50]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         qs = ScheduleObservation.objects.all()
-        context.update({
-            'total_count': qs.count(),
-            'holiday_count': qs.filter(is_holiday=True).count(),
-            'special_count': qs.filter(is_holiday=False).count(),
-        })
+        # Datos iniciales para evitar el parpadeo "0"
+        context['total_obs'] = qs.count()
+        context['holiday_obs'] = qs.filter(is_holiday=True).count()
+        context['special_obs'] = qs.filter(is_holiday=False).count()
         return context
 
 
 class ObservationTablePartialView(LoginRequiredMixin, View):
     def get(self, request):
-        queryset = ScheduleObservation.objects.all().order_by('-start_date')
-
-        # Filtros
         name = request.GET.get('name', '')
         is_holiday = request.GET.get('is_holiday', '')
 
+        queryset = ScheduleObservation.objects.all().order_by('-start_date')
         if name: queryset = queryset.filter(name__icontains=name)
-        if is_holiday: queryset = queryset.filter(is_holiday=(is_holiday == 'true'))
+        if is_holiday == 'true':
+            queryset = queryset.filter(is_holiday=True)
+        elif is_holiday == 'false':
+            queryset = queryset.filter(is_holiday=False)
 
+        # Estadísticas en tiempo real
+        all_qs = ScheduleObservation.objects.all()
         stats = {
-            'total': ScheduleObservation.objects.count(),
-            'holiday': ScheduleObservation.objects.filter(is_holiday=True).count(),
-            'special': ScheduleObservation.objects.filter(is_holiday=False).count(),
+            'total': all_qs.count(),
+            'holiday': all_qs.filter(is_holiday=True).count(),
+            'special': all_qs.filter(is_holiday=False).count(),
         }
 
         html = render_to_string('schedule/partials/partial_observation_table.html', {
@@ -196,8 +202,8 @@ class ObservationDetailAPIView(LoginRequiredMixin, View):
                 'id': obs.id,
                 'name': obs.name,
                 'description': obs.description or '',
-                'start_date': obs.start_date.isoformat(),
-                'end_date': obs.end_date.isoformat(),
+                'start_date': obs.start_date.strftime('%Y-%m-%d'),
+                'end_date': obs.end_date.strftime('%Y-%m-%d'),
                 'is_holiday': obs.is_holiday,
             }
         })
@@ -205,8 +211,8 @@ class ObservationDetailAPIView(LoginRequiredMixin, View):
 
 class ObservationToggleStatusView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        obs = get_object_or_404(ScheduleObservation, pk=pk)
-        obs.is_active = not obs.is_active
-        obs.updated_by = request.user
-        obs.save()
-        return JsonResponse({'success': True, 'message': 'Estado actualizado'})
+        instance = get_object_or_404(ScheduleObservation, pk=pk)
+        instance.is_active = not instance.is_active
+        instance.updated_by = request.user
+        instance.save()
+        return JsonResponse({'success': True, 'message': 'Estado actualizado correctamente'})

@@ -46,6 +46,8 @@ class ScheduleObservationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['start_date'].input_formats = ['%Y-%m-%d']
         self.fields['end_date'].input_formats = ['%Y-%m-%d']
+        if not self.instance.pk:
+            self.initial['is_active'] = True
 
 
 class ScheduleSearchForm(forms.Form):
