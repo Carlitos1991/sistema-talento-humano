@@ -82,7 +82,35 @@
                 </ul>
             </li>
         {% endif %}
-
+        {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations %}
+            <li class="has-submenu">
+                <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
+                   <i class="fa-regular fa-clock"></i>
+                    <span class="menu-text">Horarios</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    {% if perms.schedule.can_manage_schedules %}
+                        <li>
+                            <a href="{% url 'schedule:schedule_list' %}"
+                               class="{% if request.resolver_match.url_name == 'schedule_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-calendar-days"></i>
+                                <span class="menu-text">Horarios</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.schedule.can_manage_observations %}
+                        <li>
+                            <a href="{% url 'schedule:observation_list' %}"
+                               class="{% if request.resolver_match.url_name == 'observation_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-umbrella-beach"></i>
+                                <span class="menu-text">Feriados y Obs.</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         <!--  Ajustes -->
         {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location %}
             <li class="has-submenu">

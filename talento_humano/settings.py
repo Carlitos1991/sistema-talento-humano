@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'employee',
     'institution',
     'budget',
+    'schedule',
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

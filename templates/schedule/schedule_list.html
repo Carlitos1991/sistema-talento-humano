@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Schedules | SIGETH{% endblock %}
+
+{% block content %}
+    <div id="schedule-app" v-cloak>
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-clock-rotate-left"></i> Gestión de Horarios</h1>
+                <p>Administre las jornadas laborales, turnos y parámetros de asistencia.</p>
+            </div>
+            <button type="button" class="btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> NUEVO HORARIO
+            </button>
+        </div>
+
+        <!-- 2. Estadísticas -->
+        <div class="stats-row">
+            <div class="stat-card color-one">
+                <div class="stat-left">
+                    <h3>Total</h3>
+                    <div class="number">{{ total_schedules }}</div>
+                </div>
+                <i class="fas fa-calendar-alt stat-icon"></i>
+            </div>
+            <div class="stat-card color-two">
+                <div class="stat-left">
+                    <h3>Activos</h3>
+                    <div class="number">{{ active_schedules }}</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+            <div class="stat-card color-three">
+                <div class="stat-left">
+                    <h3>Inactivos</h3>
+                    <div class="number">{{ inactive_schedules }}</div>
+                </div>
+                <i class="fas fa-times-circle stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- 3. Contenedor principal Tabla (AJAX) -->
+        <div class="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field"
+                               placeholder="Buscar en la tabla">
+                    </div>
+                </div>
+                <div id="table-content-wrapper">
+                    {% include 'schedule/partials/partial_schedule_table.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block modals %}
+    {% include 'schedule/modals/modal_schedule_form.html' %}
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/schedule.js' %}"></script>
+{% endblock %}

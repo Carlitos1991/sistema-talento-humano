@@ -1,0 +1,120 @@
+<div id="schedule-create-app" v-cloak>
+    <div class="modal-container-medium">
+        <div class="modal-header-gradient">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-clock text-white"></i>
+                <h3 class="text-white">[[ isEdit ? 'Actualizar Horario' : 'Nuevo Horario Institucional' ]]</h3>
+            </div>
+            <button type="button" @click="closeModal" class="btn-close-modal text-white">&times;</button>
+        </div>
+
+        <form id="scheduleForm" @submit.prevent="saveSchedule">
+            <div class="modal-body-custom">
+                <!-- 1. Datos Generales -->
+                <div class="form-section-card">
+                    <h4 class="section-title"><i class="fas fa-file-signature"></i> Información Básica</h4>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label">Nombre del Horario <span class="text-danger">*</span></label>
+                            <input type="text" v-model="form.name" class="input-field" required placeholder="Ej: MATUTINO ADMINISTRATIVO">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tolerancia Atraso (Minutos)</label>
+                            <input type="number" v-model="form.late_tolerance_minutes" class="input-field" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label">Descripción / Observaciones</label>
+                        <textarea v-model="form.description" class="input-field" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- 2. Configuración de Turnos -->
+                <div class="form-section-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="section-title mb-0"><i class="fas fa-business-time"></i> Jornadas de Trabajo</h4>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small font-weight-bold">¿Habilitar Segunda Jornada?</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" v-model="isSplitShift">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Primera Jornada -->
+                    <div class="bg-primary-subtle p-3 rounded mb-3">
+                        <p class="small font-weight-bold mb-2">PRIMERA JORNADA (OBLIGATORIA)</p>
+                        <div class="grid-3-cols">
+                            <div class="form-group">
+                                <label class="form-label">Inicio J1</label>
+                                <input type="time" v-model="form.morning_start" class="input-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fin J1</label>
+                                <input type="time" v-model="form.morning_end" class="input-field" required>
+                            </div>
+                            <div class="form-group d-flex align-items-end pb-1">
+                                <label class="d-flex align-items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" v-model="form.morning_crosses_midnight">
+                                    <span class="small">Cruza medianoche</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Segunda Jornada (Reactiva) -->
+                    <transition name="fade">
+                        <div v-if="isSplitShift" class="bg-success-subtle p-3 rounded">
+                            <p class="small font-weight-bold mb-2 text-success">SEGUNDA JORNADA (OPCIONAL)</p>
+                            <div class="grid-3-cols">
+                                <div class="form-group">
+                                    <label class="form-label">Inicio J2</label>
+                                    <input type="time" v-model="form.afternoon_start" :required="isSplitShift" class="input-field">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fin J2</label>
+                                    <input type="time" v-model="form.afternoon_end" :required="isSplitShift" class="input-field">
+                                </div>
+                                <div class="form-group d-flex align-items-end pb-1">
+                                    <label class="d-flex align-items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" v-model="form.afternoon_crosses_midnight">
+                                        <span class="small">Cruza medianoche</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+
+                <!-- 3. Días Laborales y Horas Totales -->
+                <div class="form-section-card">
+                    <h4 class="section-title"><i class="fas fa-calendar-check"></i> Programación Semanal</h4>
+                    <div class="grid-2-cols align-items-center">
+                        <div class="d-flex justify-content-between px-3">
+                            <label v-for="day in days" :key="day.key" class="text-center">
+                                <span class="d-block small font-weight-bold">[[ day.label ]]</span>
+                                <input type="checkbox" v-model="form[day.key]" class="form-check-input">
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Horas Laborales por Día <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" v-model="form.daily_hours" class="input-field" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-spaced">
+                <button type="button" @click="closeModal" class="btn-cancel">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-save" :disabled="loading">
+                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-save"></i>
+                    [[ isEdit ? 'Guardar Cambios' : 'Registrar Horario' ]]
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

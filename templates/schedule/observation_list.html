@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} Feriados y Observaciones | SIGETH {% endblock %}
+
+{% block content %}
+<div class="header-card">
+    <div>
+        <h1><i class="fa-solid fa-umbrella-beach mr-2"></i> Feriados y Observaciones</h1>
+        <p>Gestione los días no laborables o jornadas especiales de la institución.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-create" onclick="openObservationModal()">
+            <i class="fa-solid fa-plus"></i> NUEVO REGISTRO
+        </button>
+    </div>
+</div>
+
+<div class="stats-row">
+    <div class="stat-card color-five">
+        <div class="stat-icon"><i class="fa-solid fa-calendar-star"></i></div>
+        <div>
+            <div class="number">{{ total_count }}</div>
+            <h3>Total Eventos</h3>
+        </div>
+    </div>
+    <div class="stat-card color-two">
+        <div class="stat-icon"><i class="fa-solid fa-flag"></i></div>
+        <div>
+            <div class="number">{{ holiday_count }}</div>
+            <h3>Feriados</h3>
+        </div>
+    </div>
+</div>
+
+<div class="table-container">
+    <div class="p-4 text-center">
+        <p class="text-muted">Módulo de observaciones en construcción. La tabla se mostrará aquí.</p>
+    </div>
+</div>
+{% endblock %}

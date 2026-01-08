@@ -1,0 +1,84 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fas fa-font header-icon"></i> Nombre</th>
+            <th><i class="fas fa-sun header-icon"></i> Primera Jornada</th>
+            <th><i class="fas fa-cloud-sun header-icon"></i> Segunda Jornada</th>
+            <th><i class="fas fa-clock header-icon"></i> Horas Diarias</th>
+            <th><i class="fas fa-hourglass-half header-icon"></i> Tolerancia</th>
+            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for schedule in schedules %}
+            <tr>
+                <td>
+                    <strong>{{ schedule.name }}</strong>
+                    {% if schedule.description %}
+                        <br><small class="text-muted">{{ schedule.description|truncatechars:40 }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                <span class="badge-time">
+                    <i class="fa-regular fa-sun"></i> {{ schedule.morning_start|time:"H:i" }} - {{ schedule.morning_end|time:"H:i" }}
+                    {% if schedule.morning_crosses_midnight %}
+                        <i class="fa-solid fa-moon text-warning" title="Cruza medianoche"></i>{% endif %}
+                </span>
+                </td>
+                <td>
+                    {% if not schedule.is_continuous %}
+                        <span class="badge-time success">
+                        <i class="fa-regular fa-clock"></i> {{ schedule.afternoon_start|time:"H:i" }} - {{ schedule.afternoon_end|time:"H:i" }}
+                            {% if schedule.afternoon_crosses_midnight %}
+                                <i class="fa-solid fa-moon text-warning" title="Cruza medianoche"></i>{% endif %}
+                    </span>
+                    {% else %}
+                        <span class="text-muted small">--- Continua ---</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="days-badges">
+                        <span class="day-dot {% if schedule.monday %}active{% endif %}">L</span>
+                        <span class="day-dot {% if schedule.tuesday %}active{% endif %}">M</span>
+                        <span class="day-dot {% if schedule.wednesday %}active{% endif %}">X</span>
+                        <span class="day-dot {% if schedule.thursday %}active{% endif %}">J</span>
+                        <span class="day-dot {% if schedule.friday %}active{% endif %}">V</span>
+                        <span class="day-dot {% if schedule.saturday %}active{% endif %}">S</span>
+                        <span class="day-dot {% if schedule.sunday %}active{% endif %}">D</span>
+                    </div>
+                </td>
+                <td><strong>{{ schedule.daily_hours }}</strong></td>
+                <td>
+                <span class="status-badge {% if schedule.is_active %}active{% else %}inactive{% endif %}">
+                    {{ schedule.is_active|yesno:"Activo,Inactivo" }}
+                </span>
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <button class="btn-views-action" @click="openEditModal({{ schedule.id }})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-delete-action"
+                                @click="toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'false,true' }})"
+                                title="{{ schedule.is_active|yesno:'Desactivar,Activar' }}">
+                            <i class="fas {% if schedule.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="no-results-content">
+                        <i class="fas fa-calendar-times no-results-icon"></i>
+                        <p class="no-results-text">No se encontraron horarios registrados.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
