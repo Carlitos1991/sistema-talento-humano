@@ -2,7 +2,7 @@
 <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
     <div class="modal-container-medium shadow-card">
         <!-- Botón Cerrar -->
-        <button type="button" @click="closeModal" class="btn-close-modal-refined" title="Cerrar">
+        <button type="button" @click="closeModal" class="btn-close-modal" title="Cerrar">
             <i class="fas fa-times"></i>
         </button>
 
@@ -65,13 +65,14 @@
 
                 <div class="alert-info mt-2">
                     <i class="fas fa-globe-americas"></i>
-                    <p class="small mb-0">Este evento se aplicará de forma <strong>global</strong> a todos los empleados registrados en el sistema.</p>
+                    <p class="small mb-0">Este evento se aplicará de forma <strong>global</strong> a todos los empleados
+                        registrados en el sistema.</p>
                 </div>
             </div>
 
             <div class="modal-footer-fixed">
                 <button type="button" @click="closeModal" class="btn-cancel">
-                    <i class="fas fa-times-circle"></i> DESCARTAR
+                    <i class="fas fa-times-circle"></i> CANCELAR
                 </button>
                 <button type="submit" class="btn-save" :disabled="loading">
                     <i v-if="loading" class="fas fa-circle-notch fa-spin"></i>

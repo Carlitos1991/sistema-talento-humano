@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Observations | SIGETH{% endblock %}
+{% block title %}Observaciones | SIGETH{% endblock %}
 
 {% block content %}
     <div id="observation-app" v-cloak
@@ -36,7 +36,7 @@
             </div>
             <div class="stat-card color-four" @click="filterByStatus('false')"
                  :class="{'opacity-low': filters.is_holiday !== 'false'}">
-                <div class="stat-left"><h3>ESPECIALES</h3>
+                <div class="stat-left"><h3>OBSERVACIONES</h3>
                     <div class="number">[[ stats.special ]]</div>
                 </div>
                 <i class="fas fa-star stat-icon"></i>
