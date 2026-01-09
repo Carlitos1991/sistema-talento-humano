@@ -4,7 +4,10 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from .models import LaborRegime, ContractType
+
+from institution.models import AdministrativeUnit
+from schedule.models import Schedule
+from .models import LaborRegime, ContractType, ManagementPeriod
 from .forms import LaborRegimeForm, ContractTypeForm
 
 
@@ -205,3 +208,76 @@ class LaborRegimeToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, V
             'success': True,
             'message': message
         })
+
+
+class ContractTypeUpdateView(LoginRequiredMixin, View):
+    """
+    Actualiza un tipo de contrato existente.
+    """
+
+    def post(self, request, pk):
+        instance = get_object_or_404(ContractType, pk=pk)
+        form = ContractTypeForm(request.POST, instance=instance)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    instance = form.save(commit=False)
+                    instance.updated_by = request.user
+                    instance.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Modalidad actualizada correctamente.'
+                })
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = ManagementPeriod
+    template_name = 'contract/management_period_list.html'
+    permission_required = 'contract.view_managementperiod'
+    context_object_name = 'periods'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = ManagementPeriod.objects.filter(is_active=True)
+
+        # Estadísticas dinámicas según el video
+        context['total_active'] = qs.count()
+        # Ejemplo de conteo por régimen (ajustar códigos según tu base)
+        context['count_losep'] = qs.filter(contract_type__labor_regime__code='LOSEP').count()
+        context['count_ct'] = qs.filter(contract_type__labor_regime__code='CT').count()
+
+        # Para el modal (necesitamos cargar regímenes y sus tipos)
+        context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related('contract_types')
+        context['schedules'] = Schedule.objects.filter(is_active=True)
+        context['units'] = AdministrativeUnit.objects.filter(is_active=True)
+
+        return context
+
+
+class ValidateEmployeeAPIView(LoginRequiredMixin, View):
+    """Busca un empleado y verifica si tiene contratos activos."""
+
+    def get(self, request, doc_number):
+        from apps.employee.models import Employee
+        try:
+            employee = Employee.objects.select_related('person').get(
+                person__document_number=doc_number, is_active=True
+            )
+            # Verificar si ya tiene un periodo activo
+            has_active = ManagementPeriod.objects.filter(employee=employee, is_active=True).exists()
+
+            return JsonResponse({
+                'success': True,
+                'has_active_contract': has_active,
+                'employee': {
+                    'id': employee.id,
+                    'full_name': employee.person.full_name,
+                    'photo': employee.person.photo.url if employee.person.photo else None,
+                }
+            })
+        except Employee.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Empleado no encontrado o inactivo.'})

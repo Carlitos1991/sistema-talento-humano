@@ -36,36 +36,43 @@ const regimeApp = createApp({
         },
         async openCreateContractType() {
             const {value: formValues} = await Swal.fire({
-                title: 'Nuevo Tipo de Contrato',
-                html:
-                    `<div class="text-left">
-                <label class="form-label font-weight-700">Código</label>
-                <input id="swal-code" class="form-control mb-3 uppercase-input" placeholder="Ej: CT_OCASIONAL">
-                <label class="form-label font-weight-700">Nombre</label>
-                <input id="swal-name" class="form-control mb-3" placeholder="Nombre de la modalidad">
-                <label class="form-label font-weight-700">Categoría</label>
-                <select id="swal-cat" class="form-control">
-                    <option value="CONTRATO">Contrato</option>
-                    <option value="ACCION_PERSONAL">Acción de Personal</option>
-                </select>
+                title: 'Nueva Modalidad Laboral',
+                html: `
+            <div class="text-left" style="padding: 1rem">
+                <div class="form-group mb-3">
+                    <label class="form-label font-weight-700">Código Único</label>
+                    <input id="swal-code" class="form-control uppercase-input" placeholder="EJ: CT_OCASIONAL">
+                </div>
+               <div class="form-group mb-3">
+                    <label class="form-label font-weight-700">Nombre de la Modalidad</label>
+                    <input id="swal-name" class="form-control uppercase-input" placeholder="EJ: CONTRATO OCASIONAL">
+                </div>editContractType
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Categoría de Documento</label>
+                    <select id="swal-cat" class="form-control">
+                        <option value="CONTRATO">Contrato</option>
+                        <option value="ACCION_PERSONAL">Acción de Personal</option>
+                    </select>
+                </div>
             </div>`,
-                focusConfirm: false,
                 showCancelButton: true,
-                confirmButtonText: 'Guardar',
+                confirmButtonText: 'Guardar Modalidad',
+                cancelButtonText: 'Cancelar',
+                customClass: {confirmButton: 'btn-swal-success', cancelButton: 'btn-swal-cancel'},
                 preConfirm: () => {
+                    const code = document.getElementById('swal-code').value;
+                    const name = document.getElementById('swal-name').value;
+                    if (!code || !name) return Swal.showValidationMessage('Código y Nombre son obligatorios');
                     return {
-                        code: document.getElementById('swal-code').value,
-                        name: document.getElementById('swal-name').value,
+                        code: code,
+                        name: name,
                         category: document.getElementById('swal-cat').value,
                         regime: this.currentRegime.id
                     }
                 }
             });
 
-            if (formValues) {
-                // Lógica para enviar vía POST al servidor y luego llamar a this.fetchContractTypes()
-                this.saveContractTypeAPI(formValues);
-            }
+            if (formValues) this.saveContractTypeAPI(formValues);
         },
 
         async saveContractTypeAPI(data) {
@@ -74,6 +81,7 @@ const regimeApp = createApp({
             formData.append('name', data.name);
             formData.append('contract_type_category', data.category);
             formData.append('labor_regime', data.regime);
+            formData.append('is_active', 'true'); // Forzado por negocio
 
             try {
                 const response = await fetch('/contract/contract-types/create/', {
@@ -81,26 +89,19 @@ const regimeApp = createApp({
                     body: formData,
                     headers: {'X-CSRFToken': getCookie('csrftoken')}
                 });
-
                 const result = await response.json();
-
                 if (result.success) {
                     this.showToast('success', result.message);
-                    this.fetchContractTypes(); // Recarga la lista del modal
-                    this.fetchTable();         // Recarga la tabla de fondo (stats/contadores)
+                    this.fetchContractTypes(); // Refresca el modal de lista
+                    this.fetchTable();         // Refresca el contador azul de la tabla principal
                 } else {
-                    // Si Django devuelve errores (ej: código duplicado)
-                    let errorMsg = result.message || "Error al validar los datos";
-                    if (result.errors) {
-                        const firstKey = Object.keys(result.errors)[0];
-                        errorMsg = `${firstKey}: ${result.errors[firstKey][0]}`;
-                    }
-                    Swal.fire('Atención', errorMsg, 'warning');
+                    Swal.fire('Atención', result.errors?.code?.[0] || 'Error al guardar', 'warning');
                 }
             } catch (error) {
-                this.showToast('error', 'Error crítico al procesar la solicitud');
+                this.showToast('error', 'Error de red');
             }
         },
+
         async toggleContractTypeStatus(id) {
             try {
                 const response = await fetch(`/contract/contract-types/toggle-status/${id}/`, {
@@ -113,7 +114,7 @@ const regimeApp = createApp({
                     this.fetchContractTypes();
                 }
             } catch (error) {
-                this.showToast('error', 'No se pudo cambiar el estado');
+                this.showToast('error', 'Error al cambiar estado');
             }
         },
         async openEditModal(id) {
@@ -137,6 +138,11 @@ const regimeApp = createApp({
         async saveRegime() {
             this.loading = true;
             const formData = new FormData();
+            formData.append('id', this.form.id || '');
+            formData.append('code', this.form.code.toUpperCase().trim());
+            formData.append('name', this.form.name.toUpperCase().trim());
+            formData.append('description', this.form.description);
+            formData.append('is_active', this.form.is_active);
             Object.keys(this.form).forEach(key => formData.append(key, this.form[key]));
 
             const url = this.isEdit ? `/contract/regimes/update/${this.form.id}/` : '/contract/regimes/create/';
@@ -184,11 +190,83 @@ const regimeApp = createApp({
                 }
             }
         },
+        async editContractType(type) {
+            const {value: formValues} = await Swal.fire({
+                title: 'Editar Modalidad Laboral',
+                html: `
+                     <div class="text-left" style="padding: 1rem">
+                        <div class="form-group mb-3">
+                            <label class="form-label font-weight-700">Código Único (No editable)</label>
+                            <input id="swal-code" class="form-control bg-readonly" readonly value="${type.code}">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label font-weight-700">Nombre de la Modalidad</label>
+                            <input id="swal-name" class="form-control uppercase-input" value="${type.name}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label font-weight-700">Categoría de Documento</label>
+                            <select id="swal-cat" class="form-control">
+                                <option value="CONTRATO" ${type.category === 'CONTRATO' ? 'selected' : ''}>Contrato</option>
+                                <option value="ACCION_PERSONAL" ${type.category === 'ACCION_PERSONAL' ? 'selected' : ''}>Acción de Personal</option>
+                            </select>
+                        </div>
+                    </div>`,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar Cambios',
+                cancelButtonText: 'Cancelar',
+                customClass: {confirmButton: 'btn-swal-success', cancelButton: 'btn-swal-cancel'},
+                preConfirm: () => {
+                    const code = document.getElementById('swal-code').value;
+                    const name = document.getElementById('swal-name').value;
+                    if (!code || !name) return Swal.showValidationMessage('Código y Nombre son obligatorios');
+                    return {
+                        id: type.id,
+                        code: code,
+                        name: name,
+                        category: document.getElementById('swal-cat').value,
+                        regime: this.currentRegime.id
+                    }
+                }
+            });
 
+            if (formValues) {
+                this.updateContractTypeAPI(formValues);
+            }
+        },
+
+        async updateContractTypeAPI(data) {
+            this.loadingContracts = true;
+            const formData = new FormData();
+            formData.append('code', data.code);
+            formData.append('name', data.name);
+            formData.append('contract_type_category', data.category);
+            formData.append('labor_regime', data.regime);
+
+            try {
+                const response = await fetch(`/contract/contract-types/update/${data.id}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showToast('success', result.message);
+                    this.fetchContractTypes(); // Recarga la lista del modal
+                } else {
+                    Swal.fire('Atención', result.message || 'Error al actualizar', 'warning');
+                }
+            } catch (error) {
+                this.showToast('error', 'Error de comunicación');
+            } finally {
+                this.loadingContracts = false;
+            }
+        },
         // --- GESTIÓN ANIDADA (TIPOS DE CONTRATO) ---
         async viewContractTypes(regimeId, regimeName) {
             this.currentRegime = {id: regimeId, name: regimeName};
             this.showContractModal = true;
+            document.body.classList.add('no-scroll');
             this.fetchContractTypes();
         },
 
@@ -199,7 +277,7 @@ const regimeApp = createApp({
                 const data = await response.json();
                 this.contractTypes = data.contract_types;
             } catch (error) {
-                console.error("Error contracts:", error);
+                this.showToast('error', 'No se pudieron cargar los tipos de contrato');
             } finally {
                 this.loadingContracts = false;
             }

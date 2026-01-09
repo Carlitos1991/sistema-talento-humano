@@ -1,16 +1,17 @@
 from django import forms
 from .models import LaborRegime, ContractType
 
+
 class LaborRegimeForm(forms.ModelForm):
     class Meta:
         model = LaborRegime
-        fields = ['code', 'name', 'description', 'is_active']
+        fields = ['code', 'name', 'description']
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control uppercase-input', 'placeholder': 'EJ: LOSEP'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del régimen'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
 
 class ContractTypeForm(forms.ModelForm):
     class Meta:
@@ -20,5 +21,5 @@ class ContractTypeForm(forms.ModelForm):
             'code': forms.TextInput(attrs={'class': 'form-control uppercase-input'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'contract_type_category': forms.Select(attrs={'class': 'form-control'}),
-            'labor_regime': forms.HiddenInput(), # Se asigna automáticamente por contexto
+            'labor_regime': forms.HiddenInput(),  # Se asigna automáticamente por contexto
         }

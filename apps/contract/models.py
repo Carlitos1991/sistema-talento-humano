@@ -16,6 +16,11 @@ class LaborRegime(BaseModel):
     name = models.CharField(verbose_name="Nombre del Régimen", max_length=255)
     description = models.TextField(verbose_name="Descripción", blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        self.code = self.code.upper().strip()
+        self.name = self.name.upper().strip()
+        super().save(*args, **kwargs)
+
     class Meta:
         db_table = 'labor_regime'
         verbose_name = 'Régimen Laboral'
@@ -50,6 +55,11 @@ class ContractType(BaseModel):
         choices=CONTRACT_TYPE_CHOICES,
         default=TYPE_CONTRATO
     )
+
+    def save(self, *args, **kwargs):
+        self.code = self.code.upper().strip()
+        self.name = self.name.upper().strip()
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = 'contract_type'

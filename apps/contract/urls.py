@@ -17,4 +17,15 @@ urlpatterns = [
     path('contract-types/create/', views.ContractTypeCreateView.as_view(), name='contract_type_create'),
     path('contract-types/toggle-status/<int:pk>/', views.ContractTypeToggleStatusView.as_view(),
          name='contract_type_toggle_status'),
+    path('contract-types/update/<int:pk>/', views.ContractTypeUpdateView.as_view(), name='contract_type_update'),
+
+    # Inicios de Gestión
+    path('periods/', views.ManagementPeriodListView.as_view(), name='period_list'),
+    path('periods/partial-table/', views.ManagementPeriodTablePartialView.as_view(), name='period_partial_table'),
+    path('periods/create/', views.ManagementPeriodCreateView.as_view(), name='period_create'),
+
+    # APIs de búsqueda para el formulario
+    path('api/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
+         name='api_validate_employee'),
+    path('api/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(), name='api_budget_lines'),
 ]

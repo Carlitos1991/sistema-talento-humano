@@ -4060,6 +4060,10 @@ textarea.is-valid:focus,
 /* Clases de utilidad adicionales */
 .bg-readonly {
     background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    font-weight: 700 !important;
+    cursor: not-allowed !important;
+    border-color: #e2e8f0 !important;
 }
 
 .text-primary-bold {

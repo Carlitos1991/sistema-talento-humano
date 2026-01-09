@@ -14,25 +14,23 @@
                 <div class="section-card-standard border-left-primary">
                     <div class="form-group mb-3">
                         <label class="form-label font-weight-700">Código</label>
-                        <input type="text" v-model="form.code" class="form-control uppercase-input" required placeholder="EJ: LOSEP">
+                        <input type="text"
+                               v-model="form.code"
+                               class="form-control uppercase-input"
+                               :class="{'bg-readonly': isEdit}"
+                               :readonly="isEdit"
+                               required
+                               placeholder="EJ: LOSEP">
+                        <small v-if="isEdit" class="text-muted italic">El código no puede ser modificado después de la
+                            creación.</small>
                     </div>
                     <div class="form-group mb-3">
                         <label class="form-label font-weight-700">Nombre</label>
-                        <input type="text" v-model="form.name" class="form-control" required>
+                        <input type="text" v-model="form.name" class="form-control" required placeholder="EJ: LOSEP">
                     </div>
                     <div class="form-group">
                         <label class="form-label font-weight-700">Descripción</label>
                         <textarea v-model="form.description" class="form-control" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <div class="alert-info mt-3">
-                    <div class="d-flex align-items-center justify-content-between w-100">
-                        <p class="small mb-0">Estado del Régimen Laboral:</p>
-                        <label class="toggle-switch">
-                            <input type="checkbox" v-model="form.is_active">
-                            <span class="toggle-slider"></span>
-                        </label>
                     </div>
                 </div>
             </div>

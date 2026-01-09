@@ -1,79 +1,119 @@
+<!-- apps/contract/templates/contract/modals/modal_contract_type_list.html -->
 <div v-if="showContractModal" class="modal-overlay" @click.self="closeModal">
     <div class="modal-container-medium shadow-card">
-        <!-- Botón Cerrar -->
+
+        <!-- Botón de Cerrar Absoluto Estilizado -->
         <button type="button" @click="closeModal" class="btn-close-modal-refined" title="Cerrar">
             <i class="fas fa-times"></i>
         </button>
 
-        <!-- Header con Identificación del Régimen -->
-        <div class="modal-header-refined" style="background: linear-gradient(to right, #034d75, #046f9f);">
+        <!-- Header Refinado (Mismo estilo que Horarios) -->
+        <div class="modal-header-refined">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fas fa-list-check"></i>
+                    <i class="fas fa-list-ul"></i>
                 </div>
                 <div>
-                    <h2 class="header-title-main">Tipos de Contrato</h2>
+                    <h2 class="header-title-main">Modalidades de Contratación</h2>
                     <p class="text-white-opacity small mb-0">Régimen: <strong>[[ currentRegime.name ]]</strong></p>
                 </div>
             </div>
-            <!-- Botón para añadir uno nuevo dentro del modal -->
-            <button class="btn btn-create btn-sm mr-5" @click="openCreateContractType" style="height: 35px; font-size: 13px;">
-                <i class="fas fa-plus"></i> AÑADIR TIPO
-            </button>
+
+            <!-- Botón Añadir integrado en el Header (Espaciado para no chocar con la X) -->
+            <div style="margin-right: 3.5rem;">
+                <button type="button" class="btn-create" @click="openCreateContractType"
+                        style="height: 38px; font-size: 13px; padding: 0 15px; border: 2px solid rgba(255,255,255,0.2);">
+                    <i class="fas fa-plus-circle"></i> AÑADIR NUEVO TIPO
+                </button>
+            </div>
         </div>
 
+        <!-- Cuerpo con Scroll y Estilos de Tarjeta -->
         <div class="modal-body-scrolled">
-            <!-- Tabla de Tipos de Contrato -->
-            <div class="section-card-standard">
-                <div v-if="loadingContracts" class="text-center py-5">
-                    <i class="fas fa-circle-notch fa-spin fa-2x text-primary"></i>
-                    <p class="mt-2 text-muted">Cargando modalidades...</p>
+
+            <!-- Card Estándar para la Tabla -->
+            <div class="section-card-standard border-left-primary">
+                <div class="section-title">
+                    <i class="fas fa-file-contract text-primary"></i> MODALIDADES REGISTRADAS
                 </div>
 
-                <table v-else class="table-modern">
-                    <thead>
+                <!-- Estado de Carga -->
+                <div v-if="loadingContracts" class="text-center py-5">
+                    <i class="fas fa-circle-notch fa-spin fa-3x text-primary" style="opacity: 0.5;"></i>
+                    <p class="mt-3 text-muted font-weight-700">Sincronizando datos...</p>
+                </div>
+
+                <!-- Tabla Moderna -->
+                <div v-else class="table-container" style="box-shadow: none; border: 1px solid #edf2f7;">
+                    <table class="table-modern">
+                        <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Nombre de la Modalidad</th>
-                            <th>Categoría</th>
-                            <th>Estado</th>
-                            <th class="actions">Acciones</th>
+                            <th><i class="fas fa-code header-icon"></i> Código</th>
+                            <th><i class="fas fa-font header-icon"></i> Nombre de la Modalidad</th>
+                            <th><i class="fas fa-tag header-icon"></i> Categoría</th>
+                            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+                            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
                         </tr>
-                    </thead>
-                    <tbody>
+                        </thead>
+                        <tbody>
                         <tr v-for="type in contractTypes" :key="type.id">
-                            <td><code class="font-weight-700">[[ type.code ]]</code></td>
-                            <td>[[ type.name ]]</td>
+                            <td><code class="text-primary font-weight-800" style="font-size: 0.9rem;">[[ type.code
+                                ]]</code></td>
+                            <td class="font-weight-600">[[ type.name ]]</td>
                             <td>
-                                <span class="status-badge" :class="type.category === 'CONTRATO' ? 'ocupada' : 'concurso'">
-                                    [[ type.category_display ]]
-                                </span>
+                                    <span class="status-badge"
+                                          :class="type.category === 'CONTRATO' ? 'ocupada' : 'concurso'">
+                                        <i class="fas mr-1"
+                                           :class="type.category === 'CONTRATO' ? 'fa-file-signature' : 'fa-user-tie'"></i>
+                                        [[ type.category_display ]]
+                                    </span>
                             </td>
                             <td>
-                                <span class="status-badge" :class="type.is_active ? 'active' : 'inactive'">
-                                    [[ type.is_active ? 'Activo' : 'Inactivo' ]]
-                                </span>
+                                    <span class="status-badge" :class="type.is_active ? 'active' : 'inactive'">
+                                        [[ type.is_active ? 'ACTIVO' : 'INACTIVO' ]]
+                                    </span>
                             </td>
                             <td class="actions">
                                 <div class="actions-wrapper">
-                                    <button class="btn-views-action btn-sm" @click="editContractType(type)">
-                                        <i class="fas fa-pen"></i>
+                                    <button class="btn-views-action" @click="editContractType(type)" title="Editar">
+                                        <i class="fas fa-pen-to-square"></i>
                                     </button>
                                     <button :class="type.is_active ? 'btn-delete-action' : 'btn-create-action'"
-                                            class="btn-sm" @click="toggleContractTypeStatus(type.id)">
+                                            @click="toggleContractTypeStatus(type.id)"
+                                            :title="type.is_active ? 'Desactivar' : 'Activar'">
                                         <i class="fas" :class="type.is_active ? 'fa-eye-slash' : 'fa-eye'"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
+
+                        <!-- Empty State -->
                         <tr v-if="contractTypes.length === 0">
-                            <td colspan="5" class="text-center py-4 text-muted italic">
-                                No hay tipos de contrato definidos para este régimen.
+                            <td colspan="5" class="text-center py-5">
+                                <div class="no-results-content">
+                                    <i class="fas fa-folder-open no-results-icon" style="font-size: 3rem;"></i>
+                                    <p class="no-results-text">No existen modalidades para este régimen.</p>
+                                </div>
                             </td>
                         </tr>
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <!-- Alerta Informativa (Reutilizando clase ya creada) -->
+            <div class="alert-info mt-3">
+                <i class="fas fa-info-circle mr-2"></i>
+                <p class="small mb-0">Estas modalidades estarán disponibles al crear nuevos <strong>Inicios de
+                    Gestión</strong> bajo el régimen [[ currentRegime.name ]].</p>
+            </div>
+        </div>
+
+        <!-- Footer Refinado -->
+        <div class="modal-footer-fixed">
+            <button type="button" @click="closeModal" class="btn-cancel" style="min-width: 150px;">
+                <i class="fas fa-chevron-left"></i> REGRESAR
+            </button>
         </div>
     </div>
 </div>

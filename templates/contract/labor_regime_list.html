@@ -3,52 +3,79 @@
 {% block title %}Regímenes Laborales | SIGETH{% endblock %}
 
 {% block content %}
-<div id="regime-app" v-cloak 
-     data-total="{{ stats_total|default:0 }}" 
-     data-active="{{ stats_active|default:0 }}" 
-     data-inactive="{{ stats_inactive|default:0 }}">
-    
-    <div class="header-card">
-        <div>
-            <h1><i class="fa-solid fa-briefcase mr-2"></i> Regímenes Laborales</h1>
-            <p>Administración de regímenes laborales y normativa institucional.</p>
-        </div>
-        <button class="btn-create" @click="openCreateModal">
-            <i class="fas fa-plus"></i> NUEVO RÉGIMEN
-        </button>
-    </div>
+    <div id="regime-app" v-cloak
+         data-total="{{ stats_total|default:0 }}"
+         data-active="{{ stats_active|default:0 }}"
+         data-inactive="{{ stats_inactive|default:0 }}">
 
-    <div class="stats-row">
-        <div class="stat-card color-one" @click="filterByStatus('')" :class="{'opacity-low': filters.is_active !== ''}">
-            <div class="stat-left"><h3>TOTAL</h3><div class="number">[[ stats.total ]]</div></div>
-            <i class="fas fa-layer-group stat-icon"></i>
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-briefcase mr-2"></i> Regímenes Laborales</h1>
+                <p>Administración de regímenes laborales y normativa institucional.</p>
+            </div>
+            <button class="btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> NUEVO RÉGIMEN
+            </button>
         </div>
-        <div class="stat-card color-two" @click="filterByStatus('true')" :class="{'opacity-low': filters.is_active !== 'true'}">
-            <div class="stat-left"><h3>ACTIVOS</h3><div class="number">[[ stats.active ]]</div></div>
-            <i class="fas fa-check-circle stat-icon"></i>
-        </div>
-        <div class="stat-card color-three" @click="filterByStatus('false')" :class="{'opacity-low': filters.is_active !== 'false'}">
-            <div class="stat-left"><h3>INACTIVOS</h3><div class="number">[[ stats.inactive ]]</div></div>
-            <i class="fas fa-times-circle stat-icon"></i>
-        </div>
-    </div>
 
-    <div class="table-container mt-3">
-        <div class="table-controls p-3">
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" v-model="filters.name" @input="debouncedSearch" class="input-field" placeholder="Buscar régimen...">
+        <div class="stats-row">
+            <div class="stat-card color-one" @click="filterByStatus('')"
+                 :class="{'opacity-low': filters.is_active !== ''}">
+                <div class="stat-left"><h3>TOTAL</h3>
+                    <div class="number">[[ stats.total ]]</div>
+                </div>
+                <i class="fas fa-layer-group stat-icon"></i>
+            </div>
+            <div class="stat-card color-two" @click="filterByStatus('true')"
+                 :class="{'opacity-low': filters.is_active !== 'true'}">
+                <div class="stat-left"><h3>ACTIVOS</h3>
+                    <div class="number">[[ stats.active ]]</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+            <div class="stat-card color-three" @click="filterByStatus('false')"
+                 :class="{'opacity-low': filters.is_active !== 'false'}">
+                <div class="stat-left"><h3>INACTIVOS</h3>
+                    <div class="number">[[ stats.inactive ]]</div>
+                </div>
+                <i class="fas fa-times-circle stat-icon"></i>
             </div>
         </div>
-        <div id="table-content-wrapper">
-            {% include 'contract/partials/partial_labor_regime_table.html' %}
-        </div>
-    </div>
 
-    {% include 'contract/modals/modal_labor_regime_form.html' %}
-</div>
+        <div class="table-app">
+            <div class="content-table">
+                <div class="table-controls p-3">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" v-model="filters.name" @input="debouncedSearch" class="input-field"
+                               placeholder="Buscar régimen...">
+                    </div>
+                </div>
+                <div id="table-content-wrapper">
+                    {% include 'contract/partials/partial_labor_regime_table.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% include 'contract/modals/modal_labor_regime_form.html' %}
+        {% include 'contract/modals/modal_contract_type_list.html' %}
+    </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/labor_regime.js' %}"></script>
+    <script src="{% static 'js/labor_regime.js' %}"></script>
 {% endblock %}

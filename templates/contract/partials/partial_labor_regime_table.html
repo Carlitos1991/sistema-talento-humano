@@ -1,5 +1,7 @@
-<table class="table-modern">
-    <thead>
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
         <tr>
             <th>Código</th>
             <th>Nombre del Régimen</th>
@@ -7,34 +9,46 @@
             <th>Estado</th>
             <th class="actions">Acciones</th>
         </tr>
-    </thead>
-    <tbody>
+        </thead>
+        <tbody>
         {% for regime in regimes %}
-        <tr>
-            <td><strong>{{ regime.code }}</strong></td>
-            <td>{{ regime.name }}</td>
-            <td class="text-center">
-                <button class="btn-list-action" onclick="regimeInstance.viewContractTypes({{ regime.id }}, '{{ regime.name }}')">
-                    {{ regime.contract_types.count }}
-                </button>
-            </td>
-            <td>
+            <tr>
+                <td><strong>{{ regime.code }}</strong></td>
+                <td>{{ regime.name }}</td>
+                <td class="text-center">
+                    <button class="btn-list-action"
+                            onclick="regimeInstance.viewContractTypes({{ regime.id }}, '{{ regime.name }}')">
+                        {{ regime.contract_types.count }}
+                    </button>
+                </td>
+                <td>
                 <span class="status-badge {% if regime.is_active %}active{% else %}inactive{% endif %}">
                     {{ regime.is_active|yesno:"Activo,Inactivo" }}
                 </span>
-            </td>
-            <td class="actions">
-                <div class="actions-wrapper">
-                    <button class="btn-views-action" onclick="regimeInstance.openEditModal({{ regime.id }})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="{% if regime.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                            onclick="regimeInstance.toggleStatus({{ regime.id }}, {{ regime.is_active|yesno:'true,false' }})">
-                        <i class="fas {% if regime.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <button class="btn-views-action" onclick="regimeInstance.openEditModal({{ regime.id }})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="{% if regime.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                onclick="regimeInstance.toggleStatus({{ regime.id }}, {{ regime.is_active|yesno:'true,false' }})">
+                            <i class="fas {% if regime.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="no-results-content">
+                        <i class="fas fa-calendar-times no-results-icon"></i>
+                        <p class="no-results-text">No se encontraron horarios registrados.</p>
+                    </div>
+                </td>
+            </tr>
         {% endfor %}
-    </tbody>
-</table>
+
+        </tbody>
+    </table>
+</div>
