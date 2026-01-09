@@ -82,10 +82,38 @@
                 </ul>
             </li>
         {% endif %}
+        {% if perms.contract.view_laborregime or perms.contract.view_managementperiod %}
+            <li class="has-submenu">
+                <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span class="menu-text">Gestión Laboral</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    {% if perms.contract.view_managementperiod %}
+                        <li>
+                            <a href="#">
+                                <i class="fa-solid fa-file-signature"></i>
+                                <span class="menu-text">Inicios de Gestión</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.contract.view_laborregime %}
+                        <li>
+                            <a href="{% url 'contract:regime_list' %}"
+                               class="{% if request.resolver_match.url_name == 'regime_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-briefcase"></i>
+                                <span class="menu-text">Regímenes Laborales</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations %}
             <li class="has-submenu">
                 <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
-                   <i class="fa-regular fa-clock"></i>
+                    <i class="fa-regular fa-clock"></i>
                     <span class="menu-text">Horarios</span>
                     <i class="fa-solid fa-chevron-right chevron-icon"></i>
                 </a>

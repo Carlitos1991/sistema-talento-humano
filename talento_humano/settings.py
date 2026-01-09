@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'institution',
     'budget',
     'schedule',
-    'contract.apps.ContractConfig'
+    'contract'
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

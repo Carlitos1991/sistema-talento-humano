@@ -1,0 +1,79 @@
+<div v-if="showContractModal" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-container-medium shadow-card">
+        <!-- Botón Cerrar -->
+        <button type="button" @click="closeModal" class="btn-close-modal-refined" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Header con Identificación del Régimen -->
+        <div class="modal-header-refined" style="background: linear-gradient(to right, #034d75, #046f9f);">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-list-check"></i>
+                </div>
+                <div>
+                    <h2 class="header-title-main">Tipos de Contrato</h2>
+                    <p class="text-white-opacity small mb-0">Régimen: <strong>[[ currentRegime.name ]]</strong></p>
+                </div>
+            </div>
+            <!-- Botón para añadir uno nuevo dentro del modal -->
+            <button class="btn btn-create btn-sm mr-5" @click="openCreateContractType" style="height: 35px; font-size: 13px;">
+                <i class="fas fa-plus"></i> AÑADIR TIPO
+            </button>
+        </div>
+
+        <div class="modal-body-scrolled">
+            <!-- Tabla de Tipos de Contrato -->
+            <div class="section-card-standard">
+                <div v-if="loadingContracts" class="text-center py-5">
+                    <i class="fas fa-circle-notch fa-spin fa-2x text-primary"></i>
+                    <p class="mt-2 text-muted">Cargando modalidades...</p>
+                </div>
+
+                <table v-else class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre de la Modalidad</th>
+                            <th>Categoría</th>
+                            <th>Estado</th>
+                            <th class="actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="type in contractTypes" :key="type.id">
+                            <td><code class="font-weight-700">[[ type.code ]]</code></td>
+                            <td>[[ type.name ]]</td>
+                            <td>
+                                <span class="status-badge" :class="type.category === 'CONTRATO' ? 'ocupada' : 'concurso'">
+                                    [[ type.category_display ]]
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge" :class="type.is_active ? 'active' : 'inactive'">
+                                    [[ type.is_active ? 'Activo' : 'Inactivo' ]]
+                                </span>
+                            </td>
+                            <td class="actions">
+                                <div class="actions-wrapper">
+                                    <button class="btn-views-action btn-sm" @click="editContractType(type)">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button :class="type.is_active ? 'btn-delete-action' : 'btn-create-action'"
+                                            class="btn-sm" @click="toggleContractTypeStatus(type.id)">
+                                        <i class="fas" :class="type.is_active ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="contractTypes.length === 0">
+                            <td colspan="5" class="text-center py-4 text-muted italic">
+                                No hay tipos de contrato definidos para este régimen.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
