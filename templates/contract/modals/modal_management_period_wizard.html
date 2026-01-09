@@ -1,0 +1,175 @@
+{% load static %}
+<div v-if="showWizard" class="modal-overlay" v-cloak>
+    <div class="modal-container-xl">
+        <!-- HEADER -->
+        <div class="modal-header-medium modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-file-signature"></i></div>
+                <h3 class="modal-title text-white mb-0">
+                    [[ isEdit ? 'Editar Gestión' : 'Nuevo Inicio de Gestión' ]]
+                </h3>
+            </div>
+
+            <!-- STEPPER -->
+            <div class="wizard-stepper-container ms-auto me-5">
+                <div class="wizard-step" :class="{'active': step === 1, 'completed': step > 1}">
+                    <div class="step-number">1</div>
+                    <span class="step-label">MODALIDAD</span>
+                </div>
+                <div class="wizard-step" :class="{'active': step === 2, 'completed': step > 2}">
+                    <div class="step-number">2</div>
+                    <span class="step-label">EMPLEADO</span>
+                </div>
+                <div class="wizard-step" :class="{'active': step === 3, 'completed': step > 3}">
+                    <div class="step-number">3</div>
+                    <span class="step-label">DATOS</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close-modal text-white-opacity" @click="closeWizard">&times;</button>
+        </div>
+
+        <form id="wizardForm" @submit.prevent="saveManagementPeriod">
+            {% csrf_token %}
+
+            <div class="modal-body-content modal-body-custom">
+
+                <!-- PASO 1: MODALIDAD (CON SCROLL CONTROLADO) -->
+                <div v-if="step === 1" class="animate__animated animate__fadeIn">
+                    <div style="max-height: 55vh; overflow-y: auto; padding-right: 10px;">
+                        {% for regime in regimes %}
+                            <div class="form-section-card">
+                                <h6 class="section-title"><i class="fas fa-briefcase"></i> Régimen: {{ regime.name }}
+                                </h6>
+                                <div class="contract-cards-grid">
+                                    {% for type in regime.contract_types.all %}
+                                        <div class="contract-type-card"
+                                             @click="selectContractType({{ type.id }}, '{{ type.name }}')">
+                                            <i class="fas {% if type.contract_type_category == 'CONTRATO' %}fa-file-contract{% else %}fa-user-check{% endif %}"></i>
+                                            <span>{{ type.name }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PASO 2: BUSCADOR -->
+                <div v-if="step === 2" class="animate__animated animate__fadeIn">
+                    <div class="form-section-card py-5 text-center">
+                        <div class="avatar-placeholder-md mx-auto mb-4"><i class="fas fa-id-card-alt fa-2x"></i></div>
+                        <h4 class="font-weight-800">Validación de Identidad</h4>
+                        <p class="text-muted mb-4">Ingrese la cédula para heredar la partida presupuestaria.</p>
+                        <div class="search-box mx-auto" style="max-width: 450px;">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" v-model="searchDoc" class="form-control with-icon"
+                                   placeholder="Cédula..." @keyup.enter="validateEmployee">
+                            <button type="button" class="btn-search" @click="validateEmployee" :disabled="loading">
+                                <i v-if="loading" class="fas fa-spinner fa-spin"></i><span v-else>VALIDAR</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 3: DATOS FINALES (LAYOUT REFINADO) -->
+                <div v-if="step === 3" class="animate__animated animate__fadeIn">
+
+                    <!-- BANNER EMPLEADO + PARTIDA -->
+                    <div class="inherited-info-card">
+                        <div class="d-flex align-items-center w-100">
+                            <img :src="selectedEmployee.photo || '{% static 'img/avatar-placeholder.png' %}'"
+                                 class="person-avatar me-3">
+                            <div class="employee-main-data">
+                                <h4 class="mb-1 text-white font-weight-800">[[ selectedEmployee.full_name ]]</h4>
+                                <span class="status-badge general">[[ selectedContractType.name ]]</span>
+                            </div>
+                            <!-- Alineado a la derecha -->
+                            <div class="budget-inherited-box ms-auto" v-if="selectedEmployee.budget_line">
+                                <small class="text-white-opacity">PARTIDA HEREDADA</small>
+                                <strong class="text-accent">[[ selectedEmployee.budget_line.number ]]</strong>
+                                <span class="d-block small text-white-opacity">[[ selectedEmployee.budget_line.position ]]</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIONES DE FORMULARIO -->
+                    <div class="form-section-card mt-4">
+                        <h6 class="section-title"><i class="fas fa-sitemap"></i> Ubicación y Documentación</h6>
+                        <div class="grid-3-cols">
+                            <div class="form-group">
+                                <label class="form-label font-weight-700">Unidad Administrativa</label>
+                                <select v-model="form.administrative_unit"
+                                        name="administrative_unit"
+                                        id="unit-select"
+                                        class="form-control select2-vue">
+                                    <option value=""></option> <!-- Dejar vacío para el placeholder de Select2 -->
+                                    {% for unit in units %}
+                                        <option value="{{ unit.id }}">{{ unit.name|upper }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Memo Necesidad</label>
+                                <input type="text" v-model="form.institutional_need_memo"
+                                       class="form-control uppercase-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Certificación Presup.</label>
+                                <input type="text" v-model="form.budget_certification"
+                                       class="form-control uppercase-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Vigencia y Jornada</h6>
+                        <div class="grid-3-cols">
+                            <div class="form-group">
+                                <label class="form-label">Fecha Inicio</label>
+                                <input type="date" v-model="form.start_date" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha Fin (Opcional)</label>
+                                <input type="date" v-model="form.end_date" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Horario Institucional</label>
+                                <select v-model="form.schedule" name="schedule" class="form-control select2-vue">
+                                    <option value="">Seleccione...</option>
+                                    {% for sch in schedules %}
+                                        <option value="{{ sch.id }}">{{ sch.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid-2-cols mt-3">
+                            <div class="form-group">
+                                <label class="form-label">Lugar de Trabajo</label>
+                                <input type="text" v-model="form.workplace" class="form-control"
+                                       placeholder="Ej: Piso 2">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Número de Documento / Acción</label>
+                                <input type="text" v-model="form.document_number" class="form-control uppercase-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
+                        <textarea v-model="form.job_functions" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" v-if="step > 1" class="btn-cancel" @click="step--">ANTERIOR</button>
+                <button type="button" v-if="step === 1" class="btn-cancel" @click="closeWizard">CANCELAR</button>
+                <button type="submit" v-if="step === 3" class="btn-save shadow-md" :disabled="loading">
+                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-check-double"></i> FINALIZAR GESTIÓN
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

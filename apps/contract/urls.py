@@ -28,4 +28,9 @@ urlpatterns = [
     path('api/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
          name='api_validate_employee'),
     path('api/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(), name='api_budget_lines'),
+    path('periods/terminate/<int:pk>/', views.ManagementPeriodTerminateView.as_view(), name='period_terminate'),
+    path('periods/sign/<int:pk>/', views.ManagementPeriodSignView.as_view(), name='period_sign'),
+    path('periods/detail/<int:pk>/', views.ManagementPeriodDetailAPIView.as_view(), name='period_detail_api'),
+    path('periods/update-partial/<int:pk>/', views.ManagementPeriodPartialUpdateView.as_view(),
+         name='period_update_partial'),
 ]

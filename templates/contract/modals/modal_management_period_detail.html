@@ -1,0 +1,71 @@
+{% load static %}
+<div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal" v-cloak>
+    <div class="modal-container-xl shadow-card">
+        <button type="button" @click="closeDetailModal" class="btn-close-modal-refined"><i class="fas fa-times"></i></button>
+
+        <div class="modal-header-refined" style="background: linear-gradient(to right, #1e293b, #334155);">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-folder-open"></i></div>
+                <div>
+                    <h2 class="header-title-main">Expediente de Gestión Laboral</h2>
+                    <p class="text-white-opacity small mb-0">Documento: <strong>[[ selectedPeriod.document_number ]]</strong></p>
+                </div>
+            </div>
+            <div class="ms-auto me-5">
+                <!-- BOTÓN EDITAR DENTRO DEL MODAL -->
+                <button class="btn-views-action" @click="editPeriodFields" title="Editar campos administrativos">
+                    <i class="fas fa-edit"></i> EDITAR DATOS
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body-scrolled">
+            <!-- Banner Superior: Empleado y Estado -->
+            <div class="inherited-info-card mb-4">
+                <div class="d-flex align-items-center w-100">
+                    <img :src="selectedPeriod.employee_photo || '{% static 'img/avatar-placeholder.png' %}'" class="person-avatar me-3">
+                    <div class="employee-main-data">
+                        <h4 class="mb-1 text-white font-weight-800">[[ selectedPeriod.employee_name ]]</h4>
+                        <span class="status-badge" :class="selectedPeriod.status_code === 'FIRMADO' ? 'firmado' : 'sin-firmar'">
+                            [[ selectedPeriod.status_name ]]
+                        </span>
+                    </div>
+                    <div class="budget-inherited-box ms-auto">
+                        <small class="text-white-opacity">PARTIDA VINCULADA</small>
+                        <strong class="text-accent">[[ selectedPeriod.budget_line_number ]]</strong>
+                        <span class="d-block small text-white-opacity">[[ selectedPeriod.position_name ]]</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2-cols">
+                <!-- Columna 1: Datos Administrativos -->
+                <div class="section-card-standard border-left-primary">
+                    <h6 class="section-title"><i class="fas fa-file-invoice text-primary"></i> Información de Respaldo</h6>
+                    <div class="audit-data-row"><span>Unidad:</span> <strong>[[ selectedPeriod.unit_name ]]</strong></div>
+                    <div class="audit-data-row"><span>Memo Necesidad:</span> <strong>[[ selectedPeriod.institutional_need_memo ]]</strong></div>
+                    <div class="audit-data-row"><span>Cert. Presupuestaria:</span> <strong>[[ selectedPeriod.budget_certification ]]</strong></div>
+                    <div class="audit-data-row"><span>Lugar de Trabajo:</span> <strong>[[ selectedPeriod.workplace ]]</strong></div>
+                </div>
+
+                <!-- Columna 2: Vigencia y Horario -->
+                <div class="section-card-standard">
+                    <h6 class="section-title"><i class="fas fa-calendar-alt text-primary"></i> Vigencia y Jornada</h6>
+                    <div class="audit-data-row"><span>Tipo Contrato:</span> <strong>[[ selectedPeriod.contract_type_name ]]</strong></div>
+                    <div class="audit-data-row"><span>Fecha Inicio:</span> <strong>[[ selectedPeriod.start_date_formatted ]]</strong></div>
+                    <div class="audit-data-row"><span>Fecha Fin:</span> <strong>[[ selectedPeriod.end_date_formatted || 'INDEFINIDO' ]]</strong></div>
+                    <div class="audit-data-row"><span>Horario:</span> <strong>[[ selectedPeriod.schedule_name ]]</strong></div>
+                </div>
+            </div>
+
+            <div class="section-card-standard mt-3">
+                <h6 class="section-title"><i class="fas fa-tasks text-primary"></i> Funciones Asignadas</h6>
+                <p class="small text-muted p-2 bg-light rounded">[[ selectedPeriod.job_functions || 'No se han descrito funciones.' ]]</p>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" @click="closeDetailModal" class="btn-cancel">CERRAR EXPEDIENTE</button>
+        </div>
+    </div>
+</div>

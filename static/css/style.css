@@ -1254,7 +1254,7 @@ select.input-field {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     border-left: 5px solid;
     cursor: pointer;
-     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card:hover {
@@ -1540,8 +1540,8 @@ th a.active .sort-icon {
     align-items: center;
     gap: 6px;
     padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
+    border-radius: 25px;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     border: 1px solid transparent;
@@ -4069,4 +4069,250 @@ textarea.is-valid:focus,
 .text-primary-bold {
     color: var(--primary-color);
     font-weight: 800;
+}
+
+/* --- WIZARD STEPPER --- */
+.wizard-stepper-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    padding: 0.5rem 0;
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    opacity: 0.4;
+    transition: all 0.3s ease;
+}
+
+.wizard-step.active {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.wizard-step.completed {
+    opacity: 0.8;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid white;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+
+.wizard-step.active .step-number {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.wizard-step.completed .step-number {
+    background: #white;
+    color: var(--primary-color);
+    background: white;
+}
+
+.step-label {
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* --- SELECCIÓN DE MODALIDAD (PASO 1) --- */
+.contract-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
+    padding: 1rem 0;
+}
+
+.contract-type-card {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.contract-type-card i {
+    font-size: 2.5rem;
+    color: #94a3b8;
+    transition: color 0.3s;
+}
+
+.contract-type-card span {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--primary-color);
+    line-height: 1.2;
+}
+
+.contract-type-card:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-soft);
+}
+
+.contract-type-card:hover i {
+    color: var(--accent-color);
+}
+
+.regime-group-title {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--secondary-color);
+    padding: 1rem 0 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.employee-main-data {
+    margin-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centrado vertical interno del texto */
+}
+
+.budget-inherited-box {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.1);
+    border-left: 3px solid var(--accent-color);
+    padding: 8px 15px;
+    text-align: right;
+}
+
+.budget-inherited-box small {
+    display: block;
+    font-size: 0.65rem;
+    opacity: 0.7;
+}
+
+.budget-inherited-box strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+}
+
+.budget-inherited-box span {
+    font-size: 0.75rem;
+}
+
+/* Wizard Stepper Bullet */
+.wizard-steps-indicator {
+    display: flex;
+    gap: 10px;
+}
+
+.step-bullet {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+    border: 2px solid transparent;
+}
+
+.step-bullet.active {
+    background: var(--accent-color);
+    border-color: white;
+}
+
+.step-bullet.completed {
+    background: white;
+    color: var(--primary-color);
+}
+
+.modal-body-custom .select2-container--default .select2-selection--single {
+    height: 45px;
+    display: flex;
+    align-items: center;
+    border-color: #cbd5e1;
+}
+
+.modal-body-custom .select2-container {
+    margin-bottom: 5px;
+}
+
+/* --- AJUSTES STEP 3 WIZARD --- */
+
+/* 1. Espacio entre el banner del empleado y la siguiente sección */
+.inherited-info-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    color: white;
+    display: flex; /* Contenedor Principal Flex */
+    align-items: center; /* Centrado vertical de todos los hijos */
+    margin-bottom: 2.5rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+/* 2. Alineación a la derecha del bloque de partida */
+.budget-inherited-box {
+    text-align: right; /* Alineación interna del texto */
+    padding: 5px 0 5px 20px;
+    border-left: 3px solid var(--accent-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 200px;
+}
+
+.budget-inherited-box strong {
+    font-size: 1.4rem;
+    color: var(--accent-color);
+    line-height: 1.2;
+    font-family: 'Courier New', monospace; /* Estilo código presupuestario */
+}
+
+/* Rojo para SIN FIRMAR */
+.status-badge.sin-firmar {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5 !important;
+}
+
+.status-badge.firmado {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid #bfdbfe !important;
+}
+
+.vigencia-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.vigencia-box strong {
+    color: var(--primary-color);
 }

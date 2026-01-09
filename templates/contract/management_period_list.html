@@ -1,10 +1,66 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Inicios de Gestión | SIGETH{% endblock %}
 
-</body>
-</html>
+{% block content %}
+    <div id="period-app" v-cloak>
+        <!-- Header -->
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-file-signature"></i> Inicios de Gestión</h1>
+                <p>Control de contratos y acciones de personal del talento humano institucional.</p>
+            </div>
+            <button class="btn-create" @click="startWizard">
+                <i class="fas fa-plus"></i> NUEVO INICIO
+            </button>
+        </div>
+
+        <!-- Stats Row Dinámico -->
+        <div class="stats-row">
+            <div class="stat-card color-one">
+                <div class="stat-left"><h3>TOTAL ACTIVOS</h3>
+                    <div class="number">{{ total_active }}</div>
+                </div>
+                <i class="fas fa-users-check stat-icon"></i>
+            </div>
+            <div class="stat-card color-two">
+                <div class="stat-left"><h3>LOSEP</h3>
+                    <div class="number">{{ count_losep }}</div>
+                </div>
+                <i class="fas fa-gavel stat-icon"></i>
+            </div>
+            <div class="stat-card color-orange">
+                <div class="stat-left"><h3>CÓD. TRABAJO</h3>
+                    <div class="number">{{ count_ct }}</div>
+                </div>
+                <i class="fas fa-hammer stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- Tabla de Inicios -->
+        <div class="table-container mt-3">
+            <div id="table-content-wrapper">
+                {% include 'contract/partials/partial_management_period_table.html' %}
+            </div>
+        </div>
+
+        <!-- EL GRAN WIZARD MODAL -->
+        {% include 'contract/modals/modal_management_period_wizard.html' %}
+        {% include 'contract/modals/modal_management_period_detail.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/management_period.js' %}"></script>
+    <script>
+        /**
+         * Pasamos los horarios de la base de datos (Django)
+         * a una variable global que el archivo .js pueda leer
+         */
+        window.allSchedules = [
+            {% for s in schedules %}
+                {id: {{ s.id }}, name: "{{ s.name }}"},
+            {% endfor %}
+        ];
+    </script>
+{% endblock %}

@@ -1,10 +1,18 @@
+import traceback
+
+from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 from django.views.generic import ListView, View
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
+from budget.models import BudgetModificationHistory
+from core.models import CatalogItem
+from employee.models import Employee
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
 from .models import LaborRegime, ContractType, ManagementPeriod
@@ -259,25 +267,324 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
 
 
 class ValidateEmployeeAPIView(LoginRequiredMixin, View):
-    """Busca un empleado y verifica si tiene contratos activos."""
-
     def get(self, request, doc_number):
-        from apps.employee.models import Employee
         try:
-            employee = Employee.objects.select_related('person').get(
-                person__document_number=doc_number, is_active=True
-            )
-            # Verificar si ya tiene un periodo activo
-            has_active = ManagementPeriod.objects.filter(employee=employee, is_active=True).exists()
+            # 1. Buscar el empleado
+            employee = Employee.objects.select_related('person').filter(
+                person__document_number=doc_number,
+                is_active=True
+            ).first()
+
+            if not employee:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Cédula no registrada como empleado activo.'
+                })
+
+            # 2. VALIDACIÓN DE PARTIDA ASIGNADA PREVIAMENTE
+            budget_line = employee.current_budget_line.first()
+            if not budget_line:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Bloqueo: El empleado no tiene una partida presupuestaria asignada. Debe asignarle una en el módulo de Partidas antes de continuar.'
+                })
+
+            # 3. Verificar si ya tiene contrato formal activo
+            has_active = ManagementPeriod.objects.filter(
+                employee=employee, status__code='ACTIVO'
+            ).exists()
+
+            if has_active:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Atención: El empleado ya posee un Inicio de Gestión (Contrato) vigente.'
+                })
 
             return JsonResponse({
                 'success': True,
-                'has_active_contract': has_active,
                 'employee': {
                     'id': employee.id,
                     'full_name': employee.person.full_name,
                     'photo': employee.person.photo.url if employee.person.photo else None,
+                    'budget_line': {
+                        'id': budget_line.id,
+                        'number': budget_line.number_individual or budget_line.code,
+                        'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
+                    }
                 }
             })
-        except Employee.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Empleado no encontrado o inactivo.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
+    def get(self, request, unit_id):
+        # Buscamos partidas que estén LIBRES para esa unidad
+        from budget.models import BudgetLine
+
+        # Ajusta este filtro según cómo vinculaste la Unidad con la Partida
+        lines = BudgetLine.objects.filter(
+            # Ejemplo: Si la partida tiene relación con la unidad o vía actividad
+            status_item__code='LIBRE',
+            is_active=True
+        ).select_related('position_item')
+
+        data = [{
+            'id': l.id,
+            'number_individual': l.number_individual or l.code,
+            'position_name': l.position_item.name if l.position_item else 'SIN CARGO',
+            'remuneration': str(l.remuneration)
+        } for l in lines]
+
+        return JsonResponse({'success': True, 'lines': data})
+
+
+class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
+    def get(self, request):
+        search = request.GET.get('name', '')
+        status = request.GET.get('status', '')  # Activos, Finalizados, etc.
+
+        # Queryset optimizado con select_related para evitar el problema N+1
+        queryset = ManagementPeriod.objects.select_related(
+            'employee__person',
+            'budget_line__position_item',
+            'contract_type__labor_regime',
+            'administrative_unit',
+            'status'
+        ).all().order_by('-start_date')
+
+        # Filtros lógicos
+        if search:
+            queryset = queryset.filter(
+                Q(employee__person__first_name__icontains=search) |
+                Q(employee__person__last_name__icontains=search) |
+                Q(employee__person__document_number__icontains=search) |
+                Q(document_number__icontains=search)
+            )
+
+        if status:
+            queryset = queryset.filter(status__code=status)
+
+        # Estadísticas para actualizar las cards reactivamente
+        all_qs = ManagementPeriod.objects.all()
+        stats = {
+            'total': all_qs.count(),
+            'active': all_qs.filter(status__code='ACTIVO').count(),
+            'losep': all_qs.filter(contract_type__labor_regime__code='LOSEP', status__code='ACTIVO').count(),
+            'ct': all_qs.filter(contract_type__labor_regime__code='CT', status__code='ACTIVO').count(),
+        }
+
+        html = render_to_string('contract/partials/partial_management_period_table.html', {
+            'periods': queryset[:50]  # Limitamos para performance
+        }, request=request)
+
+        return JsonResponse({'table_html': html, 'stats': stats})
+
+
+class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Finaliza un contrato y libera automáticamente la partida presupuestaria.
+    """
+    permission_required = 'contract.change_managementperiod'
+
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        reason = request.POST.get('reason', 'Finalización de gestión / Desvinculación')
+
+        try:
+            with transaction.atomic():
+                # 1. Obtener estados de catálogos
+                finalizado_status = CatalogItem.objects.get(catalog__code='CONTRACT_STATUS', code='FINALIZADO')
+                libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
+
+                # 2. Finalizar el Periodo de Gestión
+                period.status = finalizado_status
+                if not period.end_date:
+                    period.end_date = timezone.now().date()
+                period.updated_by = request.user
+                period.save()
+
+                # 3. Liberar la Partida Presupuestaria vinculada
+                budget_line = period.budget_line
+                old_status = budget_line.status_item.name
+
+                budget_line.status_item = libre_status
+                budget_line.current_employee = None  # La partida queda vacante
+                budget_line.updated_by = request.user
+                budget_line.save()
+
+                # 4. Registrar en el Historial de la Partida (Auditoría Presupuestaria)
+                BudgetModificationHistory.objects.create(
+                    budget_line=budget_line,
+                    modified_by=request.user,
+                    modification_type='RELEASE',
+                    field_name='Estado y Ocupante',
+                    old_value=f"Ocupada por {period.employee.person.full_name}",
+                    new_value="LIBRE / VACANTE",
+                    reason=f"Terminación de contrato {period.document_number}. Motivo: {reason}"
+                )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Gestión finalizada y partida {budget_line.number_individual} liberada exitosamente.'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
+
+
+# apps/contract/views.py
+import traceback
+from django.db import transaction, IntegrityError
+
+
+class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.add_managementperiod'
+
+    def post(self, request):
+        data = request.POST
+        try:
+            with transaction.atomic():
+                # 1. Búsqueda exacta del item de catálogo
+                # Usamos filter().first() para evitar el error 500 si no existe
+                status_initial = CatalogItem.objects.filter(
+                    catalog__code='STATUS_CONTRACT',
+                    code='SIN_FIRMAR'
+                ).first()
+
+                if not status_initial:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Error de Configuración: No existe el item "SIN_FIRMAR" en el catálogo "STATUS_CONTRACT".'
+                    }, status=400)
+
+                # 2. Obtener el empleado y validar su partida
+                employee = get_object_or_404(Employee, pk=data.get('employee'))
+                budget_line = employee.current_budget_line.first()
+
+                if not budget_line:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El empleado no tiene una partida asignada en el módulo de Presupuestos.'
+                    }, status=400)
+
+                # 3. Crear instancia con limpieza de datos
+                period = ManagementPeriod(
+                    employee=employee,
+                    budget_line=budget_line,
+                    contract_type_id=data.get('contract_type'),
+                    administrative_unit_id=data.get('administrative_unit'),
+                    schedule_id=data.get('schedule'),
+                    status=status_initial,
+
+                    document_number=data.get('document_number', '').strip().upper(),
+                    institutional_need_memo=data.get('institutional_need_memo', '').strip().upper(),
+                    budget_certification=data.get('budget_certification', '').strip().upper(),
+                    workplace=data.get('workplace', '').strip().upper(),
+                    job_functions=data.get('job_functions', '').strip(),
+                    start_date=data.get('start_date'),
+                    end_date=data.get('end_date') if data.get('end_date') else None,
+                    created_by=request.user
+                )
+
+                # 4. Validaciones de integridad de Django
+                period.full_clean()
+                period.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Contrato {period.document_number} registrado correctamente.'
+                })
+
+        except ValidationError as e:
+            # Enviamos los errores de validación de campos específicos (como el document_number único)
+            return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
+        except Exception as e:
+            print(f"--- ERROR SISTEMA: {str(e)} ---")
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=500)
+
+
+class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Acción para legalizar/firmar el contrato."""
+    permission_required = 'contract.change_managementperiod'
+
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        try:
+            status_signed = CatalogItem.objects.get(
+                catalog__code='STATUS_CONTRACT',
+                code='FIRMADO'
+            )
+            period.status = status_signed
+            period.updated_by = request.user
+            period.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'El contrato ha sido legalizado (FIRMADO) exitosamente.'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
+    """Retorna el JSON con todos los datos para el Expediente y el formulario de edición"""
+
+    def get(self, request, pk):
+        p = get_object_or_404(ManagementPeriod, pk=pk)
+        return JsonResponse({
+            'success': True,
+            'period': {
+                'id': p.id,
+                'document_number': p.document_number,
+                'employee_name': p.employee.person.full_name,
+                'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
+                'status_name': p.status.name,
+                'status_code': p.status.code,
+                'budget_line_number': p.budget_line.number_individual or p.budget_line.code,
+                'position_name': p.budget_line.position_item.name,
+                'unit_name': p.administrative_unit.name,
+                'institutional_need_memo': p.institutional_need_memo,
+                'budget_certification': p.budget_certification,
+                'start_date': p.start_date.isoformat(),  # Formato YYYY-MM-DD para el input date
+                'start_date_formatted': p.start_date.strftime('%d/%m/%Y'),
+                'end_date': p.end_date.isoformat() if p.end_date else '',
+                'end_date_formatted': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'INDEFINIDO',
+                'schedule_id': p.schedule.id,
+                'schedule_name': p.schedule.name,
+                'workplace': p.workplace,
+                'contract_type_name': p.contract_type.name,
+                'job_functions': p.job_functions,
+            }
+        })
+
+
+class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Procesa la actualización de campos específicos desde el SweetAlert del Expediente"""
+    permission_required = 'contract.change_managementperiod'
+
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        data = request.POST
+        try:
+            with transaction.atomic():
+                # Actualización de campos permitidos
+                period.document_number = data.get('doc', '').strip().upper()
+                period.workplace = data.get('workplace', '').strip().upper()
+                period.institutional_need_memo = data.get('memo', '').strip().upper()
+                period.budget_certification = data.get('cert', '').strip().upper()
+                period.start_date = data.get('start')
+                period.end_date = data.get('end') if data.get('end') else None
+                period.schedule_id = data.get('schedule')
+                period.job_functions = data.get('functions', '').strip()
+
+                period.updated_by = request.user
+                period.full_clean()
+                period.save()
+
+                return JsonResponse({'success': True, 'message': 'Expediente actualizado correctamente.'})
+        except ValidationError as e:
+            return JsonResponse({'success': False, 'message': 'Error de validación: ' + str(e.message_dict)},
+                                status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)

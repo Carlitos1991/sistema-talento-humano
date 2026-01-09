@@ -22,7 +22,7 @@ class LaborRegime(BaseModel):
         super().save(*args, **kwargs)
 
     class Meta:
-        db_table = 'labor_regime'
+        db_table = 'contract_labor_regime'
         verbose_name = 'Régimen Laboral'
         verbose_name_plural = 'Regímenes Laborales'
         ordering = ['code']
@@ -62,7 +62,7 @@ class ContractType(BaseModel):
         super().save(*args, **kwargs)
 
     class Meta:
-        db_table = 'contract_type'
+        db_table = 'contract_contract_type'
         verbose_name = 'Tipo de Contrato'
         verbose_name_plural = 'Tipos de Contrato'
         unique_together = [['labor_regime', 'code']]
@@ -97,7 +97,7 @@ class ManagementPeriod(BaseModel):
     )
     status = models.ForeignKey(
         CatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'CONTRACT_STATUS'},
+        limit_choices_to={'catalog__code': 'STATUS_CONTRACT'},
         related_name='periods_by_status', verbose_name='Estado'
     )
     administrative_unit = models.ForeignKey(
@@ -128,7 +128,7 @@ class ManagementPeriod(BaseModel):
     )
 
     class Meta:
-        db_table = 'management_period'
+        db_table = 'contract_management_period'
         verbose_name = 'Período de Gestión'
         verbose_name_plural = 'Períodos de Gestión'
         ordering = ['-start_date']
@@ -164,3 +164,51 @@ class ManagementPeriod(BaseModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class History(models.Model):
+    """Historial de cambios en contratos"""
+    employee = models.ForeignKey(
+        Employee,
+        verbose_name='Employee',
+        blank=True,
+        null=True,
+        on_delete=models.PROTECT
+    )
+    contract = models.ForeignKey(
+        'ManagementPeriod',
+        verbose_name='Contrato',
+        blank=True,
+        null=True,
+        on_delete=models.PROTECT
+    )
+    user_register = models.CharField(
+        verbose_name='Registro por:',
+        max_length=100,
+        blank=True,
+        null=True
+    )
+    type = models.CharField(
+        verbose_name='Tipo Historial',
+        max_length=100,
+        blank=True,
+        null=True
+    )
+    date_register = models.DateTimeField(
+        verbose_name='Fecha Registro',
+        auto_now_add=True
+    )
+    reason = models.TextField(
+        verbose_name='Motivo',
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        db_table = 'contract_history'
+        ordering = ['-date_register']
+        verbose_name = 'Historial'
+        verbose_name_plural = 'Historiales'
+
+    def __str__(self):
+        return f'Historial #{self.pk} - {self.type or "Sin tipo"}'

@@ -92,7 +92,8 @@
                 <ul class="submenu">
                     {% if perms.contract.view_managementperiod %}
                         <li>
-                            <a href="#">
+                            <a href="{% url 'contract:period_list' %}"
+                               class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-file-signature"></i>
                                 <span class="menu-text">Inicios de Gestión</span>
                             </a>
