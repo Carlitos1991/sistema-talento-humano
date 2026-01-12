@@ -601,18 +601,31 @@ const periodApp = createApp({
 
         async terminatePeriod(id) {
             const {value: reason, isConfirmed} = await Swal.fire({
-                title: 'Finalizar Gestión',
+                title: 'Finalizar Gestión Laboral',
                 input: 'textarea',
-                inputLabel: 'Motivo de salida',
+                inputLabel: 'Indique el motivo de la salida o terminación',
+                inputPlaceholder: 'Ej: Renuncia, Fin de contrato, Desvinculación...',
                 showCancelButton: true,
-                confirmButtonText: 'Finalizar',
-                cancelButtonText: 'Cancelar', // Corregido: Traducción
-                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
+                confirmButtonText: 'Finalizar Contrato',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'btn-save', // Usamos btn-save o puedes crear btn-danger en CSS
+                    cancelButton: 'btn-cancel'
+                },
+                preConfirm: (value) => {
+                    if (!value || value.trim().length < 5) {
+                        Swal.showValidationMessage('Debe ingresar un motivo válido (mín. 5 caracteres)');
+                        return false;
+                    }
+                    return value;
+                }
             });
 
             if (isConfirmed && reason) {
+                this.loading = true;
                 const formData = new FormData();
                 formData.append('reason', reason);
+
                 try {
                     const response = await fetch(`/contract/periods/terminate/${id}/`, {
                         method: 'POST',
@@ -620,12 +633,22 @@ const periodApp = createApp({
                         headers: {'X-CSRFToken': getCookie('csrftoken')}
                     });
                     const data = await response.json();
+
                     if (data.success) {
-                        Swal.fire('Éxito', data.message, 'success');
-                        this.fetchTable();
+                        Swal.fire({
+                            title: '¡Éxito!',
+                            text: data.message,
+                            icon: 'success',
+                            customClass: {confirmButton: 'btn-save'}
+                        });
+                        this.fetchTable(); // Recarga la tabla y los conteos de las cards
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
                     }
                 } catch (e) {
-                    this.showToast('error', 'Fallo al terminar');
+                    this.showToast('error', 'Fallo al procesar la terminación');
+                } finally {
+                    this.loading = false;
                 }
             }
         },

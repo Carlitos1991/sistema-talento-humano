@@ -68,10 +68,14 @@
                         <button class="btn-list-action" data-id="{{ period.id }}" data-action="view" title="Expediente">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn-delete-action" data-id="{{ period.id }}" data-action="terminate"
-                                title="Finalizar">
-                            <i class="fas fa-user-slash"></i>
-                        </button>
+                        {% if period.status.code != 'FINALIZADO' and period.status.code == 'FIRMADO'%}
+                            <button class="btn-delete-action"
+                                    data-id="{{ period.id }}"
+                                    data-action="terminate"
+                                    title="Finalizar Gestión">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
