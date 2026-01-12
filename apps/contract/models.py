@@ -25,7 +25,7 @@ class LaborRegime(BaseModel):
         db_table = 'contract_labor_regime'
         verbose_name = 'Régimen Laboral'
         verbose_name_plural = 'Regímenes Laborales'
-        ordering = ['code']
+        ordering = ['-code']
 
     def __str__(self):
         return f'{self.code} - {self.name}'

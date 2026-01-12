@@ -15,7 +15,7 @@
             </button>
         </div>
 
-        <!-- Stats Row Dinámico -->
+        <!-- 2. Estadísticas (Filtros Rápidos) -->
         <div class="stats-row">
             <div class="stat-card color-one">
                 <div class="stat-left"><h3>TOTAL ACTIVOS</h3>
@@ -38,9 +38,41 @@
         </div>
 
         <!-- Tabla de Inicios -->
-        <div class="table-container mt-3">
+        <div>
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Input de búsqueda -->
+                    <input type="text" id="table-search-input" class="input-field"
+                           placeholder="Filtrar en esta lista...">
+                </div>
+                <button class="btn-search" @click="triggerAdvancedSearch">
+                    <i class="fas fa-database"></i> Búsqueda Avanzada
+                </button>
+                <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel" @click="clearSearch"
+                        style="min-width: auto; padding: 0.65rem 1rem;">
+                    <i class="fas fa-sync-alt"></i> Limpiar
+                </button>
+            </div>
             <div id="table-content-wrapper">
                 {% include 'contract/partials/partial_management_period_table.html' %}
+            </div>
+            <!-- Paginación -->
+            <div class="pagination-container">
+                <span class="pagination-info" id="page-info">Calculando...</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button class="page-btn" @click="prevPage" id="btn-prev">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </li>
+                    <li><span id="current-page-display" style="font-weight: bold; padding: 0 10px;">1</span></li>
+                    <li>
+                        <button class="page-btn" @click="nextPage" id="btn-next">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
             </div>
         </div>
 

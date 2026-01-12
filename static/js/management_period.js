@@ -31,11 +31,22 @@ const periodApp = createApp({
             showDetailModal: false,
             isEdit: false,
 
+            // Paginación y Filtrado Frontend
+            currentPage: 1,
+            pageSize: 10,
+            totalRows: 0,
+            searchTerm: '',
+            allDOMRows: [], // Cache de los elementos <tr>
+
+            // Búsqueda Avanzada
+            isAdvancedSearch: false,
+            advancedQuery: '',
+
             // Datos de Búsqueda y Selección
             searchDoc: '',
             selectedContractType: {id: null, name: ''},
             selectedEmployee: {id: null, full_name: '', photo: '', budget_line: null},
-            selectedPeriod: {}, // Para el modal de expediente
+            selectedPeriod: {},
 
             // Formulario Paso 3
             form: {
@@ -52,25 +63,176 @@ const periodApp = createApp({
                 budget_certification: ''
             },
 
-            // Estadísticas y Filtros
+            // Estadísticas
             stats: {
                 total: parseInt(container?.dataset.total) || 0,
                 active: parseInt(container?.dataset.active) || 0,
                 losep: parseInt(container?.dataset.losep) || 0,
                 ct: parseInt(container?.dataset.ct) || 0
             },
-            filters: {name: '', status: ''},
-            searchTimer: null
+            filters: {status: ''}
         }
     },
 
     mounted() {
         this.fetchTable();
+        this.setupFrontendSearch();
     },
 
     methods: {
+        async fetchTable(advanced = false) {
+            this.loading = true;
+            this.isAdvancedSearch = advanced;
+
+            const params = new URLSearchParams({
+                advanced: this.isAdvancedSearch,
+                q: this.advancedQuery,
+                status: this.filters.status
+            }).toString();
+
+            try {
+                const response = await fetch(`/contract/periods/partial-table/?${params}`);
+                const data = await response.json();
+
+                const container = document.getElementById('table-content-wrapper');
+                container.innerHTML = data.table_html;
+
+                if (data.stats) this.stats = data.stats;
+
+                setTimeout(() => {
+                    this.indexRows();
+                    this.applyFrontendLogic();
+                }, 100);
+
+            } catch (e) {
+                this.showToast('error', 'Fallo de conexión');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        indexRows() {
+            const tbody = document.querySelector('#table-content-wrapper table tbody');
+            if (tbody) {
+                this.allDOMRows = Array.from(tbody.querySelectorAll('tr.period-row'));
+            }
+        },
+
+        setupFrontendSearch() {
+            const input = document.getElementById('table-search-input');
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    this.searchTerm = e.target.value.toLowerCase().trim();
+                    this.currentPage = 1;
+                    this.applyFrontendLogic();
+                });
+            }
+        },
+
+        applyFrontendLogic() {
+            const matches = this.allDOMRows.filter(row => {
+                return row.innerText.toLowerCase().includes(this.searchTerm);
+            });
+
+            this.totalRows = matches.length;
+            const totalPages = Math.ceil(this.totalRows / this.pageSize) || 1;
+
+            // CONTROL DE MENSAJE VACÍO
+            const emptyRow = document.getElementById('frontend-no-results');
+            const termDisplay = document.getElementById('search-term-display');
+            if (emptyRow) {
+                if (this.totalRows === 0 && this.searchTerm !== '') {
+                    emptyRow.style.display = '';
+                    if (termDisplay) termDisplay.textContent = this.searchTerm;
+                } else {
+                    emptyRow.style.display = 'none';
+                }
+            }
+
+            const start = (this.currentPage - 1) * this.pageSize;
+            const end = start + this.pageSize;
+
+            // Ocultamos todas las filas reales
+            this.allDOMRows.forEach(row => row.style.display = 'none');
+
+            // Mostramos solo las que encajan en la página
+            matches.forEach((row, index) => {
+                if (index >= start && index < end) {
+                    row.style.display = '';
+                }
+            });
+
+            this.updatePaginationLabels(totalPages);
+        },
+        clearSearch() {
+            this.isAdvancedSearch = false;
+            this.advancedQuery = '';
+            this.searchTerm = '';
+            const input = document.getElementById('table-search-input');
+            if (input) input.value = '';
+            this.currentPage = 1;
+            this.fetchTable(false); // Vuelve a los 50 originales
+        },
+
+        updatePaginationLabels(totalPages) {
+            const pageInfo = document.getElementById('page-info');
+            const pageDisplay = document.getElementById('current-page-display');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            if (pageInfo) {
+                const startLabel = this.totalRows > 0 ? (this.currentPage - 1) * this.pageSize + 1 : 0;
+                const endLabel = Math.min(this.currentPage * this.pageSize, this.totalRows);
+                pageInfo.textContent = `Mostrando ${startLabel}-${endLabel} de ${this.totalRows} registros`;
+            }
+            if (pageDisplay) pageDisplay.textContent = this.currentPage;
+
+            if (btnPrev) btnPrev.disabled = (this.currentPage === 1);
+            if (btnNext) btnNext.disabled = (this.currentPage >= totalPages);
+        },
+
+        nextPage() {
+            const totalPages = Math.ceil(this.totalRows / this.pageSize);
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.applyFrontendLogic();
+            }
+        },
+
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.applyFrontendLogic();
+            }
+        },
+
+        async triggerAdvancedSearch() {
+            const {value: query} = await Swal.fire({
+                title: 'Búsqueda Avanzada',
+                text: 'Buscando en toda la Base de Datos...',
+                input: 'text',
+                inputPlaceholder: 'Cédula o Nombre...',
+                showCancelButton: true,
+                confirmButtonText: 'Buscar',
+                cancelButtonText: 'Cerrar'
+            });
+
+            if (query) {
+                this.advancedQuery = query;
+                this.searchTerm = '';
+                const input = document.getElementById('table-search-input');
+                if (input) input.value = '';
+                this.fetchTable(true);
+            }
+        },
+
+        filterByStatus(status) {
+            this.filters.status = status;
+            this.fetchTable();
+        },
+
         // ==========================================
-        // 1. GESTIÓN DEL WIZARD (CREACIÓN)
+        // 2. GESTIÓN DEL WIZARD (CREACIÓN)
         // ==========================================
         startWizard() {
             this.step = 1;
@@ -115,16 +277,12 @@ const periodApp = createApp({
                 const response = await fetch(`/contract/api/validate-employee/${this.searchDoc}/`);
                 const data = await response.json();
                 if (data.success) {
-                    if (data.has_active_contract) {
-                        Swal.fire('Atención', 'Este empleado ya tiene un contrato activo.', 'warning');
-                    } else {
-                        this.selectedEmployee = data.employee;
-                        this.form.budget_line = data.employee.budget_line.id;
-                        this.step = 3;
-                        this.$nextTick(() => {
-                            this.initSelect2();
-                        });
-                    }
+                    this.selectedEmployee = data.employee;
+                    this.form.budget_line = data.employee.budget_line.id;
+                    this.step = 3;
+                    this.$nextTick(() => {
+                        this.initSelect2();
+                    });
                 } else {
                     Swal.fire('Validación', data.message, 'info');
                 }
@@ -161,9 +319,7 @@ const periodApp = createApp({
             formData.append('budget_line', this.selectedEmployee.budget_line.id);
 
             Object.keys(this.form).forEach(key => {
-                if (this.form[key] !== null && this.form[key] !== undefined) {
-                    formData.append(key, this.form[key]);
-                }
+                if (this.form[key]) formData.append(key, this.form[key]);
             });
 
             try {
@@ -172,38 +328,22 @@ const periodApp = createApp({
                     body: formData,
                     headers: {'X-CSRFToken': getCookie('csrftoken')}
                 });
-
                 const result = await response.json();
 
                 if (response.ok && result.success) {
                     Swal.fire('¡Éxito!', result.message, 'success').then(() => location.reload());
                 } else {
-                    // --- MEJORA AQUÍ: Mostrar errores específicos del Backend ---
-                    let errorContent = '';
-                    if (result.errors) {
-                        // Si Django devuelve errores por campo
-                        for (const [field, messages] of Object.entries(result.errors)) {
-                            errorContent += `<strong>${field}:</strong> ${messages.join(', ')}<br>`;
-                        }
-                    } else {
-                        errorContent = result.message || 'Error desconocido al guardar.';
-                    }
-
-                    Swal.fire({
-                        title: 'Error en Validación',
-                        html: `<div class="text-left">${errorContent}</div>`,
-                        icon: 'error'
-                    });
+                    Swal.fire('Error', result.message || 'Error al guardar', 'error');
                 }
             } catch (e) {
-                this.showToast('error', 'Error crítico en el servidor');
+                this.showToast('error', 'Error en el servidor');
             } finally {
                 this.loading = false;
             }
         },
 
         // ==========================================
-        // 2. GESTIÓN DE EXPEDIENTE (DETALLE Y EDICIÓN)
+        // 3. EXPEDIENTE, FIRMA Y TERMINACIÓN
         // ==========================================
         async viewPeriodDetails(id) {
             this.loading = true;
@@ -227,108 +367,9 @@ const periodApp = createApp({
             document.body.classList.remove('no-scroll');
         },
 
-        async editPeriodFields() {
-            const p = this.selectedPeriod;
-            // Construimos las opciones del select de horarios dinámicamente
-            let scheduleOptions = '<option value="">Seleccione...</option>';
-            window.allSchedules.forEach(s => {
-                scheduleOptions += `<option value="${s.id}" ${s.id == p.schedule_id ? 'selected' : ''}>${s.name}</option>`;
-            });
-
-            const {value: formValues} = await Swal.fire({
-                title: 'Modificar Datos Administrativos',
-                width: '850px',
-                html: `
-                <div class="text-left container-fluid" style="font-family: inherit;">
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <label class="form-label font-weight-700 small">NRO. DOCUMENTO / ACCIÓN</label>
-                            <input id="swal-doc" class="form-control" value="${p.document_number}">
-                        </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label font-weight-700 small">LUGAR DE TRABAJO</label>
-                            <input id="swal-workplace" class="form-control" value="${p.workplace}">
-                        </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label font-weight-700 small">MEMO NECESIDAD</label>
-                            <input id="swal-memo" class="form-control" value="${p.institutional_need_memo}">
-                        </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label font-weight-700 small">CERT. PRESUPUESTARIA</label>
-                            <input id="swal-cert" class="form-control" value="${p.budget_certification}">
-                        </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label font-weight-700 small">FECHA INICIO</label>
-                            <input type="date" id="swal-start" class="form-control" value="${p.start_date}">
-                        </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label font-weight-700 small">FECHA FIN</label>
-                            <input type="date" id="swal-end" class="form-control" value="${p.end_date}">
-                        </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label font-weight-700 small">HORARIO</label>
-                            <select id="swal-schedule" class="form-control">${scheduleOptions}</select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label font-weight-700 small">FUNCIONES DEL PUESTO</label>
-                            <textarea id="swal-functions" class="form-control" rows="3">${p.job_functions}</textarea>
-                        </div>
-                    </div>
-                </div>`,
-                showCancelButton: true,
-                confirmButtonText: 'Guardar Cambios',
-                cancelButtonText: 'Cancelar',
-                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'},
-                preConfirm: () => {
-                    return {
-                        doc: document.getElementById('swal-doc').value,
-                        workplace: document.getElementById('swal-workplace').value,
-                        memo: document.getElementById('swal-memo').value,
-                        cert: document.getElementById('swal-cert').value,
-                        start: document.getElementById('swal-start').value,
-                        end: document.getElementById('swal-end').value,
-                        schedule: document.getElementById('swal-schedule').value,
-                        functions: document.getElementById('swal-functions').value,
-                    }
-                }
-            });
-
-            if (formValues) {
-                this.updatePeriodAPI(p.id, formValues);
-            }
-        },
-
-        async updatePeriodAPI(id, data) {
-            this.loading = true;
-            const formData = new FormData();
-            Object.keys(data).forEach(key => formData.append(key, data[key]));
-
-            try {
-                const response = await fetch(`/contract/periods/update-partial/${id}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-CSRFToken': getCookie('csrftoken')}
-                });
-                const result = await response.json();
-                if (result.success) {
-                    this.showToast('success', result.message);
-                    this.viewPeriodDetails(id); // Recarga el modal de expediente
-                    this.fetchTable(); // Recarga la tabla de fondo
-                }
-            } catch (e) {
-                this.showToast('error', 'Error al actualizar');
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        // ==========================================
-        // 3. FIRMA Y TERMINACIÓN
-        // ==========================================
         async signPeriod(id) {
             const {isConfirmed} = await Swal.fire({
                 title: '¿Legalizar Contrato?',
-                text: "El estado cambiará a 'FIRMADO'.",
                 icon: 'info', showCancelButton: true, confirmButtonText: 'Sí, Firmar'
             });
 
@@ -377,36 +418,11 @@ const periodApp = createApp({
             }
         },
 
-        // ==========================================
-        // 4. TABLA Y FILTROS
-        // ==========================================
-        async fetchTable() {
-            const params = new URLSearchParams(this.filters).toString();
-            try {
-                const response = await fetch(`/contract/periods/partial-table/?${params}`);
-                const data = await response.json();
-                document.getElementById('table-content-wrapper').innerHTML = data.table_html;
-                if (data.stats) this.stats = data.stats;
-            } catch (e) {
-                console.error("Error table:", e);
-            }
-        },
-
-        filterByStatus(status) {
-            this.filters.status = status;
-            this.fetchTable();
-        },
-
-        debouncedSearch() {
-            clearTimeout(this.searchTimer);
-            this.searchTimer = setTimeout(() => this.fetchTable(), 400);
-        },
-
         showToast(icon, title) {
-            Swal.fire({icon, title, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
+            Swal.fire({icon, title, toast: true, position: 'top-end', showConfirmButton: false});
         }
     }
 });
 
-// Exposición e inicio
+// Inicio
 window.periodInstance = periodApp.mount('#period-app');

@@ -254,11 +254,10 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
 
         # Estadísticas dinámicas según el video
         context['total_active'] = qs.count()
-        # Ejemplo de conteo por régimen (ajustar códigos según tu base)
+        # conteo
         context['count_losep'] = qs.filter(contract_type__labor_regime__code='LOSEP').count()
         context['count_ct'] = qs.filter(contract_type__labor_regime__code='CT').count()
 
-        # Para el modal (necesitamos cargar regímenes y sus tipos)
         context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related('contract_types')
         context['schedules'] = Schedule.objects.filter(is_active=True)
         context['units'] = AdministrativeUnit.objects.filter(is_active=True)
@@ -341,44 +340,54 @@ class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
 
 class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
     def get(self, request):
-        search = request.GET.get('name', '')
-        status = request.GET.get('status', '')  # Activos, Finalizados, etc.
+        status_filter = request.GET.get('status', '')
+        advanced_search = request.GET.get('advanced', 'false') == 'true'
+        search_query = request.GET.get('q', '')
 
-        # Queryset optimizado con select_related para evitar el problema N+1
+        # Queryset base con select_related optimizado
         queryset = ManagementPeriod.objects.select_related(
-            'employee__person',
-            'budget_line__position_item',
-            'contract_type__labor_regime',
-            'administrative_unit',
-            'status'
+            'employee__person', 'budget_line__position_item',
+            'contract_type__labor_regime', 'administrative_unit', 'status'
         ).all().order_by('-start_date')
 
-        # Filtros lógicos
-        if search:
+        # 1. Filtros de Base de Datos (Búsqueda Avanzada o Filtro de Estado)
+        if status_filter:
+            queryset = queryset.filter(status__code=status_filter)
+
+        if advanced_search and search_query:
             queryset = queryset.filter(
-                Q(employee__person__first_name__icontains=search) |
-                Q(employee__person__last_name__icontains=search) |
-                Q(employee__person__document_number__icontains=search) |
-                Q(document_number__icontains=search)
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__document_number__icontains=search_query) |
+                Q(document_number__icontains=search_query)
             )
+            # Para búsqueda avanzada permitimos un set más grande (ej. 20000)
+            limit = 20000
+        else:
+            # Límite inicial de 50 registros para velocidad
+            limit = 50
 
-        if status:
-            queryset = queryset.filter(status__code=status)
+        # Aplicamos el límite final
+        queryset = queryset[:limit]
 
-        # Estadísticas para actualizar las cards reactivamente
-        all_qs = ManagementPeriod.objects.all()
+        # 2. Estadísticas para las Cards (Siempre sobre el total de la DB)
+        stats_qs = ManagementPeriod.objects.all()
         stats = {
-            'total': all_qs.count(),
-            'active': all_qs.filter(status__code='ACTIVO').count(),
-            'losep': all_qs.filter(contract_type__labor_regime__code='LOSEP', status__code='ACTIVO').count(),
-            'ct': all_qs.filter(contract_type__labor_regime__code='CT', status__code='ACTIVO').count(),
+            'total': stats_qs.count(),
+            'active': stats_qs.filter(status__code='ACTIVO').count(),
+            'losep': stats_qs.filter(contract_type__labor_regime__code='LOSEP', status__code='ACTIVO').count(),
+            'ct': stats_qs.filter(contract_type__labor_regime__code='CT', status__code='ACTIVO').count(),
         }
 
         html = render_to_string('contract/partials/partial_management_period_table.html', {
-            'periods': queryset[:50]  # Limitamos para performance
+            'periods': queryset
         }, request=request)
 
-        return JsonResponse({'table_html': html, 'stats': stats})
+        return JsonResponse({
+            'table_html': html,
+            'stats': stats,
+            'count': queryset.count()  # Cantidad de registros en el HTML inyectado
+        })
 
 
 class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):

@@ -1,102 +1,94 @@
 {% load static %}
-<table class="table-modern">
-    <thead>
-    <tr>
-        <th><i class="fas fa-user-tie header-icon"></i> Empleado / Documento</th>
-        <th><i class="fas fa-briefcase header-icon"></i> Cargo y Partida</th>
-        <th><i class="fas fa-sitemap header-icon"></i> Dependencia</th>
-        <th><i class="fas fa-file-contract header-icon"></i> Tipo de Contrato</th>
-        <th><i class="fas fa-calendar-alt header-icon"></i> Vigencia</th>
-        <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-        <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for period in periods %}
+<div class="table-container">
+    <table>
+        <thead>
         <tr>
-            <td>
-                <div class="person-info">
-                    {% if period.employee.person.photo %}
-                        <img src="{{ period.employee.person.photo.url }}" class="person-avatar">
-                    {% else %}
-                        <div class="person-avatar-placeholder">
-                            {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}</div>
-                    {% endif %}
-                    <div class="person-details">
-                        <h4>{{ period.employee.person.full_name }}</h4>
-                        <p><i class="fas fa-id-card mr-1"></i> {{ period.employee.person.document_number }}</p>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="font-weight-700 text-primary">
-                    {{ period.budget_line.position_item.name }}
-                </div>
-                <small class="text-muted">Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}</small>
-            </td>
-            <td>
-                <span class="small font-weight-600">{{ period.administrative_unit.name }}</span>
-            </td>
-            <td>
-                <span class="status-badge general">
-                    {{ period.contract_type.name }}
-                </span>
-                <br>
-                <small class="text-muted italic">{{ period.contract_type.labor_regime.name }}</small>
-            </td>
-            <td>
-                <div class="vigencia-box">
-                    <span><strong>Inicio:</strong> {{ period.start_date|date:"d/m/Y" }}</span>
-                    <span><strong>Fin:</strong> {% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}
-                        Indefinido{% endif %}</span>
-                </div>
-            </td>
-            <td>
-                {% if period.status.code == 'SIN_FIRMAR' %}
-                    <span class="status-badge sin-firmar">
-            {{ period.status.name }}
-        </span>
-                {% elif period.status.code == 'FIRMADO' %}
-                    <span class="status-badge firmado">
-            {{ period.status.name }}
-        </span>
-                {% else %}
-                    <span class="status-badge general">
-            {{ period.status.name }}
-        </span>
-                {% endif %}
-            </td>
-            <td class="actions">
-                <div class="actions-wrapper">
-                    <!-- Botón Ver Detalles (Podría abrir un reporte PDF o un modal de resumen) -->
-                    {% if period.status.code == 'SIN_FIRMAR' %}
-                        <button class="btn-create-action"
-                                onclick="periodInstance.signPeriod({{ period.id }})"
-                                title="Legalizar / Firmar">
-                            <i class="fas fa-file-signature"></i>
-                        </button>
-                    {% endif %}
-                    <button class="btn-list-action" title="Ver Expediente"
-                            onclick="periodInstance.viewPeriodDetails({{ period.id }})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <!-- Botón Finalizar (Acción legal para terminar el contrato) -->
-                    <button class="btn-delete-action" title="Finalizar Gestión"
-                            onclick="periodInstance.terminatePeriod({{ period.id }})">
-                        <i class="fas fa-user-slash"></i>
-                    </button>
-                </div>
-            </td>
+            <th><i class="fas fa-user-tie header-icon"></i> Empleado / Documento</th>
+            <th><i class="fas fa-briefcase header-icon"></i> Cargo y Partida</th>
+            <th><i class="fas fa-sitemap header-icon"></i> Dependencia</th>
+            <th><i class="fas fa-file-contract header-icon"></i> Tipo de Contrato</th>
+            <th><i class="fas fa-calendar-alt header-icon"></i> Vigencia</th>
+            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
         </tr>
-    {% empty %}
-        <tr>
+        </thead>
+        <tbody>
+        {% for period in periods %}
+            <tr class="period-row"> <!-- Agregamos clase para fácil identificación -->
+                <!-- ... (contenido de las celdas igual al anterior) ... -->
+                <td>
+                    <div class="person-info">
+                        {% if period.employee.person.photo %}
+                            <img src="{{ period.employee.person.photo.url }}" class="person-avatar">
+                        {% else %}
+                            <div class="person-avatar-placeholder">
+                                {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}</div>
+                        {% endif %}
+                        <div class="person-details">
+                            <h4>{{ period.employee.person.full_name }}</h4>
+                            <p><i class="fas fa-id-card mr-1"></i> {{ period.employee.person.document_number }}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="font-weight-700 text-primary">{{ period.budget_line.position_item.name }}</div>
+                    <small class="text-muted">Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}</small>
+                </td>
+                <td><span class="small font-weight-600">{{ period.administrative_unit.name }}</span></td>
+                <td>
+                    <span class="status-badge general">{{ period.contract_type.name }}</span><br>
+                    <small class="text-muted italic">{{ period.contract_type.labor_regime.name }}</small>
+                </td>
+                <td>
+                    <div class="vigencia-box">
+                        <span><strong>Inicio:</strong> {{ period.start_date|date:"d/m/Y" }}</span>
+                        <span><strong>Fin:</strong> {% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}
+                            Indefinido{% endif %}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-badge {% if period.status.code == 'SIN_FIRMAR' %}sin-firmar{% elif period.status.code == 'FIRMADO' %}firmado{% else %}general{% endif %}">
+                        {{ period.status.name }}
+                    </span>
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        {% if period.status.code == 'SIN_FIRMAR' %}
+                            <button class="btn-create-action" onclick="periodInstance.signPeriod({{ period.id }})"
+                                    title="Legalizar"><i class="fas fa-file-signature"></i></button>
+                        {% endif %}
+                        <button class="btn-list-action" onclick="periodInstance.viewPeriodDetails({{ period.id }})"
+                                title="Expediente"><i class="fas fa-eye"></i></button>
+                        <button class="btn-delete-action" onclick="periodInstance.terminatePeriod({{ period.id }})"
+                                title="Finalizar"><i class="fas fa-user-slash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <!-- Esto solo sale si el servidor envía 0 registros -->
+            <tr class="empty-db-state">
+                <td colspan="7" class="text-center py-5">
+                    <div class="no-results-content">
+                        <i class="fas fa-database no-results-icon"></i>
+                        <p>No existen registros en la base de datos.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+
+        <!-- FILA DINÁMICA: Mensaje para búsqueda frontend vacía -->
+        <tr id="frontend-no-results" style="display: none;">
             <td colspan="7" class="text-center py-5">
                 <div class="no-results-content">
-                    <i class="fas fa-file-invoice no-results-icon"></i>
-                    <p class="no-results-text">No existen registros de gestión con los filtros aplicados.</p>
+                    <i class="fas fa-search-minus no-results-icon" style="color: #94a3b8; font-size: 3rem;"></i>
+                    <p class="mt-3 font-weight-700" style="color: #64748b;">No hay coincidencias para "[[ searchTerm ]]"
+                        en esta lista.</p>
+                    <button class="btn-search mt-2" @click="triggerAdvancedSearch" style="background-color: #64748b;">
+                        <i class="fas fa-database"></i> Intentar Búsqueda en toda la BD
+                    </button>
                 </div>
             </td>
         </tr>
-    {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>

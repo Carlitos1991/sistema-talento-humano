@@ -58,65 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePaginationUI(totalRows, totalPages);
     }
 
-    function updatePaginationUI(totalRows, totalPages) {
-        const pageInfo = document.getElementById('page-info');
-        const pageDisplay = document.getElementById('current-page-display');
-        const btnPrev = document.getElementById('btn-prev');
-        const btnNext = document.getElementById('btn-next');
-
-        if (pageInfo) {
-            const startLabel = totalRows > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-            const endLabel = Math.min(currentPage * pageSize, totalRows);
-            pageInfo.textContent = `Mostrando ${startLabel}-${endLabel} de ${totalRows}`;
-        }
-        if (pageDisplay) pageDisplay.textContent = currentPage;
-
-        if (btnPrev) {
-            btnPrev.disabled = (currentPage === 1);
-            btnPrev.onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderTable();
-                }
-            };
-        }
-        if (btnNext) {
-            btnNext.disabled = (currentPage === totalPages);
-            btnNext.onclick = () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    renderTable();
-                }
-            };
-        }
-    }
-
-    if (searchInput) {
-        let timeout = null;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                currentSearchTerm = e.target.value.toLowerCase().trim();
-                applyFilters();
-            }, 100);
-        });
-    }
-
-    window.filterByStatus = function (status) {
-        currentStatusFilter = status;
-        const cards = {
-            'all': document.getElementById('card-filter-all'),
-            'true': document.getElementById('card-filter-active'),
-            'false': document.getElementById('card-filter-inactive')
-        };
-        Object.values(cards).forEach(c => {
-            if (c) c.classList.add('opacity-low');
-        });
-        const selected = cards[status];
-        if (selected) selected.classList.remove('opacity-low');
-        applyFilters();
-    };
-
     // =========================================================
     // 2. DOM MANIPULATION (Insertar / Actualizar)
     // =========================================================
