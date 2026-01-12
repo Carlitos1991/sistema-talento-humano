@@ -1,6 +1,9 @@
 /* apps/contract/static/js/management_period.js */
 const {createApp} = Vue;
 
+/**
+ * Helper: Obtiene el token CSRF para peticiones POST
+ */
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -19,35 +22,47 @@ function getCookie(name) {
 const periodApp = createApp({
     delimiters: ['[[', ']]'],
     data() {
+        const container = document.getElementById('period-app');
         return {
+            // --- ESTADOS DE CONTROL ---
             loading: false,
             step: 1,
             showWizard: false,
             showDetailModal: false,
+            showAdvancedModal: false,
+            isEdit: false, // <-- PROPIEDAD REQUERIDA POR EL WIZARD
 
-            // Paginación y Filtrado Frontend
+            // --- FILTRADO Y PAGINACIÓN ---
             currentPage: 1,
             pageSize: 10,
             totalRows: 0,
             searchTerm: '',
             allDOMRows: [],
-
             isAdvancedSearch: false,
             advancedQuery: '',
+            advancedFilters: {
+                regime_code: '', q: '', unit: '', regime: '', doc_number: '',
+                status_code: '', date_from: '', date_to: ''
+            },
 
-            // Selección
+            // --- SELECCIÓN Y DATOS ---
             searchDoc: '',
             selectedContractType: {id: null, name: ''},
             selectedEmployee: {id: null, full_name: '', photo: '', budget_line: null},
             selectedPeriod: {},
 
+            // --- FORMULARIO CREACIÓN ---
             form: {
                 id: null, administrative_unit: '', budget_line: '', schedule: '',
                 workplace: '', start_date: '', end_date: '', document_number: '',
                 job_functions: '', institutional_need_memo: '', budget_certification: ''
             },
 
-            stats: {total: 0, active: 0, losep: 0, ct: 0},
+            // --- ESTADÍSTICAS ---
+            stats: {
+                total: 0,
+                regimes: [] // Lista vacía inicial
+            },
             filters: {status: ''}
         }
     },
@@ -58,8 +73,11 @@ const periodApp = createApp({
     },
 
     methods: {
+        // ==========================================
+        // 1. INICIALIZACIÓN Y EVENTOS DELEGADOS
+        // ==========================================
         initDelegatedListeners() {
-            // Buscador Frontend
+            // 1. Buscador Frontend
             const searchInput = document.getElementById('table-search-input');
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
@@ -69,7 +87,7 @@ const periodApp = createApp({
                 });
             }
 
-            // Delegación de Eventos (Cero onclick inline)
+            // 2. ÚNICO Escuchador de la Tabla (Delegación de Eventos)
             const tableWrapper = document.getElementById('table-content-wrapper');
             if (tableWrapper) {
                 tableWrapper.addEventListener('click', (e) => {
@@ -79,21 +97,239 @@ const periodApp = createApp({
                     const action = btn.dataset.action;
                     const id = btn.dataset.id;
 
+                    // Mapeo de acciones centralizado
                     if (action === 'sign') this.signPeriod(id);
                     if (action === 'view') this.viewPeriodDetails(id);
                     if (action === 'terminate') this.terminatePeriod(id);
                     if (action === 'advanced-search-empty') this.triggerAdvancedSearch();
+
+                    // ACTIVACIÓN DEL BOTÓN SUBIR:
+                    if (action === 'upload') this.uploadContractFile(id);
                 });
             }
         },
+        async uploadContractFile(id) {
+            const {value: file} = await Swal.fire({
+                title: 'Subir Contrato Legalizado',
+                text: 'Seleccione el archivo PDF (Máx. 2MB)',
+                input: 'file',
+                inputAttributes: {'accept': 'application/pdf', 'aria-label': 'Subir contrato PDF'},
+                showCancelButton: true,
+                confirmButtonText: 'Subir Archivo',
+                cancelButtonText: 'Cancelar',
+                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
+            });
 
+            if (file) {
+                // Validación rápida en cliente
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire('Error', 'El archivo es demasiado pesado (Máximo 2MB)', 'error');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('contract_file', file);
+
+                this.loading = true;
+                try {
+                    const response = await fetch(`/contract/periods/upload-doc/${id}/`, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-CSRFToken': getCookie('csrftoken')}
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        this.showToast('success', data.message);
+                        this.fetchTable(); // Recargar tabla para ver el cambio
+                        if (this.showDetailModal) this.viewPeriodDetails(id); // Recargar expediente si está abierto
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                } catch (e) {
+                    this.showToast('error', 'Fallo en la carga del archivo');
+                } finally {
+                    this.loading = false;
+                }
+            }
+        },
+
+        async deleteContractFile(id) {
+            const {isConfirmed} = await Swal.fire({
+                title: '¿Eliminar Documento?',
+                text: 'Esta acción borrará el PDF físico del servidor.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                customClass: {confirmButton: 'btn-danger-action', cancelButton: 'btn-cancel'}
+            });
+
+            if (isConfirmed) {
+                try {
+                    const response = await fetch(`/contract/periods/delete-doc/${id}/`, {
+                        method: 'POST',
+                        headers: {'X-CSRFToken': getCookie('csrftoken')}
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        this.showToast('success', data.message);
+                        this.fetchTable();
+                        if (this.showDetailModal) this.viewPeriodDetails(id);
+                    }
+                } catch (e) {
+                    this.showToast('error', 'Error al eliminar archivo');
+                }
+            }
+        },
+
+
+        // ==========================================
+        // GESTIÓN DE EXPEDIENTE (EDICIÓN)
+        // ==========================================
+        async editPeriodFields() {
+            const p = this.selectedPeriod;
+
+            if (p.status_code !== 'SIN_FIRMAR') {
+                Swal.fire({
+                    title: 'Acceso Denegado',
+                    text: 'Solo se pueden modificar contratos en estado "SIN FIRMAR".',
+                    icon: 'warning'
+                });
+                return;
+            }
+
+            let scheduleOptions = '<option value="">Seleccione un horario...</option>';
+            if (window.allSchedules) {
+                window.allSchedules.forEach(s => {
+                    scheduleOptions += `<option value="${s.id}" ${s.id == p.schedule_id ? 'selected' : ''}>${s.name}</option>`;
+                });
+            }
+
+            const {value: formValues} = await Swal.fire({
+                title: 'Modificar Datos Administrativos',
+                width: '800px', // Un poco más estrecho para que los inputs no se estiren de más
+                padding: '2rem',
+                html: `
+        <div style="text-align: left; font-family: 'Inter', sans-serif;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <!-- Columna 1 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Nro. Documento / Acción</label>
+                    <input id="swal-doc" class="form-control" value="${p.document_number}" placeholder="Ej: MUN-2024-001">
+                </div>
+                <!-- Columna 2 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Lugar de Trabajo</label>
+                    <input id="swal-workplace" class="form-control" value="${p.workplace}" placeholder="Ej: Edificio Central">
+                </div>
+                <!-- Columna 1 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Memo Necesidad</label>
+                    <input id="swal-memo" class="form-control" value="${p.institutional_need_memo}">
+                </div>
+                <!-- Columna 2 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Cert. Presupuestaria</label>
+                    <input id="swal-cert" class="form-control" value="${p.budget_certification}">
+                </div>
+                <!-- Columna 1 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Fecha Inicio</label>
+                    <input type="date" id="swal-start" class="form-control" value="${p.start_date}">
+                </div>
+                <!-- Columna 2 -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Fecha Fin</label>
+                    <input type="date" id="swal-end" class="form-control" value="${p.end_date || ''}">
+                </div>
+            </div>
+            
+            <!-- Campos de ancho completo -->
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Horario Laboral</label>
+                <select id="swal-schedule" class="form-control" style="width: 100%; height: 45px;">${scheduleOptions}</select>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Funciones del Puesto</label>
+                <textarea id="swal-functions" class="form-control" rows="3" style="width: 100%; resize: none; padding: 0.75rem;">${p.job_functions}</textarea>
+            </div>
+        </div>`,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar Cambios',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'btn-save',
+                    cancelButton: 'btn-cancel',
+                    popup: 'rounded-12'
+                },
+                preConfirm: () => {
+                    // Validación simple antes de enviar
+                    const doc = document.getElementById('swal-doc').value;
+                    const start = document.getElementById('swal-start').value;
+                    if (!doc || !start) {
+                        Swal.showValidationMessage('Nro. Documento y Fecha Inicio son obligatorios');
+                        return false;
+                    }
+                    return {
+                        doc: doc.trim().toUpperCase(),
+                        workplace: document.getElementById('swal-workplace').value.trim().toUpperCase(),
+                        memo: document.getElementById('swal-memo').value.trim().toUpperCase(),
+                        cert: document.getElementById('swal-cert').value.trim().toUpperCase(),
+                        start: start,
+                        end: document.getElementById('swal-end').value,
+                        schedule: document.getElementById('swal-schedule').value,
+                        functions: document.getElementById('swal-functions').value.trim()
+                    }
+                }
+            });
+
+            if (formValues) {
+                this.updatePeriodAPI(p.id, formValues);
+            }
+        },
+
+        async updatePeriodAPI(id, data) {
+            this.loading = true;
+            const formData = new FormData();
+            // Mapeo de datos para el Backend
+            Object.keys(data).forEach(key => formData.append(key, data[key]));
+
+            try {
+                const response = await fetch(`/contract/periods/update-partial/${id}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('success', result.message);
+                    this.viewPeriodDetails(id); // Recarga los datos en el modal abierto
+                    this.fetchTable();          // Recarga la tabla de fondo
+                } else {
+                    Swal.fire('Error de Validación', result.message || 'Datos no válidos', 'error');
+                }
+            } catch (e) {
+                this.showToast('error', 'Error crítico al actualizar');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // ==========================================
+        // 2. LÓGICA DE TABLA, FILTRO Y PAGINACIÓN
+        // ==========================================
         async fetchTable(advanced = false) {
             this.loading = true;
             this.isAdvancedSearch = advanced;
+
+            // Construimos los parámetros incluyendo los de búsqueda avanzada y el código de régimen
             const params = new URLSearchParams({
                 advanced: advanced,
                 q: this.advancedQuery,
-                status: this.filters.status
+                regime_code: this.advancedFilters.regime_code, // <-- IMPORTANTE
+                status: this.filters.status,
+                ...this.advancedFilters // Esto expande el resto (unit, dates, etc.)
             }).toString();
 
             try {
@@ -103,29 +339,29 @@ const periodApp = createApp({
                 const container = document.getElementById('table-content-wrapper');
                 if (container) container.innerHTML = data.table_html;
 
-                if (data.stats) this.stats = data.stats;
+                // Actualizamos los stats reactivamente (esto cambiará los 0s por los números reales)
+                if (data.stats) {
+                    this.stats = data.stats;
+                }
 
-                // RE-INDEXAR FILAS (Crucial para el filtrado frontend)
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.indexRows();
                         this.applyFrontendLogic();
-                    }, 100); // Aumentamos a 100ms para mayor seguridad en el DOM
+                    }, 100);
                 });
 
             } catch (e) {
-                this.showToast('error', 'Fallo al cargar tabla');
+                console.error("Fallo al cargar tabla:", e);
             } finally {
                 this.loading = false;
             }
         },
 
         indexRows() {
-            // Buscamos todas las filas con la clase específica dentro del wrapper
             const container = document.getElementById('table-content-wrapper');
             if (container) {
-                const rows = container.querySelectorAll('tr.period-row');
-                this.allDOMRows = Array.from(rows);
+                this.allDOMRows = Array.from(container.querySelectorAll('tr.period-row'));
             }
         },
 
@@ -137,37 +373,23 @@ const periodApp = createApp({
             this.totalRows = matches.length;
             const totalPages = Math.ceil(this.totalRows / this.pageSize) || 1;
 
-            // 1. IDs de los mensajes
-            const emptyFrontend = document.getElementById('frontend-no-results');
-            const emptyServer = document.querySelector('.server-empty-state');
-
-            if (emptyFrontend) {
-                // Solo mostramos el "vacío del buscador" si:
-                // El servidor TRAJO datos (allDOMRows > 0) pero el filtro los OCULTÓ (totalRows === 0)
-                const showFrontendMsg = (this.allDOMRows.length > 0 && this.totalRows === 0 && this.searchTerm !== '');
-
-                if (showFrontendMsg) {
-                    emptyFrontend.classList.remove('hidden');
-                } else {
-                    emptyFrontend.classList.add('hidden');
-                }
+            const emptyRow = document.getElementById('frontend-no-results');
+            if (emptyRow) {
+                const showMsg = (this.allDOMRows.length > 0 && this.totalRows === 0 && this.searchTerm !== '');
+                showMsg ? emptyRow.classList.remove('hidden') : emptyRow.classList.add('hidden');
             }
 
-            // 2. Visibilidad de filas de datos
             this.allDOMRows.forEach(row => row.style.display = 'none');
-
             const start = (this.currentPage - 1) * this.pageSize;
             const end = start + this.pageSize;
 
             matches.forEach((row, index) => {
-                if (index >= start && index < end) {
-                    row.style.display = '';
-                }
+                if (index >= start && index < end) row.style.display = '';
             });
 
-            // 3. Forzar actualización de etiquetas (Resuelve el "Calculando...")
             this.updatePaginationUI(totalPages);
         },
+
         updatePaginationUI(totalPages) {
             const pageInfo = document.getElementById('page-info');
             const pageDisplay = document.getElementById('current-page-display');
@@ -183,83 +405,67 @@ const periodApp = createApp({
                     pageInfo.textContent = "Sin registros para mostrar";
                 }
             }
-
             if (pageDisplay) pageDisplay.textContent = this.currentPage;
             if (btnPrev) btnPrev.disabled = (this.currentPage === 1);
             if (btnNext) btnNext.disabled = (this.currentPage >= totalPages || this.totalRows === 0);
         },
 
-        updatePaginationLabels(totalPages) {
-            const pageInfo = document.getElementById('page-info');
-            const pageDisplay = document.getElementById('current-page-display');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
+        // ==========================================
+        // 3. BÚSQUEDA AVANZADA Y LIMPIEZA
+        // ==========================================
+        triggerAdvancedSearch() {
+            this.showAdvancedModal = true;
+            document.body.classList.add('no-scroll');
+        },
 
-            if (pageInfo) {
-                const start = this.totalRows > 0 ? (this.currentPage - 1) * this.pageSize + 1 : 0;
-                const end = Math.min(this.currentPage * this.pageSize, this.totalRows);
-                pageInfo.textContent = `Mostrando ${start}-${end} de ${this.totalRows} registros`;
-            }
-            if (pageDisplay) pageDisplay.textContent = this.currentPage;
+        closeAdvancedModal() {
+            this.showAdvancedModal = false;
+            document.body.classList.remove('no-scroll');
+        },
 
-            if (btnPrev) btnPrev.disabled = (this.currentPage === 1);
-            if (btnNext) btnNext.disabled = (this.currentPage >= totalPages || this.totalRows === 0);
+        resetAdvancedFilters() {
+            this.advancedFilters = {
+                q: '', unit: '', regime: '', doc_number: '',
+                status_code: '', date_from: '', date_to: ''
+            };
+        },
+
+        async applyAdvancedSearch() {
+            this.loading = true;
+            this.showAdvancedModal = false;
+            document.body.classList.remove('no-scroll');
+            this.isAdvancedSearch = true;
+            this.fetchTable(true);
+            this.showToast('success', 'Búsqueda avanzada aplicada');
         },
 
         clearSearch() {
+            this.resetAdvancedFilters();
+            this.advancedFilters.regime_code = ''; // Limpiar filtro dinámico
             this.isAdvancedSearch = false;
-            this.advancedQuery = '';
             this.searchTerm = '';
             const input = document.getElementById('table-search-input');
             if (input) input.value = '';
             this.currentPage = 1;
             this.fetchTable(false);
-            this.showToast('success', 'Búsqueda restablecida');
         },
 
-        async triggerAdvancedSearch() {
-            const {value: query} = await Swal.fire({
-                title: 'Búsqueda Avanzada',
-                text: 'Consultando en toda la Base de Datos...',
-                input: 'text',
-                showCancelButton: true,
-                confirmButtonText: 'Buscar',
-                cancelButtonText: 'Cerrar',
-                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
-            });
-
-            if (query) {
-                this.advancedQuery = query;
-                this.searchTerm = '';
-                const input = document.getElementById('table-search-input');
-                if (input) input.value = '';
-                this.fetchTable(true);
-            }
-        },
-
-        // Métodos Wizard y Gestión
-        nextPage() {
-            if (this.currentPage < Math.ceil(this.totalRows / this.pageSize)) {
-                this.currentPage++;
-                this.applyFrontendLogic();
-            }
-        },
-        prevPage() {
-            if (this.currentPage > 1) {
-                this.currentPage--;
-                this.applyFrontendLogic();
-            }
-        },
+        // ==========================================
+        // 4. GESTIÓN DEL WIZARD (CREACIÓN)
+        // ==========================================
         startWizard() {
             this.step = 1;
+            this.isEdit = false;
             this.resetWizard();
             this.showWizard = true;
             document.body.classList.add('no-scroll');
         },
+
         closeWizard() {
             this.showWizard = false;
             document.body.classList.remove('no-scroll');
         },
+
         resetWizard() {
             this.searchDoc = '';
             this.selectedContractType = {id: null, name: ''};
@@ -270,6 +476,12 @@ const periodApp = createApp({
                 institutional_need_memo: '', budget_certification: ''
             };
         },
+
+        selectContractType(id, name) { // <-- MÉTODO REQUERIDO
+            this.selectedContractType = {id, name};
+            this.step = 2;
+        },
+
         async validateEmployee() {
             if (!this.searchDoc) return;
             this.loading = true;
@@ -290,6 +502,7 @@ const periodApp = createApp({
                 this.loading = false;
             }
         },
+
         initSelect2() {
             const vm = this;
             $('.select2-vue').each(function () {
@@ -299,10 +512,11 @@ const periodApp = createApp({
                     });
             });
         },
+
         async saveManagementPeriod() {
             const f = this.form;
             if (!f.administrative_unit || !f.schedule || !f.start_date || !f.document_number) {
-                Swal.fire('Validación', 'Campos obligatorios incompletos.', 'warning');
+                Swal.fire('Validación', 'Complete los campos obligatorios.', 'warning');
                 return;
             }
             this.loading = true;
@@ -329,7 +543,12 @@ const periodApp = createApp({
                 this.loading = false;
             }
         },
+
+        // ==========================================
+        // 5. EXPEDIENTE, FIRMA Y TERMINACIÓN
+        // ==========================================
         async viewPeriodDetails(id) {
+            if (!id) return;
             this.loading = true;
             try {
                 const response = await fetch(`/contract/periods/detail/${id}/`);
@@ -340,20 +559,34 @@ const periodApp = createApp({
                     document.body.classList.add('no-scroll');
                 }
             } catch (e) {
-                this.showToast('error', 'Error al cargar expediente');
+                this.showToast('error', 'Fallo al cargar expediente');
             } finally {
                 this.loading = false;
             }
         },
+
+        closeDetailModal() {
+            this.showDetailModal = false;
+            this.selectedPeriod = {};
+            document.body.classList.remove('no-scroll');
+        },
+
         async signPeriod(id) {
             const {isConfirmed} = await Swal.fire({
-                title: '¿Legalizar Contrato?', text: 'El estado cambiará a FIRMADO.',
-                icon: 'info', showCancelButton: true, confirmButtonText: 'Sí, Firmar'
+                title: '¿Legalizar Contrato?',
+                text: 'El estado cambiará a FIRMADO.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Firmar',
+                cancelButtonText: 'Cancelar', // Corregido: Traducción
+                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
             });
+
             if (isConfirmed) {
                 try {
                     const response = await fetch(`/contract/periods/sign/${id}/`, {
-                        method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')}
+                        method: 'POST',
+                        headers: {'X-CSRFToken': getCookie('csrftoken')}
                     });
                     const data = await response.json();
                     if (data.success) {
@@ -365,17 +598,26 @@ const periodApp = createApp({
                 }
             }
         },
+
         async terminatePeriod(id) {
             const {value: reason, isConfirmed} = await Swal.fire({
-                title: 'Finalizar Gestión', input: 'textarea', inputLabel: 'Motivo de salida',
-                showCancelButton: true, confirmButtonText: 'Finalizar'
+                title: 'Finalizar Gestión',
+                input: 'textarea',
+                inputLabel: 'Motivo de salida',
+                showCancelButton: true,
+                confirmButtonText: 'Finalizar',
+                cancelButtonText: 'Cancelar', // Corregido: Traducción
+                customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
             });
+
             if (isConfirmed && reason) {
                 const formData = new FormData();
                 formData.append('reason', reason);
                 try {
                     const response = await fetch(`/contract/periods/terminate/${id}/`, {
-                        method: 'POST', body: formData, headers: {'X-CSRFToken': getCookie('csrftoken')}
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-CSRFToken': getCookie('csrftoken')}
                     });
                     const data = await response.json();
                     if (data.success) {
@@ -385,6 +627,34 @@ const periodApp = createApp({
                 } catch (e) {
                     this.showToast('error', 'Fallo al terminar');
                 }
+            }
+        },
+        filterByRegime(regimeCode) {
+            // Si hace clic en el mismo, limpiamos
+            if (this.advancedFilters.regime_code === regimeCode) {
+                this.advancedFilters.regime_code = '';
+                this.isAdvancedSearch = false;
+                this.fetchTable(false);
+            } else {
+                this.advancedFilters.regime_code = regimeCode;
+                this.isAdvancedSearch = true;
+                this.fetchTable(true);
+            }
+        },
+
+        // ==========================================
+        // 6. UTILITARIOS
+        // ==========================================
+        nextPage() {
+            if (this.currentPage < Math.ceil(this.totalRows / this.pageSize)) {
+                this.currentPage++;
+                this.applyFrontendLogic();
+            }
+        },
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.applyFrontendLogic();
             }
         },
         showToast(icon, title) {

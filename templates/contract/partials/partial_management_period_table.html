@@ -53,6 +53,12 @@
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper">
+                        {% if period.status.code == 'FIRMADO' and not period.signed_document %}
+                            <button class="btn-create-action" data-id="{{ period.id }}" data-action="upload"
+                                    title="Subir PDF Legalizado" style="background: #0ea5e9;">
+                                <i class="fas fa-file-upload"></i>
+                            </button>
+                        {% endif %}
                         {% if period.status.code == 'SIN_FIRMAR' %}
                             <button class="btn-create-action" data-id="{{ period.id }}" data-action="sign"
                                     title="Legalizar">

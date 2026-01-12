@@ -16,44 +16,48 @@
         </div>
 
         <!-- 2. Estadísticas (Filtros Rápidos) -->
-        <div class="stats-row">
-            <div class="stat-card color-one">
-                <div class="stat-left"><h3>TOTAL ACTIVOS</h3>
-                    <div class="number">{{ total_active }}</div>
+        <div class="stats-row" v-if="stats.regimes">
+            <!-- Tarjeta Fija: Total -->
+            <div class="stat-card color-one"
+                 @click="clearSearch"
+                 :class="{'opacity-low': isAdvancedSearch}">
+                <div class="stat-left">
+                    <h3>TOTAL ACTIVOS</h3>
+                    <div class="number">[[ stats.total ]]</div>
                 </div>
                 <i class="fas fa-users-check stat-icon"></i>
             </div>
-            <div class="stat-card color-two">
-                <div class="stat-left"><h3>LOSEP</h3>
-                    <div class="number">{{ count_losep }}</div>
+
+            <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
+            <div v-for="(regime, index) in stats.regimes"
+                 :key="regime.code"
+                 class="stat-card"
+                 :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.regime_code !== regime.code}]"
+                 @click="filterByRegime(regime.code)">
+                <div class="stat-left">
+                    <h3>[[ regime.name ]]</h3>
+                    <div class="number">[[ regime.count ]]</div>
                 </div>
                 <i class="fas fa-gavel stat-icon"></i>
-            </div>
-            <div class="stat-card color-orange">
-                <div class="stat-left"><h3>CÓD. TRABAJO</h3>
-                    <div class="number">{{ count_ct }}</div>
-                </div>
-                <i class="fas fa-hammer stat-icon"></i>
             </div>
         </div>
 
         <!-- Tabla de Inicios -->
-        <div>
-            <div class="table-controls">
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search-input" class="input-field"
-                           placeholder="Filtrar en esta lista...">
-                </div>
-
-                <div class="header-actions">
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
                     <button class="btn-search" @click="triggerAdvancedSearch">
                         <i class="fas fa-database"></i> Búsqueda Avanzada
                     </button>
-
-                    <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact" @click="clearSearch">
+                    <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact"
+                            @click="clearSearch">
                         <i class="fas fa-sync-alt"></i> Limpiar
                     </button>
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search-input" class="input-field"
+                               placeholder="Filtrar en esta lista...">
+                    </div>
                 </div>
             </div>
             <div id="table-content-wrapper">
@@ -81,6 +85,8 @@
         <!-- EL GRAN WIZARD MODAL -->
         {% include 'contract/modals/modal_management_period_wizard.html' %}
         {% include 'contract/modals/modal_management_period_detail.html' %}
+        {% include 'contract/modals/modal_management_period_advanced_search.html' %}
+
     </div>
 {% endblock %}
 

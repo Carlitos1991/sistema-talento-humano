@@ -33,4 +33,6 @@ urlpatterns = [
     path('periods/detail/<int:pk>/', views.ManagementPeriodDetailAPIView.as_view(), name='period_detail_api'),
     path('periods/update-partial/<int:pk>/', views.ManagementPeriodPartialUpdateView.as_view(),
          name='period_update_partial'),
+    path('periods/upload-doc/<int:pk>/', views.ManagementPeriodUploadDocView.as_view(), name='period_upload_doc'),
+    path('periods/delete-doc/<int:pk>/', views.ManagementPeriodDeleteDocView.as_view(), name='period_delete_doc'),
 ]

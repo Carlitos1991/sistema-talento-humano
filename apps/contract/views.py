@@ -2,14 +2,14 @@ import traceback
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from django.views.generic import ListView, View
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-
+import os
 from budget.models import BudgetModificationHistory
 from core.models import CatalogItem
 from employee.models import Employee
@@ -339,54 +339,112 @@ class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
 
 
 class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
-    def get(self, request):
-        status_filter = request.GET.get('status', '')
-        advanced_search = request.GET.get('advanced', 'false') == 'true'
-        search_query = request.GET.get('q', '')
+    """
+    Vista optimizada para el renderizado híbrido de la tabla de contratos.
+    Maneja búsqueda avanzada, filtrado dinámico por régimen y estadísticas en tiempo real.
+    """
 
-        # Queryset base con select_related optimizado
+    def get(self, request):
+        # 1. CAPTURA DE PARÁMETROS (Búsqueda Avanzada y Filtros)
+        is_advanced = request.GET.get('advanced', 'false') == 'true'
+        q = request.GET.get('q', '').strip()
+        regime_code_filter = request.GET.get('regime_code', '').strip()  # De las tarjetas de stats
+
+        # Filtros específicos del modal
+        unit_id = request.GET.get('unit', '')
+        regime_id = request.GET.get('regime', '')
+        doc_num = request.GET.get('doc_number', '').strip()
+        status_code = request.GET.get('status_code', '')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+
+        # 2. CONSTRUCCIÓN DEL QUERYSET BASE
+        # Optimizamos con select_related para evitar el problema N+1
         queryset = ManagementPeriod.objects.select_related(
-            'employee__person', 'budget_line__position_item',
-            'contract_type__labor_regime', 'administrative_unit', 'status'
+            'employee__person',
+            'budget_line__position_item',
+            'contract_type__labor_regime',
+            'administrative_unit',
+            'status'
         ).all().order_by('-start_date')
 
-        # 1. Filtros de Base de Datos (Búsqueda Avanzada o Filtro de Estado)
-        if status_filter:
-            queryset = queryset.filter(status__code=status_filter)
-
-        if advanced_search and search_query:
+        # 3. APLICACIÓN DE FILTROS LÓGICOS
+        if q:
             queryset = queryset.filter(
-                Q(employee__person__first_name__icontains=search_query) |
-                Q(employee__person__last_name__icontains=search_query) |
-                Q(employee__person__document_number__icontains=search_query) |
-                Q(document_number__icontains=search_query)
+                Q(employee__person__first_name__icontains=q) |
+                Q(employee__person__last_name__icontains=q) |
+                Q(employee__person__document_number__icontains=q) |
+                Q(document_number__icontains=q)
             )
-            # Para búsqueda avanzada permitimos un set más grande (ej. 20000)
-            limit = 20000
+
+        # Filtro por clic en tarjeta de estadísticas
+        if regime_code_filter:
+            queryset = queryset.filter(contract_type__labor_regime__code=regime_code_filter)
+
+        # Filtros detallados (Modal)
+        if unit_id:
+            queryset = queryset.filter(administrative_unit_id=unit_id)
+        if regime_id:
+            queryset = queryset.filter(contract_type__labor_regime_id=regime_id)
+        if doc_num:
+            queryset = queryset.filter(document_number__icontains=doc_num)
+        if status_code:
+            queryset = queryset.filter(status__code=status_code)
+
+        # Filtros por rango de fechas
+        if date_from:
+            queryset = queryset.filter(start_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(start_date__lte=date_to)
+
+        # 4. GESTIÓN DE LÍMITES (Rendimiento)
+        # Si no hay filtros activos, limitamos a 50. Si hay búsqueda, hasta 2000.
+        has_active_filters = any([q, regime_code_filter, unit_id, regime_id, doc_num, status_code, date_from, date_to])
+
+        if not is_advanced and not has_active_filters:
+            queryset = queryset[:50]
         else:
-            # Límite inicial de 50 registros para velocidad
-            limit = 50
+            queryset = queryset[:2000]
 
-        # Aplicamos el límite final
-        queryset = queryset[:limit]
+        # 5. ESTADÍSTICAS DINÁMICAS (Cálculo optimizado)
+        # Definimos los estados que consideramos "Activos" para el conteo institucional
+        active_status_list = ['SIN_FIRMAR', 'FIRMADO', 'ACTIVO']
 
-        # 2. Estadísticas para las Cards (Siempre sobre el total de la DB)
-        stats_qs = ManagementPeriod.objects.all()
-        stats = {
-            'total': stats_qs.count(),
-            'active': stats_qs.filter(status__code='ACTIVO').count(),
-            'losep': stats_qs.filter(contract_type__labor_regime__code='LOSEP', status__code='ACTIVO').count(),
-            'ct': stats_qs.filter(contract_type__labor_regime__code='CT', status__code='ACTIVO').count(),
-        }
+        # Conteo Total de contratos vigentes
+        total_active_count = ManagementPeriod.objects.filter(
+            status__code__in=active_status_list
+        ).count()
 
+        # Conteo dinámico por Régimen Laboral (Solo regímenes activos en la DB)
+        # Usamos annotate para que la DB haga el trabajo pesado
+        regime_stats = LaborRegime.objects.filter(is_active=True).annotate(
+            active_contracts=Count(
+                'contract_types__management_periods',
+                filter=Q(contract_types__management_periods__status__code__in=active_status_list)
+            )
+        ).order_by('name')
+
+        regimes_data = [
+            {
+                'code': r.code,
+                'name': r.name,
+                'count': r.active_contracts
+            } for r in regime_stats
+        ]
+
+        # 6. RENDERIZADO Y RESPUESTA
         html = render_to_string('contract/partials/partial_management_period_table.html', {
             'periods': queryset
         }, request=request)
 
         return JsonResponse({
+            'success': True,
             'table_html': html,
-            'stats': stats,
-            'count': queryset.count()  # Cantidad de registros en el HTML inyectado
+            'stats': {
+                'total': total_active_count,
+                'regimes': regimes_data
+            },
+            'count': queryset.count()
         })
 
 
@@ -545,6 +603,7 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
             'success': True,
             'period': {
                 'id': p.id,
+                'signed_document_url': p.signed_document.url if p.signed_document else None,
                 'document_number': p.document_number,
                 'employee_name': p.employee.person.full_name,
                 'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
@@ -574,6 +633,11 @@ class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMi
 
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
+        if period.status.code != 'SIN_FIRMAR':
+            return JsonResponse({
+                'success': False,
+                'message': 'Error de Integridad: No es posible editar un contrato ya firmado o finalizado.'
+            }, status=403)
         data = request.POST
         try:
             with transaction.atomic():
@@ -595,5 +659,57 @@ class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMi
         except ValidationError as e:
             return JsonResponse({'success': False, 'message': 'Error de validación: ' + str(e.message_dict)},
                                 status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class ManagementPeriodUploadDocView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        file = request.FILES.get('contract_file')
+
+        if not file:
+            return JsonResponse({'success': False, 'message': 'No se seleccionó ningún archivo.'}, status=400)
+
+        # 1. Validaciones de Seguridad
+        if not file.name.lower().endswith('.pdf'):
+            return JsonResponse({'success': False, 'message': 'Solo se permiten archivos PDF.'}, status=400)
+
+        if file.size > 2 * 1024 * 1024:  # 2MB
+            return JsonResponse({'success': False, 'message': 'El archivo excede el límite de 2MB.'}, status=400)
+
+        try:
+            # 2. Guardar archivo (Django maneja la ruta vía upload_to definido en el modelo)
+            # Si ya existe uno, eliminamos el anterior para no dejar basura en el server
+            if period.signed_document:
+                if os.path.isfile(period.signed_document.path):
+                    os.remove(period.signed_document.path)
+
+            period.signed_document = file
+            period.updated_by = request.user
+            period.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Documento legalizado cargado correctamente.',
+                'file_url': period.signed_document.url
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class ManagementPeriodDeleteDocView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        try:
+            if period.signed_document:
+                # Eliminación física
+                if os.path.isfile(period.signed_document.path):
+                    os.remove(period.signed_document.path)
+
+                period.signed_document = None
+                period.save()
+                return JsonResponse({'success': True, 'message': 'Documento eliminado del expediente.'})
+            return JsonResponse({'success': False, 'message': 'No hay documento para eliminar.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
