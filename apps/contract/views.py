@@ -1,22 +1,22 @@
-import traceback
+import os
 
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Count
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.generic import ListView, View
-from django.http import JsonResponse
-from django.template.loader import render_to_string
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-import os
+
 from budget.models import BudgetModificationHistory
 from core.models import CatalogItem
 from employee.models import Employee
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
-from .models import LaborRegime, ContractType, ManagementPeriod
 from .forms import LaborRegimeForm, ContractTypeForm
+from .models import LaborRegime, ContractType, ManagementPeriod, History
 
 
 class LaborRegimeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -463,38 +463,52 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
 
         try:
             with transaction.atomic():
-                # 1. Obtener estados de catálogos
-                # Ajusta los códigos según tu tabla CatalogItem
+                # 1. Obtener estados
                 finalizado_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
                 libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
 
-                # 2. Actualizar el Periodo de Gestión
+                # 2. Finalizar el Periodo
                 period.status = finalizado_status
                 if not period.end_date:
                     period.end_date = timezone.now().date()
                 period.updated_by = request.user
                 period.save()
 
-                # 3. Liberar la Partida Presupuestaria vinculada
+                # 3. Liberar la Partida
                 budget_line = period.budget_line
                 budget_line.status_item = libre_status
-                budget_line.current_employee = None  # La partida queda vacante
+                budget_line.current_employee = None
                 budget_line.updated_by = request.user
                 budget_line.save()
 
-                # 4. Registrar en el Historial (Opcional si tienes modelo History)
-                # History.objects.create(...)
+                # --- 4. REGISTRO EN HISTORIAL DE CONTRATO ---
+                History.objects.create(
+                    employee=period.employee,
+                    contract=period,
+                    user_register=request.user.get_full_name() or request.user.username,
+                    type='TERMINACIÓN',
+                    reason=reason  # Aquí se guarda lo que el usuario escribió en el modal
+                )
+
+                # 5. Auditoría en Historial de Partida (Ya lo tenías)
+                BudgetModificationHistory.objects.create(
+                    budget_line=budget_line,
+                    modified_by=request.user,
+                    modification_type='RELEASE',
+                    field_name='Estado y Ocupante',
+                    old_value=f"Ocupada por {period.employee.person.full_name}",
+                    new_value="LIBRE / VACANTE",
+                    reason=f"Terminación de contrato. Motivo: {reason}"
+                )
 
             return JsonResponse({
                 'success': True,
-                'message': f'Gestión finalizada y partida {budget_line.number_individual} liberada exitosamente.'
+                'message': 'Gestión finalizada, partida liberada y registro guardado en el historial.'
             })
 
-        except CatalogItem.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Error de configuración: Estados no encontrados.'},
-                                status=500)
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
+
 
 class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'contract.add_managementperiod'
@@ -569,17 +583,27 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
         try:
-            status_signed = CatalogItem.objects.get(
-                catalog__code='STATUS_CONTRACT',
-                code='FIRMADO'
-            )
-            period.status = status_signed
-            period.updated_by = request.user
-            period.save()
+            with transaction.atomic():
+                status_signed = CatalogItem.objects.get(
+                    catalog__code='STATUS_CONTRACT',
+                    code='FIRMADO'
+                )
+                period.status = status_signed
+                period.updated_by = request.user
+                period.save()
+
+                # --- REGISTRO EN HISTORIAL ---
+                History.objects.create(
+                    employee=period.employee,
+                    contract=period,
+                    user_register=request.user.get_full_name() or request.user.username,
+                    type='FIRMA',
+                    reason='CONTRATO FIRMADO'
+                )
 
             return JsonResponse({
                 'success': True,
-                'message': 'El contrato ha sido legalizado (FIRMADO) exitosamente.'
+                'message': 'El contrato ha sido legalizado y registrado en el historial.'
             })
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
