@@ -4316,3 +4316,46 @@ textarea.is-valid:focus,
 .vigencia-box strong {
     color: var(--primary-color);
 }
+
+.empty-state-container {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state-icon {
+    color: #94a3b8;
+    font-size: 3.5rem;
+    display: block;
+    margin: 0 auto 1.5rem;
+}
+
+.empty-state-text {
+    margin-top: 1rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.search-term-highlight {
+    color: var(--error);
+}
+
+/* Botones Compactos para Filtros */
+.btn-compact {
+    min-width: auto;
+    padding: 0.65rem 1.25rem;
+}
+
+.btn-secondary-search {
+    background-color: #64748b;
+}
+
+.btn-secondary-search:hover {
+    background-color: #475569;
+}
+
+/* Paginación */
+.page-current-display {
+    font-weight: 800;
+    padding: 0 1.25rem;
+    color: var(--primary-color);
+}

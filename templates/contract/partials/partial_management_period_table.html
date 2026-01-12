@@ -12,17 +12,17 @@
             <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
         </tr>
         </thead>
-        <tbody>
+        <tbody id="management-table-body">
         {% for period in periods %}
-            <tr class="period-row"> <!-- Agregamos clase para fácil identificación -->
-                <!-- ... (contenido de las celdas igual al anterior) ... -->
+            <tr class="period-row">
                 <td>
                     <div class="person-info">
                         {% if period.employee.person.photo %}
-                            <img src="{{ period.employee.person.photo.url }}" class="person-avatar">
+                            <img src="{{ period.employee.person.photo.url }}" class="person-avatar" alt="Foto">
                         {% else %}
                             <div class="person-avatar-placeholder">
-                                {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}</div>
+                                {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}
+                            </div>
                         {% endif %}
                         <div class="person-details">
                             <h4>{{ period.employee.person.full_name }}</h4>
@@ -47,43 +47,46 @@
                     </div>
                 </td>
                 <td>
-                    <span class="status-badge {% if period.status.code == 'SIN_FIRMAR' %}sin-firmar{% elif period.status.code == 'FIRMADO' %}firmado{% else %}general{% endif %}">
-                        {{ period.status.name }}
-                    </span>
+                        <span class="status-badge {% if period.status.code == 'SIN_FIRMAR' %}sin-firmar{% elif period.status.code == 'FIRMADO' %}firmado{% else %}general{% endif %}">
+                            {{ period.status.name }}
+                        </span>
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper">
                         {% if period.status.code == 'SIN_FIRMAR' %}
-                            <button class="btn-create-action" onclick="periodInstance.signPeriod({{ period.id }})"
-                                    title="Legalizar"><i class="fas fa-file-signature"></i></button>
+                            <button class="btn-create-action" data-id="{{ period.id }}" data-action="sign"
+                                    title="Legalizar">
+                                <i class="fas fa-file-signature"></i>
+                            </button>
                         {% endif %}
-                        <button class="btn-list-action" onclick="periodInstance.viewPeriodDetails({{ period.id }})"
-                                title="Expediente"><i class="fas fa-eye"></i></button>
-                        <button class="btn-delete-action" onclick="periodInstance.terminatePeriod({{ period.id }})"
-                                title="Finalizar"><i class="fas fa-user-slash"></i></button>
+                        <button class="btn-list-action" data-id="{{ period.id }}" data-action="view" title="Expediente">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn-delete-action" data-id="{{ period.id }}" data-action="terminate"
+                                title="Finalizar">
+                            <i class="fas fa-user-slash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
         {% empty %}
-            <!-- Esto solo sale si el servidor envía 0 registros -->
-            <tr class="empty-db-state">
-                <td colspan="7" class="text-center py-5">
-                    <div class="no-results-content">
-                        <i class="fas fa-database no-results-icon"></i>
-                        <p>No existen registros en la base de datos.</p>
+            <tr class="server-empty-state">
+                <td colspan="7">
+                    <div class="empty-state-container">
+                        <i class="fas fa-database empty-state-icon"></i>
+                        <p class="empty-state-text">No se encontraron registros en la Base de Datos.</p>
                     </div>
                 </td>
             </tr>
         {% endfor %}
 
-        <!-- FILA DINÁMICA: Mensaje para búsqueda frontend vacía -->
-        <tr id="frontend-no-results" style="display: none;">
-            <td colspan="7" class="text-center py-5">
-                <div class="no-results-content">
-                    <i class="fas fa-search-minus no-results-icon" style="color: #94a3b8; font-size: 3rem;"></i>
-                    <p class="mt-3 font-weight-700" style="color: #64748b;">No hay coincidencias para "[[ searchTerm ]]"
-                        en esta lista.</p>
-                    <button class="btn-search mt-2" @click="triggerAdvancedSearch" style="background-color: #64748b;">
+        <!-- FILA DE ESTADO VACÍO (MANEJADA POR JS) -->
+        <tr id="frontend-no-results" class="hidden">
+            <td colspan="7">
+                <div class="empty-state-container">
+                    <i class="fas fa-search-minus empty-state-icon"></i>
+                    <p class="empty-state-text">No existen registros con el filtro aplicado en esta lista.</p>
+                    <button class="btn-search btn-secondary-search mt-2" data-action="advanced-search-empty">
                         <i class="fas fa-database"></i> Intentar Búsqueda en toda la BD
                     </button>
                 </div>
