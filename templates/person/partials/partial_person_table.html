@@ -42,9 +42,21 @@
                 <td>{{ person.email|default:"--" }}</td>
                 <td>{{ person.phone_number|default:"--" }}</td>
                 <td class="text-center">
+                    {% if person.employee_profile.area %}
+                        <div class="font-weight-700 small text-primary">
+                            {{ person.employee_profile.area.name }}
+                        </div>
+                        {% if person.employee_profile.is_boss %}
+                            <span class="status-badge" style="background: #fef3c7; color: #92400e; font-size: 0.6rem;">JEFE/A</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted small italic">Sin unidad asignada</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
                     {% with emp=person.employee_profile %}
                         {% if emp.employment_status %}
-                            <span class="status-badge 
+                            <span class="status-badge
                                 {% if emp.employment_status.code == 'PERSONA' %}neutral
                                 {% elif emp.employment_status.code == 'EMPLEADO' or emp.employment_status.code == 'TRABAJADOR' %}active
                                 {% elif 'EX_' in emp.employment_status.code %}inactive
@@ -56,13 +68,7 @@
                         {% endif %}
                     {% endwith %}
                 </td>
-                <td class="text-center">
-                    {% if person.person_status %}
-                        <span class="status-badge neutral">{{ person.person_status.name }}</span>
-                    {% else %}
-                        <span class="status-badge status-badge-no-status">SIN ESTADO</span>
-                    {% endif %}
-                </td>
+
                 {% if perms.person.change_person or perms.person.delete_person %}
                     <td>
                         <div class="actions-wrapper">

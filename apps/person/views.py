@@ -19,8 +19,8 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         qs = Person.objects.select_related(
             'document_type',
             'user',
-            'employee_profile__employment_status',  # Relación inversa OneToOne
-            'employee_profile__area'  # Para mostrar la dependencia real
+            'employee_profile__area',
+            'employee_profile__employment_status'
         ).all().order_by('last_name')
 
         query = self.request.GET.get('q')

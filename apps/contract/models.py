@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from core.models import BaseModel, CatalogItem
@@ -80,7 +80,7 @@ class ManagementPeriod(BaseModel):
     # Identificador único del contrato (Ej: MUN-TTHH-2024-001-CT)
     document_number = models.CharField(
         verbose_name='Número de Documento',
-        max_length=100, unique=True, db_index=True
+        max_length=100, unique=True, db_index=True,blank=True
     )
 
     employee = models.ForeignKey(
@@ -162,8 +162,27 @@ class ManagementPeriod(BaseModel):
         return date_active and self.status.code == 'ACTIVO'
 
     def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+        # 1. GENERACIÓN AUTOMÁTICA DEL CÓDIGO (Solo para registros nuevos)
+        if not self.pk or not self.document_number:
+            # Obtenemos el conteo histórico para la secuencia
+            sequence = ManagementPeriod.objects.count() + 1
+            regime_code = self.contract_type.labor_regime.code
+
+            # Formato: ML-DTH-00n-CODE (con 3 ceros de padding)
+            self.document_number = f"ML-DTH-{sequence:03d}-{regime_code}"
+
+        # 2. TRANSACCIÓN ATÓMICA PARA SINCRONIZAR EMPLEADO
+        # Usamos transaction.atomic por seguridad si se llama fuera de una vista transaccional
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            # Actualizar el área del empleado automáticamente
+            if self.employee and self.administrative_unit:
+                # Solo actualizamos si es diferente para ahorrar recursos
+                if self.employee.area != self.administrative_unit:
+                    self.employee.area = self.administrative_unit
+                    # Actualizamos también el estado laboral a activo si fuera necesario
+                    self.employee.save()
 
 
 class History(models.Model):

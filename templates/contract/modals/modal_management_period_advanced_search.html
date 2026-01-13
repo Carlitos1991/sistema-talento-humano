@@ -1,4 +1,4 @@
-<div class="modal-overlay" v-if="showAdvancedModal" v-cloak>
+<div class="modal-overlay" v-if="showAdvancedModal" v-cloak @click.self="closeAdvancedModal">
     <div class="modal-container-medium" style="width: 850px; margin: auto;">
         <div class="modal-header-medium modal-header-gradient">
             <h3 class="modal-title text-white">
@@ -86,7 +86,7 @@
             <button type="button" class="btn-cancel" @click="resetAdvancedFilters">
                 <i class="fas fa-eraser me-2"></i> Limpiar Filtros
             </button>
-            <button type="button" class="btn-save" @click="applyAdvancedSearch" style="background: #1e40af;">
+            <button type="button" class="btn-save" @click="applyAdvancedSearch">
                 <i class="fas fa-search me-2"></i> Ejecutar Búsqueda
             </button>
         </div>

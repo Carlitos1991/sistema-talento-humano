@@ -41,8 +41,8 @@ const periodApp = createApp({
             isAdvancedSearch: false,
             advancedQuery: '',
             advancedFilters: {
-                regime_code: '', q: '', unit: '', regime: '', doc_number: '',
-                status_code: '', date_from: '', date_to: ''
+                q: '', unit: '', regime: '', doc_number: '',
+                status_code: '', date_from: '', date_to: '', regime_code: ''
             },
 
             // --- SELECCIÓN Y DATOS ---
@@ -107,6 +107,11 @@ const periodApp = createApp({
                     if (action === 'upload') this.uploadContractFile(id);
                 });
             }
+        },
+        openSearchModal() {
+            console.log("Intentando abrir modal..."); // Diagnostic log
+            this.showAdvancedModal = true;
+            document.body.classList.add('no-scroll');
         },
         async uploadContractFile(id) {
             const {value: file} = await Swal.fire({
@@ -214,8 +219,11 @@ const periodApp = createApp({
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                 <!-- Columna 1 -->
                 <div class="form-group">
-                    <label class="form-label" style="font-weight: 700; font-size: 0.75rem; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Nro. Documento / Acción</label>
-                    <input id="swal-doc" class="form-control" value="${p.document_number}" placeholder="Ej: MUN-2024-001">
+                    <label class="form-label">Número de Documento</label>
+                    <input type="text" class="input-field readonly-styled" 
+                           value="ML-DTH-XXX-REGIME" readonly 
+                           placeholder="Generado automáticamente">
+                    <small class="form-hint">Este código se asignará al finalizar la gestión.</small>
                 </div>
                 <!-- Columna 2 -->
                 <div class="form-group">
@@ -422,11 +430,10 @@ const periodApp = createApp({
             this.showAdvancedModal = false;
             document.body.classList.remove('no-scroll');
         },
-
         resetAdvancedFilters() {
             this.advancedFilters = {
-                q: '', unit: '', regime: '', doc_number: '',
-                status_code: '', date_from: '', date_to: ''
+                regime_code: '', q: '', unit: '', regime: '',
+                doc_number: '', status_code: '', date_from: '', date_to: ''
             };
         },
 
@@ -434,20 +441,24 @@ const periodApp = createApp({
             this.loading = true;
             this.showAdvancedModal = false;
             document.body.classList.remove('no-scroll');
+
+            // Activamos la bandera para que aparezca el botón "Limpiar" en la lista
             this.isAdvancedSearch = true;
-            this.fetchTable(true);
+
+            // Llamamos a la tabla enviando true (Búsqueda avanzada)
+            await this.fetchTable(true);
+
             this.showToast('success', 'Búsqueda avanzada aplicada');
         },
 
         clearSearch() {
             this.resetAdvancedFilters();
-            this.advancedFilters.regime_code = ''; // Limpiar filtro dinámico
             this.isAdvancedSearch = false;
             this.searchTerm = '';
             const input = document.getElementById('table-search-input');
             if (input) input.value = '';
             this.currentPage = 1;
-            this.fetchTable(false);
+            this.fetchTable(false); // Trae los 50 iniciales sin filtros
         },
 
         // ==========================================

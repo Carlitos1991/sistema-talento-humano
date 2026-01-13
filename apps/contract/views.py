@@ -526,22 +526,14 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
         data = request.POST
         try:
             with transaction.atomic():
-                # 1. Obtener estado inicial del contrato
                 status_initial = CatalogItem.objects.get(
-                    catalog__code='STATUS_CONTRACT',
-                    code='SIN_FIRMAR'
+                    catalog__code='STATUS_CONTRACT', code='SIN_FIRMAR'
                 )
 
                 employee = get_object_or_404(Employee, pk=data.get('employee'))
                 budget_line = employee.current_budget_line.first()
 
-                if not budget_line:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'El empleado no tiene una partida asignada.'
-                    }, status=400)
-
-                # 2. Crear el periodo
+                # Creamos la instancia SIN document_number (el save() lo pondrá)
                 period = ManagementPeriod(
                     employee=employee,
                     budget_line=budget_line,
@@ -549,7 +541,8 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                     administrative_unit_id=data.get('administrative_unit'),
                     schedule_id=data.get('schedule'),
                     status=status_initial,
-                    document_number=data.get('document_number', '').strip().upper(),
+
+                    # Estos campos se mantienen manuales
                     institutional_need_memo=data.get('institutional_need_memo', '').strip().upper(),
                     budget_certification=data.get('budget_certification', '').strip().upper(),
                     workplace=data.get('workplace', '').strip().upper(),
@@ -559,17 +552,12 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                     created_by=request.user
                 )
 
-                # 3. Validar y Guardar (Aquí es donde daba el 400)
                 period.full_clean()
-                period.save()
-
-                # 4. Cambiar estado del empleado a "Inactivo con Partida" (ya que aún no firma)
-                # O mantenerlo si ya lo estaba. Esto asegura la coherencia.
-                employee.set_status('INACTIVE_WITH_BUDGET')
+                period.save()  # Aquí se dispara la secuencia y el update del Employee
 
                 return JsonResponse({
                     'success': True,
-                    'message': f'Contrato {period.document_number} registrado. Esperando firma.'
+                    'message': f'Gestión {period.document_number} registrada y área del empleado actualizada.'
                 })
 
         except ValidationError as e:

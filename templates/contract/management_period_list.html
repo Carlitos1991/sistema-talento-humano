@@ -46,7 +46,7 @@
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
-                    <button class="btn-search" @click="triggerAdvancedSearch">
+                    <button type="button" class="btn-search" @click="openSearchModal">
                         <i class="fas fa-database"></i> Búsqueda Avanzada
                     </button>
                     <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact"
