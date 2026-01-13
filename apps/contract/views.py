@@ -339,18 +339,11 @@ class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
 
 
 class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
-    """
-    Vista optimizada para el renderizado híbrido de la tabla de contratos.
-    Maneja búsqueda avanzada, filtrado dinámico por régimen y estadísticas en tiempo real.
-    """
-
     def get(self, request):
-        # 1. CAPTURA DE PARÁMETROS (Búsqueda Avanzada y Filtros)
+        # 1. Filtros avanzados
         is_advanced = request.GET.get('advanced', 'false') == 'true'
         q = request.GET.get('q', '').strip()
-        regime_code_filter = request.GET.get('regime_code', '').strip()  # De las tarjetas de stats
-
-        # Filtros específicos del modal
+        regime_code_filter = request.GET.get('regime_code', '').strip()
         unit_id = request.GET.get('unit', '')
         regime_id = request.GET.get('regime', '')
         doc_num = request.GET.get('doc_number', '').strip()
@@ -358,17 +351,13 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
         date_from = request.GET.get('date_from', '')
         date_to = request.GET.get('date_to', '')
 
-        # 2. CONSTRUCCIÓN DEL QUERYSET BASE
-        # Optimizamos con select_related para evitar el problema N+1
+        # 2. QuerySet Base
         queryset = ManagementPeriod.objects.select_related(
-            'employee__person',
-            'budget_line__position_item',
-            'contract_type__labor_regime',
-            'administrative_unit',
-            'status'
+            'employee__person', 'budget_line__position_item',
+            'contract_type__labor_regime', 'administrative_unit', 'status'
         ).all().order_by('-start_date')
 
-        # 3. APLICACIÓN DE FILTROS LÓGICOS
+        # 3. Aplicación de lógica de filtrado
         if q:
             queryset = queryset.filter(
                 Q(employee__person__first_name__icontains=q) |
@@ -376,74 +365,33 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
                 Q(employee__person__document_number__icontains=q) |
                 Q(document_number__icontains=q)
             )
-
-        # Filtro por clic en tarjeta de estadísticas
         if regime_code_filter:
             queryset = queryset.filter(contract_type__labor_regime__code=regime_code_filter)
+        if unit_id: queryset = queryset.filter(administrative_unit_id=unit_id)
+        if regime_id: queryset = queryset.filter(contract_type__labor_regime_id=regime_id)
+        if doc_num: queryset = queryset.filter(document_number__icontains=doc_num)
+        if status_code: queryset = queryset.filter(status__code=status_code)
+        if date_from: queryset = queryset.filter(start_date__gte=date_from)
+        if date_to: queryset = queryset.filter(start_date__lte=date_to)
 
-        # Filtros detallados (Modal)
-        if unit_id:
-            queryset = queryset.filter(administrative_unit_id=unit_id)
-        if regime_id:
-            queryset = queryset.filter(contract_type__labor_regime_id=regime_id)
-        if doc_num:
-            queryset = queryset.filter(document_number__icontains=doc_num)
-        if status_code:
-            queryset = queryset.filter(status__code=status_code)
+        # Límite de performance
+        has_filters = any([q, regime_code_filter, unit_id, regime_id, doc_num, status_code, date_from, date_to])
+        queryset = queryset[:2000] if (is_advanced or has_filters) else queryset[:50]
 
-        # Filtros por rango de fechas
-        if date_from:
-            queryset = queryset.filter(start_date__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(start_date__lte=date_to)
-
-        # 4. GESTIÓN DE LÍMITES (Rendimiento)
-        # Si no hay filtros activos, limitamos a 50. Si hay búsqueda, hasta 2000.
-        has_active_filters = any([q, regime_code_filter, unit_id, regime_id, doc_num, status_code, date_from, date_to])
-
-        if not is_advanced and not has_active_filters:
-            queryset = queryset[:50]
-        else:
-            queryset = queryset[:2000]
-
-        # 5. ESTADÍSTICAS DINÁMICAS (Cálculo optimizado)
-        # Definimos los estados que consideramos "Activos" para el conteo institucional
-        active_status_list = ['SIN_FIRMAR', 'FIRMADO', 'ACTIVO']
-
-        # Conteo Total de contratos vigentes
-        total_active_count = ManagementPeriod.objects.filter(
-            status__code__in=active_status_list
-        ).count()
-
-        # Conteo dinámico por Régimen Laboral (Solo regímenes activos en la DB)
-        # Usamos annotate para que la DB haga el trabajo pesado
+        # 4. Estadísticas Dinámicas
+        active_status = ['SIN_FIRMAR', 'FIRMADO', 'ACTIVO']
+        total_active = ManagementPeriod.objects.filter(status__code__in=active_status).count()
         regime_stats = LaborRegime.objects.filter(is_active=True).annotate(
-            active_contracts=Count(
-                'contract_types__management_periods',
-                filter=Q(contract_types__management_periods__status__code__in=active_status_list)
-            )
+            active_contracts=Count('contract_types__management_periods', filter=Q(contract_types__management_periods__status__code__in=active_status))
         ).order_by('name')
 
-        regimes_data = [
-            {
-                'code': r.code,
-                'name': r.name,
-                'count': r.active_contracts
-            } for r in regime_stats
-        ]
+        regimes_data = [{'code': r.code, 'name': r.name, 'count': r.active_contracts} for r in regime_stats]
 
-        # 6. RENDERIZADO Y RESPUESTA
-        html = render_to_string('contract/partials/partial_management_period_table.html', {
-            'periods': queryset
-        }, request=request)
-
+        html = render_to_string('contract/partials/partial_management_period_table.html', {'periods': queryset}, request=request)
         return JsonResponse({
             'success': True,
             'table_html': html,
-            'stats': {
-                'total': total_active_count,
-                'regimes': regimes_data
-            },
+            'stats': {'total': total_active, 'regimes': regimes_data},
             'count': queryset.count()
         })
 

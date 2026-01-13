@@ -31,7 +31,7 @@ const periodApp = createApp({
             showDetailModal: false,
             showAdvancedModal: false,
             isEdit: false, // <-- PROPIEDAD REQUERIDA POR EL WIZARD
-
+            unitLevels: [],
             // --- FILTRADO Y PAGINACIÓN ---
             currentPage: 1,
             pageSize: 10,
@@ -141,6 +141,42 @@ const periodApp = createApp({
             await this.fetchTable(true);
 
             this.showToast('success', 'Búsqueda avanzada aplicada');
+        },
+        async loadInitialUnits() {
+            try {
+                const res = await fetch('/institution/api/unit-children/');
+                const data = await res.json();
+                if (data.success) {
+                    // Inicializamos con el nivel 1
+                    this.unitLevels = [{options: data.units, selectedId: null}];
+                }
+            } catch (e) {
+                console.error("Error cargando unidades:", e);
+            }
+        },
+
+        async handleUnitChange(index) {
+            const selectedId = this.unitLevels[index].selectedId;
+
+            // Cortar el array para eliminar niveles inferiores si el usuario cambia un nivel superior
+            this.unitLevels = this.unitLevels.slice(0, index + 1);
+
+            // Actualizar el valor final que irá a la base de datos
+            this.form.administrative_unit = selectedId;
+
+            if (!selectedId) return;
+
+            try {
+                const res = await fetch(`/institution/api/unit-children/?parent_id=${selectedId}`);
+                const data = await res.json();
+
+                if (data.success && data.units.length > 0) {
+                    // Agregar el siguiente nivel de combo
+                    this.unitLevels.push({options: data.units, selectedId: null});
+                }
+            } catch (e) {
+                console.error("Error cargando hijos:", e);
+            }
         },
         async uploadContractFile(id) {
             const {value: file} = await Swal.fire({
@@ -498,7 +534,11 @@ const periodApp = createApp({
             this.resetWizard();
             this.showWizard = true;
             document.body.classList.add('no-scroll');
+
+            // INICIAR CARGA DE UNIDADES NIVEL 1 INMEDIATAMENTE
+            this.loadInitialUnits();
         },
+
 
         closeWizard() {
             this.showWizard = false;
@@ -507,6 +547,7 @@ const periodApp = createApp({
 
         resetWizard() {
             this.searchDoc = '';
+            this.unitLevels = []; // Limpiar niveles
             this.selectedContractType = {id: null, name: ''};
             this.selectedEmployee = {id: null, full_name: '', photo: '', budget_line: null};
             this.form = {
@@ -533,7 +574,19 @@ const periodApp = createApp({
                     this.step = 3;
                     this.$nextTick(() => this.initSelect2());
                 } else {
-                    Swal.fire('Atención', data.message, 'info');
+                    // --- CONFIGURACIÓN ESTÁNDAR SENIOR PARA VALIDACIONES ---
+                    Swal.fire({
+                        title: 'Atención',
+                        text: data.message,
+                        icon: 'info',
+                        confirmButtonText: 'Aceptar',
+                        cancelButtonText: 'Cancelar', // Traducción de "Cancel"
+                        showCancelButton: false,      // Sugerencia: En avisos, un solo botón es más limpio
+                        customClass: {
+                            confirmButton: 'btn-save',
+                            cancelButton: 'btn-cancel'
+                        }
+                    });
                 }
             } catch (e) {
                 this.showToast('error', 'Fallo de conexión');
@@ -554,8 +607,8 @@ const periodApp = createApp({
 
         async saveManagementPeriod() {
             const f = this.form;
-            if (!f.administrative_unit || !f.schedule || !f.start_date || !f.document_number) {
-                Swal.fire('Validación', 'Complete los campos obligatorios.', 'warning');
+            if (!f.administrative_unit || !f.schedule || !f.start_date) {
+                CustomSwal.fire('Validación', 'Complete los campos obligatorios (*).', 'warning');
                 return;
             }
 
@@ -639,7 +692,7 @@ const periodApp = createApp({
                 icon: 'info',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, Firmar',
-                cancelButtonText: 'Cancelar', // Corregido: Traducción
+                cancelButtonText: 'Cancelar',
                 customClass: {confirmButton: 'btn-save', cancelButton: 'btn-cancel'}
             });
 
@@ -662,31 +715,15 @@ const periodApp = createApp({
 
         async terminatePeriod(id) {
             const {value: reason, isConfirmed} = await Swal.fire({
-                title: 'Finalizar Gestión Laboral',
+                title: 'Finalizar Gestión',
                 input: 'textarea',
-                inputLabel: 'Indique el motivo de la salida o terminación',
-                inputPlaceholder: 'Ej: Renuncia, Fin de contrato, Desvinculación...',
-                showCancelButton: true,
-                confirmButtonText: 'Finalizar Contrato',
-                cancelButtonText: 'Cancelar',
-                customClass: {
-                    confirmButton: 'btn-save', // Usamos btn-save o puedes crear btn-danger en CSS
-                    cancelButton: 'btn-cancel'
-                },
-                preConfirm: (value) => {
-                    if (!value || value.trim().length < 5) {
-                        Swal.showValidationMessage('Debe ingresar un motivo válido (mín. 5 caracteres)');
-                        return false;
-                    }
-                    return value;
-                }
+                inputLabel: 'Motivo de salida',
+                showCancelButton: true, confirmButtonText: 'Finalizar'
             });
 
             if (isConfirmed && reason) {
-                this.loading = true;
                 const formData = new FormData();
                 formData.append('reason', reason);
-
                 try {
                     const response = await fetch(`/contract/periods/terminate/${id}/`, {
                         method: 'POST',
@@ -694,22 +731,12 @@ const periodApp = createApp({
                         headers: {'X-CSRFToken': getCookie('csrftoken')}
                     });
                     const data = await response.json();
-
                     if (data.success) {
-                        Swal.fire({
-                            title: '¡Éxito!',
-                            text: data.message,
-                            icon: 'success',
-                            customClass: {confirmButton: 'btn-save'}
-                        });
-                        this.fetchTable(); // Recarga la tabla y los conteos de las cards
-                    } else {
-                        Swal.fire('Error', data.message, 'error');
+                        Swal.fire('Éxito', data.message, 'success');
+                        this.fetchTable();
                     }
                 } catch (e) {
-                    this.showToast('error', 'Fallo al procesar la terminación');
-                } finally {
-                    this.loading = false;
+                    this.showToast('error', 'Error al terminar');
                 }
             }
         },

@@ -30,14 +30,13 @@
 
         <form id="wizardForm" @submit.prevent="saveManagementPeriod">
             {% csrf_token %}
-
             <div class="modal-body-content modal-body-custom">
 
-                <!-- PASO 1: MODALIDAD (CON SCROLL CONTROLADO) -->
+                <!-- PASO 1: MODALIDAD -->
                 <div v-if="step === 1" class="animate__animated animate__fadeIn">
                     <div style="max-height: 55vh; overflow-y: auto; padding-right: 10px;">
                         {% for regime in regimes %}
-                            <div class="form-section-card">
+                            <div class="form-section-card mb-3">
                                 <h6 class="section-title"><i class="fas fa-briefcase"></i> Régimen: {{ regime.name }}
                                 </h6>
                                 <div class="contract-cards-grid">
@@ -71,7 +70,7 @@
                     </div>
                 </div>
 
-                <!-- PASO 3: DATOS FINALES (LAYOUT REFINADO) -->
+                <!-- PASO 3: DATOS FINALES -->
                 <div v-if="step === 3" class="animate__animated animate__fadeIn">
 
                     <!-- BANNER EMPLEADO + PARTIDA -->
@@ -83,7 +82,6 @@
                                 <h4 class="mb-1 text-white font-weight-800">[[ selectedEmployee.full_name ]]</h4>
                                 <span class="status-badge general">[[ selectedContractType.name ]]</span>
                             </div>
-                            <!-- Alineado a la derecha -->
                             <div class="budget-inherited-box ms-auto" v-if="selectedEmployee.budget_line">
                                 <small class="text-white-opacity">PARTIDA HEREDADA</small>
                                 <strong class="text-accent">[[ selectedEmployee.budget_line.number ]]</strong>
@@ -92,35 +90,39 @@
                         </div>
                     </div>
 
-                    <!-- SECCIONES DE FORMULARIO -->
+                    <!-- SECCIÓN: UNIDAD ADMINISTRATIVA POR NIVELES -->
                     <div class="form-section-card mt-4">
-                        <h6 class="section-title"><i class="fas fa-sitemap"></i> Ubicación y Documentación</h6>
-                        <div class="grid-3-cols">
-                            <div class="form-group">
-                                <label class="form-label font-weight-700">Unidad Administrativa</label>
-                                <select v-model="form.administrative_unit"
-                                        name="administrative_unit"
-                                        id="unit-select"
-                                        class="form-control select2-vue">
-                                    <option value=""></option> <!-- Dejar vacío para el placeholder de Select2 -->
-                                    {% for unit in units %}
-                                        <option value="{{ unit.id }}">{{ unit.name|upper }}</option>
-                                    {% endfor %}
+                        <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Organizacional</h6>
+                        <div class="unit-dynamic-grid">
+                            <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
+                                <label>
+                                    [[ index === 0 ? 'Dirección / Unidad Raíz' : 'Sub-dependencia Nivel ' + (index + 1)]]
+                                </label>
+                                <select v-model="level.selectedId"
+                                        @change="handleUnitChange(index)"
+                                        class="input-field">
+                                    <option :value="null">-- Seleccione una opción --</option>
+                                    <option v-for="opt in level.options" :key="opt.id" :value="opt.id">
+                                        [[ opt.name.toUpperCase() ]]
+                                    </option>
                                 </select>
                             </div>
+                        </div>
+                        <div class="grid-2-cols mt-4">
                             <div class="form-group">
                                 <label class="form-label">Memo Necesidad</label>
                                 <input type="text" v-model="form.institutional_need_memo"
-                                       class="form-control uppercase-input">
+                                       class="input-field uppercase-input">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Certificación Presup.</label>
                                 <input type="text" v-model="form.budget_certification"
-                                       class="form-control uppercase-input">
+                                       class="input-field uppercase-input">
                             </div>
                         </div>
                     </div>
 
+                    <!-- SECCIÓN: VIGENCIA Y JORNADA -->
                     <div class="form-section-card">
                         <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Vigencia y Jornada</h6>
                         <div class="grid-3-cols">
@@ -134,7 +136,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Horario Institucional</label>
-                                <select v-model="form.schedule" name="schedule" class="form-control select2-vue">
+                                <select v-model="form.schedule" class="input-field">
                                     <option value="">Seleccione...</option>
                                     {% for sch in schedules %}
                                         <option value="{{ sch.id }}">{{ sch.name }}</option>
@@ -145,19 +147,21 @@
                         <div class="grid-2-cols mt-3">
                             <div class="form-group">
                                 <label class="form-label">Lugar de Trabajo</label>
-                                <input type="text" v-model="form.workplace" class="form-control"
+                                <input type="text" v-model="form.workplace" class="input-field uppercase-input"
                                        placeholder="Ej: Piso 2">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Número de Documento / Acción</label>
-                                <input type="text" v-model="form.document_number" class="form-control uppercase-input">
+                                <input type="text" value="ML-DTH-XXX-REGIME" class="input-field bg-readonly" readonly>
+                                <small class="form-hint">El código secuencial se generará al guardar.</small>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section-card">
                         <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
-                        <textarea v-model="form.job_functions" class="form-control" rows="2"></textarea>
+                        <textarea v-model="form.job_functions" class="input-field" rows="2"
+                                  placeholder="Describa las actividades..."></textarea>
                     </div>
                 </div>
             </div>
@@ -165,7 +169,8 @@
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" v-if="step > 1" class="btn-cancel" @click="step--">ANTERIOR</button>
                 <button type="button" v-if="step === 1" class="btn-cancel" @click="closeWizard">CANCELAR</button>
-                <button type="submit" v-if="step === 3" class="btn-save shadow-md" :disabled="loading">
+                <button type="submit" v-if="step === 3" class="btn-save"
+                        :disabled="loading || !form.administrative_unit">
                     <i v-if="loading" class="fas fa-spinner fa-spin"></i>
                     <i v-else class="fas fa-check-double"></i> FINALIZAR GESTIÓN
                 </button>
