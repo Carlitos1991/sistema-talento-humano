@@ -261,24 +261,12 @@ class BudgetAssignmentHistory(models.Model):
         return f"{self.employee} en {self.budget_line} ({self.start_date})"
 
     def clean(self):
-        """
-        Validación para asegurar que un empleado no tenga dos partidas activas simultáneamente.
-        """
-        from django.core.exceptions import ValidationError
-
+        # Esta validación ahora solo saltará si intentamos crear
+        # una asignación cuando el empleado REALMENTE ya tiene una BudgetLine.
         if self.is_current and not self.end_date:
-            # Buscar si este empleado ya tiene otra asignación activa
-            existing_assignment = BudgetAssignmentHistory.objects.filter(
-                employee=self.employee,
-                is_current=True,
-                end_date__isnull=True
-            ).exclude(pk=self.pk).first()
-
-            if existing_assignment:
-                partida_info = existing_assignment.budget_line.number_individual or existing_assignment.budget_line.code
-                raise ValidationError({
-                    'employee': f'Este empleado ya tiene asignada la partida {partida_info}. Debe liberar primero esa partida.'
-                })
+            from .models import BudgetLine
+            if BudgetLine.objects.filter(current_employee=self.employee).exclude(pk=self.budget_line.pk).exists():
+                raise ValidationError('Este empleado ya tiene una partida asignada en la tabla principal.')
 
     def save(self, *args, **kwargs):
         self.full_clean()

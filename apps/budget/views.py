@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
@@ -11,6 +12,7 @@ from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetMo
     BudgetAssignmentHistory
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
     AssignIndividualNumberForm, BudgetChangeStatusForm
+from django.utils import timezone
 
 
 # --- 1. ENDPOINT PARA CASCADA (JSON) ---
@@ -388,23 +390,37 @@ class AssignIndividualNumberView(LoginRequiredMixin, PermissionRequiredMixin, Vi
 
 
 def search_employee_by_cedula(request):
-    cedula = request.GET.get('q', '')
+    cedula = request.GET.get('q', '').strip()
     try:
-        # Buscamos en el modelo Employee que está relacionado con Person
-        emp = Employee.objects.select_related('person').get(person__identification=cedula)
+        # 1. Obtener el empleado activo
+        emp = Employee.objects.select_related('person').get(
+            person__document_number=cedula,
+            is_active=True
+        )
 
-        # Validar si ya tiene una partida (Relación inversa de BudgetLine)
-        has_budget = hasattr(emp, 'current_budget_line') and emp.current_budget_line.exists()
+        # 2. VALIDACIÓN ARQUITECTÓNICA: Fuente de verdad -> BudgetLine
+        # Buscamos si este empleado existe como 'current_employee' en alguna partida
+        actual_assignment = BudgetLine.objects.filter(current_employee=emp).first()
 
+        if actual_assignment:
+            # Si lo encontramos, bloqueamos y enviamos el mensaje
+            partida_nombre = actual_assignment.number_individual or actual_assignment.code
+            return JsonResponse({
+                'success': False,
+                'message': f'Bloqueo: La persona {emp.person.full_name} ya ocupa actualmente la partida {partida_nombre}.'
+            })
+
+        # 3. Si no ocupa ninguna partida, devolvemos el éxito para proceder
         return JsonResponse({
             'success': True,
             'id': emp.id,
-            'full_name': f"{emp.person.last_name} {emp.person.first_name}",
+            'full_name': emp.person.full_name,
             'email': emp.person.email or 'Sin correo registrado',
-            'has_budget': has_budget
+            'photo_url': emp.person.photo.url if emp.person.photo else None
         })
+
     except Employee.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Empleado no encontrado.'})
+        return JsonResponse({'success': False, 'message': 'Cédula no registrada o empleado inactivo.'})
 
 
 class BudgetAssignEmployeeView(LoginRequiredMixin, View):
@@ -415,27 +431,39 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
     def post(self, request, pk):
         line = get_object_or_404(BudgetLine, pk=pk)
         employee_id = request.POST.get('employee_id')
-        observation = request.POST.get('observation', 'Asignación inicial')
+        observation = request.POST.get('observation', 'Asignación de partida')
 
         try:
-            status_occupied = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
+            with transaction.atomic():
+                emp = Employee.objects.get(pk=employee_id)
+                status_occupied = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
 
-            # 1. Crear el registro en Historial de Asignaciones
-            BudgetAssignmentHistory.objects.create(
-                budget_line=line,
-                employee_id=employee_id,
-                start_date=date.today(),
-                is_current=True,
-                observation=observation
-            )
+                # --- LIMPIEZA DE HISTORIAL "ZOMBIE" ---
+                # Cerramos cualquier historial previo de este empleado que haya quedado como is_current
+                # pero que en realidad ya no tenga la partida asignada.
+                BudgetAssignmentHistory.objects.filter(
+                    employee=emp,
+                    is_current=True
+                ).update(is_current=False, end_date=timezone.now().date())
 
-            # 2. Actualizar la Partida
-            line.current_employee_id = employee_id
-            line.status_item = status_occupied
-            line.save(modified_by=request.user)  # Pasamos el usuario para la auditoría
+                # 1. Crear el nuevo historial
+                BudgetAssignmentHistory.objects.create(
+                    budget_line=line,
+                    employee=emp,
+                    start_date=timezone.now().date(),
+                    is_current=True,
+                    observation=observation
+                )
 
-            return JsonResponse({'success': True, 'message': 'Persona asignada y registro histórico creado.',
-                                 'new_stats': get_budget_stats()})
+                # 2. Actualizar la partida real
+                line.current_employee = emp
+                line.status_item = status_occupied
+                line.save(modified_by=request.user)
+
+                # 3. Actualizar estado del empleado
+                emp.set_status('INACTIVE_WITH_BUDGET')
+
+            return JsonResponse({'success': True, 'message': 'Asignación procesada correctamente.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
@@ -450,22 +478,27 @@ class BudgetReleaseView(LoginRequiredMixin, View):
         reason = request.POST.get('observation', 'Liberación de partida')
 
         try:
-            # 1. "Cerrar" la asignación actual en el historial
-            history = BudgetAssignmentHistory.objects.filter(budget_line=line, is_current=True).first()
-            if history:
-                history.end_date = date.today()
-                history.is_current = false
-                history.observation = reason
-                history.save()
+            with transaction.atomic():
+                # 1. "Cerrar" la asignación actual en el historial de forma estricta
+                # Buscamos la asignación que el sistema cree que está activa
+                history = BudgetAssignmentHistory.objects.filter(
+                    budget_line=line,
+                    is_current=True
+                ).first()
 
-            # 2. Resetear la Partida
-            status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
-            line.current_employee = None
-            line.status_item = status_libre
-            line.save(modified_by=request.user)
+                if history:
+                    history.end_date = timezone.now().date()
+                    history.is_current = False  # <--- CRUCIAL: Cambiar a False
+                    history.observation = reason
+                    history.save()
 
-            return JsonResponse(
-                {'success': True, 'message': 'Partida liberada y disponible.', 'new_stats': get_budget_stats()})
+                # 2. Resetear la Partida
+                status_libre = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+                line.current_employee = None
+                line.status_item = status_libre
+                line.save(modified_by=request.user)
+
+            return JsonResponse({'success': True, 'message': 'Partida liberada y disponible.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 

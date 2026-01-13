@@ -92,14 +92,24 @@ class Employee(BaseModel):
                     'is_boss': f"El área '{self.area.name}' ya tiene un jefe marcado: {existing_boss.full_name}."
                 })
 
+    def set_status(self, status_code):
+        """
+        Cambia el estado laboral del empleado basado en el código del catálogo.
+        """
+        try:
+            status_item = CatalogItem.objects.get(
+                catalog__code='EMPLOYMENT_STATUS',
+                code=status_code
+            )
+            if self.employment_status != status_item:
+                Employee.objects.filter(pk=self.pk).update(employment_status=status_item)
+                self.employment_status = status_item
+        except CatalogItem.DoesNotExist:
+            print(f"Error: El estado {status_code} no existe en el catálogo DE ESTADOS DE EMPLEADO")
+
     def save(self, *args, **kwargs):
-        self.full_clean()
+        is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # LOGICA DE SINCRONIZACIÓN AUTOMÁTICA (Opcional pero recomendada)
-        # Si este empleado se marca como jefe, actualizamos la Unidad Administrativa
-        if self.area and self.is_boss:
-            unit = self.area
-            if unit.boss != self:
-                unit.boss = self
-                unit.save()
+        if is_new and not self.employment_status:
+            self.set_status('PERSONA')

@@ -16,7 +16,13 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'person.view_person'
 
     def get_queryset(self):
-        qs = Person.objects.select_related('document_type', 'user').all().order_by('last_name')
+        qs = Person.objects.select_related(
+            'document_type',
+            'user',
+            'employee_profile__employment_status',  # Relación inversa OneToOne
+            'employee_profile__area'  # Para mostrar la dependencia real
+        ).all().order_by('last_name')
+
         query = self.request.GET.get('q')
         if query:
             qs = qs.filter(

@@ -1,14 +1,16 @@
 <!-- templates/budget/modals/modal_budget_assign_employee.html -->
 <div class="modal-overlay">
     <div class="modal-container-medium" style="width: 750px; margin: auto;">
-        <div class="modal-header-medium modal-header-gradient" style="background: linear-gradient(to right, #2563eb, #3b82f6);">
+        <div class="modal-header-medium modal-header-gradient"
+             style="background: linear-gradient(to right, #2563eb, #3b82f6);">
             <h3 class="modal-title text-white">
                 <i class="fa-solid fa-user-plus me-2"></i> Asignar Persona a Partida
             </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
+            </button>
         </div>
 
-        <form id="assignEmployeeForm" onsubmit="submitAssignEmployee(event, {{ line.pk }})">
+        <form id="assignEmployeeForm" method="POST" onsubmit="submitAssignEmployee(event, {{ line.pk }})">
             {% csrf_token %}
             <div class="modal-body-content modal-body-custom">
                 <!-- Info de Partida (Resumen) -->
@@ -25,7 +27,8 @@
                 <div class="form-group mt-3">
                     <label class="form-label font-weight-bold">Cédula de la Persona *</label>
                     <div class="d-flex gap-2">
-                        <input type="text" id="search-cedula" class="input-field" placeholder="Ingrese cédula (10 dígitos)" maxlength="10">
+                        <input type="text" id="search-cedula" class="input-field"
+                               placeholder="Ingrese cédula (10 dígitos)" maxlength="10">
                         <button type="button" class="btn btn-search" onclick="searchEmployee()">
                             <i class="fas fa-search"></i> Buscar
                         </button>
@@ -51,7 +54,8 @@
 
                 <div class="form-group mt-3">
                     <label class="form-label">Observaciones</label>
-                    <textarea name="observation" class="input-field" rows="2" placeholder="Motivo de la asignación..."></textarea>
+                    <textarea name="observation" class="input-field" rows="2"
+                              placeholder="Motivo de la asignación..."></textarea>
                 </div>
 
                 <div class="alert-info mt-3" style="font-size: 0.85rem;">

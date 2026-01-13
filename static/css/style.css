@@ -1558,6 +1558,11 @@ th a.active .sort-icon {
     color: #991b1b;
 }
 
+.status-badge.neutral {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
 .status-badge.general {
     background-color: #8ddde3;
     color: #0547e4;

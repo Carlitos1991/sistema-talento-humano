@@ -9,7 +9,7 @@
             <th>Empleado</th>
             <th><i class="far fa-envelope header-icon"></i> Email</th>
             <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
-            <th class="text-center"><i class="fas fa-building header-icon"></i> Rol de usuario</th>
+            <th class="text-center"><i class="fas fa-building header-icon"></i> Dependencia</th>
             <th class="text-center"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
             {% if perms.person.change_person or perms.person.delete_person %}
                 <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
@@ -21,8 +21,6 @@
             <!-- ID ÚNICO PARA LA FILA: row-ID -->
             <tr class="location-row" id="row-{{ person.id }}"
                 data-status="{{ person.is_active|yesno:'true,false' }}">
-
-                <!-- CORRECCIÓN 1: Cálculo del índice limpio -->
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
 
                 <td>
@@ -44,26 +42,23 @@
                 <td>{{ person.email|default:"--" }}</td>
                 <td>{{ person.phone_number|default:"--" }}</td>
                 <td class="text-center">
-                    {% if person.user %}
-                        {% if person.user.groups.exists %}
-                            {% for group in person.user.groups.all %}
-                                <span class="status-badge status-badge-user-role">
-                                    {{ group.name }}
-                                </span>
-                            {% endfor %}
+                    {% with emp=person.employee_profile %}
+                        {% if emp.employment_status %}
+                            <span class="status-badge 
+                                {% if emp.employment_status.code == 'PERSONA' %}neutral
+                                {% elif emp.employment_status.code == 'EMPLEADO' or emp.employment_status.code == 'TRABAJADOR' %}active
+                                {% elif 'EX_' in emp.employment_status.code %}inactive
+                                {% else %}general{% endif %}">
+                                {{ emp.employment_status.name }}
+                            </span>
                         {% else %}
-                            <span class="status-badge badge-neutral">SIN ROL</span>
+                            <span class="status-badge neutral">PERSONA</span>
                         {% endif %}
-                    {% else %}
-                        <span class="status-badge status-badge-no-account">
-                            SIN CUENTA
-                        </span>
-                    {% endif %}
+                    {% endwith %}
                 </td>
                 <td class="text-center">
-                    <!-- Tu lógica de estados está bien, la dejo igual -->
                     {% if person.person_status %}
-                        <span class="status-badge badge-neutral">{{ person.person_status.name }}</span>
+                        <span class="status-badge neutral">{{ person.person_status.name }}</span>
                     {% else %}
                         <span class="status-badge status-badge-no-status">SIN ESTADO</span>
                     {% endif %}
@@ -98,8 +93,6 @@
         </tbody>
     </table>
 
-    <!-- CORRECCIÓN 3 (CRUCIAL): Cambiar 'persons' por 'people' -->
-    <!-- Como 'people' es el nombre que definiste en la View, usamos ese aquí -->
     <div class="no-results-overlay {% if people %}hidden{% endif %}">
         <div class="no-results-content empty-db-msg {% if not people %}show{% else %}hidden{% endif %}">
             <i class="fas fa-inbox no-results-icon"></i>

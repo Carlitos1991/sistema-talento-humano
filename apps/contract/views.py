@@ -466,13 +466,22 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 # 1. Obtener estados
                 finalizado_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
                 libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
-
+                current_status = period.employee.employment_status.code
+                exit_status = 'PERSONA'
                 # 2. Finalizar el Periodo
                 period.status = finalizado_status
                 if not period.end_date:
                     period.end_date = timezone.now().date()
                 period.updated_by = request.user
                 period.save()
+                mapping = {
+                    'EMPLEADO': 'EX_EMPLEADO',
+                    'TRABAJADOR': 'EX_TRABAJADOR',
+                    'CONTRATADO': 'EX_EMPLEADO',
+                    'PROFESIONAL': 'EX_PROFESIONAL'
+                }
+                exit_status = mapping.get(current_status, 'PERSONA')
+                period.employee.set_status(exit_status)
 
                 # 3. Liberar la Partida
                 budget_line = period.budget_line
@@ -517,30 +526,22 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
         data = request.POST
         try:
             with transaction.atomic():
-                # 1. Búsqueda exacta del item de catálogo
-                # Usamos filter().first() para evitar el error 500 si no existe
-                status_initial = CatalogItem.objects.filter(
+                # 1. Obtener estado inicial del contrato
+                status_initial = CatalogItem.objects.get(
                     catalog__code='STATUS_CONTRACT',
                     code='SIN_FIRMAR'
-                ).first()
+                )
 
-                if not status_initial:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Error de Configuración: No existe el item "SIN_FIRMAR" en el catálogo "STATUS_CONTRACT".'
-                    }, status=400)
-
-                # 2. Obtener el empleado y validar su partida
                 employee = get_object_or_404(Employee, pk=data.get('employee'))
                 budget_line = employee.current_budget_line.first()
 
                 if not budget_line:
                     return JsonResponse({
                         'success': False,
-                        'message': 'El empleado no tiene una partida asignada en el módulo de Presupuestos.'
+                        'message': 'El empleado no tiene una partida asignada.'
                     }, status=400)
 
-                # 3. Crear instancia con limpieza de datos
+                # 2. Crear el periodo
                 period = ManagementPeriod(
                     employee=employee,
                     budget_line=budget_line,
@@ -548,7 +549,6 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                     administrative_unit_id=data.get('administrative_unit'),
                     schedule_id=data.get('schedule'),
                     status=status_initial,
-
                     document_number=data.get('document_number', '').strip().upper(),
                     institutional_need_memo=data.get('institutional_need_memo', '').strip().upper(),
                     budget_certification=data.get('budget_certification', '').strip().upper(),
@@ -559,21 +559,24 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                     created_by=request.user
                 )
 
-                # 4. Validaciones de integridad de Django
+                # 3. Validar y Guardar (Aquí es donde daba el 400)
                 period.full_clean()
                 period.save()
 
+                # 4. Cambiar estado del empleado a "Inactivo con Partida" (ya que aún no firma)
+                # O mantenerlo si ya lo estaba. Esto asegura la coherencia.
+                employee.set_status('INACTIVE_WITH_BUDGET')
+
                 return JsonResponse({
                     'success': True,
-                    'message': f'Contrato {period.document_number} registrado correctamente.'
+                    'message': f'Contrato {period.document_number} registrado. Esperando firma.'
                 })
 
         except ValidationError as e:
-            # Enviamos los errores de validación de campos específicos (como el document_number único)
+            # Esto le dirá EXACTAMENTE qué campo falla en la consola de PyCharm
             return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
         except Exception as e:
-            print(f"--- ERROR SISTEMA: {str(e)} ---")
-            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=500)
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -591,7 +594,19 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                 period.status = status_signed
                 period.updated_by = request.user
                 period.save()
-
+                regime = period.contract_type.labor_regime.code  # LOSEP, CT, etc.
+                ctype = period.contract_type.code
+                new_status = 'EMPLEADO'
+                if regime == 'CT':
+                    new_status = 'TRABAJADOR'
+                elif regime == 'LOSEP':
+                    if 'OCASIONAL' in ctype:
+                        new_status = 'CONTRATADO'
+                    elif 'PROFESIONAL' in ctype:
+                        new_status = 'PROFESIONAL'
+                    else:
+                        new_status = 'EMPLEADO'
+                period.employee.set_status(new_status)
                 # --- REGISTRO EN HISTORIAL ---
                 History.objects.create(
                     employee=period.employee,

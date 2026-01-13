@@ -519,26 +519,48 @@ const periodApp = createApp({
                 Swal.fire('Validación', 'Complete los campos obligatorios.', 'warning');
                 return;
             }
+
             this.loading = true;
             const formData = new FormData();
             formData.append('employee', this.selectedEmployee.id);
             formData.append('contract_type', this.selectedContractType.id);
             formData.append('budget_line', this.selectedEmployee.budget_line.id);
+
             Object.keys(this.form).forEach(key => {
                 if (this.form[key]) formData.append(key, this.form[key]);
             });
+
             try {
                 const response = await fetch('/contract/periods/create/', {
-                    method: 'POST', body: formData, headers: {'X-CSRFToken': getCookie('csrftoken')}
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
                 });
+
                 const result = await response.json();
+
                 if (response.ok && result.success) {
                     Swal.fire('¡Éxito!', result.message, 'success').then(() => location.reload());
                 } else {
-                    Swal.fire('Error', result.message || 'Error al guardar.', 'error');
+                    // --- MEJORA ARQUITECTÓNICA: Mostrar errores reales del Backend ---
+                    let errorContent = '';
+                    if (result.errors) {
+                        // Si Django devuelve errores por campo (ValidationError)
+                        for (const [field, messages] of Object.entries(result.errors)) {
+                            errorContent += `<strong>${field}:</strong> ${messages.join(', ')}<br>`;
+                        }
+                    } else {
+                        errorContent = result.message || 'Error desconocido al guardar.';
+                    }
+
+                    Swal.fire({
+                        title: 'Error de Validación',
+                        html: `<div class="text-left">${errorContent}</div>`,
+                        icon: 'error'
+                    });
                 }
             } catch (e) {
-                this.showToast('error', 'Error en servidor');
+                this.showToast('error', 'Error crítico en el servidor');
             } finally {
                 this.loading = false;
             }

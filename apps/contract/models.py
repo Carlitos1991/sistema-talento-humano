@@ -137,21 +137,21 @@ class ManagementPeriod(BaseModel):
         return f'{self.document_number} | {self.employee.person.full_name}'
 
     def clean(self):
-        """
-        Validaciones de negocio críticas
-        """
-        # 1. Validar fechas
+        super().clean()
         if self.end_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': 'La fecha de fin no puede ser anterior al inicio.'})
 
-        # 2. Validar que la partida no esté ocupada por otro contrato activo (si es nuevo)
         if not self.pk:
+            # VALIDACIÓN DINÁMICA:
+            # Bloquear si la partida tiene cualquier contrato que NO esté FINALIZADO
             active_occupation = ManagementPeriod.objects.filter(
-                budget_line=self.budget_line,
-                status__code='ACTIVO'
-            ).exists()
+                budget_line=self.budget_line
+            ).exclude(status__code='FINALIZADO').exists()
+
             if active_occupation:
-                raise ValidationError({'budget_line': 'Esta partida ya se encuentra ocupada por un contrato activo.'})
+                raise ValidationError({
+                    'budget_line': 'Esta partida ya se encuentra ocupada o tiene un proceso de contrato en curso.'
+                })
 
     @property
     def is_currently_active(self):
