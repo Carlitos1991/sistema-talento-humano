@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Estado Reactivo
             const isEditing = ref(false);
             const currentId = ref(null);
+            const loadingQuickView = ref(false);
+            const quickViewHtml = ref('');
+            const currentDetailUrl = ref('#');
 
             // Formularios
             const form = ref({});
@@ -94,27 +97,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!tableContainer) return;
 
                 tableContainer.addEventListener('click', (e) => {
-                    // Editar Persona
-                    const btnEdit = e.target.closest('.btn-edit-person');
-                    if (btnEdit && btnEdit.dataset.url) {
-                        const parts = btnEdit.dataset.url.split('/').filter(Boolean);
-                        const id = parts[parts.length - 1];
-                        openEditModal(id);
-                    }
+                    // ... otros botones (edit, delete)
 
-                    // Credenciales
-                    const btnKey = e.target.closest('.btn-manage-user');
-                    if (btnKey && btnKey.dataset.url) {
-                        const parts = btnKey.dataset.url.split('/').filter(Boolean);
-                        const id = parts[parts.length - 1];
-                        openCredsModal(id);
+                    // Vista Rápida
+                    const btnQuick = e.target.closest('.btn-quick-view');
+                    if (btnQuick && btnQuick.dataset.id) {
+                        openQuickView(btnQuick.dataset.id);
                     }
                 });
-
-                // Input Foto
-                const fileInput = document.getElementById('id_photo');
-                if (fileInput) fileInput.addEventListener('change', handlePhotoChange);
             };
+            const openQuickView = async (id) => {
+                loadingQuickView.value = true;
+                quickViewHtml.value = '';
+                // Preparar URL para el detalle completo (para el paso siguiente)
+                currentDetailUrl.value = `/employee/detail/${id}/`;
+
+                const modal = document.getElementById('modalQuickViewOverlay');
+                showModal(modal);
+
+                try {
+                    const response = await fetch(`/person/quick-view/${id}/`, {
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    if (response.ok) {
+                        quickViewHtml.value = await response.text();
+                    } else {
+                        quickViewHtml.value = '<p class="text-error">Error al cargar la información.</p>';
+                    }
+                } catch (error) {
+                    quickViewHtml.value = '<p class="text-error">Error de conexión.</p>';
+                } finally {
+                    loadingQuickView.value = false;
+                }
+            };
+            const closeQuickView = () => {
+                const modal = document.getElementById('modalQuickViewOverlay');
+                hideModal(modal);
+            };
+
 
             const initSearch = () => {
                 const searchInput = document.getElementById('searchInput');
@@ -260,15 +280,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-           // Helpers UI
+            // Helpers UI
             const showModal = (el) => {
-                if(el) {
+                if (el) {
                     el.classList.remove('hidden');
                     document.body.classList.add('no-scroll'); // <--- NUEVO: Bloquea fondo
                 }
             };
             const hideModal = (el) => {
-                if(el) {
+                if (el) {
                     el.classList.add('hidden');
                     // Solo quitamos no-scroll si NO hay otros modales abiertos
                     // (Por si abres credenciales encima de editar)
@@ -304,7 +324,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 isEditing, form, errors, photoPreview,
                 credsForm, credsErrors,
                 openCreateModal, submitPersonForm,
-                openCredsModal, submitCredsForm, closeModal
+                openCredsModal, submitCredsForm, closeModal,
+                loadingQuickView, quickViewHtml, currentDetailUrl,
+                openQuickView, closeQuickView
             };
         }
     }).mount('#personApp');

@@ -1,0 +1,64 @@
+<div class="person-quick-view-wrapper">
+
+    <!-- DIV DEL BANNER (Fondo combinado, Centrado) -->
+    <div class="quick-view-banner">
+        <div class="quick-view-avatar-wrapper mb-3">
+            {% if person.photo %}
+                <img src="{{ person.photo.url }}" alt="Foto" class="avatar-xl shadow-md border-primary"
+                     style="border: 5px solid white;">
+            {% else %}
+                <div class="avatar-placeholder-xl mx-auto shadow-md" style="border: 5px solid white;">
+                    {{ person.first_name|first }}{{ person.last_name|first }}
+                </div>
+            {% endif %}
+        </div>
+
+        <h2 class="text-primary-bold mb-1" style="font-size: 1.8rem; letter-spacing: -0.02em;">
+            {{ person.full_name }}
+        </h2>
+
+        <!-- Botón Pill Centrado -->
+        <a href="{% url 'employee:employee_detail' person.id %}" class="btn-pill-action">
+            <i class="fa-solid fa-user-gear"></i> Gestionar Perfil Completo
+        </a>
+    </div>
+
+    <!-- CUERPO DE DATOS (Padding para las columnas) -->
+    <div class="quick-view-body-padding">
+        <div class="quick-view-info-grid">
+
+            <!-- Columna 1: Identificación -->
+            <div class="section-card-standard shadow-sm">
+                <h4 class="section-title"><i class="fa-solid fa-id-card"></i> Identificación</h4>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">Documento</label>
+                        <p class="info-value">{{ person.document_type.name }}</p>
+                    </div>
+                    <div class="info-group">
+                        <label class="info-label">Número</label>
+                        <p class="info-value">{{ person.document_number }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna 2: Estructura -->
+            <div class="section-card-standard shadow-sm border-left-primary">
+                <h4 class="section-title"><i class="fa-solid fa-briefcase"></i> Estructura</h4>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">Unidad</label>
+                        <p class="info-value">{{ person.employee_profile.area.name|default:"Sin Unidad" }}</p>
+                    </div>
+                    <div class="info-group">
+                        <label class="info-label">Estado</label>
+                        <p class="info-value">
+                            <span class="status-badge general">{{ person.employee_profile.employment_status.name|default:"PERSONA" }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

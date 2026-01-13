@@ -1,0 +1,143 @@
+<!-- Barra de Acción -->
+<div class="section-card-standard mb-4 bg-success-subtle border-0">
+    <div class="d-flex justify-content-between align-items-center">
+        {% if person.curriculum.pdf_file %}
+            <a href="{{ person.curriculum.pdf_file.url }}" target="_blank"
+               class="btn btn-primary btn-sm px-4 shadow-sm">
+                <i class="fa-solid fa-download me-2"></i> Ver PDF Actual
+            </a>
+        {% else %}
+            <div class="section-card-standard mb-4 bg-success-subtle border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-success fw-bold"><i class="fa-solid fa-file-pdf me-2"></i> Gestión de Hoja de Vida
+                    </div>
+                    <div class="d-flex gap-2">
+                        <input type="file" id="pdfInput" class="hidden" accept=".pdf"
+                               @change="handlePdfUpload($event, {{ person.id }})">
+                        <button class="btn btn-primary btn-sm px-4 shadow-sm"
+                                onclick="document.getElementById('pdfInput').click()">
+                            <i class="fa-solid fa-cloud-arrow-up me-2"></i> {% if person.curriculum.pdf_file %}Cambiar
+                            PDF{% else %}Subir PDF{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Contadores Estadísticos (Verdes) -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card color-two stat-readonly">
+            <div class="stat-content">
+                <div class="number text-center w-100">{{ person.curriculum.academic_titles.count|default:0 }}</div>
+                <h3 class="text-center w-100">Títulos Académicos</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card color-two stat-readonly">
+            <div class="stat-content">
+                <div class="number text-center w-100">{{ person.curriculum.work_experiences.count|default:0 }}</div>
+                <h3 class="text-center w-100">Experiencias Laborales</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card color-two stat-readonly">
+            <div class="stat-content">
+                <div class="number text-center w-100">{{ person.curriculum.trainings.count|default:0 }}</div>
+                <h3 class="text-center w-100">Capacitaciones</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card color-two stat-readonly">
+            <div class="stat-content">
+                <div class="number text-center w-100">{{ person.curriculum.get_total_work_years|default:"0,0" }}</div>
+                <h3 class="text-center w-100">Años de Experiencia</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formación Académica -->
+<div class="section-card-standard mb-4 shadow-sm">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <h5 class="section-title mb-0"><i class="fa-solid fa-graduation-cap text-success"></i> Formación Académica</h5>
+        <button class="btn btn-outline-success btn-sm" @click="openTitleModal">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+        <div id="modalTitleOverlay" class="modal-overlay hidden">
+            <div class="modal-container" style="max-width: 600px;">
+                <div class="modal-header modal-header-gradient">
+                    <h3 class="header-title-main">Nuevo Título Académico</h3>
+                    <button class="btn-close-modal-refined"
+                            onclick="this.closest('.modal-overlay').classList.add('hidden')">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body-custom">
+                    <div class="grid-2-cols gap-3">
+                        <div class="form-group col-md-12">
+                            <label class="form-label">Institución Educativa</label>
+                            <input type="text" v-model="titleForm.educational_institution"
+                                   class="input-field uppercase-input">
+                            <span v-if="titleErrors.educational_institution" class="text-error">[[ titleErrors.educational_institution[0] ]]</span>
+                        </div>
+                        <div class="form-group col-md-12">
+                            <label class="form-label">Título Obtenido</label>
+                            <input type="text" v-model="titleForm.title_obtained" class="input-field uppercase-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nivel</label>
+                            <select v-model="titleForm.education_level" class="input-field">
+                                <option value="">-- Seleccione --</option>
+                                {% for item in education_levels %} <!-- Pasar esto desde el context de la vista -->
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Año Graduación</label>
+                            <input type="number" v-model="titleForm.graduation_year" class="input-field">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-fixed">
+                    <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+                        Cancelar
+                    </button>
+                    <button class="btn-save" @click="saveAcademicTitle({{ person.id }})">Guardar Título</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-container shadow-none border">
+        <table>
+            <thead>
+            <tr>
+                <th>Nivel</th>
+                <th>Título</th>
+                <th>Institución</th>
+                <th>Año</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for title in person.curriculum.academic_titles.all %}
+                <tr>
+                    <td><span class="status-badge general">{{ title.education_level.name }}</span></td>
+                    <td class="fw-bold">{{ title.title_obtained }}</td>
+                    <td>{{ title.educational_institution }}</td>
+                    <td>{{ title.graduation_year }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">No se han registrado títulos académicos.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+<div class="section-card-standard shadow-sm">
+    <h5 class="section-title border-bottom pb-2 mb-4">
+        <i class="fa-solid fa-address-card text-warning"></i> Expediente Institucional
+    </h5>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <label class="info-label">Correo Institucional:</label>
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-envelope me-2 text-primary"></i>
+                <p class="info-value mb-0 text-primary fw-bold">{{ person.employee_profile.institutional_data.institutional_email|default:"Sin asignar" }}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="info-label">ID Biométrico (Marcación):</label>
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-fingerprint me-2 text-danger"></i>
+                <p class="info-value mb-0 fw-bold">{{ person.employee_profile.institutional_data.biometric_id|default:"N/A" }}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="info-label">Número de Expediente:</label>
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-folder-open me-2 text-warning"></i>
+                <p class="info-value mb-0 fw-bold">{{ person.employee_profile.institutional_data.file_number|default:"S/N" }}</p>
+            </div>
+        </div>
+
+        <div class="col-12 mt-4">
+            <div class="bg-light p-3 rounded-3 border">
+                <label class="info-label">Observaciones de Control:</label>
+                <p class="mb-0 italic small">{{ person.employee_profile.institutional_data.observations|default:"No hay observaciones registradas." }}</p>
+            </div>
+        </div>
+    </div>
+</div>

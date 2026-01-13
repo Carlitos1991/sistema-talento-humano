@@ -8,4 +8,5 @@ urlpatterns = [
     path('create/', views.PersonCreateView.as_view(), name='person_create'),
     path('update/<int:pk>/', views.PersonUpdateView.as_view(), name='person_update'),
     path('detail/<int:pk>/', views.person_detail_json, name='person_detail'),
+    path('quick-view/<int:pk>/', views.person_quick_view_partial, name='person_quick_view_partial'),
 ]

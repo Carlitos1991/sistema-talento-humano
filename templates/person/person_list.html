@@ -14,8 +14,8 @@
         <!-- 1. Header -->
         <div class="header-card">
             <div>
-                <h1>Gestión de Personas</h1>
-                <p>Gestión de fichas personales, empleados y usuarios del sistema.</p>
+                <h1>Gestión de Empleados</h1>
+                <p>Gestión de fichas personales y empleados </p>
             </div>
             {% if perms.person.add_person %}
                 <button type="button" class="btn btn-create" @click="openCreateModal">
@@ -81,7 +81,7 @@
         </div>
         {% include 'person/modals/modal_person_form.html' %}
         {% include 'person/modals/modal_credentials.html' %}
-
+        {% include 'person/modals/modal_person_quick_view.html' %}
     </div> <!-- Fin de #personApp -->
 
 {% endblock %}

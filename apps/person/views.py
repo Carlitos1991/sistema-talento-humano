@@ -103,3 +103,21 @@ def person_detail_json(request, pk):
         'photo_url': p.photo.url if p.photo else None
     }
     return JsonResponse({'success': True, 'data': data})
+
+
+def person_quick_view_partial(request, pk):
+    """
+    Retorna un fragmento HTML con la información resumida de una persona.
+    """
+    person = get_object_or_404(
+        Person.objects.select_related(
+            'document_type',
+            'gender',
+            'employee_profile__area',
+            'employee_profile__employment_status'
+        ),
+        pk=pk
+    )
+    return render(request, 'person/partials/partial_person_quick_view.html', {
+        'person': person
+    })
