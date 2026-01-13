@@ -1,15 +1,18 @@
-<div class="modal-overlay" v-if="showAdvancedModal" v-cloak @click.self="closeAdvancedModal">
-    <div class="modal-container-medium" style="width: 850px; margin: auto;">
+<!-- templates/contract/modals/modal_management_period_advanced_search.html -->
+<div class="search-modal-overlay" v-if="showAdvancedModal" v-cloak>
+    <div class="search-modal-container">
+        <button type="button" class="btn-close-modal-refined" @click="closeAdvancedModal">
+            <i class="fas fa-times"></i>
+        </button>
+
         <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-magnifying-glass-plus me-2"></i> Búsqueda Avanzada de Gestión
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" @click="closeAdvancedModal">&times;
-            </button>
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-search"></i></div>
+                <h3 class="modal-title text-white mb-0">Búsqueda Avanzada de Gestión</h3>
+            </div>
         </div>
 
         <div class="modal-body-content modal-body-custom">
-            <!-- Sección: Datos del Empleado -->
             <div class="section-title">
                 <i class="fas fa-user-tie"></i> Información del Personal
             </div>
@@ -17,8 +20,7 @@
                 <div class="grid-2-cols">
                     <div class="form-group">
                         <label class="form-label">Nombre o Cédula</label>
-                        <input type="text" v-model="advancedFilters.q" class="input-field"
-                               placeholder="Ej: 1712345678 o Juan Pérez">
+                        <input type="text" v-model="advancedFilters.q" class="input-field" placeholder="Ej: Juan Pérez">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Unidad Administrativa</label>
@@ -32,7 +34,6 @@
                 </div>
             </div>
 
-            <!-- Sección: Datos del Contrato -->
             <div class="section-title mt-3">
                 <i class="fas fa-file-contract"></i> Detalles del Vínculo
             </div>
@@ -49,8 +50,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Nro. Documento / Acción</label>
-                        <input type="text" v-model="advancedFilters.doc_number" class="input-field"
-                               placeholder="Ej: MUN-2024-...">
+                        <input type="text" v-model="advancedFilters.doc_number" class="input-field">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Estado de Gestión</label>
@@ -64,7 +64,6 @@
                 </div>
             </div>
 
-            <!-- Sección: Rango de Fechas -->
             <div class="section-title mt-3">
                 <i class="fas fa-calendar-day"></i> Rango de Vigencia (Inicio)
             </div>
@@ -82,7 +81,7 @@
             </div>
         </div>
 
-        <div class="modal-footer-medium modal-footer-spaced">
+       <div class="modal-footer-medium modal-footer-spaced">
             <button type="button" class="btn-cancel" @click="resetAdvancedFilters">
                 <i class="fas fa-eraser me-2"></i> Limpiar Filtros
             </button>

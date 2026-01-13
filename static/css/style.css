@@ -1777,17 +1777,16 @@ th a.active .sort-icon {
 }
 
 .modal-overlay {
-    position: fixed;
-    inset: 0;
-    display: flex;
+    position: fixed !important;
+    inset: 0 !important;
+    background-color: rgba(0, 0, 0, 0.7) !important; /* Fondo más oscuro para resaltar */
+    backdrop-filter: blur(4px);
+    display: flex !important; /* Usar flex para centrar el modal */
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.32);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2rem);
-    z-index: 1000;
-    transition: opacity .18s ease;
-    opacity: 1;
+    z-index: 99999 !important; /* Por encima de TODO el sistema */
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .hidden {
@@ -4030,27 +4029,31 @@ textarea.is-valid:focus,
 }
 
 .btn-close-modal-refined {
-    position: absolute;
-    top: 1rem;
-    right: 1.5rem;
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
     width: 32px;
     height: 32px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
     border: none;
     border-radius: 50%;
-    color: white;
+    color: white !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
     cursor: pointer;
-    z-index: 100;
+    z-index: 10002;
+    transition: all 0.3s ease;
 }
 
 .btn-close-modal-refined:hover {
-    background: #ef4444;
-    color: white;
-    transform: scale(1.1);
+    background: #ef4444 !important;
+    transform: rotate(90deg);
+}
+
+/* Evitar parpadeos de Vue */
+[v-cloak] {
+    display: none !important;
 }
 
 .modal-footer-fixed .btn-cancel,
@@ -4363,4 +4366,87 @@ textarea.is-valid:focus,
     font-weight: 800;
     padding: 0 1.25rem;
     color: var(--primary-color);
+}
+
+/* static/css/style.css */
+
+/* Regla base para todos los contenedores de modal */
+.modal-container,
+.modal-container-medium,
+.modal-container-xl {
+    position: relative; /* CRUCIAL: Mantiene la 'X' dentro del cuadro */
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-card);
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Ajuste del botón cerrar para que no flote fuera */
+.btn-close-modal-refined {
+    position: absolute;
+    top: 1.2rem; /* Ajustado para centrar verticalmente en el header */
+    right: 1.5rem;
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    z-index: 101; /* Por encima del contenido del header */
+}
+
+.btn-close-modal-refined:hover {
+    background: #ef4444;
+    transform: scale(1.1) rotate(90deg);
+}
+
+#period-app .modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    z-index: 999999 !important; /* Prioridad de nivel Dios */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+#period-app .modal-container-medium {
+    min-height: 400px;
+    min-width: 800px;
+    background: white !important;
+    border-radius: 12px;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Overlay específico para Búsqueda Avanzada */
+.search-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background-color: rgba(15, 23, 42, 0.85) !important; /* Un tono más oscuro tipo Slate */
+    z-index: 999999 !important; /* Prioridad máxima */
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px) !important;
+}
+
+/* Asegurar que el contenedor del modal de búsqueda tenga cuerpo */
+.search-modal-container {
+    position: relative !important;
+    background: white !important;
+    width: 850px;
+    max-width: 95%;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    z-index: 1000000 !important;
 }

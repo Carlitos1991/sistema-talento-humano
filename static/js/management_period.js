@@ -77,7 +77,7 @@ const periodApp = createApp({
         // 1. INICIALIZACIÓN Y EVENTOS DELEGADOS
         // ==========================================
         initDelegatedListeners() {
-            // 1. Buscador Frontend
+            // Buscador Frontend
             const searchInput = document.getElementById('table-search-input');
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
@@ -87,7 +87,7 @@ const periodApp = createApp({
                 });
             }
 
-            // 2. ÚNICO Escuchador de la Tabla (Delegación de Eventos)
+            // Delegación Única
             const tableWrapper = document.getElementById('table-content-wrapper');
             if (tableWrapper) {
                 tableWrapper.addEventListener('click', (e) => {
@@ -97,21 +97,50 @@ const periodApp = createApp({
                     const action = btn.dataset.action;
                     const id = btn.dataset.id;
 
-                    // Mapeo de acciones centralizado
                     if (action === 'sign') this.signPeriod(id);
                     if (action === 'view') this.viewPeriodDetails(id);
                     if (action === 'terminate') this.terminatePeriod(id);
-                    if (action === 'advanced-search-empty') this.triggerAdvancedSearch();
-
-                    // ACTIVACIÓN DEL BOTÓN SUBIR:
                     if (action === 'upload') this.uploadContractFile(id);
+
+                    // CORRECCIÓN: Llamar al nuevo nombre del método
+                    if (action === 'advanced-search-empty') this.openSearchModal();
                 });
             }
         },
+        // --- MÉTODOS DE BÚSQUEDA ---
         openSearchModal() {
-            console.log("Intentando abrir modal..."); // Diagnostic log
+            console.log("Iniciando secuencia de apertura...");
+
+            // Forzamos la actualización del estado
             this.showAdvancedModal = true;
             document.body.classList.add('no-scroll');
+
+            // TÉCNICA SENIOR: Forzamos un re-render mediante loading
+            // para que Vue despierte al motor de dibujo del navegador
+            this.loading = true;
+            this.$nextTick(() => {
+                this.loading = false;
+                console.log("DOM actualizado: Modal de búsqueda debería ser visible.");
+            });
+        },
+        closeAdvancedModal() {
+            this.showAdvancedModal = false;
+            document.body.classList.remove('no-scroll');
+        },
+
+        async applyAdvancedSearch() {
+            this.loading = true;
+            // Activamos bandera para mostrar botón "Limpiar" en la lista
+            this.isAdvancedSearch = true;
+
+            // Cerramos el modal
+            this.showAdvancedModal = false;
+            document.body.classList.remove('no-scroll');
+
+            // Ejecutamos la petición al servidor
+            await this.fetchTable(true);
+
+            this.showToast('success', 'Búsqueda avanzada aplicada');
         },
         async uploadContractFile(id) {
             const {value: file} = await Swal.fire({
@@ -439,26 +468,25 @@ const periodApp = createApp({
 
         async applyAdvancedSearch() {
             this.loading = true;
-            this.showAdvancedModal = false;
-            document.body.classList.remove('no-scroll');
-
-            // Activamos la bandera para que aparezca el botón "Limpiar" en la lista
             this.isAdvancedSearch = true;
-
-            // Llamamos a la tabla enviando true (Búsqueda avanzada)
+            this.showAdvancedModal = false; // Cerramos
+            document.body.classList.remove('no-scroll');
             await this.fetchTable(true);
-
             this.showToast('success', 'Búsqueda avanzada aplicada');
         },
 
+
         clearSearch() {
-            this.resetAdvancedFilters();
+            this.advancedFilters = {
+                regime_code: '', q: '', unit: '', regime: '',
+                doc_number: '', status_code: '', date_from: '', date_to: ''
+            };
             this.isAdvancedSearch = false;
             this.searchTerm = '';
             const input = document.getElementById('table-search-input');
             if (input) input.value = '';
             this.currentPage = 1;
-            this.fetchTable(false); // Trae los 50 iniciales sin filtros
+            this.fetchTable(false); // Vuelve a los 50 originales
         },
 
         // ==========================================
