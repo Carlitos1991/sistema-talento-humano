@@ -1,0 +1,27 @@
+<div id="modalCVListOverlay" class="modal-overlay hidden" v-cloak>
+    <div class="modal-container-xl" style="max-width: 900px;">
+        <div class="modal-header modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-list-check"></i></div>
+                <h3 class="header-title-main">[[ listModalTitle ]]</h3>
+            </div>
+            <button @click="closeListModal" class="btn-close-modal-refined">&times;</button>
+        </div>
+        <div class="modal-body-scrolled bg-white">
+            <div v-if="loadingList" class="text-center py-5">
+                <i class="fa-solid fa-spinner fa-spin fa-3x text-primary"></i>
+            </div>
+            <div v-else class="table-container shadow-none border-0">
+                <table class="w-100">
+                    <thead class="bg-light">
+                        <tr v-html="listTableHead"></tr>
+                    </thead>
+                    <tbody v-html="listTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer-fixed">
+            <button @click="closeListModal" class="btn-cancel" style="min-width: 150px;">Cerrar Listado</button>
+        </div>
+    </div>
+</div>

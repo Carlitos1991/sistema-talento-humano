@@ -2,7 +2,12 @@
 {% load static %}
 
 {% block content %}
-    <div id="employeeWizardApp" v-cloak>
+    <div id="employeeWizardApp"
+         v-cloak
+         data-person-id="{{ person.id }}"
+         data-titles="{{ person.curriculum.academic_titles.count|default:0 }}"
+         data-experiences="{{ person.curriculum.work_experiences.count|default:0 }}"
+         data-courses="{{ person.curriculum.trainings.count|default:0 }}">
 
         <!-- 1. BANNER -->
         <div class="banner-employee-detail">
@@ -60,7 +65,8 @@
             </div>
 
             <!-- PESTAÑA: CURRICULUM -->
-            <div v-if="activeTab === 'curriculum'">
+            <div v-if="activeTab === 'curriculum'" id="curriculum-tab-container"
+                 class="animate__animated animate__fadeIn">
                 {% include 'employee/partials/wizard/tab_curriculum.html' %}
             </div>
 
@@ -71,6 +77,10 @@
 
         </div>
         {% include 'employee/modals/modal_person_edit_wizard.html' %}
+        {% include 'employee/modals/modal_academic_title.html' %}
+        {% include 'employee/modals/modal_work_experience.html' %}
+        {% include 'employee/modals/modal_training.html' %}
+        {% include 'employee/modals/modal_cv_generic_list.html' %}
     </div>
 {% endblock %}
 

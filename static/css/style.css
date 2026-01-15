@@ -4824,6 +4824,9 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 .info-box-styled {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     background: white;
     border-radius: 12px;
     padding: 20px;
@@ -5042,7 +5045,7 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 .employee-detail-button-curriculum {
-    --button-color: #28a745;
+    --button-color: #dfbd0e;
     --button-color-rgb: 40, 167, 69;
 }
 
@@ -5086,6 +5089,16 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     --button-color-rgb: 255, 152, 0;
 }
 
+.employee-detail-button-sanctions {
+    --button-color: #7c8597;
+    --button-color-rgb: 255, 152, 0;
+}
+
+.employee-detail-button-payments {
+    --button-color: #44a641;
+    --button-color-rgb: 255, 152, 0;
+}
+
 /* Layout General */
 .container-custom {
     padding: 20px;
@@ -5108,6 +5121,7 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .contact-border {
     border-left-color: #17a2b8;
 }
+
 .additional-border {
     border-left-color: #06630f;
 }
@@ -5288,4 +5302,186 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     .grid-info-secondary {
         grid-template-columns: 1fr;
     }
+}
+
+/*CURRICULUM VITAE*/
+
+/* --- CURRICULUM VITAE REFINEMENT --- */
+
+.cv-action-banner {
+    background: #f0fdf4; /* Verde muy suave */
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.cv-action-title {
+    color: #166534;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Grid para las tablas del CV (2 columnas en pantallas grandes) */
+.grid-cv-sections {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+}
+
+@media (min-width: 1200px) {
+    .grid-cv-sections {
+        grid-template-columns: 1.2fr 0.8fr; /* Formación y Experiencia más anchos que Capacitación */
+    }
+}
+
+/* Estilo para las cabeceras de sección con botones */
+.section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+/* --- CV Action Buttons --- */
+.cv-buttons-container {
+    display: flex;
+    justify-content: space-between; /* Uno a cada extremo */
+    align-items: center;
+    width: 100%;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.btn-cv-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+/* Botón Nuevo (Verde/Success) */
+.btn-cv-new {
+    background-color: #ecfdf5;
+    color: #059669;
+    border-color: #10b98133;
+}
+
+.btn-cv-new:hover {
+    background-color: #10b981;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Botón Listado (Azul/Ghost) */
+.btn-cv-list {
+    background-color: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.btn-cv-list:hover {
+    background-color: #1e293b;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* --- CV FUSED CARDS STYLES --- */
+
+/* Contenedor de la estadística central */
+.cv-stat-inner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 0;
+    margin: 10px 0;
+    background: rgba(248, 250, 252, 0.5); /* Fondo neutro muy sutil */
+    border-radius: 12px;
+}
+
+.cv-stat-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.cv-stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 5px;
+}
+
+/* Contenedor de botones centrados */
+.cv-buttons-centered {
+    display: flex;
+    justify-content: center; /* CENTRADO HORIZONTAL */
+    gap: 15px; /* Espacio entre botones */
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Mejora de los botones para que no se estiren */
+.btn-cv-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px;
+    width: 120px; /* ANCHO FIJO PARA EVITAR ESTIRAMIENTO */
+    border-radius: 50px; /* Estilo Píldora */
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-cv-pill.new {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border-color: #bbf7d0;
+}
+
+.btn-cv-pill.list {
+    background-color: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.btn-cv-pill:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-cv-pill.new:hover {
+    background-color: #16a34a;
+    color: white;
+}
+
+.btn-cv-pill.list:hover {
+    background-color: #1e293b;
+    color: white;
 }

@@ -1,0 +1,43 @@
+<div id="modalExperienceOverlay" class="modal-overlay hidden" v-cloak>
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header modal-header-gradient">
+            <h3 class="header-title-main"><i class="fa-solid fa-briefcase me-2"></i>Nueva Experiencia Laboral</h3>
+            <button @click="closeModal('experience')" class="btn-close-modal-refined">&times;</button>
+        </div>
+        <form @submit.prevent="submitExperience">
+            <div class="modal-body-scrolled bg-light p-4">
+                <div class="form-group mb-3">
+                    <label class="form-label">Nombre de la Empresa</label>
+                    <input type="text" v-model="expForm.company_name" class="input-field uppercase-input" required>
+                </div>
+                <div class="grid-2-cols gap-3 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Cargo / Puesto</label>
+                        <input type="text" v-model="expForm.position" class="input-field uppercase-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">¿Trabaja actualmente aquí?</label>
+                        <select v-model="expForm.is_current" class="input-field">
+                            <option :value="false">No</option>
+                            <option :value="true">Sí</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2-cols gap-3 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input type="date" v-model="expForm.start_date" class="input-field" required>
+                    </div>
+                    <div class="form-group" v-if="!expForm.is_current">
+                        <label class="form-label">Fecha Fin</label>
+                        <input type="date" v-model="expForm.end_date" class="input-field">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-fixed">
+                <button type="button" @click="closeModal('experience')" class="btn-cancel">Cerrar</button>
+                <button type="submit" class="btn-save">Guardar Experiencia</button>
+            </div>
+        </form>
+    </div>
+</div>

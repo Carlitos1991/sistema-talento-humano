@@ -1,6 +1,10 @@
-// Asegurémonos de que Vue esté disponible
+/**
+ * SIGETH - Employee Wizard Controller
+ * Arquitectura: Vue 3 Composition API
+ */
+
 if (typeof Vue === 'undefined') {
-    console.error("Vue.js no está cargado. Revisa la CDN en base.html");
+    console.error("Vue.js no está cargado.");
 }
 
 const {createApp, ref, onMounted} = Vue;
@@ -8,19 +12,42 @@ const {createApp, ref, onMounted} = Vue;
 const app = createApp({
     delimiters: ['[[', ']]'],
     setup() {
+        // --- 1. ESTADOS DE NAVEGACIÓN Y CARGA ---
         const activeTab = ref('personal');
         const isSaving = ref(false);
-        // Datos reactivos
-        const titleForm = ref({is_current: false});
-        const titleErrors = ref({});
-        const bankForm = ref({});
-        const bankErrors = ref({});
+        const loadingList = ref(false);
+        const appElement = document.getElementById('employeeWizardApp');
+        const personId = appElement ? appElement.dataset.personId : null;
+        if (!personId) {
+            console.error("ERROR CRÍTICO: No se pudo obtener el personId del dataset.");
+        }
+        // --- 2. FORMULARIOS REACTIVOS ---
         const editForm = ref({});
         const editErrors = ref({});
+        const titleForm = ref({education_level: ''});
+        const titleErrors = ref({});
+        const expForm = ref({is_current: false});
+        const expErrors = ref({});
+        const trainForm = ref({training_name: ''});
+        const trainErrors = ref({});
+        const bankForm = ref({});
+        const bankErrors = ref({});
+
+        // --- 3. DATOS DE IDENTIDAD Y ESTADÍSTICAS ---
         const photoPreview = ref(null);
         const personData = ref({full_name: ''});
+        const personStats = ref({
+            titles: appElement ? parseInt(appElement.dataset.titles) : 0,
+            experiences: appElement ? parseInt(appElement.dataset.experiences) : 0,
+            courses: appElement ? parseInt(appElement.dataset.courses) : 0
+        });
 
-        // Pestañas con sus clases de estilo premium
+        // --- 4. LISTADOS GENÉRICOS (MODAL LIST) ---
+        const listModalTitle = ref('');
+        const listTableHead = ref('');
+        const listTableBody = ref('');
+
+        // --- 5. CONFIGURACIÓN DE PESTAÑAS ---
         const tabs = [
             {
                 id: 'personal',
@@ -35,6 +62,12 @@ const app = createApp({
                 class: 'employee-detail-button-curriculum'
             },
             {
+                id: 'institutional',
+                name: 'Datos Inst.',
+                icon: 'fa-solid fa-building',
+                class: 'employee-detail-button-institutional'
+            },
+            {
                 id: 'economic',
                 name: 'Datos Económicos',
                 icon: 'fa-solid fa-money-bill-1-wave',
@@ -45,12 +78,6 @@ const app = createApp({
                 name: 'Partida Presup.',
                 icon: 'fa-solid fa-address-book',
                 class: 'employee-detail-button-budget'
-            },
-            {
-                id: 'institutional',
-                name: 'Datos Inst.',
-                icon: 'fa-solid fa-building',
-                class: 'employee-detail-button-institutional'
             },
             {
                 id: 'history',
@@ -64,157 +91,293 @@ const app = createApp({
                 icon: 'fa-solid fa-calendar-check',
                 class: 'employee-detail-button-permissions'
             },
-            {id: 'actions', name: 'Acciones Pers.', icon: 'fa-solid fa-gavel', class: 'employee-detail-button-actions'},
+            {
+                id: 'actions',
+                name: 'Acciones Pers.',
+                icon: 'fa-solid fa-file-invoice',
+                class: 'employee-detail-button-actions'
+            },
             {id: 'vacations', name: 'Vacaciones', icon: 'fa-solid fa-plane', class: 'employee-detail-button-vacations'},
         ];
-        const initModalSelects = () => {
-            // Usamos un pequeño delay para asegurar que Vue ya renderizó los elementos
-            setTimeout(() => {
-                $('.select2-wizard').select2({
-                    dropdownParent: $('#modalPersonEditOverlay'), // Vital para que el dropdown no quede detrás del modal
-                    width: '100%',
-                    language: {noResults: () => "No se encontraron resultados"}
-                }).on('change', function (e) {
-                    // Sincronizar el cambio de Select2 con el objeto reactivo de Vue
-                    const fieldName = $(this).attr('name');
-                    const value = $(this).val();
-                    editForm.value[fieldName] = value;
 
-                    // Si el cambio es en país/provincia/cantón, disparar la carga de cascada
-                    if (fieldName === 'country') handleLocationChange(value, 'id_province_modal');
-                    if (fieldName === 'province') handleLocationChange(value, 'id_canton_modal');
-                    if (fieldName === 'canton') handleLocationChange(value, 'id_parish_modal');
-                });
-            }, 100);
-        };
-        // Función auxiliar para cascada desde Select2
-        const handleLocationChange = async (parentId, targetId) => {
-            await loadLocations(parentId, targetId);
-            // Refrescar el Select2 del hijo para que muestre los nuevos datos
-            $(`#${targetId}`).trigger('change.select2');
-        };
+        // --- 6. MÉTODOS: GESTIÓN DE PERSONA (EDICIÓN) ---
 
-        // Métodos de UI
-        const openBankModal = () => {
-            bankErrors.value = {};
-            const modal = document.getElementById('modalBankOverlay');
-            if (modal) modal.classList.remove('hidden');
-        };
-
-        const openTitleModal = () => {
-            titleErrors.value = {};
-            const modal = document.getElementById('modalTitleOverlay');
-            if (modal) modal.classList.remove('hidden');
-        };
-        const openEditPersonModal = async (personId) => {
-            editErrors.value = {};
-            const modal = document.getElementById('modalPersonEditOverlay');
-            if (!modal) {
-                console.error("ERROR CRÍTICO: No se encontró el elemento con ID 'modalPersonEditOverlay' en el DOM.");
-                window.Toast.fire({icon: 'error', title: 'Error interno: No se encuentra el contenedor del modal.'});
-                return; // Detenemos la ejecución aquí
-            }
+        const openEditPersonModal = async (pId) => {
             editErrors.value = {};
             try {
-                const response = await fetch(`/person/detail/${personId}/`);
-                if (!response.ok) throw new Error("Error en la respuesta del servidor");
-
+                const response = await fetch(`/person/detail/${pId}/`);
                 const res = await response.json();
-
                 if (res.success) {
                     editForm.value = res.data;
                     personData.value = {full_name: res.data.first_name + ' ' + res.data.last_name};
                     photoPreview.value = res.data.photo_url;
 
-                    // Cargamos las ubicaciones de forma secuencial y segura
-                    try {
-                        if (res.data.country) {
-                            await loadLocations(res.data.country, 'id_province_modal', res.data.province);
-                        }
-                        if (res.data.province) {
-                            await loadLocations(res.data.province, 'id_canton_modal', res.data.canton);
-                        }
-                        if (res.data.canton) {
-                            await loadLocations(res.data.canton, 'id_parish_modal', res.data.parish);
-                        }
-                    } catch (locError) {
-                        console.warn("Error cargando cascada de ubicaciones:", locError);
-                    }
+                    // Cargar cascada de ubicaciones
+                    if (res.data.country) await loadLocations(res.data.country, 'id_province_modal', res.data.province);
+                    if (res.data.province) await loadLocations(res.data.province, 'id_canton_modal', res.data.canton);
+                    if (res.data.canton) await loadLocations(res.data.canton, 'id_parish_modal', res.data.parish);
 
                     document.getElementById('modalPersonEditOverlay').classList.remove('hidden');
                     document.body.classList.add('no-scroll');
-                } else {
-                    throw new Error(res.message || "Error desconocido");
                 }
             } catch (e) {
-                console.error("Error detallado:", e); // Esto te dirá el error real en F12
-                window.Toast.fire({icon: 'error', title: 'Error al obtener los datos: ' + e.message});
+                window.Toast.fire({icon: 'error', title: 'Error al obtener datos'});
             }
         };
-        const loadLocations = async (parentId, targetId, selectedValue = null) => {
-            const target = document.getElementById(targetId);
-            if (!target) return;
 
-            try {
-                // CORRECCIÓN: Usar la ruta definida en core/urls.py
-                const response = await fetch(`/api/locations/?parent_id=${parentId}`);
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                const res = await response.json();
-
-                let options = '<option value="">-- Seleccione --</option>';
-
-                // Ahora res.data existirá gracias al cambio en Python
-                if (res.success && res.data) {
-                    res.data.forEach(loc => {
-                        options += `<option value="${loc.id}">${loc.name}</option>`;
-                    });
-                }
-
-                target.innerHTML = options;
-                if (selectedValue) target.value = selectedValue;
-                if ($(target).data('select2')) {
-                    $(target).trigger('change.select2');
-                }
-            } catch (e) {
-                console.error(`Error cargando locaciones para el target ${targetId}:`, e);
-            }
+        const closeEditModal = () => {
+            document.getElementById('modalPersonEditOverlay').classList.add('hidden');
+            document.body.classList.remove('no-scroll');
         };
 
         const submitPersonEdit = async () => {
             if (isSaving.value) return;
             isSaving.value = true;
             const formData = new FormData(document.getElementById('personEditForm'));
-            const personId = editForm.value.id;
-
             try {
-                const response = await fetch(`/person/update/${personId}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                const response = await fetch(`/person/update/${editForm.value.id}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
                 });
-
                 const res = await response.json();
-
                 if (res.success) {
-                    window.Toast.fire({
-                        icon: 'success',
-                        title: res.message
-                    });
+                    window.Toast.fire({icon: 'success', title: res.message});
                     setTimeout(() => {
                         location.reload();
                     }, 1000);
                 } else {
-                    console.error("Errores de validación:", res.errors);
                     editErrors.value = res.errors;
                     window.Toast.fire({icon: 'warning', title: 'Revise los campos marcados'});
                 }
             } catch (e) {
-                console.error("Error técnico:", e);
-                window.Toast.fire({icon: 'error', title: 'Error al guardar datos'});
+                window.Toast.fire({icon: 'error', title: 'Error al guardar'});
             } finally {
-                isSaving.value = false; // Liberar el botón
+                isSaving.value = false;
+            }
+        };
+
+        // --- 7. MÉTODOS: CURRICULUM VITAE (PDF, Títulos, Experiencia, Cursos) ---
+
+        const refreshCvTab = async (pId) => {
+            try {
+                const response = await fetch(`/employee/partial/cv/${pId}/`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const htmlText = await response.text();
+                const container = document.getElementById('curriculum-tab-container');
+                if (container) container.innerHTML = htmlText;
+            } catch (e) {
+                console.error("Error al refrescar fragmento CV", e);
+            }
+        };
+
+        const handlePdfUpload = async (event, pId) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.type !== 'application/pdf') {
+                window.Toast.fire({icon: 'error', title: 'Debe ser un archivo PDF'});
+                return;
+            }
+            window.Toast.fire({icon: 'info', title: 'Subiendo archivo...'});
+            const formData = new FormData();
+            formData.append('pdf_file', file);
+            try {
+                const response = await fetch(`/employee/api/upload-cv/${pId}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const res = await response.json();
+                if (res.success) {
+                    window.Toast.fire({icon: 'success', title: res.message});
+                    await refreshCvTab(pId);
+                }
+            } catch (error) {
+                window.Toast.fire({icon: 'error', title: 'Error de conexión'});
+            }
+        };
+
+        const submitAcademicTitle = async () => {
+            if (isSaving.value) return;
+            isSaving.value = true;
+            const formData = new FormData();
+            Object.keys(titleForm.value).forEach(key => formData.append(key, titleForm.value[key]));
+            try {
+                const res = await fetch(`/employee/api/cv/add-title/${personId}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.Toast.fire({icon: 'success', title: data.message});
+                    closeModal('academic');
+                    await refreshCvTab(personId);
+                } else {
+                    titleErrors.value = data.errors;
+                }
+            } catch (e) {
+                window.Toast.fire({icon: 'error', title: 'Error al guardar título'});
+            } finally {
+                isSaving.value = false;
+            }
+        };
+
+        const submitExperience = async () => {
+            if (isSaving.value) return;
+            isSaving.value = true;
+            const formData = new FormData();
+            Object.keys(expForm.value).forEach(key => formData.append(key, expForm.value[key]));
+            try {
+                const res = await fetch(`/employee/api/cv/add-experience/${personId}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.Toast.fire({icon: 'success', title: data.message});
+                    closeModal('experience');
+                    await refreshCvTab(personId);
+                } else {
+                    expErrors.value = data.errors;
+                }
+            } catch (e) {
+                window.Toast.fire({icon: 'error', title: 'Error al guardar experiencia'});
+            } finally {
+                isSaving.value = false;
+            }
+        };
+
+        const submitTraining = async () => {
+            if (isSaving.value) return;
+            isSaving.value = true;
+            const formData = new FormData();
+            Object.keys(trainForm.value).forEach(key => formData.append(key, trainForm.value[key]));
+            try {
+                const res = await fetch(`/employee/api/cv/add-training/${personId}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.Toast.fire({icon: 'success', title: data.message});
+                    closeModal('training');
+                    await refreshCvTab(personId);
+                } else {
+                    trainErrors.value = data.errors;
+                }
+            } catch (e) {
+                window.Toast.fire({icon: 'error', title: 'Error al guardar capacitación'});
+            } finally {
+                isSaving.value = false;
+            }
+        };
+
+        // --- 8. MÉTODOS: DATOS ECONÓMICOS ---
+
+        const openBankModal = () => {
+            bankForm.value = {holder_name: personData.value.full_name};
+            document.getElementById('modalBankOverlay').classList.remove('hidden');
+        };
+
+        const saveBankAccount = async (pId) => {
+            const formData = new FormData();
+            Object.keys(bankForm.value).forEach(key => formData.append(key, bankForm.value[key]));
+            try {
+                const response = await fetch(`/employee/api/add-bank-account/${pId}/`, {
+                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.Toast.fire({icon: 'success', title: data.message});
+                    location.reload();
+                } else {
+                    bankErrors.value = data.errors;
+                }
+            } catch (e) {
+                window.Toast.fire({icon: 'error', title: 'Error al procesar banco'});
+            }
+        };
+
+        // --- 9. AUXILIARES: MODALES, UBICACIONES, FOTOS ---
+
+        const openModal = (type, action) => {
+            if (action === 'new') {
+                const map = {
+                    academic: 'modalTitleOverlay',
+                    experience: 'modalExperienceOverlay',
+                    training: 'modalTrainingOverlay'
+                };
+                const modal = document.getElementById(map[type]);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    document.body.classList.add('no-scroll');
+                }
+            } else {
+                // Si la acción es 'list', llamamos al cargador de datos
+                fetchListData(type);
+            }
+        };
+
+        const closeModal = (type) => {
+            const map = {
+                academic: 'modalTitleOverlay',
+                experience: 'modalExperienceOverlay',
+                training: 'modalTrainingOverlay',
+                bank: 'modalBankOverlay',
+                list: 'modalCVListOverlay'
+            };
+            const modalId = map[type];
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('hidden');
+            document.body.classList.remove('no-scroll');
+        };
+
+        const fetchListData = async (type) => {
+            loadingList.value = true;
+
+            // 1. Mostrar modal de lista con spinner de carga
+            const modal = document.getElementById('modalCVListOverlay');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('no-scroll');
+            }
+
+            // 2. Configuración de títulos y rutas
+            const config = {
+                academic: {title: 'Títulos Académicos', url: 'list-titles'},
+                experience: {title: 'Experiencia Laboral', url: 'list-experience'},
+                training: {title: 'Capacitaciones Registradas', url: 'list-training'}
+            };
+
+            listModalTitle.value = config[type].title;
+            listTableBody.value = `<tr><td colspan="4" class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><br>Cargando...</td></tr>`;
+
+            try {
+                // 3. Petición al servidor (Django)
+                const response = await fetch(`/employee/api/cv/${config[type].url}/${personId}/`);
+                const data = await response.json();
+
+                // 4. Inyectar el HTML que devuelve Django
+                listTableHead.value = data.header; // Cabecera de la tabla
+                listTableBody.value = data.html;     // Filas de la tabla
+            } catch (e) {
+                console.error("Error en fetchListData:", e);
+                listTableBody.value = `<tr><td colspan="4" class="text-error text-center p-4">Error al conectar con el servidor</td></tr>`;
+            } finally {
+                loadingList.value = false;
+            }
+        };
+
+        const loadLocations = async (parentId, targetId, selectedValue = null) => {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            try {
+                const response = await fetch(`/api/locations/?parent_id=${parentId}`);
+                const res = await response.json();
+                let options = '<option value="">-- Seleccione --</option>';
+                if (res.success && res.data) {
+                    res.data.forEach(loc => {
+                        options += `<option value="${loc.id}">${loc.name}</option>`;
+                    });
+                }
+                target.innerHTML = options;
+                if (selectedValue) target.value = selectedValue;
+            } catch (e) {
+                console.error("Error cargando locaciones", e);
             }
         };
 
@@ -222,41 +385,32 @@ const app = createApp({
             const file = e.target.files[0];
             if (file) photoPreview.value = URL.createObjectURL(file);
         };
-
-        const closeEditModal = () => {
-            document.getElementById('modalPersonEditOverlay').classList.add('hidden');
+        const closeListModal = () => {
+            const modal = document.getElementById('modalCVListOverlay');
+            if (modal) modal.classList.add('hidden');
             document.body.classList.remove('no-scroll');
         };
-        document.addEventListener('change', async (e) => {
-            if (e.target.id === 'id_country_modal') await loadLocations(e.target.value, 'id_province_modal');
-            if (e.target.id === 'id_province_modal') await loadLocations(e.target.value, 'id_canton_modal');
-            if (e.target.id === 'id_canton_modal') await loadLocations(e.target.value, 'id_parish_modal');
-        });
+        window.handleCvAction = (type, action) => {
+            openModal(type, action);
+        };
 
+        // --- 10. EL RETURN: TODO LO QUE EL HTML PUEDE VER ---
         return {
-            activeTab, tabs, titleForm, titleErrors, bankForm, bankErrors,
-            editForm, editErrors, photoPreview, personData, isSaving,
-            openEditPersonModal, submitPersonEdit, handlePhotoChange, closeEditModal,
-            openBankModal, openTitleModal
+            activeTab, isSaving, loadingList, tabs, personStats, personData,
+            editForm, editErrors, photoPreview,
+            titleForm, titleErrors, expForm, expErrors, trainForm, trainErrors,
+            bankForm, bankErrors,
+            listModalTitle, listTableHead, listTableBody,
+            openEditPersonModal, closeEditModal, submitPersonEdit,
+            handlePdfUpload, openModal, closeModal,
+            closeListModal, fetchListData,
+            submitAcademicTitle, submitExperience, submitTraining,
+            openBankModal, saveBankAccount, handlePhotoChange
         };
     }
 });
 
-// Montaje seguro
+// Montaje Global
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('=== DOM LOADED ===');
-    console.log('Vue disponible:', typeof Vue !== 'undefined');
-    const appElement = document.getElementById('employeeWizardApp');
-    console.log('Elemento #employeeWizardApp encontrado:', appElement !== null);
-
-    if (appElement) {
-        try {
-            app.mount('#employeeWizardApp');
-            console.log('✅ Vue app montada correctamente');
-        } catch (error) {
-            console.error('❌ Error al montar Vue app:', error);
-        }
-    } else {
-        console.error('❌ No se encontró el elemento #employeeWizardApp');
-    }
+    app.mount('#employeeWizardApp');
 });

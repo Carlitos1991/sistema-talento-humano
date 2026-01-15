@@ -1,5 +1,5 @@
 from django import forms
-from .models import AcademicTitle, BankAccount
+from .models import AcademicTitle, BankAccount, Training, WorkExperience
 
 
 class AcademicTitleForm(forms.ModelForm):
@@ -13,6 +13,32 @@ class AcademicTitleForm(forms.ModelForm):
             'educational_institution': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
             'graduation_year': forms.NumberInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 2023'}),
             'senescyt_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Opcional'}),
+        }
+
+
+class WorkExperienceForm(forms.ModelForm):
+    class Meta:
+        model = WorkExperience
+        fields = ['company_name', 'position', 'start_date', 'end_date', 'is_current', 'responsibilities']
+        widgets = {
+            'company_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'position': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'start_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+            'responsibilities': forms.Textarea(attrs={'class': 'input-field', 'rows': 2}),
+        }
+
+
+class TrainingForm(forms.ModelForm):
+    class Meta:
+        model = Training
+        # Quitamos 'certificate_number' de la lista
+        fields = ['training_name', 'institution', 'hours', 'completion_date']
+        widgets = {
+            'training_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'institution': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'hours': forms.NumberInput(attrs={'class': 'input-field'}),
+            'completion_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
         }
 
 

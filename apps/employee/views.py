@@ -1,14 +1,16 @@
 # apps/employee/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
 from core.models import CatalogItem, Location
 from person.models import Person
-from .forms import AcademicTitleForm
+from .forms import AcademicTitleForm, WorkExperienceForm
 from .models import Employee, Curriculum
 from budget.models import BudgetLine
 
@@ -139,3 +141,73 @@ def add_bank_account(request, person_id):
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     return None
+
+
+@login_required
+@require_POST
+def upload_cv_api(request, person_id):
+    """API para subir la hoja de vida en PDF"""
+    try:
+        person = get_object_or_404(Person, pk=person_id)
+        # Obtenemos o creamos el objeto Curriculum vinculado a la persona
+        curriculum, created = Curriculum.objects.get_or_create(person=person)
+
+        pdf_file = request.FILES.get('pdf_file')
+
+        if not pdf_file:
+            return JsonResponse({'success': False, 'message': 'No se seleccionó ningún archivo.'}, status=400)
+
+        # Validación Senior: Tipo de archivo y tamaño (ej: 5MB)
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'success': False, 'message': 'Solo se permiten archivos PDF.'}, status=400)
+
+        if pdf_file.size > 5 * 1024 * 1024:
+            return JsonResponse({'success': False, 'message': 'El archivo es muy pesado (máximo 5MB).'}, status=400)
+
+        # Guardar el archivo
+        curriculum.pdf_file = pdf_file
+        curriculum.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Hoja de vida actualizada correctamente.',
+            'file_url': curriculum.pdf_file.url
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@login_required
+def curriculum_tab_partial(request, person_id):
+    """Retorna únicamente el fragmento HTML de la pestaña de Currículum"""
+    person = get_object_or_404(Person, pk=person_id)
+    # Reutilizamos el mismo template parcial
+    html = render_to_string('employee/partials/wizard/tab_curriculum.html', {'person': person}, request=request)
+    return HttpResponse(html)
+
+
+@transaction.atomic
+def add_academic_title_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    curriculum, _ = Curriculum.objects.get_or_create(person=person)
+    form = AcademicTitleForm(request.POST)
+    if form.is_valid():
+        title = form.save(commit=False)
+        title.curriculum = curriculum
+        title.save()
+        return JsonResponse({'success': True, 'message': 'Título registrado correctamente'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@transaction.atomic
+def add_work_experience_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    curriculum, _ = Curriculum.objects.get_or_create(person=person)
+    form = WorkExperienceForm(request.POST)
+    if form.is_valid():
+        exp = form.save(commit=False)
+        exp.curriculum = curriculum
+        exp.save()
+        return JsonResponse({'success': True, 'message': 'Experiencia registrada correctamente'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
