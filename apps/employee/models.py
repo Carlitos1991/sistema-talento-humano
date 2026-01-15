@@ -106,11 +106,15 @@ class Curriculum(BaseModel):
         verbose_name_plural = 'Curriculums'
 
     def get_total_work_years(self):
+        from datetime import date
         total_days = 0
-        for exp in self.work_experiences.all():
-            end_date = exp.end_date or date.today()
-            if exp.start_date:
-                total_days += (end_date - exp.start_date).days
+        experiences = self.work_experiences.all()
+        for exp in experiences:
+            start = exp.start_date
+            end = date.today() if exp.is_current else (exp.end_date or date.today())
+            if start:
+                total_days += (end - start).days
+
         return round(total_days / 365.25, 1)
 
 

@@ -1,27 +1,72 @@
 <div id="modalCVListOverlay" class="modal-overlay hidden" v-cloak>
-    <div class="modal-container-xl" style="max-width: 900px;">
-        <div class="modal-header modal-header-gradient">
-            <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fa-solid fa-list-check"></i></div>
-                <h3 class="header-title-main">[[ listModalTitle ]]</h3>
-            </div>
-            <button @click="closeListModal" class="btn-close-modal-refined">&times;</button>
+    <div class="modal-container modal-cv-list-large animate__animated animate__zoomIn">
+
+        <!-- Header del Modal -->
+        <div class="modal-header-clean">
+            <h3 class="modal-title-clean">[[ listModalTitle ]]</h3>
+            <button @click="closeModal('list')" class="btn-close-icon">&times;</button>
         </div>
-        <div class="modal-body-scrolled bg-white">
+
+        <!-- Barra de Búsqueda -->
+        <div class="modal-search-bar">
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    v-model="searchQuery"
+                    class="search-input-clean" 
+                    placeholder="Buscar ítem...">
+            </div>
+        </div>
+
+        <!-- Cuerpo del Modal con Tabla -->
+        <div class="modal-cv-list-body">
             <div v-if="loadingList" class="text-center py-5">
                 <i class="fa-solid fa-spinner fa-spin fa-3x text-primary"></i>
+                <p class="mt-3 text-secondary fw-bold">Cargando registros...</p>
             </div>
-            <div v-else class="table-container shadow-none border-0">
-                <table class="w-100">
-                    <thead class="bg-light">
-                        <tr v-html="listTableHead"></tr>
+
+            <div v-else class="table-wrapper-clean">
+                <table class="table-clean-cv">
+                    <thead>
+                        <tr>
+                            <th>NOMBRE</th>
+                            <th>CÓDIGO</th>
+                            <th>ESTADO</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
                     </thead>
-                    <tbody v-html="listTableBody"></tbody>
+                    <tbody>
+                        <tr v-for="(item, index) in filteredItems" :key="index">
+                            <td>[[ item.name ]]</td>
+                            <td><span class="badge-code">[[ item.code ]]</span></td>
+                            <td><span class="badge-status-active">Activo</span></td>
+                            <td class="text-center">
+                                <div class="action-buttons-group">
+                                    <button @click="editItem(item)" class="btn-action-edit" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button @click="deleteItem(item)" class="btn-action-delete" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredItems.length === 0">
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2"></i>
+                                <p>No se encontraron registros</p>
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
-        <div class="modal-footer-fixed">
-            <button @click="closeListModal" class="btn-cancel" style="min-width: 150px;">Cerrar Listado</button>
+
+        <!-- Footer del Modal -->
+        <div class="modal-footer-clean">
+            <button @click="closeModal('list')" class="btn-close-clean">
+                Cerrar
+            </button>
         </div>
     </div>
 </div>

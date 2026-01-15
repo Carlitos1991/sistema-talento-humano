@@ -5485,3 +5485,383 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     background-color: #1e293b;
     color: white;
 }
+
+/* Modal de Listado más pequeño */
+.modal-cv-list-container {
+    width: 800px !important; /* Reducido de 950px */
+    max-height: 70vh !important; /* Reducido de 80vh */
+    border-radius: 12px;
+}
+
+.table-cv-mini {
+    font-size: 0.82rem !important;
+}
+
+.table-cv-mini th {
+    padding: 8px 12px !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+}
+
+.table-cv-mini td {
+    padding: 6px 12px !important;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.modal-cv-list-body {
+    flex: 1;
+    overflow-y: auto; /* Scroll interno */
+    padding: 0 20px;
+}
+
+/* Columnas de tabla más pequeñas y elegantes */
+.table-cv-compact th, .table-cv-compact td {
+    padding: 10px 8px !important;
+    font-size: 0.85rem !important;
+}
+
+.col-width-status {
+    width: 120px;
+}
+
+.col-width-actions {
+    width: 100px;
+    text-align: center;
+}
+
+/* Modal de lista más angosto y centrado */
+#modalCVListOverlay .modal-container-xl {
+    max-width: 850px !important; /* Ancho ideal */
+    height: 75vh !important;
+}
+
+.table-cv-compact {
+    font-size: 0.85rem;
+}
+
+.table-cv-compact th {
+    background: #f8fafc;
+    padding: 12px 8px !important;
+}
+
+/* FIX SELECT2: Forzar visibilidad absoluta */
+.select2-container--default .select2-selection--single {
+    height: 42px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.select2-dropdown {
+    z-index: 10000000 !important;
+}
+
+/* --- MODAL DE LISTADO CV - DIMENSIONES LARGAS --- */
+.modal-cv-list-large {
+    width: 1100px !important; /* Más ancho */
+    max-width: 95% !important;
+    height: 85vh !important; /* Casi toda la altura de la pantalla */
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+}
+
+/* Cuerpo con scroll interno elegante */
+.modal-cv-list-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px !important;
+    background-color: #ffffff;
+}
+
+/* --- TABLA ULTRA COMPACTA --- */
+.table-compact-wizard {
+    width: 100% !important;
+    table-layout: fixed; /* Crucial para respetar anchos */
+}
+
+.table-compact-wizard thead th {
+    background-color: #034d75 !important;
+    color: white !important;
+    padding: 12px 8px !important;
+    font-size: 0.75rem;
+    border: none;
+}
+
+.table-compact-wizard tbody td {
+    padding: 10px !important;
+    font-size: 0.85rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    /* Truncado para que no deforme la fila */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actions-wrapper-center {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.table-compact-wizard th {
+    color: #ffffff !important; /* Texto siempre blanco */
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 14px 12px !important; /* Más aire vertical */
+    text-align: left;
+    border: none !important;
+}
+
+.table-compact-wizard td {
+    padding: 10px 8px !important;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Corta texto largo elegantemente */
+}
+
+.table-compact-wizard tr:hover td {
+    background-color: #f0f7ff;
+}
+
+.table-compact-wizard th.text-center,
+.table-compact-wizard td.text-center {
+    text-align: center !important;
+}
+
+.table-compact-wizard td {
+    padding: 12px !important;
+    font-size: 0.85rem !important;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    /* Truncado elegante de texto largo */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-compact-wizard tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Ajustes de columnas específicas */
+.col-mini {
+    width: 80px;
+}
+
+.col-sm {
+    width: 150px;
+}
+
+.col-actions {
+    width: 110px;
+    text-align: center;
+}
+
+/* ============================================
+   MODAL CV LIST - DISEÑO LIMPIO (CATEGORÍAS)
+   ============================================ */
+
+.modal-header-clean {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+}
+
+.modal-title-clean {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.btn-close-icon {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.btn-close-icon:hover {
+    color: #64748b;
+}
+
+.modal-search-bar {
+    padding: 1rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.search-input-wrapper {
+    position: relative;
+    max-width: 300px;
+}
+
+.search-icon-left {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.search-input-clean {
+    width: 100%;
+    padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+}
+
+.search-input-clean:focus {
+    outline: none;
+    border-color: #cbd5e1;
+}
+
+.search-input-clean::placeholder {
+    color: #cbd5e1;
+}
+
+.table-wrapper-clean {
+    padding: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.table-clean-cv {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.table-clean-cv thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.875rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-clean-cv tbody td {
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-clean-cv tbody tr:hover {
+    background: #f8fafc;
+}
+
+.badge-code {
+    display: inline-block;
+    padding: 0.25rem 0.625rem;
+    background: #e0e7ff;
+    color: #4f46e5;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.badge-status-active {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.action-buttons-group {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-action-edit,
+.btn-action-delete {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.btn-action-edit {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.btn-action-edit:hover {
+    background: #fde68a;
+    transform: scale(1.05);
+}
+
+.btn-action-delete {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-action-delete:hover {
+    background: #fecaca;
+    transform: scale(1.05);
+}
+
+.modal-footer-clean {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: white;
+}
+
+.btn-close-clean {
+    padding: 0.625rem 1.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-clean:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}

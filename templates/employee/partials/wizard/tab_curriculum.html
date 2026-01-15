@@ -39,8 +39,7 @@
     <div class="info-box-styled personal-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
         <div class="cv-stat-inner-container">
-            <!-- USAMOS DJANGO PARA RENDERIZAR EL NÚMERO -->
-            <div class="cv-stat-number text-primary">{{ person.curriculum.academic_titles.count|default:0 }}</div>
+            <div class="cv-stat-number text-primary">[[ personStats.titles ]]</div>
             <div class="cv-stat-label">Registrados</div>
         </div>
         <div class="cv-buttons-centered">
@@ -58,8 +57,8 @@
     <div class="info-box-styled medical-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
         <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-success">{{ person.curriculum.get_total_work_years|default:"0.0" }}</div>
-            <div class="cv-stat-label">Años de Experiencia</div>
+            <div class="cv-stat-number text-success">[[ personStats.experienceYears ]] años [[ personStats.experienceMonths ]] meses</div>
+            <div class="cv-stat-label">Experiencia Total</div>
         </div>
         <div class="cv-buttons-centered">
             <button class="btn-cv-pill new" onclick="handleCvAction('experience', 'new')">
@@ -75,8 +74,7 @@
     <div class="info-box-styled location-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-book-atlas"></i> Cursos y Capacitaciones</h6>
         <div class="cv-stat-inner-container">
-            <!-- USAMOS DJANGO -->
-            <div class="cv-stat-number text-warning">{{ person.curriculum.trainings.count|default:0 }}</div>
+            <div class="cv-stat-number text-warning">[[ personStats.courses ]]</div>
             <div class="cv-stat-label">Capacitaciones</div>
         </div>
         <div class="cv-buttons-centered">
