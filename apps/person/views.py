@@ -81,9 +81,6 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
 
 def person_detail_json(request, pk):
-    """
-    Retorna los datos para poblar el modal de edición.
-    """
     p = get_object_or_404(Person, pk=pk)
     data = {
         'id': p.id,
@@ -92,15 +89,33 @@ def person_detail_json(request, pk):
         'first_name': p.first_name,
         'last_name': p.last_name,
         'email': p.email,
-        'birth_date': p.birth_date,
+        'birth_date': p.birth_date.isoformat() if p.birth_date else None,
         'gender': p.gender_id,
+        'marital_status': p.marital_status_id,
+        'blood_type': p.blood_type_id,
         'country': p.country_id,
         'province': p.province_id,
         'canton': p.canton_id,
+        'parish': p.parish_id,
         'address_reference': p.address_reference,
         'phone_number': p.phone_number,
-        # Si hay foto, enviamos la URL, si no null
-        'photo_url': p.photo.url if p.photo else None
+        'photo_url': p.photo.url if p.photo else None,
+        # --- CAMPOS DE SALUD E INCLUSIÓN ---
+        'has_disability': p.has_disability,
+        'disability_type': p.disability_type_id,
+        'disability_percentage': p.disability_percentage,
+        'has_catastrophic_illness': p.has_catastrophic_illness,
+        'catastrophic_illness_description': p.catastrophic_illness_description,
+        'is_substitute': p.is_substitute,
+        'substitute_family_member_id': p.substitute_family_member_id,
+        'substitute_family_member_name': p.substitute_family_member_name,
+        'substitute_family_member_relationship': p.substitute_family_member_relationship_id,
+        'substitute_family_member_disability_type': p.substitute_family_member_disability_type_id,
+        'substitute_family_member_disability_percentage': p.substitute_family_member_disability_percentage,
+        # --- EMERGENCIA ---
+        'emergency_contact_name': p.emergency_contact_name,
+        'emergency_contact_phone': p.emergency_contact_phone,
+        'emergency_contact_relationship': p.emergency_contact_relationship_id,
     }
     return JsonResponse({'success': True, 'data': data})
 

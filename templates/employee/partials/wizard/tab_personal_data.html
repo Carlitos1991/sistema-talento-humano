@@ -1,0 +1,121 @@
+<div class="profile-header-container">
+
+    <!-- FOTO A LA IZQUIERDA -->
+    <div class="profile-avatar-wrapper-small">
+        {% if person.photo %}
+            <img src="{{ person.photo.url }}" class="profile-avatar-img-small">
+        {% else %}
+            <div class="profile-avatar-img-small bg-light d-flex align-items-center justify-content-center">
+                <i class="fa-solid fa-user fa-3x text-secondary"></i>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- INFORMACIÓN A LA DERECHA -->
+    <div class="profile-text-content">
+        <div class="mb-1">
+            <span class="status-badge active shadow-sm" style="padding: 5px 18px; font-size: 0.7rem;">ACTIVO</span>
+        </div>
+        <h2 class="profile-name-title">{{ person.full_name }}</h2>
+        <div class="profile-id-subtitle">
+            <i class="fa-solid fa-id-card text-primary-subtle"></i>
+            <span>Cédula: <strong>{{ person.document_number }}</strong></span>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="grid-info-personal">
+    <!-- Identidad -->
+    <div class="info-box-styled personal-border">
+        <h6 class="section-title"><i class="fa-solid fa-user"></i> Identidad</h6>
+        <div class="info-data-row">
+            <label>Género:</label>
+            <span>{{ person.gender.name|default:"N/A" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Nacimiento:</label>
+            <span>{{ person.birth_date|date:"d/m/Y" }} ({{ person.age }} años)</span>
+        </div>
+    </div>
+
+    <!-- Información Adicional -->
+    <div class="info-box-styled additional-border">
+        <h6 class="section-title"><i class="fa-solid fa-circle-info"></i> Información adicional</h6>
+        <div class="info-data-row">
+            <label>Estado Civil:</label>
+            <span>{{ person.marital_status.name|default:"-" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Tipo de Sangre:</label>
+            <span class="text-danger fw-bold">{{ person.blood_type.name|default:"-" }}</span>
+        </div>
+    </div>
+    <!-- Ubicación -->
+    <div class="info-box-styled location-border">
+        <h6 class="section-title"><i class="fa-solid fa-location-dot"></i> Ubicación</h6>
+        <div class="info-data-row">
+            <label>Localidad:</label>
+            <span>{{ person.province.name }} / {{ person.canton.name }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Dirección:</label>
+            <span class="small">{{ person.address_reference|default:"Sin dirección" }}</span>
+        </div>
+    </div>
+
+</div>
+<div class="grid-info-personal">
+    <!-- Contacto -->
+    <div class="info-box-styled contact-border">
+        <h6 class="section-title"><i class="fa-solid fa-phone"></i> Contacto</h6>
+        <div class="info-data-row">
+            <label>Email:</label>
+            <span class="text-primary" style="font-size: 0.85rem;">{{ person.email|default:"Sin especificar" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Celular:</label>
+            <span>{{ person.phone_number|default:"No registrado" }}</span>
+        </div>
+    </div>
+    <!-- Medico -->
+    <div class="info-box-styled medical-border">
+        <h6 class="section-title"><i class="fa-solid fa-heart-pulse"></i> Información Médica</h6>
+        <div class="info-data-row">
+            <label>¿Tiene Discapacidad?:</label>
+            <span class="status-badge {% if person.has_disability %}inactive{% else %}active{% endif %}"
+                  style="font-size: 0.65rem;">
+                {{ person.has_disability|yesno:"SÍ,NO" }}
+            </span>
+        </div>
+        {% if person.has_disability %}
+            <div class="info-data-row">
+                <label>Tipo / Porcentaje:</label>
+                <span>{{ person.disability_type.name }} ({{ person.disability_percentage }}%)</span>
+            </div>
+        {% endif %}
+        <div class="info-data-row">
+            <label>¿Enfermedad Catastrófica?:</label>
+            <span class="status-badge {% if person.has_catastrophic_illness %}inactive{% else %}active{% endif %}"
+                  style="font-size: 0.65rem;">
+                {{ person.has_catastrophic_illness|yesno:"SÍ,NO" }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Contacto de emergencia -->
+    <div class="info-box-styled emergency-border">
+        <h6 class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Contacto de Emergencia</h6>
+        <div class="info-data-row">
+            <label>Nombre:</label>
+            <span class="fw-bold">{{ person.emergency_contact_name|default:"No registrado" }}/{{ person.emergency_contact_relationship.name|default:"-" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Teléfono:</label>
+            <span class="text-danger fw-bold">{{ person.emergency_contact_phone|default:"-" }}</span>
+        </div>
+    </div>
+
+
+</div>

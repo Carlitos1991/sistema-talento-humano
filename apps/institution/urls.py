@@ -16,6 +16,6 @@ urlpatterns = [
     path('levels/update/<int:pk>/', views.LevelUpdateView.as_view(), name='level_update'),
     path('levels/toggle/<int:pk>/', views.level_toggle_status, name='level_toggle'),
     path('api/parents/', views.ParentOptionsJsonView.as_view(), name='api_parents'),
-    path('api/employees/search/', views.EmployeeSearchJsonView.as_view(), name='api_employee_search'),
+    path('api/employee/search/', views.EmployeeSearchJsonView.as_view(), name='api_employee_search'),
     path('api/unit-children/', views.api_get_administrative_children, name='api_unit_children'),
 ]

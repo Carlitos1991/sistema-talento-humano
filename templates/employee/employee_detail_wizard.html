@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div id="employeeWizardApp" v-cloak>
+
+        <!-- 1. BANNER -->
+        <div class="banner-employee-detail">
+            <div class="banner-info-employee-detail">
+                <span class="banner-label-top">Expediente Digital</span>
+                <h1>{{ person.full_name }}</h1>
+                <div class="banner-badges-group">
+                    <span class="banner-badge-info">
+                        <i class="fa-solid fa-id-card"></i>
+                        {{ person.document_number }}
+                    </span>
+                    <span class="banner-badge-info">
+                        <i class="fa-solid fa-briefcase"></i>
+                        {{ person.employee_profile.area.name|default:"SIN ÁREA ASIGNADA" }}
+                    </span>
+                </div>
+            </div>
+            <div class="header-actions-wrapper">
+                <a href="{% url 'person:person_list' %}" class="btn-header-premium btn-header-back">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </a>
+
+                <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
+                        style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
+                    <i class="fa-solid fa-user-pen"></i> Editar Perfil
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. NAVEGACIÓN-->
+        <div class="employee-detail-buttons-container">
+            <h3 class="buttons-section-title">
+                <i class="fa fa-th-large"></i>
+                Acciones y Módulos
+            </h3>
+            <div class="module-grid-premium">
+                <div v-for="tab in tabs"
+                     :key="tab.id"
+                     @click="activeTab = tab.id"
+                     :class="['employee-detail-button', tab.class, { active: activeTab === tab.id }]">
+                    <div class="employee-detail-button-icon">
+                        <i :class="tab.icon"></i>
+                    </div>
+                    <span class="employee-detail-button-label">[[ tab.name ]]</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. CUERPO DINÁMICO -->
+        <div class="animate__animated animate__fadeIn mt-4">
+
+            <!-- PESTAÑA: DATOS PERSONALES -->
+            <div v-if="activeTab === 'personal'">
+                {% include 'employee/partials/wizard/tab_personal_data.html' %}
+            </div>
+
+            <!-- PESTAÑA: CURRICULUM -->
+            <div v-if="activeTab === 'curriculum'">
+                {% include 'employee/partials/wizard/tab_curriculum.html' %}
+            </div>
+
+            <!-- PESTAÑA: ECONÓMICOS -->
+            <div v-if="activeTab === 'economic'">
+                {% include 'employee/partials/wizard/tab_economic_data.html' %}
+            </div>
+
+        </div>
+        {% include 'employee/modals/modal_person_edit_wizard.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/employee_wizard.js' %}"></script>
+{% endblock %}

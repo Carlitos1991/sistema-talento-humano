@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.views.generic import DetailView
 
-from core.models import CatalogItem
+from core.models import CatalogItem, Location
 from person.models import Person
 from .forms import AcademicTitleForm
 from .models import Employee, Curriculum
@@ -56,7 +56,7 @@ def search_employee_by_cedula(request):
 
 class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     model = Person
-    template_name = 'employees/employee_detail_wizard.html'
+    template_name = 'employee/employee_detail_wizard.html'
     context_object_name = 'person'
     permission_required = 'person.view_person'
 
@@ -77,6 +77,12 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['education_levels'] = CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS', is_active=True)
         context['banks_list'] = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True)
         context['account_types_list'] = CatalogItem.objects.filter(catalog__code='ACCOUNT_TYPES', is_active=True)
+        context['gender_list'] = CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True)
+        context['country_list'] = Location.objects.filter(level=1, is_active=True)
+        context['marital_status_list'] = CatalogItem.objects.filter(catalog__code='MARITAL_STATUSES', is_active=True)
+        context['blood_type_list'] = CatalogItem.objects.filter(catalog__code='BLOOD_TYPES', is_active=True)
+        context['disability_types'] = CatalogItem.objects.filter(catalog__code='DISABILITY_TYPES', is_active=True)
+        context['relationships'] = CatalogItem.objects.filter(catalog__code='RELATIONSHIPS', is_active=True)
         return context
 
 

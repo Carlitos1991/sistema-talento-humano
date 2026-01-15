@@ -462,8 +462,10 @@ class LocationJsonView(View):
         if parent_id:
             locations = Location.objects.filter(parent_id=parent_id, is_active=True).order_by('name')
         else:
-            # Si no hay padre, retornamos nivel 1 (Países)
             locations = Location.objects.filter(level=1, is_active=True).order_by('name')
 
         data = [{'id': loc.id, 'name': loc.name} for loc in locations]
-        return JsonResponse(data, safe=False)
+        return JsonResponse({
+            'success': True,
+            'data': data
+        })

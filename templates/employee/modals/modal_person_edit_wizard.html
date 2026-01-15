@@ -1,0 +1,278 @@
+<div id="modalPersonEditOverlay" class="modal-overlay hidden" v-cloak>
+    <div class="modal-container-xl" style="max-width: 950px;">
+        <div class="modal-header modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-user-gear"></i></div>
+                <div>
+                    <h3 class="header-title-main">Ficha de Información Personal</h3>
+                    <p class="text-white-50 small mb-0">[[ personData.full_name ]]</p>
+                </div>
+            </div>
+            <button @click="closeEditModal" class="btn-close-modal-refined">&times;</button>
+        </div>
+
+        <form id="personEditForm" @submit.prevent="submitPersonEdit" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="document_type" v-model="editForm.document_type">
+            <input type="hidden" name="document_number" v-model="editForm.document_number">
+
+            <div class="modal-body-scrolled bg-light">
+
+                <!-- 1. IDENTIDAD BÁSICA -->
+                <div class="form-section-card mb-3">
+                    <h6 class="section-title"><i class="fa-solid fa-id-card"></i> Identidad y Foto</h6>
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="photo-uploader-wrapper-lg">
+                            <label class="photo-upload-label">
+                                <div class="photo-preview-box-lg shadow-sm">
+                                    <img v-if="photoPreview" :src="photoPreview"
+                                         style="width: 100%; height: 100%; object-fit: cover;">
+                                    <div v-else class="placeholder-icon"><i class="fa-solid fa-camera fa-2x"></i></div>
+                                </div>
+                                <input type="file" name="photo" class="hidden" @change="handlePhotoChange"
+                                       accept="image/*">
+                            </label>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="grid-2-cols grid-compact">
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Nombres</label>
+                                    <input type="text" name="first_name" v-model="editForm.first_name"
+                                           class="input-field uppercase-input">
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Apellidos</label>
+                                    <input type="text" name="last_name" v-model="editForm.last_name"
+                                           class="input-field uppercase-input">
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Género</label>
+                                    <select name="gender" v-model="editForm.gender" class="input-field select2-wizard">
+                                        {% for g in gender_list %}
+                                            <option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Fecha de Nacimiento</label>
+                                    <input type="date" name="birth_date" v-model="editForm.birth_date"
+                                           class="input-field">
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Estado Civil</label>
+                                    <select name="marital_status" v-model="editForm.marital_status"
+                                            class="input-field select2-wizard">
+                                        {% for ms in marital_status_list %}
+                                            <option value="{{ ms.id }}">{{ ms.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Tipo Sangre</label>
+                                    <select name="blood_type" v-model="editForm.blood_type"
+                                            class="input-field select2-wizard">
+                                        {% for bt in blood_type_list %}
+                                            <option value="{{ bt.id }}">{{ bt.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CONTACTO Y UBICACIÓN -->
+                <div class="form-section-card mb-3">
+                    <h6 class="section-title"><i class="fa-solid fa-location-dot"></i> Contacto y Residencia</h6>
+                    <div class="grid-3-cols grid-compact">
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Email Personal</label>
+                            <input type="email" name="email" v-model="editForm.email" class="input-field">
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Celular</label>
+                            <input type="text" name="phone_number" v-model="editForm.phone_number" class="input-field">
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">País</label>
+                            <select name="country" id="id_country_modal" v-model="editForm.country"
+                                    class="input-field select2-wizard">
+                                {% for c in country_list %}
+                                    <option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-3-cols grid-compact mt-2">
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Provincia</label>
+                            <select name="province" id="id_province_modal" v-model="editForm.province"
+                                    class="input-field select2-wizard">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Cantón</label>
+                            <select name="canton" id="id_canton_modal" v-model="editForm.canton"
+                                    class="input-field select2-wizard">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Parroquia</label>
+                            <select name="parish" id="id_parish_modal" v-model="editForm.parish"
+                                    class="input-field select2-wizard">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group mt-2">
+                        <label class="form-label small">Dirección Exacta</label>
+                        <textarea name="address_reference" v-model="editForm.address_reference"
+                                  class="input-field uppercase-input" rows="1"></textarea>
+                    </div>
+                </div>
+
+                <!-- 3. CONTACTO DE EMERGENCIA -->
+                <div class="form-section-card mb-3">
+                    <h6 class="section-title"><i class="fa-solid fa-truck-medical"></i> Contacto de Emergencia</h6>
+                    <div class="grid-3-cols grid-compact">
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" name="emergency_contact_name" v-model="editForm.emergency_contact_name"
+                                   class="input-field uppercase-input">
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="emergency_contact_phone" v-model="editForm.emergency_contact_phone"
+                                   class="input-field">
+                        </div>
+                        <div class="form-group form-group-compact">
+                            <label class="form-label">Parentesco</label>
+                            <select name="emergency_contact_relationship"
+                                    v-model="editForm.emergency_contact_relationship"
+                                    class="input-field select2-wizard">
+                                <option value="">-- Seleccione --</option>
+                                {% for r in relationships %}
+                                    <option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. SALUD E INCLUSIÓN -->
+                <div class="form-section-card">
+                    <h6 class="section-title"><i class="fa-solid fa-hands-holding-circle"></i> Salud e Inclusión</h6>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+                        <!-- Toggle Discapacidad -->
+                        <div class="w-100">
+                            <div class="toggle-header" :class="{ 'active-header': editForm.has_disability }">
+                                <span class="d-flex align-items-center gap-2 font-weight-700 text-secondary">
+                                    <i class="fa-brands fa-accessible-icon text-primary"></i> ¿Tiene Discapacidad?
+                                </span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="has_disability" v-model="editForm.has_disability">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div v-show="editForm.has_disability" class="toggle-content">
+                                <div class="grid-2-cols grid-compact">
+                                    <div class="form-group">
+                                        <label class="form-label small">Tipo</label>
+                                        <select name="disability_type" v-model="editForm.disability_type"
+                                                class="input-field">
+                                            <option value="">-- Seleccione --</option>
+                                            {% for dt in disability_types %}
+                                                <option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Porcentaje (%)</label>
+                                        <input type="number" name="disability_percentage"
+                                               v-model="editForm.disability_percentage" class="input-field">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toggle Enfermedad -->
+                        <div class="w-100">
+                            <div class="toggle-header" :class="{ 'active-header': editForm.has_catastrophic_illness }">
+                                <span class="d-flex align-items-center gap-2 font-weight-700 text-secondary">
+                                    <i class="fa-solid fa-heart-pulse text-danger"></i> ¿Enfermedad Catastrófica?
+                                </span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="has_catastrophic_illness"
+                                           v-model="editForm.has_catastrophic_illness">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div v-show="editForm.has_catastrophic_illness" class="toggle-content">
+                                <textarea name="catastrophic_illness_description"
+                                          v-model="editForm.catastrophic_illness_description"
+                                          class="input-field uppercase-input"
+                                          placeholder="Describa la enfermedad..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Toggle Sustituto -->
+                        <div class="w-100">
+                            <div class="toggle-header" :class="{ 'active-header': editForm.is_substitute }">
+                                <span class="d-flex align-items-center gap-2 font-weight-700 text-secondary">
+                                    <i class="fa-solid fa-people-arrows text-success"></i> ¿Es Sustituto?
+                                </span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="is_substitute" v-model="editForm.is_substitute">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div v-show="editForm.is_substitute" class="toggle-content">
+                                <div class="grid-3-cols grid-compact mb-2">
+                                    <div class="form-group"><label class="form-label small">ID Familiar</label><input
+                                            type="text" name="substitute_family_member_id"
+                                            v-model="editForm.substitute_family_member_id" class="input-field"></div>
+                                    <div class="form-group"><label class="form-label small">Nombre
+                                        Familiar</label><input type="text" name="substitute_family_member_name"
+                                                               v-model="editForm.substitute_family_member_name"
+                                                               class="input-field uppercase-input"></div>
+                                    <div class="form-group">
+                                        <label class="form-label small">Parentesco</label>
+                                        <select name="substitute_family_member_relationship"
+                                                v-model="editForm.substitute_family_member_relationship"
+                                                class="input-field">
+                                            {% for r in relationships %}
+                                                <option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid-2-cols grid-compact">
+                                    <div class="form-group">
+                                        <label class="form-label small">Discapacidad Familiar</label>
+                                        <select name="substitute_family_member_disability_type"
+                                                v-model="editForm.substitute_family_member_disability_type"
+                                                class="input-field">
+                                            {% for dt in disability_types %}
+                                                <option value="{{ dt.id }}">{{ dt.name }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group"><label class="form-label small">Porcentaje (%)</label><input
+                                            type="number" name="substitute_family_member_disability_percentage"
+                                            v-model="editForm.substitute_family_member_disability_percentage"
+                                            class="input-field"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" @click="closeEditModal" class="btn-cancel" :disabled="isSaving">Descartar</button>
+                <button type="submit" class="btn-save" :disabled="isSaving">
+                    <i v-if="isSaving" class="fa-solid fa-circle-notch fa-spin"></i>
+                    <i v-else class="fa-solid fa-floppy-disk"></i>
+                    <span class="ms-2">[[ isSaving ? 'Guardando...' : 'Guardar Cambios' ]]</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -23,7 +23,7 @@ class Employee(BaseModel):
     area = models.ForeignKey(
         AdministrativeUnit,
         on_delete=models.PROTECT,
-        related_name='employees',
+        related_name='employee',
         verbose_name="Área / Departamento",
         null=True, blank=True
     )

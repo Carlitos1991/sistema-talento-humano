@@ -904,6 +904,10 @@ select.input-field {
     text-transform: uppercase;
 }
 
+.text-uppercase {
+    text-transform: uppercase;
+}
+
 .text-danger {
     color: #ef4444;
     margin-left: 2px;
@@ -4001,10 +4005,27 @@ textarea.is-valid:focus,
 
 /* Cuerpo y secciones con padding estándar */
 .modal-body-scrolled {
-    flex: 1 1 auto;
+    max-height: 65vh; /* Ajuste para que siempre quepa el footer en la pantalla */
     overflow-y: auto;
-    padding: 1rem 2.5rem 1.5rem;
-    background-color: #f8fafc;
+    padding-right: 15px; /* Espacio para evitar que el scroll tape los inputs */
+}
+
+.modal-body-scrolled::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body-scrolled::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.modal-body-scrolled::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.modal-body-scrolled::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .section-card-standard {
@@ -4127,7 +4148,6 @@ textarea.is-valid:focus,
 }
 
 .wizard-step.completed .step-number {
-    background: #white;
     color: var(--primary-color);
     background: white;
 }
@@ -4265,6 +4285,10 @@ textarea.is-valid:focus,
 
 .modal-body-custom .select2-container {
     margin-bottom: 5px;
+}
+
+.select2-container {
+    z-index: 99999;
 }
 
 /* --- AJUSTES STEP 3 WIZARD --- */
@@ -4657,17 +4681,19 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
    ========================================= */
 
 /* Banner Principal */
-.wizard-banner-premium {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    border-radius: 20px;
-    padding: 2.5rem;
+.banner-employee-detail {
+    background: linear-gradient(135deg, #05246c 0%, #354260 100%);
+    border-radius: 16px;
+    padding: 1.5rem 2.5rem; /* Ajuste de padding */
     color: white;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 140px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
-.wizard-banner-premium h1 {
+.banner-employee-detail h1 {
     color: #f8fafc;
     font-size: 2.2rem;
     font-weight: 800;
@@ -4676,22 +4702,37 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 .banner-badge-info {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 6px 16px;
+    background: rgba(181, 18, 18, 0.1);
+    padding: 8px 16px;
     border-radius: 50px;
     font-size: 0.9rem;
     font-weight: 600;
+    gap: 12px;
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Navegación por Módulos */
-.module-grid-premium {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 15px;
-    margin-bottom: 2.5rem;
+.banner-badge-info i {
+    font-size: 1rem;
+    color: #38bdf8; /* Un celeste suave para resaltar el icono sobre el fondo oscuro */
+    opacity: 0.9;
 }
+
+.banner-badge-info:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.banner-badges-group {
+    display: flex; /* Activa Flexbox */
+    align-items: center; /* Alinea verticalmente los badges */
+    gap: 12px; /* Espacio exacto entre badges (Sustituye gap-2) */
+    margin-top: 12px; /* Espacio respecto al nombre/H1 (Sustituye mt-1) */
+    flex-wrap: wrap; /* Permite que los badges bajen en pantallas pequeñas */
+}
+
+/* Navegación por Módulos */
+
 
 .module-card-item {
     background: white;
@@ -4707,17 +4748,46 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 .module-card-item i {
-    font-size: 1.6rem;
-    margin-bottom: 10px;
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+    color: #94a3b8; /* Gris azulado suave para inactivos */
+    transition: color 0.3s;
 }
 
 .module-card-item span {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 800;
-    text-transform: uppercase;
-    color: #64748b;
+    text-transform: uppercase; /* TODO EN MAYÚSCULAS */
+    color: #475569;
     text-align: center;
+    letter-spacing: 0.02em;
     padding: 0 5px;
+    line-height: 1.2;
+}
+
+.module-card-item:hover {
+    transform: translateY(-4px);
+    border-color: #3b82f6;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.module-card-item:hover i {
+    color: #3b82f6;
+}
+
+.module-card-item.active {
+    background: #eff6ff; /* Fondo azul muy claro */
+    border: 1px solid #3b82f6;
+    border-bottom: 5px solid #3b82f6 !important; /* Barra azul gruesa inferior */
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.module-card-item.active i {
+    color: #3b82f6;
+}
+
+.module-card-item.active span {
+    color: #1e3a8a;
 }
 
 /* Colores de Módulos */
@@ -4747,16 +4817,475 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .profile-avatar-img {
     width: 100%;
     height: 100%;
-    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; /* Forma ovalada moderna */
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
     object-fit: cover;
-    border: 8px solid white;
+    border: 4px solid #1e3a8a;
     box-shadow: var(--shadow-card);
 }
 
 .info-box-styled {
     background: white;
-    border-radius: 15px;
-    padding: 1.5rem;
-    border-left: 5px solid #3b82f6;
+    border-radius: 12px;
+    padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid #cbd5e1
+}
+
+.banner-info-employee-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.banner-info-employee-detail h1 {
+    margin: 0;
+    line-height: 1.1;
+    font-size: 2rem;
+}
+
+/* Bloque de Acciones (Derecha) */
+.header-actions-wrapper {
+    display: flex;
+    gap: 12px; /* Espacio entre botones */
+    align-items: center;
+}
+
+/* Estilo Base para Botones del Header */
+.btn-header-premium {
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Botón Volver (Estilo Ghost/Transparente) */
+.btn-header-back {
+    background: rgba(255, 255, 255, 0.1);
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-header-back:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-5px); /* Efecto de retroceso */
+}
+
+/* Botón Editar (Estilo Destacado/Amber) */
+.btn-header-edit {
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(15, 76, 129, 0.3);
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+}
+
+.btn-header-edit:hover {
+    background: #f59e0b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+.btn-header-edit i {
+    font-size: 1rem;
+}
+
+.banner-badge-info {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: inline-flex; /* Para que el gap interno del badge funcione */
+    align-items: center;
+    gap: 10px; /* Espacio entre icono y texto dentro del badge */
+    backdrop-filter: blur(6px);
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap; /* Evita que el texto del badge se rompa */
+}
+
+.module-grid-premium {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 0;
+    margin-bottom: 0;
+
+}
+
+.banner-label-top {
+    color: rgba(255, 255, 255, 0.6); /* Blanco con 60% de opacidad */
+    font-size: 0.75rem; /* Tamaño pequeño */
+    font-weight: 700; /* Negrita */
+    text-transform: uppercase; /* Mayúsculas automáticas */
+    letter-spacing: 0.12em; /* Espaciado entre letras para mayor elegancia */
+    margin-bottom: 6px; /* Separación con el H1 */
+    display: block; /* Para que respete el margen inferior */
+}
+
+/* Aprovecho para asegurarme de que los badges también tengan el espaciado correcto */
+.banner-badges-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.employee-detail-buttons-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px 10px;
+    margin-top: 20px;
+    margin-bottom: 25px;
+    display: block;
+    width: 100%;
+
+}
+
+.buttons-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.buttons-section-title i {
+    color: #667eea;
+}
+
+.employee-detail-button {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.employee-detail-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--button-color);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.employee-detail-button.active::before {
+    transform: scaleX(1);
+}
+
+.employee-detail-button.active {
+    border-color: var(--button-color);
+    background: rgba(var(--button-color-rgb), 0.05);
+}
+
+.employee-detail-button:hover::before {
+    transform: scaleX(1);
+}
+
+.employee-detail-button:hover {
+    border-color: var(--button-color);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.employee-detail-button-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--button-color);
+    color: white;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.employee-detail-button:hover .app-button-icon {
+    transform: scale(1.1);
+}
+
+.employee-detail-button-label {
+    color: #2c3e50;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.employee-detail-button-personal {
+    --button-color: #2e4cd1;
+    --button-color-rgb: 102, 126, 234;
+}
+
+.employee-detail-button-curriculum {
+    --button-color: #28a745;
+    --button-color-rgb: 40, 167, 69;
+}
+
+.employee-detail-button-economic {
+    --button-color: #17a2b8;
+    --button-color-rgb: 23, 162, 184;
+}
+
+.employee-detail-button-budget {
+    --button-color: #20c997;
+    --button-color-rgb: 32, 201, 151;
+}
+
+.employee-detail-button-institutional {
+    --button-color: #fd7e14;
+    --button-color-rgb: 253, 126, 20;
+}
+
+.employee-detail-button-schedule {
+    --button-color: #6610f2;
+    --button-color-rgb: 102, 16, 242;
+}
+
+.employee-detail-button-history {
+    --button-color: #795548;
+    --button-color-rgb: 121, 85, 72;
+}
+
+.employee-detail-button-permissions {
+    --button-color: #e91e63;
+    --button-color-rgb: 233, 30, 99;
+}
+
+.employee-detail-button-actions {
+    --button-color: #9c27b0;
+    --button-color-rgb: 156, 39, 176;
+}
+
+.employee-detail-button-vacations {
+    --button-color: #ff9800;
+    --button-color-rgb: 255, 152, 0;
+}
+
+/* Layout General */
+.container-custom {
+    padding: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Grid de información personal (Sustituye a row/col) */
+.grid-info-personal {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.personal-border {
+    border-left-color: #2e4cd1;
+}
+
+.contact-border {
+    border-left-color: #17a2b8;
+}
+.additional-border {
+    border-left-color: #06630f;
+}
+
+.location-border {
+    border-left-color: #fd7e14;
+}
+
+.info-data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.info-data-row:last-child {
+    border-bottom: none;
+}
+
+.info-data-row label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.info-data-row span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.profile-main-display {
+    text-align: center;
+    padding: 40px 0 20px;
+}
+
+.wizard-body-content {
+    margin-top: 10px;
+}
+
+/* Nuevo Contenedor Principal de Perfil (Horizontal) */
+.profile-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centramos el bloque completo */
+    gap: 40px; /* Espacio entre foto e información */
+    padding: 30px 0;
+    margin-bottom: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    /* Eliminamos bordes/sombras si ya está dentro de un contenedor padre con ellos */
+}
+
+/* Foto de Perfil más pequeña */
+.profile-avatar-wrapper-small {
+    position: relative;
+    width: 130px; /* Reducido de 200px a 130px */
+    height: 130px;
+    flex-shrink: 0;
+}
+
+.profile-avatar-img-small {
+    width: 100%;
+    height: 100%;
+    border-radius: 20% 20% 20% 20% / 20% 20% 20% 20%; /* Forma orgánica */
+    object-fit: cover;
+    border: 4px solid #fff;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    outline: 2px solid #3b82f6;
+}
+
+/* Bloque de Texto al lado de la foto */
+.profile-text-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left; /* Alineación a la izquierda */
+}
+
+.profile-name-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.profile-id-subtitle {
+    font-size: 1.1rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Badge de estado compacto */
+.status-badge-mini {
+    font-size: 0.65rem;
+    padding: 2px 10px;
+    border-radius: 50px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+.status-pill-large {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 16px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    width: fit-content;
+}
+
+/* 1. Agrandar Foto en Modal */
+.photo-uploader-wrapper-lg {
+    width: 160px; /* Aumentado de 120px a 160px */
+    height: 160px;
+    flex-shrink: 0;
+    margin-right: 2rem !important;
+}
+
+.photo-preview-box-lg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%; /* Óvalo perfecto */
+    border: 3px solid #e2e8f0;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 2. Quitar espacios en blanco (márgenes verdes) */
+.form-group-compact {
+    margin-bottom: 8px !important; /* Espacio vertical mínimo entre filas */
+}
+
+.form-group-compact .form-label {
+    margin-bottom: 4px; /* Espacio mínimo entre etiqueta e input */
+    font-size: 0.75rem;
+}
+
+.grid-compact {
+    gap: 10px !important; /* Reduce el espacio entre columnas */
+}
+
+/* Ajuste del cuerpo del modal para que no se vea apretado a pesar de ser compacto */
+.modal-body-scrolled {
+    padding: 1.25rem 2rem !important;
+}
+
+/* Colores de borde adicionales para las nuevas secciones */
+.medical-border {
+    border-left-color: #069800;
+}
+
+/* Verde salud */
+.emergency-border {
+    border-left-color: #ffb673;
+}
+
+/* Rojo emergencia */
+
+/* Grid para la segunda fila de información */
+.grid-info-secondary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid-info-secondary {
+        grid-template-columns: 1fr;
+    }
 }
