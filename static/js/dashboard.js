@@ -103,4 +103,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    const innerToggle = document.querySelector('.inner-toggle');
+    if (innerToggle) {
+        innerToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const parent = innerToggle.closest('.has-inner-submenu');
+            parent.classList.toggle('is-open');
+
+            // Guardar estado en localStorage
+            localStorage.setItem('admin_menu_open', parent.classList.contains('is-open'));
+        });
+
+        // Restaurar estado
+        if (localStorage.getItem('admin_menu_open') === 'true') {
+            document.querySelector('.has-inner-submenu').classList.add('is-open');
+        }
+    }
 });

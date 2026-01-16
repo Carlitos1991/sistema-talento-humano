@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Competencias | SIGETH{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Diccionario de Competencias</h1>
+            <p>Manual de Funciones - Norma MDT-2025-108</p>
+        </div>
+        <button @click="openModal('create')" type="button" class="btn btn-create">
+            <i class="fa-solid fa-plus"></i> Nueva Competencia
+        </button>
+    </div>
+    <!-- 2. Estadísticas -->
+        <div class="stats-row">
+            <!-- Total -->
+            <div class="stat-card color-one" onclick="filterByLevel('1')" id="card-filter-1">
+                <div class="stat-left">
+                    <h3>Total</h3>
+                    <div class="number" id="stat-country">{{ stats_country|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-earth-americas stat-icon"></i>
+            </div>
+
+            <!-- Nivel 2: Provincias -->
+            <div class="stat-card color-two" onclick="filterByLevel('2')" id="card-filter-2">
+                <div class="stat-left"><h3>Conductuales</h3>
+                    <div class="number" id="stat-province">{{ stats_province|default:"0" }}</div>
+                </div>
+                <i class="fa-regular fa-map stat-icon"></i>
+            </div>
+
+            <!-- Nivel 3: Ciudades -->
+            <div class="stat-card color-three" onclick="filterByLevel('3')" id="card-filter-3">
+                <div class="stat-left"><h3>Técnicas</h3>
+                    <div class="number" id="stat-city">{{ stats_city|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-city stat-icon"></i>
+            </div>
+
+            <!-- Nivel 4: Parroquias -->
+            <div class="stat-card color-four" onclick="filterByLevel('4')" id="card-filter-4">
+                <div class="stat-left"><h3>Transversales</h3>
+                    <div class="number" id="stat-parish">{{ stats_parish|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-location-dot stat-icon"></i>
+            </div>
+        </div>
+    <!-- 3. Contenedor principal Tabla (AJAX) -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field"
+                           placeholder="Buscar en la tabla">
+                </div>
+            </div>
+            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+            <div id="table-content-wrapper">
+                {% include "function_manual/partials/partial_competency_table.html" %}
+            </div>
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li>
+                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                    </li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block modals %}
+    {% include "function_manual/modals/modal_competency_form.html" %}
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}

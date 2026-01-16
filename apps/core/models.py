@@ -267,3 +267,15 @@ class SystemConfiguration(BaseModel):
             is_active=True,
             effective_date__lte=timezone.now().date()
         ).first()
+
+class Authorities(BaseModel):
+    name = models.CharField(verbose_name='Nombre* :', max_length=255)
+    charge = models.CharField(verbose_name='Cargo* :', max_length=255)
+    status = models.BooleanField(verbose_name='estado :', max_length=10)
+
+    class Meta:
+        verbose_name = "autoridades"
+        ordering = ['pk']
+
+    def __str__(self):
+        return '%s' % self.name
