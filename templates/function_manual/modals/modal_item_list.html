@@ -1,0 +1,110 @@
+<!-- templates/function_manual/modals/modal_item_list.html -->
+
+<div id="manual-item-list-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+
+        <!-- Usamos la misma clase que en personas, sin estilos inline que estorben -->
+        <div class="modal-container-medium animate-scale-in">
+
+            <!-- HEADER (Igual que Personas) -->
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-list-check me-2"></i> Items de: [[ catalogName ]]
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
+            </div>
+
+            <!-- BODY (Con la clase custom para scroll y padding) -->
+            <div class="modal-body-content modal-body-custom"
+                 style="display: flex; flex-direction: column; height: 100%;">
+
+                <!-- CONTROLES -->
+                <div class="table-controls mb-3">
+                    <div class="search-box flex-grow-1" style="max-width: 300px;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" v-model="searchQuery" class="input-field" placeholder="Buscar items..."
+                               @input="currentPage = 1">
+                    </div>
+                    {% if perms.function_manual.add_manualcatalogitem %}
+                        <button class="btn btn-create ms-3" @click="openCreateFromList">
+                            <i class="fas fa-plus"></i> Nuevo Item
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- TABLA -->
+                <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
+                    <table class="w-100">
+                        <thead>
+                        <tr>
+                            <th style="width: 20%;">Código</th>
+                            <th style="width: 40%;">Nombre</th>
+                            <th style="width: 20%;">Estado</th>
+                            {% if perms.function_manual.change_manualcatalogitem or perms.function_manual.add_manualcatalogitem %}
+                                <th style="width: 20%;" class="text-center">Acciones</th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="item in paginatedItems" :key="item.id">
+                            <td>[[ item.code ]]</td>
+                            <td>[[ item.name ]]</td>
+                            <td>
+                                    <span class="status-badge" :class="item.is_active ? 'active' : 'inactive'">
+                                        [[ item.is_active ? 'Activo' : 'Inactivo' ]]
+                                    </span>
+                            </td>
+                            {% if perms.function_manual.change_manualcatalogitem or perms.function_manual.add_manualcatalogitem %}
+                                <td class="text-center">
+                                    <div class="actions-wrapper">
+                                        {% if perms.function_manual.change_manualcatalogitem %}
+                                            <button class="btn-icon btn-views-action" @click="editItem(item.id)"
+                                                    title="Editar">
+                                                <i class="fas fa-pencil"></i>
+                                            </button>
+                                        {% endif %}
+                                        {% if perms.function_manual.delete_manualcatalogitem %}
+                                            <button class="btn-icon" @click="toggleItem(item)"
+                                                    :title="item.is_active ? 'Desactivar' : 'Activar'">
+                                                <i class="fas"
+                                                   :class="item.is_active ? 'fa-toggle-on text-success' : 'fa-toggle-off text-danger'"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- EMPTY STATES -->
+                    <div v-if="items.length === 0" class="no-results-content py-5">
+                        <i class="fas fa-inbox no-results-icon"></i>
+                        <p class="text-muted">No hay items registrados.</p>
+                    </div>
+                    <div v-if="items.length > 0 && paginatedItems.length === 0" class="no-results-content py-5">
+                        <i class="fas fa-search no-results-icon"></i>
+                        <p class="text-muted">No se encontraron coincidencias.</p>
+                    </div>
+                </div>
+
+                <!-- PAGINACIÓN -->
+                <div class="pagination-container mt-3" v-if="items.length > 0">
+                    <span class="pagination-info">[[ paginationLabel ]]</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button class="page-btn" :disabled="currentPage === 1" @click="prevPage"><i
+                                    class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li><span class="px-2 fw-bold">[[ currentPage ]]</span></li>
+                        <li>
+                            <button class="page-btn" :disabled="currentPage === totalPages" @click="nextPage"><i
+                                    class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

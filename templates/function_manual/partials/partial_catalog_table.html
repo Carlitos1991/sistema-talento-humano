@@ -1,0 +1,92 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
+            <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
+            {% if perms.function_manual.add_manualcatalogitem or perms.function_manual.view_manualcatalogitem or perms.function_manual.change_manualcatalog %}
+                <th><i class="fas fa-cogs"></i> Acciones</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% for catalog in catalogs %}
+            <!-- ID ÚNICO PARA LA FILA: row-ID -->
+            <tr class="catalog-row" id="row-{{ catalog.id }}" data-status="{{ catalog.is_active|yesno:'true,false' }}">
+                <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
+
+                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
+                <td class="catalog-name-cell">{{ catalog.name }}</td>
+
+                <td>
+                    <!-- ID ÚNICO PARA EL BADGE -->
+                    <span id="badge-{{ catalog.id }}"
+                          class="status-badge {% if catalog.is_active %}active{% else %}inactive{% endif %}">
+                    {% if catalog.is_active %}Activo{% else %}Inactivo{% endif %}
+                </span>
+                </td>
+                {% if perms.function_manual.add_manualcatalogitem or perms.function_manual.view_manualcatalogitem or perms.function_manual.change_manualcatalog %}
+                    <td>
+                        <div class="actions-wrapper">
+                            {% if perms.function_manual.add_manualcatalogitem %}
+                                <button type="button" class="btn-icon btn-create-action"
+                                        onclick="openCreateItem({{ catalog.id }}, '{{ catalog.name|escapejs }}')"
+                                        title="Agregar Item">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.function_manual.view_manualcatalogitem %}
+                                <button class="btn-icon btn-list-action"
+                                        title="Listar Items"
+                                        onclick="openListItems({{ catalog.id }}, '{{ catalog.name|escapejs }}')">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.function_manual.change_manualcatalog %}
+                                <button type="button" class="btn-icon btn-views-action"
+                                        onclick="openEditCatalog({{ catalog.id }})"
+                                        title="Editar">
+                                    <i class="fas fa-pencil"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.function_manual.change_manualcatalog %}
+                                {% if catalog.is_active %}
+                                    <!-- ESTADO ACTIVO: Botón Rojo (Delete Action) -->
+                                    <button type="button"
+                                            class="btn-icon btn-delete-action"
+                                            onclick="toggleCatalogStatus(this, '{% url 'function_manual:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                            title="Desactivar">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                {% else %}
+                                    <!-- ESTADO INACTIVO: Botón Verde (Create Action) -->
+                                    <button type="button"
+                                            class="btn-icon btn-create-action"
+                                            onclick="toggleCatalogStatus(this, '{% url 'function_manual:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
+                                            title="Activar">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}">
+        <div class="no-results-content empty-db-msg {% if not catalogs %}show{% else %}hidden{% endif %}">
+            <i class="fas fa-inbox no-results-icon"></i>
+            <p class="no-results-text">No hay catálogos registrados.</p>
+        </div>
+
+        <!-- Mensaje 2: Búsqueda sin coincidencias -->
+        <div class="no-results-content hidden" id="no-results-placeholder">
+            <i class="fas fa-search no-results-icon"></i>
+            <p class="no-results-text">No se encontraron resultados.</p>
+        </div>
+    </div>
+</div>
