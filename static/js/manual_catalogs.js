@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     window.insertNewRow = function (data) {
         if (!tableBody) return;
-        const toggleUrl = `/manual-funciones/catalogs/toggle/${data.id}/`;
+        const toggleUrl = `/function_manual/catalogs/toggle/${data.id}/`;
 
         // Se inserta con la clase 'btn-delete-action' (Rojo/Activo) por defecto para nuevos items
         const newRowHTML = `
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     // 4. MODALES VUE (Crear/Editar Catálogo)
     // =========================================================
-    const CATALOG_MOUNT_ID = '#catalog-create-app';
+    const CATALOG_MOUNT_ID = '#manual-catalog-form-app';
 
     if (document.querySelector(CATALOG_MOUNT_ID)) {
         const {createApp} = Vue;
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.currentId = id;
                     this.errors = {};
                     try {
-                        const response = await fetch(`/manual-funciones/catalogs/detail/${id}/`);
+                        const response = await fetch(`/function_manual/catalogs/detail/${id}/`);
                         const result = await response.json();
                         if (result.success) {
                             this.form = result.data;
@@ -327,8 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.append('code', this.form.code);
                     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
-                    let url = '/manual-funciones/catalogs/create/';
-                    if (this.isEditing && this.currentId) url = `/manual-funciones/catalogs/update/${this.currentId}/`;
+                    let url = '/function_manual/catalogs/create/';
+                    if (this.isEditing && this.currentId) url = `/function_manual/catalogs/update/${this.currentId}/`;
 
                     try {
                         const response = await fetch(url, {
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     // 5. APP VUE: LISTAR ITEMS (CON BUSCADOR Y PAGINACIÓN)
     // =========================================================
-    const ITEM_LIST_MOUNT = '#item-list-app';
+    const ITEM_LIST_MOUNT = '#manual-item-list-app';
     let vmItemList = null;
 
     if (document.querySelector(ITEM_LIST_MOUNT)) {
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 async fetchItems() {
                     if (!this.catalogId) return;
                     try {
-                        const res = await fetch(`/manual-funciones/items/list/${this.catalogId}/`);
+                        const res = await fetch(`/function_manual/catalogs/${this.catalogId}/items/`);
                         const data = await res.json();
                         if (data.success) {
                             this.items = data.data;
@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const formData = new FormData();
                         formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                        const res = await fetch(`/manual-funciones/items/toggle/${item.id}/`, {
+                        const res = await fetch(`/function_manual/items/toggle/${item.id}/`, {
                             method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
                         });
                         const data = await res.json();
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     // 6. APP VUE: FORMULARIO ITEM (CREAR / EDITAR)
     // =========================================================
-    const ITEM_FORM_MOUNT = '#item-create-app';
+    const ITEM_FORM_MOUNT = '#manual-item-form-app';
 
     if (document.querySelector(ITEM_FORM_MOUNT)) {
         const {createApp} = Vue;
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.isFromList = fromList;
                     this.errors = {};
                     try {
-                        const res = await fetch(`/manual-funciones/items/detail/${itemId}/`);
+                        const res = await fetch(`/function_manual/items/detail/${itemId}/`);
                         const result = await res.json();
                         if (result.success) {
                             this.form = result.data;
@@ -553,10 +553,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!this.isEditing) formData.append('catalog_id', this.parentCatalogId);
                     formData.append('name', this.form.name);
                     formData.append('code', this.form.code);
+                    formData.append('description', this.form.description || '');
+                    formData.append('order', this.form.order || 0);
                     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
-                    let url = '/manual-funciones/items/create/';
-                    if (this.isEditing) url = `/manual-funciones/items/update/${this.currentId}/`;
+                    let url = '/function_manual/catalogs/items/create/';
+                    if (this.isEditing) url = `/function_manual/catalogs/items/update/${this.currentId}/`;
 
                     try {
                         const response = await fetch(url, {

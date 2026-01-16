@@ -70,3 +70,91 @@ input:checked + .slider:before {
 #competency-modal-app .mt-3 {
     margin-top: 1rem;
 }
+
+/* Estilos para modal de items - más ancho con dos columnas */
+#manual-item-form-app .modal-container {
+    max-width: 800px;
+    width: 90%;
+}
+
+#manual-item-form-app .form-row-2-cols {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+#manual-item-form-app .form-group {
+    margin-bottom: 1rem;
+}
+
+/* Estilos para modal de lista de items - tabla sin scroll horizontal */
+#manual-item-list-app .modal-container-medium {
+    max-width: 900px;
+    width: 90%;
+}
+
+#manual-item-list-app .modal-body {
+    padding: 1.5rem 2rem;
+    background-color: #f8fafc;
+    overflow-x: hidden;
+}
+
+#manual-item-list-app .table-wrapper-items {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    overflow-x: hidden;
+    padding: 0;
+}
+
+#manual-item-list-app .table-items {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+#manual-item-list-app .table-items thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#manual-item-list-app .table-items tbody td {
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+}
+
+/* Anchos de columnas para la tabla de items */
+#manual-item-list-app .table-items thead th:nth-child(1),
+#manual-item-list-app .table-items tbody td:nth-child(1) {
+    width: 40%;
+}
+
+#manual-item-list-app .table-items thead th:nth-child(2),
+#manual-item-list-app .table-items tbody td:nth-child(2) {
+    width: 20%;
+}
+
+#manual-item-list-app .table-items thead th:nth-child(3),
+#manual-item-list-app .table-items tbody td:nth-child(3) {
+    width: 20%;
+}
+
+#manual-item-list-app .table-items thead th:nth-child(4),
+#manual-item-list-app .table-items tbody td:nth-child(4) {
+    width: 20%;
+    text-align: center;
+}

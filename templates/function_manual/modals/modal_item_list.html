@@ -32,23 +32,23 @@
                     {% endif %}
                 </div>
 
-                <!-- TABLA -->
-                <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
-                    <table class="w-100">
+                <!-- TABLA CON CONTENEDOR -->
+                <div class="table-wrapper-items">
+                    <table class="table-items">
                         <thead>
                         <tr>
-                            <th style="width: 20%;">Código</th>
-                            <th style="width: 40%;">Nombre</th>
-                            <th style="width: 20%;">Estado</th>
+                            <th>Nombre</th>
+                            <th>Código</th>
+                            <th>Estado</th>
                             {% if perms.function_manual.change_manualcatalogitem or perms.function_manual.add_manualcatalogitem %}
-                                <th style="width: 20%;" class="text-center">Acciones</th>
+                                <th class="text-center">Acciones</th>
                             {% endif %}
                         </tr>
                         </thead>
                         <tbody>
                         <tr v-for="item in paginatedItems" :key="item.id">
-                            <td>[[ item.code ]]</td>
                             <td>[[ item.name ]]</td>
+                            <td>[[ item.code ]]</td>
                             <td>
                                     <span class="status-badge" :class="item.is_active ? 'active' : 'inactive'">
                                         [[ item.is_active ? 'Activo' : 'Inactivo' ]]
