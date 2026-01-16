@@ -17,7 +17,7 @@
                     <strong>{{ competency.name }}</strong><br>
                     <small class="text-muted">{{ competency.definition|truncatechars:60 }}</small>
                 </td>
-                <td>
+                <td data-type="{{ competency.type }}">
                 <span class="badge badge-outline">
                     {{ competency.get_type_display }}
                 </span>
@@ -32,7 +32,13 @@
                 </td>
                 <td class="text-center">
                     <button class="btn-icon" title="Editar"
-                            @click="openModal('edit', {id: {{ competency.id }}, name: '{{ competency.name }}', type: '{{ competency.type }}', definition: '{{ competency.definition|escapejs }}', suggested_level: '{{ competency.suggested_level.id }}'})">
+                            @click="openModal('edit', {
+                                id: {{ competency.id }}, 
+                                name: '{{ competency.name|escapejs }}', 
+                                type: '{{ competency.type }}', 
+                                definition: '{{ competency.definition|escapejs }}', 
+                                suggested_level: {% if competency.suggested_level %}{{ competency.suggested_level.id }}{% else %}''{% endif %}
+                            })">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                 </td>

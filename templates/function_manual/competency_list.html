@@ -5,6 +5,16 @@
     <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
 {% endblock %}
 {% block content %}
+    {% csrf_token %}
+    
+    <!-- Contenedor Vue App -->
+    <div id="competencyApp" 
+         data-url-table="{% url 'function_manual:competency_table_partial' %}"
+         data-url-create="{% url 'function_manual:competency_create' %}"
+         data-url-update-base="{% url 'function_manual:competency_update' 0 %}"
+         data-url-toggle-base="{% url 'function_manual:competency_toggle' 0 %}"
+         data-levels="{{ complexity_levels }}">
+         
     <!-- 1. Header -->
     <div class="header-card">
         <div>
@@ -18,36 +28,36 @@
     <!-- 2. Estadísticas -->
         <div class="stats-row">
             <!-- Total -->
-            <div class="stat-card color-one" onclick="filterByLevel('1')" id="card-filter-1">
+            <div class="stat-card color-one">
                 <div class="stat-left">
                     <h3>Total</h3>
-                    <div class="number" id="stat-country">{{ stats_country|default:"0" }}</div>
+                    <div class="number" id="stat-total">{{ stats_total|default:"0" }}</div>
                 </div>
-                <i class="fa-solid fa-earth-americas stat-icon"></i>
+                <i class="fa-solid fa-brain stat-icon"></i>
             </div>
 
-            <!-- Nivel 2: Provincias -->
-            <div class="stat-card color-two" onclick="filterByLevel('2')" id="card-filter-2">
+            <!-- Conductuales -->
+            <div class="stat-card color-two">
                 <div class="stat-left"><h3>Conductuales</h3>
-                    <div class="number" id="stat-province">{{ stats_province|default:"0" }}</div>
+                    <div class="number" id="stat-behavioral">{{ stats_behavioral|default:"0" }}</div>
                 </div>
-                <i class="fa-regular fa-map stat-icon"></i>
+                <i class="fa-solid fa-user-tie stat-icon"></i>
             </div>
 
-            <!-- Nivel 3: Ciudades -->
-            <div class="stat-card color-three" onclick="filterByLevel('3')" id="card-filter-3">
+            <!-- Técnicas -->
+            <div class="stat-card color-three">
                 <div class="stat-left"><h3>Técnicas</h3>
-                    <div class="number" id="stat-city">{{ stats_city|default:"0" }}</div>
+                    <div class="number" id="stat-technical">{{ stats_technical|default:"0" }}</div>
                 </div>
-                <i class="fa-solid fa-city stat-icon"></i>
+                <i class="fa-solid fa-tools stat-icon"></i>
             </div>
 
-            <!-- Nivel 4: Parroquias -->
-            <div class="stat-card color-four" onclick="filterByLevel('4')" id="card-filter-4">
+            <!-- Transversales -->
+            <div class="stat-card color-four">
                 <div class="stat-left"><h3>Transversales</h3>
-                    <div class="number" id="stat-parish">{{ stats_parish|default:"0" }}</div>
+                    <div class="number" id="stat-transversal">{{ stats_transversal|default:"0" }}</div>
                 </div>
-                <i class="fa-solid fa-location-dot stat-icon"></i>
+                <i class="fa-solid fa-share-nodes stat-icon"></i>
             </div>
         </div>
     <!-- 3. Contenedor principal Tabla (AJAX) -->
@@ -80,10 +90,12 @@
             </div>
         </div>
     </div>
-
-{% endblock %}
-{% block modals %}
+    
+    <!-- Modales dentro de Vue scope -->
     {% include "function_manual/modals/modal_competency_form.html" %}
+    
+    </div> <!-- Cierre de #competencyApp -->
+
 {% endblock %}
 {% block extra_js %}
     <script src="{% static 'js/function_manual.js' %}"></script>

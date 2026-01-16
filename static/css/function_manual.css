@@ -5,22 +5,6 @@ body.no-scroll {
     overflow: hidden !important;
 }
 
-/* Forzamos que este modal específico no use el overlay genérico de style.css si da problemas */
-#modalCompetency.modal {
-    z-index: 99999 !important;
-}
-
-#modalCompetency .modal-overlay {
-    background-color: rgba(15, 23, 42, 0.7) !important; /* Oscuridad controlada */
-    backdrop-filter: blur(2px) !important; /* Desenfoque leve */
-}
-
-#modalCompetency .modal-container {
-    background-color: #ffffff !important;
-    z-index: 100000 !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-}
-
 /* Estilos de Switch para la tabla parcial */
 .switch {
     position: relative;
@@ -67,18 +51,22 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: none; /* OCULTO POR DEFECTO */
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
+/* Estilos adicionales para el modal de competencias */
+#competency-modal-app .modal-container {
+    max-width: 600px;
+    width: 90%;
 }
 
-.modal.is-active {
-    display: flex !important; /* SE MUESTRA SOLO CON ESTA CLASE */
+#competency-modal-app .form-group {
+    margin-bottom: 1rem;
+}
+
+#competency-modal-app .grid-2-cols {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+#competency-modal-app .mt-3 {
+    margin-top: 1rem;
 }

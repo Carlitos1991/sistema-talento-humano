@@ -1,5 +1,5 @@
 from django import forms
-from .models import Competency
+from .models import Competency, ManualCatalog, ManualCatalogItem
 
 class CompetencyForm(forms.ModelForm):
     class Meta:
@@ -11,3 +11,67 @@ class CompetencyForm(forms.ModelForm):
             'definition': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'suggested_level': forms.Select(attrs={'class': 'form-control select2'}),
         }
+
+
+class ManualCatalogForm(forms.ModelForm):
+    """
+    Formulario para creación y edición de Catálogos del Manual de Funciones.
+    """
+    class Meta:
+        model = ManualCatalog
+        fields = ['name', 'code', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: Niveles de Complejidad'
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: COMPLEXITY_LEVELS'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3,
+                'placeholder': 'Descripción opcional del catálogo'
+            }),
+        }
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code:
+            return code.upper().replace(' ', '_')
+        return code
+
+
+class ManualCatalogItemForm(forms.ModelForm):
+    """
+    Formulario para creación y edición de Items de Catálogo.
+    """
+    class Meta:
+        model = ManualCatalogItem
+        fields = ['name', 'code', 'description', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: Nivel Bajo'
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: LOW'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 2,
+                'placeholder': 'Descripción opcional'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '0'
+            }),
+        }
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code:
+            return code.upper().replace(' ', '_')
+        return code
