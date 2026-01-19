@@ -9,16 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 1. GESTIÓN DE ESCALAS / ESTRUCTURA (#valuationApp)
     // =========================================================================
-    const valEl = document.getElementById('valuationApp');
-    if (valEl) {
+    const valuationElement = document.getElementById('valuationApp');
+    if (valuationElement) {
         createApp({
             delimiters: ['[[', ']]'],
             data() {
                 return {
-                    parentId: valEl.dataset.parentId || null,
-                    nextType: valEl.dataset.nextType || 'ROLE',
-                    urlSave: valEl.dataset.urlSave,
-                    urlDetailBase: valEl.dataset.urlDetailBase, // URL con el '0' de placeholder
+                    parentId: valuationElement.dataset.parentId || null,
+                    nextType: valuationElement.dataset.nextType || 'ROLE',
+                    nextLevelName: valuationElement.dataset.nextLevelName || 'Nivel',
+                    urlSave: valuationElement.dataset.urlSave,
+                    urlDetailBase: valuationElement.dataset.urlDetail.replace('/0/', '/'),
                     workingType: '',
                     showModal: false, isEdit: false, loading: false,
                     catalogs: {instruction: [], decisions: [], impact: [], roles: [], matrix: [], complexity: []},
@@ -26,18 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             computed: {
-                nextLevelName() {
-                    const names = {
-                        'ROLE': 'Rol',
-                        'INSTRUCTION': 'Instrucción',
-                        'EXPERIENCE': 'Experiencia',
-                        'DECISION': 'Decisión',
-                        'IMPACT': 'Impacto',
-                        'COMPLEXITY': 'Complejidad',
-                        'RESULT': 'Resultado'
-                    };
-                    return names[this.nextType] || 'Nivel';
-                },
                 currentNodeTypeName() {
                     const names = {
                         'ROLE': 'Rol',
@@ -48,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'COMPLEXITY': 'Complejidad',
                         'RESULT': 'Resultado'
                     };
-                    return names[this.workingType] || this.nextLevelName;
+                    return names[this.workingType] || 'Nivel';
                 },
                 filteredCatalogItems() {
                     const mapping = {
@@ -82,16 +71,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.classList.add('no-scroll');
                 },
                 async editNode(id) {
-                    if (!id) return;
+                    if (!id) {
+                        window.Toast.fire({icon: 'error', title: 'ID de registro no válido'});
+                        return;
+                    }
                     this.loading = true;
                     try {
-                        // Construir URL dinámica reemplazando el 0 del placeholder
-                        const url = this.urlDetailBase.replace('0', id);
-                        const res = await fetch(url);
+                        // CONSTRUCCIÓN DE RUTA ABSOLUTA
+                        const response = await fetch(`${this.urlDetailBase}${id}/`);
+                        if (!response.ok) throw new Error("Registro no encontrado");
 
-                        if (!res.ok) throw new Error("Registro no encontrado");
-
-                        const data = await res.json();
+                        const data = await response.json();
                         this.formData = {
                             id: data.id,
                             catalog_item_id: data.catalog_item_id || '',
@@ -103,8 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.showModal = true;
                         document.body.classList.add('no-scroll');
                     } catch (e) {
-                        window.Toast.fire({icon: 'error', title: 'Error al cargar los datos'});
-                        console.error(e);
+                        console.error("Error Fetch:", e);
+                        window.Toast.fire({icon: 'error', title: 'Error al obtener datos del servidor'});
                     } finally {
                         this.loading = false;
                     }
@@ -112,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal() {
                     this.showModal = false;
                     document.body.classList.remove('no-scroll');
+                    this.resetForm();
                 },
                 async saveNode() {
                     this.loading = true;
@@ -124,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         if (res.ok) {
                             window.Toast.fire({icon: 'success', title: 'Registro guardado'});
-                            setTimeout(() => location.reload(), 800);
+                            location.reload();
                         }
                     } finally {
                         this.loading = false;

@@ -2,12 +2,17 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+
 {% block content %}
     <div id="valuationApp" v-cloak
          data-parent-id="{{ parent_node.id|default:'' }}"
          data-next-type="{{ next_node_type }}"
+         data-next-level-name="{{ next_level_name|default:'Nivel' }}"
          data-url-save="{% url 'function_manual:api_node_save' %}"
-         data-url-detail-base="/function-manual/api/valuation-nodes/detail/0/">
+         data-url-detail="{% url 'function_manual:api_node_detail' 0 %}">
 
         <div class="header-card">
             <div>
