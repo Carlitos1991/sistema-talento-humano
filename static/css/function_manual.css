@@ -857,3 +857,82 @@ body.no-scroll {
     background: #e11d48;
     color: #fff;
 }
+
+/* ============================================================================
+   BOTONES WIZARD (Estilo Personalizado)
+   ============================================================================ */
+
+.btn-wizard-nav {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 140px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin: 0 2px; /* Separación forzada mediante márgenes */
+}
+
+.btn-wizard-nav:active {
+    transform: scale(0.97);
+}
+
+/* Botón Siguiente / Finalizar (Verde) */
+.btn-wizard-next,
+.btn-wizard-save {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.btn-wizard-next:hover,
+.btn-wizard-save:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Botón Anterior (Gris/Azulado similar a secundario) */
+.btn-wizard-prev {
+    background-color: #64748b;
+    color: white;
+}
+
+.btn-wizard-prev:hover {
+    background-color: #475569;
+    box-shadow: 0 8px 10px -3px rgba(100, 116, 139, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Botón Cancelar (Rojo) */
+.btn-wizard-cancel {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-wizard-cancel:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-wizard-nav i {
+    font-size: 1.1em;
+}
+
+.btn-wizard-nav[disabled],
+.btn-wizard-nav:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #cbd5e1; /* Gris neutro */
+    color: #64748b;
+    box-shadow: none;
+    transform: none !important;
+    pointer-events: none; /* Evita cualquier interacción */
+}

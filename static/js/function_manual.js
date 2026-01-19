@@ -251,13 +251,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     loading: false, isEdit: false,
                     formData: {
                         position_code: '', specific_job_title: '', administrative_unit: '',
-                        occupational_classification: '', mission: '', knowledge_area: '', experience_details: ''
+                        occupational_classification: '', mission: '', knowledge_area: '', experience_details: '',
+                        training_topic: '', interface_relations: ''
                     },
                     unitLevels: [], selectedUnits: [],
                     valuationLevels: [], selectedNodes: [], // Paso 2 Jerárquico
                     matchResult: null,
                     activities: [{action_verb: '', description: '', additional_knowledge: ''}],
-                    catalogs: {instruction: [], decisions: [], impact: [], roles: [], verbs: [], frequency: []},
+                    catalogs: {instruction: [], decisions: [], impact: [], roles: [], verbs: [], frequency: [], competencies: []},
+                    allCompetencies: [],
+                    selectedTechnical: ['', '', ''],
+                    selectedBehavioral: ['', '', ''],
+                    selectedTransversal: ['', ''],
                     urls: {}
                 }
             },
@@ -265,11 +270,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.urls = {
                     units: wizEl.dataset.urlUnits,
                     nextCode: wizEl.dataset.urlNextCode,
-                    valuationNodes: wizEl.dataset.urlValuationNodes
+                    valuationNodes: wizEl.dataset.urlValuationNodes,
+                    matrix: wizEl.dataset.urlMatrix,
+                    cancel: wizEl.dataset.urlCancel
                 };
                 const tag = document.getElementById('catalogs-data');
                 if (tag) {
                     this.catalogs = JSON.parse(tag.textContent);
+                    if (this.catalogs.competencies) this.allCompetencies = this.catalogs.competencies;
                 }
 
                 await this.fetchUnits(null, 0);
@@ -279,10 +287,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.jQuery && $.fn.select2) {
                         this.initSelect2();
                         this.initSelect2Valuation();
+                        this.initSelect2Competencies();
                     }
                 });
             },
             computed: {
+                technicalList() { return this.allCompetencies.filter(c => c.type === 'TECHNICAL'); },
+                behavioralList() { return this.allCompetencies.filter(c => c.type === 'BEHAVIORAL'); },
+                transversalList() { return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL'); },
+
                 filteredVerbs() {
                     // matchResult viene de lo que seleccionaste en el paso 2 (ej: {group: 'SP1', ...})
                     if (!this.matchResult || !this.matchResult.group) return [];
@@ -307,9 +320,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `Sugerencia: ${verbName} ${firstAct.description.toLowerCase()}...`;
                     }
                     return "Complete las actividades para generar una sugerencia.";
+                },
+                firstUnitSelected() {
+                    return this.selectedUnits && this.selectedUnits.length > 0 && !!this.selectedUnits[0];
+                },
+                hasBasicData() {
+                     return this.firstUnitSelected && this.formData.specific_job_title;
+                },
+                isNextDisabled() {
+                    if (this.currentStep === 1) return !this.hasBasicData;
+                    if (this.currentStep === 2) return !this.formData.occupational_classification;
+                    if (this.currentStep === 3) {
+                        if (this.activities.length < 5) return true;
+                        return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
+                    }
+                    return false;
                 }
             },
             methods: {
+                cancelProcess() {
+                    window.location.href = this.urls.cancel || this.urls.matrix;
+                },
                 validateCurrentStep() {
                     if (this.currentStep === 1) {
                         if (!this.formData.administrative_unit || !this.formData.specific_job_title) {
@@ -327,9 +358,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     if (this.currentStep === 3) {
-                        const hasValidActivity = this.activities.some(a => a.action_verb && a.description.length > 10);
-                        if (!hasValidActivity) {
-                            window.Toast.fire({icon: 'warning', title: 'Agregue al menos una actividad detallada.'});
+                        if (this.activities.length < 5) {
+                            window.Toast.fire({icon: 'warning', title: 'Debe registrar al menos 5 actividades esenciales.'});
+                            return false;
+                        }
+                        const allComplete = this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
+                        if (!allComplete) {
+                            window.Toast.fire({icon: 'warning', title: 'Todas las actividades deben tener verbo, descripción y conocimientos.'});
                             return false;
                         }
                     }
@@ -389,11 +424,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.valuationLevels = this.valuationLevels.slice(0, index + 1);
                     this.selectedNodes = this.selectedNodes.slice(0, index + 1);
                     this.matchResult = null;
+                    this.formData.occupational_classification = ''; // Reset classification on change
+
                     if (id) {
                         const sel = this.valuationLevels[index].options.find(n => n.id == id);
                         if (sel.type === 'RESULT') {
                             this.matchResult = sel.classification;
-                            this.formData.occupational_classification = sel.id;
+                            this.formData.occupational_classification = sel.classification_id;
                         } else {
                             await this.fetchValuationLevel(id);
                         }
@@ -418,10 +455,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 initSelect2() {
                     const self = this;
-                    $('.select2-unit').select2({width: '100%'}).on('change', function () {
+                    $('.select2-unit').select2({width: '100%'});
+                    
+                    $('.select2-unit').off('change.vue').on('change.vue', function () {
                         const idx = $(this).data('index');
-                        self.selectedUnits[idx] = $(this).val();
-                        self.handleUnitChange(idx);
+                        const val = $(this).val();
+                        if (self.selectedUnits[idx] !== val) {
+                            self.selectedUnits[idx] = val;
+                            self.handleUnitChange(idx);
+                        }
                     });
                 },
                 initSelect2Valuation() {
@@ -429,14 +471,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     $('.select2-valuation').select2({
                         width: '100%',
                         placeholder: 'Seleccione...'
-                    }).on('change', function () {
+                    });
+                    
+                    $('.select2-valuation').off('change.vue').on('change.vue', function () {
                         const idx = $(this).data('index');
-                        self.selectedNodes[idx] = $(this).val();
-                        self.handleNodeChange(idx);
+                        const val = $(this).val();
+                        // Solo procesar si el valor realmente cambió para evitar bucles
+                        if (self.selectedNodes[idx] !== val) {
+                            self.selectedNodes[idx] = val;
+                            self.handleNodeChange(idx);
+                        }
                     });
                 },
+                initSelect2Competencies() {
+                    const self = this;
+                    // Helper genérico para init select2
+                    const setup = (cls, arrayRef) => {
+                        $(cls).select2({width: '100%', placeholder: 'Seleccione...'})
+                            .off('change.vue')
+                            .on('change.vue', function() {
+                                const idx = $(this).data('index');
+                                const val = $(this).val();
+                                if (arrayRef[idx] !== val) {
+                                    arrayRef[idx] = val;
+                                }
+                            });
+                    };
+                    setup('.select2-comp-tech', this.selectedTechnical);
+                    setup('.select2-comp-beh', this.selectedBehavioral);
+                    setup('.select2-comp-trans', this.selectedTransversal);
+                },
                 addActivity() {
-                    // Importante: Inicializar con additional_knowledge vacío
+                    // Validar que la ultima actividad tenga datos completos antes de crear otra
+                    if (this.activities.length > 0) {
+                        const last = this.activities[this.activities.length - 1];
+                        if (!last.action_verb || !last.description || !last.additional_knowledge) {
+                            window.Toast.fire({
+                                icon: 'warning',
+                                title: 'Complete todos los campos de la actividad actual antes de agregar otra.'
+                            });
+                            return;
+                        }
+                    }
                     this.activities.push({action_verb: '', description: '', additional_knowledge: ''});
                 },
                 removeActivity(idx) {
@@ -446,9 +522,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!this.validateCurrentStep()) return;
 
                     this.loading = true;
+                    // Recopilar IDs de competencias (filtrando vacíos)
+                    const competencies = [
+                        ...this.selectedTechnical,
+                        ...this.selectedBehavioral,
+                        ...this.selectedTransversal
+                    ].filter(id => id && id !== '');
+                    
                     const payload = {
                         ...this.formData,
-                        activities: this.activities
+                        activities: this.activities,
+                        competencies: competencies
                     };
 
                     try {

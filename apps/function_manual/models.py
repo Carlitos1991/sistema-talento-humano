@@ -137,7 +137,6 @@ class JobProfile(BaseModel):
     mission = models.TextField(verbose_name="Misión")
     interface_relations = models.TextField(verbose_name="Relaciones Internas/Externas")
 
-    # SOLUCIÓN AL ERROR: related_name explícitos
     required_instruction = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'INSTRUCTION_LEVELS'},
@@ -172,6 +171,7 @@ class JobProfile(BaseModel):
     knowledge_area = models.TextField(verbose_name="Área de Conocimiento")
     required_experience_months = models.PositiveIntegerField(default=0, verbose_name="Experiencia (Meses)")
     experience_details = models.TextField(verbose_name="Detalle de Experiencia")
+    training_topic = models.TextField(verbose_name="Temática de Capacitación", blank=True, null=True)
 
     occupational_classification = models.ForeignKey(
         OccupationalMatrix, on_delete=models.PROTECT, null=True, blank=True,
@@ -257,7 +257,7 @@ class ProfileCompetency(models.Model):
     """
     profile = models.ForeignKey(JobProfile, on_delete=models.CASCADE)
     competency = models.ForeignKey(Competency, on_delete=models.CASCADE)
-    observable_behavior = models.TextField(verbose_name="Comportamiento Observable")
+    observable_behavior = models.TextField(verbose_name="Comportamiento Observable", blank=True, null=True)
 
     class Meta:
         verbose_name = "Competencia del Perfil"

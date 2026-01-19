@@ -11,6 +11,8 @@
          data-url-units="{% url 'function_manual:api_units_root' %}"
          data-url-next-code="{% url 'function_manual:api_next_code' 0 %}"
          data-url-matrix="{% url 'function_manual:matrix_list' %}"
+         data-url-cancel="{% url 'function_manual:profile_list' %}"
+         data-url-save-action="{% url 'function_manual:api_profile_save' %}"
          data-url-valuation-nodes="{% url 'function_manual:api_valuation_nodes' %}">
 
 
@@ -177,20 +179,85 @@
                             <textarea v-model="formData.experience_details" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
+                    
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label">Relaciones Internas/Externas</label>
+                            <textarea v-model="formData.interface_relations" class="form-control" rows="2" placeholder="Describa con quién se relaciona el puesto"></textarea>
+                        </div>
+                        <div class="form-group">
+                             <label class="form-label">Temática de Capacitación</label>
+                             <textarea v-model="formData.training_topic" class="form-control" rows="2" placeholder="Describa la temática de capacitación requerida"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN DE COMPETENCIAS -->
+                    <div class="section-title mt-4"><i class="fa-solid fa-brain"></i> Competencias del Perfil</div>
+                    
+                    <div class="row">
+                        <!-- Técnicas -->
+                        <div class="col-md-4">
+                            <div class="p-3 bg-white border rounded">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">Técnicas</h6>
+                                <div v-for="(sel, i) in selectedTechnical" :key="'tech-'+i" class="mb-3">
+                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
+                                    <select class="form-control select2-comp-tech" :data-index="i">
+                                        <option value="">Seleccione...</option>
+                                        <option v-for="c in technicalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Conductuales -->
+                        <div class="col-md-4">
+                            <div class="p-3 bg-white border rounded">
+                                <h6 class="text-info border-bottom pb-2 mb-3">Conductuales</h6>
+                                <div v-for="(sel, i) in selectedBehavioral" :key="'beh-'+i" class="mb-3">
+                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
+                                    <select class="form-control select2-comp-beh" :data-index="i">
+                                        <option value="">Seleccione...</option>
+                                        <option v-for="c in behavioralList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transversales -->
+                        <div class="col-md-4">
+                            <div class="p-3 bg-white border rounded">
+                                <h6 class="text-secondary border-bottom pb-2 mb-3">Transversales</h6>
+                                <div v-for="(sel, i) in selectedTransversal" :key="'trans-'+i" class="mb-3">
+                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
+                                    <select class="form-control select2-comp-trans" :data-index="i">
+                                        <option value="">Seleccione...</option>
+                                        <option v-for="c in transversalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
             <!-- NAVEGACIÓN DEL WIZARD -->
-            <div class="modal-footer-fixed">
-                <button v-if="currentStep > 1" type="button" class="btn btn-cancel" @click="currentStep--">
+            <div class="form-section-card mt-3 mb-5 d-flex justify-content-center flex-wrap"
+                 v-show="currentStep > 1 || (firstUnitSelected && formData.specific_job_title)">
+
+                <button type="button" class="btn-wizard-nav btn-wizard-cancel" @click="cancelProcess">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+
+                <button v-if="currentStep > 1" type="button" class="btn-wizard-nav btn-wizard-prev" @click="currentStep--">
                     <i class="fas fa-chevron-left"></i> Anterior
                 </button>
 
-                <button v-if="currentStep < 4" type="button" class="btn btn-primary" @click="currentStep++">
+                <button v-if="currentStep < 4" type="button" class="btn-wizard-nav btn-wizard-next" @click="currentStep++" :disabled="isNextDisabled">
                     Siguiente <i class="fas fa-chevron-right"></i>
                 </button>
 
-                <button v-if="currentStep === 4" type="submit" class="btn btn-save" :disabled="loading">
+                <button v-if="currentStep === 4" type="submit" class="btn-wizard-nav btn-wizard-save" :disabled="loading">
                     <i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar
                 </button>
             </div>

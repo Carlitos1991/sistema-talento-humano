@@ -14,7 +14,7 @@ import json
 
 from institution.models import AdministrativeUnit
 from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
-    JobActivity
+    JobActivity, ProfileCompetency
 from .forms import ManualCatalogForm, ManualCatalogItemForm
 
 
@@ -50,7 +50,9 @@ class JobProfileMixin:
             "verbs": get_items('ACTION_VERBS'),
             "frequency": get_items('FREQUENCY'),
             "complexity": get_items('COMPLEXITY_LEVELS'),
-            "matrix": matrix_data
+            "matrix": matrix_data,
+            # Agregamos todas las competencias para filtrar en Vue
+            "competencies": list(Competency.objects.filter(is_active=True).values('id', 'name', 'type', 'definition'))
         }
         context['catalogs_json'] = json.dumps(catalogs_dict, cls=DjangoJSONEncoder)
         return context
@@ -335,11 +337,22 @@ class ApiValuationNodesView(View):
     def get(self, request):
         parent_id = request.GET.get('parent')
         filters = {'parent_id': parent_id} if parent_id else {'parent__isnull': True}
-        nodes = ValuationNode.objects.filter(**filters, is_active=True)
-        data = [{'id': n.id, 'name': n.catalog_item.name if n.catalog_item else n.name_extra, 'type': n.node_type,
+        nodes = ValuationNode.objects.filter(**filters, is_active=True).select_related(
+            'catalog_item', 'occupational_classification'
+        )
+
+        def get_node_name(n):
+            if n.catalog_item:
+                return n.catalog_item.name
+            if n.node_type == 'RESULT' and n.occupational_classification:
+                return f"{n.occupational_classification.occupational_group} - G{n.occupational_classification.grade}"
+            return n.name_extra if n.name_extra else "Sin Definición"
+
+        data = [{'id': n.id, 'name': get_node_name(n), 'type': n.node_type,
+                 'classification_id': n.occupational_classification_id,
                  'classification': {'group': n.occupational_classification.occupational_group,
                                     'rmu': n.occupational_classification.remuneration,
-                                    'grade': n.occupational_classification.grade} if n.node_type == 'RESULT' else None}
+                                    'grade': n.occupational_classification.grade} if n.node_type == 'RESULT' and n.occupational_classification else None}
                 for n in nodes]
         return JsonResponse(data, safe=False)
 
@@ -481,10 +494,25 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.position_code = data.get('position_code')
                 profile.specific_job_title = data.get('specific_job_title')
                 profile.administrative_unit_id = data.get('administrative_unit')
-                profile.occupational_classification_id = data.get('occupational_classification')
+                
+                # Retrieve Matrix details
+                matrix_id = data.get('occupational_classification')
+                profile.occupational_classification_id = matrix_id
+                
+                if matrix_id:
+                    matrix = OccupationalMatrix.objects.get(pk=matrix_id)
+                    profile.job_role = matrix.required_role
+                    profile.required_instruction = matrix.minimum_instruction
+                    profile.decision_making = matrix.required_decision
+                    profile.management_impact = matrix.required_impact
+                    profile.final_complexity_level = matrix.complexity_level
+                    profile.required_experience_months = matrix.minimum_experience_months
+                
                 profile.mission = data.get('mission')
                 profile.knowledge_area = data.get('knowledge_area')
                 profile.experience_details = data.get('experience_details')
+                profile.training_topic = data.get('training_topic')
+                profile.interface_relations = data.get('interface_relations')
                 profile.is_active = True
                 profile.save()
 
@@ -507,6 +535,29 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     JobActivity.objects.bulk_create(activities_to_create)
                 else:
                     raise ValueError("El perfil debe tener al menos una actividad esencial.")
+                
+                # 3. Gestionar Competencias (Borrado y re-inserción)
+                # data.get('competencies') debe ser un array de IDs
+                profile.competencies.clear()
+                comp_ids = data.get('competencies', [])
+                # Filtramos IDs válidos y únicos
+                comp_ids = list(set([cid for cid in comp_ids if cid]))
+                
+                # Para masivo con observable_behavior si fuera necesario, aquí usamos through default o create
+                # Como profile.competencies es m2m through ProfileCompetency, usamos el manager directo si el through permite o bulk_create del through
+                # Dado que ProfileCompetency tiene observable_behavior opcional ahora:
+                
+                comps_to_create = []
+                for cid in comp_ids:
+                    # Buscamos la definición para pre-llenar observable_behavior si se desea, por ahora vacío
+                    comps_to_create.append(ProfileCompetency(
+                        profile=profile,
+                        competency_id=cid,
+                        observable_behavior='' # Opcional
+                    ))
+                if comps_to_create:
+                    ProfileCompetency.objects.bulk_create(comps_to_create)
+
 
                 return JsonResponse({
                     'success': True,

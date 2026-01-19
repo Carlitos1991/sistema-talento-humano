@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/valuation-nodes/', views.ApiValuationNodesView.as_view(), name='api_valuation_nodes'),
     path('api/valuation-nodes/detail/<int:pk>/', views.ValuationNodeDetailApi.as_view(), name='api_node_detail'),
     path('api/valuation-nodes/save/', views.ValuationNodeSaveApi.as_view(), name='api_node_save'),
+    path('api/profile/save/', views.JobProfileSaveApi.as_view(), name='api_profile_save'),
     path('matrix/manage/', views.OccupationalMatrixListView.as_view(), name='matrix_list'),
     path('api/matrix/save/', views.OccupationalMatrixSaveApi.as_view(), name='api_matrix_save'),
     path('valuation/structure/', views.ValuationNodeListView.as_view(), name='valuation_list'),
