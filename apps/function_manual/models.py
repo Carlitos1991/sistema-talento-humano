@@ -141,31 +141,36 @@ class JobProfile(BaseModel):
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'INSTRUCTION_LEVELS'},
         related_name='profiles_by_instruction',
-        verbose_name="Nivel de Instrucción"
+        verbose_name="Nivel de Instrucción",
+        null=True, blank=True
     )
     decision_making = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'DECISION_LEVELS'},
         related_name='profiles_by_decision',
-        verbose_name="Toma de Decisiones"
+        verbose_name="Toma de Decisiones",
+        null=True, blank=True
     )
     management_impact = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'IMPACT_LEVELS'},
         related_name='profiles_by_impact',
-        verbose_name="Impacto de Gestión"
+        verbose_name="Impacto de Gestión",
+        null=True, blank=True
     )
     final_complexity_level = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'},
         related_name='profiles_by_complexity',
-        verbose_name="Complejidad Resultante"
+        verbose_name="Complejidad Resultante",
+        null=True, blank=True
     )
     job_role = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'JOB_ROLES'},
         related_name='profiles_by_role',
-        verbose_name="Rol Asignado"
+        verbose_name="Rol Asignado",
+        null=True, blank=True
     )
 
     knowledge_area = models.TextField(verbose_name="Área de Conocimiento")

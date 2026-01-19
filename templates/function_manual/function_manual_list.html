@@ -17,6 +17,9 @@
                 <p>Administración y Clasificación de Perfiles de Puestos Institucionales.</p>
             </div>
             {% if perms.function_manual.add_jobprofile %}
+                <a href="{% url 'function_manual:report_valuation_excel' %}" class="btn btn-create" style="background: #107c41; margin-right: 10px;">
+                    <i class="fas fa-file-excel"></i> Imprimir Valoraciones
+                </a>
                 <a href="{% url 'function_manual:profile_create' %}" class="btn btn-create">
                     <i class="fas fa-plus"></i> Nuevo Perfil
                 </a>

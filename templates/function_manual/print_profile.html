@@ -1,0 +1,387 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil de Puesto - {{ profile.specific_job_title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: "Arial", sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+            color: #000;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 21cm;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            table-layout: fixed;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 5px;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+
+        .header-blue {
+            background-color: #2e5491; /* Azul similar al de la imagen */
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .header-light-blue {
+            background-color: #dae3f3; /* Azul claro para etiquetas */
+            font-weight: bold;
+        }
+        
+        .section-title {
+            background-color: #2e5491;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            padding: 5px;
+            border: 1px solid #000;
+        }
+
+        .no-border-top {
+            border-top: none;
+        }
+
+        .center-text {
+            text-align: center;
+        }
+        
+        .bold {
+            font-weight: bold;
+        }
+        
+        .signature-box {
+            height: 80px;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-block {
+            width: 32%;
+            border: 1px solid #000;
+            text-align: center;
+        }
+
+        .signature-block-last {
+            width: 50%;
+            margin: 0 auto;
+            border: 1px solid #000;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        @media print {
+            body { 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+            .no-print {
+                display: none;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+
+        .btn-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #2e5491;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <button onclick="window.print()" class="btn-print no-print">Imprimir / Guardar PDF</button>
+
+    <div class="container">
+        <!-- HEADER -->
+        <table>
+            <tr>
+                <th colspan="2" class="header-blue" style="width: 50%;">MUNICIPIO DE LOJA</th>
+                <th colspan="2" class="header-blue" style="width: 50%;">DESCRIPCION Y PERFIL DEL PUESTO</th>
+            </tr>
+            <!-- 1. DATOS DE IDENTIFICACION -->
+            <tr>
+                <td colspan="4" class="header-blue" style="text-align: center;">1. DATOS DE IDENTIFICACION DEL PUESTO</td>
+            </tr>
+            
+            <tr>
+                <td class="header-light-blue" style="width: 25%;">Denominación del puesto:</td>
+                <td style="width: 25%;">{{ profile.specific_job_title }}</td>
+                <td class="header-light-blue" style="width: 25%;">Grupo Ocupacional:</td>
+                <td style="width: 25%;">
+                    {% if profile.occupational_classification %}
+                        {{ profile.occupational_classification.occupational_group }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td class="header-light-blue">Unidad Administrativa:</td>
+                <td>{{ profile.administrative_unit.name }}</td>
+                <td class="header-light-blue">Grado:</td>
+                <td>
+                    {% if profile.occupational_classification %}
+                        {{ profile.occupational_classification.grade }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td class="header-light-blue">Rol:</td>
+                <td>
+                    {% if profile.job_role %}
+                        {{ profile.job_role.name }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td class="header-light-blue">Ámbito:</td>
+                <td>INSTITUCIONAL</td>
+            </tr>
+        </table>
+
+        <!-- 2. MISION Y 3. RELACIONES -->
+        <table style="margin-top: -21px;">
+            <tr>
+                <td colspan="1" class="header-blue" style="width: 50%;">2. MISIÓN DEL PUESTO</td>
+                <td colspan="1" class="header-blue" style="width: 50%;">3. RELACIONES INTERNAS Y EXTERNAS</td>
+            </tr>
+            <tr>
+                <td style="height: 100px;">
+                    {{ profile.mission }}
+                </td>
+                <td style="height: 100px;">
+                    {{ profile.interface_relations }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- 4. INSTRUCCION Y 5. EXPERIENCIA -->
+        <table style="margin-top: -21px;">
+            <tr>
+                <td colspan="1" class="header-blue" style="width: 50%;">4. INSTRUCCIÓN FORMAL REQUERIDA</td>
+                <td colspan="1" class="header-blue" style="width: 50%;">5. EXPERIENCIA LABORAL REQUERIDA</td>
+            </tr>
+            <tr>
+                <td style="min-height: 80px;">
+                   <strong>Nivel:</strong> {{ profile.required_instruction.name }}<br>
+                   <strong>Área de Conocimiento:</strong> {{ profile.knowledge_area }}
+                </td>
+                <td style="min-height: 80px;">
+                    <strong>Tiempo:</strong> {{ profile.required_experience_months }} meses<br>
+                    <strong>Detalle:</strong> {{ profile.experience_details }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- 6. CAPACITACION -->
+        <table style="margin-top: -21px;">
+            <tr>
+                <td colspan="4" class="header-blue">6. CAPACITACIÓN REQUERIDA PARA EL PUESTO</td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    {{ profile.training_topic|default:"No especificada"|linebreaksbr }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- 7. ACTIVIDADES Y 8. CONOCIMIENTOS -->
+        <table style="margin-top: -21px;">
+            <tr>
+                <td class="header-blue" style="width: 50%;">7. ACTIVIDADES ESENCIALES</td>
+                <td class="header-blue" style="width: 50%;">8. CONOCIMIENTOS ADICIONALES RELAC. A LAS ACTIVIDADES ESENCIALES</td>
+            </tr>
+            
+            {% for activity in activities %}
+            <tr>
+                <td>{{ activity.description }}</td>
+                <td>{{ activity.additional_knowledge|default:"" }}</td>
+            </tr>
+            {% endfor %}
+            <!-- Rellenar filas vacías si hay pocas actividades para mantener estética -->
+            {% if activities|length < 5 %}
+                {% for i in empty_activities_range %}
+                <tr>
+                    <td style="height: 25px;">&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+        </table>
+
+        <!-- 9. COMPETENCIAS TECNICAS -->
+        <table style="margin-top: -21px;">
+             <tr>
+                <td colspan="3" class="header-blue">9. COMPETENCIAS TÉCNICAS</td>
+            </tr>
+            <tr class="header-light-blue">
+                <td style="width: 40%;">Competencia</td>
+                <td style="width: 20%;">Nivel</td>
+                <td style="width: 40%;">Comportamiento Observable</td>
+            </tr>
+            {% for comp in technical_competencies %}
+            <tr>
+                <td>{{ comp.competency.name }}</td>
+                <td>{{ comp.competency.suggested_level.name|default:"-" }}</td>
+                <td>{{ comp.observable_behavior|default:"" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">No registradas</td></tr>
+            {% endfor %}
+        </table>
+
+        <!-- 10. COMPETENCIAS CONDUCTUALES -->
+        <table style="margin-top: -21px;">
+             <tr>
+                <td colspan="3" class="header-blue">10. COMPETENCIAS CONDUCTUALES</td>
+            </tr>
+            <tr class="header-light-blue">
+                <td style="width: 40%;">Competencia</td>
+                <td style="width: 20%;">Nivel</td>
+                <td style="width: 40%;">Comportamiento Observable</td>
+            </tr>
+            {% for comp in behavioral_competencies %}
+            <tr>
+                <td>{{ comp.competency.name }}</td>
+                <td>{{ comp.competency.suggested_level.name|default:"-" }}</td>
+                <td>{{ comp.observable_behavior|default:"" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">No registradas</td></tr>
+            {% endfor %}
+        </table>
+
+         <!-- 11. COMPETENCIAS TRANSVERSALES -->
+         <table style="margin-top: -21px;">
+            <tr>
+               <td colspan="3" class="header-blue">11. COMPETENCIAS TRANSVERSALES</td>
+           </tr>
+           <tr class="header-light-blue">
+            <td style="width: 40%;">Competencia</td>
+            <td style="width: 20%;">Nivel</td>
+            <td style="width: 40%;">Comportamiento Observable</td>
+        </tr>
+           {% for comp in transversal_competencies %}
+           <tr>
+               <td>{{ comp.competency.name }}</td>
+               <td>{{ comp.competency.suggested_level.name|default:"-" }}</td>
+               <td>{{ comp.observable_behavior|default:"" }}</td>
+           </tr>
+           {% empty %}
+           <tr><td colspan="3">No registradas</td></tr>
+           {% endfor %}
+       </table>
+
+       <!-- FIRMAS -->
+       <div style="margin-top: 10px;">
+           <table style="width: 100%; border: none;">
+                <tr style="border: none;">
+                    <td style="width: 50%; border: none; padding-right: 10px;">
+                        <table style="width: 100%;">
+                            <tr><td class="header-light-blue center-text bold">Elaborado por:</td></tr>
+                            <tr>
+                                <td class="signature-box center-text" style="vertical-align: bottom;">
+                                    {% if profile.prepared_by %}
+                                        <div style="font-size: 0.8rem;">FIRMADO DIGITALMENTE</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="center-text bold">
+                                    {{ profile.prepared_by.name|default:"" }}<br>
+                                    <span style="font-weight: normal; font-size: 0.8rem;">{{ profile.prepared_by.charge|default:"" }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 50%; border: none; padding-left: 10px;">
+                        <table style="width: 100%;">
+                            <tr><td class="header-light-blue center-text bold">Revisado por:</td></tr>
+                            <tr>
+                                <td class="signature-box center-text" style="vertical-align: bottom;">
+                                    {% if profile.reviewed_by %}
+                                        <div style="font-size: 0.8rem;">FIRMADO DIGITALMENTE</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="center-text bold">
+                                    {{ profile.reviewed_by.name|default:"" }}<br>
+                                    <span style="font-weight: normal; font-size: 0.8rem;">{{ profile.reviewed_by.charge|default:"" }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+           </table>
+
+           <table style="width: 50%; margin: 10px auto; border: none;">
+               <tr style="border: none;">
+                   <td style="border: none;">
+                        <table style="width: 100%;">
+                            <tr><td class="header-light-blue center-text bold">Autorizado por:</td></tr>
+                            <tr>
+                                <td class="signature-box center-text" style="vertical-align: bottom;">
+                                    {% if profile.approved_by %}
+                                        <div style="font-size: 0.8rem;">FIRMADO DIGITALMENTE</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="center-text bold">
+                                    {{ profile.approved_by.name|default:"" }}<br>
+                                    <span style="font-weight: normal; font-size: 0.8rem;">{{ profile.approved_by.charge|default:"" }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                   </td>
+               </tr>
+           </table>
+       </div>
+
+    </div>
+</body>
+</html>

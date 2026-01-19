@@ -15,6 +15,9 @@ urlpatterns = [
     path('profiles/detail/<int:pk>/', views.JobProfileDetailModalView.as_view(), name='profile_detail_modal'),
     path('profiles/print/<int:pk>/', views.JobProfilePrintView.as_view(), name='profile_print'),  # Dummy print view for now
 
+    # Reports
+    path('reports/valuation-excel/', views.JobProfileValuationExcelView.as_view(), name='report_valuation_excel'),
+
     path('api/search-employee-simple/', views.api_search_employee_simple, name='api_search_employee_simple'),
 
     # --- ADMINISTRACIÓN / CATÁLOGOS ---

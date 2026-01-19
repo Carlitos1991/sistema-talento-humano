@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
@@ -758,8 +758,190 @@ class JobProfileDetailModalView(LoginRequiredMixin, View):
 
 
 class JobProfilePrintView(LoginRequiredMixin, View):
-    """Placeholder para impresión de perfil (se puede implementar con WeasyPrint luego)"""
+    """Vista para generar la impresión del perfil"""
     def get(self, request, pk):
-        # En una implementación real, esto retornaría un PDF.
-        # Por ahora redirigimos al detalle o retornamos un mensaje.
-        return JsonResponse({'success': False, 'message': 'La generación de PDF está en construcción.'})
+        profile = get_object_or_404(JobProfile.objects.select_related(
+            'administrative_unit', 'occupational_classification', 
+            'required_instruction', 'job_role',
+            'prepared_by', 
+            'reviewed_by', 
+            'approved_by'
+        ), pk=pk)
+
+        activities = list(profile.activities.all())
+        
+        # Separar competencias por tipo
+        competencies_qs = ProfileCompetency.objects.filter(profile=profile).select_related('competency', 'competency__suggested_level')
+        technical = [c for c in competencies_qs if c.competency.type == 'TECHNICAL']
+        behavioral = [c for c in competencies_qs if c.competency.type == 'BEHAVIORAL']
+        transversal = [c for c in competencies_qs if c.competency.type == 'TRANSVERSAL']
+
+        # Rango para llenar filas vacías en actividades si son pocas (estética)
+        empty_activities_range = range(5 - len(activities)) if len(activities) < 5 else []
+
+        context = {
+            'profile': profile,
+            'activities': activities,
+            'technical_competencies': technical,
+            'behavioral_competencies': behavioral,
+            'transversal_competencies': transversal,
+            'empty_activities_range': empty_activities_range
+        }
+        return render(request, 'function_manual/print_profile.html', context)
+
+
+class JobProfileValuationExcelView(LoginRequiredMixin, View):
+    """Genera reporte Excel de Valoración de Puestos (Legalizados) - Estilo mdT"""
+    
+    def get(self, request):
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+        from django.utils import timezone
+
+        # 1. Configuración de Respuesta
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"Reporte_Valoracion_Puestos_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        # 2. Crear Libro y Hoja
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Valoración de Puestos"
+
+        # 3. Estilos
+        # Bordes
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        # Fuentes
+        font_header_main = Font(name='Arial', size=11, bold=True, color='000000')
+        font_header_sub = Font(name='Arial', size=10, bold=True)
+        font_body = Font(name='Arial', size=9)
+
+        # Rellenos (Colores)
+        fill_header_gray = PatternFill(start_color='E7E6E6', end_color='E7E6E6', fill_type='solid') # Gris claro para encabezados inferiores
+        fill_header_blue = PatternFill(start_color='DAE8FC', end_color='DAE8FC', fill_type='solid') # Azul claro (Roles, Competencias)
+        
+        # Alineación
+        center_aligned = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        left_aligned = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+        # 4. Construcción del Encabezado (Filas 1 y 2)
+        # Título Principal
+        ws.merge_cells('D1:J1')
+        ws['D1'] = "FORMATO DE VALORACION DE PUESTOS"
+        ws['D1'].font = font_header_main
+        ws['D1'].alignment = center_aligned
+        
+        # Subtítulo (Dinámico o estático según requerimiento)
+        ws.merge_cells('D2:J2')
+        ws['D2'] = "PUESTOS INSTITUCIONALES LEGALIZADOS"
+        ws['D2'].font = font_header_main
+        ws['D2'].alignment = center_aligned
+
+        # 5. Encabezados de Tabla (Filas 3 y 4)
+        headings_l1 = [
+            ("NRO.", "A3:A4"),
+            ("DENOMINACION DE PUESTO", "B3:B4"),
+            ("RESPONSABILIDAD", "C3:C3"), # Padre de Rol
+            ("COMPETENCIAS", "D3:E3"), # Padre de Instruccion y Experiencia
+            ("NIVEL DE COMPLEJIDAD DEL PUESTO", "F3:H3"), # Padre de Decisiones, Impacto, Complejidad
+            ("CLASIFICACION", "I3:I3"), # Padre de Grupo
+            ("REFERENCIAL", "J3:J4"), # Empleado (Columna extra solicitada)
+        ]
+
+        headings_l2 = [
+            # Col C
+            ("ROL DEL PUESTO", "C4"),
+            # Cols D-E
+            ("INSTRUCCIÓN FORMAL", "D4"),
+            ("EXPERIENCIA", "E4"),
+            # Cols F-H
+            ("TOMA DE DECISIONES", "F4"),
+            ("IMPACTO INSTITUCIONAL A RESULTADOS", "G4"),
+            ("COMPLEJIDAD TECNICA (ESPECIALIZACION DE TAREAS)", "H4"),
+            # Col I
+            ("GRUPO OCUPACIONAL", "I4"),
+        ]
+
+        # Aplicar Merge y Texto Nivel 1
+        for text, merge_range in headings_l1:
+            ws.merge_cells(merge_range)
+            # Obtenemos la celda superior izquierda del merge
+            top_left_cell = ws[merge_range.split(':')[0]]
+            top_left_cell.value = text
+            top_left_cell.font = font_header_sub
+            top_left_cell.alignment = center_aligned
+            top_left_cell.border = thin_border
+            top_left_cell.fill = fill_header_blue
+
+        # Aplicar Texto Nivel 2
+        for text, cell_coord in headings_l2:
+            cell = ws[cell_coord]
+            cell.value = text
+            cell.font = Font(name='Arial', size=8, bold=True)
+            cell.alignment = center_aligned
+            cell.border = thin_border
+            cell.fill = fill_header_blue
+
+        # 6. Datos (Sólo Legalizados: tienen las 3 firmas)
+        # Filtro: prepared_by, reviewed_by, approved_by no nulos
+        profiles = JobProfile.objects.select_related(
+            'job_role', 'required_instruction', 'decision_making',
+            'management_impact', 'final_complexity_level', 
+            'occupational_classification', 'referential_employee__person'
+        ).filter(
+            is_active=True,
+            prepared_by__isnull=False,
+            reviewed_by__isnull=False,
+            approved_by__isnull=False
+        ).order_by('occupational_classification__grade', 'specific_job_title')
+
+        row_num = 5
+        for idx, p in enumerate(profiles, start=1):
+            # Obtener textos seguros
+            job_title = p.specific_job_title
+            role = p.job_role.name if p.job_role else ""
+            instruction = p.required_instruction.name if p.required_instruction else ""
+            experience = f"{p.required_experience_months} Meses"
+            decision = p.decision_making.name if p.decision_making else ""
+            impact = p.management_impact.name if p.management_impact else ""
+            complexity = p.final_complexity_level.name if p.final_complexity_level else ""
+            group = p.occupational_classification.occupational_group if p.occupational_classification else ""
+            
+            ref_employee = str(p.referential_employee.person) if p.referential_employee else "VACANTE"
+
+            row = [
+                idx,            # A
+                job_title,      # B
+                role,           # C
+                instruction,    # D
+                experience,     # E
+                decision,       # F
+                impact,         # G
+                complexity,     # H
+                group,          # I
+                ref_employee    # J
+            ]
+
+            for col_idx, value in enumerate(row, start=1):
+                cell = ws.cell(row=row_num, column=col_idx, value=value)
+                cell.font = font_body
+                cell.border = thin_border
+                # Alinear al centro excepto Titulo y Referencial que pueden ser largos
+                if col_idx in [2, 10]: 
+                    cell.alignment = left_aligned
+                else:
+                    cell.alignment = center_aligned
+            
+            row_num += 1
+
+        # 7. Ajuste de Ancho de Columnas
+        column_widths = [5, 40, 25, 25, 15, 20, 20, 20, 25, 35] # A to J
+        for i, width in enumerate(column_widths, start=1):
+            col_letter = openpyxl.utils.get_column_letter(i)
+            ws.column_dimensions[col_letter].width = width
+
+        # Guardar
+        wb.save(response)
+        return response
