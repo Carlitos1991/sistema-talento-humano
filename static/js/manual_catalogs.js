@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const formData = new FormData();
                         formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                        const res = await fetch(`/function_manual/items/toggle/${item.id}/`, {
+                        const res = await fetch(`/function_manual/catalogs/items/toggle/${item.id}/`, {
                             method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
                         });
                         const data = await res.json();
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.isFromList = fromList;
                     this.errors = {};
                     try {
-                        const res = await fetch(`/function_manual/items/detail/${itemId}/`);
+                        const res = await fetch(`/function_manual/catalogs/items/detail/${itemId}/`);
                         const result = await res.json();
                         if (result.success) {
                             this.form = result.data;
@@ -554,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.append('name', this.form.name);
                     formData.append('code', this.form.code);
                     formData.append('description', this.form.description || '');
+                    formData.append('target_groups', this.form.target_groups || '');
                     formData.append('order', this.form.order || 0);
                     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 

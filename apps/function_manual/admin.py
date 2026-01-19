@@ -14,7 +14,7 @@ class ManualCatalogAdmin(admin.ModelAdmin):
 
 @admin.register(ManualCatalogItem)
 class ManualCatalogItemAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'catalog', 'order', 'is_active']
+    list_display = ['name', 'code', 'catalog','is_active']
     search_fields = ['name', 'code']
     list_filter = ['catalog', 'is_active']
 

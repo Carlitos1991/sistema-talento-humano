@@ -1,6 +1,7 @@
 from django import forms
 from .models import Competency, ManualCatalog, ManualCatalogItem
 
+
 class CompetencyForm(forms.ModelForm):
     class Meta:
         model = Competency
@@ -17,20 +18,21 @@ class ManualCatalogForm(forms.ModelForm):
     """
     Formulario para creación y edición de Catálogos del Manual de Funciones.
     """
+
     class Meta:
         model = ManualCatalog
         fields = ['name', 'code', 'description']
         widgets = {
             'name': forms.TextInput(attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'placeholder': 'Ej: Niveles de Complejidad'
             }),
             'code': forms.TextInput(attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'placeholder': 'Ej: COMPLEXITY_LEVELS'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'Descripción opcional del catálogo'
             }),
@@ -44,29 +46,18 @@ class ManualCatalogForm(forms.ModelForm):
 
 
 class ManualCatalogItemForm(forms.ModelForm):
-    """
-    Formulario para creación y edición de Items de Catálogo.
-    """
     class Meta:
         model = ManualCatalogItem
-        fields = ['name', 'code', 'description', 'order']
+        # Agregamos target_groups a los campos
+        fields = ['name', 'code', 'description', 'target_groups']
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': 'Ej: Nivel Bajo'
-            }),
-            'code': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': 'Ej: LOW'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control', 
-                'rows': 2,
-                'placeholder': 'Descripción opcional'
-            }),
-            'order': forms.NumberInput(attrs={
-                'class': 'form-control', 
-                'placeholder': '0'
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Analizar'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: ANALIZAR'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            # Estilo para el nuevo campo
+            'target_groups': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: SP1,SP2,SP3 o TODOS'
             }),
         }
 

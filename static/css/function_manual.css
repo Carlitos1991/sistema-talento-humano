@@ -650,3 +650,210 @@ body.no-scroll {
 body.no-scroll {
     overflow: hidden !important;
 }
+
+/* Refinamiento de Tablas y Textareas */
+.table-premium {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+}
+
+.table-premium thead th {
+    padding: 12px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.row-animated {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.form-textarea-inline {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.form-textarea-inline:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.btn-add-activity {
+    background: #0f172a;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-add-activity:hover {
+    background: #1e293b;
+}
+
+.btn-delete-icon {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cell-top {
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.normative-note {
+    margin-top: 15px;
+    padding: 10px;
+    background: #fff9db;
+    border-left: 4px solid #fcc419;
+    font-size: 0.85rem;
+    color: #868e96;
+}
+
+/* Estilo Premium para Combos (Selects) */
+.form-select-premium {
+    width: 100%;
+    height: 42px;
+    padding: 0 15px;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: #1e293b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    appearance: none; /* Quita la flecha nativa */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.5em 1.5em;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.form-select-premium:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(40, 175, 35, 0.1);
+}
+
+/* Ajuste de la tabla de actividades para que no se vea desalineada */
+.table-premium tbody td {
+    padding: 8px 6px;
+    vertical-align: middle; /* Alineación central para que el combo y el textarea casen */
+}
+
+/* Mejora del Textarea de descripción */
+.form-textarea-inline {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: none;
+    transition: border-color 0.2s;
+}
+
+.form-input-premium {
+    width: 100%;
+    height: 45px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.form-input-premium:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 175, 35, 0.1);
+}
+
+/* Altura uniforme para la fila de actividades */
+.table-premium tbody td {
+    vertical-align: middle; /* Centra los elementos verticalmente en la celda */
+    padding: 10px 8px;
+}
+
+/* Forzamos a que los tres elementos midan lo mismo */
+.form-select-premium,
+.form-textarea-inline,
+.form-input-premium {
+    height: 40px !important; /* Altura fija */
+    min-height: 40px !important;
+    max-height: 40px !important;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 8px 12px; /* Padding uniforme para todos */
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    width: 100%;
+}
+
+/* Ajustes específicos para el Select para que el texto quede centrado */
+.form-select-premium {
+    padding: 0 30px 0 12px; /* Espacio para el texto y la flecha */
+    line-height: 38px; /* Centrado vertical del texto */
+}
+
+/* Ajustes para el Textarea */
+.form-textarea-inline {
+    resize: none;
+    padding: 8px 12px;
+    line-height: 1.2; /* Ajuste de línea para que no se corte el texto */
+    overflow-y: hidden; /* Ocultamos scrollbar a menos que sea necesario */
+    white-space: normal;
+}
+
+
+/* Ajustes para el Input de conocimientos adicionales */
+.form-input-premium {
+    padding: 0 12px;
+}
+
+/* Efecto Hover/Focus para toda la fila */
+.form-select-premium:focus,
+.form-textarea-inline:focus,
+.form-input-premium:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 175, 35, 0.1);
+    background-color: #fff;
+}
+
+.btn-delete-icon {
+    height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+    transition: all 0.2s;
+}
+
+.btn-delete-icon:hover {
+    background: #e11d48;
+    color: #fff;
+}

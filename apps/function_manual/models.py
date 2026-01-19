@@ -42,10 +42,14 @@ class ManualCatalogItem(BaseModel):
     name = models.CharField(max_length=255, verbose_name="Nombre del Item")
     code = models.CharField(max_length=100, verbose_name="Código Técnico")
     description = models.TextField(blank=True, null=True, verbose_name="Descripción/Observación")
-    order = models.IntegerField(default=0, verbose_name="Orden de Visualización")
+    target_groups = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Grupos Ocupacionales (Separados por coma)"
+    )
 
     class Meta:
-        ordering = ['catalog', 'order', 'name']
+        ordering = ['catalog', 'name']
         verbose_name = "Item de Catálogo"
         verbose_name_plural = "Items de Catálogo"
         unique_together = ('catalog', 'code')
@@ -205,11 +209,10 @@ class JobActivity(BaseModel):
         related_name='activity_action_verbs',
         verbose_name="Verbo de Acción"
     )
-    frequency = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.SET_NULL, null=True, blank=True,
-        limit_choices_to={'catalog__code': 'FREQUENCY'},
-        related_name='activity_frequencies',
-        verbose_name="Frecuencia"
+    additional_knowledge = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Conocimientos Adicionales"
     )
 
     description = models.TextField(verbose_name="Descripción")
@@ -310,7 +313,7 @@ class ValuationNode(BaseModel):
     class Meta:
         verbose_name = "Nodo de Valoración"
         verbose_name_plural = "Estructura de Valoración"
-        ordering = ['node_type', 'catalog_item__order']
+        ordering = ['node_type']
 
     def __str__(self):
         return f"{self.get_node_type_display()}: {self.catalog_item.name if self.catalog_item else 'Resultado'}"

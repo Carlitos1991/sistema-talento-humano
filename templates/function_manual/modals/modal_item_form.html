@@ -18,7 +18,7 @@
 
                 <!-- BODY con estilo gris suave -->
                 <div class="modal-body modal-body-custom">
-                    
+
                     <!-- Primera fila: Nombre y Código -->
                     <div class="form-row-2-cols">
                         <!-- CAMPO NOMBRE -->
@@ -71,19 +71,14 @@
                         <p class="form-hint">Información adicional sobre el ítem.</p>
                     </div>
 
-                    <!-- CAMPO ORDEN -->
-                    <div class="form-group">
-                        <label for="{{ form.order.id_for_label }}" class="form-label">
-                            <i class="fa-solid fa-sort-numeric-up"></i> {{ form.order.label }}
+                    <div class="form-group mt-3">
+                        <label class="form-label">
+                            <i class="fa-solid fa-users-gear"></i> Grupos Ocupacionales Permitidos
                         </label>
-                        <input class="input-field" id="id_order" name="order" type="number"
-                               v-model="form.order" placeholder="0" min="0" style="max-width: 200px;"/>
-                        <div class="error-message-container" v-if="errors.order">
-                            <span class="text-danger small" v-for="(error, index) in errors.order" :key="index">
-                                <i class="fas fa-exclamation-circle"></i> [[ error ]]
-                            </span>
-                        </div>
-                        <p class="form-hint">Orden de visualización del ítem.</p>
+                        <input class="input-field" type="text" v-model="form.target_groups"
+                               placeholder="Ej: SP1,SP2,SP3 o TODOS"/>
+                        <p class="form-hint">Escriba los códigos separados por coma. Use "TODOS" para que aparezca
+                            siempre.</p>
                     </div>
                 </div>
 

@@ -106,41 +106,55 @@
             <!-- PASO 3: FUNCIONES / ACTIVIDADES -->
             <section v-show="currentStep === 3" class="wizard-step-content">
                 <div class="form-section-card">
-                    <div class="section-title">
-                        <i class="fa-solid fa-list-check"></i> Actividades Esenciales
-                        <button type="button" class="btn-add-inline" @click="addActivity"><i class="fas fa-plus"></i>
+                    <div class="section-header-inline">
+                        <div class="section-title">
+                            <i class="fa-solid fa-list-check"></i> Actividades Esenciales
+                        </div>
+                        <button type="button" class="btn-add-activity" @click="addActivity">
+                            <i class="fas fa-plus"></i> Añadir Actividad
                         </button>
                     </div>
 
-                    <table class="table-clean">
-                        <thead>
-                        <tr>
-                            <th width="20%">Verbo</th>
-                            <th width="50%">Descripción de la Actividad</th>
-                            <th width="20%">Frecuencia</th>
-                            <th width="10%"></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr v-for="(act, idx) in activities" :key="idx">
-                            <td>
-                                <select v-model="act.action_verb" class="form-control">
-                                    <option v-for="v in catalogs.verbs" :value="v.id">[[ v.name ]]</option>
-                                </select>
-                            </td>
-                            <td><textarea v-model="act.description" class="form-control-inline" rows="1"></textarea>
-                            </td>
-                            <td>
-                                <select v-model="act.frequency" class="form-control">
-                                    <option v-for="f in catalogs.frequency" :value="f.id">[[ f.name ]]</option>
-                                </select>
-                            </td>
-                            <td>
-                                <button type="button" class="btn-remove" @click="removeActivity(idx)">&times;</button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table-premium">
+                            <thead>
+                            <tr>
+                                <th style="width: 200px;">Verbo de Acción</th>
+                                <th>Descripción de la Actividad (¿Qué hace? + ¿Sobre qué?)</th>
+                                <th style="width: 250px;">Conocimientos Adicionales</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-for="(act, idx) in activities" :key="idx" class="row-animated">
+                                <td>
+                                    <select v-model="act.action_verb" class="form-select-premium">
+                                        <option value="">Seleccione...</option>
+                                        <option v-for="v in filteredVerbs" :key="v.id" :value="v.id">[[ v.name ]]
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea v-model="act.description" class="form-textarea-inline"
+                                              placeholder="Descripción..."></textarea>
+                                </td>
+                                <td>
+                                    <input type="text" v-model="act.additional_knowledge" class="form-input-premium"
+                                           placeholder="Ej: Normativa contable, Excel...">
+                                </td>
+                                <td class="cell-top">
+                                    <button type="button" class="btn-delete-icon" @click="removeActivity(idx)">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="normative-note">
+                        <i class="fa-solid fa-circle-info"></i> Nota: Según la norma MDT-2025, debe describir entre 5 y
+                        10 actividades principales.
+                    </div>
                 </div>
             </section>
 

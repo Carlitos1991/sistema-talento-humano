@@ -1,6 +1,8 @@
 # apps/function_manual/views.py
 from django.db import models, transaction
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import JsonResponse
@@ -11,7 +13,8 @@ from django.contrib.auth.decorators import permission_required
 import json
 
 from institution.models import AdministrativeUnit
-from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode
+from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
+    JobActivity
 from .forms import ManualCatalogForm, ManualCatalogItemForm
 
 
@@ -26,11 +29,10 @@ class JobProfileMixin:
         context = super().get_context_data(**kwargs)
 
         def get_items(catalog_code):
-            # Obtenemos los items y los imprimimos en la consola del servidor para debug
+            # IMPORTANTE: Agregamos 'target_groups' en el .values()
             items = list(ManualCatalogItem.objects.filter(
                 catalog__code=catalog_code, is_active=True
-            ).values('id', 'name'))
-            print(f"DEBUG: Catálogo {catalog_code} encontró {len(items)} items")
+            ).values('id', 'name', 'target_groups'))
             return items
 
         matrix_data = list(OccupationalMatrix.objects.all().values(
@@ -180,6 +182,7 @@ class ManualCatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
 class ManualCatalogCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = ManualCatalog
     form_class = ManualCatalogForm
+    permission_required = 'function_manual.add_manualcatalog'
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -192,6 +195,7 @@ class ManualCatalogCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
 class ManualCatalogUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ManualCatalog
     form_class = ManualCatalogForm
+    permission_required = 'function_manual.change_manualcatalog'
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -221,6 +225,7 @@ def manual_catalog_toggle_status(request, pk):
 class ManualCatalogItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = ManualCatalogItem
     form_class = ManualCatalogItemForm
+    permission_required = 'function_manual.add_manualcatalogitem'
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -235,18 +240,22 @@ class ManualCatalogItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, C
 class ManualCatalogItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ManualCatalogItem
     form_class = ManualCatalogItemForm
+    permission_required = 'function_manual.change_manualcatalogitem'
 
     def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = self.get_form()
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'message': 'Item actualizado.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        try:
+            self.object = self.get_object()
+            form = self.get_form()
+            if form.is_valid():
+                form.save()
+                return JsonResponse({'success': True, 'message': 'Item actualizado.'})
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f"Error interno: {str(e)}"}, status=500)
 
 
 def manual_catalog_item_list_json(request, catalog_id):
-    items = ManualCatalogItem.objects.filter(catalog_id=catalog_id).values('id', 'code', 'name', 'description', 'order',
+    items = ManualCatalogItem.objects.filter(catalog_id=catalog_id).values('id', 'code', 'name', 'description',
                                                                            'is_active')
     return JsonResponse({'success': True, 'data': list(items)})
 
@@ -255,7 +264,7 @@ def manual_catalog_item_detail_json(request, pk):
     i = get_object_or_404(ManualCatalogItem, pk=pk)
     return JsonResponse({'success': True,
                          'data': {'id': i.id, 'catalog_id': i.catalog_id, 'name': i.name, 'code': i.code,
-                                  'description': i.description or '', 'order': i.order}})
+                                  'description': i.description or '', 'target_groups': i.target_groups or ''}})
 
 
 @require_POST
@@ -276,8 +285,7 @@ class CompetencyListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        complexity_items = ManualCatalogItem.objects.filter(catalog__code='COMPLEXITY_LEVELS', is_active=True).order_by(
-            'order')
+        complexity_items = ManualCatalogItem.objects.filter(catalog__code='COMPLEXITY_LEVELS', is_active=True)
         context['complexity_levels'] = json.dumps(
             [{'id': item.id, 'name': item.name, 'code': item.code} for item in complexity_items])
         qs = Competency.objects.filter(is_active=True)
@@ -451,3 +459,60 @@ def occupational_matrix_toggle_status(request, pk):
     entry.is_active = not entry.is_active
     entry.save()
     return JsonResponse({'success': True, 'is_active': entry.is_active})
+
+
+class JobProfileSaveApi(LoginRequiredMixin, View):
+    """
+    Procesa el guardado masivo del Perfil y sus Actividades en una sola transacción.
+    """
+
+    @method_decorator(csrf_protect)
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            with transaction.atomic():
+                profile_id = data.get('id')
+                # 1. Crear o Actualizar Perfil
+                if profile_id:
+                    profile = JobProfile.objects.get(pk=profile_id)
+                else:
+                    profile = JobProfile()
+
+                profile.position_code = data.get('position_code')
+                profile.specific_job_title = data.get('specific_job_title')
+                profile.administrative_unit_id = data.get('administrative_unit')
+                profile.occupational_classification_id = data.get('occupational_classification')
+                profile.mission = data.get('mission')
+                profile.knowledge_area = data.get('knowledge_area')
+                profile.experience_details = data.get('experience_details')
+                profile.is_active = True
+                profile.save()
+
+                # 2. Gestionar Actividades (Borrado y re-inserción para simplicidad en Wizard)
+                profile.activities.all().delete()
+                activities_data = data.get('activities', [])
+
+                activities_to_create = []
+                for act in activities_data:
+                    if act.get('description') and act.get('action_verb'):
+                        activities_to_create.append(JobActivity(
+                            profile=profile,
+                            action_verb_id=act.get('action_verb'),
+                            # Usamos el nuevo campo de texto
+                            additional_knowledge=act.get('additional_knowledge', ''),
+                            description=act.get('description')
+                        ))
+
+                if activities_to_create:
+                    JobActivity.objects.bulk_create(activities_to_create)
+                else:
+                    raise ValueError("El perfil debe tener al menos una actividad esencial.")
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Perfil de Puesto guardado correctamente.',
+                    'redirect': reverse_lazy('function_manual:profile_list')
+                })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)

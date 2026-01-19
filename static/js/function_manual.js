@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = await res.json();
                         this.formData = {...data}; // Cargamos toda la data en el form
                         this.isEdit = true
-;
+                        ;
                         this.showModal = true;
                         document.body.classList.add('no-scroll');
                     } catch (e) {
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     unitLevels: [], selectedUnits: [],
                     valuationLevels: [], selectedNodes: [], // Paso 2 Jerárquico
                     matchResult: null,
-                    activities: [{action_verb: '', description: '', frequency: ''}],
+                    activities: [{action_verb: '', description: '', additional_knowledge: ''}],
                     catalogs: {instruction: [], decisions: [], impact: [], roles: [], verbs: [], frequency: []},
                     urls: {}
                 }
@@ -283,13 +283,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             },
             computed: {
+                filteredVerbs() {
+                    // matchResult viene de lo que seleccionaste en el paso 2 (ej: {group: 'SP1', ...})
+                    if (!this.matchResult || !this.matchResult.group) return [];
+                    const currentSP = this.matchResult.group; // Ej: "SP1"
+                    const currentGroup = this.matchResult.group; // Ejemplo: "SP1"
+
+                    // Filtramos el catálogo de verbos que viene del servidor
+                    return this.catalogs.verbs.filter(verb => {
+                        // Si no tiene grupos definidos o es TODOS, se muestra
+                        if (!verb.target_groups || verb.target_groups === 'TODOS') return true;
+
+                        // Convertimos la cadena "SP1,SP2" en array y buscamos
+                        const allowed = verb.target_groups.split(',').map(s => s.trim());
+                        return allowed.includes(currentSP);
+                    });
+                },
                 missionPreview() {
-                    return (this.activities.length > 0 && this.activities[0].description)
-                        ? `Sugerencia: Ejecutar procesos de ${this.activities[0].description}...`
-                        : "Defina las actividades para generar la misión.";
+                    const firstAct = this.activities[0];
+                    if (firstAct && firstAct.action_verb && firstAct.description && !this.formData.mission) {
+                        const verbObj = this.catalogs.verbs.find(v => v.id == firstAct.action_verb);
+                        const verbName = verbObj ? verbObj.name : '';
+                        return `Sugerencia: ${verbName} ${firstAct.description.toLowerCase()}...`;
+                    }
+                    return "Complete las actividades para generar una sugerencia.";
                 }
             },
             methods: {
+                validateCurrentStep() {
+                    if (this.currentStep === 1) {
+                        if (!this.formData.administrative_unit || !this.formData.specific_job_title) {
+                            window.Toast.fire({icon: 'warning', title: 'Complete la unidad y el cargo.'});
+                            return false;
+                        }
+                    }
+                    if (this.currentStep === 2) {
+                        if (!this.formData.occupational_classification) {
+                            window.Toast.fire({
+                                icon: 'warning',
+                                title: 'Debe completar la valoración hasta el nivel de Resultado.'
+                            });
+                            return false;
+                        }
+                    }
+                    if (this.currentStep === 3) {
+                        const hasValidActivity = this.activities.some(a => a.action_verb && a.description.length > 10);
+                        if (!hasValidActivity) {
+                            window.Toast.fire({icon: 'warning', title: 'Agregue al menos una actividad detallada.'});
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                nextStep() {
+                    if (this.validateCurrentStep()) {
+                        if (this.currentStep === 3) this.generateMissionSuggestion();
+                        this.currentStep++;
+                    }
+                },
+                generateMissionSuggestion() {
+                    // MDT-2025: Verbo + Objeto + Condición (Sugerencia)
+                    const firstAct = this.activities[0];
+                    if (firstAct && firstAct.action_verb && firstAct.description && !this.formData.mission) {
+                        const verbText = this.catalogs.verbs.find(v => v.id == firstAct.action_verb)?.name || '';
+                        this.formData.mission = `${verbText} ${firstAct.description.toLowerCase()} para asegurar el cumplimiento de los objetivos institucionales.`;
+                    }
+                },
+
+
                 // --- UNIDADES PASO 1 ---
                 async fetchUnits(parentId, index) {
                     const url = parentId ? `${this.urls.units}${parentId}/children/` : this.urls.units;
@@ -375,16 +436,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 },
                 addActivity() {
-                    this.activities.push({action_verb: '', description: '', frequency: ''});
+                    // Importante: Inicializar con additional_knowledge vacío
+                    this.activities.push({action_verb: '', description: '', additional_knowledge: ''});
                 },
                 removeActivity(idx) {
                     if (this.activities.length > 1) this.activities.splice(idx, 1);
                 },
                 async submitForm() {
+                    if (!this.validateCurrentStep()) return;
+
                     this.loading = true;
-                    window.Toast.fire({icon: 'success', title: 'Procesando Perfil...'});
-                    // Aquí iría el fetch POST del formulario completo
-                }
+                    const payload = {
+                        ...this.formData,
+                        activities: this.activities
+                    };
+
+                    try {
+                        const res = await fetch(wizEl.dataset.urlSaveAction, { // Debes agregar este data-attr al HTML
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCsrfToken(),
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            Swal.fire('¡Éxito!', data.message, 'success').then(() => {
+                                window.location.href = data.redirect;
+                            });
+                        } else {
+                            throw new Error(data.error);
+                        }
+                    } catch (e) {
+                        window.Toast.fire({icon: 'error', title: e.message});
+                    } finally {
+                        this.loading = false;
+                    }
+                },
             }
         }).mount('#profileFormApp');
     }
@@ -476,23 +565,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 async fetchTable() {
-                   // Se recarga vía partial HTML o simplemente AJAX y se inyecta
-                   const res = await fetch(this.urls.table);
-                   const html = await res.text();
-                   document.querySelector('#table-content-wrapper').innerHTML = html;
+                    // Se recarga vía partial HTML o simplemente AJAX y se inyecta
+                    const res = await fetch(this.urls.table);
+                    const html = await res.text();
+                    document.querySelector('#table-content-wrapper').innerHTML = html;
                 },
                 // Auxiliares para botones de tabla (ya que Vue no controla el HTML inyectado vía AJAX a menos que usemos componentes)
                 // En este caso híbrido, onclick en HTML llama funciones globales o dispara eventos
                 // Simplificación: recargar página si se prefiere
                 reloadPage() {
-                     location.reload();
+                    location.reload();
                 }
 
             },
             mounted() {
                 // Leer configuración inicial
-                if(compEl.dataset.levels) {
-                     this.levels = JSON.parse(compEl.dataset.levels.replace(/'/g, '"'));
+                if (compEl.dataset.levels) {
+                    this.levels = JSON.parse(compEl.dataset.levels.replace(/'/g, '"'));
                 }
                 this.urls = {
                     table: compEl.dataset.urlTable,
@@ -500,10 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     update: compEl.dataset.urlUpdateBase,
                     toggle: compEl.dataset.urlToggleBase
                 };
-                
+
                 // Exponer app para llamadas externas desde el HTML inyectado (si fuera necesario)
                 window.competencyApp = this;
-                
+
                 // Cargar tabla inicial
                 this.fetchTable();
             }
