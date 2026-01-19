@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div id="matrixApp" v-cloak
+         data-url-save="{% url 'function_manual:api_matrix_save' %}">
+
+        <div class="header-card">
+            <div>
+                <h1>Escala de Remuneraciones (Matriz Ocupacional)</h1>
+                <p>Define los grados, grupos ocupacionales y RMU vigentes.</p>
+            </div>
+            <button class="btn btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> Nuevo Grado Salarial
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th width="10%">Grado</th>
+                        <th width="20%">Grupo</th>
+                        <th width="15%">RMU</th>
+                        <th width="45%">Requisitos Mínimos (Referencia)</th>
+                        <th width="10%" class="text-center">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for entry in matrix_entries %}
+                        <tr>
+                            <td><strong>{{ entry.grade }}</strong></td>
+                            <td><span class="status-badge general">{{ entry.occupational_group }}</span></td>
+                            <td><span class="text-primary-bold"
+                                      style="font-size: 1.1rem;">${{ entry.remuneration }}</span></td>
+                            <td>
+                                <small class="text-muted">
+                                    <strong>Rol:</strong> {{ entry.required_role.name }} |
+                                    <strong>Inst:</strong> {{ entry.minimum_instruction.name }} |
+                                    <strong>Exp:</strong> {{ entry.minimum_experience_months }} meses
+                                </small>
+                            </td>
+                            <td class="text-center">
+                            <td class="text-center">
+                                <div class="actions-wrapper">
+                                    <!-- BOTÓN EDITAR -->
+                                    <button class="btn-views-action" title="Editar"
+                                            @click="editEntry('{{ entry.id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <!-- BOTÓN ELIMINAR -->
+                                    <button class="btn-delete-action" title="Dar de baja"
+                                            @click="deleteEntry('{{ entry.id }}', '{{ entry.occupational_group }}')">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MODAL DE GESTIÓN DE MATRIZ -->
+        {% include 'function_manual/modals/modal_matrix_form.html' %}
+    </div>
+
+    <script id="catalogs-data" type="application/json">
+    {{ catalogs_json|safe }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}

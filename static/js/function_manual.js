@@ -5,7 +5,108 @@ const {createApp} = Vue;
 const getCsrfToken = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const matrixElement = document.getElementById('matrixApp');
+    if (matrixElement) {
+        createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    showModal: false, loading: false, isEdit: false,
+                    catalogs: {roles: [], instruction: [], complexity: []},
+                    formData: {
+                        id: null,
+                        occupational_group: '',
+                        grade: '',
+                        remuneration: '',
+                        required_role_id: '',
+                        complexity_level_id: '',
+                        minimum_instruction_id: '',
+                        minimum_experience_months: 0
+                    }
+                }
+            },
+            mounted() {
+                const tag = document.getElementById('catalogs-data');
+                if (tag) this.catalogs = JSON.parse(tag.textContent);
+            },
+            methods: {
+                openCreateModal() {
+                    this.isEdit = false;
+                    this.resetForm();
+                    this.showModal = true;
+                    document.body.classList.add('no-scroll');
+                },
+                async editEntry(id) {
+                    this.loading = true;
+                    try {
+                        const res = await fetch(`/function-manual/api/matrix/detail/${id}/`);
+                        const data = await res.json();
+                        this.formData = {...data}; // Cargamos toda la data en el form
+                        this.isEdit = true;
+                        this.showModal = true;
+                        document.body.classList.add('no-scroll');
+                    } catch (e) {
+                        window.Toast.fire({icon: 'error', title: 'Error al cargar datos'});
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async deleteEntry(id, name) {
+                    const result = await Swal.fire({
+                        title: `¿Dar de baja ${name}?`,
+                        text: "El registro no se eliminará, pero no aparecerá en la valoración.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonClass: 'btn-swal-danger',
+                        confirmButtonText: 'Sí, dar de baja'
+                    });
 
+                    if (result.isConfirmed) {
+                        const res = await fetch(`/function-manual/api/matrix/toggle/${id}/`, {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': getCsrfToken()}
+                        });
+                        if (res.ok) {
+                            window.Toast.fire({icon: 'success', title: 'Estado actualizado'});
+                            location.reload();
+                        }
+                    }
+                },
+                async saveMatrix() {
+                    this.loading = true;
+                    try {
+                        const res = await fetch(matrixElement.dataset.urlSave, {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+                            body: JSON.stringify(this.formData)
+                        });
+                        if (res.ok) {
+                            window.Toast.fire({icon: 'success', title: 'Registro guardado'});
+                            location.reload();
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                closeModal() {
+                    this.showModal = false;
+                    document.body.classList.remove('no-scroll');
+                },
+                resetForm() {
+                    this.formData = {
+                        id: null,
+                        occupational_group: '',
+                        grade: '',
+                        remuneration: '',
+                        required_role_id: '',
+                        complexity_level_id: '',
+                        minimum_instruction_id: '',
+                        minimum_experience_months: 0
+                    };
+                }
+            }
+        }).mount('#matrixApp');
+    }
     // =========================================================================
     // 1. GESTIÓN DE ESCALAS / ESTRUCTURA (#valuationApp)
     // =========================================================================
@@ -127,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }).mount('#valuationApp');
     }
+    DOMContentLoaded
 
     // =========================================================================
     // 2. WIZARD DE PERFILES (#profileFormApp)

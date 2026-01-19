@@ -1,0 +1,83 @@
+<!-- templates/function_manual/modals/modal_matrix_form.html -->
+<div class="valuation-modal-wrapper" :class="{ 'is-active': showModal }" v-if="showModal">
+    <!-- Capa 1: Fondo oscuro desenfocado -->
+    <div class="valuation-modal-backdrop" @click="closeModal"></div>
+
+    <!-- Capa 2: Contenedor del Modal (Nítido) -->
+    <div class="valuation-modal-box" style="max-width: 750px;">
+        <div class="modal-header modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-money-bill-trend-up me-2"></i>
+                [[ isEdit ? 'Editar' : 'Nuevo' ]] Grado Ocupacional
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form @submit.prevent="saveMatrix">
+            <div class="modal-body modal-body-custom">
+                <!-- SECCIÓN 1: DATOS SALARIALES -->
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label">Grupo Ocupacional (*)</label>
+                        <input type="text" v-model="formData.occupational_group" class="input-field"
+                               placeholder="Ej: SP1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Grado Escala (*)</label>
+                        <input type="number" v-model="formData.grade" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">RMU Mensual ($) (*)</label>
+                        <input type="number" step="0.01" v-model="formData.remuneration" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Experiencia Mínima (Meses)</label>
+                        <input type="number" v-model="formData.minimum_experience_months" class="input-field" required>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: REQUISITOS DE REFERENCIA -->
+                <div class="section-title mt-4">
+                    <i class="fa-solid fa-circle-info me-2"></i> Requisitos Normativos de Referencia
+                </div>
+
+                <div class="grid-3-cols mt-2">
+                    <div class="form-group">
+                        <label class="form-label">Rol Requerido</label>
+                        <select v-model="formData.required_role_id" class="input-field" required>
+                            <option value="">Seleccione...</option>
+                            <option v-for="r in catalogs.roles" :key="r.id" :value="r.id">[[ r.name ]]</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Instrucción Mínima</label>
+                        <select v-model="formData.minimum_instruction_id" class="input-field" required>
+                            <option value="">Seleccione...</option>
+                            <option v-for="i in catalogs.instruction" :key="i.id" :value="i.id">[[ i.name ]]</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Complejidad</label>
+                        <select v-model="formData.complexity_level_id" class="input-field" required>
+                            <option value="">Seleccione...</option>
+                            <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel" @click="closeModal">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-save" :disabled="loading">
+                    <i v-if="loading" class="fa-solid fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-save"></i>
+                    [[ loading ? 'Guardando...' : 'Guardar Cambios' ]]
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

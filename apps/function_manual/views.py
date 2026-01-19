@@ -26,9 +26,12 @@ class JobProfileMixin:
         context = super().get_context_data(**kwargs)
 
         def get_items(catalog_code):
-            return list(ManualCatalogItem.objects.filter(
+            # Obtenemos los items y los imprimimos en la consola del servidor para debug
+            items = list(ManualCatalogItem.objects.filter(
                 catalog__code=catalog_code, is_active=True
             ).values('id', 'name'))
+            print(f"DEBUG: Catálogo {catalog_code} encontró {len(items)} items")
+            return items
 
         matrix_data = list(OccupationalMatrix.objects.all().values(
             'id', 'occupational_group', 'grade', 'remuneration',
@@ -113,41 +116,40 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
 # ============================================================================
 
 class OccupationalMatrixListView(LoginRequiredMixin, PermissionRequiredMixin, JobProfileMixin, ListView):
-    model = ValuationNode
-    template_name = "function_manual/valuation_structure_list.html"
-    context_object_name = "nodes"
-    permission_required = "function_manual.view_valuationnode"
+    """Listado plano de la escala salarial (SP)"""
+    model = OccupationalMatrix
+    template_name = "function_manual/occupational_matrix_list.html"
+    context_object_name = "matrix_entries"
+    permission_required = "function_manual.view_occupationalmatrix"
 
     def get_queryset(self):
-        parent_id = self.request.GET.get('parent')
-        return ValuationNode.objects.filter(parent_id=parent_id,
-                                            is_active=True) if parent_id else ValuationNode.objects.filter(
-            parent__isnull=True, is_active=True)
+        return OccupationalMatrix.objects.select_related(
+            'required_role', 'complexity_level', 'minimum_instruction'
+        ).all().order_by('grade')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        parent_id = self.request.GET.get('parent')
-        context['parent_name'] = "Raíz"
-        context['next_level_name'] = "Rol de Puesto"
-        context['next_node_type'] = "ROLE"
-        context['breadcrumbs'] = []
 
-        if parent_id:
-            parent = get_object_or_404(ValuationNode, pk=parent_id)
-            context['parent_node'] = parent
-            context['parent_name'] = parent.catalog_item.name if parent.catalog_item else parent.name_extra
-            bc = []
-            curr = parent
-            while curr:
-                bc.insert(0, curr)
-                curr = curr.parent
-            context['breadcrumbs'] = bc
-            mapping = {'ROLE': ('INSTRUCTION', 'Instrucción'), 'INSTRUCTION': ('EXPERIENCE', 'Experiencia'),
-                       'EXPERIENCE': ('DECISION', 'Decisión'), 'DECISION': ('IMPACT', 'Impacto'),
-                       'IMPACT': ('COMPLEXITY', 'Complejidad'), 'COMPLEXITY': ('RESULT', 'Resultado Final')}
-            res = mapping.get(parent.node_type, ('RESULT', 'Resultado'))
-            context['next_node_type'], context['next_level_name'] = res
-        return context
+class OccupationalMatrixSaveApi(LoginRequiredMixin, View):
+    """API para crear o editar un grado salarial"""
+
+    def post(self, request):
+        data = json.loads(request.body)
+        entry_id = data.get('id')
+
+        if entry_id:
+            entry = get_object_or_404(OccupationalMatrix, pk=entry_id)
+        else:
+            entry = OccupationalMatrix()
+
+        entry.occupational_group = data.get('occupational_group')
+        entry.grade = data.get('grade')
+        entry.remuneration = data.get('remuneration')
+        entry.required_role_id = data.get('required_role_id')
+        entry.complexity_level_id = data.get('complexity_level_id')
+        entry.minimum_instruction_id = data.get('minimum_instruction_id')
+        entry.minimum_experience_months = data.get('minimum_experience_months')
+        entry.save()
+
+        return JsonResponse({'success': True, 'message': 'Escala salarial actualizada.'})
 
 
 # ============================================================================
@@ -367,3 +369,85 @@ class ApiUnitChildrenView(View):
         filters = {'parent_id': parent_id} if parent_id else {'parent__isnull': True}
         units = AdministrativeUnit.objects.filter(**filters, is_active=True).values('id', 'name', 'code')
         return JsonResponse(list(units), safe=False)
+
+
+class ValuationNodeListView(LoginRequiredMixin, PermissionRequiredMixin, JobProfileMixin, ListView):
+    """
+    Gestiona la estructura jerárquica de valoración (Drill-down).
+    Esta es la vista que el urls.py busca como 'valuation_list'.
+    """
+    model = ValuationNode
+    template_name = "function_manual/valuation_structure_list.html"
+    context_object_name = "nodes"
+    permission_required = "function_manual.view_valuationnode"
+
+    def get_queryset(self):
+        parent_id = self.request.GET.get('parent')
+        if parent_id:
+            return ValuationNode.objects.filter(parent_id=parent_id, is_active=True)
+        # Nivel 1: ROLES (Raíz)
+        return ValuationNode.objects.filter(parent__isnull=True, is_active=True)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        parent_id = self.request.GET.get('parent')
+
+        # Valores iniciales (Raíz)
+        context['parent_name'] = "Estructura Raíz"
+        context['next_level_name'] = "Rol de Puesto"
+        context['next_node_type'] = "ROLE"
+        context['breadcrumbs'] = []
+
+        if parent_id:
+            parent = get_object_or_404(ValuationNode, pk=parent_id)
+            context['parent_node'] = parent
+            context['parent_name'] = parent.catalog_item.name if parent.catalog_item else parent.name_extra
+
+            # Reconstruir camino de Breadcrumbs
+            bc = []
+            curr = parent
+            while curr:
+                bc.insert(0, curr)
+                curr = curr.parent
+            context['breadcrumbs'] = bc
+
+            # Lógica de la Norma: Mapeo de tipos para el siguiente nivel
+            mapping = {
+                'ROLE': ('INSTRUCTION', 'Instrucción Formal'),
+                'INSTRUCTION': ('EXPERIENCE', 'Experiencia Requerida'),
+                'EXPERIENCE': ('DECISION', 'Nivel de Decisiones'),
+                'DECISION': ('IMPACT', 'Nivel de Impacto'),
+                'IMPACT': ('COMPLEXITY', 'Nivel de Complejidad'),
+                'COMPLEXITY': ('RESULT', 'Resultado Final')
+            }
+            res = mapping.get(parent.node_type, ('RESULT', 'Resultado'))
+            context['next_node_type'] = res[0]
+            context['next_level_name'] = res[1]
+
+        return context
+
+
+class OccupationalMatrixDetailApi(View):
+    """Retorna el JSON de un grado salarial para editar"""
+
+    def get(self, request, pk):
+        entry = get_object_or_404(OccupationalMatrix, pk=pk)
+        return JsonResponse({
+            'id': entry.id,
+            'occupational_group': entry.occupational_group,
+            'grade': entry.grade,
+            'remuneration': entry.remuneration,
+            'minimum_experience_months': entry.minimum_experience_months,
+            'required_role_id': entry.required_role_id,
+            'minimum_instruction_id': entry.minimum_instruction_id,
+            'complexity_level_id': entry.complexity_level_id,
+        })
+
+
+@require_POST
+def occupational_matrix_toggle_status(request, pk):
+    """Da de baja o activa un grado salarial"""
+    entry = get_object_or_404(OccupationalMatrix, pk=pk)
+    entry.is_active = not entry.is_active
+    entry.save()
+    return JsonResponse({'success': True, 'is_active': entry.is_active})

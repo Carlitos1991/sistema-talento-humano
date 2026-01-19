@@ -82,6 +82,9 @@
         </div>
         {% include 'function_manual/modals/modal_valuation_node_form.html' %}
     </div>
+    <script id="catalogs-data" type="application/json">
+        {{ catalogs_json|safe }}
+    </script>
 {% endblock %}
 
 {% block extra_js %}
