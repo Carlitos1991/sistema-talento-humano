@@ -114,6 +114,81 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
     fields = ['position_code', 'specific_job_title', 'administrative_unit', 'referential_employee']
     success_url = reverse_lazy('function_manual:profile_list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        profile = self.object
+
+        # 1. Reconstruir ruta organizacional
+        units_path = []
+        current_unit = profile.administrative_unit
+        while current_unit:
+            units_path.insert(0, current_unit.id)
+            current_unit = current_unit.parent
+
+        # 2. Reconstruir ruta de valoración (Valuation Nodes)
+        nodes_path = []
+        if profile.occupational_classification:
+            leaf_node = ValuationNode.objects.filter(
+                occupational_classification=profile.occupational_classification,
+                node_type='RESULT'
+            ).first()
+
+            if leaf_node:
+                curr = leaf_node
+                while curr:
+                    nodes_path.insert(0, curr.id)
+                    curr = curr.parent
+
+        # 3. Actividades
+        activities_data = []
+        for act in profile.activities.all():
+            activities_data.append({
+                'action_verb': act.action_verb_id,
+                'description': act.description,
+                'additional_knowledge': act.additional_knowledge
+            })
+
+        # 4. Competencias
+        comp_map = {'TECHNICAL': [], 'BEHAVIORAL': [], 'TRANSVERSAL': []}
+        # Ordenamos por id o algo consistente para que aparezcan en los slots correctos
+        for pc in profile.profilecompetency_set.select_related('competency').order_by('id'):
+            if pc.competency.type in comp_map:
+                comp_map[pc.competency.type].append(pc.competency.id)
+
+        # Rellenar con strings vacíos para satisfacer los arrays de tamaño fijo del front (3, 3, 2)
+        while len(comp_map['TECHNICAL']) < 3: comp_map['TECHNICAL'].append('')
+        while len(comp_map['BEHAVIORAL']) < 3: comp_map['BEHAVIORAL'].append('')
+        while len(comp_map['TRANSVERSAL']) < 2: comp_map['TRANSVERSAL'].append('')
+        
+        # 5. Payload Final
+        initial_data = {
+            'id': profile.id,
+            'position_code': profile.position_code,
+            'specific_job_title': profile.specific_job_title,
+            'mission': profile.mission,
+            'knowledge_area': profile.knowledge_area,
+            'experience_details': profile.experience_details,
+            'training_topic': profile.training_topic or '',
+            'interface_relations': profile.interface_relations or '',
+            'selectedUnits': units_path,
+            # Importante: para que el wizard vue cargue paso a paso, puede requerir que selectedNodes
+            # se reconstruya secuencialmente. Pero probemos pasando el array completo.
+            'selectedNodes': nodes_path, 
+            'activities': activities_data,
+            'selectedTechnical': comp_map['TECHNICAL'][:3],
+            'selectedBehavioral': comp_map['BEHAVIORAL'][:3],
+            'selectedTransversal': comp_map['TRANSVERSAL'][:2],
+            'matchResult': {
+                'group': profile.occupational_classification.occupational_group,
+                'grade': profile.occupational_classification.grade,
+                'remuneration': str(profile.occupational_classification.remuneration),
+                'id': profile.occupational_classification.id
+            } if profile.occupational_classification else None
+        }
+
+        context['initial_data'] = json.dumps(initial_data, cls=DjangoJSONEncoder)
+        return context
+
 
 # ============================================================================
 # 3. ESCALAS / ESTRUCTURA DE VALORACIÓN (DRILL-DOWN)

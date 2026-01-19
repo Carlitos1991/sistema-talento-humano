@@ -283,6 +283,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 await this.fetchUnits(null, 0);
                 await this.fetchValuationLevel(null);
 
+                // --- LOGICA DE EDICIÓN ---
+                const initTag = document.getElementById('initial-data');
+                if (initTag) {
+                    try {
+                        const initData = JSON.parse(initTag.textContent);
+                        this.isEdit = true;
+                        await this.loadInitialData(initData);
+                    } catch (e) {
+                        console.error("Error cargando datos iniciales:", e);
+                    }
+                }
+
                 this.$nextTick(() => {
                     if (window.jQuery && $.fn.select2) {
                         this.initSelect2();
@@ -338,6 +350,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             methods: {
+                async loadInitialData(initData) {
+                    // 1. Campos Básicos
+                    this.formData = {
+                        ...this.formData,
+                        id: initData.id,
+                        position_code: initData.position_code,
+                        specific_job_title: initData.specific_job_title,
+                        mission: initData.mission,
+                        knowledge_area: initData.knowledge_area,
+                        experience_details: initData.experience_details,
+                        training_topic: initData.training_topic,
+                        interface_relations: initData.interface_relations
+                    };
+
+                    // 2. Arrays de Complejidad/Competencias
+                    this.activities = initData.activities && initData.activities.length ? initData.activities : [{action_verb: '', description: '', additional_knowledge: ''}];
+                    if (initData.selectedTechnical) this.selectedTechnical = initData.selectedTechnical;
+                    if (initData.selectedBehavioral) this.selectedBehavioral = initData.selectedBehavioral;
+                    if (initData.selectedTransversal) this.selectedTransversal = initData.selectedTransversal;
+
+                    // 3. Rehidratar Unidades (Paso 1)
+                    // Reiniciamos para cargar en orden
+                    this.unitLevels = [];
+                    this.selectedUnits = [];
+                    await this.fetchUnits(null, 0); // Carga Raíz
+
+                    const units = initData.selectedUnits;
+                    if (units && units.length > 0) {
+                        for (let i = 0; i < units.length; i++) {
+                            const unitId = units[i];
+                            // El fetchUnits anterior ya pusheó el slot para este nivel
+                            this.selectedUnits[i] = unitId;
+                            
+                            // Cargar hijos del seleccionado para preparar el siguiente nivel (o llenar las options)
+                            await this.fetchUnits(unitId, i + 1);
+                        }
+                        // Setear la unidad final seleccionada
+                        this.formData.administrative_unit = units[units.length - 1];
+                    }
+
+                    // 4. Rehidratar Valoración (Paso 2)
+                    this.valuationLevels = [];
+                    this.selectedNodes = [];
+                    await this.fetchValuationLevel(null); // Carga Raíz
+
+                    const nodes = initData.selectedNodes;
+                    if (nodes && nodes.length > 0) {
+                        for (let i = 0; i < nodes.length; i++) {
+                            const nodeId = nodes[i];
+                            this.selectedNodes[i] = nodeId;
+                            await this.fetchValuationLevel(nodeId);
+                        }
+                    }
+
+                    // 5. Match Result
+                    if (initData.matchResult) {
+                        this.matchResult = initData.matchResult;
+                        this.formData.occupational_classification = initData.matchResult.id;
+                    }
+                },
+
                 cancelProcess() {
                     window.location.href = this.urls.cancel || this.urls.matrix;
                 },

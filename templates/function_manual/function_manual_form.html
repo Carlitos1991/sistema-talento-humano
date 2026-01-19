@@ -201,7 +201,7 @@
                                 <h6 class="text-primary border-bottom pb-2 mb-3">Técnicas</h6>
                                 <div v-for="(sel, i) in selectedTechnical" :key="'tech-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-tech" :data-index="i">
+                                    <select class="form-control select2-comp-tech" :data-index="i" v-model="selectedTechnical[i]">
                                         <option value="">Seleccione...</option>
                                         <option v-for="c in technicalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
                                     </select>
@@ -215,7 +215,7 @@
                                 <h6 class="text-info border-bottom pb-2 mb-3">Conductuales</h6>
                                 <div v-for="(sel, i) in selectedBehavioral" :key="'beh-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-beh" :data-index="i">
+                                    <select class="form-control select2-comp-beh" :data-index="i" v-model="selectedBehavioral[i]">
                                         <option value="">Seleccione...</option>
                                         <option v-for="c in behavioralList" :key="c.id" :value="c.id">[[ c.name ]]</option>
                                     </select>
@@ -229,7 +229,8 @@
                                 <h6 class="text-secondary border-bottom pb-2 mb-3">Transversales</h6>
                                 <div v-for="(sel, i) in selectedTransversal" :key="'trans-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-trans" :data-index="i">
+                                    <select class="form-control select2-comp-trans" :data-index="i" v-model="selectedTransversal[i]">
+
                                         <option value="">Seleccione...</option>
                                         <option v-for="c in transversalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
                                     </select>
@@ -267,6 +268,11 @@
     <script id="catalogs-data" type="application/json">
     {{ catalogs_json|safe }}
     </script>
+    {% if initial_data %}
+    <script id="initial-data" type="application/json">
+    {{ initial_data|safe }}
+    </script>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}

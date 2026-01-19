@@ -35,7 +35,7 @@
 
             <div class="stat-card color-two">
                 <div class="stat-left">
-                    <h3>Clasificados</h3>
+                    <h3>Creados</h3>
                     <div class="number">{{ stats_classified|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-check-double stat-icon"></i>
@@ -43,7 +43,7 @@
 
             <div class="stat-card color-three">
                 <div class="stat-left">
-                    <h3>Sin Clasificar</h3>
+                    <h3>Legalizados</h3>
                     <div class="number">{{ stats_pending|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
@@ -64,7 +64,7 @@
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" v-model="searchQuery" @input="debounceSearch"
-                           class="input-field" placeholder="Buscar por cargo o unidad...">  
+                           class="input-field" placeholder="Buscar por cargo o unidad...">
                 </div>
             </div>
 
