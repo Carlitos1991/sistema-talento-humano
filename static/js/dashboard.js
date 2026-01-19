@@ -79,6 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Toggle actual
             parentLi.classList.toggle('open');
+            
+            // Si cerramos el menú principal, cerramos también los submenús internos
+            if (!parentLi.classList.contains('open')) {
+                const innerOpen = parentLi.querySelector('.has-inner-submenu.is-open');
+                if (innerOpen) {
+                    innerOpen.classList.remove('is-open');
+                    localStorage.setItem('admin_menu_open', 'false');
+                }
+            }
         });
     });
 

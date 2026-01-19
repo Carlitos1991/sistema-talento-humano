@@ -1149,6 +1149,7 @@ select.input-field {
 
 /* Base común para todos los botones de acción en la tabla (sin tocar otros botones del sistema) */
 .btn-create-action,
+.btn-success-action,
 .btn-views-action,
 .btn-delete-action,
 .btn-restore-action,
@@ -1170,11 +1171,13 @@ select.input-field {
 
 /* Icono dentro del botón: siempre blanco y centrado */
 .btn-create-action i,
+.btn-success-action i,
 .btn-views-action i,
 .btn-delete-action i,
 .btn-restore-action i,
 .btn-list-action i,
 .btn-create-action svg,
+.btn-success-action svg,
 .btn-views-action svg,
 .btn-restore-action svg,
 .btn-delete-action svg,
@@ -1187,6 +1190,10 @@ select.input-field {
 /* Fondos específicos (solo colores de botones de la tabla) */
 .btn-create-action {
     background: linear-gradient(to right, #0ba542, #009e36);
+}
+
+.btn-success-action {
+    background: linear-gradient(to right, #10b981, #059669);
 }
 
 .btn-views-action {
@@ -1207,6 +1214,7 @@ select.input-field {
 
 /* Hover/active más sutil y lento (según petición) */
 .btn-create-action:hover,
+.btn-success-action:hover,
 .btn-views-action:hover,
 .btn-restore-action:hover,
 .btn-delete-action:hover,
@@ -1216,6 +1224,7 @@ select.input-field {
 }
 
 .btn-create-action:active,
+.btn-success-action:active,
 .btn-views-action:active,
 .btn-delete-action:active,
 .btn-restore-action:active,
@@ -1227,6 +1236,7 @@ select.input-field {
 /* Ajuste visual para pantallas pequeñas */
 @media (max-width: 480px) {
     .btn-create-action,
+    .btn-success-action,
     .btn-views-action,
     .btn-delete-action,
     .btn-restore-action,
@@ -5911,7 +5921,13 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .inner-submenu {
     display: none; /* Oculto por defecto */
     background-color: rgba(255, 255, 255, 0.03);
-    padding-left: 10px;
+    padding-left: 0; /* Reseteamos padding del UL para usar el del anchor */
+}
+
+/* Indentación específica para items de nivel 3 (Administración -> XYZ) */
+.inner-submenu li a {
+    padding-left: 75px !important; /* 50px base + 25px extra indent */
+    font-size: 0.85em; /* Un poco más pequeño para jerarquía */
 }
 
 .has-inner-submenu.is-open > .inner-submenu {

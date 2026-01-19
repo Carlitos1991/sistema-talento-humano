@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+
 {% block content %}
     <div id="matrixApp" v-cloak
          data-url-save="{% url 'function_manual:api_matrix_save' %}">
@@ -21,9 +25,10 @@
                     <thead>
                     <tr>
                         <th width="10%">Grado</th>
-                        <th width="20%">Grupo</th>
-                        <th width="15%">RMU</th>
+                        <th width="12%">Grupo</th>
+                        <th width="10%">RMU</th>
                         <th width="45%">Requisitos Mínimos (Referencia)</th>
+                        <th width="10%">Estado</th>
                         <th width="10%" class="text-center">Acciones</th>
                     </tr>
                     </thead>
@@ -41,7 +46,13 @@
                                     <strong>Exp:</strong> {{ entry.minimum_experience_months }} meses
                                 </small>
                             </td>
-                            <td class="text-center">
+                            <td>
+                                {% if entry.is_active %}
+                                    <span class="status-badge active">Activo</span>
+                                {% else %}
+                                    <span class="status-badge inactive">Inactivo</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <div class="actions-wrapper">
                                     <!-- BOTÓN EDITAR -->
@@ -49,10 +60,11 @@
                                             @click="editEntry('{{ entry.id }}')">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <!-- BOTÓN ELIMINAR -->
-                                    <button class="btn-delete-action" title="Dar de baja"
-                                            @click="deleteEntry('{{ entry.id }}', '{{ entry.occupational_group }}')">
-                                        <i class="fas fa-trash-alt"></i>
+                                    <!-- BOTÓN ACCIÓN VARIABLE -->
+                                    <button class="{% if entry.is_active %}btn-delete-action{% else %}btn-success-action{% endif %}"
+                                            title="{% if entry.is_active %}Inactivar{% else %}Activar{% endif %}"
+                                            @click="toggleEntry('{{ entry.id }}', '{{ entry.occupational_group }}', {{ entry.is_active|yesno:'true,false' }})">
+                                        <i class="fas {% if entry.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
                                     </button>
                                 </div>
                             </td>

@@ -1,63 +1,68 @@
 <!-- templates/function_manual/modals/modal_competency_form.html -->
-<div id="competency-modal-app" v-cloak>
-    <div class="modal-overlay" :class="{ 'hidden': !showModal }">
-        <div class="modal-container animate-scale-in">
+<div class="valuation-modal-wrapper" :class="{ 'is-active': showModal }" v-if="showModal">
+    <!-- Backdrop separado -->
+    <div class="valuation-modal-backdrop" @click="closeModal"></div>
 
-            <!-- HEADER  -->
-            <div class="modal-header modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-brain me-2"></i> [[ isEdit ? 'Editar Competencia' : 'Nueva Competencia' ]]
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                    &times;
-                </button>
+    <!-- Contenedor Modal -->
+    <div class="valuation-modal-box animate-scale-in" style="max-width: 600px;">
+
+        <!-- HEADER  -->
+        <div class="modal-header modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-brain me-2"></i> [[ isEdit ? 'Editar Competencia' : 'Nueva Competencia' ]]
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                &times;
+            </button>
+        </div>
+
+        <form @submit.prevent="saveCompetency">
+
+            <!-- BODY -->
+            <div class="modal-body modal-body-custom">
+                <div class="form-group">
+                    <label class="form-label">Nombre de la Competencia (*)</label>
+                    <input type="text" v-model="formData.name" required class="input-field"
+                           placeholder="Ej: Liderazgo Estratégico">
+                </div>
+
+                <div class="grid-2-cols mt-3">
+                    <div class="form-group">
+                        <label class="form-label">Tipo (*)</label>
+                        <select v-model="formData.type" class="input-field" required>
+                            <option value="TECHNICAL">Técnica</option>
+                            <option value="BEHAVIORAL">Conductual</option>
+                            <option value="TRANSVERSAL">Transversal</option>
+                        </select>
+                    </div>
+                    <!-- Nota: El nivel sugerido debe venir de "levels" en JS -->
+                    <div class="form-group">
+                        <label class="form-label">Nivel Sugerido</label>
+                        <select v-model="formData.suggested_level" class="input-field">
+                            <option value="">Seleccione nivel...</option>
+                            <option v-for="lvl in levels" :key="lvl.id" :value="lvl.id">
+                                [[ lvl.name ]]
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Definición / Descripción (*)</label>
+                    <textarea v-model="formData.definition" rows="4" class="input-field"
+                              placeholder="Describa la competencia..." required></textarea>
+                </div>
             </div>
 
-            <form @submit.prevent="saveCompetency">
-
-                <!-- BODY con padding y estilo limpio -->
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label">Nombre de la Competencia</label>
-                        <input type="text" v-model="formData.name" required class="form-control"
-                               placeholder="Ej: Liderazgo Estratégico">
-                    </div>
-
-                    <div class="grid-2-cols mt-3">
-                        <div class="form-group">
-                            <label class="form-label">Tipo</label>
-                            <select v-model="formData.type" class="form-control">
-                                <option value="TECHNICAL">Técnica</option>
-                                <option value="BEHAVIORAL">Conductual</option>
-                                <option value="TRANSVERSAL">Transversal</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nivel Sugerido</label>
-                            <select v-model="formData.suggested_level" class="form-control">
-                                <option value="">Seleccione nivel...</option>
-                                <option v-for="lvl in complexityLevels" :key="lvl.id" :value="lvl.id">
-                                    [[ lvl.name ]]
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group mt-3">
-                        <label class="form-label">Definición / Descripción</label>
-                        <textarea v-model="formData.definition" rows="4" class="form-control"
-                                  placeholder="Describa la competencia..."></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-cancel" @click="closeModal">Cancelar</button>
-                    <button type="submit" class="btn btn-save" :disabled="loading">
-                        <span v-if="loading"><i class="fa-solid fa-spinner fa-spin"></i> Guardando...</span>
-                        <span v-else>Guardar Cambios</span>
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- FOOTER -->
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                <button type="submit" class="btn-save" :disabled="loading">
+                    <i v-if="loading" class="fa-solid fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-save"></i>
+                    [[ loading ? 'Guardando...' : 'Guardar Cambios' ]]
+                </button>
+            </div>
+        </form>
     </div>
 </div>

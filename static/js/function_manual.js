@@ -39,10 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 async editEntry(id) {
                     this.loading = true;
                     try {
-                        const res = await fetch(`/function-manual/api/matrix/detail/${id}/`);
+                        const res = await fetch(`/function_manual/api/matrix/detail/${id}/`);
                         const data = await res.json();
                         this.formData = {...data}; // Cargamos toda la data en el form
-                        this.isEdit = true;
+                        this.isEdit = true
+;
                         this.showModal = true;
                         document.body.classList.add('no-scroll');
                     } catch (e) {
@@ -51,18 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.loading = false;
                     }
                 },
-                async deleteEntry(id, name) {
+                async toggleEntry(id, name, isActive) {
+                    const actionName = isActive ? "Inactivar" : "Activar";
+                    const confirmText = isActive ? "Sí, inactivar" : "Sí, activar";
+                    const message = isActive
+                        ? "El registro no aparecerá en la valoración, pero no se eliminará."
+                        : "El registro volverá a estar disponible para su uso.";
+
                     const result = await Swal.fire({
-                        title: `¿Dar de baja ${name}?`,
-                        text: "El registro no se eliminará, pero no aparecerá en la valoración.",
-                        icon: 'warning',
+                        title: `¿${actionName} ${name}?`,
+                        text: message,
+                        icon: isActive ? 'warning' : 'info',
                         showCancelButton: true,
-                        confirmButtonClass: 'btn-swal-danger',
-                        confirmButtonText: 'Sí, dar de baja'
+                        customClass: {
+                            confirmButton: isActive ? 'btn-swal-danger' : 'btn-swal-success'
+                        },
+                        confirmButtonText: confirmText
                     });
 
                     if (result.isConfirmed) {
-                        const res = await fetch(`/function-manual/api/matrix/toggle/${id}/`, {
+                        const res = await fetch(`/function_manual/api/matrix/toggle/${id}/`, {
                             method: 'POST',
                             headers: {'X-CSRFToken': getCsrfToken()}
                         });
@@ -228,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }).mount('#valuationApp');
     }
-    DOMContentLoaded
 
     // =========================================================================
     // 2. WIZARD DE PERFILES (#profileFormApp)
@@ -423,8 +431,81 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     this.showModal = true;
                     document.body.classList.add('no-scroll');
+                },
+                closeModal() {
+                    this.showModal = false;
+                    document.body.classList.remove('no-scroll');
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.isEdit = false;
+                    this.formData = {id: null, name: '', type: 'TECHNICAL', definition: '', suggested_level: ''};
+                    this.currentErrors = {};
+                },
+                async saveCompetency() {
+                    this.loading = true;
+                    this.currentErrors = {};
+                    const url = this.isEdit
+                        ? this.urls.update.replace('0', this.formData.id)
+                        : this.urls.create;
+
+                    try {
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+                            body: JSON.stringify(this.formData)
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            window.Toast.fire({icon: 'success', title: 'Guardado correctamente'});
+                            this.closeModal();
+                            this.fetchTable();
+                        } else {
+                            if (data.errors) {
+                                this.currentErrors = data.errors;
+                                window.Toast.fire({icon: 'error', title: 'Verifique los campos'});
+                            } else {
+                                throw new Error('Error desconocido');
+                            }
+                        }
+                    } catch (e) {
+                        window.Toast.fire({icon: 'error', title: 'Error al guardar'});
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async fetchTable() {
+                   // Se recarga vía partial HTML o simplemente AJAX y se inyecta
+                   const res = await fetch(this.urls.table);
+                   const html = await res.text();
+                   document.querySelector('#table-content-wrapper').innerHTML = html;
+                },
+                // Auxiliares para botones de tabla (ya que Vue no controla el HTML inyectado vía AJAX a menos que usemos componentes)
+                // En este caso híbrido, onclick en HTML llama funciones globales o dispara eventos
+                // Simplificación: recargar página si se prefiere
+                reloadPage() {
+                     location.reload();
                 }
-                // ... resto de lógica de competencias
+
+            },
+            mounted() {
+                // Leer configuración inicial
+                if(compEl.dataset.levels) {
+                     this.levels = JSON.parse(compEl.dataset.levels.replace(/'/g, '"'));
+                }
+                this.urls = {
+                    table: compEl.dataset.urlTable,
+                    create: compEl.dataset.urlCreate,
+                    update: compEl.dataset.urlUpdateBase,
+                    toggle: compEl.dataset.urlToggleBase
+                };
+                
+                // Exponer app para llamadas externas desde el HTML inyectado (si fuera necesario)
+                window.competencyApp = this;
+                
+                // Cargar tabla inicial
+                this.fetchTable();
             }
         }).mount('#competencyApp');
     }
