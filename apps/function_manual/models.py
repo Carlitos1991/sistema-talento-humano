@@ -184,6 +184,13 @@ class JobProfile(BaseModel):
     reviewed_by = models.ForeignKey(Authorities, related_name='reviewed_profiles', on_delete=models.PROTECT, null=True)
     approved_by = models.ForeignKey(Authorities, related_name='approved_profiles', on_delete=models.PROTECT, null=True)
 
+    legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True, verbose_name="Perfil Legalizado (Escaneado)")
+
+    @property
+    def is_legalized(self):
+        """Retorna True si tiene las 3 firmas de legalización asignadas"""
+        return bool(self.prepared_by and self.reviewed_by and self.approved_by)
+
     class Meta:
         verbose_name = "Perfil de Puesto"
         verbose_name_plural = "Perfiles de Puesto"

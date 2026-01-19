@@ -1,0 +1,74 @@
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-medium" style="width: 750px; margin: auto;">
+        <div class="modal-header-medium modal-header-gradient"
+             style="background: linear-gradient(to right, #0d9488, #14b8a6);">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-user-tag me-2"></i> Asignar Empleado Referencial
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeManualModal()">&times;
+            </button>
+        </div>
+
+        <form id="assignReferentialForm" method="POST" onsubmit="submitAssignReferential(event, {{ profile.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-content modal-body-custom">
+                <!-- Info de Perfil -->
+                <div class="form-section-card" style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <div class="grid-2-cols">
+                        <div class="info-group">
+                            <label class="info-label text-muted">Cargo Específico</label>
+                            <div class="info-value font-weight-700">{{ profile.specific_job_title }}</div>
+                        </div>
+                        <div class="info-group">
+                            <label class="info-label text-muted">Unidad Administrativa</label>
+                            <div class="info-value">{{ profile.administrative_unit.name }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-3 text-center">
+                    <label class="form-label font-weight-700 mb-2">Buscar Funcionario (Cédula)</label>
+                    <div class="d-flex justify-content-center">
+                        <input type="text" id="search-cedula-ref" class="form-control"
+                               style="max-width: 300px; border-top-right-radius: 0; border-bottom-right-radius: 0;"
+                               placeholder="Ingrese CI...">
+                        <button type="button" class="btn btn-dark"
+                                style="border-top-left-radius: 0; border-bottom-left-radius: 0;"
+                                onclick="searchEmployeeReferential()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- RESULTADO DE BÚSQUEDA -->
+                <div id="search-result-card-ref" class="hidden mt-3">
+                    <div class="form-section-card" style="border-left: 5px solid #0d9488; background: #f0fdf4;">
+                        <div class="person-info" style="display: flex; align-items: center; gap: 15px;">
+                            <!-- CONTENEDOR PARA LA FOTO O INICIALES -->
+                            <div id="res-photo-ref" class="person-avatar-container" style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden;">
+                                <!-- Se llena vía JS -->
+                            </div>
+                            <div class="person-details">
+                                <h4 id="res-name-ref" class="mb-0 " style="color: #0f766e; font-weight: 700;"></h4>
+                                <p id="res-email-ref" class="text-muted small mb-0"></p>
+                            </div>
+                        </div>
+                        <input type="hidden" name="employee_id" id="selected-employee-id-ref">
+                    </div>
+                </div>
+
+                <div class="alert-info mt-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-1"></i> Este funcionario servirá como referencia para el levantamiento de información.
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-cancel" onclick="closeManualModal()">Cancelar</button>
+                <button type="submit" id="btn-submit-assign-ref" class="btn-save" disabled style="background: #0d9488;">
+                    <i class="fas fa-save me-2"></i> Guardar Asignación
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

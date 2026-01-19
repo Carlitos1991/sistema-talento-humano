@@ -784,4 +784,282 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }).mount('#profileApp');
     }
+
+    // =========================================================================
+    // 5. FUNCIONES GLOBALES: ASIGNAR EMPLEADO REFERENCIAL (Fuera de Vue)
+    // =========================================================================
+
+    window.openAssignReferentialModal = (pk) => {
+        fetch(`/function_manual/profiles/assign-referential/${pk}/`)
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('modal-inject-container');
+                if (container) {
+                    container.innerHTML = html;
+                    const overlay = container.querySelector('.modal-overlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    document.body.classList.add('no-scroll');
+                }
+            });
+    };
+
+    window.closeManualModal = () => {
+        const container = document.getElementById('modal-inject-container');
+        if (container) {
+            container.innerHTML = '';
+            document.body.classList.remove('no-scroll');
+        }
+    };
+
+    window.searchEmployeeReferential = async () => {
+        const cedula = document.getElementById('search-cedula-ref').value;
+        const resultCard = document.getElementById('search-result-card-ref'),
+            btnSubmit = document.getElementById('btn-submit-assign-ref'),
+            resName = document.getElementById('res-name-ref'),
+            resEmail = document.getElementById('res-email-ref'),
+            resPhoto = document.getElementById('res-photo-ref'),
+            hiddenId = document.getElementById('selected-employee-id-ref');
+
+        if (!cedula || cedula.length < 10) return Swal.fire('Error', 'Cédula no válida (mínimo 10 dígitos)', 'warning');
+
+        // Estado de carga
+        btnSubmit.disabled = true;
+        resName.textContent = 'Buscando...';
+        resultCard.classList.remove('hidden');
+
+        try {
+            const res = await fetch(`/function_manual/api/search-employee-simple/?q=${cedula}`);
+            const data = await res.json();
+
+            if (data.success) {
+                const emp = data.data;
+                resName.textContent = emp.full_name;
+                resEmail.textContent = emp.email;
+                
+                // Foto
+                const photoUrl = emp.photo ? emp.photo : '/static/img/avatar-placeholder.png';
+                resPhoto.innerHTML = `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                
+                hiddenId.value = emp.id;
+                
+                btnSubmit.disabled = false;
+                resultCard.classList.remove('hidden');
+            } else {
+                resName.textContent = 'No encontrado';
+                resEmail.textContent = data.message;
+                resPhoto.innerHTML = '<i class="fas fa-user-slash fa-lg text-muted"></i>';
+                hiddenId.value = '';
+                
+                // Opcionalmente ocultar card o mostrar error style
+                btnSubmit.disabled = true;
+            }
+
+        } catch (e) {
+            console.error(e);
+            resName.textContent = 'Error de conexión';
+        }
+    };
+
+    window.submitAssignReferential = async (e, pk) => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('btn-submit-assign-ref');
+        
+        // Bloqueo
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(`/function_manual/profiles/assign-referential/${pk}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Asignado!',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+                btn.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Asignación';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Fallo de conexión', 'error');
+            btn.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Asignación';
+            btn.disabled = false;
+        }
+    };
+
+    // =========================================================================
+    // LEGALIZACIÓN (FIRMAS)
+    // =========================================================================
+
+    window.openLegalizeModal = (pk) => {
+        fetch(`/function_manual/profiles/legalize/${pk}/`)
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('modal-inject-container');
+                if (container) {
+                    container.innerHTML = html;
+                    const overlay = container.querySelector('.modal-overlay');
+                    if (overlay) {
+                        // Forzamos estilos para garantizar overlay
+                        overlay.style.position = 'fixed';
+                        overlay.style.display = 'flex';
+                        overlay.style.zIndex = '999999';
+                    }
+                    document.body.classList.add('no-scroll');
+                    setTimeout(validateLegalizeSelects, 200);
+                }
+            });
+    };
+
+    window.validateLegalizeSelects = () => {
+        const selects = document.querySelectorAll('.select-authority');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(v => v);
+
+        selects.forEach(select => {
+            const currentVal = select.value;
+            Array.from(select.options).forEach(opt => {
+                if (!opt.value) return; // Skip placeholder
+                
+                // Si el valor está en la lista de seleccionados y NO es el valor de este select
+                if (selectedValues.includes(opt.value) && opt.value !== currentVal) {
+                    opt.disabled = true;
+                    opt.textContent = opt.textContent.replace(' (Seleccionado)', '') + ' (Seleccionado)';
+                } else {
+                    opt.disabled = false;
+                    opt.textContent = opt.textContent.replace(' (Seleccionado)', '');
+                }
+            });
+        });
+    };
+
+    window.submitLegalizeProfile = async (e, pk) => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('btn-submit-legalize');
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(`/function_manual/profiles/legalize/${pk}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Legalizado!',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                     window.closeManualModal();
+                     location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+                btn.innerHTML = '<i class="fas fa-save"></i> Guardar Legalización';
+                btn.disabled = false;
+            }
+
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Error', 'Fallo de conexión', 'error');
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Legalización';
+            btn.disabled = false;
+        }
+    };
+
+    // =========================================================================
+    // SUBIDA Y DETALLE (LEGALIZADOS)
+    // =========================================================================
+
+    window.openUploadLegalizedModal = (pk) => {
+        fetch(`/function_manual/profiles/upload-legalized/${pk}/`)
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('modal-inject-container');
+                if (container) {
+                    container.innerHTML = html;
+                    const overlay = container.querySelector('.modal-overlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    document.body.classList.add('no-scroll');
+                }
+            });
+    };
+
+    window.submitUploadLegalized = async (e, pk) => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('btn-submit-upload');
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+        btn.disabled = true;
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(`/function_manual/profiles/upload-legalized/${pk}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Subido!',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                     window.closeManualModal();
+                     // Opcional: recargar solo fila o página
+                     location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+                btn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
+                btn.disabled = false;
+            }
+
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Error', 'Fallo de conexión', 'error');
+            btn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
+            btn.disabled = false;
+        }
+    };
+
+    window.openProfileDetailModal = (pk) => {
+        fetch(`/function_manual/profiles/detail/${pk}/`)
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('modal-inject-container');
+                if (container) {
+                    container.innerHTML = html;
+                    const overlay = container.querySelector('.modal-overlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    document.body.classList.add('no-scroll');
+                }
+            });
+    };
 });

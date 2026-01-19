@@ -9,6 +9,15 @@ urlpatterns = [
     path('profiles/', views.JobProfileListView.as_view(), name='profile_list'),
     path('profiles/create/', views.JobProfileCreateView.as_view(), name='profile_create'),  # RUTA FALTANTE
     path('profiles/update/<int:pk>/', views.JobProfileUpdateView.as_view(), name='profile_update'),
+    path('profiles/assign-referential/<int:pk>/', views.JobProfileAssignReferentialView.as_view(), name='profile_assign_referential'),
+    path('profiles/legalize/<int:pk>/', views.JobProfileLegalizeView.as_view(), name='profile_legalize'),
+    path('profiles/upload-legalized/<int:pk>/', views.JobProfileUploadLegalizedView.as_view(), name='profile_upload_legalized'),
+    path('profiles/detail/<int:pk>/', views.JobProfileDetailModalView.as_view(), name='profile_detail_modal'),
+    path('profiles/print/<int:pk>/', views.JobProfilePrintView.as_view(), name='profile_print'),  # Dummy print view for now
+
+    path('api/search-employee-simple/', views.api_search_employee_simple, name='api_search_employee_simple'),
+
+    # --- ADMINISTRACIÓN / CATÁLOGOS ---
     # Útil para la tabla
 
     # --- ADMINISTRACIÓN / CATÁLOGOS ---

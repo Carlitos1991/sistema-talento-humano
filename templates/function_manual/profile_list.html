@@ -1,10 +1,103 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-custom shadow-sm">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 text-primary fw-bold">
+                        <i class="fa-solid fa-file-contract me-2"></i> Gestión de Perfiles de Puesto
+                    </h5>
+                    <a href="{% url 'function_manual:profile_create' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i> Nuevo Perfil
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Código / Cargo</th>
+                                <th>Unidad Administrativa</th>
+                                <th>Grupo Ocupacional</th>
+                                <th>Empleado Referencial</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for profile in object_list %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark">{{ profile.specific_job_title }}</span>
+                                            <small class="text-muted">{{ profile.position_code|default:"Sin código" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ profile.administrative_unit.name }}</td>
+                                    <td>
+                                        {% if profile.occupational_classification %}
+                                            <span class="badge bg-success bg-opacity-10 text-success">
+                                                {{ profile.occupational_classification.occupational_group }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if profile.referential_employee %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle-sm me-2 bg-primary text-white d-flex align-items-center justify-content-center rounded-circle" style="width: 32px; height: 32px; font-size: 12px;">
+                                                    {{ profile.referential_employee.person.initials|default:"ER" }}
+                                                </div>
+                                                <div class="d-flex flex-column">
+                                                    <span class="text-dark small fw-semibold">{{ profile.referential_employee.person.first_name }}</span>
+                                                    <span class="text-muted small" style="font-size: 0.75rem;">{{ profile.referential_employee.person.last_name }}</span>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted small fst-italic">-- Sin asignar --</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-info" 
+                                                    onclick="openAssignReferentialModal({{ profile.id }})" 
+                                                    title="Asignar Empleado Referencial">
+                                                <i class="fa-solid fa-user-tag"></i>
+                                            </button>
+                                            <a href="{% url 'function_manual:profile_update' profile.id %}" 
+                                               class="btn btn-sm btn-outline-primary" title="Editar Perfil">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <!-- Drilldown / PDF (Futuro) -->
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-file-circle-xmark fa-2x mb-3 opacity-50"></i>
+                                        <p>No se encontraron perfiles registrados.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CONTENEDOR PARA MODALES INYECTADOS -->
+    <div id="modal-inject-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}

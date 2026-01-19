@@ -1,0 +1,67 @@
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container" style="width: 500px; margin: auto;">
+        <div class="modal-header-gradient"
+             style="background: linear-gradient(to right, #6366f1, #8b5cf6); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title text-white" style="margin:0; font-size:1.1rem;">
+                <i class="fas fa-cloud-upload-alt me-2"></i> Subir Perfil Legalizado
+            </h3>
+            <button type="button" class="btn-close-modal" style="background:transparent; border:none; color:rgba(255,255,255,0.8); cursor:pointer; font-size:1.2rem;" onclick="closeManualModal()">&times;
+            </button>
+        </div>
+
+        <form id="uploadLegalizedForm" method="POST" enctype="multipart/form-data" onsubmit="submitUploadLegalized(event, {{ profile.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-custom" style="padding: 1.5rem; background-color: #f8fafc;">
+                
+                <div class="form-group mb-4 text-center">
+                    <label style="font-weight:700; display:block; margin-bottom:10px; color:#334155;">Seleccione el archivo PDF escaneado:</label>
+                    <div style="border: 2px dashed #cbd5e1; padding: 20px; border-radius: 10px; background: white; transition: all 0.2s;" id="drop-zone-upload">
+                        <i class="fas fa-file-pdf fa-3x text-danger mb-3"></i>
+                        <input type="file" name="legalized_document" id="legalized_document" class="form-control" accept=".pdf" required
+                               style="display: none;" onchange="updateFileName(this)">
+                        
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('legalized_document').click()">
+                                Explorar archivos
+                            </button>
+                        </div>
+                        <p id="file-name-display" class="mt-2 text-muted small">Ningún archivo seleccionado</p>
+                    </div>
+                </div>
+
+                {% if profile.legalized_document %}
+                <div class="alert alert-success" style="font-size: 0.85rem;">
+                    <i class="fas fa-check-circle me-1"></i> Ya existe un archivo subido. Subir otro lo reemplazará.
+                    <br>
+                    <a href="{{ profile.legalized_document.url }}" target="_blank" class="text-success font-weight-bold ml-4">Ver actual</a>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <div class="modal-footer-spaced" style="padding: 1rem 1.5rem; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn-wizard-nav btn-wizard-prev" onclick="closeManualModal()">
+                    Cancelar
+                </button>
+                <button type="submit" id="btn-submit-upload" class="btn-wizard-nav btn-wizard-save">
+                    <i class="fas fa-upload"></i> Subir Documento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function updateFileName(input) {
+        const display = document.getElementById('file-name-display');
+        if (input.files && input.files.length > 0) {
+            display.textContent = input.files[0].name;
+            display.classList.add('text-primary');
+            display.classList.remove('text-muted');
+        } else {
+            display.textContent = 'Ningún archivo seleccionado';
+            display.classList.add('text-muted');
+            display.classList.remove('text-primary');
+        }
+    }
+</script>

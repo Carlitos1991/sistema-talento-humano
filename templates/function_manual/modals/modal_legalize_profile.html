@@ -1,0 +1,75 @@
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container" style="width: 600px; margin: auto;">
+        <div class="modal-header-gradient"
+             style="background: linear-gradient(to right, #475569, #64748b); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title text-white" style="margin:0; font-size:1.1rem;">
+                <i class="fa-solid fa-file-signature me-2"></i> Legalización del Perfil
+            </h3>
+            <button type="button" class="btn-close-modal" style="background:transparent; border:none; color:rgba(255,255,255,0.8); cursor:pointer; font-size:1.2rem;" onclick="closeManualModal()">&times;
+            </button>
+        </div>
+
+        <form id="legalizeProfileForm" method="POST" onsubmit="submitLegalizeProfile(event, {{ profile.pk }})">
+            {% csrf_token %}
+            <div class="modal-body-custom" style="padding: 1.5rem; background-color: #f8fafc;">
+                <div class="mb-3" style="padding: 10px; background: #e0f2fe; color: #0369a1; border-radius: 8px; border: 1px solid #bae6fd; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle me-1"></i> Seleccione las autoridades responsables. Una misma persona no puede firmar en múltiples roles.
+                </div>
+
+                <!-- ELABORADO POR -->
+                <div class="form-group mb-3">
+                    <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Elaborado por (Analista):</label>
+                    <select name="prepared_by" id="select-prepared" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                        <option value="">--- Seleccione ---</option>
+                        {% for auth in authorities %}
+                            <option value="{{ auth.id }}" {% if profile.prepared_by_id == auth.id %}selected{% endif %}>
+                                {{ auth.name }} - {{ auth.charge }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- REVISADO POR -->
+                <div class="form-group mb-3">
+                    <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Revisado por (Jefe Inmediato):</label>
+                    <select name="reviewed_by" id="select-reviewed" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                        <option value="">--- Seleccione ---</option>
+                        {% for auth in authorities %}
+                            <option value="{{ auth.id }}" {% if profile.reviewed_by_id == auth.id %}selected{% endif %}>
+                                {{ auth.name }} - {{ auth.charge }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- AUTORIZADO POR -->
+                <div class="form-group mb-3">
+                    <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Autorizado por (Máxima Autoridad):</label>
+                    <select name="approved_by" id="select-approved" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                        <option value="">--- Seleccione ---</option>
+                        {% for auth in authorities %}
+                            <option value="{{ auth.id }}" {% if profile.approved_by_id == auth.id %}selected{% endif %}>
+                                {{ auth.name }} - {{ auth.charge }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="modal-footer-spaced" style="padding: 1rem 1.5rem; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn-wizard-nav btn-wizard-prev" onclick="closeManualModal()">
+                    Cancelar
+                </button>
+                <button type="submit" id="btn-submit-legalize" class="btn-wizard-nav btn-wizard-save">
+                    <i class="fas fa-save"></i> Guardar Legalización
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    // Initialize validation on load after a brief delay to ensure DOM is ready inside modal
+    setTimeout(validateLegalizeSelects, 100);
+</script>

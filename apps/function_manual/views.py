@@ -6,16 +6,18 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, login_required
 import json
 
+from employee.models import Employee
 from institution.models import AdministrativeUnit
 from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
     JobActivity, ProfileCompetency
 from .forms import ManualCatalogForm, ManualCatalogItemForm
+from core.models import BaseModel, Authorities
 
 
 # ============================================================================
@@ -80,8 +82,11 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return ["function_manual/function_manual_list.html"]
 
     def get_queryset(self):
-        queryset = JobProfile.objects.select_related('administrative_unit', 'occupational_classification').filter(
-            is_active=True)
+        queryset = JobProfile.objects.select_related(
+            'administrative_unit', 
+            'occupational_classification',
+            'referential_employee__person'  # Optimización para mostrar el empleado referencial
+        ).filter(is_active=True)
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(
@@ -188,6 +193,64 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
 
         context['initial_data'] = json.dumps(initial_data, cls=DjangoJSONEncoder)
         return context
+
+
+class JobProfileAssignReferentialView(LoginRequiredMixin, View):
+    """
+    Vista AJAX para asignar un empleado referencial a un perfil ya creado.
+    """
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        return render(request, 'function_manual/modals/modal_assign_referential.html', {'profile': profile})
+
+    def post(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        employee_id = request.POST.get('employee_id')
+        try:
+            emp = Employee.objects.get(pk=employee_id)
+            profile.referential_employee = emp
+            profile.save()
+            return JsonResponse({'success': True, 'message': 'Empleado referencial asignado con éxito.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+def api_search_employee_simple(request):
+    """Búsqueda simple de empleado por cédula (sin bloqueo por partida)"""
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return JsonResponse({'success': False, 'message': 'Ingrese cédula'})
+    
+    try:
+        emp = Employee.objects.select_related('person').get(person__document_number=q, is_active=True)
+        
+        # Check photo URL safely
+        photo_url = None
+        if emp.person.photo:
+            try:
+                photo_url = emp.person.photo.url
+            except Exception:
+                photo_url = None
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'id': emp.id,
+                'full_name': str(emp.person),
+                'photo': photo_url,
+                'email': emp.person.email or 'Sin email'
+            }
+        })
+    except Employee.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Empleado no encontrado o inactivo'})
+    except Employee.MultipleObjectsReturned:
+        return JsonResponse({'success': False, 'message': 'Error de datos: Cédula duplicada en sistema'})
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc()) # Print to server console too
+        return JsonResponse({'success': False, 'message': f'Error del servidor: {str(e)}'})
+
 
 
 # ============================================================================
@@ -642,3 +705,61 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
 
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+class JobProfileLegalizeView(LoginRequiredMixin, View):
+    """Vista para legalizar (firmas) el perfil de puesto"""
+
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        authorities = Authorities.objects.filter(is_active=True)
+        return render(request, 'function_manual/modals/modal_legalize_profile.html', {
+            'profile': profile,
+            'authorities': authorities
+        })
+
+    def post(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        try:
+            profile.prepared_by_id = request.POST.get('prepared_by') or None
+            profile.reviewed_by_id = request.POST.get('reviewed_by') or None
+            profile.approved_by_id = request.POST.get('approved_by') or None
+            profile.save()
+            
+            return JsonResponse({'success': True, 'message': 'Firmas de legalización actualizadas correctamente.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+class JobProfileUploadLegalizedView(LoginRequiredMixin, View):
+    """Sube el archivo PDF legalizado"""
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        return render(request, 'function_manual/modals/modal_upload_legalized.html', {'profile': profile})
+
+    def post(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        if 'legalized_document' in request.FILES:
+            profile.legalized_document = request.FILES['legalized_document']
+            profile.save()
+            return JsonResponse({'success': True, 'message': 'Archivo subido correctamente.'})
+        return JsonResponse({'success': False, 'message': 'No se recibió ningún archivo.'}, status=400)
+
+
+class JobProfileDetailModalView(LoginRequiredMixin, View):
+    """Muestra el detalle del perfil y opción para imprimir"""
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile.objects.select_related(
+            'administrative_unit', 'occupational_classification', 'referential_employee__person',
+            'prepared_by', 'reviewed_by', 'approved_by'
+        ).prefetch_related('activities', 'competencies'), pk=pk)
+        
+        return render(request, 'function_manual/modals/modal_profile_detail.html', {'profile': profile})
+
+
+class JobProfilePrintView(LoginRequiredMixin, View):
+    """Placeholder para impresión de perfil (se puede implementar con WeasyPrint luego)"""
+    def get(self, request, pk):
+        # En una implementación real, esto retornaría un PDF.
+        # Por ahora redirigimos al detalle o retornamos un mensaje.
+        return JsonResponse({'success': False, 'message': 'La generación de PDF está en construcción.'})
