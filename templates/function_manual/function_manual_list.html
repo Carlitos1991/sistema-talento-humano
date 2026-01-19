@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Perfiles de Puestos | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div id="profileApp" v-cloak
+         data-url-table="{% url 'function_manual:profile_list' %}">
+
+        <!-- 1. Header estilo SIGETH -->
+        <div class="header-card">
+            <div>
+                <h1>Manual de Funciones</h1>
+                <p>Administración y Clasificación de Perfiles de Puestos Institucionales.</p>
+            </div>
+            {% if perms.function_manual.add_jobprofile %}
+                <a href="{% url 'function_manual:profile_create' %}" class="btn btn-create">
+                    <i class="fas fa-plus"></i> Nuevo Perfil
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- 2. Estadísticas Dinámicas -->
+        <div class="stats-row">
+            <div class="stat-card color-one">
+                <div class="stat-left">
+                    <h3>Total Perfiles</h3>
+                    <div class="number">{{ stats_total|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-address-card stat-icon"></i>
+            </div>
+
+            <div class="stat-card color-two">
+                <div class="stat-left">
+                    <h3>Clasificados</h3>
+                    <div class="number">{{ stats_classified|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-check-double stat-icon"></i>
+            </div>
+
+            <div class="stat-card color-three">
+                <div class="stat-left">
+                    <h3>Sin Clasificar</h3>
+                    <div class="number">{{ stats_pending|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
+            </div>
+
+            <div class="stat-card color-four">
+                <div class="stat-left">
+                    <h3>Perfiles Activos</h3>
+                    <div class="number">{{ stats_active|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-user-gear stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- 3. Contenedor de Tabla con Buscador -->
+        <div class="card">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" v-model="searchQuery" @input="debounceSearch"
+                           class="input-field" placeholder="Buscar por cargo o unidad...">  
+                </div>
+            </div>
+
+            <div class="table-container" id="tablePartialContainer">
+                {% include 'function_manual/partials/partial_function_manual_table.html' %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}

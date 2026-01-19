@@ -1,0 +1,62 @@
+<table class="data-table">
+    <thead>
+        <tr>
+            <th width="10%">Código</th>
+            <th width="30%">Denominación del Puesto</th>
+            <th width="25%">Unidad Administrativa</th>
+            <th width="15%">Clasificación</th>
+            <th width="10%">RMU</th>
+            <th width="10%" class="text-center">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for profile in profiles %}
+        <tr>
+            <td><strong>{{ profile.position_code|default:"---" }}</strong></td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div>
+                        <span class="font-weight-700">{{ profile.specific_job_title }}</span><br>
+                        <small class="text-muted">Ref: {{ profile.referential_employee.person.get_full_name|default:"Vacante" }}</small>
+                    </div>
+                </div>
+            </td>
+            <td>{{ profile.administrative_unit.name }}</td>
+            <td>
+                {% if profile.occupational_classification %}
+                    <span class="status-badge neutral">
+                        {{ profile.occupational_classification.occupational_group }}
+                    </span>
+                {% else %}
+                    <span class="status-badge inactive">Pendiente</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="text-primary-bold">
+                    ${{ profile.occupational_classification.remuneration|default:"0.00" }}
+                </span>
+            </td>
+            <td class="text-center">
+                <div class="actions-wrapper">
+                    <a href="{% url 'function_manual:profile_update' profile.id %}"
+                       class="btn-views-action" title="Editar Perfil">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </a>
+                    <button class="btn-list-action" title="Imprimir PDF" @click="printProfile({{ profile.id }})">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6">
+                <div class="no-results-content">
+                    <i class="fa-solid fa-folder-open no-results-icon"></i>
+                    <p class="no-results-text">No se encontraron perfiles de puestos.</p>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

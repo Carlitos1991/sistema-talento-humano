@@ -19,6 +19,7 @@ class OrganizationalLevel(BaseModel):
 
 
 class AdministrativeUnit(BaseModel):
+    objects = None
     level = models.ForeignKey(
         OrganizationalLevel,
         on_delete=models.PROTECT,

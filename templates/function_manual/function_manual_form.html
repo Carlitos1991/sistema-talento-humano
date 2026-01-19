@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div id="profileFormApp" v-cloak
+         data-is-edit="{% if form.instance.pk %}true{% else %}false{% endif %}"
+         data-url-units="{% url 'function_manual:api_units_root' %}"
+         data-url-next-code="{% url 'function_manual:api_next_code' 0 %}"
+         data-url-matrix="{% url 'function_manual:matrix_list' %}"
+         data-url-valuation-nodes="{% url 'function_manual:api_valuation_nodes' %}">
+
+
+        <!-- HEADER CON STEPPER -->
+        <div class="header-card">
+            <div class="wizard-header-info">
+                <h1>[[ isEdit ? 'Editar Perfil' : 'Nuevo Perfil de Puesto' ]]</h1>
+                <p>Paso [[ currentStep ]]: [[ stepLabels[currentStep-1] ]]</p>
+            </div>
+
+            <!-- Stepper Visual -->
+            <div class="wizard-stepper">
+                <div v-for="step in 4" :key="step" class="step-item"
+                     :class="{ 'active': currentStep === step, 'completed': currentStep > step }">
+                    <div class="step-dot">[[ step ]]</div>
+                </div>
+            </div>
+        </div>
+
+        <form @submit.prevent="submitForm" class="wizard-container">
+            {% csrf_token %}
+
+            <!-- PASO 1: ESTRUCTURA E IDENTIFICACIÓN -->
+            <section v-show="currentStep === 1" class="wizard-step-content">
+                <div class="form-section-card">
+                    <div class="section-title"><i class="fa-solid fa-sitemap"></i> Ubicación Organizacional</div>
+                    <div class="unit-dynamic-grid">
+                        <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
+                            <label class="form-label">[[ getLevelLabel(index) ]]</label>
+                            <select class="form-control select2-unit" :data-index="index"
+                                    v-model="selectedUnits[index]">
+                                <option value="">Seleccione una opción...</option>
+                                <option v-for="unit in level.options" :key="unit.id" :value="unit.id">[[ unit.name ]]
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fa-solid fa-id-card"></i> Identificación</div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label">Código Posicional</label>
+                            <input type="text" v-model="formData.position_code" class="form-control bg-readonly"
+                                   readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Denominación Específica</label>
+                            <input type="text" v-model="formData.specific_job_title" class="form-control" required
+                                   placeholder="Ej: Analista de Sistemas 1">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section v-show="currentStep === 2" class="wizard-step-content">
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-diagram-predecessor"></i>
+                        Valoración Normativa (Proceso de Clasificación)
+                    </div>
+
+                    <div class="valuation-chain-container">
+                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box">
+                            <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
+                            <select class="form-control select2-valuation"
+                                    :data-index="index"
+                                    v-model="selectedNodes[index]">
+                                <option value="">Seleccione una opción...</option>
+                                <option v-for="node in level.options" :key="node.id" :value="node.id">
+                                    [[ node.name ]]
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- RESULTADO FINAL AUTOMÁTICO -->
+                    <div class="classification-result-banner mt-4" v-if="matchResult">
+                        <div class="match-icon"><i class="fa-solid fa-award"></i></div>
+                        <div class="match-details">
+                            <div class="match-group">[[ matchResult.group ]]</div>
+                            <div class="match-label">GRADO ESCALA: [[ matchResult.grade ]]</div>
+                        </div>
+                        <div class="match-salary">
+                            <small>RMU ACORDADO:</small>
+                            <span>$[[ matchResult.rmu ]]</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PASO 3: FUNCIONES / ACTIVIDADES -->
+            <section v-show="currentStep === 3" class="wizard-step-content">
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-list-check"></i> Actividades Esenciales
+                        <button type="button" class="btn-add-inline" @click="addActivity"><i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <table class="table-clean">
+                        <thead>
+                        <tr>
+                            <th width="20%">Verbo</th>
+                            <th width="50%">Descripción de la Actividad</th>
+                            <th width="20%">Frecuencia</th>
+                            <th width="10%"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="(act, idx) in activities" :key="idx">
+                            <td>
+                                <select v-model="act.action_verb" class="form-control">
+                                    <option v-for="v in catalogs.verbs" :value="v.id">[[ v.name ]]</option>
+                                </select>
+                            </td>
+                            <td><textarea v-model="act.description" class="form-control-inline" rows="1"></textarea>
+                            </td>
+                            <td>
+                                <select v-model="act.frequency" class="form-control">
+                                    <option v-for="f in catalogs.frequency" :value="f.id">[[ f.name ]]</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button type="button" class="btn-remove" @click="removeActivity(idx)">&times;</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- PASO 4: COMPLETAR PERFIL -->
+            <section v-show="currentStep === 4" class="wizard-step-content">
+                <div class="form-section-card">
+                    <div class="section-title"><i class="fa-solid fa-feather"></i> Definiciones Finales</div>
+                    <div class="form-group">
+                        <label class="form-label">Misión del Puesto</label>
+                        <textarea v-model="formData.mission" class="form-control" rows="3"></textarea>
+                        <small class="form-hint">[[ missionPreview ]]</small>
+                    </div>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label">Área de Conocimiento</label>
+                            <textarea v-model="formData.knowledge_area" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Especificidad de la Experiencia</label>
+                            <textarea v-model="formData.experience_details" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NAVEGACIÓN DEL WIZARD -->
+            <div class="modal-footer-fixed">
+                <button v-if="currentStep > 1" type="button" class="btn btn-cancel" @click="currentStep--">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+
+                <button v-if="currentStep < 4" type="button" class="btn btn-primary" @click="currentStep++">
+                    Siguiente <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <button v-if="currentStep === 4" type="submit" class="btn btn-save" :disabled="loading">
+                    <i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar
+                </button>
+            </div>
+        </form>
+
+    </div>
+    <script id="catalogs-data" type="application/json">
+    {{ catalogs_json|safe }}
+    </script>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}

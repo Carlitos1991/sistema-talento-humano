@@ -51,32 +51,6 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-/* Estilos adicionales para el modal de competencias */
-#competency-modal-app .modal-container {
-    max-width: 600px;
-    width: 90%;
-}
-
-#competency-modal-app .form-group {
-    margin-bottom: 1rem;
-}
-
-#competency-modal-app .grid-2-cols {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-#competency-modal-app .mt-3 {
-    margin-top: 1rem;
-}
-
-/* Estilos para modal de items - más ancho con dos columnas */
-#manual-item-form-app .modal-container {
-    max-width: 800px;
-    width: 90%;
-}
-
 #manual-item-form-app .form-row-2-cols {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -85,18 +59,6 @@ input:checked + .slider:before {
 
 #manual-item-form-app .form-group {
     margin-bottom: 1rem;
-}
-
-/* Estilos para modal de lista de items - tabla sin scroll horizontal */
-#manual-item-list-app .modal-container-medium {
-    max-width: 900px;
-    width: 90%;
-}
-
-#manual-item-list-app .modal-body {
-    padding: 1.5rem 2rem;
-    background-color: #f8fafc;
-    overflow-x: hidden;
 }
 
 #manual-item-list-app .table-wrapper-items {
@@ -157,4 +119,423 @@ input:checked + .slider:before {
 #manual-item-list-app .table-items tbody td:nth-child(4) {
     width: 20%;
     text-align: center;
+}
+
+/* --- REFINAMIENTO DE UNIDADES ORGANIZACIONALES --- */
+
+/* Contenedor en Grid Controlado */
+.unit-dynamic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+    background: #fcfcfc;
+    border-radius: 12px;
+}
+
+/* Animación de entrada para nuevos niveles */
+.unit-level-box {
+    animation: fadeInSlide 0.4s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Personalización Extrema de Select2 para SIGETH */
+.select2-container--default .select2-selection--single {
+    height: 48px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: all 0.2s ease !important;
+    padding-left: 10px;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 4px rgba(40, 175, 35, 0.1) !important;
+}
+
+.select2-container--default .select2-selection__rendered {
+    color: #1e293b !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+}
+
+.select2-container--default .select2-selection__arrow {
+    height: 46px !important;
+    right: 12px !important;
+}
+
+/* Estilo para los niveles ya seleccionados (ReadOnly visual) */
+.unit-level-box.is-selected-parent {
+    opacity: 0.85;
+}
+
+.unit-level-box.is-selected-parent label {
+    color: var(--accent-color);
+}
+
+.unit-dynamic-grid {
+    min-height: 100px; /* Evita que el card colapse totalmente */
+    transition: all 0.3s ease;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: flex-end;
+}
+
+/* Estilo para que el combo que falta por seleccionar se vea diferente (opcional) */
+.unit-level-box:last-child select + .select2-container .select2-selection {
+    border-style: solid;
+    border-color: var(--accent-color);
+}
+
+/* --- WIZARD STYLES --- */
+.wizard-stepper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    opacity: 0.4;
+    transition: all 0.3s;
+}
+
+.step-item.active {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.step-item.completed {
+    opacity: 0.8;
+    color: var(--accent-color);
+}
+
+.step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    border: 2px solid transparent;
+}
+
+.step-item.active .step-dot {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Banner de Resultado Clasificación */
+.classification-result-banner {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f0fdf4;
+    border: 2px solid #bbf7d0;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-around;
+    animation: pulseMatch 2s infinite;
+}
+
+@keyframes pulseMatch {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 175, 35, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(40, 175, 35, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 175, 35, 0);
+    }
+}
+
+.table-clean {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.form-control-inline {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px;
+    background: transparent;
+}
+
+/* Banner de resultado estilo Premium */
+.classification-result-banner {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #0ba542 0%, #008a2e 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 16px;
+    gap: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(11, 165, 66, 0.3);
+    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.match-icon {
+    font-size: 2.5rem;
+}
+
+.match-group {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.match-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.match-salary {
+    margin-left: auto;
+    text-align: right;
+}
+
+.match-salary span {
+    display: block;
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+.readonly-styled-box {
+    background: #f1f5f9;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-weight: 700;
+    color: var(--primary-color);
+    min-height: 45px;
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.link-drilldown {
+    color: var(--primary-color);
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.link-drilldown:hover {
+    color: var(--accent-color);
+    transform: translateX(5px);
+}
+
+.btn-back-step {
+    margin-top: 1.5rem;
+    background: #64748b;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.breadcrumb-premium {
+    display: flex;
+    gap: 10px;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.breadcrumb-premium a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.current-parent {
+    color: var(--accent-color);
+    font-weight: 800;
+}
+
+.valuation-chain-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
+}
+
+.valuation-node-box {
+    animation: fadeInRight 0.3s ease-out forwards;
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* --- ESTILOS NAVEGACIÓN JERÁRQUICA --- */
+
+.breadcrumb-premium {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-premium a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.breadcrumb-premium a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.breadcrumb-premium .sep {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.link-drilldown {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    color: var(--primary-color);
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.link-drilldown:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(8px);
+}
+
+.result-box {
+    background: #ecfdf5;
+    border: 1px solid #10b981;
+    padding: 8px 15px;
+    border-radius: 8px;
+    color: #065f46;
+}
+
+.result-box small {
+    display: block;
+    font-weight: 500;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Bloqueo de scroll al fondo */
+body.no-scroll {
+    overflow: hidden !important;
+}
+
+.modal {
+    position: fixed !important;
+    inset: 0 !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999 !important;
+    padding: 20px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* 2. ESTADO ACTIVO */
+.modal.is-active {
+    display: flex !important;
+    visibility: visible;
+    opacity: 1;
+}
+
+/* 3. EL OVERLAY (Fondo oscuro y desenfoque) */
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.7); /* Azul pizarra profundo */
+    backdrop-filter: blur(5px); /* EL BLUR SOLO AQUÍ */
+    z-index: -1;
+}
+
+/* 4. LA TARJETA DEL MODAL (Nítida) */
+.modal-container {
+    background: #ffffff;
+    width: 100%;
+    max-width: 550px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.is-active .modal-container {
+    transform: translateY(0);
+}
+
+/* Bloqueo de scroll al fondo */
+body.no-scroll {
+    overflow: hidden !important;
 }

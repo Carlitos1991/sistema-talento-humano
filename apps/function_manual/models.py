@@ -14,6 +14,7 @@ class ManualCatalog(BaseModel):
     Catálogos genéricos para el módulo de manual de funciones.
     Ejemplos: 'Niveles de Complejidad', 'Roles del Puesto', 'Verbos de Acción'.
     """
+    objects = None
     name = models.CharField(max_length=255, verbose_name="Nombre del Catálogo")
     code = models.CharField(max_length=100, unique=True, verbose_name="Código Interno")
     description = models.TextField(blank=True, verbose_name="Descripción")
@@ -31,6 +32,7 @@ class ManualCatalogItem(BaseModel):
     Items individuales de cada catálogo.
     Ejemplo: Bajo, Medio, Alto dentro del catálogo de 'Niveles de Complejidad'.
     """
+    objects = None
     catalog = models.ForeignKey(
         ManualCatalog,
         on_delete=models.CASCADE,
@@ -60,16 +62,30 @@ class OccupationalMatrix(BaseModel):
     """
     Representa la matriz de clasificación de los Art. 19 y 20 de la norma.
     """
+    objects = None
     occupational_group = models.CharField(max_length=100, verbose_name="Grupo Ocupacional (Ej: SP1)")
     grade = models.PositiveIntegerField(verbose_name="Grado de la Escala")
     remuneration = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="R.M.U.")
 
-    # related_name único para evitar colisiones
     required_role = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'JOB_ROLES'},
         related_name='matrix_by_roles',
         verbose_name="Rol del Puesto"
+    )
+    required_decision = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        limit_choices_to={'catalog__code': 'DECISION_LEVELS'},
+        related_name='matrix_by_decisions',
+        verbose_name="Nivel de Decisiones",
+        null=True, blank=True  # Temporalmente opcionales para la migración
+    )
+    required_impact = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        limit_choices_to={'catalog__code': 'IMPACT_LEVELS'},
+        related_name='matrix_by_impact',
+        verbose_name="Nivel de Impacto",
+        null=True, blank=True
     )
     complexity_level = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
@@ -103,6 +119,7 @@ class JobProfile(BaseModel):
     """
     Modelo principal para el Perfil de Puesto normativa 2025.
     """
+    objects = None
     position_code = models.CharField(max_length=50, blank=True, null=True, unique=True,
                                      verbose_name="Código Posicional")
     specific_job_title = models.CharField(max_length=255, verbose_name="Cargo Específico")
@@ -206,6 +223,7 @@ class Competency(BaseModel):
     """
     Diccionario maestro de competencias técnicas y conductuales.
     """
+    objects = None
     COMPETENCY_TYPES = (
         ('TECHNICAL', 'Técnica'),
         ('BEHAVIORAL', 'Conductual'),
@@ -241,3 +259,58 @@ class ProfileCompetency(models.Model):
     class Meta:
         verbose_name = "Competencia del Perfil"
         verbose_name_plural = "Competencias del Perfil"
+
+
+class ValuationNode(BaseModel):
+    """
+    Representa un nodo en la estructura jerárquica de valoración.
+    Niveles: 1.Rol -> 2.Instrucción -> 3.Experiencia -> 4.Decisiones
+            -> 5.Impacto -> 6.Complejidad -> 7.Resultado (Clasificación)
+    """
+
+    objects = None
+
+    class NodeType(models.TextChoices):
+        ROLE = 'ROLE', 'Rol de Puesto'
+        INSTRUCTION = 'INSTRUCTION', 'Instrucción Formal'
+        EXPERIENCE = 'EXPERIENCE', 'Experiencia'
+        DECISION = 'DECISION', 'Nivel de Decisiones'
+        IMPACT = 'IMPACT', 'Nivel de Impacto'
+        COMPLEXITY = 'COMPLEXITY', 'Nivel de Complejidad'
+        RESULT = 'RESULT', 'Grupo Ocupacional (Resultado)'
+
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='children',
+        verbose_name="Nodo Padre"
+    )
+    node_type = models.CharField(
+        max_length=20, choices=NodeType.choices,
+        verbose_name="Tipo de Nivel"
+    )
+
+    # El valor real (vinculado a tus catálogos)
+    catalog_item = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        null=True, blank=True, verbose_name="Valor del Catálogo"
+    )
+    name_extra = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Descripción personalizada"
+    )
+
+    # Solo se llena en el último nivel (RESULT) para dar el grado y sueldo
+    occupational_classification = models.ForeignKey(
+        OccupationalMatrix, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name="Clasificación Salarial"
+    )
+
+    class Meta:
+        verbose_name = "Nodo de Valoración"
+        verbose_name_plural = "Estructura de Valoración"
+        ordering = ['node_type', 'catalog_item__order']
+
+    def __str__(self):
+        return f"{self.get_node_type_display()}: {self.catalog_item.name if self.catalog_item else 'Resultado'}"

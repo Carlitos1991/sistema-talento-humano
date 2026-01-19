@@ -1,0 +1,84 @@
+<!-- templates/function_manual/valuation_structure_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div id="valuationApp" v-cloak
+         data-parent-id="{{ parent_node.id|default:'' }}"
+         data-next-type="{{ next_node_type }}"
+         data-url-save="{% url 'function_manual:api_node_save' %}"
+         data-url-detail-base="/function-manual/api/valuation-nodes/detail/0/">
+
+        <div class="header-card">
+            <div>
+                <h1>Configuración de Valoración</h1>
+                <nav class="breadcrumb-premium">
+                    <a href="{% url 'function_manual:matrix_list' %}">Estructura</a>
+                    {% for bc in breadcrumbs %}
+                        <span class="sep">/</span>
+                        <a href="?parent={{ bc.id }}">{{ bc.catalog_item.name|default:bc.name_extra }}</a>
+                    {% endfor %}
+                </nav>
+            </div>
+            <button class="btn btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> Nuevo [[ nextLevelName ]]
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th width="15%">Código</th>
+                        <th width="55%">Nombre / Valor</th>
+                        <th width="20%">Tipo</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for node in nodes %}
+                        <tr>
+                            <td><strong>{{ node.catalog_item.code|default:"---" }}</strong></td>
+                            <td>
+                                {% if node.node_type != 'RESULT' %}
+                                    <a href="?parent={{ node.id }}" class="link-drilldown">
+                                        {{ node.catalog_item.name|default:node.name_extra }}
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </a>
+                                {% else %}
+                                    <div class="result-box">
+                                        <strong>{{ node.occupational_classification.occupational_group }}</strong>
+                                        <small>RMU: ${{ node.occupational_classification.remuneration }}</small>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td><span class="status-badge neutral">{{ node.get_node_type_display }}</span></td>
+                            <td class="text-center">
+                                <div class="actions-wrapper">
+                                    <!-- BOTÓN EDITAR -->
+                                    <button class="btn-views-action" title="Editar" @click="editNode({{ node.id }})">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn-delete-action" title="Eliminar"><i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if parent_node %}
+                <button class="btn btn-cancel mt-3" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+            {% endif %}
+        </div>
+        {% include 'function_manual/modals/modal_valuation_node_form.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/function_manual.js' %}"></script>
+{% endblock %}
