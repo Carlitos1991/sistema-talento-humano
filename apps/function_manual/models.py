@@ -42,10 +42,14 @@ class ManualCatalogItem(BaseModel):
     name = models.CharField(max_length=255, verbose_name="Nombre del Item")
     code = models.CharField(max_length=100, verbose_name="Código Técnico")
     description = models.TextField(blank=True, null=True, verbose_name="Descripción/Observación")
-    target_groups = models.CharField(
-        max_length=255,
+    target_role = models.ForeignKey(
+        'ValuationNode',
+        on_delete=models.SET_NULL,
         blank=True,
-        verbose_name="Grupos Ocupacionales (Separados por coma)"
+        null=True,
+        related_name='catalog_items',
+        limit_choices_to={'node_type': 'ROLE'},
+        verbose_name="Rol Permitido (Estructura de Valoración)"
     )
 
     class Meta:

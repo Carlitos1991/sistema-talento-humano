@@ -314,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const result = await response.json();
                         if (result.success) {
                             this.form = result.data;
+                            if (!this.form.target_roles) this.form.target_roles = [];
                             this.isVisible = true;
                         }
                     } catch (error) {
@@ -508,8 +509,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     isVisible: false, isEditing: false, isFromList: false,
                     parentCatalogId: null, parentCatalogName: '', currentId: null,
-                    form: {name: '', code: ''}, errors: {}
+                    form: {name: '', code: '', description: '', target_role: '', order: 0},
+                    availableRoles: [],
+                    errors: {}
                 }
+            },
+            async mounted() {
+                // Cargar roles disponibles al iniciar la app
+                await this.loadAvailableRoles();
             },
             computed: {
                 modalTitle() {
@@ -523,20 +530,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             methods: {
+                async loadAvailableRoles() {
+                    try {
+                        const res = await fetch('/function_manual/api/roles/');
+                        const data = await res.json();
+                        if (data.success) {
+                            this.availableRoles = data.data;
+                        }
+                    } catch (e) {
+                        console.error('Error loading roles:', e);
+                    }
+                },
                 openCreate(catalogId, catalogName, fromList = false) {
                     this.isEditing = false;
                     this.currentId = null;
                     this.parentCatalogId = catalogId;
                     this.parentCatalogName = catalogName;
                     this.isFromList = fromList;
-                    this.form = {name: '', code: '', target_groups: ''};
+                    this.form = {name: '', code: '', description: '', target_role: '', order: 0};
                     this.errors = {};
                     this.isVisible = true;
 
-                    // Inicializar Select2 si aplica
                     this.$nextTick(() => {
-                        this.initSelect2Multi();
-                        $('#id_roles').val(null).trigger('change');
+                        this.initSelect2();
                     });
                 },
                 async openEdit(itemId, fromList = false) {
@@ -548,53 +564,52 @@ document.addEventListener('DOMContentLoaded', () => {
                         const res = await fetch(`/function_manual/catalogs/items/detail/${itemId}/`);
                         const result = await res.json();
                         if (result.success) {
-                            this.form = result.data;
+                            this.form = {
+                                name: result.data.name || '',
+                                code: result.data.code || '',
+                                description: result.data.description || '',
+                                target_role: result.data.target_role || '',
+                                order: result.data.order || 0,
+                                catalog_id: result.data.catalog_id
+                            };
                             this.parentCatalogId = result.data.catalog_id;
-                            // Intentar recuperar el nombre del catálogo si no lo tenemos (para saber si es Verbo)
                             if(result.data.catalog_name) this.parentCatalogName = result.data.catalog_name;
 
                             this.isVisible = true;
 
                             this.$nextTick(() => {
-                                this.initSelect2Multi();
-                                // Preseleccionar valores en combo
-                                if (this.isVerbCatalog && this.form.target_groups) {
-                                  // Separar por comas e intentar asignar
-                                  const ids = this.form.target_groups.split(',').filter(x => !isNaN(x));
-                                  if(ids.length > 0) {
-                                      $('#id_roles').val(ids).trigger('change');
-                                  } else {
-                                      $('#id_roles').val(null).trigger('change');
-                                  }
-                                }
+                                this.initSelect2();
                             });
                         }
                     } catch (e) {
                         Swal.fire('Error', 'No se pudieron cargar datos', 'error');
                     }
                 },
-                initSelect2Multi() {
+                initSelect2() {
                     const self = this;
-                    if ($('#id_roles').length) {
-                         $('#id_roles').select2({
+                    if ($('#id_target_role').length) {
+                        // Destruir instancia previa si existe
+                        if ($('#id_target_role').hasClass('select2-hidden-accessible')) {
+                            $('#id_target_role').select2('destroy');
+                        }
+                        
+                        // Inicializar Select2 sin placeholder (Vue maneja las opciones)
+                        $('#id_target_role').select2({
                             width: '100%',
-                            placeholder: 'Seleccione Roles compatibles',
-                            allowClear: true,
-                            multiple: true,
-                            dropdownParent: $('#item-modal') // Importante para que funcione en modal
-                        }).off('change').on('change', function() {
-                             // Actualizar target_groups cuando cambia el select
-                             const val = $(this).val(); 
-                             // val es un array de strings ["1", "5"]
-                             if(val && val.length > 0) {
-                                self.form.target_groups = val.join(',');
-                             } else {
-                                self.form.target_groups = '';
-                             }
+                            dropdownParent: $('#item-modal')
+                        }).off('change.vue').on('change.vue', function() {
+                            const newValue = $(this).val();
+                            self.form.target_role = newValue || '';
                         });
                     }
                 },
                 closeModal() {
+                    // Destruir Select2 antes de cerrar
+                    if ($('#id_target_role').length && $('#id_target_role').hasClass('select2-hidden-accessible')) {
+                        $('#id_target_role').select2('destroy');
+                    }
+                    this.form = {name: '', code: '', description: '', target_role: '', order: 0};
+                    this.errors = {};
                     this.isVisible = false;
                 },
                 async submitItem() {
@@ -604,7 +619,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.append('name', this.form.name);
                     formData.append('code', this.form.code);
                     formData.append('description', this.form.description || '');
-                    formData.append('target_groups', this.form.target_groups || '');
+                    if (this.form.target_role) {
+                        formData.append('target_role', this.form.target_role);
+                    }
                     formData.append('order', this.form.order || 0);
                     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 

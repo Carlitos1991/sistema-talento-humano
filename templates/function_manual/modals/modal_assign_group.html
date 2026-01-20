@@ -1,7 +1,7 @@
 <!-- Modal para Asignar Grupo Ocupacional -->
 <div id="assign-group-app" v-cloak>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }">
-        <form @submit.prevent="submitAssignment" class="modal-container animate-scale-in" style="max-width: 500px;">
+        <form @submit.prevent="submitAssignment" class="modal-container animate-scale-in" style="max-width: 700px;">
             {% csrf_token %}
             <div class="modal-header modal-header-gradient">
                 <h3 class="modal-title text-white">
@@ -14,27 +14,47 @@
 
             <div class="modal-body modal-body-custom">
                 <p class="text-sm text-gray-600 mb-4">
-                    Seleccione el grado y grupo ocupacional resultante para este perfil.
-                    Esto habilitará la opción de legalización.
+                    Complete la cadena de valoración para determinar el grupo ocupacional y grado correspondiente.
                 </p>
 
-                <div class="form-group">
-                    <label class="form-label font-bold">Grupo Ocupacional / Escala (*)</label>
-                    <select class="form-control select2-group" style="width: 100%;" required>
-                        <option value="">Seleccione...</option>
-                        <!-- Las opciones se cargarán vía JS/Backend o inyectadas -->
-                        {% for item in occupational_matrix_list %}
-                            <option value="{{ item.id }}">
-                                {{ item.occupational_group }} - Grado {{ item.grade }} - RMU ${{ item.remuneration }}
+                <!-- Cadena de valoración -->
+                <div class="valuation-chain-container mb-4">
+                    <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box">
+                        <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
+                        <select class="form-control select2-valuation-assign"
+                                :data-index="index"
+                                v-model="selectedNodes[index]"
+                                required>
+                            <option value="">Seleccione una opción...</option>
+                            <option v-for="node in level.options" :key="node.id" :value="node.id">
+                                [[ node.name ]]
                             </option>
-                        {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Resultado: Grupos Ocupacionales Filtrados -->
+                <div v-if="filteredMatrix.length > 0" class="form-group">
+                    <label class="form-label font-bold">
+                        <i class="fa-solid fa-award"></i> Grupo Ocupacional / Escala (*)
+                    </label>
+                    <select class="form-control select2-group" v-model="selectedGroup" style="width: 100%;" required>
+                        <option value="">Seleccione...</option>
+                        <option v-for="item in filteredMatrix" :key="item.id" :value="item.id">
+                            [[ item.occupational_group ]] - Grado [[ item.grade ]] - RMU $[[ item.remuneration ]]
+                        </option>
                     </select>
+                </div>
+
+                <div v-else-if="selectedNodes.length >= 6 && selectedNodes[5]" class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    No se encontraron grupos ocupacionales para la combinación seleccionada.
                 </div>
             </div>
 
             <div class="modal-footer modal-footer-spaced">
                 <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save" :disabled="loading">
+                <button type="submit" class="btn-save" :disabled="loading || !selectedGroup">
                     <span v-if="loading"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
                     <span v-else><i class="fas fa-check"></i> Asignar</span>
                 </button>
@@ -43,8 +63,12 @@
     </div>
 </div>
 
+<!-- Script data -->
+<script id="matrix-data" type="application/json">
+{{ occupational_matrix_json|default:"[]"|safe }}
+</script>
+
 <script>
-    // Pequeña app Vue para manejar este modal específico
     document.addEventListener('DOMContentLoaded', () => {
         if(document.getElementById('assign-group-app')) {
             const {createApp} = Vue;
@@ -55,33 +79,224 @@
                         isVisible: false,
                         loading: false,
                         profileId: null,
-                        selectedGroup: null
+                        selectedGroup: null,
+                        allMatrix: [],
+                        filteredMatrix: [],
+                        // Lógica de valoración en cadena
+                        valuationLevels: [],
+                        selectedNodes: []
                     }
                 },
                 mounted() {
-                    // Exponer globalmente para ser llamada desde el botón onclick
-                    window.openAssignGroupModal = (id) => {
+                    const tag = document.getElementById('matrix-data');
+                    if (tag) {
+                        try {
+                            this.allMatrix = JSON.parse(tag.textContent);
+                        } catch(e) { 
+                            console.error("Error parsing matrix data", e); 
+                        }
+                    }
+
+                    // Exponer globalmente
+                    window.openAssignGroupModal = async (id) => {
                         this.profileId = id;
                         this.selectedGroup = null;
+                        this.valuationLevels = [];
+                        this.selectedNodes = [];
+                        this.filteredMatrix = [];
                         this.isVisible = true;
+                        
+                        // Cargar el primer nivel de valoración (ROL)
+                        await this.fetchValuationLevel(null);
+                        
                         this.$nextTick(() => {
-                            $('.select2-group').val(null).trigger('change');
+                            this.initSelect2Valuation();
                         });
                     };
-
-                    // Init Select2
-                    const self = this;
-                    $('.select2-group').select2({
-                        dropdownParent: $('#assign-group-app .modal-container'),
-                        width: '100%',
-                        placeholder: 'Seleccione Grupo...'
-                    }).on('change', function() {
-                        self.selectedGroup = $(this).val();
-                    });
                 },
                 methods: {
                     closeModal() {
                         this.isVisible = false;
+                        this.valuationLevels = [];
+                        this.selectedNodes = [];
+                        this.filteredMatrix = [];
+                    },
+                    async fetchValuationLevel(parentId) {
+                        const url = parentId 
+                            ? `/function_manual/api/valuation-nodes/?parent=${parentId}` 
+                            : '/function_manual/api/valuation-nodes/';
+                        
+                        try {
+                            const res = await fetch(url);
+                            const data = await res.json();
+                            if (data.length > 0) {
+                                this.valuationLevels.push({
+                                    type: data[0].type, 
+                                    options: data
+                                });
+                                this.selectedNodes.push('');
+                                
+                                this.$nextTick(() => {
+                                    this.initSelect2Valuation();
+                                });
+                            }
+                        } catch(e) {
+                            console.error('Error fetching valuation level:', e);
+                        }
+                    },
+                    async handleNodeChange(index) {
+                        const id = this.selectedNodes[index];
+                        
+                        // Truncar niveles posteriores
+                        this.valuationLevels = this.valuationLevels.slice(0, index + 1);
+                        this.selectedNodes = this.selectedNodes.slice(0, index + 1);
+                        this.filteredMatrix = [];
+                        this.selectedGroup = null;
+
+                        if (id) {
+                            const sel = this.valuationLevels[index].options.find(n => n.id == id);
+                            
+                            // Si es RESULT, mostrar las opciones filtradas
+                            if (sel.type === 'RESULT' && sel.classification_id) {
+                                this.selectedGroup = sel.classification_id;
+                                this.filteredMatrix = [{
+                                    id: sel.classification_id,
+                                    occupational_group: sel.classification.group,
+                                    grade: sel.classification.grade,
+                                    remuneration: sel.classification.rmu
+                                }];
+                                
+                                this.$nextTick(() => {
+                                    this.initSelect2Group();
+                                });
+                            } else {
+                                // Cargar siguiente nivel
+                                await this.fetchValuationLevel(id);
+                            }
+                        }
+                    },
+                    filterMatrixByComplexity(complexityNodeId) {
+                        // Encontrar el catalog_item_id del nodo de complejidad seleccionado
+                        const complexityNode = this.valuationLevels[5]?.options.find(n => n.id == complexityNodeId);
+                        
+                        if (complexityNode && complexityNode.catalog_item_id) {
+                            // Obtener los catalog_item_id de todos los 6 niveles
+                            const nodes = this.selectedNodes.slice(0, 6).map((nodeId, idx) => {
+                                if (!nodeId || !this.valuationLevels[idx]) return null;
+                                return this.valuationLevels[idx].options.find(n => n.id == nodeId);
+                            }).filter(Boolean);
+                            
+                            // Convertir a números todos los IDs
+                            const roleId = nodes[0]?.catalog_item_id ? parseInt(nodes[0].catalog_item_id) : null;
+                            const instructionId = nodes[1]?.catalog_item_id ? parseInt(nodes[1].catalog_item_id) : null;
+                            const experienceNode = nodes[2];
+                            const decisionId = nodes[3]?.catalog_item_id ? parseInt(nodes[3].catalog_item_id) : null;
+                            const impactId = nodes[4]?.catalog_item_id ? parseInt(nodes[4].catalog_item_id) : null;
+                            const complexityId = parseInt(complexityNode.catalog_item_id);
+                            
+                            // Calcular meses de experiencia
+                            let experienceMonths = 0;
+                            if (experienceNode && experienceNode.name_extra) {
+                                const experienceName = experienceNode.name_extra.toLowerCase();
+                                if (experienceName.includes('no requerida')) {
+                                    experienceMonths = 0;
+                                } else {
+                                    const parsed = parseInt(experienceNode.name_extra);
+                                    if (!isNaN(parsed)) {
+                                        experienceMonths = parsed;
+                                    }
+                                }
+                            }
+                            
+                            console.log('Filtros modal (convertidos a números):', {
+                                roleId,
+                                instructionId,
+                                experienceMonths,
+                                decisionId,
+                                impactId,
+                                complexityId
+                            });
+                            
+                            // Filtrar matriz - comparación numérica estricta con ===
+                            this.filteredMatrix = this.allMatrix.filter(m => {
+                                const matchRole = parseInt(m.required_role_id) === roleId;
+                                const matchInstruction = parseInt(m.minimum_instruction_id) === instructionId;
+                                const matchExperience = parseInt(m.minimum_experience_months) === experienceMonths;
+                                const matchDecision = parseInt(m.required_decision_id) === decisionId;
+                                const matchImpact = parseInt(m.required_impact_id) === impactId;
+                                const matchComplexity = parseInt(m.complexity_level_id) === complexityId;
+                                
+                                const passAll = matchRole && matchInstruction && matchExperience && 
+                                               matchDecision && matchImpact && matchComplexity;
+                                
+                                if (matchComplexity) {
+                                    console.log(`${m.occupational_group}-G${m.grade}:`, {
+                                        'R': matchRole ? '✓' : `✗ ${roleId}≠${m.required_role_id}`,
+                                        'I': matchInstruction ? '✓' : `✗ ${instructionId}≠${m.minimum_instruction_id}`,
+                                        'E': matchExperience ? '✓' : `✗ ${experienceMonths}≠${m.minimum_experience_months}`,
+                                        'D': matchDecision ? '✓' : `✗ ${decisionId}≠${m.required_decision_id}`,
+                                        'Im': matchImpact ? '✓' : `✗ ${impactId}≠${m.required_impact_id}`,
+                                        'PASA': passAll ? '✓' : '✗'
+                                    });
+                                }
+                                
+                                return passAll;
+                            });
+                            
+                            console.log('Matriz filtrada modal:', this.filteredMatrix);
+                            
+                            if (this.filteredMatrix.length === 0) {
+                                console.warn('No se encontraron registros que coincidan');
+                            }
+                        } else {
+                            console.error('No se pudo obtener catalog_item_id del nodo de complejidad');
+                        }
+                    },
+                    getValuationLabel(type) {
+                        const labels = {
+                            'ROLE': '1. Rol',
+                            'INSTRUCTION': '2. Instrucción',
+                            'EXPERIENCE': '3. Experiencia',
+                            'DECISION': '4. Decisiones',
+                            'IMPACT': '5. Impacto',
+                            'COMPLEXITY': '6. Complejidad'
+                        };
+                        return labels[type] || type;
+                    },
+                    initSelect2Valuation() {
+                        const self = this;
+                        
+                        $('.select2-valuation-assign').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) {
+                                $(this).select2('destroy');
+                            }
+                        });
+                        
+                        $('.select2-valuation-assign').select2({
+                            width: '100%',
+                            dropdownParent: $('#assign-group-app .modal-container')
+                        }).off('change.vue').on('change.vue', function() {
+                            const idx = $(this).data('index');
+                            const val = $(this).val();
+                            if (self.selectedNodes[idx] !== val) {
+                                self.selectedNodes[idx] = val;
+                                self.handleNodeChange(idx);
+                            }
+                        });
+                    },
+                    initSelect2Group() {
+                        const self = this;
+                        
+                        if ($('.select2-group').hasClass('select2-hidden-accessible')) {
+                            $('.select2-group').select2('destroy');
+                        }
+                        
+                        $('.select2-group').select2({
+                            width: '100%',
+                            dropdownParent: $('#assign-group-app .modal-container')
+                        }).off('change.vue').on('change.vue', function() {
+                            self.selectedGroup = $(this).val();
+                        });
                     },
                     async submitAssignment() {
                         if(!this.selectedGroup) {

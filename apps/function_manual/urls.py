@@ -19,6 +19,7 @@ urlpatterns = [
     path('reports/valuation-excel/', views.JobProfileValuationExcelView.as_view(), name='report_valuation_excel'),
 
     path('api/search-employee-simple/', views.api_search_employee_simple, name='api_search_employee_simple'),
+    path('api/roles/', views.api_get_available_roles, name='api_get_available_roles'),
     
     # API para asignar grupo ocupacional
     path('api/profile/assign-group/', views.AssignGroupApiView.as_view(), name='api_profile_assign_group'),

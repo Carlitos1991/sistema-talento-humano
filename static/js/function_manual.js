@@ -257,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     unitLevels: [], selectedUnits: [],
                     valuationLevels: [], selectedNodes: [], // Paso 2 Jerárquico
                     matchResult: null,
+                    filteredMatrix: [], // Grupos ocupacionales filtrados por complejidad
                     activities: [{action_verb: '', description: '', additional_knowledge: ''}],
                     catalogs: {instruction: [], decisions: [], impact: [], roles: [], verbs: [], frequency: [], competencies: []},
                     allCompetencies: [],
@@ -308,6 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 behavioralList() { return this.allCompetencies.filter(c => c.type === 'BEHAVIORAL'); },
                 transversalList() { return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL'); },
 
+                selectedMatrixItem() {
+                    if (!this.formData.occupational_classification) return null;
+                    return this.filteredMatrix.find(m => m.id == this.formData.occupational_classification);
+                },
+
                 filteredVerbs() {
                     // LÓGICA ACTUALIZADA: Filtra por ROL seleccionado (catalog_item_id)
                     // Buscamos el nivel que corresponde a 'ROLE' en la jerarquía de valoración
@@ -326,12 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentRoleId = selectedNode.catalog_item_id.toString();
 
                     return this.catalogs.verbs.filter(verb => {
-                        // Si no tiene grupos definidos o es TODOS, se muestra
-                        if (!verb.target_groups || verb.target_groups === 'TODOS') return true;
+                        // Si no tiene rol definido, se muestra
+                        if (!verb.target_role) return true;
 
-                        // target_groups ahora debe contener IDs de Roles (Ej: "12, 45")
-                        const allowed = verb.target_groups.split(',').map(s => s.trim());
-                        return allowed.includes(currentRoleId);
+                        // target_role contiene el ID de ValuationNode (ROLE)
+                        return verb.target_role.toString() === currentRoleId;
                     });
                 },
                 missionPreview() {
@@ -351,7 +356,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 isNextDisabled() {
                     if (this.currentStep === 1) return !this.hasBasicData;
-                    if (this.currentStep === 2) return !this.formData.occupational_classification;
+                    
+                    if (this.currentStep === 2) {
+                        // MODIFICACIÓN: Habilitar botón si ya se tienen los 6 primeros niveles
+                        // (Rol, Instrucción, Exp, Decisión, Impacto, Complejidad)
+                        const validNodes = this.selectedNodes.filter(n => n !== '');
+                        return validNodes.length < 6;
+                    }
+
                     if (this.currentStep === 3) {
                         if (this.activities.length < 5) return true;
                         return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
@@ -515,10 +527,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.valuationLevels = this.valuationLevels.slice(0, index + 1);
                     this.selectedNodes = this.selectedNodes.slice(0, index + 1);
                     this.matchResult = null;
+                    this.filteredMatrix = []; // Limpiar matriz filtrada
                     this.formData.occupational_classification = ''; // Reset classification on change
 
                     if (id) {
                         const sel = this.valuationLevels[index].options.find(n => n.id == id);
+                        
+                        // Siempre cargar el siguiente nivel, incluyendo después de COMPLEXITY
                         if (sel.type === 'RESULT') {
                             this.matchResult = sel.classification;
                             this.formData.occupational_classification = sel.classification_id;
@@ -527,6 +542,84 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     this.$nextTick(() => this.initSelect2Valuation());
+                },
+                async filterMatrixByComplexity(complexityCatalogItemId) {
+                    // Filtrar la matriz ocupacional por TODA la cadena de valoración
+                    if (!complexityCatalogItemId) {
+                        this.filteredMatrix = [];
+                        return;
+                    }
+                    
+                    // Obtener los catalog_item_id de todos los niveles seleccionados
+                    const nodes = this.selectedNodes.map((nodeId, idx) => {
+                        if (!nodeId || !this.valuationLevels[idx]) return null;
+                        return this.valuationLevels[idx].options.find(n => n.id == nodeId);
+                    }).filter(Boolean);
+                    
+                    // Extraer y convertir a números los catalog_item_id de cada nivel
+                    const roleId = nodes[0]?.catalog_item_id ? parseInt(nodes[0].catalog_item_id) : null;
+                    const instructionId = nodes[1]?.catalog_item_id ? parseInt(nodes[1].catalog_item_id) : null;
+                    const experienceNode = nodes[2];
+                    const decisionId = nodes[3]?.catalog_item_id ? parseInt(nodes[3].catalog_item_id) : null;
+                    const impactId = nodes[4]?.catalog_item_id ? parseInt(nodes[4].catalog_item_id) : null;
+                    const complexityId = parseInt(complexityCatalogItemId);
+                    
+                    // Calcular meses de experiencia
+                    let experienceMonths = 0;
+                    if (experienceNode && experienceNode.name_extra) {
+                        const experienceName = experienceNode.name_extra.toLowerCase();
+                        if (experienceName.includes('no requerida')) {
+                            experienceMonths = 0;
+                        } else {
+                            const parsed = parseInt(experienceNode.name_extra);
+                            if (!isNaN(parsed)) {
+                                experienceMonths = parsed;
+                            }
+                        }
+                    }
+                    
+                    console.log('Filtros aplicados (convertidos a números):', {
+                        roleId,
+                        instructionId,
+                        experienceMonths,
+                        decisionId,
+                        impactId,
+                        complexityId
+                    });
+                    
+                    // Filtrar la matriz - TODOS los campos deben coincidir exactamente (comparación numérica)
+                    this.filteredMatrix = this.catalogs.matrix.filter(m => {
+                        const matchRole = parseInt(m.required_role_id) === roleId;
+                        const matchInstruction = parseInt(m.minimum_instruction_id) === instructionId;
+                        const matchExperience = parseInt(m.minimum_experience_months) === experienceMonths;
+                        const matchDecision = parseInt(m.required_decision_id) === decisionId;
+                        const matchImpact = parseInt(m.required_impact_id) === impactId;
+                        const matchComplexity = parseInt(m.complexity_level_id) === complexityId;
+                        
+                        const passAll = matchRole && matchInstruction && matchExperience && 
+                                       matchDecision && matchImpact && matchComplexity;
+                        
+                        if (matchComplexity) {
+                            console.log(`Registro ${m.occupational_group}-G${m.grade}:`, {
+                                'Rol': matchRole ? '✓' : `✗ (esperado: ${roleId}, tiene: ${m.required_role_id})`,
+                                'Instrucción': matchInstruction ? '✓' : `✗ (esperado: ${instructionId}, tiene: ${m.minimum_instruction_id})`,
+                                'Experiencia': matchExperience ? '✓' : `✗ (esperado: ${experienceMonths}, tiene: ${m.minimum_experience_months})`,
+                                'Decisión': matchDecision ? '✓' : `✗ (esperado: ${decisionId}, tiene: ${m.required_decision_id})`,
+                                'Impacto': matchImpact ? '✓' : `✗ (esperado: ${impactId}, tiene: ${m.required_impact_id})`,
+                                'Complejidad': matchComplexity ? '✓' : '✗',
+                                'PASA': passAll ? 'SÍ ✓' : 'NO ✗'
+                            });
+                        }
+                        
+                        return passAll;
+                    });
+                    
+                    console.log('Matriz filtrada:', this.filteredMatrix);
+                    console.log('Total resultados:', this.filteredMatrix.length);
+                    
+                    if (this.filteredMatrix.length === 0) {
+                        console.warn('No se encontraron registros que coincidan con todos los criterios');
+                    }
                 },
                 // --- OTROS MÉTODOS ---
                 getValuationLabel(type) {
@@ -574,6 +667,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 },
+                initSelect2Matrix() {
+                    const self = this;
+                    if ($('.select2-matrix').length) {
+                        // Destruir instancia previa
+                        if ($('.select2-matrix').hasClass('select2-hidden-accessible')) {
+                            $('.select2-matrix').select2('destroy');
+                        }
+                        
+                        $('.select2-matrix').select2({
+                            width: '100%',
+                            placeholder: 'Seleccione grupo ocupacional...'
+                        }).off('change.vue').on('change.vue', function() {
+                            self.formData.occupational_classification = $(this).val();
+                        });
+                    }
+                },
                 initSelect2Competencies() {
                     const self = this;
                     // Helper genérico para init select2
@@ -620,8 +729,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         ...this.selectedTransversal
                     ].filter(id => id && id !== '');
                     
+                    // Capturar el ID de Complejidad (Nivel 6, índice 5)
+                    const complexityId = (this.selectedNodes.length > 5) ? this.selectedNodes[5] : null;
+
                     const payload = {
                         ...this.formData,
+                        final_complexity_level_id: complexityId,
                         activities: this.activities,
                         competencies: competencies
                     };

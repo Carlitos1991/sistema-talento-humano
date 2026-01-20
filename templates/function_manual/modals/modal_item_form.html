@@ -71,24 +71,17 @@
                         <p class="form-hint">Información adicional sobre el ítem.</p>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3" v-show="isVerbCatalog">
                         <label class="form-label">
-                            <i class="fa-solid fa-users-gear"></i> Roles Permitidos (Solo para Verbos)
+                            <i class="fa-solid fa-users-gear"></i> Rol Permitido
                         </label>
-                        
-                        <!-- Si es un catálogo de Verbos, mostramos el combo múltiple. Caso contrario, el input legacy -->
-                        <div v-if="isVerbCatalog">
-                            {{ item_form.roles }}
-                        </div>
-                        <div v-else>
-                            <input class="input-field" type="text" v-model="form.target_groups"
-                                   placeholder="Ej: SP1,SP2,SP3 o TODOS"/>
-                             <p class="form-hint">Escriba los códigos separados por coma. Use "TODOS" para que aparezca
-                            siempre.</p>
-                        </div>
-                   
-                        <!-- Campo oculto real que se vincula al modelo -->
-                        <input type="hidden" name="target_groups" :value="form.target_groups">
+                        <select class="form-control" id="id_target_role" v-model="form.target_role">
+                            <option value="">Seleccione un rol...</option>
+                            <option v-for="role in availableRoles" :key="role.id" :value="role.id">
+                                [[ role.name ]]
+                            </option>
+                        </select>
+                        <p class="form-hint">Seleccione el rol (nodo de valoración) que aplica a este verbo de acción.</p>
                     </div>
                 </div>
 

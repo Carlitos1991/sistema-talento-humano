@@ -31,11 +31,17 @@ class JobProfileMixin:
         context = super().get_context_data(**kwargs)
 
         def get_items(catalog_code):
-            # IMPORTANTE: Agregamos 'target_groups' en el .values()
-            items = list(ManualCatalogItem.objects.filter(
+            items = ManualCatalogItem.objects.filter(
                 catalog__code=catalog_code, is_active=True
-            ).values('id', 'name', 'target_groups'))
-            return items
+            ).select_related('target_role')
+            return [
+                {
+                    'id': item.id,
+                    'name': item.name,
+                    'target_role': item.target_role_id if item.target_role else None
+                }
+                for item in items
+            ]
 
         matrix_data = list(OccupationalMatrix.objects.all().values(
             'id', 'occupational_group', 'grade', 'remuneration',
@@ -103,9 +109,11 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             context['stats_active'] = qs.filter(is_active=True).count()
             
             # Contexto para el modal de asignación de grupo
-            context['occupational_matrix_list'] = OccupationalMatrix.objects.select_related(
-                'required_role'
+            # Serializamos a JSON para manejo dinámico en Vue
+            matrix_data = OccupationalMatrix.objects.select_related('required_role').values(
+                'id', 'occupational_group', 'grade', 'remuneration', 'complexity_level_id'
             ).order_by('grade')
+            context['occupational_matrix_json'] = json.dumps(list(matrix_data), cls=DjangoJSONEncoder)
             
         return context
 
@@ -219,6 +227,28 @@ class JobProfileAssignReferentialView(LoginRequiredMixin, View):
             return JsonResponse({'success': True, 'message': 'Empleado referencial asignado con éxito.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+def api_get_available_roles(request):
+    """Obtener todos los nodos de tipo ROLE activos con sus nombres legibles"""
+    try:
+        roles = ValuationNode.objects.filter(
+            node_type='ROLE',
+            is_active=True
+        ).select_related('catalog_item').order_by('catalog_item__name')
+        
+        roles_data = [
+            {
+                'id': role.id,
+                'name': role.catalog_item.name if role.catalog_item else f"Rol #{role.id}"
+            }
+            for role in roles
+        ]
+        
+        return JsonResponse({'success': True, 'data': roles_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 
 
 @login_required
@@ -413,7 +443,8 @@ def manual_catalog_item_detail_json(request, pk):
                          'data': {'id': i.id, 'catalog_id': i.catalog_id,
                                   'catalog_name': i.catalog.name,  # Needed for JS
                                   'name': i.name, 'code': i.code,
-                                  'description': i.description or '', 'target_groups': i.target_groups or ''}})
+                                  'description': i.description or '',
+                                  'target_role': i.target_role_id if i.target_role else None}})
 
 
 @require_POST
@@ -642,6 +673,17 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.position_code = data.get('position_code')
                 profile.specific_job_title = data.get('specific_job_title')
                 profile.administrative_unit_id = data.get('administrative_unit')
+                
+                # Guardar el nivel de complejidad explícitamente si viene del wizard
+                # Esto es crucial si no se selecciona clasificación aun
+                complexity_node_id = data.get('final_complexity_level_id')
+                if complexity_node_id:
+                    # Buscamos el nodo para obtener el CatalogItem correcto
+                    try:
+                        node = ValuationNode.objects.get(pk=complexity_node_id)
+                        profile.final_complexity_level = node.catalog_item
+                    except ValuationNode.DoesNotExist:
+                        pass # Si no existe, ignoramos (evita crash)
                 
                 # Retrieve Matrix details
                 matrix_id = data.get('occupational_classification')
@@ -979,8 +1021,13 @@ class AssignGroupApiView(LoginRequiredMixin, View):
             # Por ahora asignamos directo.
             profile.occupational_classification = classification
             
-            # Si el perfil no tiene nombre específico, podríamos sugerir uno, 
-            # pero aquí solo asignamos la clasificación.
+            # Copiar atributos de la Matriz al Perfil para mantener consistencia
+            profile.job_role = classification.required_role
+            profile.required_instruction = classification.minimum_instruction
+            profile.decision_making = classification.required_decision
+            profile.management_impact = classification.required_impact
+            profile.final_complexity_level = classification.complexity_level
+            profile.required_experience_months = classification.minimum_experience_months
             
             profile.save()
 
