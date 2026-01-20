@@ -778,23 +778,37 @@ document.addEventListener('DOMContentLoaded', () => {
             delimiters: ['[[', ']]'],
             data() {
                 return {
-                    loading: false, isEdit: false, showModal: false,
-                    currentId: null, searchQuery: '', urls: {}, complexityLevels: [],
-                    formData: {name: '', type: 'TECHNICAL', definition: '', suggested_level: ''}
+                    loading: false, 
+                    isEdit: false, 
+                    showModal: false,
+                    currentId: null, 
+                    searchQuery: '', 
+                    urls: {}, 
+                    complexityLevels: [],
+                    formData: {name: '', type: 'TECHNICAL', definition: '', suggested_level: ''},
+                    currentErrors: {}
                 }
             },
             mounted() {
+                // Leer configuración inicial
                 this.urls = {
                     table: compEl.dataset.urlTable,
                     create: compEl.dataset.urlCreate,
-                    updateBase: compEl.dataset.urlUpdateBase,
-                    toggleBase: compEl.dataset.urlToggleBase
+                    update: compEl.dataset.urlUpdateBase,
+                    toggle: compEl.dataset.urlToggleBase
                 };
+                
                 try {
                     this.complexityLevels = JSON.parse(compEl.dataset.levels || '[]');
                 } catch (e) {
                     console.error("Error niveles:", e);
                 }
+
+                // Exponer app para llamadas externas desde el HTML inyectado
+                window.competencyApp = this;
+
+                // Cargar tabla inicial
+                this.fetchTable();
             },
             methods: {
                 async refreshTable() {
@@ -826,7 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.loading = true;
                     this.currentErrors = {};
                     const url = this.isEdit
-                        ? this.urls.update.replace('0', this.formData.id)
+                        ? this.urls.update.replace('0', this.currentId)
                         : this.urls.create;
 
                     try {
@@ -837,56 +851,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         const data = await res.json();
 
-                        if (data.success) {
-                            window.Toast.fire({icon: 'success', title: 'Guardado correctamente'});
+                        if (data.status === 'success') {
+                            window.Toast.fire({icon: 'success', title: data.message || 'Guardado correctamente'});
                             this.closeModal();
-                            this.fetchTable();
+                            await this.fetchTable();
                         } else {
-                            if (data.errors) {
-                                this.currentErrors = data.errors;
-                                window.Toast.fire({icon: 'error', title: 'Verifique los campos'});
-                            } else {
-                                throw new Error('Error desconocido');
-                            }
+                            window.Toast.fire({icon: 'error', title: data.message || 'Error al guardar'});
                         }
                     } catch (e) {
+                        console.error('Error:', e);
                         window.Toast.fire({icon: 'error', title: 'Error al guardar'});
                     } finally {
                         this.loading = false;
                     }
                 },
                 async fetchTable() {
-                    // Se recarga vía partial HTML o simplemente AJAX y se inyecta
                     const res = await fetch(this.urls.table);
                     const html = await res.text();
                     document.querySelector('#table-content-wrapper').innerHTML = html;
-                },
-                // Auxiliares para botones de tabla (ya que Vue no controla el HTML inyectado vía AJAX a menos que usemos componentes)
-                // En este caso híbrido, onclick en HTML llama funciones globales o dispara eventos
-                // Simplificación: recargar página si se prefiere
-                reloadPage() {
-                    location.reload();
                 }
-
             },
-            mounted() {
-                // Leer configuración inicial
-                if (compEl.dataset.levels) {
-                    this.levels = JSON.parse(compEl.dataset.levels.replace(/'/g, '"'));
-                }
-                this.urls = {
-                    table: compEl.dataset.urlTable,
-                    create: compEl.dataset.urlCreate,
-                    update: compEl.dataset.urlUpdateBase,
-                    toggle: compEl.dataset.urlToggleBase
-                };
-
-                // Exponer app para llamadas externas desde el HTML inyectado (si fuera necesario)
-                window.competencyApp = this;
-
-                // Cargar tabla inicial
-                this.fetchTable();
-            }
         }).mount('#competencyApp');
     }
 

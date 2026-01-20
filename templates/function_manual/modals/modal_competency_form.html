@@ -40,7 +40,7 @@
                         <label class="form-label">Nivel Sugerido</label>
                         <select v-model="formData.suggested_level" class="input-field">
                             <option value="">Seleccione nivel...</option>
-                            <option v-for="lvl in levels" :key="lvl.id" :value="lvl.id">
+                            <option v-for="lvl in complexityLevels" :key="lvl.id" :value="lvl.id">
                                 [[ lvl.name ]]
                             </option>
                         </select>
