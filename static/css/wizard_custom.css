@@ -1,0 +1,285 @@
+/* 
+   Employee Wizard Custom Styles 
+   Separated from main style.css to prevent conflicts and ensure modularity.
+*/
+
+/* =========================================
+   INSTITUTIONAL DATA STYLES (Orange Theme)
+   ========================================= */
+.text-orange {
+    color: #f97316 !important;
+}
+
+.text-orange-title {
+    color: #ea580c !important;
+}
+
+.border-orange {
+    border-color: #fed7aa !important;
+}
+
+.institutional-container {
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.institutional-container .badge-number {
+    background-color: #f97316;
+    color: white;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.institutional-container .hierarchy-arrow {
+    padding-left: 10px;
+}
+
+.institutional-container .hierarchy-item {
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Info Cards with Orange Border */
+.institutional-info-card {
+    padding: 1rem;
+    background: #fffbeb;
+    border-radius: 8px;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #f97316;
+    height: 100%;
+}
+
+.institutional-info-card .info-label {
+    display: block;
+    text-transform: uppercase;
+    color: #78716c;
+    font-weight: 700;
+    font-size: 0.7rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+
+.institutional-info-card .info-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+/* =========================================
+   BUTTON STYLES REFINEMENT
+   ========================================= */
+/* Main action button (Edit/Actualizar) - Yellow/Gold style matching reference */
+.btn-edit-action {
+    background: #fbbf24;
+    color: #1e293b !important;
+    border: 2px solid #f59e0b;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn-edit-action:hover {
+    background: #f59e0b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-edit-action i {
+    font-size: 0.9rem;
+}
+
+/* =========================================
+   HEADER CONTAINER FOR INSTITUTIONAL TAB
+   ========================================= */
+.institutional-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-left: 4px solid #f97316;
+}
+
+.institutional-header-content h4 {
+    color: #ea580c;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.institutional-header-content p {
+    color: #78716c;
+    margin-bottom: 0;
+    font-size: 0.85rem;
+}
+
+.btn-institutional-action {
+    background: #fbbf24;
+    color: #1e293b;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-institutional-action:hover {
+    background: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
+}
+
+.btn-institutional-action i {
+    font-size: 0.75rem;
+}
+
+/* =========================================
+   HEADER CONTAINER FOR ECONOMIC TAB
+   ========================================= */
+.economic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left: 4px solid #10b981;
+}
+
+.economic-header-content h4 {
+    color: #059669;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.economic-header-content p {
+    color: #6b7280;
+    margin-bottom: 0;
+    font-size: 0.85rem;
+}
+
+.btn-economic-action {
+    background: #fbbf24;
+    color: #1e293b;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-economic-action:hover {
+    background: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
+}
+
+.btn-economic-action i {
+    font-size: 0.75rem;
+}
+
+/* =========================================
+   BOX ACTION BUTTON (Inside info boxes)
+   ========================================= */
+.btn-box-action {
+    background: #fbbf24;
+    color: #1e293b;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-box-action:hover {
+    background: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+}
+
+.btn-box-action i {
+    font-size: 0.65rem;
+}
+
+.profile-header-container {
+    display: flex;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.profile-header-container .btn-edit-action {
+    flex-shrink: 0;
+    margin-left: auto;
+    /* Override for institutional tab button - smaller size */
+    padding: 4px 12px !important;
+    font-size: 0.72rem !important;
+    gap: 4px !important;
+    border-radius: 6px !important;
+    border-width: 1px !important;
+}
+
+.profile-header-container .btn-edit-action i {
+    font-size: 0.7rem !important;
+}
+
+/* Smaller button variant */
+.btn-edit-action.btn-edit-sm {
+    padding: 4px 12px !important;
+    font-size: 0.72rem !important;
+    gap: 4px !important;
+    border-radius: 6px !important;
+}
+
+.btn-edit-action.btn-edit-sm i {
+    font-size: 0.7rem !important;
+}
+
+.btn-edit-action.btn-edit-sm i {
+    font-size: 0.75rem;
+}

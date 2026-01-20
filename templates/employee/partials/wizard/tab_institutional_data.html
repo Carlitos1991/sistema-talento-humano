@@ -1,36 +1,151 @@
-<div class="section-card-standard shadow-sm">
-    <h5 class="section-title border-bottom pb-2 mb-4">
-        <i class="fa-solid fa-address-card text-warning"></i> Expediente Institucional
-    </h5>
+<!-- Header con botón Actualizar alineado a la derecha -->
+<div class="institutional-header">
+    <div class="institutional-header-content">
+        <h4><i class="fa-solid fa-building-user me-2"></i>Información Institucional</h4>
+        <p>Datos del expediente y ubicación organizacional del empleado</p>
+    </div>
+    <button class="btn-institutional-action" @click="openInstitutionalModal({{ person.id }})">
+        <i class="fa-solid fa-pen-to-square"></i> Actualizar
+    </button>
+</div>
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <label class="info-label">Correo Institucional:</label>
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-envelope me-2 text-primary"></i>
-                <p class="info-value mb-0 text-primary fw-bold">{{ person.employee_profile.institutional_data.institutional_email|default:"Sin asignar" }}</p>
-            </div>
+<!-- Grid de información similar a Datos Personales -->
+<div class="grid-info-personal">
+    <!-- Expediente -->
+    <div class="info-box-styled" style="border-left: 4px solid #f97316;">
+        <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-folder-open"></i> Expediente</h6>
+        <div class="info-data-row">
+            <label>N° Expediente:</label>
+            <span class="fw-bold">{{ person.employee_profile.institutional_data.file_number|default:"—" }}</span>
         </div>
-        <div class="col-md-4">
-            <label class="info-label">ID Biométrico (Marcación):</label>
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-fingerprint me-2 text-danger"></i>
-                <p class="info-value mb-0 fw-bold">{{ person.employee_profile.institutional_data.biometric_id|default:"N/A" }}</p>
-            </div>
+        <div class="info-data-row">
+            <label>ID Biométrico:</label>
+            <span>{{ person.employee_profile.institutional_data.biometric_id|default:"No registrado" }}</span>
         </div>
-        <div class="col-md-4">
-            <label class="info-label">Número de Expediente:</label>
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-folder-open me-2 text-warning"></i>
-                <p class="info-value mb-0 fw-bold">{{ person.employee_profile.institutional_data.file_number|default:"S/N" }}</p>
-            </div>
+        <div class="info-data-row">
+            <label>Fecha Ingreso:</label>
+            <span>{{ person.employee_profile.date_joined|date:"d/m/Y"|default:"—" }}</span>
         </div>
+    </div>
 
-        <div class="col-12 mt-4">
-            <div class="bg-light p-3 rounded-3 border">
-                <label class="info-label">Observaciones de Control:</label>
-                <p class="mb-0 italic small">{{ person.employee_profile.institutional_data.observations|default:"No hay observaciones registradas." }}</p>
+    <!-- Contacto Institucional -->
+    <div class="info-box-styled" style="border-left: 4px solid #fb923c;">
+        <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-envelope"></i> Contacto Institucional</h6>
+        <div class="info-data-row">
+            <label>Email:</label>
+            <span class="text-primary" style="font-size: 0.85rem; word-break: break-all;">{{ person.employee_profile.institutional_data.institutional_email|default:"Sin especificar" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Dependencia:</label>
+            <span class="fw-bold">{{ person.employee_profile.area.name|default:"Sin asignar" }}</span>
+        </div>
+    </div>
+
+    <!-- Estado Laboral -->
+    <div class="info-box-styled" style="border-left: 4px solid #fdba74;">
+        <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-briefcase"></i> Estado Laboral</h6>
+        <div class="info-data-row">
+            <label>Estado:</label>
+            <span class="status-badge active" style="font-size: 0.65rem;">{{ person.employee_profile.employment_status.name|default:"ACTIVO" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Es Jefe:</label>
+            <span class="status-badge {% if person.employee_profile.is_boss %}active{% else %}neutral{% endif %}" style="font-size: 0.65rem;">
+                {{ person.employee_profile.is_boss|yesno:"SÍ,NO" }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Jerarquía Institucional -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled" style="border-left: 4px solid #f97316; grid-column: span 3;">
+        <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-sitemap"></i> Jerarquía Institucional</h6>
+        <div class="p-3 bg-light rounded">
+        {% if hierarchy_list %}
+            {% for unit in hierarchy_list %}
+                <div class="d-flex align-items-center mb-2 p-2 bg-white rounded border">
+                     <span class="badge me-3" style="background-color: #f97316; min-width: 28px;">{{ forloop.counter }}</span>
+                     <div class="d-flex flex-column">
+                        <span class="text-muted small fw-bold text-uppercase">{{ unit.level_name }}:</span>
+                        <span class="fw-bold text-dark"><i class="fa-solid fa-building me-2" style="color: #f97316;"></i>{{ unit.name }}</span>
+                     </div>
+                </div>
+            {% endfor %}
+        {% else %}
+             <div class="text-center py-3 opacity-50">
+                <i class="fa-solid fa-sitemap fa-2x mb-2 text-secondary"></i>
+                <p class="text-muted mb-0 small">Sin unidad administrativa asignada.</p>
+             </div>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Observaciones -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled" style="border-left: 4px solid #64748b; grid-column: span 3;">
+        <h6 class="section-title"><i class="fa-solid fa-comment-dots"></i> Observaciones</h6>
+        <p class="mb-0 text-dark small">{{ person.employee_profile.institutional_data.observations|default:"Ninguna observación registrada." }}</p>
+    </div>
+</div>
+
+<!-- MODAL INSTITUCIONAL -->
+<div id="modalInstitutionalOverlay" class="modal-overlay hidden">
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white;">
+            <h3 class="header-title-main fs-5"><i class="fa-solid fa-building-user me-2"></i>
+                <span v-if="institutionalForm.id">Editar</span><span v-else>Crear</span> Datos Institucionales
+            </h3>
+             <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body-custom p-4">
+             <div class="mb-4">
+                 <small class="text-white d-block p-2 rounded" style="background-color: #f97316;">
+                    Empleado: {{ person.full_name }} <span class="float-end">{{ person.document_number }}</span>
+                 </small>
             </div>
+
+            <div class="d-flex align-items-center mb-2">
+                 <i class="fa-solid fa-circle-info text-orange me-2"></i>
+                 <h6 class="fw-bold mb-0 text-orange">Información Institucional</h6>
+            </div>
+            <hr class="mt-1 mb-4 border-orange">
+
+            <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-folder-open me-1"></i> Número de Expediente</label>
+                <input type="text" v-model="institutionalForm.file_number" class="form-control" placeholder="TC 360">
+                 <div class="form-text text-muted" style="font-size: 0.75rem;">Número de expediente institucional del empleado</div>
+            </div>
+
+             <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold small">Identificador Biométrico</label>
+                <input type="text" v-model="institutionalForm.biometric_id" class="form-control" placeholder="Ej: BIO-123456">
+                 <div class="form-text text-muted" style="font-size: 0.75rem;">Identificador único para el sistema biométrico</div>
+            </div>
+
+             <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-envelope me-1"></i> Correo Institucional</label>
+                <input type="email" v-model="institutionalForm.institutional_email" class="form-control" placeholder="usuario@loja.gob.ec">
+                 <div class="form-text text-muted" style="font-size: 0.75rem;">Correo electrónico institucional del empleado</div>
+            </div>
+
+             <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-comment me-1"></i> Observaciones</label>
+                <textarea v-model="institutionalForm.observations" class="form-control" rows="3" placeholder="Información adicional..."></textarea>
+                 <div class="form-text text-muted" style="font-size: 0.75rem;">Observaciones adicionales sobre datos institucionales</div>
+            </div>
+
+        </div>
+        <div class="modal-footer d-flex justify-content-end gap-2 p-3 bg-light border-top">
+             <button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+                <i class="fa-solid fa-xmark me-1"></i> Cancelar
+             </button>
+            <button class="btn btn-warning text-white btn-sm fw-bold" style="background-color: #f97316; border:none;" @click="saveInstitutionalData({{ person.id }})">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Datos
+            </button>
         </div>
     </div>
 </div>

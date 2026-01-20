@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
     <div id="employeeWizardApp"
          v-cloak
          data-person-id="{{ person.id }}"
@@ -73,6 +74,11 @@
             <!-- PESTAÑA: ECONÓMICOS -->
             <div v-if="activeTab === 'economic'">
                 {% include 'employee/partials/wizard/tab_economic_data.html' %}
+            </div>
+
+            <!-- PESTAÑA: INSTITUCIONAL -->
+            <div v-if="activeTab === 'institutional'">
+                {% include 'employee/partials/wizard/tab_institutional_data.html' %}
             </div>
 
         </div>

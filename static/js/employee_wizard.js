@@ -14,7 +14,13 @@ const app = createApp({
     delimiters: ['[[', ']]'],
     setup() {
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
-        const activeTab = ref('personal');
+        const activeTab = ref(localStorage.getItem('wizardActiveTab') || 'personal');
+        
+        // Watch for changes and save to localStorage
+        Vue.watch(activeTab, (newTab) => {
+            localStorage.setItem('wizardActiveTab', newTab);
+        });
+
         const isSaving = ref(false);
         const loadingList = ref(false);
         const appElement = document.getElementById('employeeWizardApp');
@@ -78,18 +84,40 @@ const app = createApp({
                 academic: '#modalTitleOverlay',
                 experience: '#modalExperienceOverlay',
                 training: '#modalTrainingOverlay',
-                person: '#modalPersonEditOverlay'
+                person: '#modalPersonEditOverlay',
+                bank: '#modalBankOverlay',
+                payroll: '#modalPayrollOverlay',
+                institutional: '#modalInstitutionalOverlay'
             };
             const selector = map[type];
             if (action === 'new') {
-                // RESET FORMS (Para que al dar 'Nuevo' no salgan datos de una edición previa)
+                // RESET FORMS
                 if (type === 'academic') titleForm.value = {id: null, education_level: ''};
                 if (type === 'experience') expForm.value = {id: null, is_current: false};
                 if (type === 'training') trainForm.value = {id: null};
+                if (type === 'bank') { // No action 'new' usually but for consistency
+                   bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
+                   bankErrors.value = {};
+                }
+                if (type === 'payroll') {
+                     payrollForm.value = {monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0};
+                     payrollErrors.value = {};
+                }
 
                 $(selector).removeClass('hidden');
                 initSelect2(selector);
-            } else {
+            } else if (action === 'edit' && type === 'bank') {
+                // Load existing bank data logic would go here if we fetched it asynchronously or injected it
+                // For now, we assume user might want to edit. If data is in Django template, we might need to parse it or fetch it.
+                 // Ideally we call an API to get current data or pass it in the button.
+                // Simplified for now:
+                $(selector).removeClass('hidden');
+                initSelect2(selector);
+            } else if(action === 'edit' && type === 'payroll') {
+                 // Similar to bank
+                 $(selector).removeClass('hidden');
+            }
+             else {
                 fetchListData(type);
             }
         };
@@ -97,14 +125,18 @@ const app = createApp({
         // --- 2. FORMULARIOS REACTIVOS ---
         const editForm = ref({});
         const editErrors = ref({});
+        const bankForm = ref({bank: '', account_type: '', account_number: '', holder_name: ''});
+        const bankErrors = ref({});
+        const payrollForm = ref({monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0});
+        const payrollErrors = ref({});
         const titleForm = ref({education_level: ''});
         const titleErrors = ref({});
         const expForm = ref({is_current: false});
         const expErrors = ref({});
         const trainForm = ref({training_name: ''});
         const trainErrors = ref({});
-        const bankForm = ref({});
-        const bankErrors = ref({});
+        const institutionalForm = ref({area: null, labor_regime: null, position: null, status: null});
+        const institutionalErrors = ref({});
 
         // --- 3. UI Y PREVIEW ---
         const photoPreview = ref(null);
@@ -260,7 +292,7 @@ const app = createApp({
                     if (res.data.province) await loadLocations(res.data.province, 'id_canton_modal', res.data.canton);
                     if (res.data.canton) await loadLocations(res.data.canton, 'id_parish_modal', res.data.parish);
 
-                    initSelect2InModal(modalSelector);
+                    refreshSelect2(modalSelector);
                 }
             } catch (e) {
                 window.Toast.fire({icon: 'error', title: 'Error al obtener datos'});
@@ -287,6 +319,17 @@ const app = createApp({
                 window.Toast.fire({icon: 'error', title: 'Error de servidor'});
             } finally {
                 isSaving.value = false;
+            }
+        };
+
+        const handlePhotoChange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    photoPreview.value = e.target.result;
+                };
+                reader.readAsDataURL(file);
             }
         };
 
@@ -419,6 +462,69 @@ const app = createApp({
             }
         };
 
+        const fetchListData = async (type) => {
+            currentListType.value = type;
+            loadingList.value = true;
+            listItems.value = [];
+            
+            // Show the modal
+            $('#modalCVListOverlay').removeClass('hidden');
+
+            // Configure headers
+            if (type === 'academic') listModalTitle.value = 'Mis Títulos Académicos';
+            if (type === 'experience') listModalTitle.value = 'Mi Experiencia Laboral';
+            if (type === 'training') listModalTitle.value = 'Mis Capacitaciones';
+
+            try {
+                let url = '';
+                if (type === 'academic') url = `/employee/api/cv/list-titles/${personId}/`;
+                if (type === 'experience') url = `/employee/api/cv/list-experience/${personId}/`;
+                if (type === 'training') url = `/employee/api/cv/list-training/${personId}/`;
+
+                if (url) {
+                    const res = await (await fetch(url)).json();
+                    if (res.success) {
+                        listItems.value = res.items;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                window.Toast.fire({icon: 'error', title: 'Error cargando lista'});
+            } finally {
+                loadingList.value = false;
+            }
+        };
+
+        const closeModal = (type) => {
+             const map = {
+                academic: '#modalTitleOverlay',
+                experience: '#modalExperienceOverlay',
+                training: '#modalTrainingOverlay',
+                person: '#modalPersonEditOverlay',
+                bank: '#modalBankOverlay',
+                payroll: '#modalPayrollOverlay',
+                institutional: '#modalInstitutionalOverlay'
+            };
+            const selector = map[type];
+            if (selector) $(selector).addClass('hidden');
+        };
+
+        const closeListModal = () => {
+            $('#modalCVListOverlay').addClass('hidden');
+        };
+
+        const editItem = (item) => {
+            if (currentListType.value && item) {
+                handleEditCvItem(currentListType.value, item.id);
+            }
+        };
+
+        const deleteItem = (item) => {
+             if (currentListType.value && item) {
+                handleDeleteCvItem(currentListType.value, item.id);
+            }
+        };
+
         const handleDeleteCvItem = async (type, id) => {
             const result = await Swal.fire({
                 title: '¿Eliminar registro?',
@@ -449,269 +555,253 @@ const app = createApp({
 
         // --- 8. MÉTODOS: DATOS ECONÓMICOS ---
 
-        const openBankModal = () => {
-            bankForm.value = {holder_name: personData.value.full_name};
-            $('#modalBankOverlay').removeClass('hidden');
-            initSelect2InModal('#modalBankOverlay');
-        };
-
-        const saveBankAccount = async () => {
-            const formData = new FormData();
-            Object.keys(bankForm.value).forEach(k => formData.append(k, bankForm.value[k]));
-            try {
-                const res = await (await fetch(`/employee/api/add-bank-account/${personId}/`, {
-                    method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
-                })).json();
-                if (res.success) {
-                    window.Toast.fire({icon: 'success', title: res.message});
-                    location.reload();
-                } else {
-                    bankErrors.value = res.errors;
+        const openBankModal = async (personId) => {
+             // Reset form first
+             bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
+             bankErrors.value = {};
+             
+             // Fetch existing data
+             try {
+                // Assuming we somehow have personId in scope or pass it. 
+                // Let's rely on the passed argument or the global personId if available.
+                const pid = personId || appElement.dataset.personId;
+                const response = await fetch(`/employee/person/${pid}/get-bank-account/`);
+                const result = await response.json();
+                if (result.success && result.data && Object.keys(result.data).length > 0) {
+                     bankForm.value = result.data;
+                     // Trigger change for select2
+                     setTimeout(() => {
+                         $('.select2-wizard-bank').trigger('change');
+                     }, 100);
                 }
-            } catch (e) {
-                console.error(e);
-            }
+             } catch(e) {
+                 console.log("No existing bank data or error fetching it", e);
+             }
+
+             $('#modalBankOverlay').removeClass('hidden');
+             initSelect2('#modalBankOverlay');
         };
 
-        // --- 9. AUXILIARES DE MODALES ---
-
-
-        const closeModal = (type) => {
-            const map = {
-                academic: '#modalTitleOverlay', experience: '#modalExperienceOverlay',
-                training: '#modalTrainingOverlay', bank: '#modalBankOverlay',
-                list: '#modalCVListOverlay', person: '#modalPersonEditOverlay'
-            };
-            $(map[type]).addClass('hidden');
-            document.body.classList.remove('no-scroll');
-        };
-
-        const closeListModal = () => {
-            $('#modalCVListOverlay').addClass('hidden');
-            document.body.classList.remove('no-scroll');
-        };
-
-        const fetchListData = async (type) => {
-            loadingList.value = true;
-            searchQuery.value = '';
-            listItems.value = [];
-            currentListType.value = type; // Guardar tipo actual
-            $('#modalCVListOverlay').removeClass('hidden');
-
-            const titles = {
-                academic: 'Títulos Académicos',
-                experience: 'Experiencia Laboral',
-                training: 'Capacitaciones'
-            };
-            const urls = {academic: 'list-titles', experience: 'list-experience', training: 'list-training'};
-            listModalTitle.value = `Items de: ${titles[type]}`;
-
-            try {
-                const res = await (await fetch(`/employee/api/cv/${urls[type]}/${personId}/`)).json();
-                
-                // Llenar listItems con los datos estructurados
-                if (res.items && Array.isArray(res.items)) {
-                    listItems.value = res.items.map(item => ({
-                        id: item.id,
-                        name: item.name || item.title || item.institution || 'Sin nombre',
-                        code: item.code || item.level || type.charAt(0).toUpperCase(),
-                        status: 'active'
-                    }));
+        const openPayrollModal = async (personId) => {
+             // Reset form
+             payrollForm.value = {monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0};
+             payrollErrors.value = {};
+             
+             try {
+                const pid = personId || appElement.dataset.personId;
+                const response = await fetch(`/employee/person/${pid}/get-payroll-info/`);
+                const result = await response.json();
+                if (result.success && result.data && Object.keys(result.data).length > 0) {
+                    payrollForm.value = result.data;
                 }
-                
-                // Actualizar años y meses de experiencia si es el tipo 'experience'
-                if (type === 'experience' && res.total_years !== undefined) {
-                    personStats.value.experienceYears = res.total_years;
-                    personStats.value.experienceMonths = res.total_months;
-                }
-            } catch (e) {
-                console.error('Error al cargar lista:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo cargar el listado',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
+             } catch (e) {
+                 console.log("No existing payroll data", e);
+             }
+
+             $('#modalPayrollOverlay').removeClass('hidden');
+        };
+
+        const saveBankAccount = async (personId) => {
+             try {
+                const formData = new FormData();
+                Object.keys(bankForm.value).forEach(key => {
+                    formData.append(key, bankForm.value[key] || '');
                 });
-            } finally {
-                loadingList.value = false;
-            }
-        };
 
-        // --- 10. PUENTE GLOBAL (BRIDGE) PARA HTML DINÁMICO ---
-        window.handleCvAction = (type, action) => openModal(type, action);
-        window.handleDeleteCvItem = (type, id) => handleDeleteCvItem(type, id);
-        
-        // Función helper para recalcular experiencia después de eliminar
-        const recalculateExperience = async () => {
-            try {
-                const res = await fetch(`/employee/api/cv/list-experience/${personId}/`);
-                const data = await res.json();
-                if (data.success && data.total_years !== undefined) {
-                    personStats.value.experienceYears = data.total_years;
-                    personStats.value.experienceMonths = data.total_months;
-                }
-            } catch (e) {
-                console.error('Error recalculando experiencia:', e);
-            }
-        };
-
-        const handlePhotoChange = (e) => {
-            const file = e.target.files[0];
-            if (file) photoPreview.value = URL.createObjectURL(file);
-        };
-        
-        // --- 10.1 FUNCIONES PARA ACCIONES DE LISTA ---
-        const editItem = async (item) => {
-            try {
-                // Cerrar modal de lista
-                $('#modalCVListOverlay').addClass('hidden');
-                
-                // Cargar datos del item
-                const res = await fetch(`/employee/api/cv/detail/${currentListType.value}/${item.id}/`);
-                const data = await res.json();
-                
+                const response = await fetch(`/employee/person/${personId}/add-bank-account/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                const data = await response.json();
                 if (data.success) {
-                    // Poblar formulario según el tipo
-                    if (currentListType.value === 'academic') {
-                        titleForm.value = {
-                            id: data.data.id,
-                            education_level: data.data.education_level,
-                            title_obtained: data.data.title_obtained,
-                            educational_institution: data.data.educational_institution,
-                            graduation_year: data.data.graduation_year
-                        };
-                        $('#modalTitleOverlay').removeClass('hidden');
-                        refreshSelect2('#modalTitleOverlay');
-                    } else if (currentListType.value === 'experience') {
-                        expForm.value = {
-                            id: data.data.id,
-                            company_name: data.data.company_name,
-                            position: data.data.position,
-                            start_date: data.data.start_date,
-                            end_date: data.data.end_date,
-                            is_current: data.data.is_current
-                        };
-                        $('#modalExperienceOverlay').removeClass('hidden');
-                        refreshSelect2('#modalExperienceOverlay');
-                    } else if (currentListType.value === 'training') {
-                        trainForm.value = {
-                            id: data.data.id,
-                            training_name: data.data.training_name,
-                            institution: data.data.institution,
-                            hours: data.data.hours,
-                            completion_date: data.data.completion_date
-                        };
-                        $('#modalTrainingOverlay').removeClass('hidden');
-                        refreshSelect2('#modalTrainingOverlay');
-                    }
+                    $('#modalBankOverlay').addClass('hidden');
+                    // Reload tab or page
+                    location.reload(); 
+                } else {
+                    bankErrors.value = data.errors;
                 }
-            } catch (e) {
-                console.error('Error al cargar item:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo cargar el registro',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar cuenta bancaria");
+            }
+        };
+
+         const savePayrollInfo = async (personId) => {
+             try {
+                const formData = new FormData();
+                const form = payrollForm.value;
+
+                // Booleans: CheckboxInput in Django checks for presence or 'on'
+                if(form.monthly_payment) formData.append('monthly_payment', 'on');
+                if(form.reserve_funds) formData.append('reserve_funds', 'on');
+                
+                // Numbers: Ensure they are not empty strings to avoid validation errors
+                formData.append('family_dependents', (form.family_dependents === '' || form.family_dependents == null) ? 0 : form.family_dependents);
+                formData.append('education_dependents', (form.education_dependents === '' || form.education_dependents == null) ? 0 : form.education_dependents);
+                formData.append('roles_count', (form.roles_count === '' || form.roles_count == null) ? 0 : form.roles_count);
+                
+                // Dates: Send empty string if null, which Django blank=True accepts
+                formData.append('roles_entry_date', form.roles_entry_date || '');
+
+                const response = await fetch(`/employee/person/${personId}/update-payroll-info/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
                 });
-            }
-        };
-        
-        const deleteItem = async (item) => {
-            const result = await Swal.fire({
-                title: '¿Eliminar registro?',
-                text: `Se eliminará: ${item.name}`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc2626',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            });
-            
-            if (result.isConfirmed) {
-                try {
-                    const res = await fetch(`/employee/api/cv/delete/${currentListType.value}/${item.id}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (data.success) {
-                        // Actualizar la lista removiendo el item eliminado
-                        listItems.value = listItems.value.filter(i => i.id !== item.id);
-                        
-                        // Actualizar contador de stats
-                        if (currentListType.value === 'academic') personStats.value.titles--;
-                        if (currentListType.value === 'experience') {
-                            personStats.value.experiences--;
-                            // Recalcular años y meses de experiencia
-                            await recalculateExperience();
-                        }
-                        if (currentListType.value === 'training') personStats.value.courses--;
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Eliminado',
-                            text: data.message || 'Registro eliminado correctamente',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                    } else {
-                        throw new Error(data.message || 'Error al eliminar');
-                    }
-                } catch (e) {
-                    console.error('Error al eliminar:', e);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'No se pudo eliminar el registro',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
+                const data = await response.json();
+                if (data.success) {
+                    $('#modalPayrollOverlay').addClass('hidden');
+                    location.reload(); 
+                } else {
+                    payrollErrors.value = data.errors;
+                    console.error("Payroll save errors:", data.errors);
                 }
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar informacion de nomina");
             }
         };
 
-        // --- 11. INICIALIZACIÓN ---
-        onMounted(async () => {
-            // Cargar años y meses de experiencia al iniciar
-            await recalculateExperience();
-        });
+        // --- 9. MÉTODOS: DATOS INSTITUCIONALES ---
 
-        // --- 12. EL RETURN DEFINITIVO (Sincronización con Template) ---
+        const openInstitutionalModal = async (personId) => {
+            institutionalErrors.value = {};
+            // Reset form could be here, but we usually fetch first
+            try {
+                 const pid = personId || appElement.dataset.personId;
+                 const response = await fetch(`/employee/person/${pid}/get-institutional-data/`);
+                 const res = await response.json();
+                 if (res.success) {
+                     institutionalForm.value = res.data;
+                     
+                     // Abrir modal
+                     $('#modalInstitutionalOverlay').removeClass('hidden');
+
+                     // Inicializar Select2
+                     setTimeout(() => {
+                        const $modal = $('#modalInstitutionalOverlay');
+                        $modal.find('select.select2-wizard').each(function() {
+                             $(this).select2({
+                                 dropdownParent: $modal,
+                                 width: '100%'
+                             }).on('change', function(){
+                                 institutionalForm.value[$(this).attr('name')] = $(this).val();
+                             });
+                             // Set value if exists to trigger visual update
+                             if(institutionalForm.value[$(this).attr('name')]) {
+                                 $(this).val(institutionalForm.value[$(this).attr('name')]).trigger('change.select2');
+                             }
+                        });
+                     }, 100);
+                 } else {
+                     window.Toast.fire({icon: 'error', title: 'Error al cargar datos institucionales'});
+                 }
+            } catch (e) {
+                console.error("Error fetching institutional data", e);
+                window.Toast.fire({icon: 'error', title: 'Error de conexión'});
+            }
+        };
+
+        const saveInstitutionalData = async (personId) => {
+             if (isSaving.value) return;
+             isSaving.value = true;
+             
+             try {
+                 const pid = personId || appElement.dataset.personId;
+                 const formData = new FormData();
+                 Object.keys(institutionalForm.value).forEach(key => {
+                     const val = institutionalForm.value[key];
+                     if (val !== null && val !== undefined) {
+                         formData.append(key, val);
+                     }
+                 });
+
+                 const response = await fetch(`/employee/person/${pid}/save-institutional-data/`, {
+                     method: 'POST',
+                     headers: {
+                         'X-CSRFToken': window.getCookie('csrftoken')
+                     },
+                     body: formData
+                 });
+                 const res = await response.json();
+                 
+                 if (res.success) {
+                     window.Toast.fire({icon: 'success', title: res.message});
+                     $('#modalInstitutionalOverlay').addClass('hidden');
+                     setTimeout(() => location.reload(), 500);
+                 } else {
+                     institutionalErrors.value = res.errors;
+                     window.Toast.fire({icon: 'warning', title: 'Revise los campos'});
+                 }
+             } catch (e) {
+                 console.error("Error saving institutional data", e);
+                 window.Toast.fire({icon: 'error', title: 'Error al guardar'});
+             } finally {
+                 isSaving.value = false;
+             }
+        };
+
+
         return {
             // Estados
-            activeTab, isSaving, loadingList, tabs, personStats, personData,
-            editForm, editErrors, photoPreview,
-            titleForm, titleErrors, expForm, expErrors, trainForm, trainErrors,
-            bankForm, bankErrors,
-            listModalTitle, listTableHead, listTableBody,
-            searchQuery, listItems, filteredItems,
+            tabs,
+            activeTab,
+            isSaving,
+            loadingList,
+            personStats,
+            refreshSelect2,
+            initSelect2,
+            openModal,
+            openBankModal,
+            openPayrollModal,
+            saveBankAccount,
+            savePayrollInfo,
+            editForm,
+            editErrors,
+            titleForm,
+            titleErrors,
+            expForm,
+            expErrors,
+            trainForm,
+            trainErrors,
+            bankForm,
+            bankErrors,
+            payrollForm,
+            payrollErrors,
+            institutionalForm,
+            institutionalErrors,
+            // --- 3. UI Y PREVIEW ---
+            photoPreview,
+            personData,
+            listModalTitle,
+            listTableHead,
+            listTableBody,
+            // --- 3.1 BÚSQUEDA Y FILTRADO ---
+            searchQuery,
+            listItems,
+            filteredItems,
 
             // Métodos Persona
             openEditPersonModal, closeEditModal, submitPersonEdit, handlePhotoChange,
 
             // Métodos CV
-            handlePdfUpload, openModal, closeModal, closeListModal, handleEditCvItem, handleDeleteCvItem,
+            handlePdfUpload, closeModal, closeListModal, handleEditCvItem, handleDeleteCvItem,
             submitAcademicTitle, submitExperience, submitTraining,
             editItem, deleteItem,
 
             // Métodos Bancos
-            openBankModal, saveBankAccount, refreshCvTab
+            openBankModal, saveBankAccount, refreshCvTab,
+
+            // Métodos Nómina
+            openPayrollModal, savePayrollInfo,
+
+            // Métodos Institucionales
+            institutionalForm, institutionalErrors, openInstitutionalModal, saveInstitutionalData,
         };
     }
 });

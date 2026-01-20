@@ -58,6 +58,83 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePaginationUI(totalRows, totalPages);
     }
 
+    // --- Definición de updatePaginationUI ---
+    function updatePaginationUI(totalRows, totalPages) {
+        const pageInfo = document.getElementById('page-info');
+        const currentPageDisplay = document.getElementById('current-page-display');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        if (pageInfo) {
+            const start = totalRows === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalRows);
+            pageInfo.innerText = `Mostrando ${start} a ${end} registros de ${totalRows} registros`;
+        }
+        if (currentPageDisplay) {
+            currentPageDisplay.innerText = currentPage;
+        }
+
+        // Habilitar / Deshabilitar botones
+        if (btnPrev) btnPrev.disabled = (currentPage === 1);
+        if (btnNext) btnNext.disabled = (currentPage === totalPages || totalPages === 0);
+    }
+
+    // --- Definición de filterByStatus ---
+    window.filterByStatus = function(status) {
+        currentStatusFilter = status;
+
+        // Actualizar UI de tarjetas
+        const cards = {
+            'all': document.getElementById('card-filter-all'),
+            'true': document.getElementById('card-filter-active'),
+            'false': document.getElementById('card-filter-inactive')
+        };
+        
+        // Reset opacity
+        Object.values(cards).forEach(card => {
+            if (card) {
+                card.style.opacity = '0.4';
+                card.classList.remove('active-card'); // opcional si usas clase
+            }
+        });
+
+        const activeCard = cards[status];
+        if (activeCard) {
+            activeCard.style.opacity = '1';
+        }
+
+        applyFilters();
+    };
+
+    // Event Listeners para Paginación y Búsqueda
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value.toLowerCase();
+            currentPage = 1;
+            applyFilters();
+        });
+    }
+
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    if (btnPrev) btnPrev.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+        }
+    });
+
+    if (btnNext) {
+        btnNext.addEventListener('click', () => {
+            const totalRows = filteredRows.length;
+            const totalPages = Math.ceil(totalRows / pageSize) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        });
+    }
+
     // =========================================================
     // 2. DOM MANIPULATION (Insertar / Actualizar)
     // =========================================================

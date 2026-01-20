@@ -1,131 +1,241 @@
-<!-- Cuenta Bancaria -->
-<div class="section-card-standard mb-4 shadow-sm">
-    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-        <h5 class="section-title mb-0"><i class="fa-solid fa-building-columns text-primary"></i> Cuenta Bancaria</h5>
-        <button class="btn btn-success btn-sm px-3" @click="openBankModal">
-            <i class="fa-solid fa-plus me-1"></i>
-            {% if person.economic_data.bank_account %}Editar Cuenta{% else %}Agregar Cuenta{% endif %}
-        </button>
+<!-- Header Datos Económicos -->
+<div class="economic-header">
+    <div class="economic-header-content">
+        <h4><i class="fa-solid fa-coins me-2"></i>Datos Económicos</h4>
+        <p>Información bancaria y configuración de nómina del empleado</p>
+    </div>
+</div>
+
+<div class="grid-info-personal">
+    <!-- Cuenta Bancaria -->
+    <div class="info-box-styled personal-border shadow-sm">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-building-columns"></i> Cuenta Bancaria</h6>
+            {% if person.economic_data.bank_account %}
+                <button class="btn-box-action" @click="openBankModal({{ person.id }})">
+                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                </button>
+            {% endif %}
+        </div>
+
+        {% if person.economic_data.bank_account %}
+            <div class="info-data-row">
+                <label>Institución:</label>
+                <span class="fw-bold text-dark">{{ person.economic_data.bank_account.bank.name }}</span>
+            </div>
+             <div class="info-data-row">
+                <label>Tipo de Cuenta:</label>
+                <span>{{ person.economic_data.bank_account.account_type.name }}</span>
+            </div>
+            <div class="info-data-row">
+                <label>Número:</label>
+                <span class="text-primary fw-bold" style="letter-spacing: 0.5px;">{{ person.economic_data.bank_account.account_number }}</span>
+            </div>
+             <div class="info-data-row">
+                <label>Titular:</label>
+                <span class="small text-muted">{{ person.economic_data.bank_account.holder_name }}</span>
+            </div>
+             <div class="info-data-row">
+                <label>Estado:</label>
+                <span class="status-badge active" style="font-size: 0.7rem;">Activa</span>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                 <div class="mb-3 text-secondary opacity-50">
+                    <i class="fa-solid fa-building-columns fa-2x"></i>
+                 </div>
+                <p class="text-muted small mb-3">No hay cuenta bancaria registrada</p>
+                <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
+                   <i class="fa-solid fa-plus tiny-icon"></i> Agregar
+                </button>
+            </div>
+        {% endif %}
     </div>
 
-    {% if person.economic_data.bank_account %}
-        <div class="table-container shadow-none border">
-            <table>
-                <thead>
-                <tr>
-                    <th>Institución</th>
-                    <th>Tipo</th>
-                    <th>Número</th>
-                    <th>Titular</th>
-                    <th>Estado</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td class="fw-bold">{{ person.economic_data.bank_account.bank.name }}</td>
-                    <td>{{ person.economic_data.bank_account.account_type.name }}</td>
-                    <td><code class="text-primary fw-bold">{{ person.economic_data.bank_account.account_number }}</code>
-                    </td>
-                    <td>{{ person.economic_data.bank_account.holder_name }}</td>
-                    <td><span class="status-badge active">Activa</span></td>
-                </tr>
-                </tbody>
-            </table>
+    <!-- Mensualización -->
+    <div class="info-box-styled additional-border shadow-sm">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-calculator"></i> Nómina y Mensualización</h6>
+             {% if person.economic_data.payroll_info %}
+                <button class="btn-box-action" @click="openPayrollModal({{ person.id }})">
+                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                </button>
+            {% endif %}
         </div>
-    {% else %}
-        <div class="empty-state-container border-dashed rounded-3 py-5 bg-light text-center">
-            <i class="fa-solid fa-building-columns fa-3x text-light mb-3"></i>
-            <p class="text-muted">No hay cuenta bancaria registrada para este empleado.</p>
-        </div>
-    {% endif %}
+
+        {% if person.economic_data.payroll_info %}
+             <div class="info-data-row">
+                <label>Mensualiza Décimos:</label>
+                <span class="status-badge {% if person.economic_data.payroll_info.monthly_payment %}active{% else %}neutral{% endif %}" style="font-size: 0.7rem;">
+                    {% if person.economic_data.payroll_info.monthly_payment %}SÍ{% else %}NO{% endif %}
+                </span>
+            </div>
+             <div class="info-data-row">
+                <label>Fondos de Reserva:</label>
+                <span class="status-badge {% if person.economic_data.payroll_info.reserve_funds %}active{% else %}neutral{% endif %}" style="font-size: 0.7rem;">
+                    {% if person.economic_data.payroll_info.reserve_funds %}ACUMULA{% else %}NO ACUMULA{% endif %}
+                </span>
+            </div>
+            <div class="info-data-row mt-3 pt-2 border-top">
+                <label>Cargas Familiares:</label>
+                <span class="fw-bold">{{ person.economic_data.payroll_info.family_dependents }}</span>
+            </div>
+             <div class="info-data-row">
+                <label>Cargas Educación:</label>
+                <span class="fw-bold">{{ person.economic_data.payroll_info.education_dependents }}</span>
+            </div>
+             <div class="info-data-row mt-2">
+                <label>Ingreso a Roles:</label>
+                <span class="small">{{ person.economic_data.payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
+            </div>
+        {% else %}
+             <div class="text-center py-4">
+                 <div class="mb-3 text-secondary opacity-50">
+                    <i class="fa-regular fa-calendar-check fa-2x"></i>
+                 </div>
+                <p class="text-muted small mb-3">Sin configuración de nómina</p>
+                 <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
+                   <i class="fa-solid fa-plus tiny-icon"></i> Configurar
+                </button>
+            </div>
+        {% endif %}
+    </div>
 </div>
+
+<!-- Modal Cuenta Bancaria -->
 <div id="modalBankOverlay" class="modal-overlay hidden">
     <div class="modal-container" style="max-width: 550px;">
         <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main">Información Bancaria</h3>
+            <h3 class="header-title-main">Cuenta Bancaria</h3>
             <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
         <div class="modal-body-custom">
-            <div class="alert-info small mb-3">
-                <i class="fa-solid fa-circle-info me-2"></i>
-                Esta cuenta será utilizada para el pago de haberes y nómina.
+            
+            <div class="mb-3">
+                 <small class="text-white d-block p-2 rounded" style="background-color: #0d9488;">
+                    Empleado: {{ person.full_name }}
+                 </small>
             </div>
 
             <div class="form-group mb-3">
-                <label class="form-label">Institución Bancaria</label>
-                <select v-model="bankForm.bank" class="input-field">
-                    <option value="">-- Seleccione Banco --</option>
-                    {% for b in banks_list %} <!-- Pasar esto desde la vista -->
+                <label class="form-label required">Institución Bancaria</label>
+                <select v-model="bankForm.bank" class="input-field select2-wizard-bank">
+                    <option value="">---------</option>
+                    {% for b in banks_list %}
                         <option value="{{ b.id }}">{{ b.name }}</option>
                     {% endfor %}
                 </select>
+                <div class="form-text text-muted">Seleccione el banco donde mantiene la cuenta</div>
                 <span v-if="bankErrors.bank" class="text-error">[[ bankErrors.bank[0] ]]</span>
             </div>
 
-            <div class="grid-2-cols gap-3">
-                <div class="form-group">
-                    <label class="form-label">Tipo de Cuenta</label>
-                    <select v-model="bankForm.account_type" class="input-field">
-                        <option value="">-- Seleccione --</option>
+            <div class="form-group mb-3">
+                 <label class="form-label required">Tipo de Cuenta</label>
+                 <select v-model="bankForm.account_type" class="input-field select2-wizard-bank">
+                        <option value="">---------</option>
                         {% for t in account_types_list %}
                             <option value="{{ t.id }}">{{ t.name }}</option>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Número de Cuenta</label>
-                    <input type="text" v-model="bankForm.account_number" class="input-field">
-                </div>
+                 </select>
             </div>
 
-            <div class="form-group mt-3">
-                <label class="form-label">Nombre del Titular</label>
-                <input type="text" v-model="bankForm.holder_name" class="input-field uppercase-input">
+             <div class="form-group mb-3">
+                <label class="form-label required">Número de Cuenta</label>
+                <input type="text" v-model="bankForm.account_number" class="input-field" placeholder="Ingrese el número de cuenta">
             </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label required">Titular de la Cuenta</label>
+                <input type="text" v-model="bankForm.holder_name" class="input-field uppercase-input" placeholder="NOMBRE DEL TITULAR">
+            </div>
+
+             <div class="form-group mb-3">
+                <label class="form-label">Estado de la Cuenta</label>
+                 <div class="form-check">
+                     <input class="form-check-input" type="checkbox" checked disabled>
+                     <label class="form-check-label fw-bold">
+                         Cuenta activa
+                     </label>
+                 </div>
+            </div>
+
         </div>
         <div class="modal-footer-fixed">
-            <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')">Cancelar
-            </button>
-            <button class="btn-save" @click="saveBankAccount({{ person.id }})">Confirmar Datos</button>
+            <button class="btn-save" @click="saveBankAccount({{ person.id }})"><i class="fa-solid fa-floppy-disk me-2"></i>Guardar</button>
+             <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i class="fa-solid fa-xmark me-2"></i>Cancelar</button>
         </div>
     </div>
 </div>
-<!-- Mensualización -->
-<div class="section-card-standard mb-4 shadow-sm">
-    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-        <h5 class="section-title mb-0"><i class="fa-solid fa-calculator text-primary"></i> Mensualización y Cargas</h5>
-        <button class="btn btn-success btn-sm px-3"><i class="fa-solid fa-plus me-1"></i> Configurar</button>
-    </div>
 
-    {% if person.economic_data.payroll_info %}
-        <div class="row">
-            <div class="col-md-6 border-end">
-                <div class="p-3">
-                    <p class="mb-2"><strong>Décimos Mensualizados:</strong>
-                        <span class="status-badge {% if person.economic_data.payroll_info.monthly_payment %}active{% else %}neutral{% endif %}">
-                        {% if person.economic_data.payroll_info.monthly_payment %}SÍ{% else %}NO{% endif %}
-                    </span>
-                    </p>
-                    <p class="mb-0"><strong>Fondos de Reserva:</strong>
-                        <span class="status-badge {% if person.economic_data.payroll_info.reserve_funds %}active{% else %}neutral{% endif %}">
-                        {% if person.economic_data.payroll_info.reserve_funds %}SÍ{% else %}NO{% endif %}
-                    </span>
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="p-3">
-                    <p class="mb-2"><strong>Cargas Familiares:</strong> <span
-                            class="badge bg-primary rounded-pill">{{ person.economic_data.payroll_info.family_dependents }}</span>
-                    </p>
-                    <p class="mb-0"><strong>Fecha Ingreso
-                        Roles:</strong> {{ person.economic_data.payroll_info.roles_entry_date|default:"N/A" }}</p>
-                </div>
-            </div>
+<!-- Modal Mensualización -->
+<div id="modalPayrollOverlay" class="modal-overlay hidden">
+    <div class="modal-container" style="max-width: 600px;">
+        <div class="modal-header modal-header-gradient">
+            <h3 class="header-title-main">Configuración de Nómina</h3>
+             <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
-    {% else %}
-        <div class="text-center py-4 text-muted small italic">Información de mensualización no configurada.</div>
-    {% endif %}
+        <div class="modal-body-custom">
+               <div class="mb-3">
+                 <small class="text-white d-block p-2 rounded" style="background-color: #0d9488;">
+                    Empleado: {{ person.full_name }}
+                 </small>
+            </div>
+
+            <h6 class="text-primary mb-3"><i class="fa-solid fa-toggle-on"></i> Estados</h6>
+            <div class="grid-2-cols gap-3 mb-4">
+                <div class="border p-3 rounded bg-light">
+                    <div class="form-check">
+                         <input class="form-check-input" type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly">
+                         <label class="form-check-label fw-bold" for="checkMonthly">Mensualiza</label>
+                    </div>
+                     <small class="text-muted d-block mt-1">Marque si el empleado mensualiza décimos</small>
+                </div>
+                 <div class="border p-3 rounded bg-light">
+                    <div class="form-check">
+                         <input class="form-check-input" type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve">
+                         <label class="form-check-label fw-bold" for="checkReserve">Fondos de Reserva</label>
+                    </div>
+                     <small class="text-muted d-block mt-1">Marque si acumula fondos de reserva</small>
+                </div>
+            </div>
+
+            <hr>
+
+             <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Cargas Familiares</h6>
+             <div class="grid-2-cols gap-3 mb-4">
+                <div class="form-group">
+                    <label class="form-label required">Número de Cargas</label>
+                    <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
+                </div>
+                 <div class="form-group">
+                    <label class="form-label required">Educación a Cargo</label>
+                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0" max="20">
+                </div>
+             </div>
+
+             <hr>
+
+              <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-file-invoice"></i> Información de Roles</h6>
+             <div class="grid-2-cols gap-3 mb-4">
+                <div class="form-group">
+                    <label class="form-label">Fecha Ingreso a Roles</label>
+                    <input type="date" v-model="payrollForm.roles_entry_date" class="input-field">
+                </div>
+                 <div class="form-group">
+                    <label class="form-label required">Número de Roles</label>
+                    <input type="number" v-model="payrollForm.roles_count" class="input-field" min="0">
+                </div>
+             </div>
+
+
+        </div>
+        <div class="modal-footer-fixed">
+            <button class="btn-save" @click="savePayrollInfo({{ person.id }})"><i class="fa-solid fa-floppy-disk me-2"></i>Guardar</button>
+             <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i class="fa-solid fa-xmark me-2"></i>Cancelar</button>
+        </div>
+    </div>
 </div>

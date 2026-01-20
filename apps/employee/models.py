@@ -50,6 +50,19 @@ class Employee(BaseModel):
     def __str__(self):
         return f"{self.person.full_name}"
 
+    def set_status(self, status_code):
+        """
+        Actualiza el estado laboral del empleado buscando el codigo en el Catalogo
+        """
+        try:
+            status = CatalogItem.objects.get(code=status_code, catalog__code='EMPLOYMENT_STATUS')
+            self.employment_status = status
+            self.save()
+        except CatalogItem.DoesNotExist:
+            # Opción: Lanzar error o manejar silenciosamente
+            # Por ahora solo pasaremos, pero en producción deberíamos loguear
+            pass
+
 
 # ==============================================================================
 # 2. DATOS INSTITUCIONALES (EXPEDIENTE)
@@ -224,6 +237,7 @@ class PayrollInfo(BaseModel):
     family_dependents = models.IntegerField(default=0, verbose_name='Cargas Familiares')
     education_dependents = models.IntegerField(default=0, verbose_name='Cargas Educación')
     roles_entry_date = models.DateField(null=True, blank=True, verbose_name='Ingreso a Roles')
+    roles_count = models.IntegerField(default=0, verbose_name='Número de Roles')
 
     def clean(self):
         if self.family_dependents < 0 or self.family_dependents > 20:

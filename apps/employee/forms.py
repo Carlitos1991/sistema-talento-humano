@@ -1,5 +1,5 @@
 from django import forms
-from .models import AcademicTitle, BankAccount, Training, WorkExperience
+from .models import AcademicTitle, BankAccount, Training, WorkExperience, PayrollInfo
 
 
 class AcademicTitleForm(forms.ModelForm):
@@ -51,4 +51,18 @@ class BankAccountForm(forms.ModelForm):
             'account_type': forms.Select(attrs={'class': 'input-field select2-field'}),
             'account_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 1234567890'}),
             'holder_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+        }
+
+
+class PayrollInfoForm(forms.ModelForm):
+    class Meta:
+        model = PayrollInfo  # Make sure PayrollInfo is imported at top
+        fields = ['monthly_payment', 'reserve_funds', 'family_dependents', 'education_dependents', 'roles_entry_date', 'roles_count']
+        widgets = {
+             'monthly_payment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+             'reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+             'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
+             'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
+             'roles_entry_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+             'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': 0}),
         }

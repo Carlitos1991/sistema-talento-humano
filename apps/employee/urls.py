@@ -27,5 +27,12 @@ urlpatterns = [
     path('api/cv/delete/<str:item_type>/<int:item_id>/', views.delete_cv_item_api, name='api_delete_cv_item'),
     path('api/cv/delete/<str:item_type>/<int:item_id>/', views.delete_cv_item_api, name='api_delete_cv_item'),
     path('api/cv/detail/<str:item_type>/<int:item_id>/', views.get_cv_item_detail_api, name='api_get_cv_item_detail'),
+    path('person/<int:person_id>/add-title-api/', views.add_academic_title_api, name='add_academic_title_api'),
+    path('person/<int:person_id>/update-payroll-info/', views.update_payroll_info, name='update_payroll_info'),
+    path('person/<int:person_id>/add-bank-account/', views.add_bank_account, name='add_bank_account'),
+    path('person/<int:person_id>/get-payroll-info/', views.get_payroll_info_api, name='get_payroll_info'),
+    path('person/<int:person_id>/get-bank-account/', views.get_bank_account_api, name='get_bank_account'),
+    path('person/<int:person_id>/get-institutional-data/', views.get_institutional_data_api, name='get_institutional_data'),
+    path('person/<int:person_id>/save-institutional-data/', views.save_institutional_data_api, name='save_institutional_data'),
 
 ]
