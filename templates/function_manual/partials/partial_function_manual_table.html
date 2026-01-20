@@ -68,21 +68,34 @@
                         </button>
                     {% else %}
                         <!-- VISTA: PERFIL EN EDICIÓN -->
+                        {% if not profile.occupational_classification %}
+                            <!-- Botón ASIGNAR GRUPO OCUPACIONAL (Solo si no tiene clasificación) -->
+                            <!-- Reemplaza en lógica al paso 7 del Wizard -->
+                            <button class="btn-icon"
+                                    style="background-color: #f59e0b; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                                    onclick="openAssignGroupModal({{ profile.id }})"
+                                    title="Asignar Grupo Ocupacional">
+                                <i class="fa-solid fa-scale-balanced"></i>
+                            </button>
+                        {% endif %}
+
                         <!-- Botón Asignar Referencial -->
                         <button class="btn-icon" 
-                                style="background-color: #0d9488; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                                style="background-color: #0d9488; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
                                 onclick="openAssignReferentialModal({{ profile.id }})" 
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
 
-                        <!-- Botón Legalizar (Firmas) -->
-                        <button class="btn-icon" 
-                                style="background-color: #475569; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
-                                onclick="openLegalizeModal({{ profile.id }})" 
-                                title="Legalizar Perfil">
-                            <i class="fa-solid fa-file-signature"></i>
-                        </button>
+                        {% if profile.occupational_classification %}
+                            <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->
+                            <button class="btn-icon" 
+                                    style="background-color: #475569; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                                    onclick="openLegalizeModal({{ profile.id }})" 
+                                    title="Legalizar Perfil">
+                                <i class="fa-solid fa-file-signature"></i>
+                            </button>
+                        {% endif %}
 
                         <a href="{% url 'function_manual:profile_update' profile.id %}"
                         class="btn-views-action" title="Editar Perfil">

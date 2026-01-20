@@ -309,19 +309,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 transversalList() { return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL'); },
 
                 filteredVerbs() {
-                    // matchResult viene de lo que seleccionaste en el paso 2 (ej: {group: 'SP1', ...})
-                    if (!this.matchResult || !this.matchResult.group) return [];
-                    const currentSP = this.matchResult.group; // Ej: "SP1"
-                    const currentGroup = this.matchResult.group; // Ejemplo: "SP1"
+                    // LÓGICA ACTUALIZADA: Filtra por ROL seleccionado (catalog_item_id)
+                    // Buscamos el nivel que corresponde a 'ROLE' en la jerarquía de valoración
+                    const roleLevelIndex = this.valuationLevels.findIndex(lvl => lvl.type === 'ROLE');
+                    
+                    // Si no se ha llegado al nivel de rol o no hay selección, retornamos vacío
+                    if (roleLevelIndex === -1 || !this.selectedNodes[roleLevelIndex]) return [];
+                    
+                    const selectedNodeId = this.selectedNodes[roleLevelIndex];
+                    // valuationLevels[i].options contiene los objetos node devueltos por la API
+                    const selectedNode = this.valuationLevels[roleLevelIndex].options.find(n => n.id == selectedNodeId);
+                    
+                    // Verificamos que el nodo tenga asociado un catalog_item (el Rol)
+                    if (!selectedNode || !selectedNode.catalog_item_id) return [];
+                    
+                    const currentRoleId = selectedNode.catalog_item_id.toString();
 
-                    // Filtramos el catálogo de verbos que viene del servidor
                     return this.catalogs.verbs.filter(verb => {
                         // Si no tiene grupos definidos o es TODOS, se muestra
                         if (!verb.target_groups || verb.target_groups === 'TODOS') return true;
 
-                        // Convertimos la cadena "SP1,SP2" en array y buscamos
+                        // target_groups ahora debe contener IDs de Roles (Ej: "12, 45")
                         const allowed = verb.target_groups.split(',').map(s => s.trim());
-                        return allowed.includes(currentSP);
+                        return allowed.includes(currentRoleId);
                     });
                 },
                 missionPreview() {
@@ -422,10 +432,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     if (this.currentStep === 2) {
-                        if (!this.formData.occupational_classification) {
+                        // MODIFICACIÓN: Validar hasta el nivel 6 (Complejidad). El nivel 7 (Resultado) se hace fuera.
+                        // Niveles: 1.Rol, 2.Instrucción, 3.Exp, 4.Decisión, 5.Impacto, 6.Complejidad
+                        // Se verifica que selectedNodes tenga al menos 6 valores no vacíos
+                        
+                        // Filtramos valores vacíos
+                        const validNodes = this.selectedNodes.filter(n => n !== '');
+                        
+                        // Si hay menos de 6, falta completar
+                        if (validNodes.length < 6) {
                             window.Toast.fire({
                                 icon: 'warning',
-                                title: 'Debe completar la valoración hasta el nivel de Resultado.'
+                                title: 'Debe completar la valoración hasta el nivel de Complejidad.'
                             });
                             return false;
                         }

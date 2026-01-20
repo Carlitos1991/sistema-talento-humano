@@ -101,6 +101,12 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             context['stats_classified'] = qs.filter(occupational_classification__isnull=False).count()
             context['stats_pending'] = qs.filter(occupational_classification__isnull=True).count()
             context['stats_active'] = qs.filter(is_active=True).count()
+            
+            # Contexto para el modal de asignación de grupo
+            context['occupational_matrix_list'] = OccupationalMatrix.objects.select_related(
+                'required_role'
+            ).order_by('grade')
+            
         return context
 
 
@@ -313,6 +319,7 @@ class ManualCatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = ManualCatalogForm()
+        context['item_form'] = ManualCatalogItemForm() # Agregamos el formulario de items
         stats = get_manual_catalog_stats()
         context.update(
             {'stats_total': stats['total'], 'stats_active': stats['active'], 'stats_inactive': stats['inactive']})
@@ -403,7 +410,9 @@ def manual_catalog_item_list_json(request, catalog_id):
 def manual_catalog_item_detail_json(request, pk):
     i = get_object_or_404(ManualCatalogItem, pk=pk)
     return JsonResponse({'success': True,
-                         'data': {'id': i.id, 'catalog_id': i.catalog_id, 'name': i.name, 'code': i.code,
+                         'data': {'id': i.id, 'catalog_id': i.catalog_id,
+                                  'catalog_name': i.catalog.name,  # Needed for JS
+                                  'name': i.name, 'code': i.code,
                                   'description': i.description or '', 'target_groups': i.target_groups or ''}})
 
 
@@ -487,6 +496,7 @@ class ApiValuationNodesView(View):
             return n.name_extra if n.name_extra else "Sin Definición"
 
         data = [{'id': n.id, 'name': get_node_name(n), 'type': n.node_type,
+                 'catalog_item_id': n.catalog_item_id,
                  'classification_id': n.occupational_classification_id,
                  'classification': {'group': n.occupational_classification.occupational_group,
                                     'rmu': n.occupational_classification.remuneration,
@@ -945,3 +955,39 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         # Guardar
         wb.save(response)
         return response
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class AssignGroupApiView(LoginRequiredMixin, View):
+    """
+    API para asignar manualmente el grupo ocupacional (OccupationalMatrix) a un perfil.
+    Recibe JSON: { profile_id: <int>, matrix_id: <int> }
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            profile_id = data.get('profile_id')
+            matrix_id = data.get('matrix_id')
+
+            if not profile_id or not matrix_id:
+                return JsonResponse({'success': False, 'message': 'Faltan datos requeridos (profile_id, matrix_id)'}, status=400)
+
+            profile = get_object_or_404(JobProfile, pk=profile_id)
+            classification = get_object_or_404(OccupationalMatrix, pk=matrix_id)
+
+            # Validar si es necesario alguna regla de negocio aquí.
+            # Por ahora asignamos directo.
+            profile.occupational_classification = classification
+            
+            # Si el perfil no tiene nombre específico, podríamos sugerir uno, 
+            # pero aquí solo asignamos la clasificación.
+            
+            profile.save()
+
+            return JsonResponse({
+                'success': True, 
+                'message': f'Perfil asignado correctamente a {classification.occupational_group} - Grado {classification.grade}'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)

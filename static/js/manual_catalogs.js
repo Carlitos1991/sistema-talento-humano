@@ -514,6 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
             computed: {
                 modalTitle() {
                     return this.isEditing ? 'Editar Item' : `Nuevo Item para: ${this.parentCatalogName}`;
+                },
+                isVerbCatalog() {
+                    // Detectar si estamos en el catálogo de verbos.
+                    // Puede venir via parentCatalogName o si cargamos el form.
+                    // Nombre normalizado: Verbos de Acción
+                    return (this.parentCatalogName && this.parentCatalogName.toUpperCase().includes('VERB'));
                 }
             },
             methods: {
@@ -523,9 +529,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.parentCatalogId = catalogId;
                     this.parentCatalogName = catalogName;
                     this.isFromList = fromList;
-                    this.form = {name: '', code: ''};
+                    this.form = {name: '', code: '', target_groups: ''};
                     this.errors = {};
                     this.isVisible = true;
+
+                    // Inicializar Select2 si aplica
+                    this.$nextTick(() => {
+                        this.initSelect2Multi();
+                        $('#id_roles').val(null).trigger('change');
+                    });
                 },
                 async openEdit(itemId, fromList = false) {
                     this.isEditing = true;
@@ -538,10 +550,48 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (result.success) {
                             this.form = result.data;
                             this.parentCatalogId = result.data.catalog_id;
+                            // Intentar recuperar el nombre del catálogo si no lo tenemos (para saber si es Verbo)
+                            if(result.data.catalog_name) this.parentCatalogName = result.data.catalog_name;
+
                             this.isVisible = true;
+
+                            this.$nextTick(() => {
+                                this.initSelect2Multi();
+                                // Preseleccionar valores en combo
+                                if (this.isVerbCatalog && this.form.target_groups) {
+                                  // Separar por comas e intentar asignar
+                                  const ids = this.form.target_groups.split(',').filter(x => !isNaN(x));
+                                  if(ids.length > 0) {
+                                      $('#id_roles').val(ids).trigger('change');
+                                  } else {
+                                      $('#id_roles').val(null).trigger('change');
+                                  }
+                                }
+                            });
                         }
                     } catch (e) {
                         Swal.fire('Error', 'No se pudieron cargar datos', 'error');
+                    }
+                },
+                initSelect2Multi() {
+                    const self = this;
+                    if ($('#id_roles').length) {
+                         $('#id_roles').select2({
+                            width: '100%',
+                            placeholder: 'Seleccione Roles compatibles',
+                            allowClear: true,
+                            multiple: true,
+                            dropdownParent: $('#item-modal') // Importante para que funcione en modal
+                        }).off('change').on('change', function() {
+                             // Actualizar target_groups cuando cambia el select
+                             const val = $(this).val(); 
+                             // val es un array de strings ["1", "5"]
+                             if(val && val.length > 0) {
+                                self.form.target_groups = val.join(',');
+                             } else {
+                                self.form.target_groups = '';
+                             }
+                        });
                     }
                 },
                 closeModal() {

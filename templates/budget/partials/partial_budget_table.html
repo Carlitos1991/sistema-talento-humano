@@ -46,7 +46,7 @@
                 <td>
                     {% if line.current_employee %}
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-xs fw-bold">{{ line.current_employee.full_name }}</span>
+                            <span class="text-xs fw-bold">{{ line.current_employee.person.full_name }}</span>
                         </div>
                     {% else %}
                         <span class="status-badge badge-neutral">SIN ASIGNAR</span>

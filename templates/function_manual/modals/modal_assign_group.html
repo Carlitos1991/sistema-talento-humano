@@ -1,0 +1,126 @@
+<!-- Modal para Asignar Grupo Ocupacional -->
+<div id="assign-group-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }">
+        <form @submit.prevent="submitAssignment" class="modal-container animate-scale-in" style="max-width: 500px;">
+            {% csrf_token %}
+            <div class="modal-header modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-scale-balanced me-2"></i> Asignar Grupo Ocupacional
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body modal-body-custom">
+                <p class="text-sm text-gray-600 mb-4">
+                    Seleccione el grado y grupo ocupacional resultante para este perfil.
+                    Esto habilitará la opción de legalización.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label font-bold">Grupo Ocupacional / Escala (*)</label>
+                    <select class="form-control select2-group" style="width: 100%;" required>
+                        <option value="">Seleccione...</option>
+                        <!-- Las opciones se cargarán vía JS/Backend o inyectadas -->
+                        {% for item in occupational_matrix_list %}
+                            <option value="{{ item.id }}">
+                                {{ item.occupational_group }} - Grado {{ item.grade }} - RMU ${{ item.remuneration }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                <button type="submit" class="btn-save" :disabled="loading">
+                    <span v-if="loading"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
+                    <span v-else><i class="fas fa-check"></i> Asignar</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Pequeña app Vue para manejar este modal específico
+    document.addEventListener('DOMContentLoaded', () => {
+        if(document.getElementById('assign-group-app')) {
+            const {createApp} = Vue;
+            createApp({
+                delimiters: ['[[', ']]'],
+                data() {
+                    return {
+                        isVisible: false,
+                        loading: false,
+                        profileId: null,
+                        selectedGroup: null
+                    }
+                },
+                mounted() {
+                    // Exponer globalmente para ser llamada desde el botón onclick
+                    window.openAssignGroupModal = (id) => {
+                        this.profileId = id;
+                        this.selectedGroup = null;
+                        this.isVisible = true;
+                        this.$nextTick(() => {
+                            $('.select2-group').val(null).trigger('change');
+                        });
+                    };
+
+                    // Init Select2
+                    const self = this;
+                    $('.select2-group').select2({
+                        dropdownParent: $('#assign-group-app .modal-container'),
+                        width: '100%',
+                        placeholder: 'Seleccione Grupo...'
+                    }).on('change', function() {
+                        self.selectedGroup = $(this).val();
+                    });
+                },
+                methods: {
+                    closeModal() {
+                        this.isVisible = false;
+                    },
+                    async submitAssignment() {
+                        if(!this.selectedGroup) {
+                            Swal.fire('Atención', 'Seleccione un grupo ocupacional', 'warning');
+                            return;
+                        }
+                        this.loading = true;
+                        try {
+                            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            
+                            const res = await fetch('/function_manual/api/profile/assign-group/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({
+                                    profile_id: this.profileId,
+                                    matrix_id: this.selectedGroup
+                                })
+                            });
+                            const data = await res.json();
+                            
+                            if(data.success) {
+                                Swal.fire('Guardado', 'Grupo asignado correctamente', 'success').then(() => {
+                                    location.reload();
+                                });
+                                this.closeModal();
+                            } else {
+                                Swal.fire('Error', data.message || 'Error al guardar', 'error');
+                            }
+                        } catch(e) {
+                             Swal.fire('Error', 'Error de conexión', 'error');
+                        } finally {
+                            this.loading = false;
+                        }
+                    }
+                }
+            }).mount('#assign-group-app');
+        }
+    });
+</script>
