@@ -315,28 +315,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
 
                 filteredVerbs() {
-                    // LÓGICA ACTUALIZADA: Filtra por ROL seleccionado (catalog_item_id)
-                    // Buscamos el nivel que corresponde a 'ROLE' en la jerarquía de valoración
+                    // Filtrar verbos por el ROL seleccionado en Step 2
                     const roleLevelIndex = this.valuationLevels.findIndex(lvl => lvl.type === 'ROLE');
                     
-                    // Si no se ha llegado al nivel de rol o no hay selección, retornamos vacío
-                    if (roleLevelIndex === -1 || !this.selectedNodes[roleLevelIndex]) return [];
+                    // Si no se ha seleccionado un rol, retornar todos los verbos
+                    if (roleLevelIndex === -1 || !this.selectedNodes[roleLevelIndex]) {
+                        return this.catalogs.verbs;
+                    }
                     
-                    const selectedNodeId = this.selectedNodes[roleLevelIndex];
-                    // valuationLevels[i].options contiene los objetos node devueltos por la API
-                    const selectedNode = this.valuationLevels[roleLevelIndex].options.find(n => n.id == selectedNodeId);
-                    
-                    // Verificamos que el nodo tenga asociado un catalog_item (el Rol)
-                    if (!selectedNode || !selectedNode.catalog_item_id) return [];
-                    
-                    const currentRoleId = selectedNode.catalog_item_id.toString();
+                    const selectedRoleNodeId = this.selectedNodes[roleLevelIndex];
 
                     return this.catalogs.verbs.filter(verb => {
-                        // Si no tiene rol definido, se muestra
+                        // Si el verbo no tiene rol específico (target_role es null), se muestra para todos
                         if (!verb.target_role) return true;
 
-                        // target_role contiene el ID de ValuationNode (ROLE)
-                        return verb.target_role.toString() === currentRoleId;
+                        // Comparar el target_role del verbo con el nodo de valoración seleccionado
+                        return verb.target_role == selectedRoleNodeId;
                     });
                 },
                 missionPreview() {
