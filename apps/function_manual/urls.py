@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/roles/', views.api_get_available_roles, name='api_get_available_roles'),
     
     # API para asignar grupo ocupacional
+    path('api/profile/<int:profile_id>/valuation-chain/', views.api_get_profile_valuation_chain, name='api_profile_valuation_chain'),
     path('api/profile/assign-group/', views.AssignGroupApiView.as_view(), name='api_profile_assign_group'),
 
     # --- ADMINISTRACIÓN / CATÁLOGOS ---

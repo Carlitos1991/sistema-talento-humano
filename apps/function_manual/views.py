@@ -145,7 +145,10 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
             current_unit = current_unit.parent
 
         # 2. Reconstruir ruta de valoración (Valuation Nodes)
+        # Intentar reconstruir desde los campos individuales del perfil
         nodes_path = []
+        
+        # Si el perfil tiene clasificación ocupacional, usar esa ruta completa
         if profile.occupational_classification:
             leaf_node = ValuationNode.objects.filter(
                 occupational_classification=profile.occupational_classification,
@@ -157,6 +160,72 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                 while curr:
                     nodes_path.insert(0, curr.id)
                     curr = curr.parent
+        else:
+            # Si no tiene clasificación, reconstruir desde los campos individuales
+            # Buscar cada nodo basándose en los catalog_items guardados
+            
+            # 1. ROL
+            if profile.job_role:
+                role_node = ValuationNode.objects.filter(
+                    node_type='ROLE',
+                    catalog_item=profile.job_role,
+                    is_active=True
+                ).first()
+                if role_node:
+                    nodes_path.append(role_node.id)
+                    
+                    # 2. INSTRUCCIÓN
+                    if profile.required_instruction:
+                        instruction_node = ValuationNode.objects.filter(
+                            node_type='INSTRUCTION',
+                            catalog_item=profile.required_instruction,
+                            parent=role_node,
+                            is_active=True
+                        ).first()
+                        if instruction_node:
+                            nodes_path.append(instruction_node.id)
+                            
+                            # 3. EXPERIENCIA (buscar el primer nodo hijo)
+                            experience_node = ValuationNode.objects.filter(
+                                node_type='EXPERIENCE',
+                                parent=instruction_node,
+                                is_active=True
+                            ).first()
+                            if experience_node:
+                                nodes_path.append(experience_node.id)
+                                
+                                # 4. DECISIÓN
+                                if profile.decision_making:
+                                    decision_node = ValuationNode.objects.filter(
+                                        node_type='DECISION',
+                                        catalog_item=profile.decision_making,
+                                        parent=experience_node,
+                                        is_active=True
+                                    ).first()
+                                    if decision_node:
+                                        nodes_path.append(decision_node.id)
+                                        
+                                        # 5. IMPACTO
+                                        if profile.management_impact:
+                                            impact_node = ValuationNode.objects.filter(
+                                                node_type='IMPACT',
+                                                catalog_item=profile.management_impact,
+                                                parent=decision_node,
+                                                is_active=True
+                                            ).first()
+                                            if impact_node:
+                                                nodes_path.append(impact_node.id)
+                                                
+                                                # 6. COMPLEJIDAD
+                                                if profile.final_complexity_level:
+                                                    complexity_node = ValuationNode.objects.filter(
+                                                        node_type='COMPLEXITY',
+                                                        catalog_item=profile.final_complexity_level,
+                                                        parent=impact_node,
+                                                        is_active=True
+                                                    ).first()
+                                                    if complexity_node:
+                                                        nodes_path.append(complexity_node.id)
 
         # 3. Actividades
         activities_data = []
@@ -674,16 +743,66 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.specific_job_title = data.get('specific_job_title')
                 profile.administrative_unit_id = data.get('administrative_unit')
                 
-                # Guardar el nivel de complejidad explícitamente si viene del wizard
-                # Esto es crucial si no se selecciona clasificación aun
-                complexity_node_id = data.get('final_complexity_level_id')
+                # Guardar todos los niveles de valoración desde los nodos seleccionados
+                role_node_id = data.get('role_node_id')
+                if role_node_id:
+                    try:
+                        node = ValuationNode.objects.get(pk=role_node_id)
+                        if node.catalog_item:
+                            profile.job_role = node.catalog_item
+                    except ValuationNode.DoesNotExist:
+                        pass
+                
+                instruction_node_id = data.get('instruction_node_id')
+                if instruction_node_id:
+                    try:
+                        node = ValuationNode.objects.get(pk=instruction_node_id)
+                        if node.catalog_item:
+                            profile.required_instruction = node.catalog_item
+                    except ValuationNode.DoesNotExist:
+                        pass
+                
+                experience_node_id = data.get('experience_node_id')
+                if experience_node_id:
+                    try:
+                        node = ValuationNode.objects.get(pk=experience_node_id)
+                        if node.name_extra:
+                            # Extraer meses de experiencia del nombre
+                            import re
+                            match = re.search(r'(\d+)', node.name_extra)
+                            if match:
+                                profile.required_experience_months = int(match.group(1))
+                            elif 'no requerida' in node.name_extra.lower():
+                                profile.required_experience_months = 0
+                    except ValuationNode.DoesNotExist:
+                        pass
+                
+                decision_node_id = data.get('decision_node_id')
+                if decision_node_id:
+                    try:
+                        node = ValuationNode.objects.get(pk=decision_node_id)
+                        if node.catalog_item:
+                            profile.decision_making = node.catalog_item
+                    except ValuationNode.DoesNotExist:
+                        pass
+                
+                impact_node_id = data.get('impact_node_id')
+                if impact_node_id:
+                    try:
+                        node = ValuationNode.objects.get(pk=impact_node_id)
+                        if node.catalog_item:
+                            profile.management_impact = node.catalog_item
+                    except ValuationNode.DoesNotExist:
+                        pass
+                
+                complexity_node_id = data.get('complexity_node_id')
                 if complexity_node_id:
-                    # Buscamos el nodo para obtener el CatalogItem correcto
                     try:
                         node = ValuationNode.objects.get(pk=complexity_node_id)
-                        profile.final_complexity_level = node.catalog_item
+                        if node.catalog_item:
+                            profile.final_complexity_level = node.catalog_item
                     except ValuationNode.DoesNotExist:
-                        pass # Si no existe, ignoramos (evita crash)
+                        pass
                 
                 # Retrieve Matrix details
                 matrix_id = data.get('occupational_classification')
@@ -999,7 +1118,53 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         return response
 
 
-@method_decorator(csrf_protect, name='dispatch')
+def api_get_profile_valuation_chain(request, profile_id):
+    """
+    Devuelve los 6 niveles de valoración con los valores seleccionados del perfil.
+    Devuelve los catalog_item_id seleccionados para cada nivel.
+    """
+    try:
+        profile = JobProfile.objects.filter(pk=profile_id).select_related(
+            'job_role',
+            'required_instruction', 
+            'decision_making',
+            'management_impact',
+            'final_complexity_level'
+        ).first()
+        
+        if not profile:
+            return JsonResponse({
+                'success': False,
+                'message': 'Perfil no encontrado'
+            }, status=404)
+        
+        # Construir respuesta con los catalog_items seleccionados
+        valuation_data = {
+            'success': True,
+            'selected_values': {
+                'role_id': profile.job_role_id,
+                'instruction_id': profile.required_instruction_id,
+                'experience_months': profile.required_experience_months or 0,
+                'decision_id': profile.decision_making_id,
+                'impact_id': profile.management_impact_id,
+                'complexity_id': profile.final_complexity_level_id
+            }
+        }
+        
+        return JsonResponse(valuation_data)
+        
+    except Exception as e:
+        import traceback
+        print("=" * 80)
+        print("ERROR en api_get_profile_valuation_chain:")
+        traceback.print_exc()
+        print("=" * 80)
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error del servidor: {str(e)}'
+        }, status=500)
+
+
 class AssignGroupApiView(LoginRequiredMixin, View):
     """
     API para asignar manualmente el grupo ocupacional (OccupationalMatrix) a un perfil.

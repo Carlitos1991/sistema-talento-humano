@@ -77,7 +77,7 @@
                     </div>
 
                     <div class="valuation-chain-container">
-                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box">
+                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box" v-show="level.type !== 'RESULT'">
                             <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
                             <select class="form-control select2-valuation"
                                     :data-index="index"

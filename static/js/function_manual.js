@@ -729,12 +729,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         ...this.selectedTransversal
                     ].filter(id => id && id !== '');
                     
-                    // Capturar el ID de Complejidad (Nivel 6, índice 5)
-                    const complexityId = (this.selectedNodes.length > 5) ? this.selectedNodes[5] : null;
+                    // Capturar los IDs de todos los niveles de valoración (nodos)
+                    const valuationNodeIds = {
+                        role_node_id: this.selectedNodes[0] || null,
+                        instruction_node_id: this.selectedNodes[1] || null,
+                        experience_node_id: this.selectedNodes[2] || null,
+                        decision_node_id: this.selectedNodes[3] || null,
+                        impact_node_id: this.selectedNodes[4] || null,
+                        complexity_node_id: this.selectedNodes[5] || null,
+                        result_node_id: this.selectedNodes[6] || null  // Nivel 7 (RESULT) si existe
+                    };
 
                     const payload = {
                         ...this.formData,
-                        final_complexity_level_id: complexityId,
+                        ...valuationNodeIds,
+                        final_complexity_level_id: valuationNodeIds.complexity_node_id,  // Por compatibilidad
                         activities: this.activities,
                         competencies: competencies
                     };

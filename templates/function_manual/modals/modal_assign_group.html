@@ -14,17 +14,27 @@
 
             <div class="modal-body modal-body-custom">
                 <p class="text-sm text-gray-600 mb-4">
-                    Complete la cadena de valoración para determinar el grupo ocupacional y grado correspondiente.
+                    Seleccione el grupo ocupacional correspondiente basado en la valoración del perfil.
                 </p>
 
-                <!-- Cadena de valoración -->
-                <div class="valuation-chain-container mb-4">
-                    <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box">
+                <!-- Indicador de carga -->
+                <div v-if="!hasResultLevel" class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                    <p class="mt-2 text-sm text-gray-600">Cargando opciones...</p>
+                </div>
+
+                <!-- Cadena de valoración - Solo mostrar el nivel RESULT (7mo) cuando esté disponible -->
+                <div v-else class="valuation-chain-container mb-4">
+                    <div v-for="(level, index) in valuationLevels" 
+                         :key="index" 
+                         class="valuation-node-box"
+                         v-show="level.type === 'RESULT'">
                         <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
                         <select class="form-control select2-valuation-assign"
                                 :data-index="index"
                                 v-model="selectedNodes[index]"
-                                required>
+                                :disabled="level.type !== 'RESULT'"
+                                :required="level.type === 'RESULT'">
                             <option value="">Seleccione una opción...</option>
                             <option v-for="node in level.options" :key="node.id" :value="node.id">
                                 [[ node.name ]]
@@ -33,28 +43,12 @@
                     </div>
                 </div>
 
-                <!-- Resultado: Grupos Ocupacionales Filtrados -->
-                <div v-if="filteredMatrix.length > 0" class="form-group">
-                    <label class="form-label font-bold">
-                        <i class="fa-solid fa-award"></i> Grupo Ocupacional / Escala (*)
-                    </label>
-                    <select class="form-control select2-group" v-model="selectedGroup" style="width: 100%;" required>
-                        <option value="">Seleccione...</option>
-                        <option v-for="item in filteredMatrix" :key="item.id" :value="item.id">
-                            [[ item.occupational_group ]] - Grado [[ item.grade ]] - RMU $[[ item.remuneration ]]
-                        </option>
-                    </select>
-                </div>
 
-                <div v-else-if="selectedNodes.length >= 6 && selectedNodes[5]" class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    No se encontraron grupos ocupacionales para la combinación seleccionada.
-                </div>
             </div>
 
             <div class="modal-footer modal-footer-spaced">
                 <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save" :disabled="loading || !selectedGroup">
+                <button type="submit" class="btn-save" :disabled="loading || !hasResultSelected">
                     <span v-if="loading"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
                     <span v-else><i class="fas fa-check"></i> Asignar</span>
                 </button>
@@ -87,6 +81,15 @@
                         selectedNodes: []
                     }
                 },
+                computed: {
+                    hasResultSelected() {
+                        const resultIndex = this.valuationLevels.findIndex(l => l.type === 'RESULT');
+                        return resultIndex !== -1 && this.selectedNodes[resultIndex];
+                    },
+                    hasResultLevel() {
+                        return this.valuationLevels.some(l => l.type === 'RESULT');
+                    }
+                },
                 mounted() {
                     const tag = document.getElementById('matrix-data');
                     if (tag) {
@@ -106,12 +109,8 @@
                         this.filteredMatrix = [];
                         this.isVisible = true;
                         
-                        // Cargar el primer nivel de valoración (ROL)
-                        await this.fetchValuationLevel(null);
-                        
-                        this.$nextTick(() => {
-                            this.initSelect2Valuation();
-                        });
+                        // Cargar la cadena de valoración precargada desde el backend
+                        await this.loadProfileValuationChain(id);
                     };
                 },
                 methods: {
@@ -121,160 +120,211 @@
                         this.selectedNodes = [];
                         this.filteredMatrix = [];
                     },
-                    async fetchValuationLevel(parentId) {
-                        const url = parentId 
-                            ? `/function_manual/api/valuation-nodes/?parent=${parentId}` 
+                    async loadProfileValuationChain(profileId) {
+                        try {
+                            // Primero obtener los valores seleccionados del perfil
+                            const res = await fetch(`/function_manual/api/profile/${profileId}/valuation-chain/`);
+                            const data = await res.json();
+                            
+                            if (!data.success) {
+                                Swal.fire('Error', data.message || 'No se pudo cargar los datos del perfil', 'error');
+                                return;
+                            }
+                            
+                            const selected = data.selected_values;
+                            console.log('Valores seleccionados del perfil:', selected);
+                            
+                            // Cargar la cadena de valoración secuencialmente
+                            // Nivel 1: ROL
+                            await this.fetchAndSelectLevel(null, 'ROLE', selected.role_id);
+                            if (!this.selectedNodes[0]) {
+                                console.error('No se pudo cargar nivel ROL');
+                                return;
+                            }
+                            
+                            // Nivel 2: INSTRUCCIÓN
+                            await this.fetchAndSelectLevel(this.selectedNodes[0], 'INSTRUCTION', selected.instruction_id);
+                            if (!this.selectedNodes[1]) {
+                                console.error('No se pudo cargar nivel INSTRUCTION');
+                                return;
+                            }
+                            
+                            // Nivel 3: EXPERIENCIA (buscar por meses de experiencia)
+                            await this.fetchAndSelectLevel(this.selectedNodes[1], 'EXPERIENCE', null, selected.experience_months);
+                            if (!this.selectedNodes[2]) {
+                                console.error('No se pudo cargar nivel EXPERIENCE');
+                                return;
+                            }
+                            
+                            // Nivel 4: DECISIÓN
+                            await this.fetchAndSelectLevel(this.selectedNodes[2], 'DECISION', selected.decision_id);
+                            if (!this.selectedNodes[3]) {
+                                console.error('No se pudo cargar nivel DECISION');
+                                return;
+                            }
+                            
+                            // Nivel 5: IMPACTO
+                            await this.fetchAndSelectLevel(this.selectedNodes[3], 'IMPACT', selected.impact_id);
+                            if (!this.selectedNodes[4]) {
+                                console.error('No se pudo cargar nivel IMPACT');
+                                return;
+                            }
+                            
+                            // Nivel 6: COMPLEJIDAD
+                            await this.fetchAndSelectLevel(this.selectedNodes[4], 'COMPLEXITY', selected.complexity_id);
+                            if (!this.selectedNodes[5]) {
+                                console.error('No se pudo cargar nivel COMPLEXITY');
+                                return;
+                            }
+                            
+                            // Nivel 7: RESULT (SIN pre-selección, debe quedar vacío)
+                            await this.fetchAndSelectLevel(this.selectedNodes[5], 'RESULT', null, null, false);
+                            
+                            console.log('Cadena de valoración cargada:', {
+                                levels: this.valuationLevels.length,
+                                selected: this.selectedNodes
+                            });
+                            
+                            // Inicializar Select2 inmediatamente después de cargar RESULT
+                            this.$nextTick(() => {
+                                this.initSelect2Valuation();
+                            });
+                            
+                        } catch(e) {
+                            console.error('Error cargando cadena de valoración:', e);
+                            Swal.fire('Error', 'Error al cargar los datos del perfil', 'error');
+                        }
+                    },
+                    async fetchAndSelectLevel(parentNodeId, expectedType, catalogItemIdToSelect, experienceMonths = null, autoSelectFirst = true) {
+                        // Cargar un nivel y pre-seleccionar el valor si se proporciona
+                        const url = parentNodeId 
+                            ? `/function_manual/api/valuation-nodes/?parent=${parentNodeId}` 
                             : '/function_manual/api/valuation-nodes/';
                         
                         try {
                             const res = await fetch(url);
-                            const data = await res.json();
-                            if (data.length > 0) {
+                            const nodes = await res.json();
+                            
+                            console.log(`Nivel ${expectedType}:`, nodes.length, 'opciones');
+                            
+                            if (nodes.length > 0 && nodes[0].type === expectedType) {
                                 this.valuationLevels.push({
-                                    type: data[0].type, 
-                                    options: data
+                                    type: nodes[0].type,
+                                    options: nodes
                                 });
-                                this.selectedNodes.push('');
                                 
-                                this.$nextTick(() => {
-                                    this.initSelect2Valuation();
-                                });
+                                // Determinar qué nodo seleccionar
+                                let selectedNodeId = '';
+                                
+                                if (catalogItemIdToSelect) {
+                                    // Buscar por catalog_item_id
+                                    const matchingNode = nodes.find(n => n.catalog_item_id == catalogItemIdToSelect);
+                                    if (matchingNode) {
+                                        selectedNodeId = matchingNode.id;
+                                        console.log(`  -> Seleccionado: ${matchingNode.name} (ID: ${selectedNodeId})`);
+                                    } else {
+                                        console.warn(`  -> No se encontró nodo con catalog_item_id=${catalogItemIdToSelect}`);
+                                        if (autoSelectFirst) {
+                                            selectedNodeId = nodes[0].id;
+                                            console.log(`  -> Seleccionado primer nodo por defecto: ${nodes[0].name}`);
+                                        }
+                                    }
+                                } else if (expectedType === 'EXPERIENCE' && experienceMonths !== null) {
+                                    // Para EXPERIENCE, buscar por meses en name_extra
+                                    const matchingNode = nodes.find(n => {
+                                        if (!n.name_extra && !n.name) return false;
+                                        
+                                        // Usar name o name_extra según lo que esté disponible
+                                        const nodeName = (n.name_extra || n.name || '').toLowerCase();
+                                        
+                                        // Si es 0 meses, buscar "no requerida" o "sin experiencia"
+                                        if (experienceMonths === 0) {
+                                            return nodeName.includes('no requerida') || 
+                                                   nodeName.includes('sin experiencia') ||
+                                                   nodeName.includes('no requiere') ||
+                                                   nodeName.includes('0 meses') ||
+                                                   nodeName === '0';
+                                        }
+                                        
+                                        // Para otros valores, buscar el número en el texto
+                                        const text = n.name_extra || n.name || '';
+                                        const match = text.match(/(\d+)/);
+                                        if (match) {
+                                            return parseInt(match[1]) === experienceMonths;
+                                        }
+                                        return false;
+                                    });
+                                    
+                                    if (matchingNode) {
+                                        selectedNodeId = matchingNode.id;
+                                        console.log(`  -> Seleccionado por experiencia (${experienceMonths} meses): ${matchingNode.name} (ID: ${selectedNodeId})`);
+                                    } else {
+                                        console.warn(`  -> No se encontró nodo con experiencia de ${experienceMonths} meses. Opciones disponibles:`, 
+                                            nodes.map(n => ({id: n.id, name: n.name, name_extra: n.name_extra})));
+                                        if (autoSelectFirst) {
+                                            selectedNodeId = nodes[0].id;
+                                            console.log(`  -> Seleccionado primer nodo por defecto: ${nodes[0].name}`);
+                                        }
+                                    }
+                                } else if (autoSelectFirst && expectedType !== 'RESULT') {
+                                    // Para otros niveles (excepto RESULT), seleccionar el primero por defecto
+                                    selectedNodeId = nodes[0].id;
+                                    console.log(`  -> Seleccionado por defecto: ${nodes[0].name} (ID: ${selectedNodeId})`);
+                                } else {
+                                    // Para RESULT o cuando autoSelectFirst es false, dejar vacío
+                                    console.log(`  -> No se pre-selecciona ningún valor (vacío)`);
+                                }
+                                
+                                this.selectedNodes.push(selectedNodeId);
+                            } else {
+                                console.error(`Tipo esperado ${expectedType} no coincide con ${nodes[0]?.type}`);
                             }
                         } catch(e) {
-                            console.error('Error fetching valuation level:', e);
+                            console.error('Error fetching level:', e);
                         }
                     },
                     async handleNodeChange(index) {
                         const id = this.selectedNodes[index];
+                        const level = this.valuationLevels[index];
                         
-                        // Truncar niveles posteriores
-                        this.valuationLevels = this.valuationLevels.slice(0, index + 1);
-                        this.selectedNodes = this.selectedNodes.slice(0, index + 1);
-                        this.filteredMatrix = [];
-                        this.selectedGroup = null;
-
-                        if (id) {
-                            const sel = this.valuationLevels[index].options.find(n => n.id == id);
+                        // Solo procesar si es el nivel RESULT (el único habilitado)
+                        if (level && level.type === 'RESULT' && id) {
+                            const sel = level.options.find(n => n.id == id);
                             
-                            // Si es RESULT, mostrar las opciones filtradas
-                            if (sel.type === 'RESULT' && sel.classification_id) {
+                            if (sel && sel.classification_id) {
                                 this.selectedGroup = sel.classification_id;
-                                this.filteredMatrix = [{
-                                    id: sel.classification_id,
-                                    occupational_group: sel.classification.group,
-                                    grade: sel.classification.grade,
-                                    remuneration: sel.classification.rmu
-                                }];
-                                
-                                this.$nextTick(() => {
-                                    this.initSelect2Group();
-                                });
-                            } else {
-                                // Cargar siguiente nivel
-                                await this.fetchValuationLevel(id);
                             }
-                        }
-                    },
-                    filterMatrixByComplexity(complexityNodeId) {
-                        // Encontrar el catalog_item_id del nodo de complejidad seleccionado
-                        const complexityNode = this.valuationLevels[5]?.options.find(n => n.id == complexityNodeId);
-                        
-                        if (complexityNode && complexityNode.catalog_item_id) {
-                            // Obtener los catalog_item_id de todos los 6 niveles
-                            const nodes = this.selectedNodes.slice(0, 6).map((nodeId, idx) => {
-                                if (!nodeId || !this.valuationLevels[idx]) return null;
-                                return this.valuationLevels[idx].options.find(n => n.id == nodeId);
-                            }).filter(Boolean);
-                            
-                            // Convertir a números todos los IDs
-                            const roleId = nodes[0]?.catalog_item_id ? parseInt(nodes[0].catalog_item_id) : null;
-                            const instructionId = nodes[1]?.catalog_item_id ? parseInt(nodes[1].catalog_item_id) : null;
-                            const experienceNode = nodes[2];
-                            const decisionId = nodes[3]?.catalog_item_id ? parseInt(nodes[3].catalog_item_id) : null;
-                            const impactId = nodes[4]?.catalog_item_id ? parseInt(nodes[4].catalog_item_id) : null;
-                            const complexityId = parseInt(complexityNode.catalog_item_id);
-                            
-                            // Calcular meses de experiencia
-                            let experienceMonths = 0;
-                            if (experienceNode && experienceNode.name_extra) {
-                                const experienceName = experienceNode.name_extra.toLowerCase();
-                                if (experienceName.includes('no requerida')) {
-                                    experienceMonths = 0;
-                                } else {
-                                    const parsed = parseInt(experienceNode.name_extra);
-                                    if (!isNaN(parsed)) {
-                                        experienceMonths = parsed;
-                                    }
-                                }
-                            }
-                            
-                            console.log('Filtros modal (convertidos a números):', {
-                                roleId,
-                                instructionId,
-                                experienceMonths,
-                                decisionId,
-                                impactId,
-                                complexityId
-                            });
-                            
-                            // Filtrar matriz - comparación numérica estricta con ===
-                            this.filteredMatrix = this.allMatrix.filter(m => {
-                                const matchRole = parseInt(m.required_role_id) === roleId;
-                                const matchInstruction = parseInt(m.minimum_instruction_id) === instructionId;
-                                const matchExperience = parseInt(m.minimum_experience_months) === experienceMonths;
-                                const matchDecision = parseInt(m.required_decision_id) === decisionId;
-                                const matchImpact = parseInt(m.required_impact_id) === impactId;
-                                const matchComplexity = parseInt(m.complexity_level_id) === complexityId;
-                                
-                                const passAll = matchRole && matchInstruction && matchExperience && 
-                                               matchDecision && matchImpact && matchComplexity;
-                                
-                                if (matchComplexity) {
-                                    console.log(`${m.occupational_group}-G${m.grade}:`, {
-                                        'R': matchRole ? '✓' : `✗ ${roleId}≠${m.required_role_id}`,
-                                        'I': matchInstruction ? '✓' : `✗ ${instructionId}≠${m.minimum_instruction_id}`,
-                                        'E': matchExperience ? '✓' : `✗ ${experienceMonths}≠${m.minimum_experience_months}`,
-                                        'D': matchDecision ? '✓' : `✗ ${decisionId}≠${m.required_decision_id}`,
-                                        'Im': matchImpact ? '✓' : `✗ ${impactId}≠${m.required_impact_id}`,
-                                        'PASA': passAll ? '✓' : '✗'
-                                    });
-                                }
-                                
-                                return passAll;
-                            });
-                            
-                            console.log('Matriz filtrada modal:', this.filteredMatrix);
-                            
-                            if (this.filteredMatrix.length === 0) {
-                                console.warn('No se encontraron registros que coincidan');
-                            }
-                        } else {
-                            console.error('No se pudo obtener catalog_item_id del nodo de complejidad');
                         }
                     },
                     getValuationLabel(type) {
                         const labels = {
                             'ROLE': '1. Rol',
-                            'INSTRUCTION': '2. Instrucción',
+                            'INSTRUCTION': '2. Instrucción Formal',
                             'EXPERIENCE': '3. Experiencia',
-                            'DECISION': '4. Decisiones',
-                            'IMPACT': '5. Impacto',
-                            'COMPLEXITY': '6. Complejidad'
+                            'DECISION': '4. Toma de Decisiones',
+                            'IMPACT': '5. Impacto de Gestión',
+                            'COMPLEXITY': '6. Nivel de Complejidad',
+                            'RESULT': '7. Grupo Ocupacional'
                         };
                         return labels[type] || type;
                     },
                     initSelect2Valuation() {
                         const self = this;
                         
+                        // Limpiar Select2 existentes
                         $('.select2-valuation-assign').each(function() {
                             if ($(this).hasClass('select2-hidden-accessible')) {
                                 $(this).select2('destroy');
                             }
                         });
                         
+                        // Inicializar Select2 con dropdownParent correcto
                         $('.select2-valuation-assign').select2({
                             width: '100%',
-                            dropdownParent: $('#assign-group-app .modal-container')
+                            dropdownParent: $('#assign-group-app .modal-overlay'),
+                            placeholder: 'Seleccione una opción...',
+                            allowClear: false,
+                            dropdownCssClass: 'select2-dropdown-modal'
                         }).off('change.vue').on('change.vue', function() {
                             const idx = $(this).data('index');
                             const val = $(this).val();
@@ -299,10 +349,22 @@
                         });
                     },
                     async submitAssignment() {
-                        if(!this.selectedGroup) {
-                            Swal.fire('Atención', 'Seleccione un grupo ocupacional', 'warning');
+                        // Verificar que se haya seleccionado un nodo RESULT
+                        const resultLevelIndex = this.valuationLevels.findIndex(l => l.type === 'RESULT');
+                        if (resultLevelIndex === -1 || !this.selectedNodes[resultLevelIndex]) {
+                            Swal.fire('Atención', 'Debe seleccionar un grupo ocupacional', 'warning');
                             return;
                         }
+                        
+                        const selectedResultNode = this.valuationLevels[resultLevelIndex].options.find(
+                            n => n.id == this.selectedNodes[resultLevelIndex]
+                        );
+                        
+                        if (!selectedResultNode || !selectedResultNode.classification_id) {
+                            Swal.fire('Error', 'El grupo seleccionado no tiene clasificación asociada', 'error');
+                            return;
+                        }
+                        
                         this.loading = true;
                         try {
                             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -315,7 +377,7 @@
                                 },
                                 body: JSON.stringify({
                                     profile_id: this.profileId,
-                                    matrix_id: this.selectedGroup
+                                    matrix_id: selectedResultNode.classification_id
                                 })
                             });
                             const data = await res.json();
