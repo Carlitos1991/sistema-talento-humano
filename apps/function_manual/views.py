@@ -93,6 +93,18 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'occupational_classification',
             'referential_employee__person'  # Optimización para mostrar el empleado referencial
         ).filter(is_active=True)
+        
+        # Filtrar por usuario: solo administradores ven todos los perfiles
+        user = self.request.user
+        can_view_all = (
+            user.has_perm('function_manual.can_admin') or
+            user.is_superuser
+        )
+        
+        if not can_view_all:
+            # Usuarios normales solo ven sus propios perfiles
+            queryset = queryset.filter(created_by=user)
+        
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(

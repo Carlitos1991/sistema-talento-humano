@@ -877,27 +877,88 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 4. LISTADO DE PERFILES (#profileApp)
     // =========================================================================
-    const profListEl = document.getElementById('profileApp');
-    if (profListEl) {
+    const profileListEl = document.getElementById('profileApp');
+    if (profileListEl) {
         createApp({
             delimiters: ['[[', ']]'],
             data() {
-                return {searchQuery: '', timeout: null, urls: {}}
+                return {
+                    searchQuery: '',
+                    debounceTimer: null,
+                    // Paginación
+                    currentPage: 1,
+                    pageSize: 10,
+                    totalRows: 0,
+                    allDOMRows: []
+                };
+            },
+            computed: {
+                totalPages() {
+                    return Math.ceil(this.totalRows / this.pageSize) || 1;
+                }
             },
             mounted() {
-                this.urls = {table: profListEl.dataset.urlTable};
+                this.initPagination();
             },
             methods: {
                 debounceSearch() {
-                    clearTimeout(this.timeout);
-                    this.timeout = setTimeout(() => this.fetchTable(), 500);
+                    clearTimeout(this.debounceTimer);
+                    this.debounceTimer = setTimeout(() => {
+                        this.filterTable();
+                    }, 300);
                 },
-                async fetchTable() {
-                    const url = new URL(this.urls.table, window.location.origin);
-                    url.searchParams.append('partial', '1');
-                    if (this.searchQuery) url.searchParams.append('q', this.searchQuery);
-                    const res = await fetch(url);
-                    document.getElementById('tablePartialContainer').innerHTML = await res.text();
+                filterTable() {
+                    const query = this.searchQuery.toLowerCase().trim();
+                    const rows = document.querySelectorAll('#profileTable tbody tr');
+                    
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.dataset.filtered = text.includes(query) ? 'true' : 'false';
+                    });
+                    
+                    // Re-aplicar paginación después de filtrar
+                    this.currentPage = 1;
+                    this.applyPagination();
+                },
+                initPagination() {
+                    const rows = document.querySelectorAll('#profileTable tbody tr');
+                    this.allDOMRows = Array.from(rows);
+                    this.allDOMRows.forEach(row => row.dataset.filtered = 'true');
+                    this.applyPagination();
+                },
+                applyPagination() {
+                    // Obtener filas visibles (filtradas)
+                    const visibleRows = this.allDOMRows.filter(r => r.dataset.filtered === 'true');
+                    this.totalRows = visibleRows.length;
+                    
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    
+                    // Ocultar todas las filas primero
+                    this.allDOMRows.forEach(row => row.style.display = 'none');
+                    
+                    // Mostrar solo las de la página actual
+                    visibleRows.forEach((row, idx) => {
+                        row.style.display = (idx >= start && idx < end) ? '' : 'none';
+                    });
+                },
+                nextPage() {
+                    if (this.currentPage < this.totalPages) {
+                        this.currentPage++;
+                        this.applyPagination();
+                    }
+                },
+                prevPage() {
+                    if (this.currentPage > 1) {
+                        this.currentPage--;
+                        this.applyPagination();
+                    }
+                },
+                goToPage(page) {
+                    if (page >= 1 && page <= this.totalPages) {
+                        this.currentPage = page;
+                        this.applyPagination();
+                    }
                 }
             }
         }).mount('#profileApp');

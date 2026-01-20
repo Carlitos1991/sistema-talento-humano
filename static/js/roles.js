@@ -22,13 +22,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelectorAll('.perm-check').forEach(el => el.checked = false);
                 };
 
+                // --- GESTIÓN DE CHECKBOX ADMIN POR MODELO ---
+                const toggleAllPermsForModel = (event, modelId) => {
+                    const isChecked = event.target.checked;
+                    const row = event.target.closest('tr');
+                    if (row) {
+                        row.querySelectorAll('.custom-checkbox:not(.perm-admin-all)').forEach(cb => {
+                            cb.checked = isChecked;
+                        });
+                    }
+                };
+
                 // --- FUNCIONES UI ---
                 const applyTemplate = (type) => {
                     uncheckAll();
-                    if (type === 'admin') {
+                    if (type === 'manager') {
                         document.querySelectorAll('.perm-check').forEach(el => el.checked = true);
-                    } else if (type === 'editor') {
+                    } else if (type === 'creator') {
                         document.querySelectorAll('.perm-view, .perm-add, .perm-change').forEach(el => el.checked = true);
+                    } else if (type === 'editor') {
+                        document.querySelectorAll('.perm-view, .perm-change').forEach(el => el.checked = true);
                     } else if (type === 'read') {
                         document.querySelectorAll('.perm-view').forEach(el => el.checked = true);
                     }
@@ -75,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             if (res.data.permissions) {
                                 res.data.permissions.forEach(permId => {
-                                    const chk = document.querySelector(`input[value="${permId}"]`);
+                                    const chk = document.querySelector(`input[name="permissions[]"][value="${permId}"]`);
                                     if (chk) chk.checked = true;
                                 });
                             }
@@ -129,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     isVisible, isEditing, errors,
                     closeModal, submitRole,
-                    applyTemplate, toggleModule
+                    applyTemplate, toggleModule, toggleAllPermsForModel
                 };
             }
         }).mount('#role-modal-app');

@@ -1,6 +1,6 @@
 <div id="role-modal-app" v-cloak>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 950px;">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 1250px; width: 95%;">
 
             <form @submit.prevent="submitRole" id="roleForm">
                 {% csrf_token %}
@@ -35,13 +35,17 @@
                     <div class="template-selector-box mb-4">
                         <span class="template-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Plantillas Rápidas:</span>
                         <div class="template-options">
-                            <label class="template-chip admin">
-                                <input type="radio" name="template" @change="applyTemplate('admin')">
-                                <span><i class="fa-solid fa-crown"></i> Admin Total</span>
+                            <label class="template-chip manager">
+                                <input type="radio" name="template" @change="applyTemplate('manager')">
+                                <span><i class="fa-solid fa-user-gear"></i> Administrar</span>
+                            </label>
+                            <label class="template-chip creator">
+                                <input type="radio" name="template" @change="applyTemplate('creator')">
+                                <span><i class="fa-solid fa-file-circle-plus"></i> Ver/Crear/Editar</span>
                             </label>
                             <label class="template-chip editor">
                                 <input type="radio" name="template" @change="applyTemplate('editor')">
-                                <span><i class="fa-solid fa-pen-to-square"></i> Editor / Analista</span>
+                                <span><i class="fa-solid fa-pen-to-square"></i> Ver/Editar</span>
                             </label>
                             <label class="template-chip read">
                                 <input type="radio" name="template" @change="applyTemplate('read')">
@@ -80,11 +84,12 @@
                                             <table class="w-100 table-permissions module-table-{{ forloop.counter }}">
                                                 <thead>
                                                 <tr>
-                                                    <th class="w-40 text-start ps-3">Recurso / Modelo</th>
-                                                    <th class="w-15 text-center">Ver</th>
-                                                    <th class="w-15 text-center">Crear</th>
-                                                    <th class="w-15 text-center">Editar</th>
-                                                    <th class="w-15 text-center">Borrar</th>
+                                                    <th class="text-start ps-3" style="width: 40%; min-width: 180px;">Recurso / Modelo</th>
+                                                    <th class="text-center" style="width: 10%; min-width: 70px;">Ver</th>
+                                                    <th class="text-center" style="width: 10%; min-width: 70px;">Crear</th>
+                                                    <th class="text-center" style="width: 10%; min-width: 70px;">Editar</th>
+                                                    <th class="text-center" style="width: 10%; min-width: 70px;">Borrar</th>
+                                                    <th class="text-center" style="width: 10%; min-width: 80px;">Admin</th>
                                                 </tr>
                                                 </thead>
                                                 <tbody>
@@ -92,7 +97,7 @@
                                                     <tr>
                                                         <td class="ps-3 fw-bold text-secondary">{{ model.name }}</td>
 
-                                                        <!-- Checkboxes grandes -->
+                                                        <!-- Checkbox Ver -->
                                                         <td class="text-center">
                                                             {% if model.perms.view %}
                                                                 <input type="checkbox" name="permissions[]"
@@ -100,6 +105,8 @@
                                                                        class="custom-checkbox perm-check perm-view">
                                                             {% endif %}
                                                         </td>
+
+                                                        <!-- Checkbox Crear -->
                                                         <td class="text-center">
                                                             {% if model.perms.add %}
                                                                 <input type="checkbox" name="permissions[]"
@@ -107,6 +114,8 @@
                                                                        class="custom-checkbox perm-check perm-add">
                                                             {% endif %}
                                                         </td>
+
+                                                        <!-- Checkbox Editar -->
                                                         <td class="text-center">
                                                             {% if model.perms.change %}
                                                                 <input type="checkbox" name="permissions[]"
@@ -114,12 +123,22 @@
                                                                        class="custom-checkbox perm-check perm-change">
                                                             {% endif %}
                                                         </td>
+
+                                                        <!-- Checkbox Borrar -->
                                                         <td class="text-center">
                                                             {% if model.perms.delete %}
                                                                 <input type="checkbox" name="permissions[]"
                                                                        value="{{ model.perms.delete.id }}"
                                                                        class="custom-checkbox perm-check perm-delete delete-check">
                                                             {% endif %}
+                                                        </td>
+
+                                                        <!-- Checkbox Admin (todos) -->
+                                                        <td class="text-center">
+                                                            <input type="checkbox" 
+                                                                   class="custom-checkbox perm-check perm-admin-all"
+                                                                   @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                        </td>
                                                         </td>
                                                     </tr>
                                                 {% endfor %}

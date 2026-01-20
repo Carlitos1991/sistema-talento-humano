@@ -119,10 +119,53 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             role = form.save()
             perm_ids = request.POST.getlist('permissions[]')
             if perm_ids:
-                role.permissions.set([int(pid) for pid in perm_ids])
+                # Agregar permisos can_admin automáticamente
+                perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
+                role.permissions.set([int(pid) for pid in perm_ids_with_admin])
 
             return JsonResponse({'success': True, 'message': 'Rol creado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    
+    def _add_can_admin_permissions(self, perm_ids):
+        """Agrega automáticamente can_admin si se marcaron todos los permisos de un modelo"""
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        
+        perm_ids = [int(pid) for pid in perm_ids]
+        permissions = Permission.objects.filter(id__in=perm_ids).select_related('content_type')
+        
+        # Agrupar permisos por content_type
+        perms_by_model = {}
+        for perm in permissions:
+            ct_id = perm.content_type_id
+            if ct_id not in perms_by_model:
+                perms_by_model[ct_id] = []
+            perms_by_model[ct_id].append(perm.codename)
+        
+        # Verificar si tienen los 4 permisos básicos y agregar can_admin
+        for ct_id, codenames in perms_by_model.items():
+            # Buscar el modelo name para construir los codenames correctos
+            ct = ContentType.objects.get(id=ct_id)
+            model_name = ct.model
+            
+            expected_perms = [
+                f'view_{model_name}',
+                f'add_{model_name}',
+                f'change_{model_name}',
+                f'delete_{model_name}'
+            ]
+            
+            has_all = all(p in codenames for p in expected_perms)
+            if has_all:
+                # Buscar el permiso can_admin para este content_type
+                can_admin_perm = Permission.objects.filter(
+                    content_type_id=ct_id,
+                    codename='can_admin'
+                ).first()
+                if can_admin_perm and can_admin_perm.id not in perm_ids:
+                    perm_ids.append(can_admin_perm.id)
+        
+        return perm_ids
 
 
 class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -149,10 +192,53 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         if form.is_valid():
             role = form.save()
             perm_ids = request.POST.getlist('permissions[]')
-            role.permissions.set([int(pid) for pid in perm_ids])
+            # Agregar permisos can_admin automáticamente
+            perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
+            role.permissions.set([int(pid) for pid in perm_ids_with_admin])
 
             return JsonResponse({'success': True, 'message': 'Rol actualizado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    
+    def _add_can_admin_permissions(self, perm_ids):
+        """Agrega automáticamente can_admin si se marcaron todos los permisos de un modelo"""
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        
+        perm_ids = [int(pid) for pid in perm_ids]
+        permissions = Permission.objects.filter(id__in=perm_ids).select_related('content_type')
+        
+        # Agrupar permisos por content_type
+        perms_by_model = {}
+        for perm in permissions:
+            ct_id = perm.content_type_id
+            if ct_id not in perms_by_model:
+                perms_by_model[ct_id] = []
+            perms_by_model[ct_id].append(perm.codename)
+        
+        # Verificar si tienen los 4 permisos básicos y agregar can_admin
+        for ct_id, codenames in perms_by_model.items():
+            # Buscar el modelo name para construir los codenames correctos
+            ct = ContentType.objects.get(id=ct_id)
+            model_name = ct.model
+            
+            expected_perms = [
+                f'view_{model_name}',
+                f'add_{model_name}',
+                f'change_{model_name}',
+                f'delete_{model_name}'
+            ]
+            
+            has_all = all(p in codenames for p in expected_perms)
+            if has_all:
+                # Buscar el permiso can_admin para este content_type
+                can_admin_perm = Permission.objects.filter(
+                    content_type_id=ct_id,
+                    codename='can_admin'
+                ).first()
+                if can_admin_perm and can_admin_perm.id not in perm_ids:
+                    perm_ids.append(can_admin_perm.id)
+        
+        return perm_ids
 
 
 # --- 3. GESTIÓN DE CREDENCIALES ---

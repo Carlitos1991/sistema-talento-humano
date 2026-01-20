@@ -28,6 +28,9 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         # Ajusta esto a los nombres reales de tus apps en settings
         target_apps = {
             'person': 'Gestión de Personal',
+            'employee': 'Gestión de Empleados',
+            'institution': 'Estructura Organizacional',
+            'function_manual': 'Manual de Funciones',
             'core': 'Sistema y Usuarios',  # Aquí están User, Catalog, Location
             'auth': 'Seguridad (Roles)',  # Aquí está el modelo Group
         }
@@ -41,6 +44,11 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
             module_models = []
 
             for ct in content_types:
+                # Validar que el modelo existe (puede haber ContentTypes huérfanos)
+                model_class = ct.model_class()
+                if model_class is None:
+                    continue
+                
                 # Obtener permisos para este modelo
                 perms = Permission.objects.filter(content_type=ct)
                 if not perms.exists():
@@ -48,7 +56,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
 
                 # Estructura para la fila de la tabla
                 model_data = {
-                    'name': ct.model_class()._meta.verbose_name_plural.title(),
+                    'name': model_class._meta.verbose_name_plural.title(),
                     'perms': {
                         'view': perms.filter(codename__startswith='view_').first(),
                         'add': perms.filter(codename__startswith='add_').first(),

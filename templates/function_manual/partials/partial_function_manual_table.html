@@ -1,4 +1,4 @@
-<table class="data-table">
+<table class="data-table" id="profileTable">
     <thead>
         <tr>
             <th width="10%">Código</th>
@@ -60,23 +60,25 @@
                         </button>
 
                         <!-- Subir Documento Legalizado -->
+                        {% if perms.function_manual.can_admin %}
                         <button class="btn-icon" 
                                 style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
                                 onclick="openUploadLegalizedModal({{ profile.id }})" 
                                 title="Subir PDF Legalizado">
                              <i class="fas fa-file-upload"></i>
                         </button>
+                        {% endif %}
                     {% else %}
                         <!-- VISTA: PERFIL EN EDICIÓN -->
-                        {% if not profile.occupational_classification %}
-                            <!-- Botón ASIGNAR GRUPO OCUPACIONAL (Solo si no tiene clasificación) -->
-                            <!-- Reemplaza en lógica al paso 7 del Wizard -->
-                            <button class="btn-icon"
-                                    style="background-color: #f59e0b; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
-                                    onclick="openAssignGroupModal({{ profile.id }})"
-                                    title="Asignar Grupo Ocupacional">
-                                <i class="fa-solid fa-scale-balanced"></i>
-                            </button>
+                        {% if perms.function_manual.can_admin %}
+                            {% if not profile.occupational_classification %}
+                                <button class="btn-icon"
+                                        style="background-color: #f59e0b; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                                        onclick="openAssignGroupModal({{ profile.id }})"
+                                        title="Asignar Grupo Ocupacional">
+                                    <i class="fa-solid fa-scale-balanced"></i>
+                                </button>
+                            {% endif %}
                         {% endif %}
 
                         <!-- Botón Asignar Referencial -->
@@ -87,7 +89,7 @@
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
 
-                        {% if profile.occupational_classification %}
+                        {% if profile.occupational_classification and perms.function_manual.can_admin %}
                             <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->
                             <button class="btn-icon" 
                                     style="background-color: #475569; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"

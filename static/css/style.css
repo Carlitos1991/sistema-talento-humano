@@ -2503,11 +2503,48 @@ input:checked + .toggle-slider:before {
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
+/* Estilos específicos por tipo de plantilla */
+.template-chip.admin input:checked + span {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
+.template-chip.manager input:checked + span {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1);
+}
+
+.template-chip.creator input:checked + span {
+    background-color: #fef9c3;
+    color: #ca8a04;
+    border-color: #ca8a04;
+    box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.1);
+}
+
+.template-chip.editor input:checked + span {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.template-chip.read input:checked + span {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    border-color: #6b7280;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
+}
+
 /* 2. Tarjetas de Módulo */
 .permissions-scroll-area {
     max-height: 450px;
     overflow-y: auto;
-    padding-right: 5px; /* Evita que el scroll tape contenido */
+    overflow-x: hidden;
+    padding-right: 5px;
 }
 
 .module-permission-card {
@@ -2516,6 +2553,10 @@ input:checked + .toggle-slider:before {
     overflow: hidden;
     background: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.module-body {
+    overflow-x: auto;
 }
 
 .module-header {
@@ -2544,22 +2585,33 @@ input:checked + .toggle-slider:before {
 }
 
 /* 3. Tabla Interna */
+.table-permissions {
+    table-layout: fixed;
+    width: 100%;
+}
+
 .table-permissions th {
     background-color: #f1f5f9;
     color: #64748b;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    padding: 0.75rem;
+    padding: 0.6rem 0.4rem;
     border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
 }
 
 .table-permissions td {
-    padding: 0.75rem !important;
+    padding: 0.6rem 0.4rem !important;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
-    text-align: center; /* Centralizamos el contenido de la celda */
+    text-align: center;
     position: relative;
+}
+
+.table-permissions td:first-child {
+    text-align: left;
+    padding-left: 0.75rem !important;
 }
 
 .table-permissions td .form-check-input {
@@ -2578,12 +2630,43 @@ input:checked + .toggle-slider:before {
     background-color: #f8fafc;
 }
 
-/* 4. Checkboxes Personalizados */
+/* 4. Checkboxes y Radio Buttons Personalizados */
 .custom-checkbox {
     width: 1.2rem;
     height: 1.2rem;
     cursor: pointer;
     accent-color: #2563eb; /* Azul primario */
+}
+
+.custom-radio {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
+.custom-radio.perm-admin {
+    accent-color: #16a34a; /* Verde para Administrar */
+}
+
+.custom-radio.perm-view {
+    accent-color: #6b7280; /* Gris para Ver */
+}
+
+.custom-radio.perm-add {
+    accent-color: #3b82f6; /* Azul para Crear */
+}
+
+.custom-radio.perm-change {
+    accent-color: #f59e0b; /* Naranja para Editar */
+}
+
+.custom-radio.perm-delete {
+    accent-color: #ef4444; /* Rojo para Borrar */
+}
+
+.hidden {
+    display: none;
 }
 
 /* Checkbox de borrar en rojo (opcional) */

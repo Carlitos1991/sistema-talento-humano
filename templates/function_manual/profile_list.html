@@ -65,12 +65,12 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-info" 
-                                                    onclick="openAssignReferentialModal({{ profile.id }})" 
+                                            <button type="button" class="btn btn-sm btn-outline-info"
+                                                    onclick="openAssignReferentialModal({{ profile.id }})"
                                                     title="Asignar Empleado Referencial">
                                                 <i class="fa-solid fa-user-tag"></i>
                                             </button>
-                                            <a href="{% url 'function_manual:profile_update' profile.id %}" 
+                                            <a href="{% url 'function_manual:profile_update' profile.id %}"
                                                class="btn btn-sm btn-outline-primary" title="Editar Perfil">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -93,7 +93,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- CONTENEDOR PARA MODALES INYECTADOS -->
     <div id="modal-inject-container"></div>
 {% endblock %}

@@ -22,6 +22,9 @@ class ManualCatalog(BaseModel):
     class Meta:
         verbose_name = "Catálogo de Manual"
         verbose_name_plural = "Catálogos de Manual"
+        permissions = [
+            ("can_admin", "Puede administrar Catálogos de Manual"),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -114,6 +117,9 @@ class OccupationalMatrix(BaseModel):
         verbose_name = "Matriz Ocupacional"
         verbose_name_plural = "Matrices Ocupacionales"
         unique_together = ('occupational_group', 'grade')
+        permissions = [
+            ("can_admin", "Puede administrar Matriz Ocupacional"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.occupational_group} - ${self.remuneration}"
@@ -203,6 +209,9 @@ class JobProfile(BaseModel):
     class Meta:
         verbose_name = "Perfil de Puesto"
         verbose_name_plural = "Perfiles de Puesto"
+        permissions = [
+            ("can_admin", "Puede administrar Perfiles de Puesto"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.specific_job_title}"
@@ -262,6 +271,9 @@ class Competency(BaseModel):
     class Meta:
         verbose_name = "Competencia"
         verbose_name_plural = "Diccionario de Competencias"
+        permissions = [
+            ("can_admin", "Puede administrar Competencias"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.get_type_display()})"
@@ -330,6 +342,9 @@ class ValuationNode(BaseModel):
         verbose_name = "Nodo de Valoración"
         verbose_name_plural = "Estructura de Valoración"
         ordering = ['node_type']
+        permissions = [
+            ("can_admin", "Puede administrar Estructura de Valoración"),
+        ]
 
     def __str__(self):
         return f"{self.get_node_type_display()}: {self.catalog_item.name if self.catalog_item else 'Resultado'}"

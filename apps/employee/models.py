@@ -137,6 +137,10 @@ class AcademicTitle(BaseModel):
     graduation_year = models.IntegerField(null=True, blank=True, verbose_name='Año de Graduación')
     is_current = models.BooleanField(default=False, verbose_name='En Curso')
 
+    class Meta:
+        verbose_name = 'Título Académico'
+        verbose_name_plural = 'Títulos Académicos'
+
 
 class WorkExperience(BaseModel):
     curriculum = models.ForeignKey(Curriculum, on_delete=models.CASCADE, related_name='work_experiences')
@@ -147,6 +151,10 @@ class WorkExperience(BaseModel):
     is_current = models.BooleanField(default=False, verbose_name='Trabajo Actual')
     responsibilities = models.TextField(blank=True, null=True)
 
+    class Meta:
+        verbose_name = 'Experiencia Laboral'
+        verbose_name_plural = 'Experiencias Laborales'
+
 
 class Training(BaseModel):
     curriculum = models.ForeignKey(Curriculum, on_delete=models.CASCADE, related_name='trainings')
@@ -154,6 +162,10 @@ class Training(BaseModel):
     institution = models.CharField(max_length=200, verbose_name='Institución')
     hours = models.IntegerField(verbose_name='Horas')
     completion_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Capacitación'
+        verbose_name_plural = 'Capacitaciones'
 
 
 # ==============================================================================
@@ -216,3 +228,7 @@ class PayrollInfo(BaseModel):
     def clean(self):
         if self.family_dependents < 0 or self.family_dependents > 20:
             raise ValidationError({'family_dependents': 'Debe estar entre 0 y 20'})
+
+    class Meta:
+        verbose_name = 'Información de Nómina'
+        verbose_name_plural = 'Información de Nómina'
