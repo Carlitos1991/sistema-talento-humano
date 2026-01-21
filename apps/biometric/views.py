@@ -221,7 +221,7 @@ def get_biometric_time_ajax(request, pk):
     
     try:
         device = get_object_or_404(BiometricDevice, pk=pk)
-        server_time = timezone.now()  # Hora local configurada en settings
+        server_time = timezone.localtime()  # Hora local de Ecuador (America/Guayaquil)
 
         device_time_str = "Error: No se pudo conectar al dispositivo"
 
@@ -304,7 +304,7 @@ def update_biometric_time_ajax(request, pk):
         logger.info(f"Actualizando hora de {device.name} - Mode: {mode}, Time: {new_time_str}")
 
         if mode == 'server':
-            target_time = datetime.now()
+            target_time = timezone.localtime()  # Hora local de Ecuador
         elif mode == 'custom' and new_time_str:
             try:
                 target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
