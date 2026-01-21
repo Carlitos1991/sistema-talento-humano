@@ -16,7 +16,7 @@ urlpatterns = [
     path('schedule/', include('schedule.urls')),
     path('contract/', include('contract.urls')),
     path('function_manual/', include('function_manual.urls')),
-    path('biometric/', include('apps.biometric.urls')),
+    path('biometric/', include('biometric.urls')),
 
 ]
 

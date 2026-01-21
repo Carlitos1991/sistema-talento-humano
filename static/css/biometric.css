@@ -1,0 +1,19 @@
+/* apps/biometric/static/css/biometric.css */
+
+/* Evita ver variables [[ ]] o modales antes de que Vue cargue */
+[v-cloak] {
+    display: none !important;
+}
+
+/* Ajustes específicos para el modal de biométricos */
+.biometric-modal .modal-container-medium {
+    max-width: 600px;
+}
+
+.status-online { color: var(--accent-color); }
+.status-offline { color: var(--error); }
+
+/* Animación para la sincronización */
+.fa-spin-slow {
+    animation: fa-spin 2s infinite linear;
+}

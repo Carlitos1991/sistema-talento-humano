@@ -1,41 +1,48 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Biométricos | SIGETH{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/biometric.css' %}">
+{% endblock %}
 {% block content %}
-    <!-- 1. Header -->
-    <div class="header-card">
-        <div>
-            <h1>Gestión de Biométricos</h1>
-            <p>Administra los dispositivos biométricos del sistema.</p>
-        </div>
-    </div>
-    <!-- 2. Estadísticas -->
-    <div class="stats-row">
-        <!-- TOTAL -->
-        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
-            <div class="stat-left">
-                <h3>Total</h3>
-                <div class="number">{{ stats_total|default:"0" }}</div>
+    <div id="biometric-app" v-cloak>
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1>Gestión de Biométricos</h1>
+                <p>Administra los dispositivos biométricos del sistema.</p>
             </div>
-            <i class="fas fa-users stat-icon"></i>
+            <button type="button" @click="openModalCreate" class="btn-create">
+                <i class="fa-solid fa-plus"></i> Nuevo Biométrico
+            </button>
         </div>
-        <!-- ACTIVOS -->
-        <div class="stat-card color-two opacity-low" onclick="filterByStatus('active')" id="card-filter-active">
-            <div class="stat-left"><h3>Activos</h3>
-                <div class="number">{{ stats_active|default:"0" }}</div>
+        <!-- 2. Estadísticas -->
+        <div class="stats-row">
+            <!-- TOTAL -->
+            <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+                <div class="stat-left">
+                    <h3>Total</h3>
+                    <div class="number">{{ stats_total|default:"0" }}</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
             </div>
-            <i class="fa-regular fa-circle-check stat-icon"></i>
-        </div>
-        <!-- INACTIVOS -->
-        <div class="stat-card color-three opacity-low" onclick="filterByStatus('inactive')" id="card-filter-inactive">
-            <div class="stat-left"><h3>Inactivos</h3>
-                <div class="number">{{ stats_inactive|default:"0" }}</div>
+            <!-- ACTIVOS -->
+            <div class="stat-card color-two opacity-low" onclick="filterByStatus('active')" id="card-filter-active">
+                <div class="stat-left"><h3>Activos</h3>
+                    <div class="number">{{ stats_active|default:"0" }}</div>
+                </div>
+                <i class="fa-regular fa-circle-check stat-icon"></i>
             </div>
-            <i class="fa-solid fa-circle-xmark stat-icon"></i>
+            <!-- INACTIVOS -->
+            <div class="stat-card color-three opacity-low" onclick="filterByStatus('inactive')"
+                 id="card-filter-inactive">
+                <div class="stat-left"><h3>Inactivos</h3>
+                    <div class="number">{{ stats_inactive|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-circle-xmark stat-icon"></i>
+            </div>
         </div>
-    </div>
-    <!-- 3. Contenedor principal Tabla (AJAX) -->
-    <div id="biometric-app">
+        <!-- 3. Contenedor principal Tabla (AJAX) -->
         <div class="content-table">
             <div class="table-controls">
                 {#                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">#}
@@ -43,7 +50,8 @@
                 {#                </button>#}
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" v-model="searchQuery" @input="search" placeholder="Buscar por nombre o IP...">
+                    <input type="text" v-model="searchQuery" @input="search"
+                           placeholder="Buscar por nombre o IP...">
                 </div>
             </div>
             <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->

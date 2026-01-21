@@ -1,21 +1,26 @@
-from django.views.generic import ListView, CreateView, UpdateView
-from django.urls import reverse_lazy
-from django.http import JsonResponse
+import logging
+from datetime import datetime
+
+from django.views.generic import ListView, View
+from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
-from .models import BiometricDevice
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
+from employee.models import InstitutionalData
+
+logger = logging.getLogger(__name__)
 
 
-class BiometricMixin:
+class BiometricListView(ListView):
     model = BiometricDevice
-    success_url = reverse_lazy('biometric:biometric_list')
-
-
-class BiometricListView(BiometricMixin, ListView):
     template_name = 'biometric/biometric_list.html'
     context_object_name = 'devices'
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = BiometricDevice.objects.filter(is_active=True)
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(name__icontains=q) | qs.filter(ip_address__icontains=q)
@@ -24,18 +29,109 @@ class BiometricListView(BiometricMixin, ListView):
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
-            html = render_to_string('biometric/partials/partial_biometric_table.html', {'devices': self.object_list})
+            html = render_to_string('biometric/partials/partial_biometric_table.html', {
+                'devices': self.object_list
+            }, request=request)
             return JsonResponse({'html': html})
         return super().get(request, *args, **kwargs)
 
 
-class BiometricCreateView(BiometricMixin, CreateView):
-    fields = ['name', 'ip_address', 'port', 'location', 'serial_number', 'model_name']
+@csrf_exempt
+def create_biometric_ajax(request):
+    """Crea o actualiza biométricos vía AJAX"""
+    if request.method == 'POST':
+        try:
+            device_id = request.POST.get('id')
+            data = {
+                'name': request.POST.get('name'),
+                'ip_address': request.POST.get('ip_address'),
+                'port': request.POST.get('port', 4370),
+                'location': request.POST.get('location'),
+                'updated_by': request.user
+            }
 
-    def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Dispositivo registrado correctamente'})
+            if device_id:
+                BiometricDevice.objects.filter(id=device_id).update(**data)
+                msg = "Dispositivo actualizado."
+            else:
+                data['created_by'] = request.user
+                BiometricDevice.objects.create(**data)
+                msg = "Dispositivo registrado."
 
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+            return JsonResponse({'status': 'success', 'message': msg})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ADMSReceiverView(View):
+    """Receptor Push Mode de ZKTeco"""
+
+    def get(self, request):
+        sn = request.GET.get('SN')
+        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
+
+    def post(self, request):
+        sn = request.GET.get('SN')
+        table = request.GET.get('table')
+
+        if table == 'ATTLOG':
+            datos_crudos = request.body.decode('utf-8').strip()
+            if not datos_crudos:
+                return HttpResponse("OK", content_type="text/plain")
+
+            try:
+                # 1. Identificar el dispositivo
+                device = BiometricDevice.objects.get(serial_number=sn, is_active=True)
+
+                with transaction.atomic():
+                    # 2. Crear un registro de carga para este lote
+                    batch_load = BiometricLoad.objects.create(
+                        biometric=device,
+                        load_type="ADMS_PUSH",
+                        reason=f"Recepción automática SN: {sn}"
+                    )
+
+                    count = 0
+                    for linea in datos_crudos.splitlines():
+                        campos = linea.split('\t')
+                        if len(campos) < 2: continue
+
+                        user_pin = campos[0].strip()
+                        timestamp_str = campos[1].strip()
+
+                        # 3. Buscar al empleado por su biometric_id (InstitutionalData)
+                        # Usamos select_related para no saturar la base de datos
+                        inst_data = InstitutionalData.objects.select_related('employee').filter(
+                            biometric_id=user_pin
+                        ).first()
+
+                        if inst_data:
+                            # 4. Evitar duplicados exactos (Mismo empleado, misma hora)
+                            reg_time = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                            exists = AttendanceRegistry.objects.filter(
+                                employee=inst_data.employee,
+                                registry_date=reg_time
+                            ).exists()
+
+                            if not exists:
+                                AttendanceRegistry.objects.create(
+                                    employee=inst_data.employee,
+                                    biometric_load=batch_load,
+                                    employee_id_bio=user_pin,
+                                    registry_date=reg_time
+                                )
+                                count += 1
+
+                    # 5. Actualizar total de la carga
+                    batch_load.num_records = count
+                    batch_load.save()
+
+                logger.info(f"ADMS: {count} marcaciones procesadas de {sn}")
+                return HttpResponse("OK", content_type="text/plain")
+
+            except BiometricDevice.DoesNotExist:
+                logger.error(f"ADMS Error: Dispositivo SN {sn} no registrado.")
+                return HttpResponse("OK", content_type="text/plain")
+
+        return HttpResponse("OK", content_type="text/plain")

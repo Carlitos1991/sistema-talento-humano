@@ -21,14 +21,19 @@ createApp({
         async search() {
             try {
                 const data = await BiometricService.getTable(this.searchQuery);
-                document.getElementById('table-container').innerHTML = data.html;
+                // CAMBIO AQUÍ: Debe coincidir con el ID del HTML
+                const container = document.getElementById('table-content-wrapper');
+                if (container) {
+                    container.innerHTML = data.html;
+                }
             } catch (error) {
+                console.error(error);
                 this.notifyError('No se pudo actualizar la tabla');
             }
         },
 
-        openModalCreate() {
-            this.modalTitle = 'Nuevo Biométrico';
+         openModalCreate() {
+            this.modalTitle = 'Registrar Nuevo Biométrico';
             this.resetForm();
             this.showModal = true;
         },

@@ -5,8 +5,6 @@ app_name = 'biometric'
 
 urlpatterns = [
     path('list/', views.BiometricListView.as_view(), name='biometric_list'),
-    path('create/', views.BiometricCreateView.as_view(), name='biometric_create'),
-    # Agregaremos estas más adelante cuando completemos el CRUD
-    # path('update/<int:pk>/', views.BiometricUpdateView.as_view(), name='biometric_update'),
-    # path('delete/<int:pk>/', views.BiometricDeleteView.as_view(), name='biometric_delete'),
+    path('save-ajax/', views.create_biometric_ajax, name='biometric_save_ajax'),
+    path('adms/receive/', views.ADMSReceiverView.as_view(), name='adms_receiver'),
 ]

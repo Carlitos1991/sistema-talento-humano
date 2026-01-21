@@ -1,33 +1,45 @@
 <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>[[ modalTitle ]]</h3>
-            <button @click="closeModal" class="close-btn">&times;</button>
+    <div class="modal-container-medium">
+        <div class="modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-fingerprint"></i></div>
+                <h3 class="header-title-main">[[ modalTitle ]]</h3>
+            </div>
+            <button @click="closeModal" class="btn-close-modal-refined">&times;</button>
         </div>
+
         <form @submit.prevent="saveDevice">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Nombre *</label>
-                    <input type="text" v-model="form.name" required>
-                </div>
-                <div class="row">
-                    <div class="col-8">
-                        <label>IP *</label>
-                        <input type="text" v-model="form.ip_address" placeholder="0.0.0.0" required>
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <div class="section-title"><i class="fa-solid fa-info-circle"></i> Datos Técnicos</div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nombre del Dispositivo</label>
+                        <input type="text" v-model="form.name" class="form-control" required>
                     </div>
-                    <div class="col-4">
-                        <label>Puerto *</label>
-                        <input type="number" v-model="form.port" required>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label">Dirección IP</label>
+                            <input type="text" v-model="form.ip_address" class="form-control"
+                                   placeholder="192.168.1.100" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Puerto</label>
+                            <input type="number" v-model="form.port" class="form-control" required>
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Ubicación</label>
-                    <input type="text" v-model="form.location">
+                    <div class="form-group mt-3">
+                        <label class="form-label">Ubicación Física</label>
+                        <input type="text" v-model="form.location" class="form-control">
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" @click="closeModal" class="btn-secondary">Cancelar</button>
-                <button type="submit" class="btn-primary">Guardar</button>
+
+            <div class="modal-footer-fixed">
+                <button type="button" @click="closeModal" class="btn-cancel">Cancelar</button>
+                <button type="submit" class="btn-save" :disabled="isSaving">
+                    <i v-if="isSaving" class="fas fa-spinner fa-spin"></i>
+                    [[ isSaving ? 'Guardando...' : 'Guardar Dispositivo' ]]
+                </button>
             </div>
         </form>
     </div>
