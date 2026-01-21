@@ -20,6 +20,14 @@ window.getCookie = function (name) {
 
 // Configuración Global de Toast
 if (typeof Swal !== 'undefined') {
+    // Configuración global de SweetAlert2 en español
+    Swal.mixin({
+        confirmButtonText: 'Aceptar',
+        cancelButtonText: 'Cancelar',
+        denyButtonText: 'Denegar',
+        closeButtonText: 'Cerrar'
+    });
+    
     window.Toast = Swal.mixin({
         toast: true,
         position: 'top-end',

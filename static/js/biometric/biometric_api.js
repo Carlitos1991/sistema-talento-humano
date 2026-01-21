@@ -2,13 +2,19 @@
  * Service para manejar todas las peticiones fetch de Biométricos
  */
 const BiometricService = {
-   async getTable(query = '', status = '') {
+    async getTable(query = '', status = '') {
         const url = `${window.location.pathname}?q=${query}&status=${status}`;
 
         const response = await fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
         if (!response.ok) throw new Error('Error al cargar la tabla');
+        return await response.json();
+    },
+    async testConnection(id) {
+        const url = `/biometric/test-connection/${id}/`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Error en la comunicación');
         return await response.json();
     },
 

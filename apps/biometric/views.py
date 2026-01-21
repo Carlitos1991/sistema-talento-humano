@@ -10,6 +10,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
 from employee.models import InstitutionalData
+from .utils import test_connection
 
 logger = logging.getLogger(__name__)
 
@@ -192,3 +193,19 @@ def get_biometric_data(request, pk):
             'is_active': device.is_active,
         }
     })
+
+
+@csrf_exempt
+def test_connection_ajax(request, pk):
+    """Prueba la conexión física con el biométrico usando Sockets y pyzk2"""
+    device = get_object_or_404(BiometricDevice, pk=pk)
+
+    result = test_connection(device.ip_address, int(device.port))
+
+    if result.get('success') and result.get('device_info'):
+        info = result['device_info']
+        device.serial_number = info.get('serialNumber', device.serial_number)
+        device.model_name = info.get('deviceName', device.model_name)
+        device.save()
+
+    return JsonResponse(result)

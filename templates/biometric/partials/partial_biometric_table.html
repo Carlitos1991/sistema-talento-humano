@@ -34,8 +34,10 @@
                 <td class="actions-cell">
                     <div class="actions-wrapper">
                         <!-- Botón Probar Conexión (Gris/Azul) -->
-                        <button class="btn-list-action" title="Probar Conexión">
-                            <i class="fa-solid fa-rotate"></i>
+                        <button onclick="window.biometricVM.handleTestConnection({{ device.id }})"
+                                class="btn-list-action"
+                                title="Probar Conexión">
+                            <i class="fa-solid fa-satellite-dish"></i>
                         </button>
                         <!-- Botón Editar (Amarillo) -->
                         <button onclick="window.biometricVM.openModalEdit({{ device.id }})"

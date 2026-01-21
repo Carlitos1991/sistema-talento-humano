@@ -183,3 +183,161 @@ input:checked + .toggle-slider:before {
     opacity: 1 !important; /* Resalta al pasar el mouse incluso si no está filtrado */
     filter: none !important;
 }
+
+/* --- ESTILOS PERSONALIZADOS PARA SWEETALERT BIOMÉTRICO --- */
+
+/* Contenedor principal de la info */
+.swal-connection-box {
+    background-color: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+    margin-top: 15px;
+    border: 1px solid #f1f5f9;
+}
+
+/* Encabezado con el check verde dentro de la caja */
+.swal-connection-header {
+    color: #10b981;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+/* Lista de detalles */
+.swal-connection-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.swal-connection-item {
+    font-size: 0.95rem;
+    color: #334155;
+    line-height: 1.4;
+}
+
+.swal-connection-item strong {
+    font-weight: 800;
+    color: #1e293b;
+    margin-right: 5px;
+}
+
+/* Personalización del botón Confirmar de SweetAlert */
+.btn-swal-confirm-green {
+    background-color: #10b981 !important;
+    color: white !important;
+    padding: 12px 45px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    border: none !important;
+    cursor: pointer;
+    display: block !important;
+    margin: 15px auto 0 !important; /* Centrado automático horizontal */
+    transition: transform 0.2s ease;
+}
+
+.btn-swal-confirm-green:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Centrar el contenedor de acciones (botones) de SweetAlert */
+.swal-actions-centered {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 20px auto 0 !important;
+    width: 100% !important;
+}
+
+/* Forzar ocultar el botón Cancel en modales con acciones centradas */
+.swal2-popup .swal-actions-centered .swal2-cancel,
+.swal2-popup .swal-actions-centered .swal2-deny {
+    display: none !important;
+}
+
+/* Ocultar botón Cancel cuando solo hay un botón de confirmación */
+.swal2-popup:has(.btn-swal-confirm-green-centered) .swal2-cancel,
+.swal2-popup:has(.btn-swal-confirm-red-centered) .swal2-cancel,
+.swal2-popup:has(.btn-swal-confirm-green-centered) .swal2-deny,
+.swal2-popup:has(.btn-swal-confirm-red-centered) .swal2-deny {
+    display: none !important;
+}
+
+.swal2-loader {
+    border-color: #10b981 transparent #10b981 transparent !important;
+    margin: 20px auto !important;
+}
+
+.swal-connection-box {
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.btn-swal-confirm-green-centered {
+    background-color: #10b981 !important;
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2) !important;
+}
+
+.btn-swal-confirm-green-centered:hover {
+    transform: translateY(-2px);
+    background-color: #059669 !important;
+}
+
+/* Forzar que el loader sea lo único visible en la carga */
+.swal2-loader {
+    margin: 20px auto !important;
+}
+
+/* Ocultar cualquier residuo de botones en estado loading */
+.swal2-loading .swal2-actions {
+    display: none !important;
+}
+
+.swal2-loading .swal2-confirm,
+.swal2-loading .swal2-cancel,
+.swal2-loading .swal2-deny {
+    display: none !important;
+}
+
+/* Forzamos que el contenedor de acciones se muestre (aquí reside el spinner) */
+.swal2-loading .swal2-actions {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    min-height: 60px; /* Espacio para que el spinner no esté apretado */
+}
+
+/* Estilizamos el spinner para que sea elegante y use el verde de tu SIGETH */
+.swal2-loader {
+    border-color: #10b981 transparent #10b981 transparent !important; /* Verde corporativo */
+    border-width: 0.25em !important;
+}
+
+.btn-swal-confirm-green-centered,
+.btn-swal-confirm-red-centered {
+    display: block !important; /* Forzar comportamiento de bloque */
+    margin: 20px auto 0 !important; /* Centrado horizontal automático */
+    padding: 12px 50px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    border: none !important;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    color: white !important;
+}
+
+.btn-swal-confirm-red-centered {
+    background-color: #ef4444 !important;
+    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2) !important;
+}
+
+.btn-swal-confirm-red-centered:hover {
+    transform: translateY(-2px);
+    background-color: #dc2626 !important;
+}
