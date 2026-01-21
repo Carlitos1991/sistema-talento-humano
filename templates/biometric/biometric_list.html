@@ -19,37 +19,45 @@
         <!-- 2. Estadísticas -->
         <div class="stats-row">
             <!-- TOTAL -->
-            <div class="stat-card color-one">
+            <div class="stat-card color-one"
+                 @click="filterByStatus('all')"
+                 :class="{'opacity-low': currentStatus !== 'all' && currentStatus !== ''}">
                 <div class="stat-left">
                     <h3>Total</h3>
-                    <!-- Usamos span con ID para el mounted y [[ ]] para el tiempo real -->
-                    <div class="number"><span id="val-total" class="hidden">{{ stats_total }}</span>[[ stats.total ]]
+                    <div class="number">
+                        <span id="val-total" class="hidden">{{ stats_total }}</span>[[ stats.total ]]
                     </div>
                 </div>
                 <i class="fas fa-users stat-icon"></i>
             </div>
 
             <!-- ACTIVOS -->
-            <div class="stat-card color-two">
+            <div class="stat-card color-two"
+                 @click="filterByStatus('active')"
+                 :class="{'opacity-low': currentStatus !== 'active'}">
                 <div class="stat-left">
                     <h3>Activos</h3>
-                    <div class="number"><span id="val-active" class="hidden">{{ stats_active }}</span>[[ stats.active ]]
+                    <div class="number">
+                        <span id="val-active" class="hidden">{{ stats_active }}</span>[[ stats.active ]]
                     </div>
                 </div>
                 <i class="fa-regular fa-circle-check stat-icon"></i>
             </div>
 
             <!-- INACTIVOS -->
-            <div class="stat-card color-three">
+            <div class="stat-card color-three"
+                 @click="filterByStatus('inactive')"
+                 :class="{'opacity-low': currentStatus !== 'inactive'}">
                 <div class="stat-left">
                     <h3>Inactivos</h3>
-                    <div class="number"><span id="val-inactive" class="hidden">{{ stats_inactive }}</span>[[
-                        stats.inactive ]]
+                    <div class="number">
+                        <span id="val-inactive" class="hidden">{{ stats_inactive }}</span>[[ stats.inactive ]]
                     </div>
                 </div>
                 <i class="fa-solid fa-circle-xmark stat-icon"></i>
             </div>
         </div>
+
         <!-- 3. Contenedor principal Tabla (AJAX) -->
         <div class="content-table">
             <div class="table-controls">

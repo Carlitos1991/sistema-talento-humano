@@ -8,11 +8,8 @@ const biometricApp = createApp({
             showModal: false,
             modalTitle: 'Nuevo Biométrico',
             searchQuery: '',
-            stats: {
-                total: 0,
-                active: 0,
-                inactive: 0
-            },
+            currentStatus: 'all',
+            stats: {total: 0, active: 0, inactive: 0},
             pagination: {
                 label: 'Mostrando 0-0 de 0'
             },
@@ -30,25 +27,24 @@ const biometricApp = createApp({
     methods: {
         async search() {
             try {
-                const data = await BiometricService.getTable(this.searchQuery);
+                const data = await BiometricService.getTable(this.searchQuery, this.currentStatus);
 
                 // 1. Actualizar Tabla
                 document.getElementById('table-content-wrapper').innerHTML = data.html;
 
                 // 2. Actualizar Estadísticas dinámicamente
-                if (data.stats) {
-                    this.stats = data.stats;
-                }
+                if (data.stats) this.stats = data.stats;
 
                 // 3. Actualizar Paginación
-                if (data.pagination) {
-                    this.pagination.label = data.pagination.label;
-                }
+                if (data.pagination) this.pagination.label = data.pagination.label;
             } catch (error) {
                 console.error(error);
             }
         },
-
+        async filterByStatus(status) {
+            this.currentStatus = status;
+            await this.search();
+        },
         async openModalEdit(id) {
             this.modalTitle = 'Editar Biométrico';
             try {
