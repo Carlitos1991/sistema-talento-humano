@@ -13,14 +13,14 @@
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-info-circle"></i> Datos Técnicos</div>
                     <div class="form-group mb-3">
-                        <label class="form-label">Nombre del Dispositivo</label>
-                        <input type="text" v-model="form.name" class="form-control" required>
+                        <label class="form-label">Nombre del Dispositivo(*)</label>
+                        <input type="text" v-model="form.name" class="form-control" placeholder="Ej. Hall" required>
                     </div>
                     <div class="grid-2-cols">
                         <div class="form-group">
-                            <label class="form-label">Dirección IP</label>
+                            <label class="form-label">Dirección IP(*)</label>
                             <input type="text" v-model="form.ip_address" class="form-control"
-                                   placeholder="192.168.1.100" required>
+                                   placeholder="Ej. 192.168.1.100" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Puerto</label>
@@ -29,7 +29,25 @@
                     </div>
                     <div class="form-group mt-3">
                         <label class="form-label">Ubicación Física</label>
-                        <input type="text" v-model="form.location" class="form-control">
+                        <input type="text" v-model="form.location" placeholder="Ej. Primer piso" class="form-control">
+                    </div>
+                    <div class="form-group mt-4 d-flex align-items-center justify-content-between"
+                         style="background: #f8fafc; padding: 12px 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div>
+                            <label class="form-label mb-0" style="font-weight: 700;">Estado del Dispositivo</label>
+                            <p class="mb-0" style="font-size: 0.75rem; color: #64748b;">Habilitar o deshabilitar
+                                conexión</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span :class="form.is_active ? 'text-success' : 'text-danger'"
+                                  style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">
+                                [[ form.is_active ? 'Activo' : 'Inactivo' ]]
+                            </span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" v-model="form.is_active">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>

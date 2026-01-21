@@ -19,25 +19,33 @@
         <!-- 2. Estadísticas -->
         <div class="stats-row">
             <!-- TOTAL -->
-            <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+            <div class="stat-card color-one">
                 <div class="stat-left">
                     <h3>Total</h3>
-                    <div class="number">{{ stats_total|default:"0" }}</div>
+                    <!-- Usamos span con ID para el mounted y [[ ]] para el tiempo real -->
+                    <div class="number"><span id="val-total" class="hidden">{{ stats_total }}</span>[[ stats.total ]]
+                    </div>
                 </div>
                 <i class="fas fa-users stat-icon"></i>
             </div>
+
             <!-- ACTIVOS -->
-            <div class="stat-card color-two opacity-low" onclick="filterByStatus('active')" id="card-filter-active">
-                <div class="stat-left"><h3>Activos</h3>
-                    <div class="number">{{ stats_active|default:"0" }}</div>
+            <div class="stat-card color-two">
+                <div class="stat-left">
+                    <h3>Activos</h3>
+                    <div class="number"><span id="val-active" class="hidden">{{ stats_active }}</span>[[ stats.active ]]
+                    </div>
                 </div>
                 <i class="fa-regular fa-circle-check stat-icon"></i>
             </div>
+
             <!-- INACTIVOS -->
-            <div class="stat-card color-three opacity-low" onclick="filterByStatus('inactive')"
-                 id="card-filter-inactive">
-                <div class="stat-left"><h3>Inactivos</h3>
-                    <div class="number">{{ stats_inactive|default:"0" }}</div>
+            <div class="stat-card color-three">
+                <div class="stat-left">
+                    <h3>Inactivos</h3>
+                    <div class="number"><span id="val-inactive" class="hidden">{{ stats_inactive }}</span>[[
+                        stats.inactive ]]
+                    </div>
                 </div>
                 <i class="fa-solid fa-circle-xmark stat-icon"></i>
             </div>
@@ -63,7 +71,11 @@
                 {% include 'biometric/modals/modal_biometric_form.html' %}
             </div>
             <div class="pagination-container" id="js-pagination">
-                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <span id="val-pagination-label" class="hidden">
+                    {% if stats_total > 0 %}Mostrando 1-{{ stats_total }} de {{ stats_total }}{% else %}Mostrando 0-0 de
+                        0{% endif %}
+                </span>
+                <span class="pagination-info">[[ pagination.label ]]</span>
                 <ul class="pagination-list">
                     <li>
                         <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>

@@ -3,27 +3,47 @@
     <table>
         <thead>
         <tr>
-            <th>Nombre</th>
-            <th>IP/Puerto</th>
-            <th>Ubicación</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th><i class="fas fa-clock header-icon"></i>Nombre</th>
+            <th><i class="fas fa-server header-icon"></i>IP/Puerto</th>
+            <th><i class="fas fa-map-location header-icon"></i>Ubicación</th>
+            <th><i class="fas fa-toggle-on header-icon"></i>Estado</th>
+            <th><i class="fas fa-bars header-icon"></i> Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for device in devices %}
             <tr>
-                <td>{{ device.name }}</td>
-                <td>{{ device.ip_address }}:{{ device.port }}</td>
-                <td>{{ device.location }}</td>
+                <td class="device-name-cell">{{ device.name }}</td>
                 <td>
-                <span class="badge {% if device.is_active %}badge-success{% else %}badge-danger{% endif %}">
-                    {{ device.is_active|yesno:"Activo,Inactivo" }}
-                </span>
+                    <span class="pill pill-ip">{{ device.ip_address }}</span>
+                    <span class="pill-separator">:</span>
+                    <span class="pill pill-port">{{ device.port }}</span>
                 </td>
+                <td class="device-secondary-info">{{ device.location }}</td>
                 <td>
-                    <button class="btn-icon" title="Sincronizar"><i class="fa-solid fa-rotate"></i></button>
-                    <button class="btn-icon" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                    {% if device.is_active %}
+                        <span class="status-pill status-pill-active">
+                            <i class="fa-solid fa-circle-check"></i> Activo
+                        </span>
+                    {% else %}
+                        <span class="status-pill status-pill-inactive">
+                             <i class="fa-solid fa-circle-xmark"></i> Inactivo
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="actions-cell">
+                    <div class="actions-wrapper">
+                        <!-- Botón Probar Conexión (Gris/Azul) -->
+                        <button class="btn-list-action" title="Probar Conexión">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                        <!-- Botón Editar (Amarillo) -->
+                        <button onclick="window.biometricVM.openModalEdit({{ device.id }})"
+                                class="btn-views-action"
+                                title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         {% empty %}

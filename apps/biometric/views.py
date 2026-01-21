@@ -18,9 +18,10 @@ class BiometricListView(ListView):
     model = BiometricDevice
     template_name = 'biometric/biometric_list.html'
     context_object_name = 'devices'
+    paginate_by = 10
 
     def get_queryset(self):
-        qs = BiometricDevice.objects.filter(is_active=True)
+        qs = BiometricDevice.objects.all()
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(name__icontains=q) | qs.filter(ip_address__icontains=q)
@@ -29,11 +30,40 @@ class BiometricListView(ListView):
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
+
+            # 1. Renderizar la tabla parcial
             html = render_to_string('biometric/partials/partial_biometric_table.html', {
                 'devices': self.object_list
             }, request=request)
-            return JsonResponse({'html': html})
+
+            # 2. Calcular estadísticas reales
+            total = self.object_list.count()
+            active = self.object_list.filter(is_active=True).count()
+            inactive = total - active
+
+            # 3. Devolver HTML + Estadísticas + Paginación
+            return JsonResponse({
+                'html': html,
+                'stats': {
+                    'total': total,
+                    'active': active,
+                    'inactive': inactive
+                },
+                'pagination': {
+                    'total_records': total,
+                    # Aquí podrías añadir lógica de 'from' y 'to' si usas paginador real
+                    'label': f"Mostrando 1-{total} de {total}" if total > 0 else "Mostrando 0-0 de 0"
+                }
+            })
         return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+        context['stats_total'] = qs.count()
+        context['stats_active'] = qs.filter(is_active=True).count()
+        context['stats_inactive'] = qs.filter(is_active=False).count()
+        return context
 
 
 @csrf_exempt
@@ -42,10 +72,12 @@ def create_biometric_ajax(request):
     if request.method == 'POST':
         try:
             device_id = request.POST.get('id')
+            is_active = request.POST.get('is_active') == 'true'
             data = {
                 'name': request.POST.get('name'),
                 'ip_address': request.POST.get('ip_address'),
                 'port': request.POST.get('port', 4370),
+                'is_active': is_active,
                 'location': request.POST.get('location'),
                 'updated_by': request.user
             }
@@ -61,6 +93,7 @@ def create_biometric_ajax(request):
             return JsonResponse({'status': 'success', 'message': msg})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return None
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -135,3 +168,19 @@ class ADMSReceiverView(View):
                 return HttpResponse("OK", content_type="text/plain")
 
         return HttpResponse("OK", content_type="text/plain")
+
+
+@csrf_exempt
+def get_biometric_data(request, pk):
+    device = get_object_or_404(BiometricDevice, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'biometric': {
+            'id': device.id,
+            'name': device.name,
+            'ip_address': device.ip_address,
+            'port': device.port,
+            'location': device.location,
+            'is_active': device.is_active,
+        }
+    })

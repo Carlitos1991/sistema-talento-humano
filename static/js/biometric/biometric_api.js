@@ -20,6 +20,7 @@ const BiometricService = {
         formData.append('ip_address', data.ip_address);
         formData.append('port', data.port);
         formData.append('location', data.location);
+        formData.append('is_active', data.is_active);
 
         const response = await fetch(url, {
             method: 'POST',
