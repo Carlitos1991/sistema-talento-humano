@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Usuarios | SIGETH{% endblock %}
-
+{% block title %}Biométricos | SIGETH{% endblock %}
 {% block content %}
     <!-- 1. Header -->
     <div class="header-card">
         <div>
-            <h1>Gestión de Usuarios</h1>
-            <p>Configuración de usuarios, roles y permisos del sistema.</p>
+            <h1>Gestión de Biométricos</h1>
+            <p>Administra los dispositivos biométricos del sistema.</p>
         </div>
     </div>
     <!-- 2. Estadísticas -->
@@ -25,32 +24,35 @@
             <div class="stat-left"><h3>Activos</h3>
                 <div class="number">{{ stats_active|default:"0" }}</div>
             </div>
-            <i class="fas fa-user-check stat-icon"></i>
+            <i class="fa-regular fa-circle-check stat-icon"></i>
         </div>
         <!-- INACTIVOS -->
         <div class="stat-card color-three opacity-low" onclick="filterByStatus('inactive')" id="card-filter-inactive">
             <div class="stat-left"><h3>Inactivos</h3>
                 <div class="number">{{ stats_inactive|default:"0" }}</div>
             </div>
-            <i class="fas fa-user-slash stat-icon"></i>
+            <i class="fa-solid fa-circle-xmark stat-icon"></i>
         </div>
     </div>
     <!-- 3. Contenedor principal Tabla (AJAX) -->
-    <div id="table-app">
+    <div id="biometric-app">
         <div class="content-table">
             <div class="table-controls">
-                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">
-                    <i class="fas fa-sliders-h"></i> Filtros Avanzados
-                </button>
+                {#                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">#}
+                {#                    <i class="fas fa-sliders-h"></i> Filtros Avanzados#}
+                {#                </button>#}
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search" class="input-field"
-                           placeholder="Buscar en la tabla">
+                    <input type="text" v-model="searchQuery" @input="search" placeholder="Buscar por nombre o IP...">
                 </div>
             </div>
             <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
             <div id="table-content-wrapper">
-                {% include 'security/users/partials/partial_user_table.html' %}
+                {% include 'biometric/partials/partial_biometric_table.html' %}
+            </div>
+            <!-- Modal de Creación/Edición -->
+            <div id="modal-container">
+                {% include 'biometric/modals/modal_biometric_form.html' %}
             </div>
             <div class="pagination-container" id="js-pagination">
                 <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
@@ -69,11 +71,7 @@
         </div>
     </div>
 {% endblock %}
-{% block modals %}
-    {% include 'security/users/modals/modal_create_credentials.html' %}
-    {% include 'security/users/modals/modal_advanced_search.html' %}
-{% endblock %}
 {% block extra_js %}
-    <script src="{% static 'js/users.js' %}"></script>
-    <script src="{% static 'js/credentials.js' %}"></script>
+    <script src="{% static 'js/biometric/biometric_api.js' %}"></script>
+    <script src="{% static 'js/biometric/biometric_main.js' %}"></script>
 {% endblock %}

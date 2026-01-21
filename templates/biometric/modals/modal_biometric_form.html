@@ -1,0 +1,34 @@
+<div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>[[ modalTitle ]]</h3>
+            <button @click="closeModal" class="close-btn">&times;</button>
+        </div>
+        <form @submit.prevent="saveDevice">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" v-model="form.name" required>
+                </div>
+                <div class="row">
+                    <div class="col-8">
+                        <label>IP *</label>
+                        <input type="text" v-model="form.ip_address" placeholder="0.0.0.0" required>
+                    </div>
+                    <div class="col-4">
+                        <label>Puerto *</label>
+                        <input type="number" v-model="form.port" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ubicación</label>
+                    <input type="text" v-model="form.location">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" @click="closeModal" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
