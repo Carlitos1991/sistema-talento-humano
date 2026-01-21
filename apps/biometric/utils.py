@@ -25,6 +25,23 @@ class BiometricConnection:
             logger.error(f"Error conectando a {self.ip_address}: {e}")
             return False
 
+    def get_time(self):
+        """Lee la hora actual del hardware."""
+        try:
+            return self.conn.get_time() if self.conn else None
+        except:
+            return None
+
+    def set_time(self, new_datetime):
+        """Escribe una nueva hora en el hardware."""
+        try:
+            if self.conn:
+                self.conn.set_time(new_datetime)
+                return True
+        except:
+            return False
+        return False
+
     def disconnect(self):
         """Cierra la conexión de forma segura."""
         if self.conn:

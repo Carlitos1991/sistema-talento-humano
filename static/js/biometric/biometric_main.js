@@ -8,6 +8,10 @@ const biometricApp = createApp({
             showModal: false,
             modalTitle: 'Nuevo Biométrico',
             searchQuery: '',
+            showTimeModal: false,
+            isSavingTime: false,
+            timeData: {name: '', server_time: '', device_time: ''},
+            timeForm: {id: null, mode: 'server', custom_time: ''},
             currentStatus: 'all',
             stats: {total: 0, active: 0, inactive: 0},
             pagination: {
@@ -59,7 +63,159 @@ const biometricApp = createApp({
                 this.notifyError('Error al obtener datos');
             }
         },
+        async openModalTime(id) {
+            // Mostrar loading sin botones
+            Swal.fire({
+                title: 'Consultando tiempos...', 
+                text: 'Conectando con el dispositivo...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                showCancelButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            try {
+                const response = await fetch(`/biometric/get-time/${id}/`);
+                
+                console.log('Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Data recibida:', data);
+                
+                // Si la respuesta no es exitosa, mostrar error
+                if (!response.ok || !data.success) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Conexión',
+                        text: data.message || 'No se pudo comunicar con el servidor.',
+                        confirmButtonText: 'Aceptar',
+                        showCancelButton: false,
+                        buttonsStyling: false,
+                        customClass: {
+                            confirmButton: 'btn-swal-confirm-red-centered',
+                            actions: 'swal-actions-centered'
+                        }
+                    });
+                    return;
+                }
 
+                // Verificar si hubo error de conexión con el dispositivo
+                if (data.device_time && data.device_time.includes('Error')) {
+                    // Cerrar el loading
+                    Swal.close();
+                    
+                    // Mostrar advertencia
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin Conexión al Dispositivo',
+                        text: 'No se pudo leer la hora del dispositivo. Verifique que esté encendido y accesible en la red.',
+                        confirmButtonText: 'Aceptar',
+                        showCancelButton: false,
+                        buttonsStyling: false,
+                        customClass: {
+                            confirmButton: 'btn-swal-confirm-red-centered',
+                            actions: 'swal-actions-centered'
+                        }
+                    });
+                    return; // No abrir el modal si no hay conexión
+                }
+
+                // Si todo está bien, cerrar loading y abrir modal
+                Swal.close();
+
+                // Preparar datos del formulario
+                this.timeData = {
+                    name: data.device_name,
+                    server_time: data.server_time,
+                    device_time: data.device_time
+                };
+                this.timeForm = {
+                    id: id,
+                    mode: 'server',
+                    custom_time: data.server_time.replace(' ', 'T').substring(0, 16)
+                };
+
+                // Abrir el modal
+                console.log('Abriendo modal, showTimeModal:', this.showTimeModal);
+                this.showTimeModal = true;
+                console.log('Modal abierto, showTimeModal:', this.showTimeModal);
+                
+            } catch (e) {
+                console.error('Error en openModalTime:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'No se pudo comunicar con el servidor. Verifique la conexión de red.',
+                    confirmButtonText: 'Aceptar',
+                    showCancelButton: false,
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn-swal-confirm-red-centered',
+                        actions: 'swal-actions-centered'
+                    }
+                });
+            }
+        },
+
+        async saveTime() {
+            this.isSavingTime = true;
+            const fd = new FormData();
+            fd.append('mode', this.timeForm.mode);
+            fd.append('new_time', this.timeForm.custom_time);
+
+            console.log('Enviando actualización de hora:', {
+                id: this.timeForm.id,
+                mode: this.timeForm.mode,
+                custom_time: this.timeForm.custom_time
+            });
+
+            try {
+                const response = await fetch(`/biometric/update-time/${this.timeForm.id}/`, {
+                    method: 'POST',
+                    body: fd
+                });
+                
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                if (response.ok && result.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: result.message,
+                        confirmButtonText: 'Aceptar'
+                    });
+                    this.showTimeModal = false;
+                    // Recargar la tabla para reflejar cambios
+                    await this.search();
+                } else {
+                    // Mostrar mensaje de error del servidor
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message || 'Error al actualizar la hora',
+                        confirmButtonText: 'Aceptar'
+                    });
+                }
+            } catch (e) {
+                console.error('Error en saveTime:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'No se pudo comunicar con el servidor. Verifique la conexión.',
+                    confirmButtonText: 'Aceptar'
+                });
+            } finally {
+                this.isSavingTime = false;
+            }
+        },
+
+        closeTimeModal() {
+            this.showTimeModal = false;
+        },
         openModalCreate() {
             this.modalTitle = 'Registrar Nuevo Biométrico';
             this.resetForm();

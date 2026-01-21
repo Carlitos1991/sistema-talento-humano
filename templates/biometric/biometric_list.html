@@ -78,6 +78,10 @@
             <div id="modal-container">
                 {% include 'biometric/modals/modal_biometric_form.html' %}
             </div>
+            
+            <!-- Modal de Actualizar Hora -->
+            {% include 'biometric/modals/modal_biometric_time.html' %}
+            
             <div class="pagination-container" id="js-pagination">
                 <span id="val-pagination-label" class="hidden">
                     {% if stats_total > 0 %}Mostrando 1-{{ stats_total }} de {{ stats_total }}{% else %}Mostrando 0-0 de

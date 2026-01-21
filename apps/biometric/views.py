@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
@@ -209,3 +210,171 @@ def test_connection_ajax(request, pk):
         device.save()
 
     return JsonResponse(result)
+
+
+@csrf_exempt
+def get_biometric_time_ajax(request, pk):
+    """Obtiene la hora del servidor y del dispositivo simultáneamente."""
+    import logging
+    import socket
+    logger = logging.getLogger(__name__)
+    
+    try:
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        server_time = timezone.now()  # Hora local configurada en settings
+
+        device_time_str = "Error: No se pudo conectar al dispositivo"
+
+        # Verificación rápida de TCP (ping al puerto)
+        try:
+            logger.info(f"Haciendo ping TCP a {device.ip_address}:{device.port}")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)  # Timeout de 2 segundos
+            result = sock.connect_ex((device.ip_address, device.port))
+            sock.close()
+            
+            if result != 0:
+                logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
+                return JsonResponse({
+                    'success': True,
+                    'device_name': device.name,
+                    'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'device_time': 'Error: No hay respuesta en el puerto. Verifique que el dispositivo esté encendido.'
+                })
+        except socket.error as e:
+            logger.error(f"Error de socket al conectar con {device.ip_address}: {e}")
+            return JsonResponse({
+                'success': True,
+                'device_name': device.name,
+                'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'device_time': 'Error: Dispositivo no accesible en la red.'
+            })
+
+        # Si el ping fue exitoso, intentar conexión ZKTeco
+        try:
+            from .utils import BiometricConnection
+            logger.info(f"Obteniendo hora de {device.name} ({device.ip_address}:{device.port})")
+            bio = BiometricConnection(device.ip_address, device.port, timeout=3)
+            
+            if bio.connect():
+                d_time = bio.get_time()
+                if d_time:
+                    device_time_str = d_time.strftime('%Y-%m-%d %H:%M:%S')
+                    logger.info(f"Hora del dispositivo: {device_time_str}")
+                else:
+                    logger.warning(f"No se pudo leer la hora de {device.name}")
+                    device_time_str = "Error: Conectado pero sin respuesta de hora"
+                bio.disconnect()
+            else:
+                logger.error(f"No se pudo conectar a {device.name}")
+                device_time_str = "Error: Falló la autenticación con el dispositivo"
+        except Exception as e:
+            logger.exception(f"Error al obtener hora de {device.name}")
+            device_time_str = f"Error: {str(e)}"
+
+        return JsonResponse({
+            'success': True,
+            'device_name': device.name,
+            'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'device_time': device_time_str
+        })
+    except Exception as e:
+        logger.exception("Error general en get_biometric_time_ajax")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error del servidor: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def update_biometric_time_ajax(request, pk):
+    """Aplica la nueva hora al dispositivo."""
+    import logging
+    import socket
+    logger = logging.getLogger(__name__)
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+    
+    try:
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        mode = request.POST.get('mode')
+        new_time_str = request.POST.get('new_time')
+        
+        logger.info(f"Actualizando hora de {device.name} - Mode: {mode}, Time: {new_time_str}")
+
+        if mode == 'server':
+            target_time = datetime.now()
+        elif mode == 'custom' and new_time_str:
+            try:
+                target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
+            except ValueError as e:
+                logger.error(f"Formato de fecha inválido: {e}")
+                return JsonResponse({'status': 'error', 'message': f'Formato de fecha inválido: {new_time_str}'}, status=400)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Parámetros inválidos'}, status=400)
+
+        # Verificación rápida de TCP (ping al puerto)
+        try:
+            logger.info(f"Verificando conectividad TCP a {device.ip_address}:{device.port}")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)  # Timeout de 2 segundos
+            result = sock.connect_ex((device.ip_address, device.port))
+            sock.close()
+            
+            if result != 0:
+                logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': f'No se puede conectar al dispositivo {device.name}. Verifique que esté encendido y accesible en la red.'
+                }, status=400)
+        except socket.error as e:
+            logger.error(f"Error de socket al conectar con {device.ip_address}: {e}")
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Dispositivo {device.name} no accesible en la red: {str(e)}'
+            }, status=400)
+
+        # Si el ping fue exitoso, intentar conexión ZKTeco
+        from .utils import BiometricConnection
+        logger.info(f"Intentando conectar a {device.ip_address}:{device.port}")
+        bio = BiometricConnection(device.ip_address, device.port, timeout=3)
+        
+        if not bio.connect():
+            logger.error(f"No se pudo autenticar con el dispositivo {device.name}")
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'No se pudo autenticar con el dispositivo {device.name}. Verifique las credenciales.'
+            }, status=400)
+        
+        try:
+            logger.info(f"Estableciendo hora: {target_time}")
+            success = bio.set_time(target_time)
+            bio.disconnect()
+            
+            if success:
+                logger.info(f"Hora actualizada correctamente en {device.name}")
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': f'Hora actualizada correctamente a {target_time.strftime("%d/%m/%Y %H:%M:%S")}'
+                })
+            else:
+                logger.error(f"El dispositivo {device.name} rechazó la actualización")
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': f'El dispositivo {device.name} rechazó la actualización de hora. Verifique permisos.'
+                }, status=400)
+        except Exception as e:
+            logger.exception(f"Error al escribir la hora en {device.name}")
+            bio.disconnect()
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Error al escribir la hora: {str(e)}'
+            }, status=500)
+            
+    except Exception as e:
+        logger.exception("Error general en update_biometric_time_ajax")
+        return JsonResponse({
+            'status': 'error', 
+            'message': f'Error del servidor: {str(e)}'
+        }, status=500)

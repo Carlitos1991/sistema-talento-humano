@@ -18,16 +18,19 @@ window.getCookie = function (name) {
     return cookieValue;
 };
 
-// Configuración Global de Toast
+// Configuración Global de SweetAlert2 en Español
 if (typeof Swal !== 'undefined') {
-    // Configuración global de SweetAlert2 en español
-    Swal.mixin({
+    // Establecer textos por defecto en español globalmente
+    const swalDefaults = Swal.mixin({
         confirmButtonText: 'Aceptar',
         cancelButtonText: 'Cancelar',
-        denyButtonText: 'Denegar',
-        closeButtonText: 'Cerrar'
+        denyButtonText: 'Denegar'
     });
     
+    // Sobrescribir el Swal global con los defaults en español
+    window.Swal = swalDefaults;
+    
+    // Toast notification personalizado
     window.Toast = Swal.mixin({
         toast: true,
         position: 'top-end',

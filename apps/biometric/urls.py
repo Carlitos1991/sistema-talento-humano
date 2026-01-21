@@ -9,5 +9,7 @@ urlpatterns = [
     path('adms/receive/', views.ADMSReceiverView.as_view(), name='adms_receiver'),
     path('get-data/<int:pk>/', views.get_biometric_data, name='get_biometric_data'),
     path('test-connection/<int:pk>/', views.test_connection_ajax, name='test_connection'),
+    path('get-time/<int:pk>/', views.get_biometric_time_ajax, name='get_time'),
+    path('update-time/<int:pk>/', views.update_biometric_time_ajax, name='update_time'),
 
 ]

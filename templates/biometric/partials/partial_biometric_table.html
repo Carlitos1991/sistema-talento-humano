@@ -39,6 +39,12 @@
                                 title="Probar Conexión">
                             <i class="fa-solid fa-satellite-dish"></i>
                         </button>
+                        <button onclick="window.biometricVM.openModalTime({{ device.id }})"
+                                class="btn-list-action"
+                                style="background: linear-gradient(to right, #4f46e5, #3730a3);"
+                                title="Actualizar Hora">
+                            <i class="fa-solid fa-clock"></i>
+                        </button>
                         <!-- Botón Editar (Amarillo) -->
                         <button onclick="window.biometricVM.openModalEdit({{ device.id }})"
                                 class="btn-views-action"
