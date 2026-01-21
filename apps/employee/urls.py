@@ -34,5 +34,8 @@ urlpatterns = [
     path('person/<int:person_id>/get-bank-account/', views.get_bank_account_api, name='get_bank_account'),
     path('person/<int:person_id>/get-institutional-data/', views.get_institutional_data_api, name='get_institutional_data'),
     path('person/<int:person_id>/save-institutional-data/', views.save_institutional_data_api, name='save_institutional_data'),
+    # Catálogos para modales
+    path('api/areas-list/', views.get_areas_list_api, name='api_areas_list'),
+    path('api/employment-statuses/', views.get_employment_statuses_api, name='api_employment_statuses'),
 
 ]

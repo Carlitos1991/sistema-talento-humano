@@ -135,7 +135,14 @@ const app = createApp({
         const expErrors = ref({});
         const trainForm = ref({training_name: ''});
         const trainErrors = ref({});
-        const institutionalForm = ref({area: null, labor_regime: null, position: null, status: null});
+        const institutionalForm = ref({
+            area: null, 
+            employment_status: null, 
+            file_number: '', 
+            biometric_id: '', 
+            institutional_email: '', 
+            observations: ''
+        });
         const institutionalErrors = ref({});
 
         // --- 3. UI Y PREVIEW ---
@@ -682,22 +689,50 @@ const app = createApp({
                      // Abrir modal
                      $('#modalInstitutionalOverlay').removeClass('hidden');
 
-                     // Inicializar Select2
-                     setTimeout(() => {
+                     // Cargar opciones y configurar Select2
+                     setTimeout(async () => {
                         const $modal = $('#modalInstitutionalOverlay');
-                        $modal.find('select.select2-wizard').each(function() {
-                             $(this).select2({
-                                 dropdownParent: $modal,
-                                 width: '100%'
-                             }).on('change', function(){
-                                 institutionalForm.value[$(this).attr('name')] = $(this).val();
-                             });
-                             // Set value if exists to trigger visual update
-                             if(institutionalForm.value[$(this).attr('name')]) {
-                                 $(this).val(institutionalForm.value[$(this).attr('name')]).trigger('change.select2');
-                             }
-                        });
-                     }, 100);
+                        
+                        // Cargar áreas
+                        const areasResponse = await fetch('/employee/api/areas-list/');
+                        const areasData = await areasResponse.json();
+                        if (areasData.success) {
+                            const $areaSelect = $modal.find('.select2-institutional-area');
+                            $areaSelect.empty().append('<option value="">Seleccione una unidad</option>');
+                            areasData.data.forEach(area => {
+                                $areaSelect.append(`<option value="${area.id}">${area.name}</option>`);
+                            });
+                            $areaSelect.select2({
+                                dropdownParent: $modal,
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                placeholder: 'Seleccione una unidad',
+                                allowClear: true
+                            }).val(res.data.area).trigger('change').on('change', function(){
+                                institutionalForm.value.area = $(this).val();
+                            });
+                        }
+                        
+                        // Cargar estados laborales
+                        const statusResponse = await fetch('/employee/api/employment-statuses/');
+                        const statusData = await statusResponse.json();
+                        if (statusData.success) {
+                            const $statusSelect = $modal.find('.select2-employment-status');
+                            $statusSelect.empty().append('<option value="">Seleccione un estado</option>');
+                            statusData.data.forEach(status => {
+                                $statusSelect.append(`<option value="${status.id}">${status.name}</option>`);
+                            });
+                            $statusSelect.select2({
+                                dropdownParent: $modal,
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                placeholder: 'Seleccione un estado',
+                                allowClear: true
+                            }).val(res.data.employment_status).trigger('change').on('change', function(){
+                                institutionalForm.value.employment_status = $(this).val();
+                            });
+                        }
+                     }, 150);
                  } else {
                      window.Toast.fire({icon: 'error', title: 'Error al cargar datos institucionales'});
                  }

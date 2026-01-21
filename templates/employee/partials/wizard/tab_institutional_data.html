@@ -115,6 +115,22 @@
             <hr class="mt-1 mb-4 border-orange">
 
             <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-sitemap me-1"></i> Unidad Administrativa</label>
+                <select v-model="institutionalForm.area" class="form-control select2-institutional-area" style="width: 100%;">
+                    <option value="">Seleccione una unidad</option>
+                </select>
+                <div class="form-text text-muted" style="font-size: 0.75rem;">Área o departamento al que pertenece el empleado</div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-user-check me-1"></i> Estado Laboral</label>
+                <select v-model="institutionalForm.employment_status" class="form-control select2-employment-status" style="width: 100%;">
+                    <option value="">Seleccione un estado</option>
+                </select>
+                <div class="form-text text-muted" style="font-size: 0.75rem;">Estado actual del empleado (Activo, Comisión, etc.)</div>
+            </div>
+
+            <div class="form-group mb-3">
                 <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-folder-open me-1"></i> Número de Expediente</label>
                 <input type="text" v-model="institutionalForm.file_number" class="form-control" placeholder="TC 360">
                  <div class="form-text text-muted" style="font-size: 0.75rem;">Número de expediente institucional del empleado</div>

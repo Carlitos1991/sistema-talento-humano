@@ -554,10 +554,10 @@ def get_institutional_data_api(request, person_id):
             'position': position_name,
             
             # Campos Editables de InstitutionalData
-            'file_number': inst_data.file_number,
-            'biometric_id': inst_data.biometric_id,
-            'institutional_email': inst_data.institutional_email,
-            'observations': inst_data.observations
+            'file_number': inst_data.file_number or '',
+            'biometric_id': inst_data.biometric_id or '',
+            'institutional_email': inst_data.institutional_email or '',
+            'observations': inst_data.observations or ''
         }
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
@@ -603,3 +603,22 @@ def save_institutional_data_api(request, person_id):
         except Exception as e:
              return JsonResponse({'success': False, 'message': str(e)}, status=400)
     return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+
+
+@login_required
+def get_areas_list_api(request):
+    """Retorna todas las unidades administrativas activas para select2"""
+    from apps.institution.models import AdministrativeUnit
+    areas = AdministrativeUnit.objects.filter(is_active=True).values('id', 'name', 'code')
+    return JsonResponse({'success': True, 'data': list(areas)})
+
+
+@login_required
+def get_employment_statuses_api(request):
+    """Retorna los estados laborales activos para select2"""
+    from apps.core.models import CatalogItem
+    statuses = CatalogItem.objects.filter(
+        catalog__code='EMPLOYMENT_STATUS', 
+        is_active=True
+    ).values('id', 'name')
+    return JsonResponse({'success': True, 'data': list(statuses)})

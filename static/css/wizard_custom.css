@@ -246,6 +246,50 @@
     font-size: 0.65rem;
 }
 
+/* =========================================
+   FOOTER ACTION BUTTON (Centered in box footer)
+   ========================================= */
+.info-box-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-footer-action {
+    background: #fbbf24;
+    color: #1e293b;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.btn-footer-action:hover {
+    background: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-footer-action:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-footer-action i {
+    font-size: 0.75rem;
+}
+
 .profile-header-container {
     display: flex;
     padding: 1.25rem;

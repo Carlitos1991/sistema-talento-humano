@@ -9,13 +9,8 @@
 <div class="grid-info-personal">
     <!-- Cuenta Bancaria -->
     <div class="info-box-styled personal-border shadow-sm">
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <div class="border-bottom pb-2 mb-3">
             <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-building-columns"></i> Cuenta Bancaria</h6>
-            {% if person.economic_data.bank_account %}
-                <button class="btn-box-action" @click="openBankModal({{ person.id }})">
-                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                </button>
-            {% endif %}
         </div>
 
         {% if person.economic_data.bank_account %}
@@ -39,6 +34,13 @@
                 <label>Estado:</label>
                 <span class="status-badge active" style="font-size: 0.7rem;">Activa</span>
             </div>
+            
+            <!-- Footer con botón centrado -->
+            <div class="info-box-footer">
+                <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
+                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                </button>
+            </div>
         {% else %}
             <div class="text-center py-4">
                  <div class="mb-3 text-secondary opacity-50">
@@ -54,13 +56,8 @@
 
     <!-- Mensualización -->
     <div class="info-box-styled additional-border shadow-sm">
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <div class="border-bottom pb-2 mb-3">
             <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-calculator"></i> Nómina y Mensualización</h6>
-             {% if person.economic_data.payroll_info %}
-                <button class="btn-box-action" @click="openPayrollModal({{ person.id }})">
-                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                </button>
-            {% endif %}
         </div>
 
         {% if person.economic_data.payroll_info %}
@@ -87,6 +84,13 @@
              <div class="info-data-row mt-2">
                 <label>Ingreso a Roles:</label>
                 <span class="small">{{ person.economic_data.payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
+            </div>
+            
+            <!-- Footer con botón centrado -->
+            <div class="info-box-footer">
+                <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
+                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                </button>
             </div>
         {% else %}
              <div class="text-center py-4">
