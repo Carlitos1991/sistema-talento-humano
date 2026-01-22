@@ -1,52 +1,105 @@
 <div v-if="showTimeModal" class="modal-overlay" @click.self="closeTimeModal">
-    <div class="modal-container-medium" style="max-width: 550px;">
-        <div class="modal-header-gradient">
-            <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fa-solid fa-clock"></i></div>
-                <h3 class="header-title-main">Actualizar Hora del Biométrico</h3>
+    <div class="modal-container-medium time-modal-container">
+        <!-- Header con gradiente azul -->
+        <div class="time-modal-header">
+            <div class="time-modal-header-content">
+                <div class="time-modal-icon">
+                    <i class="fa-solid fa-clock fa-xl"></i>
+                </div>
+                <div>
+                    <h3 class="time-modal-title">Sincronización de Hora</h3>
+                    <p class="time-modal-subtitle">[[ timeData.name ]]</p>
+                </div>
             </div>
-            <button @click="closeTimeModal" class="btn-close-modal-refined">&times;</button>
+            <button @click="closeTimeModal" class="btn-close-modal-refined" style="color: white;">&times;</button>
         </div>
 
-        <div class="modal-body-custom">
-            <!-- Card de Info Tiempos -->
-            <div class="swal-connection-box" style="margin-top: 0; margin-bottom: 20px;">
-                <div class="swal-connection-details">
-                    <div class="swal-connection-item"><strong>Dispositivo:</strong> [[ timeData.name ]]</div>
-                    <div class="swal-connection-item"><strong>Hora Actual del Dispositivo:</strong>
-                        <span :class="timeData.device_time.includes('Error') ? 'text-danger' : ''">[[ timeData.device_time ]]</span>
+        <div class="time-modal-body">
+            <!-- Comparación de horas con diseño moderno -->
+            <div class="time-comparison-grid">
+                <!-- Hora del Dispositivo -->
+                <div class="time-card-device">
+                    <div class="time-card-header">
+                        <i class="fa-solid fa-fingerprint time-card-icon-device"></i>
+                        <span class="time-card-label-device">Biométrico</span>
                     </div>
-                    <div class="swal-connection-item"><strong>Hora del Servidor:</strong> [[ timeData.server_time ]]</div>
+                    <div v-if="!timeData.device_time.includes('Error')" class="time-card-time">
+                        [[ timeData.device_time.split(' ')[1] ]]
+                    </div>
+                    <div v-else class="time-card-error">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Sin conexión
+                    </div>
+                    <div v-if="!timeData.device_time.includes('Error')" class="time-card-date">
+                        [[ timeData.device_time.split(' ')[0] ]]
+                    </div>
+                </div>
+
+                <!-- Hora del Servidor -->
+                <div class="time-card-server">
+                    <div class="time-card-header">
+                        <i class="fa-solid fa-server time-card-icon-server"></i>
+                        <span class="time-card-label-server">Servidor</span>
+                    </div>
+                    <div class="time-card-time-server">
+                        [[ timeData.server_time.split(' ')[1] ]]
+                    </div>
+                    <div class="time-card-date-server">
+                        [[ timeData.server_time.split(' ')[0] ]]
+                    </div>
                 </div>
             </div>
 
-            <!-- Opciones de Radio -->
-            <div class="form-section-card">
-                <div class="form-group mb-3">
-                    <label class="d-flex align-items-center gap-2 cursor-pointer">
-                        <input type="radio" v-model="timeForm.mode" value="server">
-                        <span>Sincronizar con hora del servidor</span>
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="d-flex align-items-center gap-2 cursor-pointer">
-                        <input type="radio" v-model="timeForm.mode" value="custom">
-                        <span>Establecer hora personalizada</span>
-                    </label>
-                </div>
+            <!-- Opciones de sincronización -->
+            <div class="time-sync-options">
+                <h6 class="time-sync-title">
+                    <i class="fa-solid fa-gear"></i> Opciones de Sincronización
+                </h6>
+                
+                <!-- Opción: Sincronizar con servidor -->
+                <label class="time-radio-option" :class="{'selected': timeForm.mode === 'server'}" @click="timeForm.mode = 'server'">
+                    <input type="radio" v-model="timeForm.mode" value="server">
+                    <div class="time-radio-content">
+                        <div class="time-radio-label">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Sincronizar con servidor
+                        </div>
+                        <div class="time-radio-description">
+                            Establece automáticamente la hora del servidor en el dispositivo
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Opción: Hora personalizada -->
+                <label class="time-radio-option" :class="{'selected': timeForm.mode === 'custom'}" @click="timeForm.mode = 'custom'">
+                    <input type="radio" v-model="timeForm.mode" value="custom">
+                    <div class="time-radio-content">
+                        <div class="time-radio-label">
+                            <i class="fa-solid fa-pen-to-square"></i> Hora personalizada
+                        </div>
+                        <div class="time-radio-description">
+                            Define manualmente la fecha y hora que deseas establecer
+                        </div>
+                    </div>
+                </label>
 
                 <!-- Input de Fecha (Solo si es personalizado) -->
-                <div v-if="timeForm.mode === 'custom'" class="mt-3 animate__animated animate__fadeIn">
-                    <label class="form-label">Fecha y Hora:</label>
-                    <input type="datetime-local" v-model="timeForm.custom_time" class="form-control">
+                <div v-if="timeForm.mode === 'custom'" class="time-custom-input-wrapper">
+                    <label class="time-custom-label">
+                        <i class="fa-regular fa-calendar"></i> Fecha y Hora:
+                    </label>
+                    <input type="datetime-local" 
+                           v-model="timeForm.custom_time" 
+                           class="time-custom-input">
                 </div>
             </div>
         </div>
 
-        <div class="modal-footer-fixed">
-            <button @click="closeTimeModal" class="btn-cancel" style="min-width: 120px;">Cancelar</button>
-            <button @click="saveTime" class="btn-save" :disabled="isSavingTime" style="min-width: 180px;">
-                <i :class="isSavingTime ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-arrows-rotate'"></i>
+        <!-- Footer con botones -->
+        <div class="time-modal-footer">
+            <button @click="closeTimeModal" class="time-btn-cancel">
+                <i class="fa-solid fa-xmark"></i> Cancelar
+            </button>
+            <button @click="saveTime" :disabled="isSavingTime" class="time-btn-update">
+                <i :class="isSavingTime ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-clock-rotate-left'"></i>
                 [[ isSavingTime ? 'Actualizando...' : 'Actualizar Hora' ]]
             </button>
         </div>
