@@ -1484,11 +1484,6 @@ table {
     transition: background 0.18s ease;
 }
 
-.table-container tbody td:first-child {
-    font-weight: 700;
-    font-family: ui-monospace, monospace;
-}
-
 .table-container tbody tr:last-child td {
     border-bottom: none;
 }

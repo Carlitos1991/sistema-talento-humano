@@ -45,6 +45,17 @@
                                 title="Actualizar Hora">
                             <i class="fa-solid fa-clock"></i>
                         </button>
+                        <button onclick="window.biometricVM.openModalUpload({{ device.id }}, '{{ device.name }}')"
+                                class="btn-list-action"
+                                style="background: linear-gradient(to right, #475569, #1e293b);"
+                                title="Subir Archivo USB">
+                            <i class="fa-brands fa-usb"></i>
+                        </button>
+                        <button onclick="window.biometricVM.handleLoadAttendance({{ device.id }}, '{{ device.name }}')"
+                                class="btn-success-action"
+                                title="Descargar Marcaciones">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </button>
                         <!-- Botón Editar (Amarillo) -->
                         <button onclick="window.biometricVM.openModalEdit({{ device.id }})"
                                 class="btn-views-action"

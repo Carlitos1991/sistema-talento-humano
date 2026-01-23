@@ -8,6 +8,11 @@ const biometricApp = createApp({
             showModal: false,
             modalTitle: 'Nuevo Biométrico',
             searchQuery: '',
+            showUploadModal: false,
+            isUploading: false,
+            selectedDeviceId: null,
+            selectedDeviceName: '',
+            uploadForm: {file: null},
             showTimeModal: false,
             isSavingTime: false,
             timeData: {name: '', server_time: '', device_time: ''},
@@ -29,6 +34,52 @@ const biometricApp = createApp({
         }
     },
     methods: {
+        openModalUpload(id, name) {
+            this.selectedDeviceId = id;
+            this.selectedDeviceName = name;
+            this.uploadForm.file = null;
+            this.showUploadModal = true;
+        },
+
+        onFileSelected(event) {
+            this.uploadForm.file = event.target.files[0];
+        },
+
+        async processUpload() {
+            this.isUploading = true;
+            const fd = new FormData();
+            fd.append('file', this.uploadForm.file);
+
+            try {
+                const response = await fetch(`/biometric/upload-file/${this.selectedDeviceId}/`, {
+                    method: 'POST',
+                    body: fd
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    Swal.fire({
+                        title: 'Carga Completada',
+                        text: result.message,
+                        icon: 'success',
+                        confirmButtonText: 'Entendido',
+                        customClass: {confirmButton: 'btn-swal-confirm-green-centered'},
+                        buttonsStyling: false
+                    });
+                    this.showUploadModal = false;
+                    await this.search(); // Actualizar estadísticas
+                } else {
+                    this.notifyError(result.message);
+                }
+            } catch (e) {
+                this.notifyError('Error técnico al subir el archivo');
+            } finally {
+                this.isUploading = false;
+            }
+        },
+        closeUploadModal() {
+            this.showUploadModal = false;
+        },
         async search() {
             try {
                 const data = await BiometricService.getTable(this.searchQuery, this.currentStatus);
@@ -66,7 +117,7 @@ const biometricApp = createApp({
         async openModalTime(id) {
             // Mostrar loading sin botones
             Swal.fire({
-                title: 'Consultando tiempos...', 
+                title: 'Consultando tiempos...',
                 text: 'Conectando con el dispositivo...',
                 allowOutsideClick: false,
                 showConfirmButton: false,
@@ -75,15 +126,15 @@ const biometricApp = createApp({
                     Swal.showLoading();
                 }
             });
-            
+
             try {
                 const response = await fetch(`/biometric/get-time/${id}/`);
-                
+
                 console.log('Response status:', response.status);
-                
+
                 const data = await response.json();
                 console.log('Data recibida:', data);
-                
+
                 // Si la respuesta no es exitosa, mostrar error
                 if (!response.ok || !data.success) {
                     Swal.fire({
@@ -105,7 +156,7 @@ const biometricApp = createApp({
                 if (data.device_time && data.device_time.includes('Error')) {
                     // Cerrar el loading
                     Swal.close();
-                    
+
                     // Mostrar advertencia
                     await Swal.fire({
                         icon: 'warning',
@@ -141,7 +192,7 @@ const biometricApp = createApp({
                 console.log('Abriendo modal, showTimeModal:', this.showTimeModal);
                 this.showTimeModal = true;
                 console.log('Modal abierto, showTimeModal:', this.showTimeModal);
-                
+
             } catch (e) {
                 console.error('Error en openModalTime:', e);
                 Swal.fire({
@@ -176,11 +227,11 @@ const biometricApp = createApp({
                     method: 'POST',
                     body: fd
                 });
-                
+
                 console.log('Response status:', response.status);
                 const result = await response.json();
                 console.log('Response data:', result);
-                
+
                 if (response.ok && result.status === 'success') {
                     Swal.fire({
                         icon: 'success',
@@ -313,6 +364,83 @@ const biometricApp = createApp({
                 }
             } catch (error) {
                 this.notifyError('Error de red al intentar la conexión');
+            }
+        },
+        async handleLoadAttendance(id, name) {
+            // 1. MODAL DE CONFIRMACIÓN (Estilo púrpura solicitado)
+            const result = await Swal.fire({
+                title: '¿Cargar marcaciones?',
+                html: `
+            <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 10px;">Se cargarán todas las marcaciones del dispositivo:</p>
+            <p style="font-weight: 800; color: #1e293b; text-transform: uppercase;">${name}</p>
+            <p style="color: #64748b; font-size: 0.95rem; margin-top: 15px;">Solo se guardarán las marcaciones de empleados con identificador biométrico registrado.</p>
+        `,
+                icon: 'question',
+                iconColor: '#7e22ce',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-download"></i> Cargar Marcaciones',
+                cancelButtonText: 'Cancelar',
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'btn-swal-confirm-purple-centered', // Clase para botón púrpura
+                    cancelButton: 'btn-swal-cancel-gray'
+                }
+            });
+
+            if (result.isConfirmed) {
+                // 2. MOSTRAR LOADING SIN BOTONES
+                Swal.fire({
+                    title: 'Sincronizando...',
+                    text: 'Conectando y descargando datos, espere por favor.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    showCancelButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                try {
+                    // Llamada al endpoint de Python que creamos en views.py
+                    const response = await fetch(`/biometric/load-attendance/${id}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': BiometricService.getCsrfToken()
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.status === 'success') {
+                        // 3. ÉXITO
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Sincronización Exitosa!',
+                            text: data.message,
+                            confirmButtonText: 'Aceptar',
+                            customClass: {
+                                confirmButton: 'btn-swal-confirm-green-centered'
+                            },
+                            buttonsStyling: false
+                        });
+                        await this.search(); // Refrescar tabla y contadores
+                    } else {
+                        // 4. ERROR O INFO (No hay registros)
+                        Swal.fire({
+                            icon: data.status === 'info' ? 'info' : 'error',
+                            title: data.status === 'info' ? 'Sin registros' : 'Error',
+                            text: data.message,
+                            confirmButtonText: 'Cerrar',
+                            customClass: {
+                                confirmButton: 'btn-swal-confirm-red-centered'
+                            },
+                            buttonsStyling: false
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    this.notifyError('Error de red al intentar sincronizar marcaciones');
+                }
             }
         },
 

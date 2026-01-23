@@ -12,6 +12,8 @@ from django.shortcuts import get_object_or_404
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
 from employee.models import InstitutionalData
 from .utils import test_connection
+import io
+from django.utils.timezone import make_aware
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +220,7 @@ def get_biometric_time_ajax(request, pk):
     import logging
     import socket
     logger = logging.getLogger(__name__)
-    
+
     try:
         device = get_object_or_404(BiometricDevice, pk=pk)
         server_time = timezone.localtime()  # Hora local de Ecuador (America/Guayaquil)
@@ -232,7 +234,7 @@ def get_biometric_time_ajax(request, pk):
             sock.settimeout(2)  # Timeout de 2 segundos
             result = sock.connect_ex((device.ip_address, device.port))
             sock.close()
-            
+
             if result != 0:
                 logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
                 return JsonResponse({
@@ -255,7 +257,7 @@ def get_biometric_time_ajax(request, pk):
             from .utils import BiometricConnection
             logger.info(f"Obteniendo hora de {device.name} ({device.ip_address}:{device.port})")
             bio = BiometricConnection(device.ip_address, device.port, timeout=3)
-            
+
             if bio.connect():
                 d_time = bio.get_time()
                 if d_time:
@@ -292,15 +294,15 @@ def update_biometric_time_ajax(request, pk):
     import logging
     import socket
     logger = logging.getLogger(__name__)
-    
+
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
-    
+
     try:
         device = get_object_or_404(BiometricDevice, pk=pk)
         mode = request.POST.get('mode')
         new_time_str = request.POST.get('new_time')
-        
+
         logger.info(f"Actualizando hora de {device.name} - Mode: {mode}, Time: {new_time_str}")
 
         if mode == 'server':
@@ -310,7 +312,8 @@ def update_biometric_time_ajax(request, pk):
                 target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
             except ValueError as e:
                 logger.error(f"Formato de fecha inválido: {e}")
-                return JsonResponse({'status': 'error', 'message': f'Formato de fecha inválido: {new_time_str}'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Formato de fecha inválido: {new_time_str}'},
+                                    status=400)
         else:
             return JsonResponse({'status': 'error', 'message': 'Parámetros inválidos'}, status=400)
 
@@ -321,17 +324,17 @@ def update_biometric_time_ajax(request, pk):
             sock.settimeout(2)  # Timeout de 2 segundos
             result = sock.connect_ex((device.ip_address, device.port))
             sock.close()
-            
+
             if result != 0:
                 logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
                 return JsonResponse({
-                    'status': 'error', 
+                    'status': 'error',
                     'message': f'No se puede conectar al dispositivo {device.name}. Verifique que esté encendido y accesible en la red.'
                 }, status=400)
         except socket.error as e:
             logger.error(f"Error de socket al conectar con {device.ip_address}: {e}")
             return JsonResponse({
-                'status': 'error', 
+                'status': 'error',
                 'message': f'Dispositivo {device.name} no accesible en la red: {str(e)}'
             }, status=400)
 
@@ -339,42 +342,207 @@ def update_biometric_time_ajax(request, pk):
         from .utils import BiometricConnection
         logger.info(f"Intentando conectar a {device.ip_address}:{device.port}")
         bio = BiometricConnection(device.ip_address, device.port, timeout=3)
-        
+
         if not bio.connect():
             logger.error(f"No se pudo autenticar con el dispositivo {device.name}")
             return JsonResponse({
-                'status': 'error', 
+                'status': 'error',
                 'message': f'No se pudo autenticar con el dispositivo {device.name}. Verifique las credenciales.'
             }, status=400)
-        
+
         try:
             logger.info(f"Estableciendo hora: {target_time}")
             success = bio.set_time(target_time)
             bio.disconnect()
-            
+
             if success:
                 logger.info(f"Hora actualizada correctamente en {device.name}")
                 return JsonResponse({
-                    'status': 'success', 
+                    'status': 'success',
                     'message': f'Hora actualizada correctamente a {target_time.strftime("%d/%m/%Y %H:%M:%S")}'
                 })
             else:
                 logger.error(f"El dispositivo {device.name} rechazó la actualización")
                 return JsonResponse({
-                    'status': 'error', 
+                    'status': 'error',
                     'message': f'El dispositivo {device.name} rechazó la actualización de hora. Verifique permisos.'
                 }, status=400)
         except Exception as e:
             logger.exception(f"Error al escribir la hora en {device.name}")
             bio.disconnect()
             return JsonResponse({
-                'status': 'error', 
+                'status': 'error',
                 'message': f'Error al escribir la hora: {str(e)}'
             }, status=500)
-            
+
     except Exception as e:
         logger.exception("Error general en update_biometric_time_ajax")
         return JsonResponse({
-            'status': 'error', 
+            'status': 'error',
             'message': f'Error del servidor: {str(e)}'
         }, status=500)
+
+
+@csrf_exempt
+def upload_biometric_file_ajax(request, pk):
+    """Procesa archivos .dat descargados por USB desde el biométrico."""
+    if request.method == 'POST' and request.FILES.get('file'):
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        file = request.FILES['file']
+
+        # Validar extensión básica
+        if not file.name.endswith(('.dat', '.txt')):
+            return JsonResponse({'status': 'error', 'message': 'Formato de archivo no válido (.dat o .txt)'},
+                                status=400)
+
+        try:
+            # Leer el archivo y decodificar (ZKTeco suele usar UTF-8 o latin-1)
+            content = file.read().decode('utf-8', errors='ignore').strip()
+            lines = content.splitlines()
+
+            saved_count = 0
+            duplicate_count = 0
+            not_found_count = 0
+
+            with transaction.atomic():
+                # Registro de la carga manual
+                manual_load = BiometricLoad.objects.create(
+                    biometric=device,
+                    load_type="MANUAL_USB",
+                    reason=f"Carga desde archivo: {file.name}",
+                    created_by=request.user
+                )
+
+                for line in lines:
+                    parts = line.strip().split('\t')
+                    if len(parts) < 2: continue
+
+                    user_pin = parts[0].strip().lstrip('0')
+                    timestamp_str = parts[1].strip()
+
+                    # 1. Buscar relación empleado
+                    inst_data = InstitutionalData.objects.select_related('employee').filter(
+                        biometric_id=user_pin
+                    ).first()
+
+                    if not inst_data:
+                        not_found_count += 1
+                        continue
+
+                    # 2. Parsear fecha aware
+                    try:
+                        naive_date = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                        registry_date = make_aware(naive_date)
+                    except:
+                        continue
+
+                    # 3. Evitar duplicados
+                    exists = AttendanceRegistry.objects.filter(
+                        employee=inst_data.employee,
+                        registry_date=registry_date
+                    ).exists()
+
+                    if not exists:
+                        AttendanceRegistry.objects.create(
+                            employee=inst_data.employee,
+                            biometric_load=manual_load,
+                            employee_id_bio=user_pin,
+                            registry_date=registry_date
+                        )
+                        saved_count += 1
+                    else:
+                        duplicate_count += 1
+
+                # Actualizar total final
+                manual_load.num_records = saved_count
+                manual_load.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Procesado: {saved_count} nuevos, {duplicate_count} duplicados, {not_found_count} no asociados.'
+            })
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Error al procesar: {str(e)}'}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
+
+
+@csrf_exempt
+def load_attendance_ajax(request, pk):
+    """Se conecta al equipo, descarga marcaciones y las guarda."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+
+    device = get_object_or_404(BiometricDevice, pk=pk)
+
+    from .utils import BiometricConnection
+    bio = BiometricConnection(device.ip_address, device.port)
+
+    if not bio.connect():
+        return JsonResponse({
+            'status': 'error',
+            'message': f'No se pudo establecer conexión con {device.ip_address}'
+        }, status=400)
+
+    try:
+        raw_records = bio.get_attendance()
+        if not raw_records:
+            bio.disconnect()
+            return JsonResponse({'status': 'info', 'message': 'No hay marcaciones nuevas en el dispositivo.'})
+
+        saved_count = 0
+        duplicate_count = 0
+
+        with transaction.atomic():
+            # Registro de la carga
+            batch_load = BiometricLoad.objects.create(
+                biometric=device,
+                load_type="DIRECT_SYNC",
+                reason="Sincronización manual desde panel",
+                created_by=request.user
+            )
+
+            for rec in raw_records:
+                # Normalizamos el ID (quitar ceros a la izquierda)
+                user_id = str(rec.user_id).strip().lstrip('0')
+
+                # Buscamos al empleado
+                inst_data = InstitutionalData.objects.select_related('employee').filter(
+                    biometric_id=user_id
+                ).first()
+
+                if inst_data:
+                    # Convertimos la fecha del hardware a aware (zona horaria Ecuador)
+                    reg_date = make_aware(rec.timestamp)
+
+                    # Evitamos duplicados
+                    exists = AttendanceRegistry.objects.filter(
+                        employee=inst_data.employee,
+                        registry_date=reg_date
+                    ).exists()
+
+                    if not exists:
+                        AttendanceRegistry.objects.create(
+                            employee=inst_data.employee,
+                            biometric_load=batch_load,
+                            employee_id_bio=user_id,
+                            registry_date=reg_date
+                        )
+                        saved_count += 1
+                    else:
+                        duplicate_count += 1
+
+            # Actualizamos el total de la carga
+            batch_load.num_records = saved_count
+            batch_load.save()
+
+        bio.disconnect()
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Sincronización exitosa: {saved_count} registros guardados, {duplicate_count} duplicados omitidos.'
+        })
+
+    except Exception as e:
+        bio.disconnect()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

@@ -39,12 +39,8 @@
     font-weight: 500;
 }
 
-/* Nombre del dispositivo (ALCALDIA) */
 .device-name-cell {
-    font-weight: 800; /* Extra bold */
     color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
 }
 
 /* Estilo de las Píldoras (Badges) */
@@ -641,3 +637,75 @@ input:checked + .toggle-slider:before {
     }
 }
 
+/* apps/biometric/static/css/biometric.css */
+
+/* Botón Púrpura (Confirmar Carga) */
+.btn-swal-purple {
+    background-color: #7e22ce !important; /* Púrpura intenso */
+    color: white !important;
+    padding: 12px 25px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    border: none !important;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(126, 34, 206, 0.2) !important;
+}
+
+/* Botón Gris (Cancelar) */
+.btn-swal-gray {
+    background-color: #64748b !important; /* Gris slate */
+    color: white !important;
+    padding: 12px 25px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    border: none !important;
+    cursor: pointer;
+}
+
+.btn-swal-purple:hover {
+    background-color: #6b21a8 !important;
+    transform: translateY(-2px);
+}
+
+.btn-swal-gray:hover {
+    background-color: #475569 !important;
+    transform: translateY(-2px);
+}
+/* apps/biometric/static/css/biometric.css */
+
+/* Botón Púrpura Centrado */
+.btn-swal-confirm-purple-centered {
+    background-color: #7e22ce !important;
+    color: white !important;
+    padding: 12px 35px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    border: none !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    margin-right: 10px;
+}
+
+.btn-swal-confirm-purple-centered:hover {
+    background-color: #6b21a8 !important;
+    transform: translateY(-2px);
+}
+
+/* Botón Gris para Cancelar */
+.btn-swal-cancel-gray {
+    background-color: #64748b !important;
+    color: white !important;
+    padding: 12px 35px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    border: none !important;
+    cursor: pointer;
+}

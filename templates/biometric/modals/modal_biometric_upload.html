@@ -1,0 +1,44 @@
+<div v-if="showUploadModal" class="modal-overlay" @click.self="closeUploadModal">
+    <div class="modal-container-medium" style="max-width: 500px;">
+        <div class="modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-file-import"></i></div>
+                <h3 class="header-title-main">Cargar Archivo USB</h3>
+            </div>
+            <button @click="closeUploadModal" class="btn-close-modal-refined">&times;</button>
+        </div>
+
+        <div class="modal-body-custom">
+            <div class="alert-info" style="margin-bottom: 20px; font-size: 0.85rem;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Seleccione el archivo <strong>.dat</strong> extraído del equipo <strong>[[ selectedDeviceName ]]</strong>.</span>
+            </div>
+
+            <div class="form-section-card" style="padding: 30px 20px; text-align: center; border: 2px dashed #cbd5e1;">
+                <input type="file" id="fileInput" ref="fileInput" class="hidden" @change="onFileSelected" accept=".dat,.txt">
+
+                <div v-if="!uploadForm.file" @click="$refs.fileInput.click()" class="cursor-pointer">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 3rem; color: #94a3b8;"></i>
+                    <p class="mt-2" style="font-weight: 700; color: #64748b;">Haga clic para buscar el archivo</p>
+                </div>
+
+                <div v-else class="d-flex align-items-center justify-content-center gap-3">
+                    <i class="fa-solid fa-file-lines" style="font-size: 2rem; color: #0f4c81;"></i>
+                    <div class="text-left">
+                        <p class="mb-0" style="font-weight: 800; color: #1e293b;">[[ uploadForm.file.name ]]</p>
+                        <small style="color: #64748b;">[[ (uploadForm.file.size / 1024).toFixed(2) ]] KB</small>
+                    </div>
+                    <button @click="uploadForm.file = null" class="btn-icon text-danger" title="Quitar"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button @click="closeUploadModal" class="btn-cancel">Cancelar</button>
+            <button @click="processUpload" class="btn-save" :disabled="!uploadForm.file || isUploading">
+                <i v-if="isUploading" class="fa-solid fa-spinner fa-spin"></i>
+                [[ isUploading ? 'Procesando...' : 'Iniciar Carga' ]]
+            </button>
+        </div>
+    </div>
+</div>

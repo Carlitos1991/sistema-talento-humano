@@ -5,6 +5,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+from biometric import adms_views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
@@ -17,6 +19,7 @@ urlpatterns = [
     path('contract/', include('contract.urls')),
     path('function_manual/', include('function_manual.urls')),
     path('biometric/', include('biometric.urls')),
+    path('iclock/cdata', adms_views.adms_receive_attendance),
 
 ]
 
