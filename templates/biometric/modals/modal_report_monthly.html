@@ -1,0 +1,42 @@
+<div v-if="showMonthlyModal" class="modal-overlay" @click.self="showMonthlyModal = false">
+    <div class="modal-container-medium" style="max-width: 450px;">
+        <div class="modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-calendar-days"></i></div>
+                <h3 class="header-title-main">Reporte Mensual</h3>
+            </div>
+            <button @click="showMonthlyModal = false" class="btn-close-modal-refined">&times;</button>
+        </div>
+
+        <div class="modal-body-custom">
+            <div class="swal-connection-box" style="margin-top:0; border-left: 4px solid #3b82f6;">
+                <p class="mb-1"><strong>Empleado:</strong> [[ selectedEmp.name ]]</p>
+                <p class="mb-0"><strong>Cédula:</strong> [[ selectedEmp.dni ]]</p>
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-calendar-day me-1"></i> Seleccione el Mes:</label>
+                <select v-model="monthlyForm.month" class="form-control">
+                    <option value="1">Enero</option><option value="2">Febrero</option>
+                    <option value="3">Marzo</option><option value="4">Abril</option>
+                    <option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option>
+                    <option value="9">Septiembre</option><option value="10">Octubre</option>
+                    <option value="11">Noviembre</option><option value="12">Diciembre</option>
+                </select>
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-check-double me-1"></i> Año:</label>
+                <input type="number" v-model="monthlyForm.year" class="form-control">
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button @click="showMonthlyModal = false" class="btn-cancel">Cancelar</button>
+            <button @click="downloadMonthly" class="btn-save" style="background: #3b82f6;">
+                <i class="fa-solid fa-file-pdf"></i> Generar
+            </button>
+        </div>
+    </div>
+</div>

@@ -215,8 +215,9 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#">
-                       <i class="fa-regular fa-file-lines"></i> Reportes
+                    <a href="{% url 'biometric:employee_report_list' %}"
+                       class="{% if 'reportes' in request.path %}active-child{% endif %}">
+                        <i class="fa-regular fa-file-lines"></i> Reportes
                     </a>
                 </li>
             </ul>

@@ -1,0 +1,35 @@
+<div v-if="showSpecificModal" class="modal-overlay" @click.self="showSpecificModal = false">
+    <div class="modal-container-medium" style="max-width: 450px;">
+        <div class="modal-header-gradient" style="background: linear-gradient(to right, #8b5cf6, #6d28d9);">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-calendar-check"></i></div>
+                <h3 class="header-title-main">Reporte Específico</h3>
+            </div>
+            <button @click="showSpecificModal = false" class="btn-close-modal-refined">&times;</button>
+        </div>
+
+        <div class="modal-body-custom">
+            <div class="swal-connection-box" style="margin-top:0; border-left: 4px solid #8b5cf6;">
+                <p class="mb-1"><strong>Empleado:</strong> [[ selectedEmp.name ]]</p>
+                <p class="mb-0"><strong>Cédula:</strong> [[ selectedEmp.dni ]]</p>
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-calendar-plus me-1"></i> Fecha Inicio:</label>
+                <input type="date" v-model="specificForm.start" class="form-control">
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-calendar-minus me-1"></i> Fecha Fin:</label>
+                <input type="date" v-model="specificForm.end" class="form-control">
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button @click="showSpecificModal = false" class="btn-cancel">Cancelar</button>
+            <button @click="downloadSpecific" class="btn-save" style="background: #8b5cf6;" :disabled="!specificForm.start || !specificForm.end">
+                <i class="fa-solid fa-file-pdf"></i> Generar
+            </button>
+        </div>
+    </div>
+</div>

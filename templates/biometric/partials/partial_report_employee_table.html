@@ -1,0 +1,47 @@
+<div class="table-container">
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>Empleado</th>
+                <th>Cédula</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in employees %}
+            <tr>
+                <td>
+                    <div class="person-info">
+                        {% if data.employee.person.photo %}
+                            <img src="{{ data.employee.person.photo.url }}" class="person-avatar">
+                        {% else %}
+                            <div class="person-avatar-placeholder">{{ data.employee.person.first_name|slice:":1" }}</div>
+                        {% endif %}
+                        <div class="person-details">
+                            <h4>{{ data.employee.person.full_name }}</h4>
+                            <p>ID Bio: <strong>{{ data.biometric_id }}</strong></p>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge-code">{{ data.employee.person.document_number }}</span>
+                </td>
+                <td class="actions-cell">
+                    <div class="actions-wrapper">
+                        <!-- Botón Reporte Mensual (Azul) -->
+                        <button onclick="window.reportVM.openMonthly('{{ data.employee.id }}', '{{ data.employee.person.full_name }}', '{{ data.employee.person.document_number }}')"
+                                class="btn-list-action" style="background: #3b82f6;" title="Reporte Mensual">
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </button>
+                        <!-- Botón Reporte Específico (Púrpura) -->
+                        <button onclick="window.reportVM.openSpecific('{{ data.employee.id }}', '{{ data.employee.person.full_name }}', '{{ data.employee.person.document_number }}')"
+                                class="btn-list-action" style="background: #8b5cf6;" title="Rango Específico">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

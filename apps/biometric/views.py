@@ -1,19 +1,20 @@
+import calendar
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
+from django.utils.timezone import make_aware
 from django.views.generic import ListView, View
 from django.http import JsonResponse, HttpResponse
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
-from django.db import transaction
+from django.db import transaction, models
 from django.shortcuts import get_object_or_404
+
+from xhtml2pdf import pisa
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
+from .utils import test_connection, BiometricConnection
 from employee.models import InstitutionalData
-from .utils import test_connection
-import io
-from django.utils.timezone import make_aware
 
 logger = logging.getLogger(__name__)
 
@@ -22,46 +23,34 @@ class BiometricListView(ListView):
     model = BiometricDevice
     template_name = 'biometric/biometric_list.html'
     context_object_name = 'devices'
-    paginate_by = 10
 
     def get_queryset(self):
         qs = BiometricDevice.objects.all()
-
-        # 1. Filtro por búsqueda de texto
         q = self.request.GET.get('q')
         if q:
-            qs = qs.filter(name__icontains=q) | qs.filter(ip_address__icontains=q)
+            qs = qs.filter(models.Q(name__icontains=q) | models.Q(ip_address__icontains=q))
 
-        # 2. Filtro por Estado (Nuevo)
         status = self.request.GET.get('status')
         if status == 'active':
             qs = qs.filter(is_active=True)
         elif status == 'inactive':
             qs = qs.filter(is_active=False)
-
         return qs
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
-
-            # 1. Renderizar la tabla parcial
             html = render_to_string('biometric/partials/partial_biometric_table.html', {
                 'devices': self.object_list
             }, request=request)
-            total_qs = BiometricDevice.objects.all()
-            # 2. Calcular estadísticas reales
-            total = self.object_list.count()
-            active = self.object_list.filter(is_active=True).count()
-            inactive = total - active
 
-            # 3. Devolver HTML + Estadísticas + Paginación
+            all_devs = BiometricDevice.objects.all()
             return JsonResponse({
                 'html': html,
                 'stats': {
-                    'total': total_qs.count(),
-                    'active': total_qs.filter(is_active=True).count(),
-                    'inactive': total_qs.filter(is_active=False).count()
+                    'total': all_devs.count(),
+                    'active': all_devs.filter(is_active=True).count(),
+                    'inactive': all_devs.filter(is_active=False).count()
                 },
                 'pagination': {
                     'label': f"Mostrando 1-{self.object_list.count()} de {self.object_list.count()}" if self.object_list.count() > 0 else "Mostrando 0-0 de 0"
@@ -69,117 +58,65 @@ class BiometricListView(ListView):
             })
         return super().get(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        qs = self.get_queryset()
-        context['stats_total'] = qs.count()
-        context['stats_active'] = qs.filter(is_active=True).count()
-        context['stats_inactive'] = qs.filter(is_active=False).count()
-        return context
+
+@csrf_exempt
+def save_biometric_ajax(request):
+    """Crea o actualiza biométricos"""
+    try:
+        device_id = request.POST.get('id')
+        is_active = request.POST.get('is_active') == 'true'
+        data = {
+            'name': request.POST.get('name'),
+            'ip_address': request.POST.get('ip_address'),
+            'port': request.POST.get('port', 4370),
+            'is_active': is_active,
+            'location': request.POST.get('location'),
+            'updated_by': request.user
+        }
+        if device_id and device_id != 'null':
+            BiometricDevice.objects.filter(id=device_id).update(**data)
+            msg = "Dispositivo actualizado."
+        else:
+            data['created_by'] = request.user
+            BiometricDevice.objects.create(**data)
+            msg = "Dispositivo registrado."
+        return JsonResponse({'status': 'success', 'message': msg})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 @csrf_exempt
-def create_biometric_ajax(request):
-    """Crea o actualiza biométricos vía AJAX"""
-    if request.method == 'POST':
-        try:
-            device_id = request.POST.get('id')
-            is_active = request.POST.get('is_active') == 'true'
-            data = {
-                'name': request.POST.get('name'),
-                'ip_address': request.POST.get('ip_address'),
-                'port': request.POST.get('port', 4370),
-                'is_active': is_active,
-                'location': request.POST.get('location'),
-                'updated_by': request.user
-            }
+def load_attendance_ajax(request, pk):
+    device = get_object_or_404(BiometricDevice, pk=pk)
+    connection = BiometricConnection(device.ip_address, device.port)
+    if not connection.connect():
+        return JsonResponse({'status': 'error', 'message': 'Fallo de conexión'}, status=400)
 
-            if device_id:
-                BiometricDevice.objects.filter(id=device_id).update(**data)
-                msg = "Dispositivo actualizado."
-            else:
-                data['created_by'] = request.user
-                BiometricDevice.objects.create(**data)
-                msg = "Dispositivo registrado."
+    try:
+        raw_records = connection.get_attendance()
+        saved_count = 0
+        with transaction.atomic():
+            load_entry = BiometricLoad.objects.create(biometric=device, load_type="DIRECT_SYNC")
+            for rec in raw_records:
+                user_id = str(rec.user_id).strip().lstrip('0')
+                inst = InstitutionalData.objects.filter(biometric_id=user_id).first()
+                if inst:
+                    clean_date = rec.timestamp.replace(tzinfo=None)
 
-            return JsonResponse({'status': 'success', 'message': msg})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return None
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class ADMSReceiverView(View):
-    """Receptor Push Mode de ZKTeco"""
-
-    def get(self, request):
-        sn = request.GET.get('SN')
-        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
-
-    def post(self, request):
-        sn = request.GET.get('SN')
-        table = request.GET.get('table')
-
-        if table == 'ATTLOG':
-            datos_crudos = request.body.decode('utf-8').strip()
-            if not datos_crudos:
-                return HttpResponse("OK", content_type="text/plain")
-
-            try:
-                # 1. Identificar el dispositivo
-                device = BiometricDevice.objects.get(serial_number=sn, is_active=True)
-
-                with transaction.atomic():
-                    # 2. Crear un registro de carga para este lote
-                    batch_load = BiometricLoad.objects.create(
-                        biometric=device,
-                        load_type="ADMS_PUSH",
-                        reason=f"Recepción automática SN: {sn}"
-                    )
-
-                    count = 0
-                    for linea in datos_crudos.splitlines():
-                        campos = linea.split('\t')
-                        if len(campos) < 2: continue
-
-                        user_pin = campos[0].strip()
-                        timestamp_str = campos[1].strip()
-
-                        # 3. Buscar al empleado por su biometric_id (InstitutionalData)
-                        # Usamos select_related para no saturar la base de datos
-                        inst_data = InstitutionalData.objects.select_related('employee').filter(
-                            biometric_id=user_pin
-                        ).first()
-
-                        if inst_data:
-                            # 4. Evitar duplicados exactos (Mismo empleado, misma hora)
-                            reg_time = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-                            exists = AttendanceRegistry.objects.filter(
-                                employee=inst_data.employee,
-                                registry_date=reg_time
-                            ).exists()
-
-                            if not exists:
-                                AttendanceRegistry.objects.create(
-                                    employee=inst_data.employee,
-                                    biometric_load=batch_load,
-                                    employee_id_bio=user_pin,
-                                    registry_date=reg_time
-                                )
-                                count += 1
-
-                    # 5. Actualizar total de la carga
-                    batch_load.num_records = count
-                    batch_load.save()
-
-                logger.info(f"ADMS: {count} marcaciones procesadas de {sn}")
-                return HttpResponse("OK", content_type="text/plain")
-
-            except BiometricDevice.DoesNotExist:
-                logger.error(f"ADMS Error: Dispositivo SN {sn} no registrado.")
-                return HttpResponse("OK", content_type="text/plain")
-
-        return HttpResponse("OK", content_type="text/plain")
+                    if not AttendanceRegistry.objects.filter(employee=inst.employee, registry_date=clean_date).exists():
+                        AttendanceRegistry.objects.create(
+                            employee=inst.employee,
+                            biometric_load=load_entry,
+                            employee_id_bio=user_id,
+                            registry_date=clean_date
+                        )
+                        saved_count += 1
+            load_entry.num_records = saved_count
+            load_entry.save()
+        connection.disconnect()
+        return JsonResponse({'status': 'success', 'message': f'Sincronizados {saved_count} registros.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -188,361 +125,222 @@ def get_biometric_data(request, pk):
     return JsonResponse({
         'success': True,
         'biometric': {
-            'id': device.id,
-            'name': device.name,
-            'ip_address': device.ip_address,
-            'port': device.port,
-            'location': device.location,
-            'is_active': device.is_active,
+            'id': device.id, 'name': device.name, 'ip_address': device.ip_address,
+            'port': device.port, 'location': device.location, 'is_active': device.is_active,
         }
     })
 
 
 @csrf_exempt
 def test_connection_ajax(request, pk):
-    """Prueba la conexión física con el biométrico usando Sockets y pyzk2"""
     device = get_object_or_404(BiometricDevice, pk=pk)
-
     result = test_connection(device.ip_address, int(device.port))
-
     if result.get('success') and result.get('device_info'):
         info = result['device_info']
         device.serial_number = info.get('serialNumber', device.serial_number)
         device.model_name = info.get('deviceName', device.model_name)
         device.save()
-
     return JsonResponse(result)
 
 
 @csrf_exempt
 def get_biometric_time_ajax(request, pk):
-    """Obtiene la hora del servidor y del dispositivo simultáneamente."""
-    import logging
-    import socket
-    logger = logging.getLogger(__name__)
+    device = get_object_or_404(BiometricDevice, pk=pk)
+    server_time = timezone.localtime()
+    device_time_str = "Error: No se pudo conectar"
 
-    try:
-        device = get_object_or_404(BiometricDevice, pk=pk)
-        server_time = timezone.localtime()  # Hora local de Ecuador (America/Guayaquil)
+    bio = BiometricConnection(device.ip_address, device.port)
+    if bio.connect():
+        d_time = bio.get_time()
+        if d_time:
+            device_time_str = d_time.strftime('%Y-%m-%d %H:%M:%S')
+        bio.disconnect()
 
-        device_time_str = "Error: No se pudo conectar al dispositivo"
-
-        # Verificación rápida de TCP (ping al puerto)
-        try:
-            logger.info(f"Haciendo ping TCP a {device.ip_address}:{device.port}")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2)  # Timeout de 2 segundos
-            result = sock.connect_ex((device.ip_address, device.port))
-            sock.close()
-
-            if result != 0:
-                logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
-                return JsonResponse({
-                    'success': True,
-                    'device_name': device.name,
-                    'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
-                    'device_time': 'Error: No hay respuesta en el puerto. Verifique que el dispositivo esté encendido.'
-                })
-        except socket.error as e:
-            logger.error(f"Error de socket al conectar con {device.ip_address}: {e}")
-            return JsonResponse({
-                'success': True,
-                'device_name': device.name,
-                'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'device_time': 'Error: Dispositivo no accesible en la red.'
-            })
-
-        # Si el ping fue exitoso, intentar conexión ZKTeco
-        try:
-            from .utils import BiometricConnection
-            logger.info(f"Obteniendo hora de {device.name} ({device.ip_address}:{device.port})")
-            bio = BiometricConnection(device.ip_address, device.port, timeout=3)
-
-            if bio.connect():
-                d_time = bio.get_time()
-                if d_time:
-                    device_time_str = d_time.strftime('%Y-%m-%d %H:%M:%S')
-                    logger.info(f"Hora del dispositivo: {device_time_str}")
-                else:
-                    logger.warning(f"No se pudo leer la hora de {device.name}")
-                    device_time_str = "Error: Conectado pero sin respuesta de hora"
-                bio.disconnect()
-            else:
-                logger.error(f"No se pudo conectar a {device.name}")
-                device_time_str = "Error: Falló la autenticación con el dispositivo"
-        except Exception as e:
-            logger.exception(f"Error al obtener hora de {device.name}")
-            device_time_str = f"Error: {str(e)}"
-
-        return JsonResponse({
-            'success': True,
-            'device_name': device.name,
-            'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'device_time': device_time_str
-        })
-    except Exception as e:
-        logger.exception("Error general en get_biometric_time_ajax")
-        return JsonResponse({
-            'success': False,
-            'message': f'Error del servidor: {str(e)}'
-        }, status=500)
+    return JsonResponse({
+        'success': True, 'device_name': device.name,
+        'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'device_time': device_time_str
+    })
 
 
 @csrf_exempt
 def update_biometric_time_ajax(request, pk):
-    """Aplica la nueva hora al dispositivo."""
-    import logging
-    import socket
-    logger = logging.getLogger(__name__)
+    if request.method != 'POST': return JsonResponse({'status': 'error'}, status=405)
+    device = get_object_or_404(BiometricDevice, pk=pk)
+    mode = request.POST.get('mode')
+    new_time_str = request.POST.get('new_time')
 
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+    if mode == 'server':
+        target_time = timezone.localtime().replace(tzinfo=None)  # pyzk prefiere naive local
+    else:
+        target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
 
-    try:
-        device = get_object_or_404(BiometricDevice, pk=pk)
-        mode = request.POST.get('mode')
-        new_time_str = request.POST.get('new_time')
-
-        logger.info(f"Actualizando hora de {device.name} - Mode: {mode}, Time: {new_time_str}")
-
-        if mode == 'server':
-            target_time = timezone.localtime()  # Hora local de Ecuador
-        elif mode == 'custom' and new_time_str:
-            try:
-                target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
-            except ValueError as e:
-                logger.error(f"Formato de fecha inválido: {e}")
-                return JsonResponse({'status': 'error', 'message': f'Formato de fecha inválido: {new_time_str}'},
-                                    status=400)
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Parámetros inválidos'}, status=400)
-
-        # Verificación rápida de TCP (ping al puerto)
-        try:
-            logger.info(f"Verificando conectividad TCP a {device.ip_address}:{device.port}")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2)  # Timeout de 2 segundos
-            result = sock.connect_ex((device.ip_address, device.port))
-            sock.close()
-
-            if result != 0:
-                logger.error(f"Puerto {device.port} cerrado en {device.ip_address}")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'No se puede conectar al dispositivo {device.name}. Verifique que esté encendido y accesible en la red.'
-                }, status=400)
-        except socket.error as e:
-            logger.error(f"Error de socket al conectar con {device.ip_address}: {e}")
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Dispositivo {device.name} no accesible en la red: {str(e)}'
-            }, status=400)
-
-        # Si el ping fue exitoso, intentar conexión ZKTeco
-        from .utils import BiometricConnection
-        logger.info(f"Intentando conectar a {device.ip_address}:{device.port}")
-        bio = BiometricConnection(device.ip_address, device.port, timeout=3)
-
-        if not bio.connect():
-            logger.error(f"No se pudo autenticar con el dispositivo {device.name}")
-            return JsonResponse({
-                'status': 'error',
-                'message': f'No se pudo autenticar con el dispositivo {device.name}. Verifique las credenciales.'
-            }, status=400)
-
-        try:
-            logger.info(f"Estableciendo hora: {target_time}")
-            success = bio.set_time(target_time)
-            bio.disconnect()
-
-            if success:
-                logger.info(f"Hora actualizada correctamente en {device.name}")
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Hora actualizada correctamente a {target_time.strftime("%d/%m/%Y %H:%M:%S")}'
-                })
-            else:
-                logger.error(f"El dispositivo {device.name} rechazó la actualización")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'El dispositivo {device.name} rechazó la actualización de hora. Verifique permisos.'
-                }, status=400)
-        except Exception as e:
-            logger.exception(f"Error al escribir la hora en {device.name}")
-            bio.disconnect()
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Error al escribir la hora: {str(e)}'
-            }, status=500)
-
-    except Exception as e:
-        logger.exception("Error general en update_biometric_time_ajax")
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Error del servidor: {str(e)}'
-        }, status=500)
+    bio = BiometricConnection(device.ip_address, device.port)
+    if bio.connect():
+        success = bio.set_time(target_time)
+        bio.disconnect()
+        if success:
+            return JsonResponse({'status': 'success', 'message': 'Hora actualizada.'})
+    return JsonResponse({'status': 'error', 'message': 'Fallo al establecer hora.'}, status=400)
 
 
 @csrf_exempt
 def upload_biometric_file_ajax(request, pk):
-    """Procesa archivos .dat descargados por USB desde el biométrico."""
     if request.method == 'POST' and request.FILES.get('file'):
         device = get_object_or_404(BiometricDevice, pk=pk)
         file = request.FILES['file']
-
-        # Validar extensión básica
-        if not file.name.endswith(('.dat', '.txt')):
-            return JsonResponse({'status': 'error', 'message': 'Formato de archivo no válido (.dat o .txt)'},
-                                status=400)
-
         try:
-            # Leer el archivo y decodificar (ZKTeco suele usar UTF-8 o latin-1)
             content = file.read().decode('utf-8', errors='ignore').strip()
             lines = content.splitlines()
-
             saved_count = 0
-            duplicate_count = 0
-            not_found_count = 0
-
             with transaction.atomic():
-                # Registro de la carga manual
                 manual_load = BiometricLoad.objects.create(
-                    biometric=device,
-                    load_type="MANUAL_USB",
-                    reason=f"Carga desde archivo: {file.name}",
-                    created_by=request.user
+                    biometric=device, load_type="MANUAL_USB",
+                    reason=f"Archivo: {file.name}", created_by=request.user
                 )
-
                 for line in lines:
                     parts = line.strip().split('\t')
                     if len(parts) < 2: continue
-
                     user_pin = parts[0].strip().lstrip('0')
-                    timestamp_str = parts[1].strip()
-
-                    # 1. Buscar relación empleado
-                    inst_data = InstitutionalData.objects.select_related('employee').filter(
-                        biometric_id=user_pin
-                    ).first()
-
-                    if not inst_data:
-                        not_found_count += 1
-                        continue
-
-                    # 2. Parsear fecha aware
                     try:
-                        naive_date = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-                        registry_date = make_aware(naive_date)
+                        naive_date = datetime.strptime(parts[1].strip(), '%Y-%m-%d %H:%M:%S')
+                        reg_date = make_aware(naive_date)
+                        inst_data = InstitutionalData.objects.filter(biometric_id=user_pin).first()
+                        if inst_data and not AttendanceRegistry.objects.filter(employee=inst_data.employee,
+                                                                               registry_date=reg_date).exists():
+                            AttendanceRegistry.objects.create(
+                                employee=inst_data.employee, biometric_load=manual_load,
+                                employee_id_bio=user_pin, registry_date=reg_date
+                            )
+                            saved_count += 1
                     except:
                         continue
-
-                    # 3. Evitar duplicados
-                    exists = AttendanceRegistry.objects.filter(
-                        employee=inst_data.employee,
-                        registry_date=registry_date
-                    ).exists()
-
-                    if not exists:
-                        AttendanceRegistry.objects.create(
-                            employee=inst_data.employee,
-                            biometric_load=manual_load,
-                            employee_id_bio=user_pin,
-                            registry_date=registry_date
-                        )
-                        saved_count += 1
-                    else:
-                        duplicate_count += 1
-
-                # Actualizar total final
                 manual_load.num_records = saved_count
                 manual_load.save()
-
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Procesado: {saved_count} nuevos, {duplicate_count} duplicados, {not_found_count} no asociados.'
-            })
-
+            return JsonResponse({'status': 'success', 'message': f'Cargados {saved_count} registros.'})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Error al procesar: {str(e)}'}, status=500)
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Archivo requerido.'}, status=400)
 
-    return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
 
+def generate_monthly_report_pdf(request):
+    emp_id = request.GET.get('emp_id')
+    month = int(request.GET.get('month', 1))
+    year = int(request.GET.get('year', 2026))
+    inst_data = get_object_or_404(InstitutionalData, employee_id=emp_id)
 
-@csrf_exempt
-def load_attendance_ajax(request, pk):
-    """Se conecta al equipo, descarga marcaciones y las guarda."""
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+    # Query de marcaciones (Naive)
+    punches = AttendanceRegistry.objects.filter(
+        employee_id=emp_id, registry_date__year=year, registry_date__month=month
+    ).order_by('registry_date')
 
-    device = get_object_or_404(BiometricDevice, pk=pk)
-
-    from .utils import BiometricConnection
-    bio = BiometricConnection(device.ip_address, device.port)
-
-    if not bio.connect():
-        return JsonResponse({
-            'status': 'error',
-            'message': f'No se pudo establecer conexión con {device.ip_address}'
-        }, status=400)
-
-    try:
-        raw_records = bio.get_attendance()
-        if not raw_records:
-            bio.disconnect()
-            return JsonResponse({'status': 'info', 'message': 'No hay marcaciones nuevas en el dispositivo.'})
-
-        saved_count = 0
-        duplicate_count = 0
-
-        with transaction.atomic():
-            # Registro de la carga
-            batch_load = BiometricLoad.objects.create(
-                biometric=device,
-                load_type="DIRECT_SYNC",
-                reason="Sincronización manual desde panel",
-                created_by=request.user
-            )
-
-            for rec in raw_records:
-                # Normalizamos el ID (quitar ceros a la izquierda)
-                user_id = str(rec.user_id).strip().lstrip('0')
-
-                # Buscamos al empleado
-                inst_data = InstitutionalData.objects.select_related('employee').filter(
-                    biometric_id=user_id
-                ).first()
-
-                if inst_data:
-                    # Convertimos la fecha del hardware a aware (zona horaria Ecuador)
-                    reg_date = make_aware(rec.timestamp)
-
-                    # Evitamos duplicados
-                    exists = AttendanceRegistry.objects.filter(
-                        employee=inst_data.employee,
-                        registry_date=reg_date
-                    ).exists()
-
-                    if not exists:
-                        AttendanceRegistry.objects.create(
-                            employee=inst_data.employee,
-                            biometric_load=batch_load,
-                            employee_id_bio=user_id,
-                            registry_date=reg_date
-                        )
-                        saved_count += 1
-                    else:
-                        duplicate_count += 1
-
-            # Actualizamos el total de la carga
-            batch_load.num_records = saved_count
-            batch_load.save()
-
-        bio.disconnect()
-        return JsonResponse({
-            'status': 'success',
-            'message': f'Sincronización exitosa: {saved_count} registros guardados, {duplicate_count} duplicados omitidos.'
+    punches_map = {}
+    for p in punches:
+        day = p.registry_date.day
+        if day not in punches_map: punches_map[day] = []
+        punches_map[day].append({
+            'time': p.registry_date.strftime('%H:%M'),
+            'device': p.biometric_load.biometric.name[:10]
         })
 
-    except Exception as e:
-        bio.disconnect()
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    weeks = calendar.Calendar(firstweekday=0).monthdayscalendar(year, month)
+    calendar_data = []
+    for week in weeks:
+        week_list = []
+        for day in week:
+            week_list.append({'day': day if day != 0 else '', 'punches': punches_map.get(day, [])})
+        calendar_data.append(week_list)
+
+    months_es = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE",
+                 "NOVIEMBRE", "DICIEMBRE"]
+    template = get_template('biometric/reports/pdf_attendance_calendar.html')
+    html = template.render({
+        'emp': inst_data.employee, 'month_name': months_es[month], 'year': year,
+        'calendar': calendar_data, 'today': datetime.now()  # Naive
+    })
+    response = HttpResponse(content_type='application/pdf')
+    pisa.CreatePDF(html, dest=response)
+    return response
+
+
+# Receptor ADMS unificado
+@method_decorator(csrf_exempt, name='dispatch')
+class ADMSReceiverView(View):
+    def get(self, request):
+        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
+
+    def post(self, request):
+        # Esta lógica se delegó a adms_views.py para mantener limpieza
+        from .adms_views import adms_receive_attendance
+        return adms_receive_attendance(request)
+
+
+class EmployeeReportListView(ListView):
+    model = InstitutionalData
+    template_name = 'biometric/employee_report_list.html'
+    context_object_name = 'employees'
+    paginate_by = 15
+
+    def get_queryset(self):
+        # Solo empleados con ID biométrico
+        qs = InstitutionalData.objects.select_related('employee__person').filter(
+            biometric_id__isnull=False
+        ).exclude(biometric_id='')
+
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(
+                models.Q(employee__person__first_name__icontains=q) |
+                models.Q(employee__person__last_name__icontains=q) |
+                models.Q(employee__person__document_number__icontains=q)
+            )
+        return qs
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            html = render_to_string('biometric/partials/partial_report_employee_table.html', {
+                'employees': self.object_list
+            }, request=request)
+            return JsonResponse({'html': html})
+        return super().get(request, *args, **kwargs)
+
+
+def generate_specific_report_pdf(request):
+    """Genera un reporte PDF basado en un rango de fechas personalizado."""
+    employee_id = request.GET.get('emp_id')
+    start_str = request.GET.get('start')
+    end_str = request.GET.get('end')
+
+    if not all([employee_id, start_str, end_str]):
+        return HttpResponse("Parámetros incompletos", status=400)
+
+    # Convertir strings a objetos date
+    start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+
+    institutional_info = get_object_or_404(InstitutionalData, employee_id=employee_id)
+
+    # Obtener marcaciones en el rango (usando __date para comparar solo la parte de fecha)
+    punches = AttendanceRegistry.objects.filter(
+        employee_id=employee_id,
+        registry_date__date__range=[start_date, end_date]
+    ).select_related('biometric_load__biometric').order_by('registry_date')
+
+    template = get_template('biometric/modals/modal_report_specific.html')
+    html_content = template.render({
+        'emp': institutional_info.employee,
+        'start_date': start_date,
+        'end_date': end_date,
+        'punches': punches,
+        'today': datetime.now(),
+    })
+
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"Reporte_Específico_{institutional_info.biometric_id}.pdf"
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+    pisa_status = pisa.CreatePDF(html_content, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Error al generar PDF', status=500)
+    return response

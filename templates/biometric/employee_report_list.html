@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div id="report-app" v-cloak>
+    <div class="header-card">
+        <div>
+            <h1>Reportes de Asistencia</h1>
+            <p>Generación de archivos PDF basados en marcaciones de hardware.</p>
+        </div>
+    </div>
+
+    <div class="content-table">
+        <div class="table-controls">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" v-model="searchQuery" @input="search" placeholder="Buscar empleado o cédula...">
+            </div>
+        </div>
+
+        <div id="table-content-wrapper">
+            {% include 'biometric/partials/partial_report_employee_table.html' %}
+        </div>
+    </div>
+
+    <!-- INCLUSIÓN DE MODALES -->
+    {% include 'biometric/modals/modal_report_monthly.html' %}
+    {% include 'biometric/modals/modal_report_specific.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/biometric/report_main.js' %}"></script>
+{% endblock %}
