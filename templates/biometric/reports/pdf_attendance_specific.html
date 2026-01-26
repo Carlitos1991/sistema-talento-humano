@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 2cm 1.5cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: Arial, Helvetica, sans-serif; 
+            font-size: 11px; 
+            color: #000; 
+        }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px;
+        }
+        
+        .header h2 { 
+            margin: 0 0 10px 0; 
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        /* Info del empleado */
+        .employee-info {
+            margin: 20px 0;
+            width: 100%;
+        }
+        
+        .employee-info table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #999;
+            background-color: #f5f5f5;
+        }
+        
+        .employee-info td {
+            padding: 6px 8px;
+            font-size: 10px;
+            border: none;
+        }
+        
+        .employee-info td strong {
+            font-weight: bold;
+        }
+        
+        .employee-info td:nth-child(1),
+        .employee-info td:nth-child(3) {
+            width: 18%;
+        }
+        
+        .employee-info td:nth-child(2) {
+            width: 32%;
+        }
+        
+        .employee-info td:nth-child(4) {
+            width: 32%;
+        }
+        
+        /* Resumen de estadísticas */
+        .stats-section {
+            margin: 20px 0;
+            width: 100%;
+        }
+        
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #999;
+        }
+        
+        .stats-table th {
+            background-color: #4db8ff !important;
+            color: #000 !important;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #999;
+            font-size: 10px;
+            font-weight: bold;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .stats-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #999;
+            font-size: 11px;
+            background-color: #fff;
+        }
+        
+        /* Contenedor de cuatro columnas */
+        .two-column-container {
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .date-section {
+            page-break-inside: avoid;
+            margin-bottom: 12px;
+        }
+        
+        .date-header {
+            background-color: #e0e0e0 !important;
+            font-weight: bold;
+            text-align: left;
+            padding: 4px 8px;
+            border: 1px solid #999;
+            font-size: 9px;
+            margin-bottom: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .punches-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+        }
+        
+        .punches-table td {
+            width: 25%;
+            padding: 3px 4px;
+            border: 1px solid #999;
+            vertical-align: top;
+            font-size: 9px;
+        }
+        
+        .punches-table td:nth-child(odd) {
+            background-color: #f5f5f5;
+        }
+        
+        .punch-time {
+            font-weight: bold;
+            color: #000;
+            font-size: 10px;
+            display: block;
+        }
+        
+        .punch-device {
+            color: #666;
+            font-size: 8px;
+            display: block;
+            margin-top: 2px;
+        }
+        
+        .empty-cell {
+            background-color: #fff !important;
+            border: 1px solid #999;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #999;
+            font-size: 9px;
+            text-align: left;
+        }
+        
+        .footer p {
+            margin: 3px 0;
+        }
+        
+        .no-records {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Reporte del {{ start_date|date:"Y-m-d" }} hasta {{ end_date|date:"Y-m-d" }}</h2>
+    </div>
+
+    <div class="employee-info">
+        <table>
+            <tr>
+                <td><strong>Empleado:</strong></td>
+                <td>{{ emp.person.full_name|upper }}</td>
+                <td><strong>Dirección:</strong></td>
+                <td>DIRECCIÓN DE TALENTO HUMANO</td>
+            </tr>
+            <tr>
+                <td><strong>Cargo:</strong></td>
+                <td colspan="3">
+                    {% if emp.institutional_data.position %}
+                        {{ emp.institutional_data.position|upper }}
+                    {% else %}
+                        EMPLEADO
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="stats-section">
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Atrasos</th>
+                    <th>Horas Extra.</th>
+                    <th>Días sin picar</th>
+                    <th>Días con inconsistencias</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {% if punches %}
+    <div class="two-column-container">
+        {% regroup punches by registry_date|date:"Y-m-d" as date_list %}
+        {% for date_group in date_list %}
+            <div class="date-section">
+                <div class="date-header">
+                    {% with date_group.list|first as first_punch %}
+                    {% if first_punch.registry_date|date:"w" == "0" %}Domingo
+                    {% elif first_punch.registry_date|date:"w" == "1" %}Lunes
+                    {% elif first_punch.registry_date|date:"w" == "2" %}Martes
+                    {% elif first_punch.registry_date|date:"w" == "3" %}Miércoles
+                    {% elif first_punch.registry_date|date:"w" == "4" %}Jueves
+                    {% elif first_punch.registry_date|date:"w" == "5" %}Viernes
+                    {% elif first_punch.registry_date|date:"w" == "6" %}Sábado
+                    {% endif %}, {{ first_punch.registry_date|date:"d/m/Y" }}
+                    {% endwith %}
+                </div>
+                
+                <table class="punches-table">
+                    {% for punch in date_group.list %}
+                        {% if forloop.counter0|divisibleby:4 %}
+                        <tr>
+                        {% endif %}
+                            <td>
+                                <span class="punch-time">{{ punch.registry_date|date:"H:i:s" }}</span>
+                                <span class="punch-device">{{ punch.biometric_load.biometric.name }}</span>
+                            </td>
+                        {% if forloop.counter|divisibleby:4 or forloop.last %}
+                            {% if forloop.last %}
+                                {% if forloop.counter|divisibleby:4 %}
+                                    {# Ya está completa la fila #}
+                                {% elif forloop.counter|add:"3"|divisibleby:4 %}
+                                    <td class="empty-cell"></td>
+                                    <td class="empty-cell"></td>
+                                    <td class="empty-cell"></td>
+                                {% elif forloop.counter|add:"2"|divisibleby:4 %}
+                                    <td class="empty-cell"></td>
+                                    <td class="empty-cell"></td>
+                                {% elif forloop.counter|add:"1"|divisibleby:4 %}
+                                    <td class="empty-cell"></td>
+                                {% endif %}
+                            {% endif %}
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </table>
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-records">
+        <p>No se encontraron registros de marcaciones en el período seleccionado.</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p><strong>Impreso por:</strong> {{ emp.person.document_number }}</p>
+        <p><strong>Fecha de impresión:</strong> {{ today|date:"d" }} de 
+        {% if today|date:"n" == "1" %}Enero
+        {% elif today|date:"n" == "2" %}Febrero
+        {% elif today|date:"n" == "3" %}Marzo
+        {% elif today|date:"n" == "4" %}Abril
+        {% elif today|date:"n" == "5" %}Mayo
+        {% elif today|date:"n" == "6" %}Junio
+        {% elif today|date:"n" == "7" %}Julio
+        {% elif today|date:"n" == "8" %}Agosto
+        {% elif today|date:"n" == "9" %}Septiembre
+        {% elif today|date:"n" == "10" %}Octubre
+        {% elif today|date:"n" == "11" %}Noviembre
+        {% elif today|date:"n" == "12" %}Diciembre
+        {% endif %} de {{ today|date:"Y" }} a las {{ today|date:"H:i" }}</p>
+    </div>
+</body>
+</html>

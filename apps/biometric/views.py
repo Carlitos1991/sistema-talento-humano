@@ -1,8 +1,7 @@
 import calendar
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
-from django.utils.timezone import make_aware
 from django.views.generic import ListView, View
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string, get_template
@@ -101,14 +100,19 @@ def load_attendance_ajax(request, pk):
                 user_id = str(rec.user_id).strip().lstrip('0')
                 inst = InstitutionalData.objects.filter(biometric_id=user_id).first()
                 if inst:
-                    clean_date = rec.timestamp.replace(tzinfo=None)
+                    # El dispositivo devuelve hora local naive, usarla directamente sin conversiones
+                    registry_datetime = rec.timestamp
+                    
+                    # Si por alguna razón viene con tzinfo, removerlo para mantener la hora local
+                    if hasattr(registry_datetime, 'tzinfo') and registry_datetime.tzinfo is not None:
+                        registry_datetime = registry_datetime.replace(tzinfo=None)
 
-                    if not AttendanceRegistry.objects.filter(employee=inst.employee, registry_date=clean_date).exists():
+                    if not AttendanceRegistry.objects.filter(employee=inst.employee, registry_date=registry_datetime).exists():
                         AttendanceRegistry.objects.create(
                             employee=inst.employee,
                             biometric_load=load_entry,
                             employee_id_bio=user_id,
-                            registry_date=clean_date
+                            registry_date=registry_datetime
                         )
                         saved_count += 1
             load_entry.num_records = saved_count
@@ -146,7 +150,7 @@ def test_connection_ajax(request, pk):
 @csrf_exempt
 def get_biometric_time_ajax(request, pk):
     device = get_object_or_404(BiometricDevice, pk=pk)
-    server_time = timezone.localtime()
+    server_time = datetime.now()  # USE_TZ=False, usar datetime.now() para hora local
     device_time_str = "Error: No se pudo conectar"
 
     bio = BiometricConnection(device.ip_address, device.port)
@@ -171,7 +175,7 @@ def update_biometric_time_ajax(request, pk):
     new_time_str = request.POST.get('new_time')
 
     if mode == 'server':
-        target_time = timezone.localtime().replace(tzinfo=None)  # pyzk prefiere naive local
+        target_time = datetime.now()  # USE_TZ=False, hora local naive directa
     else:
         target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
 
@@ -327,7 +331,7 @@ def generate_specific_report_pdf(request):
         registry_date__date__range=[start_date, end_date]
     ).select_related('biometric_load__biometric').order_by('registry_date')
 
-    template = get_template('biometric/modals/modal_report_specific.html')
+    template = get_template('biometric/reports/pdf_attendance_specific.html')
     html_content = template.render({
         'emp': institutional_info.employee,
         'start_date': start_date,
@@ -337,7 +341,7 @@ def generate_specific_report_pdf(request):
     })
 
     response = HttpResponse(content_type='application/pdf')
-    filename = f"Reporte_Específico_{institutional_info.biometric_id}.pdf"
+    filename = f"Reporte_Especifico_{institutional_info.employee.person.document_number}_{start_str}_al_{end_str}.pdf"
     response['Content-Disposition'] = f'inline; filename="{filename}"'
 
     pisa_status = pisa.CreatePDF(html_content, dest=response)

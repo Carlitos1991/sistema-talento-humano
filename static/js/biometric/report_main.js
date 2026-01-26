@@ -30,10 +30,10 @@ const reportApp = createApp({
                 const url = `/biometric/reports/monthly-pdf/?emp_id=${this.selectedEmp.id}&month=${this.monthlyForm.month}&year=${this.monthlyForm.year}`;
                 window.open(url, '_blank');
             },
-        },
-        downloadSpecific() {
-            const url = `/biometric/reports/specific-pdf/?emp_id=${this.selectedEmp.id}&start=${this.specificForm.start}&end=${this.specificForm.end}`;
-            window.open(url, '_blank');
+            downloadSpecific() {
+                const url = `/biometric/reports/specific-pdf/?emp_id=${this.selectedEmp.id}&start=${this.specificForm.start}&end=${this.specificForm.end}`;
+                window.open(url, '_blank');
+            }
         }
     })
 ;
