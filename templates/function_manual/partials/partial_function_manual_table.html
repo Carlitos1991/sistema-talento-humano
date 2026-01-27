@@ -1,16 +1,16 @@
 <table class="data-table" id="profileTable">
     <thead>
-        <tr>
-            <th width="10%">Código</th>
-            <th width="30%">Denominación del Puesto</th>
-            <th width="25%">Unidad Administrativa</th>
-            <th width="15%">Clasificación</th>
-            <th width="10%">RMU</th>
-            <th width="10%" class="text-center">Acciones</th>
-        </tr>
+    <tr>
+        <th width="10%">Código</th>
+        <th width="30%">Denominación del Puesto</th>
+        <th width="25%">Unidad Administrativa</th>
+        <th width="15%">Clasificación</th>
+        <th width="10%">RMU</th>
+        <th width="10%" class="text-center">Acciones</th>
+    </tr>
     </thead>
     <tbody>
-        {% for profile in profiles %}
+    {% for profile in profiles %}
         <tr>
             <td><strong>{{ profile.position_code|default:"---" }}</strong></td>
             <td>
@@ -18,15 +18,17 @@
                     <div>
                         <span class="font-weight-700">{{ profile.specific_job_title }}</span><br>
                         {% if profile.referential_employee %}
-                             <small class="text-muted" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                                <i class="fas fa-user-check text-success"></i> 
+                            <small class="text-muted"
+                                   style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                <i class="fas fa-user-check text-success"></i>
                                 {{ profile.referential_employee.person.full_name }}
-                             </small>
+                            </small>
                         {% else %}
-                             <small class="text-muted" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.7;">
-                                <i class="fas fa-user-slash"></i> 
+                            <small class="text-muted"
+                                   style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.7;">
+                                <i class="fas fa-user-slash"></i>
                                 Sin empleado referencial
-                             </small>
+                            </small>
                         {% endif %}
                     </div>
                 </div>
@@ -50,23 +52,23 @@
                 <div class="actions-wrapper">
                     {% if profile.is_legalized %}
                         <!-- VISTA: PERFIL LEGALIZADO -->
-                        
+
                         <!-- Ver Detalle (incluye Print) -->
-                        <button class="btn-icon" 
+                        <button class="btn-icon"
                                 style="background-color: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
-                                onclick="openProfileDetailModal({{ profile.id }})" 
+                                onclick="openProfileDetailModal({{ profile.id }})"
                                 title="Ver Detalle y Opciones">
                             <i class="fas fa-eye"></i>
                         </button>
 
                         <!-- Subir Documento Legalizado -->
                         {% if perms.function_manual.can_admin %}
-                        <button class="btn-icon" 
-                                style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
-                                onclick="openUploadLegalizedModal({{ profile.id }})" 
-                                title="Subir PDF Legalizado">
-                             <i class="fas fa-file-upload"></i>
-                        </button>
+                            <button class="btn-icon"
+                                    style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                                    onclick="openUploadLegalizedModal({{ profile.id }})"
+                                    title="Subir PDF Legalizado">
+                                <i class="fas fa-file-upload"></i>
+                            </button>
                         {% endif %}
                     {% else %}
                         <!-- VISTA: PERFIL EN EDICIÓN -->
@@ -82,32 +84,33 @@
                         {% endif %}
 
                         <!-- Botón Asignar Referencial -->
-                        <button class="btn-icon" 
+                        <button class="btn-icon"
                                 style="background-color: #0d9488; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
-                                onclick="openAssignReferentialModal({{ profile.id }})" 
+                                onclick="openAssignReferentialModal({{ profile.id }})"
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
 
                         {% if profile.occupational_classification and perms.function_manual.can_admin %}
                             <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->
-                            <button class="btn-icon" 
+                            <button class="btn-icon"
                                     style="background-color: #475569; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
-                                    onclick="openLegalizeModal({{ profile.id }})" 
+                                    onclick="openLegalizeModal({{ profile.id }})"
                                     title="Legalizar Perfil">
                                 <i class="fa-solid fa-file-signature"></i>
                             </button>
                         {% endif %}
-
-                        <a href="{% url 'function_manual:profile_update' profile.id %}"
-                        class="btn-views-action" title="Editar Perfil">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </a>
+                        {% if not profile.occupational_classification %}
+                            <a href="{% url 'function_manual:profile_update' profile.id %}"
+                               class="btn-views-action" title="Editar Perfil">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                        {% endif %}
                     {% endif %}
                 </div>
             </td>
         </tr>
-        {% empty %}
+    {% empty %}
         <tr>
             <td colspan="6">
                 <div class="no-results-content">
@@ -116,6 +119,6 @@
                 </div>
             </td>
         </tr>
-        {% endfor %}
+    {% endfor %}
     </tbody>
 </table>
