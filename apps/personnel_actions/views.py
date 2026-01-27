@@ -10,7 +10,7 @@ from .forms import PersonnelActionForm, ActionMovementForm
 
 class PersonnelActionListView(LoginRequiredMixin, ListView):
     model = PersonnelAction
-    template_name = 'personnel_actions/personnel_action_list.html'
+    template_name = 'personnel_action/personnel_action_list.html'
     context_object_name = 'actions'
     paginate_by = 10
 
@@ -31,7 +31,7 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
 class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
     model = PersonnelAction
     form_class = PersonnelActionForm
-    template_name = 'personnel_actions/modal_personnel_action_form.html'
+    template_name = 'personnel_action/modals/modal_personnel_action_form.html'
 
     def form_valid(self, form):
         # Lógica transaccional para guardar Cabecera + Detalle
@@ -46,7 +46,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 previous_remuneration=0  # Aquí podrías buscar datos actuales del empleado
             )
 
-        return render(self.request, 'personnel_actions/partial_personnel_action_list.html', {
+        return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
             'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
                        :10]
         })

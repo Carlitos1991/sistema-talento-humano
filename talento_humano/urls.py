@@ -17,6 +17,7 @@ urlpatterns = [
     path('employee/', include('employee.urls')),
     path('schedule/', include('schedule.urls')),
     path('contract/', include('contract.urls')),
+    path('personnel_actions/', include('personnel_actions.urls')),
     path('function_manual/', include('function_manual.urls')),
     path('biometric/', include('biometric.urls')),
     path('iclock/cdata', adms_views.adms_receive_attendance),

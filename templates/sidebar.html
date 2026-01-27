@@ -48,10 +48,33 @@
         {% if perms.person.view_person %}
             <li>
                 <a href="{% url 'person:person_list' %}"
-                   class="{% if 'person' in request.resolver_match.app_name %}active{% endif %}">
+                   class="{% if request.resolver_match.app_name == 'person' %}active{% endif %}">
                     <i class="fa-solid fa-users"></i>
                     <span class="menu-text">Empleados</span>
                 </a>
+            </li>
+        {% endif %}
+        {% if perms.personnel_actions.view_personnelaction %}
+            <li class="has-submenu">
+                <a href="#">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span class="menu-text">Acciones de Pers.</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li>
+                        <a href="{% url 'personnel_actions:action_list' %}">
+                            <i class="fa-solid fa-file-pen"></i>
+                            <span class="menu-text">Administrar acciones</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'biometric:biometric_list' %}">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span class="menu-text">Tipos de acciones</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
         {% endif %}
         {% if perms.budget.view_budget %}
