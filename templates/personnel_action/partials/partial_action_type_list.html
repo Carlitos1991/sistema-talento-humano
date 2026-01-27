@@ -1,0 +1,49 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Nombre de la Acción</th>
+            <th>Estado</th>
+            <th class="actions">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for type in types %}
+            <tr>
+                <td><strong>{{ type.code }}</strong></td>
+                <td>{{ type.name }}</td>
+                <td>
+                    <span class="status-badge {% if type.is_active %}active{% else %}inactive{% endif %}">
+                        {{ type.is_active|yesno:"Activo,Inactivo" }}
+                    </span>
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <!-- Edición controlada por instancia Vue (ActionTypeInstance) -->
+                        <button class="btn-views-action"
+                                onclick="ActionTypeInstance.openEditModal('{% url 'personnel_actions:type_update' type.pk %}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+
+                        <!-- Toggle Estado -->
+                        <button class="{% if type.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                onclick="ActionTypeInstance.toggleStatus('{% url 'personnel_actions:type_toggle' type.pk %}')">
+                            <i class="fas {% if type.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">
+                    <div class="no-results-content">
+                        <i class="fas fa-file-circle-xmark no-results-icon"></i>
+                        <p class="no-results-text">No se encontraron tipos de acción registrados.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

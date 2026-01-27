@@ -69,7 +69,8 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'biometric:biometric_list' %}">
+                        <a href="{% url 'personnel_actions:type_list' %}"
+                           class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
                             <i class="fa-solid fa-list-check"></i>
                             <span class="menu-text">Tipos de acciones</span>
                         </a>

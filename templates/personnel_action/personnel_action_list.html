@@ -1,125 +1,91 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Acciones de Personal{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2 class="page-title">Gestión de Acciones de Personal</h2>
-    <div class="actions">
-        <!-- Botón disparador del Modal controlado por Vue -->
-        <button class="btn btn-primary" @click="openCreateModal">
-            <i class="fa-solid fa-plus"></i> Nueva Acción
-        </button>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <input type="text" id="searchInput" class="form-control search-input" 
-               placeholder="Buscar por empleado o número..." 
-               onkeyup="searchTable()"> 
-    </div>
-    <div class="card-body" id="tableContainer">
-        <!-- Inyección inicial de la tabla -->
-        {% include 'personnel_action/partials/partial_personnel_action_list.html' %}
-    </div>
-</div>
-{% endblock %}
-
-{% block modals %}
-<!-- Contenedor del Modal Vue -->
-<div id="vue-modals">
-    <div v-if="showModal" class="modal-overlay" v-cloak>
-        <div class="modal-container modal-lg">
-            <div class="modal-header">
-                <h3>[[ modalTitle ]]</h3>
-                <button @click="closeModal" class="close-btn">&times;</button>
+    <div>
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-file-signature"></i> Acciones de Personal</h1>
+                <p>Gestión de acciones administrativas del personal</p>
             </div>
-            <div class="modal-body" v-html="modalContent">
-                <!-- El contenido se carga vía AJAX -->
+            <button class="btn-create" @click="startWizard">
+                <i class="fas fa-plus"></i> NUEVA ACCIÓN DE PERSONAL
+            </button>
+        </div>
+        <!-- 2. Estadísticas (Filtros Rápidos) -->
+        <div class="stats-row" v-if="stats.regimes">
+            <!-- Tarjeta Fija: Total -->
+            <div class="stat-card color-one"
+                 @click="clearSearch"
+                 :class="{'opacity-low': isAdvancedSearch}">
+                <div class="stat-left">
+                    <h3>TOTAL ACTIVOS</h3>
+                    <div class="number">[[ stats.total ]]</div>
+                </div>
+                <i class="fas fa-users-check stat-icon"></i>
+            </div>
+
+            <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
+            <div v-for="(regime, index) in stats.regimes"
+                 :key="regime.code"
+                 class="stat-card"
+                 :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.regime_code !== regime.code}]"
+                 @click="filterByRegime(regime.code)">
+                <div class="stat-left">
+                    <h3>[[ regime.name ]]</h3>
+                    <div class="number">[[ regime.count ]]</div>
+                </div>
+                <i class="fas fa-gavel stat-icon"></i>
+            </div>
+        </div>
+        {#    tABLA #}
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <button type="button" class="btn-search" @click="openSearchModal">
+                        <i class="fas fa-database"></i> Búsqueda Avanzada
+                    </button>
+                    <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact"
+                            @click="clearSearch">
+                        <i class="fas fa-sync-alt"></i> Limpiar
+                    </button>
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search-input" class="input-field"
+                               placeholder="Filtrar en esta lista...">
+                    </div>
+                </div>
+            </div>
+            <div id="table-content-wrapper">
+                {% include 'personnel_action/partials/partial_personnel_action_list.html' %}
+            </div>
+            <!-- Paginación -->
+            <div class="pagination-container">
+                <span class="pagination-info" id="page-info">Calculando...</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button class="page-btn" @click="prevPage" id="btn-prev">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </li>
+                    <li><span id="current-page-display" class="page-current-display">1</span></li>
+                    <li>
+                        <button class="page-btn" @click="nextPage" id="btn-next">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
-</div>
+{% endblock %}
+
+{% block modals %}
+    {% include 'personnel_action/modals/modal_personnel_action_form.html' %}
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    const { createApp } = Vue;
-
-    createApp({
-        delimiters: ['[[', ']]'],
-        data() {
-            return {
-                showModal: false,
-                modalTitle: 'Nueva Acción de Personal',
-                modalContent: '<div class="text-center"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>'
-            }
-        },
-        methods: {
-            async openCreateModal() {
-                this.showModal = true;
-                this.modalTitle = 'Registrar Acción';
-                
-                // Fetch del formulario
-                const response = await fetch("{% url 'personnel_actions:action_create' %}");
-                this.modalContent = await response.text();
-                
-                // Re-inicializar Select2 después de renderizar HTML
-                this.$nextTick(() => {
-                    $('.select2').select2({ dropdownParent: $('.modal-container') });
-                    this.bindFormSubmit();
-                });
-            },
-            closeModal() {
-                this.showModal = false;
-                this.modalContent = '';
-            },
-            bindFormSubmit() {
-                const form = document.querySelector('.modal-body form');
-                if(!form) return;
-
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const formData = new FormData(form);
-                    
-                    const response = await fetch(form.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                    });
-
-                    if (response.ok) {
-                        const newTableHtml = await response.text();
-                        document.getElementById('tableContainer').innerHTML = newTableHtml;
-                        this.closeModal();
-                        Swal.fire('Éxito', 'Acción guardada correctamente', 'success');
-                    } else {
-                        // Manejo de errores (volver a pintar el form con errores)
-                        this.modalContent = await response.text();
-                         this.$nextTick(() => {
-                            $('.select2').select2({ dropdownParent: $('.modal-container') });
-                            this.bindFormSubmit();
-                        });
-                    }
-                });
-            }
-        }
-    }).mount('#vue-modals');
-
-    // Lógica Vanilla JS para búsqueda
-    let timeout = null;
-    function searchTable() {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            const query = document.getElementById('searchInput').value;
-            fetch(`?q=${query}`, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
-                .then(r => r.text())
-                .then(html => {
-                    document.getElementById('tableContainer').innerHTML = html;
-                });
-        }, 300);
-    }
-</script>
+    <script src="{% static 'js/personnel_action/personnel_action.js' %}"></script>
 {% endblock %}

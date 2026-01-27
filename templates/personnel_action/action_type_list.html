@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Acción | SIGETH{% endblock %}
+
+{% block content %}
+    <div id="action-type-app" v-cloak
+         data-total="{{ stats_total|default:0 }}"
+         data-active="{{ stats_active|default:0 }}"
+         data-inactive="{{ stats_inactive|default:0 }}">
+
+        <!-- 1. Header Estilo Contrato -->
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción de Personal</h1>
+                <p>Catálogo de movimientos de personal (Nombramientos, Ascensos, etc.)</p>
+            </div>
+            <button class="btn-create" @click="openCreateModal">
+                <i class="fas fa-plus"></i> NUEVO TIPO
+            </button>
+        </div>
+
+        <!-- 2. Tarjetas de Estadísticas -->
+        <div class="stats-row">
+            <div class="stat-card color-one" @click="filterByStatus('')"
+                 :class="{'opacity-low': filters.status !== ''}">
+                <div class="stat-left"><h3>TOTAL</h3>
+                    <div class="number">[[ stats.total ]]</div>
+                </div>
+                <i class="fas fa-layer-group stat-icon"></i>
+            </div>
+            <div class="stat-card color-two" @click="filterByStatus('true')"
+                 :class="{'opacity-low': filters.status !== 'true'}">
+                <div class="stat-left"><h3>ACTIVOS</h3>
+                    <div class="number">[[ stats.active ]]</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+            <div class="stat-card color-three" @click="filterByStatus('false')"
+                 :class="{'opacity-low': filters.status !== 'false'}">
+                <div class="stat-left"><h3>INACTIVOS</h3>
+                    <div class="number">[[ stats.inactive ]]</div>
+                </div>
+                <i class="fas fa-times-circle stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- 3. Tabla y Filtros -->
+        <div class="table-app">
+            <div class="content-table">
+                <div class="table-controls p-3">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" v-model="filters.query" @input="debouncedSearch" class="input-field"
+                               placeholder="Buscar por código o nombre...">
+                    </div>
+                </div>
+                
+                <div id="table-content-wrapper">
+                    {% include 'personnel_action/partials/partial_action_type_list.html' %}
+                </div>
+                
+                <!-- Paginación Simple (Visual) -->
+                <div class="pagination-container">
+                    <span class="pagination-info">Resultados del catálogo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inclusión del Modal -->
+        {% include 'personnel_action/modals/modal_action_type_form.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Lógica JS específica para este módulo -->
+    <script src="{% static 'js/personnel_action/action_type.js' %}"></script>
+{% endblock %}

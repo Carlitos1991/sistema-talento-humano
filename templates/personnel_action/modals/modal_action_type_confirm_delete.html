@@ -1,0 +1,12 @@
+<form method="post" action="{% url 'personnel_actions:type_delete' object.pk %}">
+    {% csrf_token %}
+    <div class="text-center p-4">
+        <i class="fa-solid fa-triangle-exclamation text-warning fa-3x mb-3"></i>
+        <p>¿Estás seguro de eliminar el tipo <strong>{{ object.name }}</strong>?</p>
+        <p class="text-muted small">Esta acción no se puede deshacer si tiene registros asociados.</p>
+    </div>
+    <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" onclick="document.querySelector('.close-btn').click()">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+    </div>
+</form>

@@ -1,11 +1,12 @@
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 
-from .models import PersonnelAction, ActionMovement
-from .forms import PersonnelActionForm, ActionMovementForm
+from .models import PersonnelAction, ActionMovement, ActionType
+from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
 
 
 class PersonnelActionListView(LoginRequiredMixin, ListView):
@@ -49,4 +50,74 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
         return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
             'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
                        :10]
+        })
+
+
+class ActionTypeListView(LoginRequiredMixin, ListView):
+    model = ActionType
+    template_name = 'personnel_action/action_type_list.html'
+    context_object_name = 'types'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        query = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+
+        if query:
+            qs = qs.filter(Q(name__icontains=query) | Q(code__icontains=query))
+
+        if status == 'true':
+            qs = qs.filter(is_active=True)
+        elif status == 'false':
+            qs = qs.filter(is_active=False)
+
+        return qs.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Estadísticas para las tarjetas superiores
+        ctx['stats_total'] = ActionType.objects.count()
+        ctx['stats_active'] = ActionType.objects.filter(is_active=True).count()
+        ctx['stats_inactive'] = ActionType.objects.filter(is_active=False).count()
+        return ctx
+
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['personnel_actions/action_type/partial_action_type_list.html']
+        return [self.template_name]
+
+
+class ActionTypeCreateView(LoginRequiredMixin, CreateView):
+    model = ActionType
+    form_class = ActionTypeForm
+    template_name = 'personnel_action/modals/modal_action_type_form.html'
+
+    def form_valid(self, form):
+        form.save()
+        return render(self.request, 'personnel_action/partials/partial_action_type_list.html', {
+            'types': ActionType.objects.all().order_by('name')
+        })
+
+
+class ActionTypeUpdateView(LoginRequiredMixin, UpdateView):
+    model = ActionType
+    form_class = ActionTypeForm
+    template_name = 'personnel_action/modals/modal_action_type_form.html'
+
+    def form_valid(self, form):
+        form.save()
+        return render(self.request, 'personnel_action/partials/partial_action_type_list.html', {
+            'types': ActionType.objects.all().order_by('name')
+        })
+
+
+# Vista especial para cambiar estado (Toggle) vía AJAX
+class ActionTypeToggleStatusView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        obj = get_object_or_404(ActionType, pk=pk)
+        obj.is_active = not obj.is_active
+        obj.save()
+        return render(request, 'personnel_action/partials/partial_action_type_list.html', {
+            'types': ActionType.objects.all().order_by('name')
         })

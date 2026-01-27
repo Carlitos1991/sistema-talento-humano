@@ -1,12 +1,13 @@
 from django import forms
-from .models import PersonnelAction, ActionMovement
+from .models import PersonnelAction, ActionMovement, ActionType
+
 
 class PersonnelActionForm(forms.ModelForm):
     class Meta:
         model = PersonnelAction
         fields = ['employee', 'action_type', 'number',
                   'date_issue', 'date_effective', 'explanation',
-                  'authority_1', 'authority_2', 'reviewer','elaboration','register']
+                  'authority_1', 'authority_2', 'reviewer', 'elaboration', 'register']
         widgets = {
             'employee': forms.Select(attrs={'class': 'form-select select2'}),
             'action_type': forms.Select(attrs={'class': 'form-select select2'}),
@@ -20,15 +21,27 @@ class PersonnelActionForm(forms.ModelForm):
             'decree_number': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+
 class ActionMovementForm(forms.ModelForm):
     class Meta:
         model = ActionMovement
         fields = ['previous_remuneration', 'new_remuneration',
                   'new_unit', 'new_position', 'location_text']
         widgets = {
-             'new_unit': forms.Select(attrs={'class': 'form-select select2'}),
-             'new_position': forms.Select(attrs={'class': 'form-select select2'}),
-             'previous_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
-             'new_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
-             'location_text': forms.TextInput(attrs={'class': 'form-control'}),
+            'new_unit': forms.Select(attrs={'class': 'form-select select2'}),
+            'new_position': forms.Select(attrs={'class': 'form-select select2'}),
+            'previous_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
+            'new_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
+            'location_text': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ActionTypeForm(forms.ModelForm):
+    class Meta:
+        model = ActionType
+        fields = ['name', 'code', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'}),
+            'code': forms.TextInput(attrs={'class': 'form-control uppercase-input', 'placeholder': 'EJ: NOM-PROV'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
