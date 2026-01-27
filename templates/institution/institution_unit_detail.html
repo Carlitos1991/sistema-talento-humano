@@ -75,17 +75,15 @@
                 <table class="elegant-table">
                     <thead>
                     <tr>
-                        <th width="30%">Entregable</th>
-                        <th width="15%">Frecuencia</th>
-                        <th width="40%">Descripción</th>
+                        <th width="35%">Entregable</th>
+                        <th width="50%">Descripción</th>
                         <th width="15%" class="text-center">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr v-for="item in deliverables" :key="item.id" class="elegant-row">
                         <td><strong>[[ item.name ]]</strong></td>
-                        <td><span class="frequency-tag">[[ item.frequency ]]</span></td>
-                        <td class="description-cell">[[ item.description ]]</td>
+                        <td class="description-cell">[[ item.description || 'Sin descripción' ]]</td>
                         <td>
                             <div class="action-buttons-group">
                                 <button type="button" @click="openModal(item)" class="action-btn edit">

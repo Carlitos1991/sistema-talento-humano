@@ -11,7 +11,7 @@ createApp({
         const deliverables = ref([]);
         const showModal = ref(false); // DEBE empezar en false
         const editingId = ref(null);
-        const form = ref({name: '', description: '', frequency: ''});
+        const form = ref({name: '', description: ''});
 
         const fetchDeliverables = async () => {
             try {
@@ -27,7 +27,7 @@ createApp({
 
         // Función para limpiar el formulario
         const resetForm = () => {
-            form.value = {name: '', description: '', frequency: ''};
+            form.value = {name: '', description: ''};
             editingId.value = null;
         };
 
@@ -36,8 +36,7 @@ createApp({
                 editingId.value = item.id;
                 form.value = {
                     name: item.name,
-                    description: item.description,
-                    frequency: item.frequency
+                    description: item.description || ''
                 };
             } else {
                 resetForm();
@@ -61,7 +60,6 @@ createApp({
             const formData = new FormData();
             formData.append('name', form.value.name);
             formData.append('description', form.value.description || '');
-            formData.append('frequency', form.value.frequency || '');
             formData.append('csrfmiddlewaretoken', csrfToken);
 
             const url = editingId.value

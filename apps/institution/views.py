@@ -337,8 +337,7 @@ class DeliverableListJsonView(LoginRequiredMixin, View):
         data = [{
             'id': d.id,
             'name': d.name,
-            'description': d.description or '',
-            'frequency': d.frequency or ''
+            'description': d.description or ''
         } for d in deliverables]
         return JsonResponse({'success': True, 'data': data})
 
@@ -390,21 +389,25 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
 def api_unit_deliverables(request, unit_id):
     """
     Endpoint para obtener los entregables de una unidad administrativa específica.
-    Utilizado por el Wizard de Perfiles de Puesto (Vue.js).
+    Utilizado por Vue.js en la vista de detalle y en el Wizard de Perfiles de Puesto.
     """
     try:
         # Filtramos por la unidad y que el entregable esté activo
         deliverables = Deliverable.objects.filter(
             unit_id=unit_id,
             is_active=True
-        ).values('id', 'name')
+        ).order_by('name')
 
-        # Convertimos el QuerySet a una lista para serialización JSON
-        data = list(deliverables)
+        # Construir la lista con todos los campos necesarios
+        data = [{
+            'id': d.id,
+            'name': d.name,
+            'description': d.description or ''
+        } for d in deliverables]
 
-        return JsonResponse(data, safe=False)
+        return JsonResponse({'success': True, 'data': data})
     except Exception as e:
         return JsonResponse(
-            {'error': str(e)},
+            {'success': False, 'error': str(e)},
             status=500
         )
