@@ -239,7 +239,7 @@ class JobActivity(BaseModel):
         blank=True,
         verbose_name="Conocimientos Adicionales"
     )
-
+    points = models.PositiveIntegerField(default=0, verbose_name="Puntos de Actividad")
     description = models.TextField(verbose_name="Descripción")
     deliverable = models.ForeignKey(
         'institution.Deliverable',

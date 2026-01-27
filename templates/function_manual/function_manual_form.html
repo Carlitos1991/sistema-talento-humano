@@ -122,32 +122,30 @@
                         <table class="table-premium">
                             <thead>
                             <tr>
-                                <th style="width: 200px;">Acción y Producto</th>
+                                <th style="width: 180px;">Acción y Producto</th>
                                 <th>Descripción de la Actividad</th>
-                                <th style="width: 160px;">Valoración (C/A/F)</th>
-                                <th style="width: 200px;">Conocimientos</th>
+                                <th style="width: 150px;">Valoración (C/AG/F)</th>
+                                <th style="width: 160px;">Conocimientos</th>
+                                <th style="width: 60px; text-align: center;">Pts</th>
                                 <th style="width: 40px;"></th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr v-for="(act, idx) in activities" :key="idx" class="row-animated">
                                 <td>
-                                    <!-- Verbo de Acción -->
                                     <select :data-index="idx" data-field="action_verb"
-                                            data-placeholder="Seleccione el Verbo..."
-                                            class="select2-act mb-1">
+                                            data-placeholder="Seleccione Verbo..." class="select2-act mb-1">
                                         <option></option>
-                                        <option v-for="v in filteredVerbs" :key="v.id" :value="v.id">[[ v.name ]]
+                                        <option v-for="v in filteredVerbs" :key="v.id" :value="v.id"
+                                                :selected="act.action_verb == v.id">[[ v.name ]]
                                         </option>
                                     </select>
 
-                                    <!-- Entregable -->
                                     <select :data-index="idx" data-field="deliverable"
-                                            data-placeholder="Seleccione Producto/Servicio..."
-                                            class="select2-act">
+                                            data-placeholder="Producto/Servicio..." class="select2-act">
                                         <option></option>
-                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id">[[ d.name
-                                            ]]
+                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id"
+                                                :selected="act.deliverable == d.id">[[ d.name ]]
                                         </option>
                                     </select>
                                 </td>
@@ -156,37 +154,40 @@
                                               placeholder="¿Qué hace? + ¿Sobre qué?..."></textarea>
                                 </td>
                                 <td>
-                                    <!-- Complejidad -->
                                     <select :data-index="idx" data-field="complexity"
-                                            data-placeholder="Complejidad..."
-                                            class="select2-act mb-1">
+                                            data-placeholder="Complejidad (C)..." class="select2-act mb-1">
                                         <option></option>
-                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
-                                            ]]
-                                        </option>
-                                    </select>
-                                    <!-- Aporte -->
-                                    <select :data-index="idx" data-field="contribution"
-                                            data-placeholder="Aporte a Gestión..."
-                                            class="select2-act mb-1">
-                                        <option></option>
-                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
-                                            ]]
+                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id"
+                                                :selected="act.complexity == c.id">[[ c.name ]]
                                         </option>
                                     </select>
 
-                                    <!-- 5. Frecuencia -->
-                                    <select :data-index="idx" data-field="frequency"
-                                            data-placeholder="Frecuencia..."
-                                            class="select2-act">
+                                    <select :data-index="idx" data-field="contribution"
+                                            data-placeholder="Aporte Gestión (AG)..." class="select2-act mb-1">
                                         <option></option>
-                                        <option v-for="f in catalogs.frequency" :key="f.id" :value="f.id">[[ f.name ]]
+                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id"
+                                                :selected="act.contribution == c.id">[[ c.name ]]
+                                        </option>
+                                    </select>
+
+                                    <select :data-index="idx" data-field="frequency"
+                                            data-placeholder="Frecuencia (F)..." class="select2-act">
+                                        <option></option>
+                                        <!-- FILTRO: No mostrar MENSUAL en la lista -->
+                                        <option v-for="f in catalogs.frequency"
+                                                v-show="!f.name.toUpperCase().includes('MENSUAL')"
+                                                :key="f.id" :value="f.id"
+                                                :selected="act.frequency == f.id">
+                                            [[ f.name ]]
                                         </option>
                                     </select>
                                 </td>
                                 <td>
                                     <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
                                               placeholder="Conocimientos..."></textarea>
+                                </td>
+                                <td style="text-align: center; vertical-align: middle;">
+                                    <span class="badge-points">[[ act.points || 0 ]]</span>
                                 </td>
                                 <td class="cell-top">
                                     <button type="button" class="btn-delete-icon" @click="removeActivity(idx)">
@@ -249,7 +250,7 @@
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
                                     <select class="form-control select2-comp-tech" :data-index="i">
                                         <option value="">Seleccione...</option>
-                                        <option v-for="c in availableTechnical(i)" :key="c.id" :value="c.id" 
+                                        <option v-for="c in availableTechnical(i)" :key="c.id" :value="c.id"
                                                 :selected="selectedTechnical[i] == c.id">[[ c.name ]]
                                         </option>
                                     </select>
@@ -294,7 +295,7 @@
             </section>
 
             <!-- NAVEGACIÓN DEL WIZARD -->
-           <div class="form-section-card mt-3 mb-5 d-flex justify-content-center flex-wrap">
+            <div class="form-section-card mt-3 mb-5 d-flex justify-content-center flex-wrap">
 
                 <button type="button" class="btn-wizard-nav btn-wizard-cancel" @click="cancelProcess">
                     <i class="fa-solid fa-xmark"></i> Cancelar

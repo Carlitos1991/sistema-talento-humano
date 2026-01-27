@@ -257,18 +257,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 delimiters: ['[[', ']]'],
                 data() {
                     return {
-                        currentStep: 1, stepLabels: ['Estructura', 'Valoración', 'Actividades', 'Finalización'],
-                        loading: false, isEdit: false,
+                        currentStep: 1,
+                        stepLabels: ['Estructura', 'Valoración', 'Actividades', 'Finalización'],
+                        loading: false,
+                        isEdit: false,
                         formData: {
-                            position_code: '', specific_job_title: '', administrative_unit: '',
-                            occupational_classification: '', mission: '', knowledge_area: '', experience_details: '',
-                            training_topic: '', interface_relations: ''
+                            position_code: '',
+                            specific_job_title: '',
+                            administrative_unit: '',
+                            occupational_classification: '',
+                            mission: '',
+                            knowledge_area: '',
+                            experience_details: '',
+                            training_topic: '',
+                            interface_relations: ''
                         },
-                        unitLevels: [], selectedUnits: [],
-                        valuationLevels: [], selectedNodes: [], // Paso 2 Jerárquico
+                        unitLevels: [],
+                        selectedUnits: [],
+                        valuationLevels: [],
+                        selectedNodes: [],
                         matchResult: null,
-                        filteredMatrix: [], // Grupos ocupacionales filtrados por complejidad
-                        activities: [{action_verb: '', description: '', additional_knowledge: ''}],
+                        filteredMatrix: [],
+
+                        currentUnitDeliverables: [],
+
+                        // Estructura de actividades con el campo points
+                        activities: [{
+                            action_verb: '',
+                            description: '',
+                            additional_knowledge: '',
+                            deliverable: '',
+                            complexity: '',
+                            contribution: '',
+                            frequency: '',
+                            points: 0
+                        }],
+
                         catalogs: {
                             instruction: [],
                             decisions: [],
@@ -418,31 +442,92 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const idx = $el.data('index');
                                 const field = $el.data('field');
                                 const customPlaceholder = $el.data('placeholder') || "Seleccione...";
-                                // Solo destruimos si ya está inicializado para evitar conflictos
+
                                 if ($el.hasClass('select2-hidden-accessible')) {
                                     $el.select2('destroy');
                                 }
 
-                                // Inicializamos
+                                // Obtener el valor actual del array de actividades
+                                const currentValue = self.activities[idx] ? self.activities[idx][field] : '';
+                                
+                                // Establecer el valor en el select antes de inicializar Select2
+                                if (currentValue) {
+                                    $el.val(currentValue);
+                                }
+
                                 $el.select2({
                                     width: '100%',
                                     placeholder: customPlaceholder,
                                     allowClear: false,
                                     dropdownAutoWidth: true
-                                }).on('change', function () {
+                                }).off('change.act').on('change.act', function () {
                                     const val = $(this).val();
-                                    // Actualizamos el modelo de Vue
                                     if (self.activities[idx]) {
                                         self.activities[idx][field] = val;
+
+                                        // RECALCULAR PUNTOS DE ESTA FILA
+                                        if (['complexity', 'contribution', 'frequency'].includes(field)) {
+                                            self.activities[idx].points = self.calculateActivityPoints(self.activities[idx]);
+                                        }
                                     }
                                 });
 
-                                const currentValue = self.activities[idx] ? self.activities[idx][field] : '';
+                                // Trigger change.select2 para actualizar la visualización
                                 if (currentValue) {
-                                    $el.val(currentValue).trigger('change.select2');
+                                    $el.trigger('change.select2');
+                                    // Calcular puntos iniciales al cargar edición
+                                    if (['complexity', 'contribution', 'frequency'].includes(field)) {
+                                        self.activities[idx].points = self.calculateActivityPoints(self.activities[idx]);
+                                    }
                                 }
                             });
                         });
+                    },
+                    calculateActivityPoints(act) {
+                        if (!act.complexity || !act.contribution || !act.frequency) return 0;
+
+                        const getItemName = (id, catKey) => {
+                            const item = this.catalogs[catKey].find(i => i.id == id);
+                            return item ? item.name.toUpperCase() : '';
+                        };
+
+                        const nameC = getItemName(act.complexity, 'complexity');
+                        const nameAG = getItemName(act.contribution, 'complexity');
+                        const nameF = getItemName(act.frequency, 'frequency');
+
+                        // Mapeo: Alto(3), Medio(2), Bajo(1)
+                        const mapVal = (name) => {
+                            if (name.includes('ALTO')) return 3;
+                            if (name.includes('MEDIO')) return 2;
+                            if (name.includes('BAJO')) return 1;
+                            return 0;
+                        };
+
+                        // Mapeo Frecuencia: Diario(5), Semanal(4), Mensual(3), Semestral/Trim(2), Anual(1)
+                        const mapFreq = (name) => {
+                            if (name.includes('DIARIO')) return 5;
+                            if (name.includes('SEMANAL')) return 4;
+                            if (name.includes('MENSUAL')) return 3;
+                            if (name.includes('SEMESTRAL') || name.includes('TRIMESTRAL')) return 2;
+                            if (name.includes('ANUAL')) return 1;
+                            return 0;
+                        };
+
+                        const c = mapVal(nameC);
+                        const ag = mapVal(nameAG);
+                        const f = mapFreq(nameF);
+
+                        // Fórmula: AG * (F + C)
+                        return ag * (f + c);
+                    },
+
+                    updateTotals() {
+                        let grandTotal = 0;
+                        this.activities.forEach(act => {
+                            act.points = this.calculateActivityPoints(act);
+                            grandTotal += act.points;
+                        });
+                        this.formData.total_points = grandTotal;
                     },
                     async loadInitialData(initData) {
                         this.loading = true;
@@ -482,15 +567,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             // D. REHIDRATAR PASO 3 (Actividades)
-                            this.activities = initData.activities.map(a => ({
-                                action_verb: a.action_verb || '',
-                                description: a.description || '',
-                                additional_knowledge: a.additional_knowledge || '',
-                                deliverable: a.deliverable || '',
-                                complexity: a.complexity || '',
-                                contribution: a.contribution || '',
-                                frequency: a.frequency || ''
-                            }));
+                            this.activities = initData.activities.map(a => {
+                                const actObj = {
+                                    action_verb: a.action_verb || '',
+                                    description: a.description || '',
+                                    additional_knowledge: a.additional_knowledge || '',
+                                    deliverable: a.deliverable || '',
+                                    complexity: a.complexity || '',
+                                    contribution: a.contribution || '',
+                                    frequency: a.frequency || '',
+                                    points: 0
+                                };
+                                actObj.points = this.calculateActivityPoints(actObj);
+                                return actObj;
+                            });
                             this.selectedTechnical = initData.selectedTechnical ? [...initData.selectedTechnical] : ['', '', ''];
                             this.selectedBehavioral = initData.selectedBehavioral ? [...initData.selectedBehavioral] : ['', '', ''];
                             this.selectedTransversal = initData.selectedTransversal ? [...initData.selectedTransversal] : ['', ''];
