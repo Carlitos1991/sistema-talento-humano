@@ -35,7 +35,8 @@ INSTALLED_APPS = [
     'schedule',
     'contract',
     'function_manual',
-    'biometric'
+    'biometric',
+    'personnel_actions'
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

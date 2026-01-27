@@ -1,0 +1,50 @@
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Empleado</th>
+                <th>Tipo</th>
+                <th>Fechas</th>
+                <th>Estado</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in actions %}
+            <tr>
+                <td class="fw-bold">{{ action.number }}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm me-2">{{ action.employee.first_name|first }}</div>
+                        <div>
+                            <div>{{ action.employee.get_full_name }}</div>
+                            <small class="text-muted">{{ action.employee.identification }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge bg-info-subtle text-info">{{ action.action_type.name }}</span></td>
+                <td>
+                    <small class="d-block">Emisión: {{ action.date_issue|date:"d/m/Y" }}</small>
+                    <small class="d-block text-primary">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
+                </td>
+                <td>
+                    {% if action.is_registered %}
+                        <span class="badge bg-success">Registrada</span>
+                    {% else %}
+                        <span class="badge bg-warning">Borrador</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <button class="btn-icon" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon text-danger" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center py-4">No se encontraron registros.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

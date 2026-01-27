@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acciones de Personal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Gestión de Acciones de Personal</h2>
+    <div class="actions">
+        <!-- Botón disparador del Modal controlado por Vue -->
+        <button class="btn btn-primary" @click="openCreateModal">
+            <i class="fa-solid fa-plus"></i> Nueva Acción
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <input type="text" id="searchInput" class="form-control search-input" 
+               placeholder="Buscar por empleado o número..." 
+               onkeyup="searchTable()"> 
+    </div>
+    <div class="card-body" id="tableContainer">
+        <!-- Inyección inicial de la tabla -->
+        {% include 'personnel_actions/partial_personnel_action_list.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Contenedor del Modal Vue -->
+<div id="vue-modals">
+    <div v-if="showModal" class="modal-overlay" v-cloak>
+        <div class="modal-container modal-lg">
+            <div class="modal-header">
+                <h3>[[ modalTitle ]]</h3>
+                <button @click="closeModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" v-html="modalContent">
+                <!-- El contenido se carga vía AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                showModal: false,
+                modalTitle: 'Nueva Acción de Personal',
+                modalContent: '<div class="text-center"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>'
+            }
+        },
+        methods: {
+            async openCreateModal() {
+                this.showModal = true;
+                this.modalTitle = 'Registrar Acción';
+                
+                // Fetch del formulario
+                const response = await fetch("{% url 'personnel_actions:action_create' %}");
+                this.modalContent = await response.text();
+                
+                // Re-inicializar Select2 después de renderizar HTML
+                this.$nextTick(() => {
+                    $('.select2').select2({ dropdownParent: $('.modal-container') });
+                    this.bindFormSubmit();
+                });
+            },
+            closeModal() {
+                this.showModal = false;
+                this.modalContent = '';
+            },
+            bindFormSubmit() {
+                const form = document.querySelector('.modal-body form');
+                if(!form) return;
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+
+                    if (response.ok) {
+                        const newTableHtml = await response.text();
+                        document.getElementById('tableContainer').innerHTML = newTableHtml;
+                        this.closeModal();
+                        Swal.fire('Éxito', 'Acción guardada correctamente', 'success');
+                    } else {
+                        // Manejo de errores (volver a pintar el form con errores)
+                        this.modalContent = await response.text();
+                         this.$nextTick(() => {
+                            $('.select2').select2({ dropdownParent: $('.modal-container') });
+                            this.bindFormSubmit();
+                        });
+                    }
+                });
+            }
+        }
+    }).mount('#vue-modals');
+
+    // Lógica Vanilla JS para búsqueda
+    let timeout = null;
+    function searchTable() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const query = document.getElementById('searchInput').value;
+            fetch(`?q=${query}`, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById('tableContainer').innerHTML = html;
+                });
+        }, 300);
+    }
+</script>
+{% endblock %}

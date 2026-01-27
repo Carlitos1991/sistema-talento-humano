@@ -1,0 +1,55 @@
+<form method="post" action="{% url 'personnel_actions:action_create' %}" class="grid-form">
+    {% csrf_token %}
+
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Empleado</label>
+            {{ form.employee }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Tipo de Acción</label>
+            {{ form.action_type }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Número</label>
+            {{ form.number }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Fecha Emisión</label>
+            {{ form.date_issue }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Fecha Vigencia</label>
+            {{ form.date_effective }}
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Explicación</label>
+        {{ form.explanation }}
+    </div>
+
+    <!-- Sección de Firmas -->
+    <fieldset class="border p-3 rounded mb-3">
+        <legend class="float-none w-auto px-2 fs-6">Firmas Autorizadas</legend>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Autoridad 1</label>
+                {{ form.authority_1 }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Revisado Por</label>
+                {{ form.reviewer }}
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+    </div>
+</form>
