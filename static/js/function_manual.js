@@ -383,77 +383,136 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (this.currentStep === 3) {
-                        if (this.activities.length < 5) return true;
+                        if (this.activities.length < 6) return true;
                         return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
                     }
                     return false;
                 }
             },
             methods: {
+                initSelect2Activities() {
+                    this.$nextTick(() => {
+                        const self = this;
+                        $('.select2-act').each(function () {
+                            const $el = $(this);
+                            const idx = $el.data('index');
+                            const field = $el.data('field');
+                            const customPlaceholder = $el.data('placeholder') || "Seleccione...";
+                            // Solo destruimos si ya está inicializado para evitar conflictos
+                            if ($el.hasClass('select2-hidden-accessible')) {
+                                $el.select2('destroy');
+                            }
+
+                            // Inicializamos
+                            $el.select2({
+                                width: '100%',
+                                placeholder: customPlaceholder,
+                                allowClear: false,
+                                dropdownAutoWidth: true
+                            }).on('change', function () {
+                                const val = $(this).val();
+                                // Actualizamos el modelo de Vue
+                                if (self.activities[idx]) {
+                                    self.activities[idx][field] = val;
+                                }
+                            });
+
+                            const currentValue = self.activities[idx] ? self.activities[idx][field] : '';
+                            if (currentValue) {
+                                $el.val(currentValue).trigger('change.select2');
+                            }
+                        });
+                    });
+                },
                 async loadInitialData(initData) {
-                    // 1. Campos Básicos
-                    this.formData = {
-                        ...this.formData,
-                        id: initData.id,
-                        position_code: initData.position_code,
-                        specific_job_title: initData.specific_job_title,
-                        mission: initData.mission,
-                        knowledge_area: initData.knowledge_area,
-                        experience_details: initData.experience_details,
-                        training_topic: initData.training_topic,
-                        interface_relations: initData.interface_relations
-                    };
+                    this.loading = true;
+                    try {
+                        // A. Datos básicos
+                        this.formData = {...this.formData, ...initData};
 
-                    // 2. Arrays de Complejidad/Competencias
-                    this.activities = initData.activities && initData.activities.length ? initData.activities : [{
-                        action_verb: '',
-                        description: '',
-                        additional_knowledge: ''
-                    }];
-                    if (initData.selectedTechnical) this.selectedTechnical = initData.selectedTechnical;
-                    if (initData.selectedBehavioral) this.selectedBehavioral = initData.selectedBehavioral;
-                    if (initData.selectedTransversal) this.selectedTransversal = initData.selectedTransversal;
-                    if (initData.unit_deliverables) {
-                        this.currentUnitDeliverables = initData.unit_deliverables;
-                    }
-                    // 3. Rehidratar Unidades (Paso 1)
-                    // Reiniciamos para cargar en orden
-                    this.unitLevels = [];
-                    this.selectedUnits = [];
-                    await this.fetchUnits(null, 0); // Carga Raíz
+                        // B. REHIDRATAR PASO 1 (Unidades Organizacionales)
+                        this.unitLevels = [];
+                        this.selectedUnits = [];
+                        await this.fetchUnits(null, 0); // Carga la raíz
 
-                    const units = initData.selectedUnits;
-                    if (units && units.length > 0) {
-                        for (let i = 0; i < units.length; i++) {
-                            const unitId = units[i];
-                            // El fetchUnits anterior ya pusheó el slot para este nivel
-                            this.selectedUnits[i] = unitId;
-
-                            // Cargar hijos del seleccionado para preparar el siguiente nivel (o llenar las options)
-                            await this.fetchUnits(unitId, i + 1);
+                        if (initData.selectedUnits && initData.selectedUnits.length > 0) {
+                            for (let i = 0; i < initData.selectedUnits.length; i++) {
+                                const uId = initData.selectedUnits[i];
+                                this.selectedUnits[i] = uId;
+                                await this.fetchUnits(uId, i + 1); // Espera a cargar los hijos
+                            }
+                            const finalUnitId = initData.selectedUnits[initData.selectedUnits.length - 1];
+                            this.formData.administrative_unit = finalUnitId;
+                            // Cargar entregables de la unidad final
+                            await this.fetchUnitDeliverables(finalUnitId);
                         }
-                        // Setear la unidad final seleccionada
-                        this.formData.administrative_unit = units[units.length - 1];
-                    }
 
-                    // 4. Rehidratar Valoración (Paso 2)
-                    this.valuationLevels = [];
-                    this.selectedNodes = [];
-                    await this.fetchValuationLevel(null); // Carga Raíz
+                        // C. REHIDRATAR PASO 2 (Valoración Normativa - SECUENCIAL)
+                        this.valuationLevels = [];
+                        this.selectedNodes = [];
+                        await this.fetchValuationLevel(null); // Carga Nivel 1 (Roles)
 
-                    const nodes = initData.selectedNodes;
-                    if (nodes && nodes.length > 0) {
-                        for (let i = 0; i < nodes.length; i++) {
-                            const nodeId = nodes[i];
-                            this.selectedNodes[i] = nodeId;
-                            await this.fetchValuationLevel(nodeId);
+                        if (initData.selectedNodes && initData.selectedNodes.length > 0) {
+                            for (let i = 0; i < initData.selectedNodes.length; i++) {
+                                const nodeId = initData.selectedNodes[i];
+                                this.selectedNodes[i] = nodeId;
+                                // Cargamos el siguiente nivel basándonos en el nodo actual
+                                await this.fetchValuationLevel(nodeId);
+                            }
                         }
-                    }
 
-                    // 5. Match Result
-                    if (initData.matchResult) {
-                        this.matchResult = initData.matchResult;
-                        this.formData.occupational_classification = initData.matchResult.id;
+                        // D. REHIDRATAR PASO 3 (Actividades)
+                        this.activities = initData.activities.map(a => ({
+                            action_verb: a.action_verb || '',
+                            description: a.description || '',
+                            additional_knowledge: a.additional_knowledge || '',
+                            deliverable: a.deliverable || '',
+                            complexity: a.complexity || '',
+                            contribution: a.contribution || '',
+                            frequency: a.frequency || ''
+                        }));
+                        this.selectedTechnical = initData.selectedTechnical ? [...initData.selectedTechnical] : ['', '', ''];
+                        this.selectedBehavioral = initData.selectedBehavioral ? [...initData.selectedBehavioral] : ['', '', ''];
+                        this.selectedTransversal = initData.selectedTransversal ? [...initData.selectedTransversal] : ['', ''];
+
+                        // E. SINCRONIZACIÓN VISUAL (Select2)
+                        this.$nextTick(() => {
+                            // Inicializamos todos los Select2
+                            this.initSelect2();           // Paso 1
+                            this.initSelect2Valuation();  // Paso 2
+                            this.initSelect2Activities(); // Paso 3
+                            this.initSelect2Competencies();// Paso 4
+
+                            // Forzamos a Select2 del PASO 2 a mostrar los valores
+                            this.selectedNodes.forEach((nodeId, i) => {
+                                $(`.select2-valuation[data-index="${i}"]`).val(nodeId).trigger('change.select2');
+                            });
+                            this.selectedTechnical.forEach((id, i) => {
+                                $(`.select2-comp-tech[data-index="${i}"]`).val(id).trigger('change.select2');
+                            });
+                            this.selectedBehavioral.forEach((id, i) => {
+                                $(`.select2-comp-beh[data-index="${i}"]`).val(id).trigger('change.select2');
+                            });
+                            this.selectedTransversal.forEach((id, i) => {
+                                $(`.select2-comp-trans[data-index="${i}"]`).val(id).trigger('change.select2');
+                            });
+
+                            // Forzamos a Select2 del PASO 3 a mostrar los valores
+                            this.activities.forEach((act, idx) => {
+                                $(`select[data-index="${idx}"][data-field="action_verb"]`).val(act.action_verb).trigger('change.select2');
+                                $(`select[data-index="${idx}"][data-field="deliverable"]`).val(act.deliverable).trigger('change.select2');
+                                $(`select[data-index="${idx}"][data-field="complexity"]`).val(act.complexity).trigger('change.select2');
+                                $(`select[data-index="${idx}"][data-field="contribution"]`).val(act.contribution).trigger('change.select2');
+                                $(`select[data-index="${idx}"][data-field="frequency"]`).val(act.frequency).trigger('change.select2');
+                            });
+                        });
+
+                        if (initData.matchResult) this.matchResult = initData.matchResult;
+
+                    } catch (e) {
+                        console.error("Error rehidratando formulario:", e);
+                    } finally {
+                        this.loading = false;
                     }
                 },
 
@@ -485,10 +544,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     if (this.currentStep === 3) {
-                        if (this.activities.length < 5) {
+                        if (this.activities.length < 6) {
                             window.Toast.fire({
                                 icon: 'warning',
-                                title: 'Debe registrar al menos 5 actividades esenciales.'
+                                title: 'Debe registrar al menos 6 actividades esenciales.'
                             });
                             return false;
                         }
@@ -531,26 +590,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 async handleUnitChange(index) {
                     const id = this.selectedUnits[index];
+
+                    // 1. Limpiar hijos
                     this.unitLevels = this.unitLevels.slice(0, index + 1);
                     this.selectedUnits = this.selectedUnits.slice(0, index + 1);
+
+                    // 2. Determinar cuál es la unidad más específica seleccionada hasta ahora
+                    // Filtramos el array para obtener el último valor que no sea vacío
+                    const lastSelectedId = this.selectedUnits.filter(u => u !== '').pop();
+
                     if (id) {
+                        // Cargar el siguiente nivel si existe
                         await this.fetchUnits(id, index + 1);
-                        this.formData.administrative_unit = id;
-                        const codeRes = await fetch(this.urls.nextCode.replace('0', id));
-                        const codeData = await codeRes.json();
-                        await this.fetchUnitDeliverables(id);
-                        this.formData.position_code = codeData.next_code;
                     }
-                    this.$nextTick(() => this.initSelect2());
+
+                    if (lastSelectedId) {
+                        this.formData.administrative_unit = lastSelectedId;
+
+                        // CARGAR ENTREGABLES de la unidad más específica
+                        await this.fetchUnitDeliverables(lastSelectedId);
+
+                        // Obtener código posicional
+                        const codeRes = await fetch(this.urls.nextCode.replace('0', lastSelectedId));
+                        const codeData = await codeRes.json();
+                        this.formData.position_code = codeData.next_code;
+                    } else {
+                        this.formData.administrative_unit = '';
+                        this.currentUnitDeliverables = [];
+                    }
+
+                    this.$nextTick(() => {
+                        this.initSelect2(); // Refresca select2 de unidades
+                        this.initSelect2Activities(); // MUY IMPORTANTE: Refresca los combos de la tabla
+                    });
                 },
                 async fetchUnitDeliverables(unitId) {
+                    if (!unitId) return;
                     try {
-                        // Asumiendo que creas un endpoint simple o usas uno existente
-                        const res = await fetch(`/institution/api/units/${unitId}/deliverables/`);
-                        const data = await res.json();
-                        this.currentUnitDeliverables = data;
+                        const response = await fetch(`/institution/api/units/${unitId}/deliverables/`);
+                        const result = await response.json();
+
+                        // Ajuste según estructura de tu API (si devuelve .data o el array directo)
+                        this.currentUnitDeliverables = result.success ? result.data : result;
+
+                        console.log("Entregables actualizados para unidad:", unitId, this.currentUnitDeliverables);
                     } catch (e) {
                         console.error("Error cargando entregables:", e);
+                        this.currentUnitDeliverables = [];
                     }
                 },
                 // --- VALORACIÓN PASO 2 ---
@@ -565,23 +651,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 async handleNodeChange(index) {
                     const id = this.selectedNodes[index];
+
+                    // Cortamos los niveles que siguen al que cambió
                     this.valuationLevels = this.valuationLevels.slice(0, index + 1);
                     this.selectedNodes = this.selectedNodes.slice(0, index + 1);
                     this.matchResult = null;
-                    this.filteredMatrix = []; // Limpiar matriz filtrada
-                    this.formData.occupational_classification = ''; // Reset classification on change
 
                     if (id) {
                         const sel = this.valuationLevels[index].options.find(n => n.id == id);
-
-                        // Siempre cargar el siguiente nivel, incluyendo después de COMPLEXITY
-                        if (sel.type === 'RESULT') {
+                        if (sel && sel.type === 'RESULT') {
                             this.matchResult = sel.classification;
                             this.formData.occupational_classification = sel.classification_id;
                         } else {
                             await this.fetchValuationLevel(id);
                         }
                     }
+                    // Reinicializamos los select2 de los nuevos niveles creados
                     this.$nextTick(() => this.initSelect2Valuation());
                 },
                 async filterMatrixByComplexity(complexityCatalogItemId) {
@@ -693,19 +778,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 initSelect2Valuation() {
                     const self = this;
-                    $('.select2-valuation').select2({
-                        width: '100%',
-                        placeholder: 'Seleccione...'
-                    });
+                    $('.select2-valuation').each(function () {
+                        const $el = $(this);
+                        const idx = $el.data('index');
 
-                    $('.select2-valuation').off('change.vue').on('change.vue', function () {
-                        const idx = $(this).data('index');
-                        const val = $(this).val();
-                        // Solo procesar si el valor realmente cambió para evitar bucles
-                        if (self.selectedNodes[idx] !== val) {
-                            self.selectedNodes[idx] = val;
-                            self.handleNodeChange(idx);
+                        if ($el.hasClass('select2-hidden-accessible')) {
+                            $el.select2('destroy');
                         }
+
+                        $el.select2({
+                            width: '100%',
+                            placeholder: "Seleccione...",
+                            allowClear: false
+                        }).off('change').on('change', function () {
+                            const val = $(this).val();
+                            if (self.selectedNodes[idx] !== val) {
+                                self.selectedNodes[idx] = val;
+                                self.handleNodeChange(idx); // Esto dispara la carga del siguiente nivel
+                            }
+                        });
                     });
                 },
                 initSelect2Matrix() {
@@ -726,38 +817,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 initSelect2Competencies() {
                     const self = this;
-                    // Helper genérico para init select2
                     const setup = (cls, arrayRef) => {
-                        $(cls).select2({width: '100%', placeholder: 'Seleccione...'})
-                            .off('change.vue')
-                            .on('change.vue', function () {
-                                const idx = $(this).data('index');
+                        $(cls).each(function () {
+                            const $el = $(this);
+                            const idx = $el.data('index');
+
+                            if ($el.hasClass('select2-hidden-accessible')) {
+                                $el.select2('destroy');
+                            }
+
+                            $el.select2({
+                                width: '100%',
+                                placeholder: "Seleccione...",
+                            }).off('change').on('change', function () {
                                 const val = $(this).val();
                                 if (arrayRef[idx] !== val) {
                                     arrayRef[idx] = val;
+                                    // CLAVE: Refrescamos todos los combos del mismo grupo para bloquear el duplicado
+                                    $(`.${$el.attr('class').split(' ').find(c => c.startsWith('select2-comp'))}`).each(function () {
+                                        if ($(this).data('index') !== idx) {
+                                            $(this).select2('destroy').select2({
+                                                width: '100%',
+                                                placeholder: "Seleccione..."
+                                            });
+                                        }
+                                    });
                                 }
                             });
+                        });
                     };
+
                     setup('.select2-comp-tech', this.selectedTechnical);
                     setup('.select2-comp-beh', this.selectedBehavioral);
                     setup('.select2-comp-trans', this.selectedTransversal);
                 },
                 addActivity() {
-                    // Validar que la ultima actividad tenga datos completos antes de crear otra
-                    if (this.activities.length > 0) {
-                        const last = this.activities[this.activities.length - 1];
-                        if (!last.action_verb || !last.description || !last.additional_knowledge) {
-                            window.Toast.fire({
-                                icon: 'warning',
-                                title: 'Complete todos los campos de la actividad actual antes de agregar otra.'
-                            });
-                            return;
-                        }
-                    }
-                    this.activities.push({action_verb: '', description: '', additional_knowledge: ''});
-                },
-                removeActivity(idx) {
-                    if (this.activities.length > 1) this.activities.splice(idx, 1);
+                    this.activities.push({
+                        action_verb: '',
+                        description: '',
+                        additional_knowledge: '',
+                        deliverable: '',
+                        complexity: '',
+                        contribution: '',
+                        frequency: ''
+                    });
+                    this.$nextTick(() => {
+                        this.initSelect2Activities();
+                    });
                 },
                 async submitForm() {
                     if (!this.validateCurrentStep()) return;

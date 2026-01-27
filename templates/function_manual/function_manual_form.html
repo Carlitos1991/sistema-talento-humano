@@ -122,62 +122,71 @@
                         <table class="table-premium">
                             <thead>
                             <tr>
-                                <th style="width: 180px;">Acción y Producto</th>
+                                <th style="width: 200px;">Acción y Producto</th>
                                 <th>Descripción de la Actividad</th>
-                                <th style="width: 150px;">Valoración (C/A/F)</th>
-                                <th style="width: 180px;">Conocimientos</th>
+                                <th style="width: 160px;">Valoración (C/A/F)</th>
+                                <th style="width: 200px;">Conocimientos</th>
                                 <th style="width: 40px;"></th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr v-for="(act, idx) in activities" :key="idx" class="row-animated">
                                 <td>
-                                    <!-- Verbo -->
-                                    <select v-model="act.action_verb" class="form-select-premium mb-1">
-                                        <option value="">Verbo...</option>
+                                    <!-- Verbo de Acción -->
+                                    <select :data-index="idx" data-field="action_verb"
+                                            data-placeholder="Seleccione el Verbo..."
+                                            class="select2-act mb-1">
+                                        <option></option>
                                         <option v-for="v in filteredVerbs" :key="v.id" :value="v.id">[[ v.name ]]
                                         </option>
                                     </select>
-                                    <!-- Entregable (Filtrado dinámicamente por Unidad) -->
-                                    <select v-model="act.deliverable" class="form-select-premium">
-                                        <option value="">Entregable...</option>
+
+                                    <!-- Entregable -->
+                                    <select :data-index="idx" data-field="deliverable"
+                                            data-placeholder="Seleccione Producto/Servicio..."
+                                            class="select2-act">
+                                        <option></option>
                                         <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id">[[ d.name
                                             ]]
                                         </option>
                                     </select>
                                 </td>
                                 <td>
-                <textarea v-model="act.description" class="form-textarea-inline"
-                          placeholder="¿Qué hace? + ¿Sobre qué?..."
-                          style="height: 85px !important; max-height: 85px !important;"></textarea>
+                                    <textarea v-model="act.description" class="form-textarea-inline"
+                                              placeholder="¿Qué hace? + ¿Sobre qué?..."></textarea>
                                 </td>
                                 <td>
                                     <!-- Complejidad -->
-                                    <select v-model="act.complexity" class="form-select-premium mb-1"
-                                            title="Complejidad">
-                                        <option value="">Compl...</option>
+                                    <select :data-index="idx" data-field="complexity"
+                                            data-placeholder="Complejidad..."
+                                            class="select2-act mb-1">
+                                        <option></option>
                                         <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
                                             ]]
                                         </option>
                                     </select>
                                     <!-- Aporte -->
-                                    <select v-model="act.contribution" class="form-select-premium mb-1" title="Aporte">
-                                        <option value="">Aporte...</option>
+                                    <select :data-index="idx" data-field="contribution"
+                                            data-placeholder="Aporte a Gestión..."
+                                            class="select2-act mb-1">
+                                        <option></option>
                                         <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
                                             ]]
                                         </option>
                                     </select>
-                                    <!-- Frecuencia -->
-                                    <select v-model="act.frequency" class="form-select-premium" title="Frecuencia">
-                                        <option value="">Frec...</option>
+
+                                    <!-- 5. Frecuencia -->
+                                    <select :data-index="idx" data-field="frequency"
+                                            data-placeholder="Frecuencia..."
+                                            class="select2-act">
+                                        <option></option>
                                         <option v-for="f in catalogs.frequency" :key="f.id" :value="f.id">[[ f.name ]]
                                         </option>
                                     </select>
                                 </td>
                                 <td>
-                <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
-                          placeholder="Conocimientos..."
-                          style="height: 85px !important; max-height: 85px !important;"></textarea>
+                                    <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
+                                              placeholder="Conocimientos..."></textarea>
                                 </td>
                                 <td class="cell-top">
                                     <button type="button" class="btn-delete-icon" @click="removeActivity(idx)">
@@ -189,7 +198,7 @@
                         </table>
                     </div>
                     <div class="normative-note">
-                        <i class="fa-solid fa-circle-info"></i> Nota: Según la norma MDT-2025, debe describir entre 5 y
+                        <i class="fa-solid fa-circle-info"></i> Nota: Según la norma MDT-2025, debe describir entre 6 y
                         10 actividades principales.
                     </div>
                 </div>
