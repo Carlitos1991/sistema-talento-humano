@@ -333,6 +333,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL');
                     },
 
+                    // Listas filtradas de competencias disponibles por índice
+                    availableTechnical() {
+                        return (index) => {
+                            const selected = this.selectedTechnical.filter((val, i) => i !== index && val);
+                            return this.technicalList.filter(c => !selected.includes(String(c.id)));
+                        };
+                    },
+                    availableBehavioral() {
+                        return (index) => {
+                            const selected = this.selectedBehavioral.filter((val, i) => i !== index && val);
+                            return this.behavioralList.filter(c => !selected.includes(String(c.id)));
+                        };
+                    },
+                    availableTransversal() {
+                        return (index) => {
+                            const selected = this.selectedTransversal.filter((val, i) => i !== index && val);
+                            return this.transversalList.filter(c => !selected.includes(String(c.id)));
+                        };
+                    },
+
                     selectedMatrixItem() {
                         if (!this.formData.occupational_classification) return null;
                         return this.filteredMatrix.find(m => m.id == this.formData.occupational_classification);
@@ -817,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     initSelect2Competencies() {
                         const self = this;
-                        const setup = (cls, arrayRef) => {
+                        const setup = (cls, arrayRef, availableFunc) => {
                             $(cls).each(function () {
                                 const $el = $(this);
                                 const idx = $el.data('index');
@@ -826,30 +846,37 @@ document.addEventListener('DOMContentLoaded', () => {
                                     $el.select2('destroy');
                                 }
 
+                                // Obtener las opciones disponibles para este índice
+                                const availableOptions = availableFunc(idx);
+                                const currentValue = arrayRef[idx];
+
+                                // Limpiar y reconstruir las opciones
+                                $el.empty();
+                                $el.append('<option value="">Seleccione...</option>');
+                                availableOptions.forEach(comp => {
+                                    $el.append(`<option value="${comp.id}">${comp.name}</option>`);
+                                });
+
+                                // Restaurar el valor actual si existe
+                                if (currentValue) {
+                                    $el.val(currentValue);
+                                }
+
                                 $el.select2({
                                     width: '100%',
                                     placeholder: "Seleccione...",
-                                }).off('change').on('change', function () {
+                                }).off('change.comp').on('change.comp', function () {
                                     const val = $(this).val();
-                                    if (arrayRef[idx] !== val) {
-                                        arrayRef[idx] = val;
-                                        // CLAVE: Refrescamos todos los combos del mismo grupo para bloquear el duplicado
-                                        $(`.${$el.attr('class').split(' ').find(c => c.startsWith('select2-comp'))}`).each(function () {
-                                            if ($(this).data('index') !== idx) {
-                                                $(this).select2('destroy').select2({
-                                                    width: '100%',
-                                                    placeholder: "Seleccione..."
-                                                });
-                                            }
-                                        });
-                                    }
+                                    arrayRef[idx] = val;
+                                    // Refrescar todos los selects del mismo grupo
+                                    self.initSelect2Competencies();
                                 });
                             });
                         };
 
-                        setup('.select2-comp-tech', this.selectedTechnical);
-                        setup('.select2-comp-beh', this.selectedBehavioral);
-                        setup('.select2-comp-trans', this.selectedTransversal);
+                        setup('.select2-comp-tech', this.selectedTechnical, this.availableTechnical);
+                        setup('.select2-comp-beh', this.selectedBehavioral, this.availableBehavioral);
+                        setup('.select2-comp-trans', this.selectedTransversal, this.availableTransversal);
                     },
                     addActivity() {
                         // 1. Obtener la última actividad de la lista
