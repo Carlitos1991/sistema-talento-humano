@@ -11,7 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import permission_required, login_required
 import json
-
+from institution.models import Deliverable as InstDeliverable
 from employee.models import Employee
 from institution.models import AdministrativeUnit
 from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
@@ -89,22 +89,22 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = JobProfile.objects.select_related(
-            'administrative_unit', 
+            'administrative_unit',
             'occupational_classification',
             'referential_employee__person'  # Optimización para mostrar el empleado referencial
         ).filter(is_active=True)
-        
+
         # Filtrar por usuario: solo administradores ven todos los perfiles
         user = self.request.user
         can_view_all = (
-            user.has_perm('function_manual.can_admin') or
-            user.is_superuser
+                user.has_perm('function_manual.can_admin') or
+                user.is_superuser
         )
-        
+
         if not can_view_all:
             # Usuarios normales solo ven sus propios perfiles
             queryset = queryset.filter(created_by=user)
-        
+
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(
@@ -119,14 +119,14 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             context['stats_classified'] = qs.filter(occupational_classification__isnull=False).count()
             context['stats_pending'] = qs.filter(occupational_classification__isnull=True).count()
             context['stats_active'] = qs.filter(is_active=True).count()
-            
+
             # Contexto para el modal de asignación de grupo
             # Serializamos a JSON para manejo dinámico en Vue
             matrix_data = OccupationalMatrix.objects.select_related('required_role').values(
                 'id', 'occupational_group', 'grade', 'remuneration', 'complexity_level_id'
             ).order_by('grade')
             context['occupational_matrix_json'] = json.dumps(list(matrix_data), cls=DjangoJSONEncoder)
-            
+
         return context
 
 
@@ -159,7 +159,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
         # 2. Reconstruir ruta de valoración (Valuation Nodes)
         # Intentar reconstruir desde los campos individuales del perfil
         nodes_path = []
-        
+
         # Si el perfil tiene clasificación ocupacional, usar esa ruta completa
         if profile.occupational_classification:
             leaf_node = ValuationNode.objects.filter(
@@ -175,7 +175,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
         else:
             # Si no tiene clasificación, reconstruir desde los campos individuales
             # Buscar cada nodo basándose en los catalog_items guardados
-            
+
             # 1. ROL
             if profile.job_role:
                 role_node = ValuationNode.objects.filter(
@@ -185,7 +185,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                 ).first()
                 if role_node:
                     nodes_path.append(role_node.id)
-                    
+
                     # 2. INSTRUCCIÓN
                     if profile.required_instruction:
                         instruction_node = ValuationNode.objects.filter(
@@ -196,7 +196,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                         ).first()
                         if instruction_node:
                             nodes_path.append(instruction_node.id)
-                            
+
                             # 3. EXPERIENCIA (buscar el primer nodo hijo)
                             experience_node = ValuationNode.objects.filter(
                                 node_type='EXPERIENCE',
@@ -205,7 +205,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                             ).first()
                             if experience_node:
                                 nodes_path.append(experience_node.id)
-                                
+
                                 # 4. DECISIÓN
                                 if profile.decision_making:
                                     decision_node = ValuationNode.objects.filter(
@@ -216,7 +216,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                                     ).first()
                                     if decision_node:
                                         nodes_path.append(decision_node.id)
-                                        
+
                                         # 5. IMPACTO
                                         if profile.management_impact:
                                             impact_node = ValuationNode.objects.filter(
@@ -227,7 +227,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                                             ).first()
                                             if impact_node:
                                                 nodes_path.append(impact_node.id)
-                                                
+
                                                 # 6. COMPLEJIDAD
                                                 if profile.final_complexity_level:
                                                     complexity_node = ValuationNode.objects.filter(
@@ -245,9 +245,16 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
             activities_data.append({
                 'action_verb': act.action_verb_id,
                 'description': act.description,
-                'additional_knowledge': act.additional_knowledge
+                'additional_knowledge': act.additional_knowledge,
+                'deliverable': act.deliverable_id,
+                'complexity': act.complexity_id,
+                'contribution': act.contribution_id,
+                'frequency': act.frequency_id,
             })
-
+        unit_deliverables = list(InstDeliverable.objects.filter(
+            unit=profile.administrative_unit, is_active=True
+        ).values('id', 'name'))
+        context['unit_deliverables_json'] = json.dumps(unit_deliverables, cls=DjangoJSONEncoder)
         # 4. Competencias
         comp_map = {'TECHNICAL': [], 'BEHAVIORAL': [], 'TRANSVERSAL': []}
         # Ordenamos por id o algo consistente para que aparezcan en los slots correctos
@@ -259,7 +266,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
         while len(comp_map['TECHNICAL']) < 3: comp_map['TECHNICAL'].append('')
         while len(comp_map['BEHAVIORAL']) < 3: comp_map['BEHAVIORAL'].append('')
         while len(comp_map['TRANSVERSAL']) < 2: comp_map['TRANSVERSAL'].append('')
-        
+
         # 5. Payload Final
         initial_data = {
             'id': profile.id,
@@ -273,7 +280,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
             'selectedUnits': units_path,
             # Importante: para que el wizard vue cargue paso a paso, puede requerir que selectedNodes
             # se reconstruya secuencialmente. Pero probemos pasando el array completo.
-            'selectedNodes': nodes_path, 
+            'selectedNodes': nodes_path,
             'activities': activities_data,
             'selectedTechnical': comp_map['TECHNICAL'][:3],
             'selectedBehavioral': comp_map['BEHAVIORAL'][:3],
@@ -294,6 +301,7 @@ class JobProfileAssignReferentialView(LoginRequiredMixin, View):
     """
     Vista AJAX para asignar un empleado referencial a un perfil ya creado.
     """
+
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile, pk=pk)
         return render(request, 'function_manual/modals/modal_assign_referential.html', {'profile': profile})
@@ -318,7 +326,7 @@ def api_get_available_roles(request):
             node_type='ROLE',
             is_active=True
         ).select_related('catalog_item').order_by('catalog_item__name')
-        
+
         roles_data = [
             {
                 'id': role.id,
@@ -326,7 +334,7 @@ def api_get_available_roles(request):
             }
             for role in roles
         ]
-        
+
         return JsonResponse({'success': True, 'data': roles_data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
@@ -338,10 +346,10 @@ def api_search_employee_simple(request):
     q = request.GET.get('q', '').strip()
     if not q:
         return JsonResponse({'success': False, 'message': 'Ingrese cédula'})
-    
+
     try:
         emp = Employee.objects.select_related('person').get(person__document_number=q, is_active=True)
-        
+
         # Check photo URL safely
         photo_url = None
         if emp.person.photo:
@@ -365,9 +373,8 @@ def api_search_employee_simple(request):
         return JsonResponse({'success': False, 'message': 'Error de datos: Cédula duplicada en sistema'})
     except Exception as e:
         import traceback
-        print(traceback.format_exc()) # Print to server console too
+        print(traceback.format_exc())  # Print to server console too
         return JsonResponse({'success': False, 'message': f'Error del servidor: {str(e)}'})
-
 
 
 # ============================================================================
@@ -430,7 +437,7 @@ class ManualCatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = ManualCatalogForm()
-        context['item_form'] = ManualCatalogItemForm() # Agregamos el formulario de items
+        context['item_form'] = ManualCatalogItemForm()  # Agregamos el formulario de items
         stats = get_manual_catalog_stats()
         context.update(
             {'stats_total': stats['total'], 'stats_active': stats['active'], 'stats_inactive': stats['inactive']})
@@ -754,7 +761,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.position_code = data.get('position_code')
                 profile.specific_job_title = data.get('specific_job_title')
                 profile.administrative_unit_id = data.get('administrative_unit')
-                
+
                 # Guardar todos los niveles de valoración desde los nodos seleccionados
                 role_node_id = data.get('role_node_id')
                 if role_node_id:
@@ -764,7 +771,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             profile.job_role = node.catalog_item
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 instruction_node_id = data.get('instruction_node_id')
                 if instruction_node_id:
                     try:
@@ -773,7 +780,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             profile.required_instruction = node.catalog_item
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 experience_node_id = data.get('experience_node_id')
                 if experience_node_id:
                     try:
@@ -788,7 +795,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                                 profile.required_experience_months = 0
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 decision_node_id = data.get('decision_node_id')
                 if decision_node_id:
                     try:
@@ -797,7 +804,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             profile.decision_making = node.catalog_item
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 impact_node_id = data.get('impact_node_id')
                 if impact_node_id:
                     try:
@@ -806,7 +813,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             profile.management_impact = node.catalog_item
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 complexity_node_id = data.get('complexity_node_id')
                 if complexity_node_id:
                     try:
@@ -815,11 +822,11 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             profile.final_complexity_level = node.catalog_item
                     except ValuationNode.DoesNotExist:
                         pass
-                
+
                 # Retrieve Matrix details
                 matrix_id = data.get('occupational_classification')
                 profile.occupational_classification_id = matrix_id
-                
+
                 if matrix_id:
                     matrix = OccupationalMatrix.objects.get(pk=matrix_id)
                     profile.job_role = matrix.required_role
@@ -828,7 +835,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     profile.management_impact = matrix.required_impact
                     profile.final_complexity_level = matrix.complexity_level
                     profile.required_experience_months = matrix.minimum_experience_months
-                
+
                 profile.mission = data.get('mission')
                 profile.knowledge_area = data.get('knowledge_area')
                 profile.experience_details = data.get('experience_details')
@@ -847,38 +854,40 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         activities_to_create.append(JobActivity(
                             profile=profile,
                             action_verb_id=act.get('action_verb'),
-                            # Usamos el nuevo campo de texto
+                            description=act.get('description'),
                             additional_knowledge=act.get('additional_knowledge', ''),
-                            description=act.get('description')
+                            deliverable_id=act.get('deliverable') or None,
+                            complexity_id=act.get('complexity') or None,
+                            contribution_id=act.get('contribution') or None,
+                            frequency_id=act.get('frequency') or None,
                         ))
 
                 if activities_to_create:
                     JobActivity.objects.bulk_create(activities_to_create)
                 else:
                     raise ValueError("El perfil debe tener al menos una actividad esencial.")
-                
+
                 # 3. Gestionar Competencias (Borrado y re-inserción)
                 # data.get('competencies') debe ser un array de IDs
                 profile.competencies.clear()
                 comp_ids = data.get('competencies', [])
                 # Filtramos IDs válidos y únicos
                 comp_ids = list(set([cid for cid in comp_ids if cid]))
-                
+
                 # Para masivo con observable_behavior si fuera necesario, aquí usamos through default o create
                 # Como profile.competencies es m2m through ProfileCompetency, usamos el manager directo si el through permite o bulk_create del through
                 # Dado que ProfileCompetency tiene observable_behavior opcional ahora:
-                
+
                 comps_to_create = []
                 for cid in comp_ids:
                     # Buscamos la definición para pre-llenar observable_behavior si se desea, por ahora vacío
                     comps_to_create.append(ProfileCompetency(
                         profile=profile,
                         competency_id=cid,
-                        observable_behavior='' # Opcional
+                        observable_behavior=''  # Opcional
                     ))
                 if comps_to_create:
                     ProfileCompetency.objects.bulk_create(comps_to_create)
-
 
                 return JsonResponse({
                     'success': True,
@@ -908,7 +917,7 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
             profile.reviewed_by_id = request.POST.get('reviewed_by') or None
             profile.approved_by_id = request.POST.get('approved_by') or None
             profile.save()
-            
+
             return JsonResponse({'success': True, 'message': 'Firmas de legalización actualizadas correctamente.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
@@ -916,6 +925,7 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
 
 class JobProfileUploadLegalizedView(LoginRequiredMixin, View):
     """Sube el archivo PDF legalizado"""
+
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile, pk=pk)
         return render(request, 'function_manual/modals/modal_upload_legalized.html', {'profile': profile})
@@ -931,30 +941,33 @@ class JobProfileUploadLegalizedView(LoginRequiredMixin, View):
 
 class JobProfileDetailModalView(LoginRequiredMixin, View):
     """Muestra el detalle del perfil y opción para imprimir"""
+
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile.objects.select_related(
             'administrative_unit', 'occupational_classification', 'referential_employee__person',
             'prepared_by', 'reviewed_by', 'approved_by'
         ).prefetch_related('activities', 'competencies'), pk=pk)
-        
+
         return render(request, 'function_manual/modals/modal_profile_detail.html', {'profile': profile})
 
 
 class JobProfilePrintView(LoginRequiredMixin, View):
     """Vista para generar la impresión del perfil"""
+
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile.objects.select_related(
-            'administrative_unit', 'occupational_classification', 
+            'administrative_unit', 'occupational_classification',
             'required_instruction', 'job_role',
-            'prepared_by', 
-            'reviewed_by', 
+            'prepared_by',
+            'reviewed_by',
             'approved_by'
         ), pk=pk)
 
         activities = list(profile.activities.all())
-        
+
         # Separar competencias por tipo
-        competencies_qs = ProfileCompetency.objects.filter(profile=profile).select_related('competency', 'competency__suggested_level')
+        competencies_qs = ProfileCompetency.objects.filter(profile=profile).select_related('competency',
+                                                                                           'competency__suggested_level')
         technical = [c for c in competencies_qs if c.competency.type == 'TECHNICAL']
         behavioral = [c for c in competencies_qs if c.competency.type == 'BEHAVIORAL']
         transversal = [c for c in competencies_qs if c.competency.type == 'TRANSVERSAL']
@@ -975,7 +988,7 @@ class JobProfilePrintView(LoginRequiredMixin, View):
 
 class JobProfileValuationExcelView(LoginRequiredMixin, View):
     """Genera reporte Excel de Valoración de Puestos (Legalizados) - Estilo mdT"""
-    
+
     def get(self, request):
         import openpyxl
         from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
@@ -993,18 +1006,20 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
 
         # 3. Estilos
         # Bordes
-        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
                              top=Side(style='thin'), bottom=Side(style='thin'))
-        
+
         # Fuentes
         font_header_main = Font(name='Arial', size=11, bold=True, color='000000')
         font_header_sub = Font(name='Arial', size=10, bold=True)
         font_body = Font(name='Arial', size=9)
 
         # Rellenos (Colores)
-        fill_header_gray = PatternFill(start_color='E7E6E6', end_color='E7E6E6', fill_type='solid') # Gris claro para encabezados inferiores
-        fill_header_blue = PatternFill(start_color='DAE8FC', end_color='DAE8FC', fill_type='solid') # Azul claro (Roles, Competencias)
-        
+        fill_header_gray = PatternFill(start_color='E7E6E6', end_color='E7E6E6',
+                                       fill_type='solid')  # Gris claro para encabezados inferiores
+        fill_header_blue = PatternFill(start_color='DAE8FC', end_color='DAE8FC',
+                                       fill_type='solid')  # Azul claro (Roles, Competencias)
+
         # Alineación
         center_aligned = Alignment(horizontal='center', vertical='center', wrap_text=True)
         left_aligned = Alignment(horizontal='left', vertical='center', wrap_text=True)
@@ -1015,7 +1030,7 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         ws['D1'] = "FORMATO DE VALORACION DE PUESTOS"
         ws['D1'].font = font_header_main
         ws['D1'].alignment = center_aligned
-        
+
         # Subtítulo (Dinámico o estático según requerimiento)
         ws.merge_cells('D2:J2')
         ws['D2'] = "PUESTOS INSTITUCIONALES LEGALIZADOS"
@@ -1026,11 +1041,11 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         headings_l1 = [
             ("NRO.", "A3:A4"),
             ("DENOMINACION DE PUESTO", "B3:B4"),
-            ("RESPONSABILIDAD", "C3:C3"), # Padre de Rol
-            ("COMPETENCIAS", "D3:E3"), # Padre de Instruccion y Experiencia
-            ("NIVEL DE COMPLEJIDAD DEL PUESTO", "F3:H3"), # Padre de Decisiones, Impacto, Complejidad
-            ("CLASIFICACION", "I3:I3"), # Padre de Grupo
-            ("REFERENCIAL", "J3:J4"), # Empleado (Columna extra solicitada)
+            ("RESPONSABILIDAD", "C3:C3"),  # Padre de Rol
+            ("COMPETENCIAS", "D3:E3"),  # Padre de Instruccion y Experiencia
+            ("NIVEL DE COMPLEJIDAD DEL PUESTO", "F3:H3"),  # Padre de Decisiones, Impacto, Complejidad
+            ("CLASIFICACION", "I3:I3"),  # Padre de Grupo
+            ("REFERENCIAL", "J3:J4"),  # Empleado (Columna extra solicitada)
         ]
 
         headings_l2 = [
@@ -1071,7 +1086,7 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         # Filtro: prepared_by, reviewed_by, approved_by no nulos
         profiles = JobProfile.objects.select_related(
             'job_role', 'required_instruction', 'decision_making',
-            'management_impact', 'final_complexity_level', 
+            'management_impact', 'final_complexity_level',
             'occupational_classification', 'referential_employee__person'
         ).filter(
             is_active=True,
@@ -1091,20 +1106,20 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
             impact = p.management_impact.name if p.management_impact else ""
             complexity = p.final_complexity_level.name if p.final_complexity_level else ""
             group = p.occupational_classification.occupational_group if p.occupational_classification else ""
-            
+
             ref_employee = str(p.referential_employee.person) if p.referential_employee else "VACANTE"
 
             row = [
-                idx,            # A
-                job_title,      # B
-                role,           # C
-                instruction,    # D
-                experience,     # E
-                decision,       # F
-                impact,         # G
-                complexity,     # H
-                group,          # I
-                ref_employee    # J
+                idx,  # A
+                job_title,  # B
+                role,  # C
+                instruction,  # D
+                experience,  # E
+                decision,  # F
+                impact,  # G
+                complexity,  # H
+                group,  # I
+                ref_employee  # J
             ]
 
             for col_idx, value in enumerate(row, start=1):
@@ -1112,15 +1127,15 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
                 cell.font = font_body
                 cell.border = thin_border
                 # Alinear al centro excepto Titulo y Referencial que pueden ser largos
-                if col_idx in [2, 10]: 
+                if col_idx in [2, 10]:
                     cell.alignment = left_aligned
                 else:
                     cell.alignment = center_aligned
-            
+
             row_num += 1
 
         # 7. Ajuste de Ancho de Columnas
-        column_widths = [5, 40, 25, 25, 15, 20, 20, 20, 25, 35] # A to J
+        column_widths = [5, 40, 25, 25, 15, 20, 20, 20, 25, 35]  # A to J
         for i, width in enumerate(column_widths, start=1):
             col_letter = openpyxl.utils.get_column_letter(i)
             ws.column_dimensions[col_letter].width = width
@@ -1138,18 +1153,18 @@ def api_get_profile_valuation_chain(request, profile_id):
     try:
         profile = JobProfile.objects.filter(pk=profile_id).select_related(
             'job_role',
-            'required_instruction', 
+            'required_instruction',
             'decision_making',
             'management_impact',
             'final_complexity_level'
         ).first()
-        
+
         if not profile:
             return JsonResponse({
                 'success': False,
                 'message': 'Perfil no encontrado'
             }, status=404)
-        
+
         # Construir respuesta con los catalog_items seleccionados
         valuation_data = {
             'success': True,
@@ -1162,9 +1177,9 @@ def api_get_profile_valuation_chain(request, profile_id):
                 'complexity_id': profile.final_complexity_level_id
             }
         }
-        
+
         return JsonResponse(valuation_data)
-        
+
     except Exception as e:
         import traceback
         print("=" * 80)
@@ -1172,7 +1187,7 @@ def api_get_profile_valuation_chain(request, profile_id):
         traceback.print_exc()
         print("=" * 80)
         return JsonResponse({
-            'success': False, 
+            'success': False,
             'message': f'Error del servidor: {str(e)}'
         }, status=500)
 
@@ -1182,6 +1197,7 @@ class AssignGroupApiView(LoginRequiredMixin, View):
     API para asignar manualmente el grupo ocupacional (OccupationalMatrix) a un perfil.
     Recibe JSON: { profile_id: <int>, matrix_id: <int> }
     """
+
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -1189,7 +1205,8 @@ class AssignGroupApiView(LoginRequiredMixin, View):
             matrix_id = data.get('matrix_id')
 
             if not profile_id or not matrix_id:
-                return JsonResponse({'success': False, 'message': 'Faltan datos requeridos (profile_id, matrix_id)'}, status=400)
+                return JsonResponse({'success': False, 'message': 'Faltan datos requeridos (profile_id, matrix_id)'},
+                                    status=400)
 
             profile = get_object_or_404(JobProfile, pk=profile_id)
             classification = get_object_or_404(OccupationalMatrix, pk=matrix_id)
@@ -1197,7 +1214,7 @@ class AssignGroupApiView(LoginRequiredMixin, View):
             # Validar si es necesario alguna regla de negocio aquí.
             # Por ahora asignamos directo.
             profile.occupational_classification = classification
-            
+
             # Copiar atributos de la Matriz al Perfil para mantener consistencia
             profile.job_role = classification.required_role
             profile.required_instruction = classification.minimum_instruction
@@ -1205,11 +1222,11 @@ class AssignGroupApiView(LoginRequiredMixin, View):
             profile.management_impact = classification.required_impact
             profile.final_complexity_level = classification.complexity_level
             profile.required_experience_months = classification.minimum_experience_months
-            
+
             profile.save()
 
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': f'Perfil asignado correctamente a {classification.occupational_group} - Grado {classification.grade}'
             })
 

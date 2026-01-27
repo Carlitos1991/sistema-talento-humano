@@ -22,7 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         complexity_level_id: '',
                         minimum_instruction_id: '',
                         minimum_experience_months: 0
-                    }
+                    },
+                    activities: [{
+                        action_verb: '',
+                        description: '',
+                        additional_knowledge: '',
+                        deliverable: '',
+                        complexity: '',
+                        contribution: '',
+                        frequency: ''
+                    }],
+                    currentUnitDeliverables: [],
                 }
             },
             mounted() {
@@ -259,7 +269,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     matchResult: null,
                     filteredMatrix: [], // Grupos ocupacionales filtrados por complejidad
                     activities: [{action_verb: '', description: '', additional_knowledge: ''}],
-                    catalogs: {instruction: [], decisions: [], impact: [], roles: [], verbs: [], frequency: [], competencies: []},
+                    catalogs: {
+                        instruction: [],
+                        decisions: [],
+                        impact: [],
+                        roles: [],
+                        verbs: [],
+                        frequency: [],
+                        competencies: []
+                    },
                     allCompetencies: [],
                     selectedTechnical: ['', '', ''],
                     selectedBehavioral: ['', '', ''],
@@ -305,9 +323,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             },
             computed: {
-                technicalList() { return this.allCompetencies.filter(c => c.type === 'TECHNICAL'); },
-                behavioralList() { return this.allCompetencies.filter(c => c.type === 'BEHAVIORAL'); },
-                transversalList() { return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL'); },
+                technicalList() {
+                    return this.allCompetencies.filter(c => c.type === 'TECHNICAL');
+                },
+                behavioralList() {
+                    return this.allCompetencies.filter(c => c.type === 'BEHAVIORAL');
+                },
+                transversalList() {
+                    return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL');
+                },
 
                 selectedMatrixItem() {
                     if (!this.formData.occupational_classification) return null;
@@ -317,12 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 filteredVerbs() {
                     // Filtrar verbos por el ROL seleccionado en Step 2
                     const roleLevelIndex = this.valuationLevels.findIndex(lvl => lvl.type === 'ROLE');
-                    
+
                     // Si no se ha seleccionado un rol, retornar todos los verbos
                     if (roleLevelIndex === -1 || !this.selectedNodes[roleLevelIndex]) {
                         return this.catalogs.verbs;
                     }
-                    
+
                     const selectedRoleNodeId = this.selectedNodes[roleLevelIndex];
 
                     return this.catalogs.verbs.filter(verb => {
@@ -346,11 +370,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     return this.selectedUnits && this.selectedUnits.length > 0 && !!this.selectedUnits[0];
                 },
                 hasBasicData() {
-                     return this.firstUnitSelected && this.formData.specific_job_title;
+                    return this.firstUnitSelected && this.formData.specific_job_title;
                 },
                 isNextDisabled() {
                     if (this.currentStep === 1) return !this.hasBasicData;
-                    
+
                     if (this.currentStep === 2) {
                         // MODIFICACIÓN: Habilitar botón si ya se tienen los 6 primeros niveles
                         // (Rol, Instrucción, Exp, Decisión, Impacto, Complejidad)
@@ -381,11 +405,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
 
                     // 2. Arrays de Complejidad/Competencias
-                    this.activities = initData.activities && initData.activities.length ? initData.activities : [{action_verb: '', description: '', additional_knowledge: ''}];
+                    this.activities = initData.activities && initData.activities.length ? initData.activities : [{
+                        action_verb: '',
+                        description: '',
+                        additional_knowledge: ''
+                    }];
                     if (initData.selectedTechnical) this.selectedTechnical = initData.selectedTechnical;
                     if (initData.selectedBehavioral) this.selectedBehavioral = initData.selectedBehavioral;
                     if (initData.selectedTransversal) this.selectedTransversal = initData.selectedTransversal;
-
+                    if (initData.unit_deliverables) {
+                        this.currentUnitDeliverables = initData.unit_deliverables;
+                    }
                     // 3. Rehidratar Unidades (Paso 1)
                     // Reiniciamos para cargar en orden
                     this.unitLevels = [];
@@ -398,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const unitId = units[i];
                             // El fetchUnits anterior ya pusheó el slot para este nivel
                             this.selectedUnits[i] = unitId;
-                            
+
                             // Cargar hijos del seleccionado para preparar el siguiente nivel (o llenar las options)
                             await this.fetchUnits(unitId, i + 1);
                         }
@@ -441,10 +471,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         // MODIFICACIÓN: Validar hasta el nivel 6 (Complejidad). El nivel 7 (Resultado) se hace fuera.
                         // Niveles: 1.Rol, 2.Instrucción, 3.Exp, 4.Decisión, 5.Impacto, 6.Complejidad
                         // Se verifica que selectedNodes tenga al menos 6 valores no vacíos
-                        
+
                         // Filtramos valores vacíos
                         const validNodes = this.selectedNodes.filter(n => n !== '');
-                        
+
                         // Si hay menos de 6, falta completar
                         if (validNodes.length < 6) {
                             window.Toast.fire({
@@ -456,12 +486,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (this.currentStep === 3) {
                         if (this.activities.length < 5) {
-                            window.Toast.fire({icon: 'warning', title: 'Debe registrar al menos 5 actividades esenciales.'});
+                            window.Toast.fire({
+                                icon: 'warning',
+                                title: 'Debe registrar al menos 5 actividades esenciales.'
+                            });
                             return false;
                         }
                         const allComplete = this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
                         if (!allComplete) {
-                            window.Toast.fire({icon: 'warning', title: 'Todas las actividades deben tener verbo, descripción y conocimientos.'});
+                            window.Toast.fire({
+                                icon: 'warning',
+                                title: 'Todas las actividades deben tener verbo, descripción y conocimientos.'
+                            });
                             return false;
                         }
                     }
@@ -502,9 +538,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.formData.administrative_unit = id;
                         const codeRes = await fetch(this.urls.nextCode.replace('0', id));
                         const codeData = await codeRes.json();
+                        await this.fetchUnitDeliverables(id);
                         this.formData.position_code = codeData.next_code;
                     }
                     this.$nextTick(() => this.initSelect2());
+                },
+                async fetchUnitDeliverables(unitId) {
+                    try {
+                        // Asumiendo que creas un endpoint simple o usas uno existente
+                        const res = await fetch(`/institution/api/units/${unitId}/deliverables/`);
+                        const data = await res.json();
+                        this.currentUnitDeliverables = data;
+                    } catch (e) {
+                        console.error("Error cargando entregables:", e);
+                    }
                 },
                 // --- VALORACIÓN PASO 2 ---
                 async fetchValuationLevel(parentId) {
@@ -526,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (id) {
                         const sel = this.valuationLevels[index].options.find(n => n.id == id);
-                        
+
                         // Siempre cargar el siguiente nivel, incluyendo después de COMPLEXITY
                         if (sel.type === 'RESULT') {
                             this.matchResult = sel.classification;
@@ -543,13 +590,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.filteredMatrix = [];
                         return;
                     }
-                    
+
                     // Obtener los catalog_item_id de todos los niveles seleccionados
                     const nodes = this.selectedNodes.map((nodeId, idx) => {
                         if (!nodeId || !this.valuationLevels[idx]) return null;
                         return this.valuationLevels[idx].options.find(n => n.id == nodeId);
                     }).filter(Boolean);
-                    
+
                     // Extraer y convertir a números los catalog_item_id de cada nivel
                     const roleId = nodes[0]?.catalog_item_id ? parseInt(nodes[0].catalog_item_id) : null;
                     const instructionId = nodes[1]?.catalog_item_id ? parseInt(nodes[1].catalog_item_id) : null;
@@ -557,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const decisionId = nodes[3]?.catalog_item_id ? parseInt(nodes[3].catalog_item_id) : null;
                     const impactId = nodes[4]?.catalog_item_id ? parseInt(nodes[4].catalog_item_id) : null;
                     const complexityId = parseInt(complexityCatalogItemId);
-                    
+
                     // Calcular meses de experiencia
                     let experienceMonths = 0;
                     if (experienceNode && experienceNode.name_extra) {
@@ -571,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     }
-                    
+
                     console.log('Filtros aplicados (convertidos a números):', {
                         roleId,
                         instructionId,
@@ -580,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         impactId,
                         complexityId
                     });
-                    
+
                     // Filtrar la matriz - TODOS los campos deben coincidir exactamente (comparación numérica)
                     this.filteredMatrix = this.catalogs.matrix.filter(m => {
                         const matchRole = parseInt(m.required_role_id) === roleId;
@@ -589,10 +636,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const matchDecision = parseInt(m.required_decision_id) === decisionId;
                         const matchImpact = parseInt(m.required_impact_id) === impactId;
                         const matchComplexity = parseInt(m.complexity_level_id) === complexityId;
-                        
-                        const passAll = matchRole && matchInstruction && matchExperience && 
-                                       matchDecision && matchImpact && matchComplexity;
-                        
+
+                        const passAll = matchRole && matchInstruction && matchExperience &&
+                            matchDecision && matchImpact && matchComplexity;
+
                         if (matchComplexity) {
                             console.log(`Registro ${m.occupational_group}-G${m.grade}:`, {
                                 'Rol': matchRole ? '✓' : `✗ (esperado: ${roleId}, tiene: ${m.required_role_id})`,
@@ -604,13 +651,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 'PASA': passAll ? 'SÍ ✓' : 'NO ✗'
                             });
                         }
-                        
+
                         return passAll;
                     });
-                    
+
                     console.log('Matriz filtrada:', this.filteredMatrix);
                     console.log('Total resultados:', this.filteredMatrix.length);
-                    
+
                     if (this.filteredMatrix.length === 0) {
                         console.warn('No se encontraron registros que coincidan con todos los criterios');
                     }
@@ -634,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 initSelect2() {
                     const self = this;
                     $('.select2-unit').select2({width: '100%'});
-                    
+
                     $('.select2-unit').off('change.vue').on('change.vue', function () {
                         const idx = $(this).data('index');
                         const val = $(this).val();
@@ -650,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         width: '100%',
                         placeholder: 'Seleccione...'
                     });
-                    
+
                     $('.select2-valuation').off('change.vue').on('change.vue', function () {
                         const idx = $(this).data('index');
                         const val = $(this).val();
@@ -668,11 +715,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         if ($('.select2-matrix').hasClass('select2-hidden-accessible')) {
                             $('.select2-matrix').select2('destroy');
                         }
-                        
+
                         $('.select2-matrix').select2({
                             width: '100%',
                             placeholder: 'Seleccione grupo ocupacional...'
-                        }).off('change.vue').on('change.vue', function() {
+                        }).off('change.vue').on('change.vue', function () {
                             self.formData.occupational_classification = $(this).val();
                         });
                     }
@@ -683,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const setup = (cls, arrayRef) => {
                         $(cls).select2({width: '100%', placeholder: 'Seleccione...'})
                             .off('change.vue')
-                            .on('change.vue', function() {
+                            .on('change.vue', function () {
                                 const idx = $(this).data('index');
                                 const val = $(this).val();
                                 if (arrayRef[idx] !== val) {
@@ -722,7 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ...this.selectedBehavioral,
                         ...this.selectedTransversal
                     ].filter(id => id && id !== '');
-                    
+
                     // Capturar los IDs de todos los niveles de valoración (nodos)
                     const valuationNodeIds = {
                         role_node_id: this.selectedNodes[0] || null,
@@ -778,12 +825,12 @@ document.addEventListener('DOMContentLoaded', () => {
             delimiters: ['[[', ']]'],
             data() {
                 return {
-                    loading: false, 
-                    isEdit: false, 
+                    loading: false,
+                    isEdit: false,
                     showModal: false,
-                    currentId: null, 
-                    searchQuery: '', 
-                    urls: {}, 
+                    currentId: null,
+                    searchQuery: '',
+                    urls: {},
                     complexityLevels: [],
                     formData: {name: '', type: 'TECHNICAL', definition: '', suggested_level: ''},
                     currentErrors: {}
@@ -797,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     update: compEl.dataset.urlUpdateBase,
                     toggle: compEl.dataset.urlToggleBase
                 };
-                
+
                 try {
                     this.complexityLevels = JSON.parse(compEl.dataset.levels || '[]');
                 } catch (e) {
@@ -910,12 +957,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 filterTable() {
                     const query = this.searchQuery.toLowerCase().trim();
                     const rows = document.querySelectorAll('#profileTable tbody tr');
-                    
+
                     rows.forEach(row => {
                         const text = row.textContent.toLowerCase();
                         row.dataset.filtered = text.includes(query) ? 'true' : 'false';
                     });
-                    
+
                     // Re-aplicar paginación después de filtrar
                     this.currentPage = 1;
                     this.applyPagination();
@@ -930,13 +977,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Obtener filas visibles (filtradas)
                     const visibleRows = this.allDOMRows.filter(r => r.dataset.filtered === 'true');
                     this.totalRows = visibleRows.length;
-                    
+
                     const start = (this.currentPage - 1) * this.pageSize;
                     const end = start + this.pageSize;
-                    
+
                     // Ocultar todas las filas primero
                     this.allDOMRows.forEach(row => row.style.display = 'none');
-                    
+
                     // Mostrar solo las de la página actual
                     visibleRows.forEach((row, idx) => {
                         row.style.display = (idx >= start && idx < end) ? '' : 'none';
@@ -1014,13 +1061,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const emp = data.data;
                 resName.textContent = emp.full_name;
                 resEmail.textContent = emp.email;
-                
+
                 // Foto
                 const photoUrl = emp.photo ? emp.photo : '/static/img/avatar-placeholder.png';
                 resPhoto.innerHTML = `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-                
+
                 hiddenId.value = emp.id;
-                
+
                 btnSubmit.disabled = false;
                 resultCard.classList.remove('hidden');
             } else {
@@ -1028,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resEmail.textContent = data.message;
                 resPhoto.innerHTML = '<i class="fas fa-user-slash fa-lg text-muted"></i>';
                 hiddenId.value = '';
-                
+
                 // Opcionalmente ocultar card o mostrar error style
                 btnSubmit.disabled = true;
             }
@@ -1043,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const form = e.target;
         const btn = document.getElementById('btn-submit-assign-ref');
-        
+
         // Bloqueo
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
         btn.disabled = true;
@@ -1056,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1112,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentVal = select.value;
             Array.from(select.options).forEach(opt => {
                 if (!opt.value) return; // Skip placeholder
-                
+
                 // Si el valor está en la lista de seleccionados y NO es el valor de este select
                 if (selectedValues.includes(opt.value) && opt.value !== currentVal) {
                     opt.disabled = true;
@@ -1129,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const form = e.target;
         const btn = document.getElementById('btn-submit-legalize');
-        
+
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
         btn.disabled = true;
 
@@ -1141,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1150,8 +1197,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
-                     window.closeManualModal();
-                     location.reload();
+                    window.closeManualModal();
+                    location.reload();
                 });
             } else {
                 Swal.fire('Error', data.message, 'error');
@@ -1189,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const form = e.target;
         const btn = document.getElementById('btn-submit-upload');
-        
+
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
         btn.disabled = true;
 
@@ -1201,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
@@ -1210,9 +1257,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
-                     window.closeManualModal();
-                     // Opcional: recargar solo fila o página
-                     location.reload();
+                    window.closeManualModal();
+                    // Opcional: recargar solo fila o página
+                    location.reload();
                 });
             } else {
                 Swal.fire('Error', data.message, 'error');

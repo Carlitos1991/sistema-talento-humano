@@ -199,7 +199,8 @@ class JobProfile(BaseModel):
     reviewed_by = models.ForeignKey(Authorities, related_name='reviewed_profiles', on_delete=models.PROTECT, null=True)
     approved_by = models.ForeignKey(Authorities, related_name='approved_profiles', on_delete=models.PROTECT, null=True)
 
-    legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True, verbose_name="Perfil Legalizado (Escaneado)")
+    legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True,
+                                          verbose_name="Perfil Legalizado (Escaneado)")
 
     @property
     def is_legalized(self):
@@ -223,11 +224,10 @@ class JobProfile(BaseModel):
 
 class JobActivity(BaseModel):
     """
-    Actividades esenciales del puesto.
+    Actividades esenciales del puesto enriquecidas con métricas de valoración.
     """
     profile = models.ForeignKey(JobProfile, on_delete=models.CASCADE, related_name='activities')
 
-    # SOLUCIÓN AL ERROR: related_name explícitos
     action_verb = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'ACTION_VERBS'},
@@ -241,6 +241,37 @@ class JobActivity(BaseModel):
     )
 
     description = models.TextField(verbose_name="Descripción")
+    deliverable = models.ForeignKey(
+        'institution.Deliverable',
+        on_delete=models.PROTECT,
+        related_name='activities',
+        verbose_name="Entregable / Producto",
+        null=True, blank=True
+    )
+
+    complexity = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'},
+        related_name='activities_complexity',
+        verbose_name="Nivel de Complejidad",
+        null=True, blank=True
+    )
+
+    contribution = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'},
+        related_name='activities_contribution',
+        verbose_name="Aporte a la Gestión",
+        null=True, blank=True
+    )
+
+    frequency = models.ForeignKey(
+        ManualCatalogItem, on_delete=models.PROTECT,
+        limit_choices_to={'catalog__code': 'FREQUENCY'},
+        related_name='activities_frequency',
+        verbose_name="Frecuencia",
+        null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "Actividad Esencial"

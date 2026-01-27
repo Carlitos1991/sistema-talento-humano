@@ -1,5 +1,5 @@
 # apps/institution/views.py
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
@@ -384,3 +384,27 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
             'address': unit.address, 'phone': unit.phone
         }
         return JsonResponse({'success': True, 'data': data})
+
+
+@login_required
+def api_unit_deliverables(request, unit_id):
+    """
+    Endpoint para obtener los entregables de una unidad administrativa específica.
+    Utilizado por el Wizard de Perfiles de Puesto (Vue.js).
+    """
+    try:
+        # Filtramos por la unidad y que el entregable esté activo
+        deliverables = Deliverable.objects.filter(
+            unit_id=unit_id,
+            is_active=True
+        ).values('id', 'name')
+
+        # Convertimos el QuerySet a una lista para serialización JSON
+        data = list(deliverables)
+
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse(
+            {'error': str(e)},
+            status=500
+        )

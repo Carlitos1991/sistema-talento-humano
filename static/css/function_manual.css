@@ -936,3 +936,14 @@ body.no-scroll {
     transform: none !important;
     pointer-events: none; /* Evita cualquier interacción */
 }
+
+/* Ajuste para múltiples elementos en celdas de actividad */
+.table-premium td .mb-1 {
+    margin-bottom: 4px !important;
+}
+
+/* Permitir que la celda de valoración sea un poco más compacta */
+.table-premium td select.form-select-premium {
+    font-size: 0.8rem;
+    padding: 0 20px 0 8px;
+}

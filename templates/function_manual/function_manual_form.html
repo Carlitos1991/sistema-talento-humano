@@ -77,7 +77,8 @@
                     </div>
 
                     <div class="valuation-chain-container">
-                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box" v-show="level.type !== 'RESULT'">
+                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box"
+                             v-show="level.type !== 'RESULT'">
                             <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
                             <select class="form-control select2-valuation"
                                     :data-index="index"
@@ -121,28 +122,62 @@
                         <table class="table-premium">
                             <thead>
                             <tr>
-                                <th style="width: 200px;">Verbo de Acción</th>
-                                <th>Descripción de la Actividad (¿Qué hace? + ¿Sobre qué?)</th>
-                                <th style="width: 250px;">Conocimientos Adicionales</th>
-                                <th style="width: 50px;"></th>
+                                <th style="width: 180px;">Acción y Producto</th>
+                                <th>Descripción de la Actividad</th>
+                                <th style="width: 150px;">Valoración (C/A/F)</th>
+                                <th style="width: 180px;">Conocimientos</th>
+                                <th style="width: 40px;"></th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr v-for="(act, idx) in activities" :key="idx" class="row-animated">
                                 <td>
-                                    <select v-model="act.action_verb" class="form-select-premium">
-                                        <option value="">Seleccione...</option>
+                                    <!-- Verbo -->
+                                    <select v-model="act.action_verb" class="form-select-premium mb-1">
+                                        <option value="">Verbo...</option>
                                         <option v-for="v in filteredVerbs" :key="v.id" :value="v.id">[[ v.name ]]
+                                        </option>
+                                    </select>
+                                    <!-- Entregable (Filtrado dinámicamente por Unidad) -->
+                                    <select v-model="act.deliverable" class="form-select-premium">
+                                        <option value="">Entregable...</option>
+                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id">[[ d.name
+                                            ]]
                                         </option>
                                     </select>
                                 </td>
                                 <td>
-                                    <textarea v-model="act.description" class="form-textarea-inline"
-                                              placeholder="Descripción..."></textarea>
+                <textarea v-model="act.description" class="form-textarea-inline"
+                          placeholder="¿Qué hace? + ¿Sobre qué?..."
+                          style="height: 85px !important; max-height: 85px !important;"></textarea>
                                 </td>
                                 <td>
-                                    <input type="text" v-model="act.additional_knowledge" class="form-input-premium"
-                                           placeholder="Ej: Normativa contable, Excel...">
+                                    <!-- Complejidad -->
+                                    <select v-model="act.complexity" class="form-select-premium mb-1"
+                                            title="Complejidad">
+                                        <option value="">Compl...</option>
+                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
+                                            ]]
+                                        </option>
+                                    </select>
+                                    <!-- Aporte -->
+                                    <select v-model="act.contribution" class="form-select-premium mb-1" title="Aporte">
+                                        <option value="">Aporte...</option>
+                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id">[[ c.name
+                                            ]]
+                                        </option>
+                                    </select>
+                                    <!-- Frecuencia -->
+                                    <select v-model="act.frequency" class="form-select-premium" title="Frecuencia">
+                                        <option value="">Frec...</option>
+                                        <option v-for="f in catalogs.frequency" :key="f.id" :value="f.id">[[ f.name ]]
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
+                          placeholder="Conocimientos..."
+                          style="height: 85px !important; max-height: 85px !important;"></textarea>
                                 </td>
                                 <td class="cell-top">
                                     <button type="button" class="btn-delete-icon" @click="removeActivity(idx)">
@@ -179,21 +214,23 @@
                             <textarea v-model="formData.experience_details" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
-                    
+
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
                             <label class="form-label">Relaciones Internas/Externas</label>
-                            <textarea v-model="formData.interface_relations" class="form-control" rows="2" placeholder="Describa con quién se relaciona el puesto"></textarea>
+                            <textarea v-model="formData.interface_relations" class="form-control" rows="2"
+                                      placeholder="Describa con quién se relaciona el puesto"></textarea>
                         </div>
                         <div class="form-group">
-                             <label class="form-label">Temática de Capacitación</label>
-                             <textarea v-model="formData.training_topic" class="form-control" rows="2" placeholder="Describa la temática de capacitación requerida"></textarea>
+                            <label class="form-label">Temática de Capacitación</label>
+                            <textarea v-model="formData.training_topic" class="form-control" rows="2"
+                                      placeholder="Describa la temática de capacitación requerida"></textarea>
                         </div>
                     </div>
 
                     <!-- SECCIÓN DE COMPETENCIAS -->
                     <div class="section-title mt-4"><i class="fa-solid fa-brain"></i> Competencias del Perfil</div>
-                    
+
                     <div class="row">
                         <!-- Técnicas -->
                         <div class="col-md-4">
@@ -201,23 +238,27 @@
                                 <h6 class="text-primary border-bottom pb-2 mb-3">Técnicas</h6>
                                 <div v-for="(sel, i) in selectedTechnical" :key="'tech-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-tech" :data-index="i" v-model="selectedTechnical[i]">
+                                    <select class="form-control select2-comp-tech" :data-index="i"
+                                            v-model="selectedTechnical[i]">
                                         <option value="">Seleccione...</option>
-                                        <option v-for="c in technicalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                        <option v-for="c in technicalList" :key="c.id" :value="c.id">[[ c.name ]]
+                                        </option>
                                     </select>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Conductuales -->
                         <div class="col-md-4">
                             <div class="p-3 bg-white border rounded">
                                 <h6 class="text-info border-bottom pb-2 mb-3">Conductuales</h6>
                                 <div v-for="(sel, i) in selectedBehavioral" :key="'beh-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-beh" :data-index="i" v-model="selectedBehavioral[i]">
+                                    <select class="form-control select2-comp-beh" :data-index="i"
+                                            v-model="selectedBehavioral[i]">
                                         <option value="">Seleccione...</option>
-                                        <option v-for="c in behavioralList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                        <option v-for="c in behavioralList" :key="c.id" :value="c.id">[[ c.name ]]
+                                        </option>
                                     </select>
                                 </div>
                             </div>
@@ -229,10 +270,12 @@
                                 <h6 class="text-secondary border-bottom pb-2 mb-3">Transversales</h6>
                                 <div v-for="(sel, i) in selectedTransversal" :key="'trans-'+i" class="mb-3">
                                     <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-trans" :data-index="i" v-model="selectedTransversal[i]">
+                                    <select class="form-control select2-comp-trans" :data-index="i"
+                                            v-model="selectedTransversal[i]">
 
                                         <option value="">Seleccione...</option>
-                                        <option v-for="c in transversalList" :key="c.id" :value="c.id">[[ c.name ]]</option>
+                                        <option v-for="c in transversalList" :key="c.id" :value="c.id">[[ c.name ]]
+                                        </option>
                                     </select>
                                 </div>
                             </div>
@@ -250,15 +293,18 @@
                     <i class="fa-solid fa-xmark"></i> Cancelar
                 </button>
 
-                <button v-if="currentStep > 1" type="button" class="btn-wizard-nav btn-wizard-prev" @click="currentStep--">
+                <button v-if="currentStep > 1" type="button" class="btn-wizard-nav btn-wizard-prev"
+                        @click="currentStep--">
                     <i class="fas fa-chevron-left"></i> Anterior
                 </button>
 
-                <button v-if="currentStep < 4" type="button" class="btn-wizard-nav btn-wizard-next" @click="currentStep++" :disabled="isNextDisabled">
+                <button v-if="currentStep < 4" type="button" class="btn-wizard-nav btn-wizard-next"
+                        @click="currentStep++" :disabled="isNextDisabled">
                     Siguiente <i class="fas fa-chevron-right"></i>
                 </button>
 
-                <button v-if="currentStep === 4" type="submit" class="btn-wizard-nav btn-wizard-save" :disabled="loading">
+                <button v-if="currentStep === 4" type="submit" class="btn-wizard-nav btn-wizard-save"
+                        :disabled="loading">
                     <i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar
                 </button>
             </div>
@@ -269,7 +315,7 @@
     {{ catalogs_json|safe }}
     </script>
     {% if initial_data %}
-    <script id="initial-data" type="application/json">
+        <script id="initial-data" type="application/json">
     {{ initial_data|safe }}
     </script>
     {% endif %}
