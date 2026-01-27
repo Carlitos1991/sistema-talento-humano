@@ -16,15 +16,19 @@ class SIGETHSecurityMiddleware:
 
     def __call__(self, request):
         path = request.path_info
-
+        try:
+            login_path = settings.LOGIN_URL if settings.LOGIN_URL.startswith('/') else reverse(settings.LOGIN_URL)
+        except Exception:
+            login_path = settings.LOGIN_URL
         # 1. Rutas que el biométrico y el público pueden usar sin estar logueados
         # Ajustado a tus URLs actuales
         public_paths = [
-            settings.LOGIN_URL,  # 'core:login'
-            '/admin/',  # Administración de Django
-            '/static/',  # Archivos CSS/JS
-            '/media/',  # Fotos de empleados
-            '/biometric/adms/',  # <--- CRUCIAL: El hardware entra por aquí
+            login_path,
+            settings.LOGIN_URL,  # también aceptar el nombre por si acaso
+            '/admin/',
+            '/static/',
+            '/media/',
+            '/biometric/adms/',
         ]
 
         # 2. Verificar si la petición es para una ruta pública
