@@ -63,3 +63,21 @@ class AdministrativeUnit(BaseModel):
         if self.parent:
             return f"{self.parent.get_full_path()} > {self.name}"
         return self.name
+
+
+class Deliverable(BaseModel):
+    unit = models.ForeignKey(
+        'AdministrativeUnit',
+        on_delete=models.CASCADE,
+        related_name='deliverables'
+    )
+    name = models.CharField(max_length=255, verbose_name="Nombre del Entregable")
+    description = models.TextField(blank=True, null=True, verbose_name="Descripción/Especificaciones")
+
+    class Meta:
+        verbose_name = "Entregable"
+        verbose_name_plural = "Entregables"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} - {self.unit.name}"

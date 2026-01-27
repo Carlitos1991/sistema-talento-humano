@@ -1,7 +1,7 @@
 from django import forms
 from core.forms import BaseFormMixin
 from employee.models import Employee
-from .models import AdministrativeUnit, OrganizationalLevel
+from .models import AdministrativeUnit, OrganizationalLevel, Deliverable
 
 
 # --- FORMULARIO DE UNIDADES (Se mantiene igual) ---
@@ -46,7 +46,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Configurar queryset de parent
         self.fields['parent'].queryset = AdministrativeUnit.objects.none()
         if 'parent' in self.data:
@@ -61,7 +61,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         # Configurar queryset de boss - VACIO para carga con AJAX
         self.fields['boss'].queryset = Employee.objects.none()
         self.fields['boss'].required = False
-        
+
         # Si estamos editando y hay un jefe asignado, cargarlo
         if self.instance.pk and self.instance.boss:
             self.fields['boss'].queryset = Employee.objects.filter(pk=self.instance.boss.pk)
@@ -111,3 +111,14 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class DeliverableForm(BaseFormMixin, forms.ModelForm):
+    class Meta:
+        model = Deliverable
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Ej: Reporte Mensual de Nómina', 'class': 'input-field'}),
+            'description': forms.Textarea(
+                attrs={'placeholder': 'Detalle los requisitos del entregable...', 'rows': 3, 'class': 'input-field'}),
+        }

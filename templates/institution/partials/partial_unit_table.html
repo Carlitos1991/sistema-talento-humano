@@ -68,6 +68,11 @@
                                     title="Editar Unidad">
                                 <i class="fas fa-pencil"></i>
                             </button>
+                            <a href="{% url 'institution:unit_detail_view' unit.id %}"
+                               class="btn-icon btn-detail-action"
+                               title="Ver Entregables">
+                                <i class="fas fa-eye"></i>
+                            </a>
 
                             <!-- Toggle Status (Estilo Correcto) -->
                             {% if unit.is_active %}

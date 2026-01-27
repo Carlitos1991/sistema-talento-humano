@@ -2,14 +2,14 @@
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import ListView, CreateView, UpdateView, View
+from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from employee.models import Employee
-from .models import AdministrativeUnit, OrganizationalLevel
-from .forms import AdministrativeUnitForm, OrganizationalLevelForm
+from .models import AdministrativeUnit, OrganizationalLevel, Deliverable
+from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm
 
 
 class ParentOptionsJsonView(LoginRequiredMixin, View):
@@ -151,28 +151,11 @@ class UnitCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
 
 
 # --- DETALLES (JSON para Modal) ---
-class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = AdministrativeUnit
+    template_name = 'institution/institution_unit_detail.html'
+    context_object_name = 'unit'
     permission_required = 'institution.view_administrativeunit'
-
-    def get(self, request, pk):
-        unit = get_object_or_404(AdministrativeUnit, pk=pk)
-        boss_data = None
-        if unit.boss:
-            boss_data = {
-                'id': unit.boss.id,
-                'text': f"{unit.boss.person.last_name} {unit.boss.person.first_name}"
-            }
-        data = {
-            'name': unit.name,
-            'level': unit.level_id,
-            'parent': unit.parent_id,
-            'boss': unit.boss_id,
-            'boss_data': boss_data,
-            'code': unit.code,
-            'address': unit.address,
-            'phone': unit.phone
-        }
-        return JsonResponse({'success': True, 'data': data})
 
 
 # --- ACTUALIZAR ---
@@ -346,3 +329,58 @@ def api_get_administrative_children(request):
     data = [{'id': u.id, 'name': u.name} for u in units]
 
     return JsonResponse({'success': True, 'units': data})
+
+
+class DeliverableListJsonView(LoginRequiredMixin, View):
+    def get(self, request, unit_id):
+        deliverables = Deliverable.objects.filter(unit_id=unit_id, is_active=True).order_by('-created_at')
+        data = [{
+            'id': d.id,
+            'name': d.name,
+            'description': d.description or '',
+            'frequency': d.frequency or ''
+        } for d in deliverables]
+        return JsonResponse({'success': True, 'data': data})
+
+
+class DeliverableCreateUpdateView(LoginRequiredMixin, View):
+    def post(self, request, unit_id, pk=None):
+        if pk:
+            instance = get_object_or_404(Deliverable, pk=pk, unit_id=unit_id)
+            form = DeliverableForm(request.POST, instance=instance)
+        else:
+            form = DeliverableForm(request.POST)
+
+        if form.is_valid():
+            deliverable = form.save(commit=False)
+            deliverable.unit_id = unit_id
+            deliverable.save()
+            return JsonResponse({'success': True, 'message': 'Entregable guardado correctamente.'})
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class DeliverableDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        deliverable = get_object_or_404(Deliverable, pk=pk)
+        deliverable.is_active = False  # Soft delete
+        deliverable.save()
+        return JsonResponse({'success': True, 'message': 'Entregable eliminado.'})
+
+
+class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'institution.view_administrativeunit'
+
+    def get(self, request, pk):
+        unit = get_object_or_404(AdministrativeUnit, pk=pk)
+        boss_data = None
+        if unit.boss:
+            boss_data = {
+                'id': unit.boss.id,
+                'text': f"{unit.boss.person.last_name} {unit.boss.person.first_name}"
+            }
+        data = {
+            'name': unit.name, 'level': unit.level_id, 'parent': unit.parent_id,
+            'boss': unit.boss_id, 'boss_data': boss_data, 'code': unit.code,
+            'address': unit.address, 'phone': unit.phone
+        }
+        return JsonResponse({'success': True, 'data': data})

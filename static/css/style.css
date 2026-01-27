@@ -1151,6 +1151,7 @@ select.input-field {
 .btn-create-action,
 .btn-success-action,
 .btn-views-action,
+.btn-detail-action,
 .btn-delete-action,
 .btn-restore-action,
 .btn-list-action {
@@ -1199,6 +1200,9 @@ select.input-field {
 .btn-views-action {
     background: linear-gradient(to right, #fbbf24, #f59e0b);
 }
+.btn-detail-action {
+    background: linear-gradient(to right, #7dc1df, #1378dd);
+}
 
 .btn-delete-action {
     background: linear-gradient(to right, #c64939, #6c051d);
@@ -1226,6 +1230,7 @@ select.input-field {
 .btn-create-action:active,
 .btn-success-action:active,
 .btn-views-action:active,
+.btn-detail-action:active,
 .btn-delete-action:active,
 .btn-restore-action:active,
 .btn-list-action:active {
@@ -1238,6 +1243,7 @@ select.input-field {
     .btn-create-action,
     .btn-success-action,
     .btn-views-action,
+    .btn-detail-action,
     .btn-delete-action,
     .btn-restore-action,
     .btn-list-action {

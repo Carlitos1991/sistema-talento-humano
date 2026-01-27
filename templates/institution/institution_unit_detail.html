@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/institution_detail.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="detail-container-fluid" id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}">
+
+        <!-- 1. HERO HEADER: Nombre de la Unidad y Botón Volver -->
+        <div class="hero-detail-card">
+            <div class="hero-content">
+                <a href="{% url 'institution:unit_list' %}" class="back-link-circle" title="Volver al listado">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="hero-text">
+                    <span class="category-label">Unidad Administrativa</span>
+                    <h1>{{ unit.name }}</h1>
+                </div>
+            </div>
+            <div class="hero-actions">
+            <span class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
+                {% if unit.is_active %}Activa{% else %}Inactiva{% endif %}
+            </span>
+            </div>
+        </div>
+
+        <!-- 2. INFO BAR: Datos clave en formato horizontal -->
+        <div class="info-stats-bar">
+            <div class="info-stat-item">
+                <i class="fas fa-layer-group"></i>
+                <div>
+                    <label>Nivel Jerárquico</label>
+                    <p>{{ unit.level.name }}</p>
+                </div>
+            </div>
+            <div class="info-stat-item">
+                <i class="fas fa-user-tie"></i>
+                <div>
+                    <label>Jefe Responsable</label>
+                    <p>{{ unit.boss.person.get_full_name|default:"Sin asignar" }}</p>
+                </div>
+            </div>
+            <div class="info-stat-item">
+                <i class="fas fa-fingerprint"></i>
+                <div>
+                    <label>Código Interno</label>
+                    <p>{{ unit.code|default:"N/A" }}</p>
+                </div>
+            </div>
+            <div class="info-stat-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <div>
+                    <label>Ubicación</label>
+                    <p>{{ unit.address|default:"No registrada" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SECCIÓN DE ENTREGABLES -->
+        <div class="main-content-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h2>Portafolio de Entregables</h2>
+                    <span class="count-badge">[[ deliverables.length ]]</span>
+                </div>
+                <!-- BOTÓN NUEVO -->
+                <button type="button" @click="openModal()" class="btn-elegant-create">
+                    <i class="fas fa-plus"></i> Nuevo Entregable
+                </button>
+            </div>
+
+            <!-- Tabla Elegante (Se mantiene igual) -->
+            <div class="elegant-table-container" v-if="deliverables.length > 0">
+                <table class="elegant-table">
+                    <thead>
+                    <tr>
+                        <th width="30%">Entregable</th>
+                        <th width="15%">Frecuencia</th>
+                        <th width="40%">Descripción</th>
+                        <th width="15%" class="text-center">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="item in deliverables" :key="item.id" class="elegant-row">
+                        <td><strong>[[ item.name ]]</strong></td>
+                        <td><span class="frequency-tag">[[ item.frequency ]]</span></td>
+                        <td class="description-cell">[[ item.description ]]</td>
+                        <td>
+                            <div class="action-buttons-group">
+                                <button type="button" @click="openModal(item)" class="action-btn edit">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" @click="deleteItem(item.id)" class="action-btn delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-else class="elegant-empty-state">
+                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
+                <h3>Sin entregables registrados</h3>
+                <p>Haga clic en "Nuevo Entregable" para comenzar.</p>
+            </div>
+
+            <!-- MODAL ELEGANTE DE ENTREGABLES -->
+            <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+                <div class="modal-card animate__animated animate__fadeInDown">
+                    <div class="modal-header">
+                        <h3>[[ editingId ? 'Editar Entregable' : 'Nuevo Entregable' ]]</h3>
+                        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-grid-modal">
+                            <div class="form-group full-width">
+                                <label>Nombre del Entregable *</label>
+                                <input type="text" v-model="form.name" class="modern-input"
+                                       placeholder="Ej: Reporte Mensual">
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Descripción</label>
+                                <textarea v-model="form.description" class="modern-input" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <!-- BOTONES CON CLASES Y CLICKS CORREGIDOS -->
+                        <button type="button" class="btn-cancel-elegant" @click="closeModal">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="button" class="btn-save-elegant" @click="saveDeliverable">
+                            <i class="fas fa-save"></i> [[ editingId ? 'Actualizar' : 'Guardar' ]]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/institution/institution_deliverables.js' %}"></script>
+{% endblock %}

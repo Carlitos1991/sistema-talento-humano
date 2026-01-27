@@ -18,4 +18,12 @@ urlpatterns = [
     path('api/parents/', views.ParentOptionsJsonView.as_view(), name='api_parents'),
     path('api/employee/search/', views.EmployeeSearchJsonView.as_view(), name='api_employee_search'),
     path('api/unit-children/', views.api_get_administrative_children, name='api_unit_children'),
+    path('api/units/<int:unit_id>/deliverables/', views.DeliverableListJsonView.as_view(), name='api_deliverable_list'),
+    path('api/units/<int:unit_id>/deliverables/save/', views.DeliverableCreateUpdateView.as_view(),
+         name='api_deliverable_create'),
+    path('api/units/<int:unit_id>/deliverables/save/<int:pk>/', views.DeliverableCreateUpdateView.as_view(),
+         name='api_deliverable_update'),
+    path('api/deliverables/delete/<int:pk>/', views.DeliverableDeleteView.as_view(), name='api_deliverable_delete'),
+    path('units/detail/<int:pk>/view/', views.UnitDetailView.as_view(), name='unit_detail_view'),
+    path('units/detail/<int:pk>/json/', views.UnitDetailJsonView.as_view(), name='unit_detail_json'),
 ]

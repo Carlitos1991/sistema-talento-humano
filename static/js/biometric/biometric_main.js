@@ -128,7 +128,7 @@ const biometricApp = createApp({
             });
 
             try {
-                const response = await fetch(`/biometric/get-time/${id}/`);
+                const response = await fetch(`/biometric/get-device-time/${id}/`);
 
                 console.log('Response status:', response.status);
 
@@ -223,8 +223,11 @@ const biometricApp = createApp({
             });
 
             try {
-                const response = await fetch(`/biometric/update-time/${this.timeForm.id}/`, {
+                const response = await fetch(`/biometric/update-device-time/${this.timeForm.id}/`, {
                     method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
                     body: fd
                 });
 
@@ -446,6 +449,12 @@ const biometricApp = createApp({
 
         resetForm() {
             this.form = {id: null, name: '', ip_address: '', port: 4370, location: '', is_active: true};
+        },
+
+        getCsrfToken() {
+            return document.cookie.split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
         },
 
         notifySuccess(msg) {
