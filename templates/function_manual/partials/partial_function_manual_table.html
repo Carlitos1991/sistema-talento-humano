@@ -90,6 +90,11 @@
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
+                        <a class="btn-icon"
+                           style="background-color: #065923; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                           href="{% url 'function_manual:report_activities_excel' profile.id %}">
+                            <i class="fas fa-file-excel text-success me-2"></i>
+                        </a>
 
                         {% if profile.occupational_classification and perms.function_manual.can_admin %}
                             <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->

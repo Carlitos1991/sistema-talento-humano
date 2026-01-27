@@ -9,20 +9,24 @@ urlpatterns = [
     path('profiles/', views.JobProfileListView.as_view(), name='profile_list'),
     path('profiles/create/', views.JobProfileCreateView.as_view(), name='profile_create'),  # RUTA FALTANTE
     path('profiles/update/<int:pk>/', views.JobProfileUpdateView.as_view(), name='profile_update'),
-    path('profiles/assign-referential/<int:pk>/', views.JobProfileAssignReferentialView.as_view(), name='profile_assign_referential'),
+    path('profiles/assign-referential/<int:pk>/', views.JobProfileAssignReferentialView.as_view(),
+         name='profile_assign_referential'),
     path('profiles/legalize/<int:pk>/', views.JobProfileLegalizeView.as_view(), name='profile_legalize'),
-    path('profiles/upload-legalized/<int:pk>/', views.JobProfileUploadLegalizedView.as_view(), name='profile_upload_legalized'),
+    path('profiles/upload-legalized/<int:pk>/', views.JobProfileUploadLegalizedView.as_view(),
+         name='profile_upload_legalized'),
     path('profiles/detail/<int:pk>/', views.JobProfileDetailModalView.as_view(), name='profile_detail_modal'),
-    path('profiles/print/<int:pk>/', views.JobProfilePrintView.as_view(), name='profile_print'),  # Dummy print view for now
+    path('profiles/print/<int:pk>/', views.JobProfilePrintView.as_view(), name='profile_print'),
+    # Dummy print view for now
 
     # Reports
     path('reports/valuation-excel/', views.JobProfileValuationExcelView.as_view(), name='report_valuation_excel'),
 
     path('api/search-employee-simple/', views.api_search_employee_simple, name='api_search_employee_simple'),
     path('api/roles/', views.api_get_available_roles, name='api_get_available_roles'),
-    
+
     # API para asignar grupo ocupacional
-    path('api/profile/<int:profile_id>/valuation-chain/', views.api_get_profile_valuation_chain, name='api_profile_valuation_chain'),
+    path('api/profile/<int:profile_id>/valuation-chain/', views.api_get_profile_valuation_chain,
+         name='api_profile_valuation_chain'),
     path('api/profile/assign-group/', views.AssignGroupApiView.as_view(), name='api_profile_assign_group'),
 
     # --- ADMINISTRACIÓN / CATÁLOGOS ---
@@ -63,4 +67,6 @@ urlpatterns = [
     path('valuation/structure/', views.ValuationNodeListView.as_view(), name='valuation_list'),
     path('api/matrix/detail/<int:pk>/', views.OccupationalMatrixDetailApi.as_view(), name='api_matrix_detail'),
     path('api/matrix/toggle/<int:pk>/', views.occupational_matrix_toggle_status, name='api_matrix_toggle'),
+    path('profiles/report_activities_excel/<int:pk>/', views.JobActivityReportExcelView.as_view(),
+         name='report_activities_excel'),
 ]

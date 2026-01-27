@@ -1,4 +1,5 @@
 # apps/function_manual/views.py
+import openpyxl
 from django.db import models, transaction
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -11,6 +12,9 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import permission_required, login_required
 import json
+
+from openpyxl.styles import Border, PatternFill, Font, Alignment, Side
+
 from institution.models import Deliverable as InstDeliverable
 from employee.models import Employee
 from institution.models import AdministrativeUnit
@@ -1232,3 +1236,149 @@ class AssignGroupApiView(LoginRequiredMixin, View):
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class JobActivityReportExcelView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Genera el reporte de Levantamiento de Actividades (Formato MDT)
+    Calcula dinámicamente los valores AG, F, C y Total.
+    """
+    permission_required = "function_manual.view_jobprofile"
+
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
+        activities = profile.activities.all().select_related(
+            'action_verb', 'deliverable', 'complexity', 'contribution', 'frequency'
+        )
+
+        # 1. Configuración del Libro y Hoja
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"Levantamiento_Actividades_{profile.position_code}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Levantamiento de Actividades"
+
+        # 2. Estilos Globales
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        header_fill = PatternFill(start_color='DAE8FC', end_color='DAE8FC', fill_type='solid')
+        main_header_font = Font(name='Arial', size=11, bold=True)
+        sub_header_font = Font(name='Arial', size=8, bold=True)
+        body_font = Font(name='Arial', size=9)
+        center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        left_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+        # 3. Encabezado Superior (Fila 1 y 2)
+        ws.merge_cells('A1:C2')
+        ws['A1'] = "Municipio de Loja"
+        ws['A1'].font = main_header_font
+        ws['A1'].alignment = center_align
+
+        ws.merge_cells('D1:K2')
+        ws['D1'] = "FORMATO LEVANTAMIENTO DE ACTIVIDADES"
+        ws['D1'].font = main_header_font
+        ws['D1'].alignment = center_align
+
+        # Denominación del Puesto (Fila 3)
+        ws.merge_cells('A3:C3')
+        ws['A3'] = "DENOMINACIÓN DE PUESTO:"
+        ws['A3'].font = sub_header_font
+        ws.merge_cells('D3:K3')
+        ws['D3'] = f"{profile.specific_job_title} ({profile.position_code})"
+        ws['D3'].font = body_font
+
+        # 4. Cabeceras de Tabla (Fila 4 y 5)
+        headers = [
+            ("NRO.", "A4:A5"),
+            ("ENTREGABLES\n(PRODUCTOS/SERVICIOS)", "B4:B5"),
+            ("ACTIVIDADES", "C4:C5"),
+            ("APORTE A LA GESTION\n(AG)", "D4:D5"),
+            ("FRECUENCIA (F)", "E4:E5"),
+            ("COMPLEJIDAD (C)", "F4:F5"),
+            ("AG", "G4:G5"),
+            ("F", "H4:H5"),
+            ("C", "I4:I5"),
+            ("TOTAL\nAG*(F+C)", "J4:J5"),
+            ("ACTIVIDADES\nSELECCIONADAS PARA EL\nPERFIL", "K4:K5"),
+        ]
+
+        for text, merge_range in headers:
+            ws.merge_cells(merge_range)
+            cell = ws[merge_range.split(':')[0]]
+            cell.value = text
+            cell.font = sub_header_font
+            cell.alignment = center_align
+            cell.fill = header_fill
+            # Aplicar bordes al rango mergeado
+            for row in ws[merge_range]:
+                for c in row:
+                    c.border = thin_border
+
+        # 5. Mapeos de Lógica Normativa
+        def get_val_ag_c(name):
+            n = name.upper()
+            if "ALTO" in n: return 3
+            if "MEDIO" in n: return 2
+            if "BAJO" in n: return 1
+            return 0
+
+        def get_val_f(name):
+            n = name.upper()
+            if "DIARIO" in n: return 5
+            if "SEMANAL" in n: return 4
+            if "MENSUAL" in n: return 3
+            if "TRIMESTRAL" in n or "SEMESTRAL" in n: return 2
+            if "ANUAL" in n: return 1
+            return 0
+
+        # 6. Datos de Actividades
+        row_num = 6
+        for idx, act in enumerate(activities, start=1):
+            # Obtención de nombres
+            deliverable_name = act.deliverable.name if act.deliverable else "N/A"
+            activity_text = f"{act.action_verb.name} {act.description}".strip()
+            ag_name = act.contribution.name if act.contribution else "Bajo"
+            f_name = act.frequency.name if act.frequency else "Anual"
+            c_name = act.complexity.name if act.complexity else "Bajo"
+
+            # Obtención de valores numéricos
+            v_ag = get_val_ag_c(ag_name)
+            v_f = get_val_f(f_name)
+            v_c = get_val_ag_c(c_name)
+            total = v_ag * (v_f + v_c)
+
+            data_row = [
+                idx,  # A: Nro
+                deliverable_name,  # B: Entregable
+                activity_text,  # C: Actividad (Verbo + Desc)
+                ag_name,  # D: Nombre Aporte
+                f_name,  # E: Nombre Frecuencia
+                c_name,  # F: Nombre Complejidad
+                v_ag,  # G: Valor AG
+                v_f,  # H: Valor F
+                v_c,  # I: Valor C
+                total,  # J: Total
+                "SELECCIONADA"  # K: Selección
+            ]
+
+            for col_idx, value in enumerate(data_row, start=1):
+                cell = ws.cell(row=row_num, column=col_idx, value=value)
+                cell.font = body_font
+                cell.border = thin_border
+                # Alineación
+                if col_idx in [2, 3]:  # Texto largo a la izquierda
+                    cell.alignment = left_align
+                else:
+                    cell.alignment = center_align
+
+            row_num += 1
+
+        # 7. Ajuste de Ancho de Columnas
+        widths = [5, 25, 45, 12, 12, 12, 5, 5, 5, 10, 15]
+        for i, w in enumerate(widths, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+        wb.save(response)
+        return response
