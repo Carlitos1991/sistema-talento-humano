@@ -1,19 +1,53 @@
-<div v-if="showModal" class="modal-overlay" @click.self="closeModal" v-cloak>
-    <div class="modal-container shadow-card" style="max-width: 500px;">
-        <button type="button" @click="closeModal" class="btn-close-modal-refined"><i class="fas fa-times"></i></button>
-
-        <div class="modal-header-refined">
-            <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fas fa-file-pen"></i></div>
-                <h2 class="header-title-main">[[ isEdit ? 'Editar Tipo' : 'Nuevo Tipo de Acción' ]]</h2>
+<!-- ID para montar la app de Vue del Modal -->
+<div id="action-type-modal-app" v-cloak>
+    
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" @click.self="closeModal">
+        <div class="modal-container shadow-card animate-scale-in" style="max-width: 500px;">
+            
+            <!-- Header -->
+            <div class="modal-header-refined">
+                <button type="button" @click="closeModal" class="btn-close-modal-refined"><i class="fas fa-times"></i></button>
+                <div class="header-content-group">
+                    <div class="header-icon-circle"><i class="fas fa-file-pen"></i></div>
+                    <h2 class="header-title-main">[[ isEdit ? 'Editar Tipo' : 'Nuevo Tipo' ]]</h2>
+                </div>
             </div>
-        </div>
 
-        <div class="modal-body-scrolled" v-html="modalContent" v-if="modalContent">
-            <!-- El contenido del form se inyecta aquí vía AJAX -->
-        </div>
-        <div class="modal-body-scrolled text-center p-4" v-else>
-            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <!-- Form -->
+            <form @submit.prevent="saveData">
+                <div class="modal-body-scrolled">
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Código</label>
+                        <input type="text" v-model="formData.code" class="form-control uppercase-input" 
+                               :disabled="isEdit" placeholder="Ej: NOM-PROV" required>
+                        <small v-if="errors.code" class="text-danger">[[ errors.code[0] ]]</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Nombre</label>
+                        <input type="text" v-model="formData.name" class="form-control" 
+                               placeholder="Ej: Nombramiento" required>
+                        <small v-if="errors.name" class="text-danger">[[ errors.name[0] ]]</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="chkActive" v-model="formData.is_active">
+                            <label class="form-check-label" for="chkActive">Registro Activo</label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer-fixed">
+                    <button type="button" class="btn-cancel" @click="closeModal">CANCELAR</button>
+                    <button type="submit" class="btn-save" :disabled="loading">
+                        <i v-if="loading" class="fas fa-spinner fa-spin mr-1"></i>
+                        [[ isEdit ? 'ACTUALIZAR' : 'GUARDAR' ]]
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

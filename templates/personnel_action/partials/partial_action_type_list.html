@@ -21,15 +21,13 @@
                 <td class="actions">
                     <div class="actions-wrapper">
                         <!-- Edición controlada por instancia Vue (ActionTypeInstance) -->
-                        <button class="btn-views-action"
-                                onclick="ActionTypeInstance.openEditModal('{% url 'personnel_actions:type_update' type.pk %}')">
+                        <button class="btn-views-action" onclick="editActionType({{ type.pk }})">
                             <i class="fas fa-edit"></i>
                         </button>
 
                         <!-- Toggle Estado -->
-                        <button class="{% if type.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                                onclick="ActionTypeInstance.toggleStatus('{% url 'personnel_actions:type_toggle' type.pk %}')">
-                            <i class="fas {% if type.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                        <button class="btn-delete-action text-danger" onclick="deleteActionType({{ type.pk }})">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </td>

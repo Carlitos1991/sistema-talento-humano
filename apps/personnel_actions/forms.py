@@ -42,6 +42,16 @@ class ActionTypeForm(forms.ModelForm):
         fields = ['name', 'code', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'}),
-            'code': forms.TextInput(attrs={'class': 'form-control uppercase-input', 'placeholder': 'EJ: NOM-PROV'}),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control uppercase-input',
+                'placeholder': 'EJ: NOM-PROV',
+                'oninput': 'this.value = this.value.toUpperCase()'
+            }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code:
+            return code.upper()
+        return code

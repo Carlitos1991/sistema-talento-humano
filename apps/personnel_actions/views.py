@@ -1,3 +1,6 @@
+from django.db.models import Q
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
@@ -76,7 +79,7 @@ class ActionTypeListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # Estadísticas para las tarjetas superiores
+        # Estadísticas Globales
         ctx['stats_total'] = ActionType.objects.count()
         ctx['stats_active'] = ActionType.objects.filter(is_active=True).count()
         ctx['stats_inactive'] = ActionType.objects.filter(is_active=False).count()
@@ -84,8 +87,56 @@ class ActionTypeListView(LoginRequiredMixin, ListView):
 
     def get_template_names(self):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['personnel_actions/action_type/partial_action_type_list.html']
+            return ['personnel_action/partials/partial_action_type_list.html']
         return [self.template_name]
+
+
+class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
+    """Maneja Crear (POST sin ID) y Actualizar (POST con ID)"""
+
+    def post(self, request, pk=None):
+        if pk:
+            instance = get_object_or_404(ActionType, pk=pk)
+            form = ActionTypeForm(request.POST, instance=instance)
+        else:
+            form = ActionTypeForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            # Renderizamos la tabla actualizada para devolverla
+            types = ActionType.objects.all().order_by('name')
+            html_table = render_to_string(
+                'personnel_action/partials/partial_action_type_list.html',
+                {'types': types},
+                request=request
+            )
+            return JsonResponse({'success': True, 'html': html_table})
+        else:
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+class ActionTypeDetailJsonView(LoginRequiredMixin, View):
+    """Devuelve los datos de un registro en JSON para cargarlos en Vue"""
+    def get(self, request, pk):
+        obj = get_object_or_404(ActionType, pk=pk)
+        data = {
+            'id': obj.pk,
+            'name': obj.name,
+            'code': obj.code,
+            'is_active': obj.is_active
+        }
+        return JsonResponse(data)
+
+class ActionTypeDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        obj = get_object_or_404(ActionType, pk=pk)
+        obj.delete()
+        types = ActionType.objects.all().order_by('name')
+        html_table = render_to_string(
+            'personnel_action/partials/partial_action_type_list.html',
+            {'types': types},
+            request=request
+        )
+        return JsonResponse({'success': True, 'html': html_table})
 
 
 class ActionTypeCreateView(LoginRequiredMixin, CreateView):
@@ -118,6 +169,10 @@ class ActionTypeToggleStatusView(LoginRequiredMixin, View):
         obj = get_object_or_404(ActionType, pk=pk)
         obj.is_active = not obj.is_active
         obj.save()
-        return render(request, 'personnel_action/partials/partial_action_type_list.html', {
-            'types': ActionType.objects.all().order_by('name')
-        })
+        types = ActionType.objects.all().order_by('name')
+        html_table = render_to_string(
+            'personnel_action/partials/partial_action_type_list.html',
+            {'types': types},
+            request=request
+        )
+        return JsonResponse({'success': True, 'html': html_table})
