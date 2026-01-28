@@ -1,0 +1,10 @@
+
+.content-faded {
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#table-content-wrapper {
+    min-height: 200px;
+    transition: all 0.2s ease-in-out;
+}

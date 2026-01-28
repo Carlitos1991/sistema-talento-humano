@@ -2,90 +2,127 @@
 {% load static %}
 {% block title %}Acciones de Personal{% endblock %}
 
+{% block extra_css %}
+    <!-- Cargamos el CSS manual -->
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+{% endblock %}
+
 {% block content %}
-    <div>
+    <div id="personnelActionApp" v-cloak>
         <!-- 1. Header -->
         <div class="header-card">
             <div>
                 <h1><i class="fa-solid fa-file-signature"></i> Acciones de Personal</h1>
                 <p>Gestión de acciones administrativas del personal</p>
             </div>
-            <button class="btn-create" @click="startWizard">
-                <i class="fas fa-plus"></i> NUEVA ACCIÓN DE PERSONAL
+            <button class="btn-create" type="button" @click="openCreateModal">
+                <i class="fas fa-plus"></i> NUEVA ACCIÓN
             </button>
         </div>
-        <!-- 2. Estadísticas (Filtros Rápidos) -->
-        <div class="stats-row" v-if="stats.regimes">
-            <!-- Tarjeta Fija: Total -->
-            <div class="stat-card color-one"
-                 @click="clearSearch"
-                 :class="{'opacity-low': isAdvancedSearch}">
+
+        <!-- 2. Estadísticas -->
+        <div class="stats-row">
+            <div class="stat-card color-one" @click="filterByStatus('all')" id="card-filter-all">
                 <div class="stat-left">
-                    <h3>TOTAL ACTIVOS</h3>
+                    <h3>Total</h3>
                     <div class="number">[[ stats.total ]]</div>
                 </div>
-                <i class="fas fa-users-check stat-icon"></i>
+                <i class="fas fa-layer-group stat-icon"></i>
             </div>
-
-            <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
-            <div v-for="(regime, index) in stats.regimes"
-                 :key="regime.code"
-                 class="stat-card"
-                 :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.regime_code !== regime.code}]"
-                 @click="filterByRegime(regime.code)">
+            <div class="stat-card color-two opacity-low" @click="filterByStatus('registered')">
                 <div class="stat-left">
-                    <h3>[[ regime.name ]]</h3>
-                    <div class="number">[[ regime.count ]]</div>
+                    <h3>Registradas</h3>
+                    <div class="number" id="stat-registered">[[ stats.registered ]]</div>
                 </div>
-                <i class="fas fa-gavel stat-icon"></i>
+                <i class="fa-solid fa-clipboard-check stat-icon"></i>
+            </div>
+            <div class="stat-card color-three opacity-low" @click="filterByStatus('pending')">
+                <div class="stat-left">
+                    <h3>Ocupadas</h3>
+                    <div class="number" id="stat-ocupada">[[ stats.pending ]]</div>
+                </div>
+                <i class="fas fa-clock stat-icon"></i>
             </div>
         </div>
-        {#    tABLA #}
-        <div id="table-app">
+
+        <!-- 3. Controles y Tabla -->
+        <div class="table-card">
             <div class="content-table">
                 <div class="table-controls">
                     <button type="button" class="btn-search" @click="openSearchModal">
-                        <i class="fas fa-database"></i> Búsqueda Avanzada
+                        <i class="fas fa-sliders-h"></i> Búsqueda Avanzada
                     </button>
-                    <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact"
-                            @click="clearSearch">
+                    <button v-if="hasActiveFilters" class="btn-cancel btn-compact" @click="clearFilters">
                         <i class="fas fa-sync-alt"></i> Limpiar
                     </button>
+                    <!-- Búsqueda Frontend corregida -->
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search-input" class="input-field"
-                               placeholder="Filtrar en esta lista...">
+                        <input type="text" id="local-search-input" class="input-field"
+                               placeholder="Filtrar en pantalla..." @keyup="localSearch">
                     </div>
                 </div>
             </div>
-            <div id="table-content-wrapper">
+            <div id="table-content-wrapper" :class="{ 'content-faded': isLoading }">
                 {% include 'personnel_action/partials/partial_personnel_action_list.html' %}
             </div>
             <!-- Paginación -->
             <div class="pagination-container">
-                <span class="pagination-info" id="page-info">Calculando...</span>
+            <span class="pagination-info">
+                <template v-if="pagination.totalRecords > 0">
+                    Mostrando página [[ pagination.page ]] de [[ pagination.numPages ]]
+                    (Total: <b>[[ pagination.totalRecords ]]</b> registros)
+                </template>
+                <template v-else>
+                    Sin registros encontrados.
+                </template>
+            </span>
                 <ul class="pagination-list">
                     <li>
-                        <button class="page-btn" @click="prevPage" id="btn-prev">
+                        <button class="page-btn" :disabled="!pagination.hasPrev"
+                                @click="changePage(pagination.page - 1)">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                     </li>
-                    <li><span id="current-page-display" class="page-current-display">1</span></li>
+                    <li><span class="page-current-display">[[ pagination.page ]]</span></li>
                     <li>
-                        <button class="page-btn" @click="nextPage" id="btn-next">
+                        <button class="page-btn" :disabled="!pagination.hasNext"
+                                @click="changePage(pagination.page + 1)">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </li>
                 </ul>
             </div>
+
+            <!-- --- AREA DE MODALES --- -->
+
+            <!-- 1. Modal de Creación/Edición (Carga Dinámica HTML AJAX) -->
+            <div v-if="isModalOpen" class="modal-backdrop" @click.self="closeModal">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3>[[ modalTitle ]]</h3>
+                        <button class="modal-close-btn" @click="closeModal">&times;</button>
+                    </div>
+                    <div class="modal-body" v-html="modalHtml"></div>
+                </div>
+            </div>
+
+            <!-- 2. Modal de Búsqueda Avanzada (Carga Estática include) -->
+            {% include 'personnel_action/modals/modal_search_advanced.html' %}
         </div>
     </div>
 {% endblock %}
 
-{% block modals %}
-    {% include 'personnel_action/modals/modal_personnel_action_form.html' %}
-{% endblock %}
-
 {% block extra_js %}
+    {{ stats|json_script:"initial-stats" }}
+    <script id="initial-pagination" type="application/json">
+        {
+            "page": {{ page_obj.number }},
+            "numPages": {{ paginator.num_pages }},
+            "hasNext": {{ page_obj.has_next|lower }},
+            "hasPrev": {{ page_obj.has_previous|lower }},
+            "totalRecords": {{ paginator.count }}
+        }
+    </script>
     <script src="{% static 'js/personnel_action/personnel_action.js' %}"></script>
 {% endblock %}

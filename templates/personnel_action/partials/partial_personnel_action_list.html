@@ -1,18 +1,18 @@
 {% load static %}
-<div class="table-container">
+<div id="main-data-table" class="table-container">
     <table>
         <thead>
-            <tr>
-                <th>Número</th>
-                <th>Empleado</th>
-                <th>Tipo</th>
-                <th>Fechas</th>
-                <th>Estado</th>
-                <th class="text-end">Acciones</th>
-            </tr>
+        <tr>
+            <th>Número</th>
+            <th>Empleado</th>
+            <th>Tipo</th>
+            <th>Fechas</th>
+            <th>Estado</th>
+            <th class="text-end">Acciones</th>
+        </tr>
         </thead>
         <tbody>
-            {% for action in actions %}
+        {% for action in actions %}
             <tr>
                 <td class="fw-bold">{{ action.number }}</td>
                 <td>
@@ -41,11 +41,11 @@
                     <button class="btn-icon text-danger" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
-            {% empty %}
+        {% empty %}
             <tr>
                 <td colspan="6" class="text-center py-4">No se encontraron registros.</td>
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 </div>

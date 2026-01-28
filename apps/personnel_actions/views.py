@@ -20,16 +20,83 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('employee', 'action_type')
-        query = self.request.GET.get('q')
-        if query:
-            qs = qs.filter(employee__first_name__icontains=query) | qs.filter(number__icontains=query)
-        return qs
 
-    def get_template_names(self):
-        # Si es una petición AJAX (HTMX o fetch), devuelve solo la tabla
+        # --- Filtros Backend (Búsqueda Avanzada y Stats) ---
+
+        # 1. Filtro General (Texto)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(
+                Q(employee__first_name__icontains=q) |
+                Q(employee__last_name__icontains=q) |
+                Q(employee__identification__icontains=q) |
+                Q(number__icontains=q)
+            )
+
+        # 2. Filtro por Estado (Stats)
+        status = self.request.GET.get('status')
+        if status == 'registered':
+            qs = qs.filter(is_registered=True)
+        elif status == 'pending':
+            qs = qs.filter(is_registered=False)
+
+        # 3. Filtros Avanzados (Ejemplo)
+        date_start = self.request.GET.get('date_start')
+        date_end = self.request.GET.get('date_end')
+        action_type_id = self.request.GET.get('action_type')
+
+        if date_start and date_end:
+            qs = qs.filter(date_issue__range=[date_start, date_end])
+
+        if action_type_id:
+            qs = qs.filter(action_type_id=action_type_id)
+
+        return qs.order_by('-date_issue', '-number')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # --- Cálculo de Estadísticas ---
+        total_qs = PersonnelAction.objects.all()
+
+        context['stats'] = {
+            'total': total_qs.count(),
+            'registered': total_qs.filter(is_registered=True).count(),
+            'pending': total_qs.filter(is_registered=False).count(),
+        }
+
+        # Mantenemos los parámetros actuales para la paginación
+        params = self.request.GET.copy()
+        if 'page' in params:
+            del params['page']
+        context['current_params'] = params.urlencode()
+
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        """
+        Sobrescribimos para detectar AJAX.
+        Si es AJAX, devolvemos JSON con el HTML de la tabla y la paginación actualizada.
+        """
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['personnel_actions/partial_personnel_action_list.html']
-        return [self.template_name]
+            html_table = render_to_string(
+                'personnel_action/partials/partial_personnel_action_list.html',
+                context,
+                request=self.request
+            )
+            paginator = context['paginator']
+            page_obj = context['page_obj']
+
+            return JsonResponse({
+                'html': html_table,
+                'page_number': page_obj.number,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+                'num_pages': paginator.num_pages,
+                'total_records': paginator.count
+            })
+
+        return super().render_to_response(context, **response_kwargs)
 
 
 class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
