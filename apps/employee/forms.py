@@ -1,4 +1,7 @@
 from django import forms
+
+from core.forms import BaseFormMixin
+from institution.models import AdministrativeUnit
 from .models import AcademicTitle, BankAccount, Training, WorkExperience, PayrollInfo
 
 
@@ -57,12 +60,13 @@ class BankAccountForm(forms.ModelForm):
 class PayrollInfoForm(forms.ModelForm):
     class Meta:
         model = PayrollInfo  # Make sure PayrollInfo is imported at top
-        fields = ['monthly_payment', 'reserve_funds', 'family_dependents', 'education_dependents', 'roles_entry_date', 'roles_count']
+        fields = ['monthly_payment', 'reserve_funds', 'family_dependents', 'education_dependents', 'roles_entry_date',
+                  'roles_count']
         widgets = {
-             'monthly_payment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-             'reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-             'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
-             'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
-             'roles_entry_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
-             'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': 0}),
+            'monthly_payment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
+            'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
+            'roles_entry_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+            'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': 0}),
         }

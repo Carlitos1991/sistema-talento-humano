@@ -102,3 +102,19 @@ class OrganigramForm(BaseFormMixin, forms.ModelForm):
                 'id': 'file-input-organigram'
             })
         }
+
+
+class AssignBossForm(BaseFormMixin, forms.ModelForm):
+    class Meta:
+        model = AdministrativeUnit
+        fields = ['boss']
+        widgets = {
+            'boss': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_boss_assign',  # ID único para este modal
+                'data-placeholder': 'Buscar empleado...'
+            }),
+        }
+        labels = {
+            'boss': 'Seleccione Funcionario Responsable'
+        }

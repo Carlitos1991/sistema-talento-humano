@@ -79,6 +79,14 @@
                                title="Ver Entregables">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            {% if perms.institution.change_administrativeunit %}
+                                <button type="button"
+                                        class="btn-icon btn-success-action"
+                                        onclick="openAssignBoss('{{ unit.id }}')"
+                                        title="Asignar Jefe Inmediato">
+                                    <i class="fas fa-user-tie"></i>
+                                </button>
+                            {% endif %}
 
                             <!-- Toggle Status -->
                             {% if unit.is_active %}

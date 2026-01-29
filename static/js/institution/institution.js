@@ -417,3 +417,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updatePaginationUI();
 });
+
+// ==========================================
+// 4. LÓGICA ASIGNAR JEFE (SIN BOOTSTRAP)
+// ==========================================
+
+window.openAssignBoss = async function (unitId) {
+    // 1. Crear contenedor si no existe
+    let modalContainer = document.getElementById('assign-boss-modal-container');
+
+    // Si no existe el div en el HTML, lo creamos dinámicamente
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'assign-boss-modal-container';
+        modalContainer.className = 'custom-modal-overlay'; // Clase para CSS propio
+        // Estructura interna básica para centrar contenido
+        modalContainer.innerHTML = '<div class="custom-modal-dialog"></div>';
+        document.body.appendChild(modalContainer);
+    }
+
+    // 2. Cargar formulario desde el servidor
+    try {
+        const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+
+        if (!res.ok) throw new Error('Error al cargar modal');
+
+        const html = await res.text();
+
+        // Inyectamos el HTML dentro del dialog
+        // Nota: Asegúrate que modalContainer tenga un hijo, si no, inyectamos directo
+        if (modalContainer.firstElementChild) {
+            modalContainer.firstElementChild.innerHTML = html;
+        } else {
+            modalContainer.innerHTML = html;
+        }
+
+        // 3. Inicializar Select2 (Buscador)
+        if (typeof $ !== 'undefined') {
+            $('#id_boss_assign').select2({
+                dropdownParent: $('#assign-boss-modal-container'),
+                width: '100%',
+                placeholder: 'Buscar empleado activo...',
+                allowClear: true,
+                ajax: {
+                    url: '/institution/api/employee/search/',
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({term: params.term}),
+                    processResults: (data) => ({results: data.results})
+                }
+            });
+        }
+
+        // 4. MOSTRAR EL MODAL
+        modalContainer.style.display = 'flex'; // Usamos flex para centrar
+        document.body.classList.add('modal-open'); // Bloquear scroll
+
+        // Guardamos el ID para el submit
+        modalContainer.dataset.unitId = unitId;
+
+        // Cerrar al hacer clic fuera (en el fondo oscuro)
+        modalContainer.onclick = function (e) {
+            if (e.target === modalContainer) {
+                closeAssignModal();
+            }
+        };
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'No se pudo cargar el formulario.', 'error');
+    }
+};
+
+window.closeAssignModal = function () {
+    const modalContainer = document.getElementById('assign-boss-modal-container');
+    if (modalContainer) {
+        modalContainer.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        // Opcional: Limpiar contenido para ahorrar memoria
+        if (modalContainer.firstElementChild) modalContainer.firstElementChild.innerHTML = '';
+    }
+};
+
+window.submitAssignBoss = async function () {
+    const container = document.getElementById('assign-boss-modal-container');
+    const unitId = container.dataset.unitId;
+    const form = document.getElementById('assignBossForm');
+
+    if (!form) return;
+
+    try {
+        const formData = new FormData(form);
+        const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            window.closeAssignModal();
+            Swal.fire({
+                icon: 'success',
+                title: '¡Listo!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            // Recargar tabla de unidades
+            if (typeof window.fetchUnits === 'function') {
+                window.fetchUnits();
+            } else {
+                window.location.reload();
+            }
+        } else {
+            Swal.fire('Atención', 'Seleccione un empleado válido.', 'warning');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+    }
+};

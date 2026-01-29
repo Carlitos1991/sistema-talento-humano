@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+
+from .forms import AssignBossForm
 from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
@@ -49,12 +51,15 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
     """Búsqueda optimizada de empleados para Select2 (Maneja miles de registros)."""
 
     def get(self, request):
-        term = request.GET.get('term', '').strip()  # Lo que escribe el usuario
+        term = request.GET.get('term', '').strip()
 
-        qs = Employee.objects.filter(is_active=True).select_related('person')
+        qs = Employee.objects.filter(is_active=True).exclude(
+            Q(employment_status__name__icontains='EX EMPLEADO') |
+            Q(employment_status__name__icontains='EX TRABAJADOR') |
+            Q(employment_status__name__icontains='PASIVO')
+        ).select_related('person')
 
         if term:
-            # Búsqueda por múltiples campos (OR)
             qs = qs.filter(
                 Q(person__first_name__icontains=term) |
                 Q(person__last_name__icontains=term) |
@@ -65,14 +70,12 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
 
         results = []
         for emp in qs:
-            # Formato claro: Apellidos Nombres (Cédula)
             full_name = f"{emp.person.last_name} {emp.person.first_name}"
             document = emp.person.document_number
-            text = f"{full_name} ({document})"
-
+            # Agregamos el cargo si existe (opcional pero útil)
             results.append({
-                'id': str(emp.id),  # Convertir a string para evitar problemas de tipo en JS
-                'text': text
+                'id': str(emp.id),
+                'text': f"{full_name} ({document})"
             })
 
         return JsonResponse({'results': results})
@@ -578,6 +581,10 @@ class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             employees = Employee.objects.filter(
                 area_id=current_unit.pk,
                 is_active=True
+            ).exclude(
+                # Excluimos explícitamente si el nombre del estado contiene estas palabras
+                Q(employment_status__name__icontains='EX EMPLEADO') |
+                Q(employment_status__name__icontains='EX TRABAJADOR')
             ).select_related('person').prefetch_related(
                 'current_budget_line',
                 'current_budget_line__position_item'
@@ -604,3 +611,22 @@ class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             }
         context['form'] = AdministrativeUnitForm()
         return render(request, self.template_name, context)
+
+
+class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = AdministrativeUnit
+    form_class = AssignBossForm
+    template_name = 'institution/modals/modal_assign_boss.html'
+    permission_required = 'institution.change_administrativeunit'
+    context_object_name = 'unit'
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            form.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'Jefe asignado correctamente a {self.object.name}.'
+            })
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)

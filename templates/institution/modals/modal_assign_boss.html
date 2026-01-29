@@ -1,0 +1,34 @@
+<div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">
+                <i class="fas fa-user-tie me-2"></i>Asignar Jefe Inmediato
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeAssignModal()"></button>
+        </div>
+
+        <form id="assignBossForm" method="post">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="alert alert-info py-2">
+                    <small><i class="fas fa-info-circle"></i> Unidad: <strong>{{ unit.name }}</strong></small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Funcionario</label>
+                    {{ form.boss }}
+                    <div class="form-text text-muted">
+                        Puede buscar por nombre o número de cédula. No se muestran ex-empleados.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignBoss()">
+                    <i class="fas fa-save me-2"></i>Guardar Asignación
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
