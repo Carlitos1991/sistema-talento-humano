@@ -1,73 +1,208 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dependencias Nivel 1 | SIGETH{% endblock %}
+{% block title %}
+    {% if mode == 'detail' %}{{ current_unit.name }}{% else %}Dependencias Nivel 1{% endif %} | SIGETH
+{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="root-list-container">
+    <div class="root-list-container">
 
-    <!-- 1. HEADER: Título Municipio (Imagen 2) -->
-    <div class="root-header-card">
-        <div class="municipality-brand">
-            <i class="fas fa-building brand-icon"></i>
-            <h1 class="brand-text">MUNICIPIO DE LOJA</h1>
-        </div>
-        
-        <!-- Botón volver flotante a la derecha -->
-        <a href="{% url 'institution:organigram_view' %}" class="btn-back-simple">
-            <i class="fas fa-arrow-left"></i> Volver al Organigrama
-        </a>
-    </div>
-
-    <!-- 2. SUBTÍTULO: Dependencias Activas (Imagen 1) -->
-    <div class="section-divider">
-        <i class="fas fa-sitemap me-2"></i>
-        <h3>Dependencias Activas ({{ total_active }})</h3>
-        <div class="divider-line"></div>
-    </div>
-
-    <!-- 3. GRID DE TARJETAS -->
-    <div class="cards-grid-layout">
-        {% for unit in units %}
-        <div class="dependency-card animate-scale-in">
-            <!-- Badges Superiores -->
-            <div class="card-badges">
-                <span class="badge-gray">{{ unit.level.name }}</span>
-                <span class="badge-gray-dark">Activo</span>
+        <!-- HEADER COMÚN -->
+        <div class="root-header-card">
+            <div class="municipality-brand">
+                <i class="fas fa-building brand-icon"></i>
+                <h1 class="brand-text">
+                    {% if mode == 'detail' %}
+                        {{ current_unit.name }}
+                    {% else %}
+                        MUNICIPIO DE LOJA
+                    {% endif %}
+                </h1>
             </div>
 
-            <!-- Nombre Unidad -->
-            <h2 class="card-unit-title">{{ unit.name }}</h2>
+            <!-- NAVEGACIÓN MODIFICADA -->
+            {% if mode == 'detail' %}
+                <div class="d-flex gap-3 align-items-center">
 
-            <!-- Información Detallada -->
-            <div class="card-details">
-                <div class="detail-row">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>{{ unit.address|default:"Sin dirección registrada" }}</span>
+                    <!-- 1. Botón Regresar (Inteligente) -->
+                    {% if current_unit.parent %}
+                        <a href="{% url 'institution:organigram_nav_detail' current_unit.parent.id %}"
+                           class="btn-back-simple">
+                            <i class="fas fa-arrow-left"></i> Regresar
+                        </a>
+                    {% else %}
+                        <a href="{% url 'institution:organigram_nav' %}" class="btn-back-simple">
+                            <i class="fas fa-arrow-left"></i> Regresar
+                        </a>
+                    {% endif %}
+
+                    <!-- 2. Separador visual -->
+                    <span style="color: #cbd5e1;">|</span>
+
+                    <!-- 3. Botón Inicio (Siempre visible) -->
+                    <a href="{% url 'institution:organigram_nav' %}" class="btn-back-simple">
+                        <i class="fas fa-home"></i> Inicio
+                    </a>
                 </div>
-                <div class="detail-row">
-                    <i class="fas fa-phone-alt"></i>
-                    <span>{{ unit.phone|default:"Sin teléfono" }}</span>
-                </div>
-            </div>
-            
-            <!-- Acción (Opcional, si quieres que lleve al detalle) -->
-            <div class="card-footer-action">
-                <a href="{% url 'institution:unit_detail_view' unit.id %}" class="link-details">
-                    Ver Detalles <i class="fas fa-chevron-right ms-1"></i>
+            {% else %}
+                <a href="{% url 'institution:organigram_view' %}" class="btn-back-simple">
+                    <i class="fas fa-arrow-left"></i> Volver al Organigrama
                 </a>
-            </div>
+            {% endif %}
         </div>
-        {% empty %}
-        <div class="empty-message">
-            <i class="fas fa-info-circle"></i> No hay dependencias de Nivel 1 configuradas.
-        </div>
-        {% endfor %}
-    </div>
 
-</div>
+        <!-- =============== ESTADO 1: LISTADO RAÍZ =============== -->
+        {% if mode == 'root' %}
+
+            <div class="section-divider">
+                <i class="fas fa-sitemap me-2"></i>
+                <h3>Dependencias Activas ({{ total_active }})</h3>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="grid-dynamic">
+                {% for unit in units %}
+                    <div class="dependency-card animate-scale-in">
+
+                        <!-- 1. HEADER -->
+                        <div class="card-header-section">
+                            <span class="badge-dark">{{ unit.level.name }}</span>
+                            <span class="badge-dark">Activo</span>
+                        </div>
+
+                        <!-- 2. BODY -->
+                        <div class="card-body-section">
+                            <h2 class="card-unit-title">{{ unit.name }}</h2>
+                            <div class="card-info-row">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ unit.address|default:"Sin dirección" }}</span>
+                            </div>
+                            <div class="card-info-row">
+                                <i class="fas fa-phone-alt"></i>
+                                <span>{{ unit.phone|default:"Sin teléfono" }}</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. FOOTER -->
+                        <div class="card-footer-section">
+                            <div class="btn-pill-group">
+                                <a href="{% url 'institution:organigram_nav_detail' unit.id %}"
+                                   class="btn-pill outline">
+                                    <i class="fas fa-eye"></i> Detalle
+                                </a>
+
+                                {% if perms.institution.change_administrativeunit %}
+                                    <button type="button" class="btn-pill solid"
+                                            onclick="openEditUnit('{{ unit.id }}')">
+                                        <i class="fas fa-pen"></i> Actualizar
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- =============== ESTADO 2: DETALLE (NÓMINA + HIJOS) =============== -->
+        {% elif mode == 'detail' %}
+
+            <!-- 1. NÓMINA DE PERSONAL -->
+            <div class="mb-4">
+                <div class="section-divider">
+                    <i class="fas fa-users me-2"></i>
+                    <h3>Nómina de Personal</h3>
+                    <div class="divider-line"></div>
+                    <!-- Botón imprimir eliminado -->
+                </div>
+
+                <div class="employees-grid">
+                    {% for emp in employees %}
+                        <div class="employee-card">
+
+                            <!-- CABECERA: FOTO + BOTÓN CARPETA -->
+                            <div class="employee-card-header">
+                                <!-- Botón Carpeta (Enlace al detalle) -->
+                                <a href="{% url 'employee:employee_detail' emp.person.pk %}"
+                                   class="btn-folder-detail"
+                                   title="Ver Expediente / Detalle">
+                                    <i class="fas fa-folder"></i>
+                                </a>
+
+                                <!-- Foto -->
+                                <div class="photo-wrapper">
+                                    {% if emp.person.photo %}
+                                        <img src="{{ emp.person.photo.url }}" class="employee-photo" alt="Foto">
+                                    {% else %}
+                                        <img src="{% static 'img/default-avatar.png' %}" class="employee-photo"
+                                             alt="Sin foto">
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- NOMBRE -->
+                            <div class="employee-name">
+                                {{ emp.person.first_name }} {{ emp.person.last_name }}
+                                <br>
+                                <small style="font-weight: 400; font-size: 0.7rem; color: #9ca3af;">
+                                    CI: {{ emp.person.document_number }}
+                                </small>
+                            </div>
+
+                            <!-- CARGO (OBTENIDO DE LA PARTIDA PRESUPUESTARIA) -->
+                            <span class="employee-job">
+                            {% with partida=emp.current_budget_line.first %}
+                                {% if partida and partida.position_item %}
+                                    {{ partida.position_item.name|upper }}
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 0.7rem;">SIN PARTIDA ASIGNADA</span>
+                                {% endif %}
+                            {% endwith %}
+                        </span>
+
+                        </div>
+                    {% empty %}
+                        <div class="col-12 text-center py-5 text-muted" style="grid-column: 1 / -1;">
+                            <i class="fas fa-user-slash fa-2x mb-2 opacity-50"></i>
+                            <p>No hay personal asignado directamente a esta unidad.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 2. DEPENDENCIAS HIJAS (JEFATURAS O COORDINACIONES) -->
+            <div class="children-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 text-dark fw-bold" style="font-size: 1rem;">
+                        <i class="fas fa-network-wired me-2"></i>Sub-dependencias / Áreas
+                    </h4>
+                </div>
+
+                <div class="children-grid">
+                    {% for child in children %}
+                        <a href="{% url 'institution:organigram_nav_detail' child.id %}" class="child-unit-btn">
+                            <i class="fas fa-users"></i> {{ child.name }}
+                        </a>
+                    {% empty %}
+                        <p class="text-muted small w-100 text-center">No existen sub-dependencias creadas.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% endif %}
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+    {% include 'institution/modals/modal_unit_form.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/institution/institution.js' %}"></script>
 {% endblock %}

@@ -10,6 +10,7 @@ from django.utils.decorators import method_decorator
 from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
+from django.apps import apps
 
 
 class ParentOptionsJsonView(LoginRequiredMixin, View):
@@ -562,14 +563,44 @@ class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     context_object_name = 'units'
     permission_required = 'institution.view_administrativeunit'
 
-    def get_queryset(self):
-        # Filtramos solo Nivel 1 (Raíz) y Activos
-        return AdministrativeUnit.objects.filter(
-            level__level_order=1,
-            is_active=True
-        ).select_related('level').order_by('name')
+    def get(self, request, pk=None):
+        context = {}
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['total_active'] = self.get_queryset().count()
-        return context
+        if pk:
+            # --- ESTADO 2: DETALLE (DRILL-DOWN) ---
+            current_unit = get_object_or_404(AdministrativeUnit, pk=pk)
+
+            # 1. Hijos ordenados por código y nombre
+            children = AdministrativeUnit.objects.filter(
+                parent=current_unit,
+                is_active=True
+            ).order_by('code', 'name')
+            employees = Employee.objects.filter(
+                area_id=current_unit.pk,
+                is_active=True
+            ).select_related('person').prefetch_related(
+                'current_budget_line',
+                'current_budget_line__position_item'
+            )
+
+            context = {
+                'mode': 'detail',
+                'current_unit': current_unit,
+                'children': children,
+                'employees': employees,
+            }
+
+        else:
+            # --- ESTADO 1: RAÍZ ---
+            units = AdministrativeUnit.objects.filter(
+                level__level_order=1,
+                is_active=True
+            ).select_related('level').order_by('code', 'name')
+
+            context = {
+                'mode': 'root',
+                'units': units,
+                'total_active': units.count()
+            }
+        context['form'] = AdministrativeUnitForm()
+        return render(request, self.template_name, context)

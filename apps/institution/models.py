@@ -1,3 +1,4 @@
+# apps/institution/models.py
 from django.db import models
 from core.models import BaseModel
 
@@ -19,7 +20,6 @@ class OrganizationalLevel(BaseModel):
 
 
 class AdministrativeUnit(BaseModel):
-    objects = None
     level = models.ForeignKey(
         OrganizationalLevel,
         on_delete=models.PROTECT,
@@ -81,6 +81,7 @@ class Deliverable(BaseModel):
 
     def __str__(self):
         return f"{self.name} - {self.unit.name}"
+
 
 class InstitutionOrganigram(models.Model):
     """

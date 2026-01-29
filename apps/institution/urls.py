@@ -30,4 +30,8 @@ urlpatterns = [
     path('api/next-code/', views.GetNextCodeJsonView.as_view(), name='api_next_code'),
     path('organigram/positional/', views.OrganigramView.as_view(), name='organigram_view'),
     path('organigram/root-list/', views.RootLevelListView.as_view(), name='root_level_list'),
+    # Ruta base (Raíz)
+    path('organigram/navigation/', views.RootLevelListView.as_view(), name='organigram_nav'),
+    # Ruta con ID (Detalle)
+    path('organigram/navigation/<int:pk>/', views.RootLevelListView.as_view(), name='organigram_nav_detail'),
 ]
