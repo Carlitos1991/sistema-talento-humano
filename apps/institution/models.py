@@ -54,7 +54,7 @@ class AdministrativeUnit(BaseModel):
     class Meta:
         verbose_name = "Unidad Administrativa"
         verbose_name_plural = "Unidades Administrativas"
-        ordering = ['level__level_order', 'name']
+        ordering = ['code', 'name']
 
     def __str__(self):
         return f"{self.name} ({self.level.name})"

@@ -3,7 +3,7 @@
     <table>
         <thead>
         <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th><i class="fa-solid fa-list-ol"></i>Código</th>
             <th><i class="fa-solid fa-building"></i> Unidad Administrativa</th>
             <th><i class="fa-solid fa-building"></i> Depende de</th>
             <th><i class="fa-solid fa-layer-group"></i> Nivel</th>
@@ -18,21 +18,27 @@
         <tbody id="table-body">
         {% for unit in units %}
             <tr class="unit-row" id="row-{{ unit.id }}" data-status="{{ unit.is_active|yesno:'true,false' }}">
-                <td>{{ forloop.counter }}</td>
-
+                <td><span class="badge-code">{{ unit.code|default:"--" }}</span></td>
                 <td>
-                    <div class="d-flex flex-column">
-                        <span class="fw-bold text-primary">{{ unit.name }}</span>
-                    </div>
+                    <a href="javascript:void(0);"
+                       onclick="filterByParent('{{ unit.id }}', '{{ unit.level.level_order|add:"1" }}')"
+                       class="link"
+                       title="Ver dependencias de {{ unit.name }}">
+                        {{ unit.name }}
+                    </a>
                 </td>
                 <td>
-                    <div class="d-flex flex-column">
-                        {% if unit.parent %}
-                            <span class="fw-bold text-primary">{{ unit.parent.name }}</span>
-                        {% else %}
-                            <span class="fw-bold text-primary">-Raíz-</span>
-                        {% endif %}
-                    </div>
+                    {% if unit.parent %}
+                        <a href="javascript:void(0);"
+                           onclick="filterByParent('{{ unit.parent.parent_id|default:'' }}')"
+                           class="link"
+                           title="Ir al nivel de {{ unit.parent.name }}">
+                            <i class="fas fa-level-up-alt me-1 small"></i>
+                            {{ unit.parent.name }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted" title="Nivel Raíz">-Raíz-</span>
+                    {% endif %}
                 </td>
 
                 <td>
@@ -74,7 +80,7 @@
                                 <i class="fas fa-eye"></i>
                             </a>
 
-                            <!-- Toggle Status (Estilo Correcto) -->
+                            <!-- Toggle Status -->
                             {% if unit.is_active %}
                                 <button class="btn-icon btn-delete-action"
                                         onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
@@ -92,6 +98,21 @@
                     </td>
                 {% endif %}
             </tr>
+
+            {# AQUI EMPIEZA LO NUEVO: Si no hay unidades en el for, se ejecuta esto #}
+        {% empty %}
+            <tr class="empty-state-row">
+                <td colspan="7" class="empty-state-cell">
+                    <div class="empty-state-content">
+                        <i class="fas fa-network-wired empty-state-icon"></i>
+                        <h5 class="empty-state-text">No existen dependencias</h5>
+
+                        <button onclick="window.fetchUnits({level: '', parent: ''})" class="btn-empty-reset">
+                            <i class="fas fa-undo me-1"></i> Volver al inicio
+                        </button>
+                    </div>
+                </td>
+            </tr>
         {% endfor %}
         </tbody>
     </table>
@@ -104,17 +125,5 @@
          data-end="{{ page_obj.end_index }}"
          data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
          data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
-    </div>
-
-    <!-- Empty State -->
-    <div class="no-results-overlay {% if units %}hidden{% endif %}">
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron resultados.</p>
-        </div>
-        <div class="no-results-content empty-db-msg {% if not units %}show{% else %}hidden{% endif %}">
-            <i class="fas fa-sitemap no-results-icon"></i>
-            <p class="no-results-text">No hay unidades administrativas registradas.</p>
-        </div>
     </div>
 </div>

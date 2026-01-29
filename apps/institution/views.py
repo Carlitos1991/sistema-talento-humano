@@ -95,13 +95,16 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'institution.view_administrativeunit'
 
     def get_queryset(self):
-        # Optimizamos consultas (select_related para FKs)
-        qs = AdministrativeUnit.objects.select_related('level', 'parent', 'boss__person').all().order_by(
-            'level__level_order', 'name')
+        qs = AdministrativeUnit.objects.filter(is_active=True).select_related(
+            'level', 'parent', 'boss__person'
+        )
 
+        # Parámetros GET
         q = self.request.GET.get('q')
-        status = self.request.GET.get('status')
+        level_id = self.request.GET.get('level')
+        parent_id = self.request.GET.get('parent')  # Para el drill-down
 
+        # 1. Búsqueda por texto (Prioridad alta)
         if q:
             qs = qs.filter(
                 Q(name__icontains=q) |
@@ -110,19 +113,33 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(boss__person__last_name__icontains=q)
             )
 
-        if status == 'true':
-            qs = qs.filter(is_active=True)
-        elif status == 'false':
-            qs = qs.filter(is_active=False)
+        # 2. Filtro por Padre (Drill-down)
+        elif parent_id:
+            qs = qs.filter(parent_id=parent_id)
 
-        return qs
+        # 3. Filtro por Nivel
+        elif level_id:
+            qs = qs.filter(level_id=level_id)
+
+        # 4. DEFAULT
+        else:
+            first_lvl = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order').first()
+            if first_lvl:
+                qs = qs.filter(level=first_lvl)
+                self.default_level_id = first_lvl.id
+
+        return qs.order_by('code', 'name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = AdministrativeUnitForm()  # Para el modal vacío
-        context.update(get_unit_stats())
+        context['form'] = AdministrativeUnitForm()
+        context.update(get_level_stats())
+        if hasattr(self, 'default_level_id'):
+            context['active_level_id'] = self.default_level_id
+
         return context
 
+    # El método get (AJAX) se mantiene igual
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
@@ -197,11 +214,34 @@ class UnitToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
 # ==========================================
 
 def get_level_stats():
-    return {
-        'total': OrganizationalLevel.objects.count(),
-        'active': OrganizationalLevel.objects.filter(is_active=True).count(),
-        'inactive': OrganizationalLevel.objects.filter(is_active=False).count(),
-    }
+    """
+    Retorna niveles con conteo, colores e ICONOS dinámicos.
+    """
+    levels = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')[:5]
+    stats = []
+
+    colors = ['color-one', 'color-two', 'color-three', 'color-four', 'color-five']
+    # Iconos mapeados por índice (0=Raíz, 1=Direcciones, 2=Deptos, etc.)
+    icons = [
+        'fa-globe',  # Nivel 1 (Ej: Institución)
+        'fa-building',  # Nivel 2 (Ej: Direcciones)
+        'fa-briefcase',  # Nivel 3 (Ej: Departamentos)
+        'fa-users',  # Nivel 4 (Ej: Unidades/Equipos)
+        'fa-user-tag'  # Nivel 5 (Ej: Auxiliares)
+    ]
+
+    for i, lvl in enumerate(levels):
+        count = AdministrativeUnit.objects.filter(level=lvl, is_active=True).count()
+        stats.append({
+            'id': lvl.id,
+            'name': lvl.name,
+            'order': lvl.level_order,
+            'count': count,
+            'color': colors[i] if i < len(colors) else 'color-one',
+            'icon': icons[i] if i < len(icons) else 'fa-sitemap'  # Icono dinámico
+        })
+
+    return {'level_stats': stats}
 
 
 class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

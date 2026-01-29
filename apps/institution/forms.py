@@ -4,7 +4,6 @@ from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel, Deliverable
 
 
-# --- FORMULARIO DE UNIDADES (Se mantiene igual) ---
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = AdministrativeUnit
@@ -47,31 +46,40 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Configurar queryset de parent
+        # 1. Lógica para el campo 'parent' (Optimización de QuerySet)
         self.fields['parent'].queryset = AdministrativeUnit.objects.none()
-        if 'parent' in self.data:
+
+        # Caso A: Envío de datos (POST) con valor seleccionado
+        if 'parent' in self.data and self.data.get('parent'):
             try:
                 parent_id = int(self.data.get('parent'))
                 self.fields['parent'].queryset = AdministrativeUnit.objects.filter(pk=parent_id)
             except (ValueError, TypeError):
                 pass
+        # Caso B: Edición (Instancia existente con padre)
         elif self.instance.pk and self.instance.parent:
             self.fields['parent'].queryset = AdministrativeUnit.objects.filter(pk=self.instance.parent.pk)
 
-        # Configurar queryset de boss - VACIO para carga con AJAX
+        # 2. Lógica para 'boss' (Select2 AJAX - Carga vacía inicial)
         self.fields['boss'].queryset = Employee.objects.none()
         self.fields['boss'].required = False
-
-        # Si estamos editando y hay un jefe asignado, cargarlo
-        if self.instance.pk and self.instance.boss:
+        if 'boss' in self.data and self.data.get('boss'):
+            try:
+                boss_id = int(self.data.get('boss'))
+                self.fields['boss'].queryset = Employee.objects.filter(pk=boss_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.boss:
             self.fields['boss'].queryset = Employee.objects.filter(pk=self.instance.boss.pk)
 
+        if self.instance.pk:
+            self.fields['level'].disabled = True
+            self.fields['level'].required = False
 
-# --- FORMULARIO DE NIVELES (CORREGIDO) ---
+
 class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = OrganizationalLevel
-        # SOLO el nombre. El orden es automático y no debe estar aquí.
         fields = ['name']
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'Ej: DIRECCIÓN GENERAL', 'class': 'uppercase-input'}),
@@ -81,33 +89,23 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
         }
 
     def clean_name(self):
-        """Guardar siempre en Mayúsculas"""
         name = self.cleaned_data.get('name')
         if name:
             return name.upper()
         return name
 
     def save(self, commit=True):
-        """
-        Calcula automáticamente el orden jerárquico al guardar.
-        """
         instance = super().save(commit=False)
-
-        # Solo si es nuevo (no tiene ID), calculamos su orden
         if not instance.pk:
-            # 1. Obtener órdenes ocupados en registros ACTIVOS
             active_orders = set(
                 OrganizationalLevel.objects.filter(is_active=True)
                 .values_list('level_order', flat=True)
             )
-
             next_order = 1
             while next_order in active_orders:
                 next_order += 1
-
             instance.level_order = next_order
             instance.is_active = True
-
         if commit:
             instance.save()
         return instance

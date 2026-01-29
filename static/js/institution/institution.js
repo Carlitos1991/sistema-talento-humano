@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const {createApp, ref, nextTick} = Vue;
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
-    let currentFilters = {q: '', status: 'all', page: 1};
+    let currentFilters = {q: '', level: '', parent: '', page: 1};
 
     // Configuración Toast
     const Toast = Swal.mixin({
@@ -21,22 +21,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. LÓGICA DE TABLA
     window.fetchUnits = function (params = {}) {
-        if (params.reset) currentFilters = {q: '', status: 'all', page: 1};
-        else Object.assign(currentFilters, params);
+        // Reset de página al cambiar filtros (no al paginar)
+        if (params.level || params.parent || params.q) {
+            params.page = 1;
+        }
+
+        Object.assign(currentFilters, params);
+
+        // Limpiar parámetros mutuamente excluyentes
+        if (params.level) currentFilters.parent = ''; // Si filtro por nivel, quito filtro padre
+        if (params.parent) currentFilters.level = ''; // Si filtro por padre, quito filtro nivel
 
         const url = new URL(window.location.href);
         Object.keys(currentFilters).forEach(key => {
             if (currentFilters[key]) url.searchParams.set(key, currentFilters[key]);
         });
 
+        // Mostrar indicador de carga si se desea (opcional)
+        if (tableContainer) tableContainer.style.opacity = '0.6';
+
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
                 if (tableContainer) {
                     tableContainer.innerHTML = html;
+                    tableContainer.style.opacity = '1';
                     updatePaginationUI();
+
+                    const btnReset = document.getElementById('btn-reset-filters');
+                    if (btnReset) {
+                        if (currentFilters.parent) btnReset.classList.remove('hidden');
+                        else btnReset.classList.add('hidden');
+                    }
                 }
-            });
+            })
+            .catch(err => console.error("Error fetching units:", err));
     };
 
     function updatePaginationUI() {
@@ -49,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pageInfo) pageInfo.textContent = total == 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total}`;
         const pageDisplay = document.getElementById('current-page-display');
         if (pageDisplay) pageDisplay.textContent = page;
+
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
         if (btnPrev) btnPrev.disabled = meta.dataset.hasPrev !== 'true';
@@ -59,15 +79,31 @@ document.addEventListener('DOMContentLoaded', () => {
         let timeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(() => window.fetchUnits({q: e.target.value, page: 1}), 500);
+            timeout = setTimeout(() => window.fetchUnits({q: e.target.value}), 10);
         });
     }
 
-    window.filterByStatus = function (status) {
+    window.filterByLevel = function (levelId, cardElement = null) {
         document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
-        const activeCard = document.getElementById(status === 'all' ? 'card-filter-all' : (status === 'true' ? 'card-filter-active' : 'card-filter-inactive'));
-        if (activeCard) activeCard.classList.remove('opacity-low');
-        window.fetchUnits({status: status, page: 1});
+
+        if (!cardElement) {
+            cardElement = document.getElementById(`stat-card-${levelId}`);
+        }
+        if (cardElement) {
+            cardElement.classList.remove('opacity-low');
+        }
+
+        window.fetchUnits({level: levelId});
+    };
+    // --- FILTRO POR PADRE (DRILL-DOWN) ---
+    window.filterByParent = function (parentId) {
+        document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
+
+        if (!parentId || parentId === 'None') {
+            window.fetchUnits({parent: '', level: ''}); // Reset total a inicio
+        } else {
+            window.fetchUnits({parent: parentId});
+        }
     };
 
     // 2. LÓGICA DEL MODAL
@@ -197,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     isEditing.value = false;
                     currentId.value = null;
                     errors.value = {};
-                    isParentDisabled.value = true;
 
                     document.getElementById(formEl).reset();
                     isVisible.value = true;
@@ -206,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await nextTick();
                     initializeSelects();
 
-                    // Aseguramos que el nivel esté HABILITADO al crear
+                    // Habilitar nivel para creación
                     $('#id_level').prop('disabled', false);
 
                     shouldLoadParentsOnLevelChange = true;
@@ -222,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     errors.value = {};
 
                     try {
-                        const res = await fetch(`/institution/units/detail/${id}/`);
+                        const res = await fetch(`/institution/units/detail/${id}/json/`);
                         const result = await res.json();
 
                         if (result.success) {
@@ -243,23 +278,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             // --- LÓGICA DE NIVEL BLOQUEADO ---
                             shouldLoadParentsOnLevelChange = false;
 
-                            // 1. Establecer valor
+                            // 1. Establecer valor y bloquear
                             $('#id_level').val(d.level).trigger('change');
+                            $('#id_level').prop('disabled', true); // Visualmente bloqueado
 
-                            // 2. Bloquear el combo de Nivel (Requirement: Read-only on edit)
-                            $('#id_level').prop('disabled', true);
-
-                            // 3. Cargar padres (loadParents manejará si el 2do combo se habilita o no)
+                            // 2. Cargar padres manualmente
                             await loadParents(d.level, d.parent);
-
                             shouldLoadParentsOnLevelChange = true;
 
-                            // Llenar Jefe
+                            // 3. Llenar Jefe
                             if (d.boss_data) {
+                                // Pre-inject option si no existe
                                 if ($('#id_boss').find(`option[value="${d.boss_data.id}"]`).length === 0) {
-                                    $('#id_boss').append(new Option(d.boss_data.text, d.boss_data.id, true, true));
+                                    const newOption = new Option(d.boss_data.text, d.boss_data.id, true, true);
+                                    $('#id_boss').append(newOption).trigger('change');
+                                } else {
+                                    $('#id_boss').val(d.boss_data.id).trigger('change');
                                 }
-                                $('#id_boss').val(d.boss_data.id).trigger('change');
                             } else {
                                 $('#id_boss').val(null).trigger('change');
                             }
@@ -276,33 +311,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const submitForm = async () => {
-                    // --- TRUCO IMPORTANTE ---
-                    // Al editar, el nivel está disabled. Los campos disabled NO se envían en FormData.
-                    // Django dará error de validación. Debemos habilitarlo temporalmente.
-                    const wasLevelDisabled = $('#id_level').prop('disabled');
-                    if (wasLevelDisabled) {
-                        $('#id_level').prop('disabled', false);
-                    }
+                    const formElement = document.getElementById(formEl);
+                    const formData = new FormData(formElement);
 
-                    const formData = new FormData(document.getElementById(formEl));
+                    // --- LIMPIEZA DE DATOS ---
 
-                    // Restauramos el estado disabled si estaba bloqueado
-                    if (wasLevelDisabled) {
-                        $('#id_level').prop('disabled', true);
-                    }
-
-                    // Limpieza del padre si está deshabilitado
-                    if ($('#id_parent').select2('enable') === false) {
+                    // 1. Manejo del Padre (Parent):
+                    if ($('#id_parent').prop('disabled')) {
                         formData.delete('parent');
                     }
-
                     const url = isEditing.value
                         ? `/institution/units/update/${currentId.value}/`
                         : `/institution/units/create/`;
 
                     try {
                         const res = await fetch(url, {
-                            method: 'POST', body: formData,
+                            method: 'POST',
+                            body: formData,
                             headers: {'X-Requested-With': 'XMLHttpRequest'}
                         });
                         const data = await res.json();
@@ -317,8 +342,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             window.fetchUnits();
                             if (data.new_stats) updateStats(data.new_stats);
                         } else {
+                            // Manejo de errores
                             errors.value = data.errors;
-                            Toast.fire({icon: 'warning', title: 'Revise el formulario'});
+
+                            // Si el error es específico del popup SweetAlert
+                            if (data.message && !data.errors) {
+                                Toast.fire({icon: 'error', title: data.message});
+                            } else {
+                                Toast.fire({icon: 'warning', title: 'Revise el formulario'});
+                            }
                         }
                     } catch (e) {
                         console.error('Error en submitForm:', e);
@@ -396,6 +428,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnP) btnP.onclick = () => window.fetchUnits({page: currentFilters.page - 1});
     if (btnN) btnN.onclick = () => window.fetchUnits({page: currentFilters.page + 1});
     if (btnA) btnA.onclick = () => window.openCreateUnit();
-
-    window.fetchUnits();
+    const firstStat = document.querySelector('.stat-card[data-first="true"]');
+    if (firstStat) {
+        const levelId = firstStat.dataset.levelId;
+        // Simulamos click para cargar visuales y datos
+        window.filterByLevel(levelId, firstStat);
+    } else {
+        // Fallback por si no hay niveles
+        window.fetchUnits();
+    }
 });

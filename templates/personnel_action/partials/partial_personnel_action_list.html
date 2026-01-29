@@ -36,9 +36,40 @@
                         <span class="badge bg-warning">Borrador</span>
                     {% endif %}
                 </td>
-                <td class="text-end">
-                    <button class="btn-icon" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-icon text-danger" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                <td>
+                    <div class="actions-wrapper">
+                        <button type="button" class="btn-icon btn-detail-action"
+                                title="Detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn-icon btn-views-action"
+                                title="Editar">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+                        <button type="button" class="btn-icon btn-restore-action"
+                                title="Imprimir">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button type="button" class="btn-icon btn-success-action"
+                                title="Registrar">
+                            <i class="fa-solid fa-file-circle-check"></i>
+                        </button>
+                        {% if action.is_active %}
+                            <!-- ESTADO ACTIVO: Rojo -->
+                            <button type="button"
+                                    class="btn-icon btn-delete-action"
+                                    title="Desactivar">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        {% else %}
+                            <!-- ESTADO INACTIVO: Verde -->
+                            <button type="button"
+                                    class="btn-icon btn-create-action"
+                                    title="Activar">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
         {% empty %}

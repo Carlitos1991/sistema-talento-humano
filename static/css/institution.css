@@ -1,0 +1,52 @@
+/* --- ESTADO VACÍO DE TABLA (EMPTY STATE) --- */
+.empty-state-row {
+    background-color: transparent !important; /* Evita hovers extraños */
+}
+
+.empty-state-cell {
+    padding: 3rem 1rem;
+    text-align: center;
+    background-color: #f9fafb; /* Fondo sutil para distinguir de las filas normales */
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.empty-state-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #6b7280;
+}
+
+.empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    color: #9ca3af;
+}
+
+.empty-state-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+    color: #4b5563;
+}
+
+/* Botón sutil de reseteo */
+.btn-empty-reset {
+    margin-top: 15px;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    padding: 6px 16px;
+    border-radius: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-empty-reset:hover {
+    border-color: #374151;
+    color: #374151;
+    background-color: #f3f4f6;
+}
