@@ -42,6 +42,12 @@
                             </a>
                         </li>
                     {% endif %}
+                    <li class="{% if 'posicional' in request.path %}active{% endif %}">
+                        <a href="{% url 'institution:organigram_view' %}">
+                            <i class="fas fa-sitemap"></i>
+                            <span>Posicional</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
         {% endif %}

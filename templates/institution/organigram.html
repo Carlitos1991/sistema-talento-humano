@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organigrama Posicional | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <!-- Cargamos el CSS externo unificado -->
+    <link rel="stylesheet" href="{% static 'css/institution.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="organigram-container">
+
+        <div class="header-simple">
+            <h2 class="fw-bold text-dark mb-0">Organigrama Institucional</h2>
+        </div>
+
+        <div class="org-title-wrapper">
+            <!-- AGREGADO: data-url -->
+            <button type="button" class="btn-org-title"
+                    id="btn-municipio-link"
+                    data-url="{% url 'institution:root_level_list' %}">
+                <i class="fas fa-landmark me-2"></i> MUNICIPIO DE LOJA
+            </button>
+        </div>
+
+        <!-- EL VISOR (CANVAS) -->
+        <div class="image-viewer-box" id="viewer-box">
+
+            <!-- 1. IMAGEN (Si existe) -->
+            <img src="{% if organigram %}{{ organigram.image.url }}{% endif %}"
+                 class="organigram-img {% if not organigram %}hidden{% endif %}"
+                 id="main-image"
+                 draggable="false"
+                 alt="Organigrama">
+
+            <!-- 2. ZONA DE CARGA -->
+            <div class="upload-zone {% if organigram %}hidden{% endif %}"
+                 id="upload-placeholder">
+
+                <i class="fas fa-sitemap upload-icon"></i>
+                <h4 class="text-light mb-4">No hay organigrama visualizado</h4>
+
+                {% if perms.institution.change_administrativeunit %}
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        <span class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt me-2"></i> Seleccionar Imagen
+                        </span>
+                        {{ form.image }}
+                    </form>
+                    <p class="mt-3 small text-secondary">Formatos: JPG, PNG, WEBP (Max 10MB)</p>
+                {% else %}
+                    <p class="text-danger">No tienes permisos para subir archivos.</p>
+                {% endif %}
+            </div>
+
+            <!-- 3. BARRA DE HERRAMIENTAS -->
+            <div class="viewer-toolbar {% if not organigram %}hidden{% endif %}" id="toolbar">
+                <button class="tool-btn" id="btn-zoom-in" title="Acercar (Zoom +)">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="tool-btn" id="btn-zoom-out" title="Alejar (Zoom -)">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="tool-btn" id="btn-reset" title="Restaurar Tamaño">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                </button>
+
+                <div class="divider"></div>
+
+                <button class="tool-btn" id="btn-download" title="Descargar Imagen">
+                    <i class="fas fa-download"></i>
+                </button>
+
+                {% if perms.institution.change_administrativeunit %}
+                    <div class="divider"></div>
+                    <button class="tool-btn" id="btn-trigger-upload" title="Cambiar / Actualizar Imagen">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- Botón Guardar Flotante -->
+            <button type="button" id="btn-save-float" class="btn-save-float">
+                <i class="fas fa-save me-2"></i> Guardar Cambios
+            </button>
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Cargamos el JS externo -->
+    <script src="{% static 'js/institution/organigram.js' %}"></script>
+{% endblock %}

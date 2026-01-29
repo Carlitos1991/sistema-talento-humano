@@ -4,7 +4,7 @@
     <link rel="stylesheet" href="{% static 'css/institution_detail.css' %}">
 {% endblock %}
 {% block content %}
-    <div class="detail-container-fluid" id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}">
+    <div class="detail-wrapper" id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}" v-cloak>
 
         <!-- 1. HERO HEADER: Nombre de la Unidad y Botón Volver -->
         <div class="hero-detail-card">

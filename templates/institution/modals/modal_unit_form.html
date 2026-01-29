@@ -1,15 +1,20 @@
-<!-- En modal_unit_form.html -->
+<!-- apps/institution/templates/institution/modals/modal_unit_form.html -->
 
 <div id="unit-modal-app" v-cloak>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 800px;">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 600px;">
             <form @submit.prevent="submitForm" id="unitForm">
                 {% csrf_token %}
+
+                <!-- Campos Ocultos Inyectados -->
+                {{ form.level }}
+                {{ form.parent }}
+                {{ form.boss }}
 
                 <div class="modal-header-medium modal-header-gradient">
                     <h3 class="modal-title text-white">
                         <i class="fa-solid fa-sitemap me-2"></i>
-                        <span v-text="isEditing ? 'Editar Unidad Administrativa' : 'Nueva Unidad Administrativa'"></span>
+                        <span v-text="isEditing ? 'Editar Unidad' : 'Nueva Unidad Administrativa'"></span>
                     </h3>
                     <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;
                     </button>
@@ -21,61 +26,36 @@
                         <span v-for="err in errors.__all__">[[ err ]]</span>
                     </div>
 
-                    <!-- Datos Principales -->
                     <div class="form-section-card">
-                        <h6 class="section-title"><i class="fa-solid fa-circle-info me-2"></i>Información General</h6>
-
-                        <div class="row">
-                            <div class="form-group">
-                                <label class="form-label">Nombre de la Unidad <span class="text-danger">*</span></label>
-                                {{ form.name }}
-                                <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
-                            </div>
-                        </div>
-
-                        <div class="grid-2-cols">
-                            <div class="form-group">
-                                <label class="form-label">Nivel Jerárquico <span class="text-danger">*</span></label>
-                                {{ form.level }}
-                                <div class="text-error" v-if="errors.level">[[ errors.level[0] ]]</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Unidad Padre (Dependencia)</label>
-                                <div :class="{ 'opacity-50': isParentDisabled }">
-                                    {{ form.parent }}
-                                </div>
-                                <div class="text-error" v-if="errors.parent">[[ errors.parent[0] ]]</div>
-                                <small class="form-hint" v-if="isParentDisabled">
-                                    Deshabilitado para el Nivel 1 o si no se ha seleccionado nivel.
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Datos Administrativos -->
-                    <div class="form-section-card">
-                        <h6 class="section-title"><i class="fa-solid fa-briefcase me-2"></i>Gestión y Contacto</h6>
-
+                        <!-- Campo CODIGO (Auto) -->
                         <div class="form-group mb-3">
-                            <label class="form-label">Jefe / Responsable</label>
-                            <!-- Django renderiza el select, Vue/JS lo maneja con Select2 -->
-                            {{ form.boss }}
-                            <div class="text-error" v-if="errors.boss">[[ errors.boss[0] ]]</div>
-                            <small class="form-hint">Seleccione un empleado activo para asignar jefatura.</small>
+                            <label class="form-label">Código / Partida <span class="text-danger">*</span></label>
+                            {{ form.code }}
+                            <div class="text-error" v-if="errors.code">[[ errors.code[0] ]]</div>
+                            <small class="form-hint" v-if="!isEditing">
+                                Generado automáticamente según la jerarquía actual.
+                            </small>
+                        </div>
+
+                        <!-- Campo NOMBRE -->
+                        <div class="form-group mb-3">
+                            <label class="form-label">Nombre de la Unidad <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
                         </div>
 
                         <div class="row g-3">
-                            <div class="col-md-4 form-group">
-                                <label class="form-label">Código / Partida</label>
-                                {{ form.code }}
-                            </div>
-                            <div class="col-md-4 form-group">
-                                <label class="form-label">Ubicación Física</label>
+                            <!-- Campo UBICACIÓN -->
+                            <div class="col-md-6 form-group">
+                                <label class="form-label">Ubicación</label>
                                 {{ form.address }}
+                                <div class="text-error" v-if="errors.address">[[ errors.address[0] ]]</div>
                             </div>
-                            <div class="col-md-4 form-group">
-                                <label class="form-label">Teléfono / Ext.</label>
+                            <!-- Campo TELÉFONO -->
+                            <div class="col-md-6 form-group">
+                                <label class="form-label">Teléfono</label>
                                 {{ form.phone }}
+                                <div class="text-error" v-if="errors.phone">[[ errors.phone[0] ]]</div>
                             </div>
                         </div>
                     </div>

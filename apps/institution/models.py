@@ -81,3 +81,18 @@ class Deliverable(BaseModel):
 
     def __str__(self):
         return f"{self.name} - {self.unit.name}"
+
+class InstitutionOrganigram(models.Model):
+    """
+    Almacena la imagen oficial del organigrama de la institución.
+    """
+    image = models.ImageField(upload_to='institution/organigram/', verbose_name="Imagen del Organigrama")
+    uploaded_at = models.DateTimeField(auto_now=True, verbose_name="Fecha de actualización")
+    updated_by = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, verbose_name="Subido por")
+
+    class Meta:
+        verbose_name = "Organigrama Posicional"
+        verbose_name_plural = "Organigramas"
+
+    def __str__(self):
+        return f"Organigrama - {self.uploaded_at.strftime('%d/%m/%Y')}"

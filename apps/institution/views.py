@@ -1,15 +1,15 @@
 # apps/institution/views.py
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from employee.models import Employee
-from .models import AdministrativeUnit, OrganizationalLevel, Deliverable
-from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm
+from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
+from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
 
 
 class ParentOptionsJsonView(LoginRequiredMixin, View):
@@ -451,3 +451,125 @@ def api_unit_deliverables(request, unit_id):
             {'success': False, 'error': str(e)},
             status=500
         )
+
+
+class GetNextCodeJsonView(LoginRequiredMixin, View):
+    """
+    Calcula el siguiente código disponible basado en el padre o nivel.
+    Lógica: Busca el último código hermano, extrae el último segmento numérico y suma 1.
+    """
+
+    def get(self, request):
+        parent_id = request.GET.get('parent_id')
+
+        # Caso 1: Tiene Padre (Niveles 2, 3, 4, 5...)
+        if parent_id and parent_id != 'null':
+            parent = get_object_or_404(AdministrativeUnit, pk=parent_id)
+            parent_code = parent.code if parent.code else "0"
+
+            # Buscamos hijos directos
+            last_sibling = AdministrativeUnit.objects.filter(
+                parent=parent
+            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
+
+            if last_sibling and last_sibling.code:
+                # Intentamos extraer el último segmento del código hermano
+                try:
+                    parts = last_sibling.code.split('.')
+                    last_num = int(parts[-1])
+                    new_last_num = last_num + 1
+                    # Reconstruimos: prefijo del padre + nuevo número
+                    base_prefix = ".".join(parts[:-1])
+                    next_code = f"{base_prefix}.{new_last_num}"
+                except ValueError:
+                    # Si el código hermano no es numérico estándar, fallback
+                    next_code = f"{parent_code}.1"
+            else:
+                # Es el primer hijo
+                next_code = f"{parent_code}.1"
+
+            level_id = parent.level.level_order + 1  # El nivel será el siguiente al del padre
+
+        # Caso 2: Nivel Raíz (Nivel 1)
+        else:
+            # Buscamos el último nivel 1
+            last_root = AdministrativeUnit.objects.filter(
+                parent__isnull=True
+            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
+
+            if last_root and last_root.code:
+                try:
+                    last_num = int(last_root.code)
+                    next_code = str(last_num + 1)
+                except ValueError:
+                    next_code = "1"
+            else:
+                next_code = "1"
+
+            try:
+                level_obj = OrganizationalLevel.objects.get(level_order=1)
+                level_id = level_obj.id
+            except OrganizationalLevel.DoesNotExist:
+                level_id = None
+
+        return JsonResponse({
+            'success': True,
+            'next_code': next_code,
+            'suggested_level': level_id
+        })
+
+
+class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'institution.view_administrativeunit'  # O un permiso específico si prefieres
+    template_name = 'institution/organigram.html'
+
+    def get(self, request):
+        # Obtener el último organigrama subido
+        organigram = InstitutionOrganigram.objects.last()
+        form = OrganigramForm()
+        return render(request, self.template_name, {
+            'organigram': organigram,
+            'form': form
+        })
+
+    def post(self, request):
+        # Verificar permisos de escritura solo al subir
+        if not request.user.has_perm('institution.change_administrativeunit'):
+            return render(request, '403.html', status=403)
+
+        form = OrganigramForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Guardamos el nuevo registro
+            instance = form.save(commit=False)
+            instance.updated_by = request.user
+            instance.save()
+
+            # Opcional: Borrar los anteriores para no llenar el disco
+            # InstitutionOrganigram.objects.exclude(pk=instance.pk).delete()
+
+            return redirect('institution:organigram_view')
+
+        organigram = InstitutionOrganigram.objects.last()
+        return render(request, self.template_name, {
+            'organigram': organigram,
+            'form': form
+        })
+
+
+class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = AdministrativeUnit
+    template_name = 'institution/root_level_list.html'
+    context_object_name = 'units'
+    permission_required = 'institution.view_administrativeunit'
+
+    def get_queryset(self):
+        # Filtramos solo Nivel 1 (Raíz) y Activos
+        return AdministrativeUnit.objects.filter(
+            level__level_order=1,
+            is_active=True
+        ).select_related('level').order_by('name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_active'] = self.get_queryset().count()
+        return context

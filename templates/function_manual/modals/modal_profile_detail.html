@@ -107,11 +107,10 @@
                class="btn-wizard-nav btn-wizard-save" style="border: none; text-decoration: none;">
                 <i class="fas fa-print"></i> Imprimir Perfil
             </a>
-            <a href="{% url 'function_manual:report_activities_excel' profile.id %}">
+            <a href="{% url 'function_manual:report_activities_excel' profile.id %}"
                class="btn-wizard-nav btn-wizard-prev" style="border: none; text-decoration: none;">
-                <i class="fas fa-file-excel"></i> Imprimir Levantamiento Actividades
+                <i class="fas fa-print"></i> Imprimir Levantamiento Actividades
             </a>
-
             <button type="button" class="btn-wizard-nav btn-wizard-cancel" onclick="closeManualModal()">
                 Cerrar
             </button>

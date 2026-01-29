@@ -1,7 +1,7 @@
 from django import forms
 from core.forms import BaseFormMixin
 from employee.models import Employee
-from .models import AdministrativeUnit, OrganizationalLevel, Deliverable
+from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 
 
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
@@ -9,72 +9,41 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         model = AdministrativeUnit
         fields = ['name', 'level', 'parent', 'boss', 'code', 'address', 'phone']
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ej: Dirección Financiera'
-            }),
-            'level': forms.Select(attrs={
-                'class': 'input-field',
-            }),
-            'parent': forms.Select(attrs={
-                'class': 'input-field',
-            }),
-            'boss': forms.Select(attrs={
-                'class': 'input-field select2-ajax',
-                'data-placeholder': 'Escriba para buscar empleado...',
-            }),
-            'code': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ej: FIN-001'
-            }),
-            'address': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ubicación física de la oficina'
-            }),
-            'phone': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Extensión o directo'
-            }),
+            'name': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Dirección Financiera'}),
+            'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Generado automáticamente'}),
+            'address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ubicación física'}),
+            'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Extensión'}),
+
+            # CAMPOS OCULTOS
+            'level': forms.HiddenInput(),
+            'parent': forms.HiddenInput(),
+            'boss': forms.HiddenInput(),
         }
         labels = {
             'name': 'Nombre de la Unidad',
-            'level': 'Nivel Jerárquico',
-            'parent': 'Unidad Padre (Dependencia)',
-            'boss': 'Jefe / Responsable',
+            'code': 'Código / Partida (Único)',
+            'address': 'Ubicación',
+            'phone': 'Teléfono'
         }
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        # Validación de unicidad manual para mensaje personalizado
+        if code:
+            # Excluimos la propia instancia si estamos editando
+            qs = AdministrativeUnit.objects.filter(code=code)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                raise forms.ValidationError(f"El código '{code}' ya pertenece a otra unidad administrativa.")
+        return code
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # 1. Lógica para el campo 'parent' (Optimización de QuerySet)
-        self.fields['parent'].queryset = AdministrativeUnit.objects.none()
-
-        # Caso A: Envío de datos (POST) con valor seleccionado
-        if 'parent' in self.data and self.data.get('parent'):
-            try:
-                parent_id = int(self.data.get('parent'))
-                self.fields['parent'].queryset = AdministrativeUnit.objects.filter(pk=parent_id)
-            except (ValueError, TypeError):
-                pass
-        # Caso B: Edición (Instancia existente con padre)
-        elif self.instance.pk and self.instance.parent:
-            self.fields['parent'].queryset = AdministrativeUnit.objects.filter(pk=self.instance.parent.pk)
-
-        # 2. Lógica para 'boss' (Select2 AJAX - Carga vacía inicial)
-        self.fields['boss'].queryset = Employee.objects.none()
         self.fields['boss'].required = False
-        if 'boss' in self.data and self.data.get('boss'):
-            try:
-                boss_id = int(self.data.get('boss'))
-                self.fields['boss'].queryset = Employee.objects.filter(pk=boss_id)
-            except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.boss:
-            self.fields['boss'].queryset = Employee.objects.filter(pk=self.instance.boss.pk)
-
-        if self.instance.pk:
-            self.fields['level'].disabled = True
-            self.fields['level'].required = False
+        self.fields['parent'].required = False
+        self.fields['level'].required = True
 
 
 class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
@@ -119,4 +88,17 @@ class DeliverableForm(BaseFormMixin, forms.ModelForm):
             'name': forms.TextInput(attrs={'placeholder': 'Ej: Reporte Mensual de Nómina', 'class': 'input-field'}),
             'description': forms.Textarea(
                 attrs={'placeholder': 'Detalle los requisitos del entregable...', 'rows': 3, 'class': 'input-field'}),
+        }
+
+
+class OrganigramForm(BaseFormMixin, forms.ModelForm):
+    class Meta:
+        model = InstitutionOrganigram
+        fields = ['image']
+        widgets = {
+            'image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'id': 'file-input-organigram'
+            })
         }

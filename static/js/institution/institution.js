@@ -21,65 +21,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. LÓGICA DE TABLA
     window.fetchUnits = function (params = {}) {
-        // Reset de página al cambiar filtros (no al paginar)
-        if (params.level || params.parent || params.q) {
+
+        if ('q' in params || 'level' in params || 'parent' in params) {
             params.page = 1;
         }
 
+        // Fusionar nuevos parámetros con los actuales
         Object.assign(currentFilters, params);
 
-        // Limpiar parámetros mutuamente excluyentes
-        if (params.level) currentFilters.parent = ''; // Si filtro por nivel, quito filtro padre
-        if (params.parent) currentFilters.level = ''; // Si filtro por padre, quito filtro nivel
+        // Limpieza de filtros mutuamente excluyentes
+        if (params.level) currentFilters.parent = '';
+        if (params.parent) currentFilters.level = '';
 
+        // Construir URL
         const url = new URL(window.location.href);
         Object.keys(currentFilters).forEach(key => {
-            if (currentFilters[key]) url.searchParams.set(key, currentFilters[key]);
+            // Solo enviamos parámetros que tengan valor
+            if (currentFilters[key] !== '' && currentFilters[key] !== null) {
+                url.searchParams.set(key, currentFilters[key]);
+            } else {
+                url.searchParams.delete(key);
+            }
         });
 
-        // Mostrar indicador de carga si se desea (opcional)
-        if (tableContainer) tableContainer.style.opacity = '0.6';
-
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-            .then(res => res.text())
+            .then(res => {
+                if (!res.ok) throw new Error("Error en la petición");
+                return res.text();
+            })
             .then(html => {
                 if (tableContainer) {
                     tableContainer.innerHTML = html;
-                    tableContainer.style.opacity = '1';
                     updatePaginationUI();
 
+                    // Mostrar/Ocultar botón de reset según si hay drill-down
                     const btnReset = document.getElementById('btn-reset-filters');
                     if (btnReset) {
-                        if (currentFilters.parent) btnReset.classList.remove('hidden');
-                        else btnReset.classList.add('hidden');
+                        btnReset.classList.toggle('hidden', !currentFilters.parent);
                     }
                 }
             })
-            .catch(err => console.error("Error fetching units:", err));
+            .catch(err => {
+                console.error("Error fetching units:", err);
+                if (currentFilters.page > 1) {
+                    window.fetchUnits({page: 1});
+                }
+            });
     };
+
 
     function updatePaginationUI() {
         const meta = document.getElementById('pagination-metadata');
         if (!meta) return;
-        const total = meta.dataset.total, start = meta.dataset.start, end = meta.dataset.end,
-            page = parseInt(meta.dataset.page);
+
+        // Leer datos como Strings y convertir si es necesario
+        const total = meta.dataset.total;
+        const start = meta.dataset.start;
+        const end = meta.dataset.end;
+        const page = meta.dataset.page;
+        const hasPrev = meta.dataset.hasPrev === 'true';
+        const hasNext = meta.dataset.hasNext === 'true';
 
         const pageInfo = document.getElementById('page-info');
-        if (pageInfo) pageInfo.textContent = total == 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total}`;
+        if (pageInfo) pageInfo.textContent = (total == 0 || total === undefined)
+            ? "Sin resultados"
+            : `Mostrando ${start}-${end} de ${total}`;
+
         const pageDisplay = document.getElementById('current-page-display');
         if (pageDisplay) pageDisplay.textContent = page;
 
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
-        if (btnPrev) btnPrev.disabled = meta.dataset.hasPrev !== 'true';
-        if (btnNext) btnNext.disabled = meta.dataset.hasNext !== 'true';
+
+        if (btnPrev) {
+            btnPrev.disabled = !hasPrev;
+            btnPrev.onclick = () => window.fetchUnits({page: parseInt(currentFilters.page) - 1});
+        }
+        if (btnNext) {
+            btnNext.disabled = !hasNext;
+            btnNext.onclick = () => window.fetchUnits({page: parseInt(currentFilters.page) + 1});
+        }
     }
 
     if (searchInput) {
         let timeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(() => window.fetchUnits({q: e.target.value}), 10);
+            timeout = setTimeout(() => {
+                window.fetchUnits({q: e.target.value, page: 1});
+            }, 300);
         });
     }
 
@@ -100,7 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
 
         if (!parentId || parentId === 'None') {
-            window.fetchUnits({parent: '', level: ''}); // Reset total a inicio
+            window.fetchUnits({parent: '', level: '', q: ''});
+            const firstCard = document.querySelector('.stat-card');
+            if (firstCard) firstCard.classList.remove('opacity-low');
         } else {
             window.fetchUnits({parent: parentId});
         }
@@ -213,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // APP VUE
     if (document.getElementById('unit-modal-app')) {
-        const app = createApp({
+        createApp({
             delimiters: ['[[', ']]'],
             setup() {
                 const isVisible = ref(false);
@@ -221,33 +253,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentId = ref(null);
                 const errors = ref({});
                 const formEl = 'unitForm';
-                const isParentDisabled = ref(true);
 
-                const handleParentStateChange = (e) => {
-                    isParentDisabled.value = e.detail.disabled;
-                };
-                document.addEventListener('parent-state-changed', handleParentStateChange);
-
-                // --- ABRIR CREAR ---
+                // --- ABRIR CREAR (Automático) ---
                 const openCreate = async () => {
                     isEditing.value = false;
                     currentId.value = null;
                     errors.value = {};
 
-                    document.getElementById(formEl).reset();
+                    const formObj = document.getElementById(formEl);
+                    if (formObj) formObj.reset();
+
                     isVisible.value = true;
                     document.body.classList.add('no-scroll');
 
-                    await nextTick();
-                    initializeSelects();
+                    // 1. Detectar contexto
+                    const parentId = currentFilters.parent || '';
 
-                    // Habilitar nivel para creación
-                    $('#id_level').prop('disabled', false);
+                    // 2. Obtener código
+                    try {
+                        const url = `/institution/api/next-code/?parent_id=${parentId}`;
+                        const res = await fetch(url);
+                        const data = await res.json();
 
-                    shouldLoadParentsOnLevelChange = true;
-                    $('#id_level').val(null).trigger('change');
-                    $('#id_boss').val(null).trigger('change');
-                    await loadParents(null);
+                        if (data.success) {
+                            if (formObj) {
+                                formObj.querySelector('[name=code]').value = data.next_code;
+                                if (data.suggested_level) formObj.querySelector('[name=level]').value = data.suggested_level;
+
+                                const parentInput = formObj.querySelector('[name=parent]');
+                                if (parentInput) parentInput.value = parentId ? parentId : '';
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error code auto:", e);
+                    }
                 };
 
                 // --- ABRIR EDITAR ---
@@ -258,49 +297,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         const res = await fetch(`/institution/units/detail/${id}/json/`);
+                        if (!res.ok) throw new Error();
                         const result = await res.json();
 
                         if (result.success) {
                             const d = result.data;
-
                             isVisible.value = true;
                             document.body.classList.add('no-scroll');
                             await nextTick();
-                            initializeSelects();
 
-                            // Llenar datos texto
                             const form = document.getElementById(formEl);
-                            form.querySelector('[name=name]').value = d.name;
-                            form.querySelector('[name=code]').value = d.code || '';
-                            form.querySelector('[name=address]').value = d.address || '';
-                            form.querySelector('[name=phone]').value = d.phone || '';
-
-                            // --- LÓGICA DE NIVEL BLOQUEADO ---
-                            shouldLoadParentsOnLevelChange = false;
-
-                            // 1. Establecer valor y bloquear
-                            $('#id_level').val(d.level).trigger('change');
-                            $('#id_level').prop('disabled', true); // Visualmente bloqueado
-
-                            // 2. Cargar padres manualmente
-                            await loadParents(d.level, d.parent);
-                            shouldLoadParentsOnLevelChange = true;
-
-                            // 3. Llenar Jefe
-                            if (d.boss_data) {
-                                // Pre-inject option si no existe
-                                if ($('#id_boss').find(`option[value="${d.boss_data.id}"]`).length === 0) {
-                                    const newOption = new Option(d.boss_data.text, d.boss_data.id, true, true);
-                                    $('#id_boss').append(newOption).trigger('change');
-                                } else {
-                                    $('#id_boss').val(d.boss_data.id).trigger('change');
-                                }
-                            } else {
-                                $('#id_boss').val(null).trigger('change');
+                            if (form) {
+                                form.querySelector('[name=name]').value = d.name;
+                                form.querySelector('[name=code]').value = d.code || '';
+                                form.querySelector('[name=address]').value = d.address || '';
+                                form.querySelector('[name=phone]').value = d.phone || '';
+                                form.querySelector('[name=level]').value = d.level;
+                                form.querySelector('[name=parent]').value = d.parent || '';
+                                form.querySelector('[name=boss]').value = d.boss || '';
                             }
                         }
                     } catch (e) {
-                        console.error('Error en openEdit:', e);
                         Toast.fire({icon: 'error', title: 'Error al cargar datos'});
                     }
                 };
@@ -311,23 +328,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const submitForm = async () => {
-                    const formElement = document.getElementById(formEl);
-                    const formData = new FormData(formElement);
-
-                    // --- LIMPIEZA DE DATOS ---
-
-                    // 1. Manejo del Padre (Parent):
-                    if ($('#id_parent').prop('disabled')) {
-                        formData.delete('parent');
-                    }
+                    const formData = new FormData(document.getElementById(formEl));
                     const url = isEditing.value
                         ? `/institution/units/update/${currentId.value}/`
                         : `/institution/units/create/`;
 
                     try {
                         const res = await fetch(url, {
-                            method: 'POST',
-                            body: formData,
+                            method: 'POST', body: formData,
                             headers: {'X-Requested-With': 'XMLHttpRequest'}
                         });
                         const data = await res.json();
@@ -340,20 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                             closeModal();
                             window.fetchUnits();
-                            if (data.new_stats) updateStats(data.new_stats);
                         } else {
-                            // Manejo de errores
                             errors.value = data.errors;
-
-                            // Si el error es específico del popup SweetAlert
-                            if (data.message && !data.errors) {
-                                Toast.fire({icon: 'error', title: data.message});
-                            } else {
-                                Toast.fire({icon: 'warning', title: 'Revise el formulario'});
-                            }
+                            Toast.fire({icon: 'warning', title: 'Revise el formulario'});
                         }
                     } catch (e) {
-                        console.error('Error en submitForm:', e);
                         Toast.fire({icon: 'error', title: 'Error del servidor'});
                     }
                 };
@@ -361,36 +360,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.openCreateUnit = openCreate;
                 window.openEditUnit = openEdit;
 
-                return {
-                    isVisible,
-                    isEditing,
-                    errors,
-                    isParentDisabled,
-                    closeModal,
-                    submitForm
-                };
+                return {isVisible, isEditing, errors, closeModal, submitForm};
             }
         }).mount('#unit-modal-app');
     }
-
     // 3. TOGGLE STATUS
-    window.toggleUnitStatus = async (btnElement, url, name) => {
-        const isCurrentlyActive = btnElement.classList.contains('btn-delete-action');
-        const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
-        const btnClass = isCurrentlyActive ? 'btn-swal-danger' : 'btn-swal-success';
-
+    window.toggleUnitStatus = async (btnElement, url, name, id) => {
         const result = await Swal.fire({
-            title: `¿${actionVerb} unidad?`,
-            text: `Vas a cambiar el estado de "${name}"`,
+            title: '¿Cambiar estado?',
+            text: `Unidad: ${name}`,
             icon: 'warning',
             showCancelButton: true,
-            buttonsStyling: false,
-            customClass: {
-                confirmButton: `swal2-confirm ${btnClass}`,
-                cancelButton: 'swal2-cancel btn-swal-cancel',
-                popup: 'swal2-popup'
-            },
-            confirmButtonText: `Sí, ${actionVerb.toLowerCase()}`,
+            confirmButtonText: 'Sí, cambiar',
             cancelButtonText: 'Cancelar'
         });
 
@@ -402,9 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    Toast.fire({icon: 'success', title: 'Estado Actualizado', text: data.message});
+                    Toast.fire({icon: 'success', title: data.message});
+                    // Recargar tabla para ver cambios
                     window.fetchUnits();
-                    if (data.new_stats) updateStats(data.new_stats);
                 } else {
                     Toast.fire({icon: 'error', title: data.message});
                 }
@@ -433,8 +414,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const levelId = firstStat.dataset.levelId;
         // Simulamos click para cargar visuales y datos
         window.filterByLevel(levelId, firstStat);
-    } else {
-        // Fallback por si no hay niveles
-        window.fetchUnits();
     }
+    updatePaginationUI();
 });

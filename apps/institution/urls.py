@@ -26,5 +26,8 @@ urlpatterns = [
     path('api/deliverables/delete/<int:pk>/', views.DeliverableDeleteView.as_view(), name='api_deliverable_delete'),
     path('units/detail/<int:pk>/view/', views.UnitDetailView.as_view(), name='unit_detail_view'),
     path('units/detail/<int:pk>/json/', views.UnitDetailJsonView.as_view(), name='unit_detail_json'),
-    path('api/units/<int:unit_id>/deliverables/', views.api_unit_deliverables, name='api_unit_deliverables')
+    path('api/units/<int:unit_id>/deliverables/', views.api_unit_deliverables, name='api_unit_deliverables'),
+    path('api/next-code/', views.GetNextCodeJsonView.as_view(), name='api_next_code'),
+    path('organigram/positional/', views.OrganigramView.as_view(), name='organigram_view'),
+    path('organigram/root-list/', views.RootLevelListView.as_view(), name='root_level_list'),
 ]
