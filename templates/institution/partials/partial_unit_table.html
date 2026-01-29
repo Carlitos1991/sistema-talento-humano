@@ -47,11 +47,22 @@
 
                 <td>
                     {% if unit.boss %}
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="avatar-placeholder-sm" style="font-size: 0.7rem; width: 24px; height: 24px;">
-                                {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+                        <div class="boss-mini-profile">
+                            <!-- Foto -->
+                            {% if unit.boss.person.photo %}
+                                <img src="{{ unit.boss.person.photo.url }}" class="boss-avatar-img" alt="Foto">
+                            {% else %}
+                                <div class="avatar-placeholder-sm"
+                                     style="width: 40px; height: 40px; font-size: 0.9rem;">
+                                    {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Info Texto -->
+                            <div class="boss-info">
+                                <span class="boss-name-highlight">{{ unit.boss.person.first_name }}</span>
+                                <span class="boss-lastname-highlight">{{ unit.boss.person.last_name }}</span>
                             </div>
-                            <span>{{ unit.boss.person.last_name }} {{ unit.boss.person.first_name }}</span>
                         </div>
                     {% else %}
                         <span class="status-badge badge-neutral">SIN ASIGNAR</span>

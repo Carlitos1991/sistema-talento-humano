@@ -622,9 +622,29 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+
+        # 1. Guardamos referencia al jefe anterior (si existía)
+        old_boss = self.object.boss
+
         form = self.get_form()
         if form.is_valid():
-            form.save()
+            # 2. Guardamos la unidad con el nuevo jefe
+            unit = form.save()
+            new_boss = unit.boss
+
+            # 3. Actualizamos al NUEVO jefe (is_boss = True)
+            if new_boss:
+                new_boss.is_boss = True
+                new_boss.save(update_fields=['is_boss'])
+
+            # 4. Actualizamos al ANTIGUO jefe (is_boss = False)
+            # Solo si es diferente al nuevo y NO dirige otras unidades
+            if old_boss and old_boss != new_boss:
+                # Verificamos si sigue siendo jefe de alguna OTRA unidad
+                if not old_boss.managed_units.exists():
+                    old_boss.is_boss = False
+                    old_boss.save(update_fields=['is_boss'])
+
             return JsonResponse({
                 'success': True,
                 'message': f'Jefe asignado correctamente a {self.object.name}.'

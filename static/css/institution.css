@@ -859,3 +859,65 @@ body.modal-open {
     border-radius: 6px;
     cursor: pointer;
 }
+
+/* =========================================
+   ESTILOS NUEVOS: JEFE Y ESTRELLA
+   ========================================= */
+
+/* --- 1. Mini Perfil en Tabla (Unidades) --- */
+.boss-mini-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.boss-avatar-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.boss-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+.boss-name-highlight {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.boss-lastname-highlight {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+/* --- 2. Estrella Azul en Organigrama --- */
+.star-badge {
+    position: absolute;
+    right: 5px; /* A la derecha de la foto */
+    top: 50%; /* Centrado verticalmente */
+    transform: translateY(-50%);
+
+    background-color: white; /* Fondo blanco para resaltar */
+    color: #2563eb; /* Azul fuerte */
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    z-index: 6; /* Por encima de la foto pero debajo de tooltips */
+    border: 1px solid #bfdbfe;
+}

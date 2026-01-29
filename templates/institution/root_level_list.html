@@ -127,12 +127,20 @@
 
                             <!-- CABECERA: FOTO + BOTÓN CARPETA -->
                             <div class="employee-card-header">
-                                <!-- Botón Carpeta (Enlace al detalle) -->
-                                <a href="{% url 'employee:employee_detail' emp.person.pk %}"
+
+                                <!-- Botón Carpeta (Izquierda) -->
+                                <a href="{% url 'employee:employee_detail' emp.pk %}"
                                    class="btn-folder-detail"
-                                   title="Ver Expediente / Detalle">
+                                   title="Ver Expediente">
                                     <i class="fas fa-folder"></i>
                                 </a>
+
+                                <!-- ESTRELLA AZUL (Derecha - Solo si es Jefe) -->
+                                {% if emp.is_boss %}
+                                    <div class="star-badge" title="Jefe / Director de Área">
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                {% endif %}
 
                                 <!-- Foto -->
                                 <div class="photo-wrapper">
