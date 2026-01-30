@@ -27,7 +27,6 @@
                         <th width="10%">Grado</th>
                         <th width="12%">Grupo</th>
                         <th width="10%">RMU</th>
-                        <th width="45%">Requisitos Mínimos (Referencia)</th>
                         <th width="10%">Estado</th>
                         <th width="10%" class="text-center">Acciones</th>
                     </tr>
@@ -39,13 +38,6 @@
                             <td><span class="status-badge general">{{ entry.occupational_group }}</span></td>
                             <td><span class="text-primary-bold"
                                       style="font-size: 1.1rem;">${{ entry.remuneration }}</span></td>
-                            <td>
-                                <small class="text-muted">
-                                    <strong>Rol:</strong> {{ entry.required_role.name }} |
-                                    <strong>Inst:</strong> {{ entry.minimum_instruction.name }} |
-                                    <strong>Exp:</strong> {{ entry.minimum_experience_months }} meses
-                                </small>
-                            </td>
                             <td>
                                 {% if entry.is_active %}
                                     <span class="status-badge active">Activo</span>

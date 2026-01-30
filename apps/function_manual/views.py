@@ -48,10 +48,7 @@ class JobProfileMixin:
             ]
 
         matrix_data = list(OccupationalMatrix.objects.all().values(
-            'id', 'occupational_group', 'grade', 'remuneration',
-            'required_role_id', 'minimum_instruction_id',
-            'minimum_experience_months', 'required_decision_id',
-            'required_impact_id', 'complexity_level_id'
+            'id', 'occupational_group', 'grade', 'remuneration'
         ))
 
         catalogs_dict = {
@@ -63,7 +60,6 @@ class JobProfileMixin:
             "frequency": get_items('FREQUENCY'),
             "complexity": get_items('COMPLEXITY_LEVELS'),
             "matrix": matrix_data,
-            # Agregamos todas las competencias para filtrar en Vue
             "competencies": list(Competency.objects.filter(is_active=True).values('id', 'name', 'type', 'definition'))
         }
         context['catalogs_json'] = json.dumps(catalogs_dict, cls=DjangoJSONEncoder)
@@ -124,11 +120,10 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             context['stats_pending'] = qs.filter(occupational_classification__isnull=True).count()
             context['stats_active'] = qs.filter(is_active=True).count()
 
-            # Contexto para el modal de asignación de grupo
-            # Serializamos a JSON para manejo dinámico en Vue
-            matrix_data = OccupationalMatrix.objects.select_related('required_role').values(
-                'id', 'occupational_group', 'grade', 'remuneration', 'complexity_level_id'
+            matrix_data = OccupationalMatrix.objects.values(
+                'id', 'occupational_group', 'grade', 'remuneration'
             ).order_by('grade')
+
             context['occupational_matrix_json'] = json.dumps(list(matrix_data), cls=DjangoJSONEncoder)
 
         return context
@@ -393,13 +388,11 @@ class OccupationalMatrixListView(LoginRequiredMixin, PermissionRequiredMixin, Jo
     permission_required = "function_manual.view_occupationalmatrix"
 
     def get_queryset(self):
-        return OccupationalMatrix.objects.select_related(
-            'required_role', 'complexity_level', 'minimum_instruction'
-        ).all().order_by('grade')
+        return OccupationalMatrix.objects.all().order_by('grade')
 
 
 class OccupationalMatrixSaveApi(LoginRequiredMixin, View):
-    """API para crear o editar un grado salarial"""
+    """API para crear o editar un grado salarial (Simplificado)"""
 
     def post(self, request):
         data = json.loads(request.body)
@@ -413,10 +406,6 @@ class OccupationalMatrixSaveApi(LoginRequiredMixin, View):
         entry.occupational_group = data.get('occupational_group')
         entry.grade = data.get('grade')
         entry.remuneration = data.get('remuneration')
-        entry.required_role_id = data.get('required_role_id')
-        entry.complexity_level_id = data.get('complexity_level_id')
-        entry.minimum_instruction_id = data.get('minimum_instruction_id')
-        entry.minimum_experience_months = data.get('minimum_experience_months')
         entry.save()
 
         return JsonResponse({'success': True, 'message': 'Escala salarial actualizada.'})
@@ -729,10 +718,6 @@ class OccupationalMatrixDetailApi(View):
             'occupational_group': entry.occupational_group,
             'grade': entry.grade,
             'remuneration': entry.remuneration,
-            'minimum_experience_months': entry.minimum_experience_months,
-            'required_role_id': entry.required_role_id,
-            'minimum_instruction_id': entry.minimum_instruction_id,
-            'complexity_level_id': entry.complexity_level_id,
         })
 
 
@@ -747,7 +732,8 @@ def occupational_matrix_toggle_status(request, pk):
 
 class JobProfileSaveApi(LoginRequiredMixin, View):
     """
-    Procesa el guardado masivo del Perfil y sus Actividades en una sola transacción.
+    Procesa el guardado masivo del Perfil.
+    LOGICA ACTUALIZADA: Obtiene los datos de requisitos desde los Nodos de Valoración.
     """
 
     @method_decorator(csrf_protect)
@@ -756,7 +742,6 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             data = json.loads(request.body)
             with transaction.atomic():
                 profile_id = data.get('id')
-                # 1. Crear o Actualizar Perfil
                 if profile_id:
                     profile = JobProfile.objects.get(pk=profile_id)
                 else:
@@ -766,80 +751,63 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.specific_job_title = data.get('specific_job_title')
                 profile.administrative_unit_id = data.get('administrative_unit')
 
-                # Guardar todos los niveles de valoración desde los nodos seleccionados
+                # ==========================================================
+                # EXTRACCIÓN DE DATOS DESDE LOS NODOS DE VALORACIÓN
+                # ==========================================================
+
+                # 1. ROL (Desde el nodo seleccionado en el wizard)
                 role_node_id = data.get('role_node_id')
                 if role_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=role_node_id)
-                        if node.catalog_item:
-                            profile.job_role = node.catalog_item
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=role_node_id).first()
+                    if node and node.catalog_item:
+                        profile.job_role = node.catalog_item
 
+                # 2. INSTRUCCIÓN
                 instruction_node_id = data.get('instruction_node_id')
                 if instruction_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=instruction_node_id)
-                        if node.catalog_item:
-                            profile.required_instruction = node.catalog_item
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=instruction_node_id).first()
+                    if node and node.catalog_item:
+                        profile.required_instruction = node.catalog_item
 
+                # 3. EXPERIENCIA (Ahora es CharField)
+                # Obtenemos el texto descriptivo del nodo de experiencia
                 experience_node_id = data.get('experience_node_id')
                 if experience_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=experience_node_id)
-                        if node.name_extra:
-                            # Extraer meses de experiencia del nombre
-                            import re
-                            match = re.search(r'(\d+)', node.name_extra)
-                            if match:
-                                profile.required_experience_months = int(match.group(1))
-                            elif 'no requerida' in node.name_extra.lower():
-                                profile.required_experience_months = 0
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=experience_node_id).first()
+                    if node:
+                        # Prioridad: name_extra (texto manual) > catalog_item.name
+                        profile.required_experience = node.name_extra or (
+                            node.catalog_item.name if node.catalog_item else "No definida")
 
+                # 4. DECISIÓN
                 decision_node_id = data.get('decision_node_id')
                 if decision_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=decision_node_id)
-                        if node.catalog_item:
-                            profile.decision_making = node.catalog_item
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=decision_node_id).first()
+                    if node and node.catalog_item:
+                        profile.decision_making = node.catalog_item
 
+                # 5. IMPACTO
                 impact_node_id = data.get('impact_node_id')
                 if impact_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=impact_node_id)
-                        if node.catalog_item:
-                            profile.management_impact = node.catalog_item
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=impact_node_id).first()
+                    if node and node.catalog_item:
+                        profile.management_impact = node.catalog_item
 
+                # 6. COMPLEJIDAD
                 complexity_node_id = data.get('complexity_node_id')
                 if complexity_node_id:
-                    try:
-                        node = ValuationNode.objects.get(pk=complexity_node_id)
-                        if node.catalog_item:
-                            profile.final_complexity_level = node.catalog_item
-                    except ValuationNode.DoesNotExist:
-                        pass
+                    node = ValuationNode.objects.filter(pk=complexity_node_id).first()
+                    if node and node.catalog_item:
+                        profile.final_complexity_level = node.catalog_item
 
-                # Retrieve Matrix details
-                matrix_id = data.get('occupational_classification')
-                profile.occupational_classification_id = matrix_id
+                # 7. RESULTADO (Matriz Ocupacional)
+                result_node_id = data.get('result_node_id')
+                if result_node_id:
+                    node = ValuationNode.objects.filter(pk=result_node_id).first()
+                    if node and node.occupational_classification:
+                        profile.occupational_classification = node.occupational_classification
 
-                if matrix_id:
-                    matrix = OccupationalMatrix.objects.get(pk=matrix_id)
-                    profile.job_role = matrix.required_role
-                    profile.required_instruction = matrix.minimum_instruction
-                    profile.decision_making = matrix.required_decision
-                    profile.management_impact = matrix.required_impact
-                    profile.final_complexity_level = matrix.complexity_level
-                    profile.required_experience_months = matrix.minimum_experience_months
-
+                # Campos de texto libre
                 profile.mission = data.get('mission')
                 profile.knowledge_area = data.get('knowledge_area')
                 profile.experience_details = data.get('experience_details')
@@ -848,7 +816,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.is_active = True
                 profile.save()
 
-                # 2. Gestionar Actividades (Borrado y re-inserción para simplicidad en Wizard)
+                # 2. Gestionar Actividades
                 profile.activities.all().delete()
                 activities_data = data.get('activities', [])
 
@@ -864,6 +832,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             complexity_id=act.get('complexity') or None,
                             contribution_id=act.get('contribution') or None,
                             frequency_id=act.get('frequency') or None,
+                            points=act.get('points', 0)
                         ))
 
                 if activities_to_create:
@@ -871,24 +840,16 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 else:
                     raise ValueError("El perfil debe tener al menos una actividad esencial.")
 
-                # 3. Gestionar Competencias (Borrado y re-inserción)
-                # data.get('competencies') debe ser un array de IDs
+                # 3. Gestionar Competencias
                 profile.competencies.clear()
-                comp_ids = data.get('competencies', [])
-                # Filtramos IDs válidos y únicos
-                comp_ids = list(set([cid for cid in comp_ids if cid]))
-
-                # Para masivo con observable_behavior si fuera necesario, aquí usamos through default o create
-                # Como profile.competencies es m2m through ProfileCompetency, usamos el manager directo si el through permite o bulk_create del through
-                # Dado que ProfileCompetency tiene observable_behavior opcional ahora:
+                comp_ids = list(set([cid for cid in data.get('competencies', []) if cid]))
 
                 comps_to_create = []
                 for cid in comp_ids:
-                    # Buscamos la definición para pre-llenar observable_behavior si se desea, por ahora vacío
                     comps_to_create.append(ProfileCompetency(
                         profile=profile,
                         competency_id=cid,
-                        observable_behavior=''  # Opcional
+                        observable_behavior=''
                     ))
                 if comps_to_create:
                     ProfileCompetency.objects.bulk_create(comps_to_create)
@@ -900,6 +861,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 })
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
@@ -1175,7 +1138,7 @@ def api_get_profile_valuation_chain(request, profile_id):
             'selected_values': {
                 'role_id': profile.job_role_id,
                 'instruction_id': profile.required_instruction_id,
-                'experience_months': profile.required_experience_months or 0,
+                'experience_text': profile.required_experience,
                 'decision_id': profile.decision_making_id,
                 'impact_id': profile.management_impact_id,
                 'complexity_id': profile.final_complexity_level_id
@@ -1199,39 +1162,62 @@ def api_get_profile_valuation_chain(request, profile_id):
 class AssignGroupApiView(LoginRequiredMixin, View):
     """
     API para asignar manualmente el grupo ocupacional (OccupationalMatrix) a un perfil.
-    Recibe JSON: { profile_id: <int>, matrix_id: <int> }
+    LOGICA ACTUALIZADA: Los requisitos se extraen de la cadena de NODOS
+    que llevaron a ese resultado, no de la matriz.
     """
 
     def post(self, request):
         try:
             data = json.loads(request.body)
             profile_id = data.get('profile_id')
-            matrix_id = data.get('matrix_id')
+            # El result_node_id es el ID del ValuationNode de tipo 'RESULT'
+            result_node_id = data.get('result_node_id')
 
-            if not profile_id or not matrix_id:
-                return JsonResponse({'success': False, 'message': 'Faltan datos requeridos (profile_id, matrix_id)'},
-                                    status=400)
+            if not profile_id or not result_node_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Faltan datos requeridos (profile_id o result_node_id)'
+                }, status=400)
 
-            profile = get_object_or_404(JobProfile, pk=profile_id)
-            classification = get_object_or_404(OccupationalMatrix, pk=matrix_id)
+            with transaction.atomic():
+                profile = get_object_or_404(JobProfile, pk=profile_id)
+                # Obtenemos el nodo de resultado
+                leaf_node = get_object_or_404(ValuationNode, pk=result_node_id)
 
-            # Validar si es necesario alguna regla de negocio aquí.
-            # Por ahora asignamos directo.
-            profile.occupational_classification = classification
+                if not leaf_node.occupational_classification:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El nodo seleccionado no tiene una clasificación salarial vinculada.'
+                    }, status=400)
 
-            # Copiar atributos de la Matriz al Perfil para mantener consistencia
-            profile.job_role = classification.required_role
-            profile.required_instruction = classification.minimum_instruction
-            profile.decision_making = classification.required_decision
-            profile.management_impact = classification.required_impact
-            profile.final_complexity_level = classification.complexity_level
-            profile.required_experience_months = classification.minimum_experience_months
+                # 1. Asignamos la clasificación (Sueldo/Grado/Grupo)
+                profile.occupational_classification = leaf_node.occupational_classification
 
-            profile.save()
+                # 2. RECORREMOS HACIA ARRIBA EL ÁRBOL PARA HEREDAR REQUISITOS
+                curr = leaf_node.parent
+                while curr:
+                    if curr.node_type == 'COMPLEXITY' and curr.catalog_item:
+                        profile.final_complexity_level = curr.catalog_item
+                    elif curr.node_type == 'IMPACT' and curr.catalog_item:
+                        profile.management_impact = curr.catalog_item
+                    elif curr.node_type == 'DECISION' and curr.catalog_item:
+                        profile.decision_making = curr.catalog_item
+                    elif curr.node_type == 'EXPERIENCE':
+                        # Guardamos el texto (ej: "24 meses")
+                        profile.required_experience = curr.name_extra or (
+                            curr.catalog_item.name if curr.catalog_item else "No definido")
+                    elif curr.node_type == 'INSTRUCTION' and curr.catalog_item:
+                        profile.required_instruction = curr.catalog_item
+                    elif curr.node_type == 'ROLE' and curr.catalog_item:
+                        profile.job_role = curr.catalog_item
+
+                    curr = curr.parent
+
+                profile.save()
 
             return JsonResponse({
                 'success': True,
-                'message': f'Perfil asignado correctamente a {classification.occupational_group} - Grado {classification.grade}'
+                'message': f'Perfil legalizado y asignado a {profile.occupational_classification.occupational_group}'
             })
 
         except Exception as e:

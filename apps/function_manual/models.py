@@ -71,58 +71,21 @@ class ManualCatalogItem(BaseModel):
 
 class OccupationalMatrix(BaseModel):
     """
-    Representa la matriz de clasificación de los Art. 19 y 20 de la norma.
+    Representa solo la escala salarial y grados.
+    La definición de requisitos ahora reside en la estructura de Árbol (ValuationNode).
     """
-    objects = None
     occupational_group = models.CharField(max_length=100, verbose_name="Grupo Ocupacional (Ej: SP1)")
     grade = models.PositiveIntegerField(verbose_name="Grado de la Escala")
     remuneration = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="R.M.U.")
-
-    required_role = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'JOB_ROLES'},
-        related_name='matrix_by_roles',
-        verbose_name="Rol del Puesto"
-    )
-    required_decision = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'DECISION_LEVELS'},
-        related_name='matrix_by_decisions',
-        verbose_name="Nivel de Decisiones",
-        null=True, blank=True  # Temporalmente opcionales para la migración
-    )
-    required_impact = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'IMPACT_LEVELS'},
-        related_name='matrix_by_impact',
-        verbose_name="Nivel de Impacto",
-        null=True, blank=True
-    )
-    complexity_level = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'},
-        related_name='matrix_by_complexities',
-        verbose_name="Nivel de Complejidad"
-    )
-    minimum_instruction = models.ForeignKey(
-        ManualCatalogItem, on_delete=models.PROTECT,
-        limit_choices_to={'catalog__code': 'INSTRUCTION_LEVELS'},
-        related_name='matrix_by_instructions',
-        verbose_name="Instrucción Formal Mínima"
-    )
-
-    minimum_experience_months = models.PositiveIntegerField(verbose_name="Experiencia Mínima (Meses)")
 
     class Meta:
         verbose_name = "Matriz Ocupacional"
         verbose_name_plural = "Matrices Ocupacionales"
         unique_together = ('occupational_group', 'grade')
-        permissions = [
-            ("can_admin", "Puede administrar Matriz Ocupacional"),
-        ]
+        ordering = ['grade']
 
     def __str__(self) -> str:
-        return f"{self.occupational_group} - ${self.remuneration}"
+        return f"{self.occupational_group} - G{self.grade} - ${self.remuneration}"
 
 
 # ==============================================================================
@@ -130,64 +93,48 @@ class OccupationalMatrix(BaseModel):
 # ==============================================================================
 
 class JobProfile(BaseModel):
-    """
-    Modelo principal para el Perfil de Puesto normativa 2025.
-    """
     objects = None
-    position_code = models.CharField(max_length=50, blank=True, null=True, unique=True,
-                                     verbose_name="Código Posicional")
+    position_code = models.CharField(max_length=50, blank=True, null=True, unique=True)
     specific_job_title = models.CharField(max_length=255, verbose_name="Cargo Específico")
-    administrative_unit = models.ForeignKey(
-        AdministrativeUnit, on_delete=models.PROTECT, related_name='job_profiles', verbose_name="Unidad Administrativa"
-    )
-    referential_employee = models.ForeignKey(
-        Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Empleado Referencial"
-    )
+    administrative_unit = models.ForeignKey(AdministrativeUnit, on_delete=models.PROTECT, related_name='job_profiles')
+    referential_employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
 
     mission = models.TextField(verbose_name="Misión")
     interface_relations = models.TextField(verbose_name="Relaciones Internas/Externas")
 
+    # Campos que se llenan desde los Nodos de Valoración seleccionados
     required_instruction = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'INSTRUCTION_LEVELS'},
-        related_name='profiles_by_instruction',
-        verbose_name="Nivel de Instrucción",
-        null=True, blank=True
+        related_name='profiles_by_instruction', null=True, blank=True
     )
     decision_making = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'DECISION_LEVELS'},
-        related_name='profiles_by_decision',
-        verbose_name="Toma de Decisiones",
-        null=True, blank=True
+        related_name='profiles_by_decision', null=True, blank=True
     )
     management_impact = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'IMPACT_LEVELS'},
-        related_name='profiles_by_impact',
-        verbose_name="Impacto de Gestión",
-        null=True, blank=True
+        related_name='profiles_by_impact', null=True, blank=True
     )
     final_complexity_level = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'},
-        related_name='profiles_by_complexity',
-        verbose_name="Complejidad Resultante",
-        null=True, blank=True
+        related_name='profiles_by_complexity', null=True, blank=True
     )
     job_role = models.ForeignKey(
         ManualCatalogItem, on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'JOB_ROLES'},
-        related_name='profiles_by_role',
-        verbose_name="Rol Asignado",
-        null=True, blank=True
+        related_name='profiles_by_role', null=True, blank=True
     )
+    required_experience = models.CharField(max_length=255, verbose_name="Experiencia Requerida", default="No Requerida")
 
     knowledge_area = models.TextField(verbose_name="Área de Conocimiento")
-    required_experience_months = models.PositiveIntegerField(default=0, verbose_name="Experiencia (Meses)")
     experience_details = models.TextField(verbose_name="Detalle de Experiencia")
     training_topic = models.TextField(verbose_name="Temática de Capacitación", blank=True, null=True)
 
+    # Vinculación a la escala salarial (Resultado Final)
     occupational_classification = models.ForeignKey(
         OccupationalMatrix, on_delete=models.PROTECT, null=True, blank=True,
         verbose_name="Clasificación Matriz"
@@ -199,20 +146,15 @@ class JobProfile(BaseModel):
     reviewed_by = models.ForeignKey(Authorities, related_name='reviewed_profiles', on_delete=models.PROTECT, null=True)
     approved_by = models.ForeignKey(Authorities, related_name='approved_profiles', on_delete=models.PROTECT, null=True)
 
-    legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True,
-                                          verbose_name="Perfil Legalizado (Escaneado)")
+    legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True)
 
     @property
     def is_legalized(self):
-        """Retorna True si tiene las 3 firmas de legalización asignadas"""
         return bool(self.prepared_by and self.reviewed_by and self.approved_by)
 
     class Meta:
         verbose_name = "Perfil de Puesto"
         verbose_name_plural = "Perfiles de Puesto"
-        permissions = [
-            ("can_admin", "Puede administrar Perfiles de Puesto"),
-        ]
 
     def __str__(self) -> str:
         return f"{self.specific_job_title}"
