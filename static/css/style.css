@@ -1193,6 +1193,7 @@ select.input-field {
 .btn-views-action {
     background: linear-gradient(to right, #fbbf24, #f59e0b);
 }
+
 .btn-detail-action {
     background: linear-gradient(to right, #7dc1df, #1378dd);
 }
@@ -6018,4 +6019,23 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 
 .has-inner-submenu.is-open .chevron-icon-small {
     transform: rotate(180deg);
+}
+
+.empty-state-container {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #6c757d; /* Gris suave */
+    background-color: #fff;
+}
+
+.empty-state-icon {
+    font-size: 3rem; /* Tamaño grande para el icono */
+    margin-bottom: 1rem;
+    color: #dee2e6; /* Gris muy claro para el icono */
+    display: block;
+}
+
+.empty-state-text {
+    font-size: 1.1rem;
+    font-weight: 500;
 }

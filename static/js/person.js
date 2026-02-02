@@ -1,212 +1,240 @@
 /* static/js/apps/person.js */
 
+let vueApp = null;
+
+// --- FUNCIONES GLOBALES (Accesibles desde HTML) ---
+window.toggleSearchModal = (show) => {
+    const el = document.getElementById('modalAdvancedSearch');
+    if (el) {
+        show ? el.classList.remove('hidden') : el.classList.add('hidden');
+        document.body.classList.toggle('no-scroll', show);
+    } else {
+        console.warn('El modal modalAdvancedSearch no existe en el DOM.');
+    }
+};
+
+window.applyAdvancedSearch = () => {
+    if (vueApp) vueApp.handleAdvancedSearch();
+    window.toggleSearchModal(false);
+};
+
+window.resetAdvancedSearch = () => {
+    document.getElementById('advancedSearchForm')?.reset();
+    $('.select2-field').val(null).trigger('change');
+    if (vueApp) vueApp.resetFilters();
+};
+
+window.changePage = (page) => {
+    if (vueApp) vueApp.fetchPeople(page);
+};
+
+window.quickFilterStatus = (statusId) => {
+    const statusSelect = document.querySelector('select[name="status"]');
+    if (statusSelect) {
+        statusSelect.value = statusId;
+        $(statusSelect).trigger('change');
+    }
+    if (vueApp) vueApp.applyQuickFilter(statusId);
+};
+
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificamos primero si existe el elemento para no ejecutar lógica innecesaria
     const appElement = document.getElementById('personApp');
     if (!appElement) return;
 
     const {createApp, ref, onMounted} = Vue;
-
-    // 1. LEER CONFIGURACIÓN (Data Attributes)
     let urls = {};
     try {
-        if (appElement.dataset.urls) {
-            urls = JSON.parse(appElement.dataset.urls);
-        } else {
-            console.error("Falta atributo data-urls en #personApp");
-        }
+        urls = JSON.parse(appElement.dataset.urls);
     } catch (e) {
-        console.error("Error al parsear URLs:", e);
+        console.error(e);
     }
 
-    // 2. INICIAR VUE
-    createApp({
+    const app = createApp({
         setup() {
-            // Estado Reactivo
-            const isEditing = ref(false);
-            const currentId = ref(null);
+            // --- 1. DEFINICIÓN DE VARIABLES REACTIVAS ---
+
+            // Filtros y Búsqueda
+            const activeFilters = ref({});
+
+            // Vista Rápida
             const loadingQuickView = ref(false);
             const quickViewHtml = ref('');
-            const currentDetailUrl = ref('#');
+            const currentDetailUrl = ref('#'); // <--- FALTABA ESTA VARIABLE
 
-            // Formularios
+            // Formularios (Crear/Editar)
+            const isEditing = ref(false);
             const form = ref({});
             const errors = ref({});
             const photoPreview = ref(null);
+            const currentId = ref(null);
 
+            // Credenciales
             const credsForm = ref({username: '', password: '', role: ''});
             const credsErrors = ref({});
 
-            // --- CICLO DE VIDA ---
-            onMounted(() => {
-                initTableListeners();
-                initSearch();
-                initLocationCascading();
-            });
+            // ----------------------------------------------------
+            // 2. BÚSQUEDA INMEDIATA (FRONTEND)
+            // ----------------------------------------------------
+            const initLocalSearch = () => {
+                const input = document.getElementById('searchInput');
+                if (!input) return;
 
-            // --- LÓGICA UBICACIONES (CASCADA) ---
-            const initLocationCascading = () => {
-                const map = {
-                    'id_country': 'id_province',
-                    'id_province': 'id_canton',
-                    'id_canton': 'id_parish'
-                };
+                // Clonamos el nodo para eliminar listeners viejos y asegurar limpieza
+                const newInput = input.cloneNode(true);
+                input.parentNode.replaceChild(newInput, input);
 
-                Object.keys(map).forEach(sourceId => {
-                    const el = document.getElementById(sourceId);
-                    if (el) {
-                        el.addEventListener('change', (e) => loadLocationChildren(e.target.value, map[sourceId]));
-                    }
+                newInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('#table-body tr');
+
+                    rows.forEach(row => {
+                        const text = row.innerText.toLowerCase();
+                        if (text.includes(term) || term === '') {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
                 });
             };
 
-            const loadLocationChildren = async (parentId, targetSelectId) => {
-                const target = document.getElementById(targetSelectId);
-                if (!target) return;
+            // ----------------------------------------------------
+            // 3. BÚSQUEDA AVANZADA & PAGINACIÓN (BACKEND)
+            // ----------------------------------------------------
+            const fetchPeople = async (page = 1) => {
+                const params = new URLSearchParams();
+                params.append('page', page);
 
-                target.innerHTML = '<option value="">Cargando...</option>';
-
-                if (!parentId) {
-                    target.innerHTML = '<option value="">-- Seleccione --</option>';
-                    return;
+                // Añadir filtros avanzados activos
+                for (const [key, value] of Object.entries(activeFilters.value)) {
+                    if (value) params.append(key, value);
                 }
 
                 try {
-                    if (!urls.locations) throw new Error("URL locations no definida");
-
-                    const response = await fetch(`${urls.locations}?parent_id=${parentId}&format=json`, {
+                    const response = await fetch(`${urls.list}?${params.toString()}`, {
                         headers: {'X-Requested-With': 'XMLHttpRequest'}
                     });
                     const data = await response.json();
 
-                    let options = '<option value="">-- Seleccione --</option>';
-                    (Array.isArray(data) ? data : data.data || []).forEach(item => {
-                        options += `<option value="${item.id}">${item.name}</option>`;
-                    });
-                    target.innerHTML = options;
+                    if (data.success) {
+                        const container = document.getElementById('tableContainer');
+                        if (container) {
+                            container.innerHTML = data.html;
 
+                            // Limpiar filtro local visual al cargar nuevos datos
+                            const searchInput = document.getElementById('searchInput');
+                            if (searchInput) searchInput.value = '';
+                        }
+                    }
                 } catch (error) {
-                    console.error("Error cargando ubicaciones:", error);
-                    target.innerHTML = '<option value="">Error</option>';
+                    console.error("Error fetching data:", error);
                 }
             };
 
-            // --- LISTENERS TABLA (Delegación de eventos) ---
+            const handleAdvancedSearch = () => {
+                const formData = new FormData(document.getElementById('advancedSearchForm'));
+                activeFilters.value = Object.fromEntries(formData.entries());
+                fetchPeople(1);
+            };
+
+            const resetFilters = () => {
+                activeFilters.value = {};
+                fetchPeople(1);
+            };
+
+            const applyQuickFilter = (statusId) => {
+                activeFilters.value = {'status': statusId};
+                fetchPeople(1);
+            };
+
+            // ----------------------------------------------------
+            // 4. VISTA RÁPIDA (DELEGACIÓN DE EVENTOS)
+            // ----------------------------------------------------
             const initTableListeners = () => {
-                const tableContainer = document.getElementById('tableContainer');
-                if (!tableContainer) return;
+                const container = document.getElementById('tableContainer');
+                if (!container) return;
 
-                tableContainer.addEventListener('click', (e) => {
-                    // ... otros botones (edit, delete)
-
-                    // Vista Rápida
-                    const btnQuick = e.target.closest('.btn-quick-view');
-                    if (btnQuick && btnQuick.dataset.id) {
-                        openQuickView(btnQuick.dataset.id);
+                container.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.btn-quick-view');
+                    if (btn) {
+                        e.preventDefault();
+                        const personId = btn.dataset.id;
+                        if (personId) {
+                            openQuickView(personId);
+                        }
                     }
                 });
             };
+
             const openQuickView = async (id) => {
                 loadingQuickView.value = true;
-                quickViewHtml.value = '';
-                // Preparar URL para el detalle completo (para el paso siguiente)
-                currentDetailUrl.value = `/employee/detail/${id}/`;
+                quickViewHtml.value = '<div class="p-4 text-center text-gray-500">Cargando información...</div>';
+                currentDetailUrl.value = `/employee/detail/${id}/`; // Actualiza el link "Ver más"
 
                 const modal = document.getElementById('modalQuickViewOverlay');
                 showModal(modal);
 
                 try {
-                    const response = await fetch(`/person/quick-view/${id}/`, {
-                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                    });
-                    if (response.ok) {
-                        quickViewHtml.value = await response.text();
+                    const res = await fetch(`/person/quick-view-partial/${id}/`);
+                    if (res.ok) {
+                        quickViewHtml.value = await res.text();
                     } else {
-                        quickViewHtml.value = '<p class="text-error">Error al cargar la información.</p>';
+                        quickViewHtml.value = '<p class="text-error p-4">No se pudo cargar la información.</p>';
                     }
-                } catch (error) {
-                    quickViewHtml.value = '<p class="text-error">Error de conexión.</p>';
+                } catch (e) {
+                    quickViewHtml.value = '<p class="text-error p-4">Error de conexión.</p>';
                 } finally {
                     loadingQuickView.value = false;
                 }
             };
+
             const closeQuickView = () => {
-                const modal = document.getElementById('modalQuickViewOverlay');
-                hideModal(modal);
+                hideModal(document.getElementById('modalQuickViewOverlay'));
             };
 
-
-            const initSearch = () => {
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) {
-                    searchInput.addEventListener('input', debounce((e) => {
-                        fetchPeople(e.target.value);
-                    }, 500));
+            // ----------------------------------------------------
+            // 5. MODALES Y FORMULARIOS
+            // ----------------------------------------------------
+            const showModal = (el) => {
+                if (el) {
+                    el.classList.remove('hidden');
+                    document.body.classList.add('no-scroll');
+                }
+            };
+            const hideModal = (el) => {
+                if (el) {
+                    el.classList.add('hidden');
+                    if (document.querySelectorAll('.modal-overlay:not(.hidden)').length === 0) {
+                        document.body.classList.remove('no-scroll');
+                    }
                 }
             };
 
-            // --- API ACTIONS ---
-            const fetchPeople = (query) => {
-                fetch(`${urls.list}?q=${query}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                    .then(res => res.text())
-                    .then(html => {
-                        document.getElementById('tableContainer').innerHTML = html;
-                    });
-            };
-
-
-            // --- MODALES ACTIONS ---
-            // CORRECCIÓN PRINCIPAL: Buscar el elemento DOM DENTRO de la función
             const openCreateModal = () => {
                 isEditing.value = false;
                 currentId.value = null;
                 form.value = {};
                 errors.value = {};
                 photoPreview.value = null;
-
-                // Reiniciar form visualmente
                 document.getElementById('personFormHtml')?.reset();
-
-                // Buscar el modal AHORA (en vivo)
-                const modal = document.getElementById('modalPersonOverlay');
-                showModal(modal);
+                showModal(document.getElementById('modalPersonOverlay'));
             };
 
             const openEditModal = async (id) => {
                 isEditing.value = true;
                 currentId.value = id;
                 errors.value = {};
-
                 try {
                     const res = await fetch(urls.detail.replace('0', id));
                     const json = await res.json();
-
                     if (json.success) {
                         form.value = json.data;
                         photoPreview.value = json.data.photo_url;
-
-                        // Carga en cascada
-                        const d = json.data;
-                        if (d.country) {
-                            await loadLocationChildren(d.country, 'id_province');
-                            document.getElementById('id_province').value = d.province;
-                        }
-                        if (d.province) {
-                            await loadLocationChildren(d.province, 'id_canton');
-                            document.getElementById('id_canton').value = d.canton;
-                        }
-                        if (d.canton) {
-                            await loadLocationChildren(d.canton, 'id_parish');
-                            document.getElementById('id_parish').value = d.parish || '';
-                        }
-
-                        // Buscar el modal AHORA
-                        const modal = document.getElementById('modalPersonOverlay');
-                        showModal(modal);
+                        showModal(document.getElementById('modalPersonOverlay'));
                     }
                 } catch (e) {
                     console.error(e);
-                    if (window.Toast) window.Toast.fire({icon: 'error', title: 'Error cargando datos'});
                 }
             };
 
@@ -225,11 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (data.success) {
                         if (window.Toast) window.Toast.fire({icon: 'success', title: data.message});
-
-                        const modal = document.getElementById('modalPersonOverlay');
-                        hideModal(modal);
-
-                        fetchPeople(document.getElementById('searchInput')?.value || '');
+                        hideModal(document.getElementById('modalPersonOverlay'));
+                        fetchPeople(1); // Recarga la tabla en página 1
                     } else {
                         errors.value = data.errors;
                         if (window.Toast) window.Toast.fire({icon: 'warning', title: 'Revise el formulario'});
@@ -245,9 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentId.value = id;
                 credsForm.value = {username: '', password: '', role: ''};
                 credsErrors.value = {};
-
-                const modal = document.getElementById('modalCredentialsOverlay');
-                showModal(modal);
+                showModal(document.getElementById('modalCredentialsOverlay'));
             };
 
             const submitCredsForm = async () => {
@@ -267,11 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (data.success) {
                         if (window.Toast) window.Toast.fire({icon: 'success', title: data.message});
-
-                        const modal = document.getElementById('modalCredentialsOverlay');
-                        hideModal(modal);
-
-                        setTimeout(() => fetchPeople(''), 500);
+                        hideModal(document.getElementById('modalCredentialsOverlay'));
+                        fetchPeople(1);
                     } else {
                         credsErrors.value = data.errors;
                     }
@@ -280,54 +300,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            // Helpers UI
-            const showModal = (el) => {
-                if (el) {
-                    el.classList.remove('hidden');
-                    document.body.classList.add('no-scroll'); // <--- NUEVO: Bloquea fondo
-                }
-            };
-            const hideModal = (el) => {
-                if (el) {
-                    el.classList.add('hidden');
-                    // Solo quitamos no-scroll si NO hay otros modales abiertos
-                    // (Por si abres credenciales encima de editar)
-                    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
-                    if (openModals.length === 0) {
-                        document.body.classList.remove('no-scroll'); // <--- NUEVO: Desbloquea
-                    }
-                }
-            };
-
-            const handlePhotoChange = (e) => {
-                if (e.target.files[0]) photoPreview.value = URL.createObjectURL(e.target.files[0]);
-            };
-
             const closeModal = () => {
-                const m1 = document.getElementById('modalPersonOverlay');
-                const m2 = document.getElementById('modalCredentialsOverlay');
-                hideModal(m1);
-                hideModal(m2);
+                hideModal(document.getElementById('modalPersonOverlay'));
+                hideModal(document.getElementById('modalCredentialsOverlay'));
             };
 
-            function debounce(func, timeout = 300) {
-                let timer;
-                return (...args) => {
-                    clearTimeout(timer);
-                    timer = setTimeout(() => {
-                        func.apply(this, args);
-                    }, timeout);
-                };
-            }
+            // ----------------------------------------------------
+            // CICLO DE VIDA
+            // ----------------------------------------------------
+            onMounted(() => {
+                initLocalSearch();
+                initTableListeners();
+
+                $('.select2-field').select2({
+                    dropdownParent: $('#modalAdvancedSearch')
+                });
+            });
 
             return {
-                isEditing, form, errors, photoPreview,
-                credsForm, credsErrors,
-                openCreateModal, submitPersonForm,
+                // Métodos
+                fetchPeople, handleAdvancedSearch, resetFilters, applyQuickFilter,
+                openCreateModal, openEditModal, submitPersonForm,
                 openCredsModal, submitCredsForm, closeModal,
+                openQuickView, closeQuickView,
+
+                // Estado Reactivo (Devolvemos las constantes, NO re-creamos refs)
+                activeFilters,
                 loadingQuickView, quickViewHtml, currentDetailUrl,
-                openQuickView, closeQuickView
+                isEditing, form, errors, photoPreview,
+                credsForm, credsErrors
             };
         }
-    }).mount('#personApp');
+    });
+
+    vueApp = app.mount('#personApp');
 });

@@ -1,9 +1,14 @@
 # apps/person/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 from django.views.generic import ListView, CreateView, UpdateView
+from django.db.models import Q, Value, CharField
+from django.db.models.functions import Concat
+from core.models import CatalogItem
+from institution.models import AdministrativeUnit
 from .models import Person
 from .forms import PersonForm
 
@@ -16,32 +21,103 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'person.view_person'
 
     def get_queryset(self):
+        # 1. Base Query con optimización y ANOTACIÓN de Nombre Completo
         qs = Person.objects.select_related(
             'document_type',
             'user',
             'employee_profile__area',
-            'employee_profile__employment_status'
-        ).all().order_by('last_name')
+            'employee_profile__employment_status',
+            'marital_status'  # Agregamos esto para optimizar
+        ).annotate(
+            full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
+        ).order_by('last_name')
 
-        query = self.request.GET.get('q')
-        if query:
+        # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
+
+        # Recogemos parámetros
+        cedula = self.request.GET.get('cedula')
+        nombres = self.request.GET.get('nombres')  # Este buscará en la mezcla
+        area_id = self.request.GET.get('area')
+        status_id = self.request.GET.get('status')
+        marital_id = self.request.GET.get('marital_status')  # Nuevo filtro
+
+        # Aplicamos filtros si existen
+        if cedula:
+            qs = qs.filter(document_number__icontains=cedula)
+
+        if nombres:
+            # Busca en nombre, apellido O la concatenación de ambos
             qs = qs.filter(
-                Q(first_name__icontains=query) |
-                Q(last_name__icontains=query) |
-                Q(document_number__icontains=query)
+                Q(first_name__icontains=nombres) |
+                Q(last_name__icontains=nombres) |
+                Q(full_name_str__icontains=nombres)
             )
+
+        if area_id:
+            qs = qs.filter(employee_profile__area_id=area_id)
+
+        if status_id:
+            qs = qs.filter(employee_profile__employment_status_id=status_id)
+
+        if marital_id:
+            qs = qs.filter(marital_status_id=marital_id)
+
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = PersonForm()  # Para renderizar el modal vacío
+
+        # Formularios y Catálogos para el Modal de Búsqueda Avanzada
+        context['form'] = PersonForm()
+        context['marital_status_list'] = CatalogItem.objects.filter(catalog__code='MARITAL_STATUSES', is_active=True)
+        context['areas_list'] = AdministrativeUnit.objects.filter(is_active=True)
+        context['status_list'] = CatalogItem.objects.filter(catalog__code='EMPLOYMENT_STATUS', is_active=True)
+        context['gender_list'] = CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True)
+
+        # --- 3. ESTADÍSTICAS DINÁMICAS (Por Estado Laboral) ---
+        # Agrupamos empleados por estado y contamos
+        from employee.models import Employee
+        stats_qs = Employee.objects.values(
+            'employment_status__name',
+            'employment_status__code',
+            'employment_status__id'
+        ).annotate(total=Count('id')).order_by('-total')
+
+        # Convertimos a lista para fácil manejo en template
+        stats = []
+        total_employees = Person.objects.count()
+
+        # Tarjeta "Todos"
+        stats.append({
+            'label': 'Total',
+            'count': total_employees,
+            'icon': 'fa-users',
+            'class': 'color-one',
+            'filter_val': ''  # Vacío limpia el filtro
+        })
+
+        # Tarjetas dinámicas (Top 3 estados más comunes para no saturar)
+        colors = ['color-two', 'color-three', 'color-four']
+        for idx, item in enumerate(stats_qs[:3]):
+            stats.append({
+                'label': item['employment_status__name'] or 'Sin Estado',
+                'count': item['total'],
+                'icon': 'fa-user-tag',
+                'class': colors[idx] if idx < len(colors) else 'color-one',
+                'filter_val': item['employment_status__id']
+            })
+
+        context['stats_cards'] = stats
         return context
 
     def get(self, request, *args, **kwargs):
+        # Si es petición AJAX (Búsqueda o Paginación), devolvemos solo la tabla parcial
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            return render(request, 'person/partials/partial_person_table.html', context)
+            html = render_to_string('person/partials/partial_person_table.html', context, request=request)
+            return JsonResponse({'success': True, 'html': html})
+
         return super().get(request, *args, **kwargs)
 
 

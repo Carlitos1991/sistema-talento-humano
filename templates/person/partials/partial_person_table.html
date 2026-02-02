@@ -4,7 +4,6 @@
     <table>
         <thead>
         <tr>
-            <!-- Corregí el encabezado, había un enlace vacío '#' -->
             <th><i class="fa-solid fa-list-ol"></i></th>
             <th>Empleado</th>
             <th><i class="far fa-envelope header-icon"></i> Email</th>
@@ -18,7 +17,6 @@
         </thead>
         <tbody id="table-body">
         {% for person in people %}
-            <!-- ID ÚNICO PARA LA FILA: row-ID -->
             <tr class="location-row" id="row-{{ person.id }}"
                 data-status="{{ person.is_active|yesno:'true,false' }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
@@ -92,17 +90,37 @@
         {% endfor %}
         </tbody>
     </table>
-
-    <div class="no-results-overlay {% if people %}hidden{% endif %}">
-        <div class="no-results-content empty-db-msg {% if not people %}show{% else %}hidden{% endif %}">
-            <i class="fas fa-inbox no-results-icon"></i>
-            <p class="no-results-text">No hay personas registradas.</p>
-        </div>
-
-        <!-- Mensaje Búsqueda (lo maneja JS al filtrar) -->
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron resultados.</p>
-        </div>
-    </div>
+</div>
+<!-- PAGINACIÓN -->
+<div class="pagination-container">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }} - {{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+    </span>
+    {% if is_paginated %}
+        <ul class="pagination-list">
+            <li>
+                <button {% if page_obj.has_previous %}onclick="changePage({{ page_obj.previous_page_number }})"
+                        {% else %}disabled{% endif %} class="page-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </li>
+            {% for i in paginator.page_range %}
+                {% if page_obj.number == i %}
+                    <li>
+                        <button class="page-btn active">{{ i }}</button>
+                    </li>
+                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                    <li>
+                        <button onclick="changePage({{ i }})" class="page-btn">{{ i }}</button>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            <li>
+                <button {% if page_obj.has_next %}onclick="changePage({{ page_obj.next_page_number }})"
+                        {% else %}disabled{% endif %} class="page-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>
+        </ul>
+    {% endif %}
 </div>

@@ -1,0 +1,68 @@
+<!-- apps/person/templates/person/modals/modal_person_advanced_search.html -->
+<div id="modalAdvancedSearch" class="modal-overlay hidden">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3><i class="fas fa-filter"></i> Filtros de Base de Datos</h3>
+            <button type="button" class="close-modal-btn" onclick="toggleSearchModal(false)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="advancedSearchForm" onsubmit="event.preventDefault();">
+                <div class="form-grid two-columns">
+
+                    <!-- 1. Cédula -->
+                    <div class="form-group">
+                        <label class="form-label">Cédula / Identificación</label>
+                        <input type="text" name="cedula" class="input-field" placeholder="Ej: 1700...">
+                    </div>
+
+                    <!-- 2. Nombres y Apellidos (Mezcla) -->
+                    <div class="form-group">
+                        <label class="form-label">Nombres / Apellidos</label>
+                        <input type="text" name="nombres" class="input-field"
+                               placeholder="Buscar por nombre completo...">
+                    </div>
+
+                    <!-- 3. Área -->
+                    <div class="form-group">
+                        <label class="form-label">Unidad Administrativa</label>
+                        <select name="area" class="input-field select2-field" style="width: 100%;">
+                            <option value="">-- Todas --</option>
+                            {% for area in areas_list %}
+                                <option value="{{ area.id }}">{{ area.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- 4. Estado Laboral -->
+                    <div class="form-group">
+                        <label class="form-label">Estado del Empleado</label>
+                        <select name="status" class="input-field select2-field" style="width: 100%;">
+                            <option value="">-- Todos --</option>
+                            {% for st in status_list %}
+                                <option value="{{ st.id }}">{{ st.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- 5. Estado Civil (NUEVO) -->
+                    <div class="form-group">
+                        <label class="form-label">Estado Civil</label>
+                        <select name="marital_status" class="input-field" style="width: 100%;">
+                            <option value="">-- Todos --</option>
+                            {% for ms in marital_status_list %}
+                                <option value="{{ ms.id }}">{{ ms.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="resetAdvancedSearch()">Limpiar</button>
+            <button type="button" class="btn btn-primary" onclick="applyAdvancedSearch()">Buscar en BD</button>
+        </div>
+    </div>
+</div>
