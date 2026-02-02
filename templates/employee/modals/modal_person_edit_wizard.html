@@ -13,8 +13,6 @@
 
         <form id="personEditForm" @submit.prevent="submitPersonEdit" enctype="multipart/form-data">
             {% csrf_token %}
-            <input type="hidden" name="document_type" v-model="editForm.document_type">
-            <input type="hidden" name="document_number" v-model="editForm.document_number">
 
             <div class="modal-body-scrolled bg-light">
 
@@ -36,14 +34,23 @@
                         <div class="flex-grow-1">
                             <div class="grid-2-cols grid-compact">
                                 <div class="form-group form-group-compact">
+                                    <label class="form-label">Tipo Documento</label>
+                                    <input type="text" v-model="editForm.document_type_name" readonly class="input-field bg-light" style="cursor: not-allowed;">
+                                    <input type="hidden" name="document_type" v-model="editForm.document_type">
+                                </div>
+                                <div class="form-group form-group-compact">
+                                    <label class="form-label">Número Documento</label>
+                                    <input type="text" name="document_number" v-model="editForm.document_number" readonly class="input-field bg-light" style="cursor: not-allowed;">
+                                </div>
+                                <div class="form-group form-group-compact">
                                     <label class="form-label">Nombres</label>
                                     <input type="text" name="first_name" v-model="editForm.first_name"
-                                           class="input-field uppercase-input">
+                                           placeholder="Ej: JUAN CARLOS" class="input-field uppercase-input">
                                 </div>
                                 <div class="form-group form-group-compact">
                                     <label class="form-label">Apellidos</label>
                                     <input type="text" name="last_name" v-model="editForm.last_name"
-                                           class="input-field uppercase-input">
+                                           placeholder="Ej: PÉREZ GARCÍA" class="input-field uppercase-input">
                                 </div>
                                 <div class="form-group form-group-compact">
                                     <label class="form-label">Género</label>
@@ -84,11 +91,11 @@
                     <div class="grid-3-cols grid-compact">
                         <div class="form-group form-group-compact">
                             <label class="form-label">Email Personal</label>
-                            <input type="email" name="email" v-model="editForm.email" class="input-field">
+                            <input type="email" name="email" v-model="editForm.email" placeholder="ejemplo@correo.com" class="input-field">
                         </div>
                         <div class="form-group form-group-compact">
                             <label class="form-label">Celular</label>
-                            <input type="text" name="phone_number" v-model="editForm.phone_number" class="input-field">
+                            <input type="text" name="phone_number" v-model="editForm.phone_number" placeholder="0999999999" class="input-field">
                         </div>
                         <div class="form-group form-group-compact">
                             <label class="form-label">País</label>

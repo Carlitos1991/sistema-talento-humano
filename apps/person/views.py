@@ -145,15 +145,48 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Person
     form_class = PersonForm
     template_name = 'person/modals/modal_person_form.html'
-    permission_required = 'change.view_person'
+    permission_required = 'person.change_person'
 
     def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = PersonForm(request.POST, request.FILES, instance=self.object)
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'message': 'Datos actualizados correctamente.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        try:
+            self.object = self.get_object()
+            
+            # Verificar si la foto actual existe físicamente
+            if self.object.photo:
+                try:
+                    # Intentar acceder al archivo
+                    if not self.object.photo.storage.exists(self.object.photo.name):
+                        # La foto no existe físicamente, limpiar el campo
+                        print(f"Foto no encontrada: {self.object.photo.name}, limpiando campo...")
+                        self.object.photo = None
+                        self.object.save(update_fields=['photo'])
+                except Exception as e:
+                    # Error al acceder a la foto (ruta inválida, etc), limpiar el campo
+                    print(f"Error al verificar foto: {e}, limpiando campo...")
+                    self.object.photo = None
+                    self.object.save(update_fields=['photo'])
+            
+            # Procesar el formulario
+            if 'photo' in request.FILES:
+                # Hay una nueva foto
+                form = PersonForm(request.POST, request.FILES, instance=self.object)
+            else:
+                # No hay nueva foto
+                form = PersonForm(request.POST, instance=self.object)
+            
+            if form.is_valid():
+                form.save()
+                return JsonResponse({'success': True, 'message': 'Datos actualizados correctamente.'})
+            else:
+                # Log de errores para debugging
+                print("Errores de formulario:", form.errors)
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        except Exception as e:
+            # Log del error real
+            import traceback
+            print("Error en PersonUpdateView:", str(e))
+            traceback.print_exc()
+            return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
 
 def person_detail_json(request, pk):
@@ -161,6 +194,7 @@ def person_detail_json(request, pk):
     data = {
         'id': p.id,
         'document_type': p.document_type_id,
+        'document_type_name': p.document_type.name if p.document_type else '',
         'document_number': p.document_number,
         'first_name': p.first_name,
         'last_name': p.last_name,

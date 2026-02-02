@@ -47,12 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => {
                 if (!res.ok) throw new Error("Error en la petición");
-                return res.text();
+                return res.json();
             })
-            .then(html => {
+            .then(data => {
                 if (tableContainer) {
-                    tableContainer.innerHTML = html;
+                    tableContainer.innerHTML = data.html;
                     updatePaginationUI();
+
+                    // Actualizar estadísticas de las tarjetas
+                    updateLevelStats(data.level_stats);
 
                     // Mostrar/Ocultar botón de reset según si hay drill-down
                     const btnReset = document.getElementById('btn-reset-filters');
@@ -384,6 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     Toast.fire({icon: 'success', title: data.message});
+                    // Actualizar estadísticas si vienen en la respuesta
+                    if (data.level_stats) {
+                        updateLevelStats(data.level_stats);
+                    }
                     // Recargar tabla para ver cambios
                     window.fetchUnits();
                 } else {
@@ -400,6 +407,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stat-total').textContent = stats.total;
         document.getElementById('stat-active').textContent = stats.active;
         document.getElementById('stat-inactive').textContent = stats.inactive;
+    }
+
+    function updateLevelStats(levelStats) {
+        if (!levelStats || !Array.isArray(levelStats)) return;
+        
+        levelStats.forEach(stat => {
+            const card = document.getElementById(`stat-card-${stat.id}`);
+            if (card) {
+                const numberElement = card.querySelector('.number');
+                if (numberElement) {
+                    numberElement.textContent = stat.count;
+                }
+            }
+        });
     }
 
     const btnP = document.getElementById('btn-prev');

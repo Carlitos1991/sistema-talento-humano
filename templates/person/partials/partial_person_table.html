@@ -31,7 +31,6 @@
                             </div>
                         {% endif %}
                         <div class="person-details">
-                            <!-- Invertí el orden habitual: Nombre Apellido -->
                             <h4>{{ person.first_name }} {{ person.last_name }}</h4>
                             <p><i class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}</p>
                         </div>
@@ -87,7 +86,24 @@
                     </td>
                 {% endif %}
             </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state-container">
+                        <i class="fas fa-calendar-times empty-state-icon"></i>
+                        <p class="empty-state-text">No se encontraron registros registrados.</p>
+                    </div>
+                </td>
+            </tr>
         {% endfor %}
+        <tr id="client-no-results" style="display: none;">
+            <td colspan="7">
+                <div class="empty-state-container">
+                    <i class="fas fa-search empty-state-icon"></i>
+                    <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
+                </div>
+            </td>
+        </tr>
         </tbody>
     </table>
 </div>

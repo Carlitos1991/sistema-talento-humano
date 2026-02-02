@@ -270,11 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.currentId = null;
                     this.errors = {};
                     if (parentData) {
+                        // Calcular el siguiente nivel (hijo del padre seleccionado)
                         let nextLevel = parseInt(parentData.level) + 1;
                         if (nextLevel > 4) nextLevel = 4;
-                        this.form = {name: '', level: nextLevel, parent: parentData.id};
+                        
+                        // Configurar formulario para crear HIJO
+                        this.form = {
+                            name: '', 
+                            level: nextLevel, 
+                            parent: parentData.id  // El ID del padre
+                        };
                         this.parentNameDisplay = parentData.name;
+                        
+                        console.log('Creando hijo de:', parentData.name, '- Nivel padre:', parentData.level, '- Nuevo nivel:', nextLevel);
                     } else {
+                        // Sin padre = crear país (nivel 1)
                         this.form = {name: '', level: 1, parent: ''};
                         this.parentNameDisplay = '- Raíz -';
                     }
@@ -291,8 +301,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const response = await fetch(`/settings/locations/detail/${id}/`);
                         const result = await response.json();
                         if (result.success) {
-                            this.form = result.data;
-                            this.parentNameDisplay = result.data.parent_name || 'Sin Padre';
+                            // Solo asignar los campos necesarios para el formulario
+                            this.form = {
+                                name: result.data.name,
+                                level: result.data.level,
+                                parent: result.data.parent || ''
+                            };
+                            this.parentNameDisplay = result.data.parent_name || '- Raíz -';
                             this.isVisible = true;
                         }
                     } catch (e) {

@@ -23,7 +23,7 @@ class Person(models.Model):
     first_name = models.CharField(max_length=120)
     last_name = models.CharField(max_length=120)
     photo = models.ImageField(upload_to='employee/photos/', null=True, blank=True)
-    email = models.EmailField(unique=True, null=True, blank=True, verbose_name="Correo Personal")
+    email = models.EmailField(null=True, blank=True, verbose_name="Correo Personal")
 
     # --- Información Personal Básica ---
     birth_date = models.DateField(null=True, blank=True, verbose_name="Fecha de Nacimiento")
@@ -47,7 +47,7 @@ class Person(models.Model):
     parish = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True,
                                limit_choices_to={'level': 4}, related_name='people_by_parish')
     address_reference = models.TextField(blank=True, null=True, verbose_name="Dirección")
-    phone_number = models.CharField(max_length=20, blank=True, null=True,  verbose_name="Teléfono")
+    phone_number = models.CharField(max_length=200, blank=True, null=True,  verbose_name="Teléfono")
 
     # --- Información de Salud ---
     has_disability = models.BooleanField(default=False)
@@ -76,7 +76,7 @@ class Person(models.Model):
 
     # --- Contacto de Emergencia ---
     emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
-    emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    emergency_contact_phone = models.CharField(max_length=200, blank=True, null=True)
     emergency_contact_relationship = models.ForeignKey(CatalogItem, on_delete=models.SET_NULL, null=True, blank=True,
                                                        limit_choices_to={'catalog__code': 'RELATIONSHIPS'},
                                                        related_name='emergency_contacts_by_relationship')

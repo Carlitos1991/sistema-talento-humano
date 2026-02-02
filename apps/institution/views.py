@@ -148,7 +148,15 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            return render(request, 'institution/partials/partial_unit_table.html', context)
+            # Incluir level_stats actualizado en la respuesta
+            from django.http import JsonResponse
+            from django.template.loader import render_to_string
+            import json
+            html = render_to_string('institution/partials/partial_unit_table.html', context, request=request)
+            return JsonResponse({
+                'html': html,
+                'level_stats': context.get('level_stats', [])
+            }, safe=False)
         return super().get(request, *args, **kwargs)
 
 
@@ -209,7 +217,7 @@ class UnitToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return JsonResponse({
             'success': True,
             'message': f'La unidad "{unit.name}" ha sido {status_label}.',
-            'new_stats': get_unit_stats()
+            'level_stats': get_level_stats()['level_stats']
         })
 
 

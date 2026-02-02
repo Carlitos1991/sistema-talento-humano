@@ -63,13 +63,27 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
                 pass  # Fallo silencioso si no existe el catálogo aún
 
         # 2. LOGICA: Clases CSS y Atributos (Manejo especial para Email)
+        placeholders_map = {
+            'document_number': '1234567890',
+            'first_name': 'JUAN CARLOS',
+            'last_name': 'PÉREZ GARCÍA',
+            'email': 'ejemplo@correo.com',
+            'phone_number': '0999999999',
+            'address_reference': 'Calle Principal y Secundaria, Casa #123',
+            'emergency_contact_name': 'MARÍA GARCÍA',
+            'emergency_contact_phone': '0988888888',
+            'disability_percentage': '40',
+            'catastrophic_illness_description': 'Descripción de la enfermedad',
+            'substitute_family_member_name': 'PEDRO GARCÍA'
+        }
+        
         for name, field in self.fields.items():
             attrs = {}
 
             # --- CASO ESPECIAL: EMAIL (Sin mayúsculas) ---
             if name == 'email':
                 attrs['class'] = 'input-field'  # Clase limpia (sin uppercase-input)
-                attrs['placeholder'] = 'ejemplo@correo.com'
+                attrs['placeholder'] = placeholders_map.get(name, '')
 
             # --- CASO SELECTS (Para Select2) ---
             elif isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
@@ -82,6 +96,9 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             # --- RESTO DE CAMPOS (Mayúsculas visuales) ---
             else:
                 attrs['class'] = 'input-field uppercase-input'
+                # Agregar placeholder si existe en el mapa
+                if name in placeholders_map:
+                    attrs['placeholder'] = placeholders_map[name]
 
             # Aplicamos los atributos al widget
             field.widget.attrs.update(attrs)
