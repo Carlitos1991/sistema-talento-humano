@@ -430,6 +430,10 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 }
                 exit_status = mapping.get(current_status, 'PERSONA')
                 period.employee.set_status(exit_status)
+                
+                # Cambiar is_active del empleado a False
+                period.employee.is_active = False
+                period.employee.save()
 
                 # 3. Liberar la Partida
                 budget_line = period.budget_line

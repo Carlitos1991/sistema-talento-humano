@@ -2,6 +2,10 @@
 {% load static %}
 {% block title %}Directorio de Personas | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
+{% endblock %}
+
 {% block content %}
     <div id="personApp" data-urls='{
         "list": "{% url "person:person_list" %}",

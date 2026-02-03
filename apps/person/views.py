@@ -32,13 +32,26 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('last_name')
         
-        # --- FILTRO BASE: Solo personas con estado laboral específico ---
-        # Filtrar solo: EMPLEADO, CONTRATADO, TRABAJADOR, PERSONA, PROFESIONAL
-        allowed_status_codes = ['EMPLEADO', 'CONTRATADO', 'TRABAJADOR', 'PERSONA', 'PROFESIONAL']
-        qs = qs.filter(employee_profile__employment_status__code__in=allowed_status_codes)
-
         # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')
+        
+        # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
+        # Recogemos parámetros
+        cedula = self.request.GET.get('cedula')
+        nombres = self.request.GET.get('nombres')
+        area_id = self.request.GET.get('area')
+        status_id = self.request.GET.get('status')
+        marital_id = self.request.GET.get('marital_status')
+        gender_id = self.request.GET.get('gender')
+        
+        # Detectar si hay búsqueda avanzada activa
+        has_advanced_search = any([cedula, nombres, area_id, status_id, marital_id, gender_id])
+        
+        # --- FILTRO BASE: Solo empleados activos si NO hay búsqueda avanzada ---
+        if not has_advanced_search and not q:
+            qs = qs.filter(employee_profile__is_active=True)
+        
+        # Búsqueda rápida
         if q:
             qs = qs.filter(
                 Q(first_name__icontains=q) |
@@ -48,16 +61,7 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(full_name_str__icontains=q)
             )
 
-        # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
-
-        # Recogemos parámetros
-        cedula = self.request.GET.get('cedula')
-        nombres = self.request.GET.get('nombres')  # Este buscará en la mezcla
-        area_id = self.request.GET.get('area')
-        status_id = self.request.GET.get('status')
-        marital_id = self.request.GET.get('marital_status')  # Nuevo filtro
-
-        # Aplicamos filtros si existen
+        # Aplicamos filtros avanzados si existen
         if cedula:
             qs = qs.filter(document_number__icontains=cedula)
 
@@ -77,6 +81,9 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if marital_id:
             qs = qs.filter(marital_status_id=marital_id)
+            
+        if gender_id:
+            qs = qs.filter(gender_id=gender_id)
 
         return qs
 
@@ -87,13 +94,23 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['form'] = PersonForm()
         context['marital_status_list'] = CatalogItem.objects.filter(catalog__code='MARITAL_STATUSES', is_active=True)
         context['areas_list'] = AdministrativeUnit.objects.filter(is_active=True)
-        context['status_list'] = CatalogItem.objects.filter(catalog__code='EMPLOYMENT_STATUS', is_active=True)
+        # Heredar todos los estados del catálogo EMPLOYMENT_STATUS
+        context['status_list'] = CatalogItem.objects.filter(catalog__code='EMPLOYMENT_STATUS').order_by('name')
         context['gender_list'] = CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True)
 
-        # --- 3. ESTADÍSTICAS DINÁMICAS (Por Estado Laboral) ---
-        # Agrupamos empleados por estado y contamos
+        # --- 3. ESTADÍSTICAS DINÁMICAS (Solo Estados Activos) ---
         from employee.models import Employee
-        stats_qs = Employee.objects.values(
+        
+        # Códigos de estados activos
+        active_status_codes = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
+        
+        # Estadísticas solo de empleados activos
+        active_employees = Employee.objects.filter(
+            employment_status__code__in=active_status_codes,
+            is_active=True
+        )
+        
+        stats_qs = active_employees.values(
             'employment_status__name',
             'employment_status__code',
             'employment_status__id'
@@ -101,24 +118,32 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # Convertimos a lista para fácil manejo en template
         stats = []
-        total_employees = Person.objects.count()
+        total_active_employees = active_employees.count()
 
-        # Tarjeta "Todos"
+        # Tarjeta "Total Activos"
         stats.append({
-            'label': 'Total',
-            'count': total_employees,
+            'label': 'Total Activos',
+            'count': total_active_employees,
             'icon': 'fa-users',
             'class': 'color-one',
             'filter_val': ''  # Vacío limpia el filtro
         })
 
-        # Tarjetas dinámicas (Top 3 estados más comunes para no saturar)
-        colors = ['color-two', 'color-three', 'color-four']
-        for idx, item in enumerate(stats_qs[:3]):
+        # Tarjetas dinámicas por cada estado activo
+        icons_map = {
+            'EMPLEADO': 'fa-user-tie',
+            'TRABAJADOR': 'fa-hard-hat',
+            'CONTRATADO': 'fa-user-clock',
+            'PROFESIONAL': 'fa-user-graduate'
+        }
+        colors = ['color-two', 'color-three', 'color-four', 'color-five']
+        
+        for idx, item in enumerate(stats_qs):
+            code = item['employment_status__code']
             stats.append({
                 'label': item['employment_status__name'] or 'Sin Estado',
                 'count': item['total'],
-                'icon': 'fa-user-tag',
+                'icon': icons_map.get(code, 'fa-user-tag'),
                 'class': colors[idx] if idx < len(colors) else 'color-one',
                 'filter_val': item['employment_status__id']
             })

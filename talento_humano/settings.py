@@ -14,7 +14,7 @@ SECRET_KEY = config('SECRET_KEY')
 DB_OLD = {'dbname': 'db_talento_2020', 'user': 'postgres', 'password': 'Talento2023**', 'host': '192.168.1.253'}
 DB_NEW = {'dbname': 'db_talento_humano', 'user': 'postgres', 'password': 'admin', 'host': 'localhost'}
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 

@@ -24,6 +24,58 @@ window.resetAdvancedSearch = () => {
     if (vueApp) vueApp.resetFilters();
 };
 
+window.closeModalOnOutsideClick = (event) => {
+    if (event.target.id === 'modalAdvancedSearch') {
+        window.toggleSearchModal(false);
+    }
+};
+
+window.initializeSelect2 = () => {
+    // Usar MutationObserver para inicializar Select2 cuando el modal esté visible
+    const modal = document.getElementById('modalAdvancedSearch');
+    if (!modal) return;
+
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const isVisible = !modal.classList.contains('hidden');
+                if (isVisible) {
+                    // Inicializar Select2 para los campos del modal
+                    $('#areaSearchSelect').select2({
+                        dropdownParent: $('#modalAdvancedSearch'),
+                        allowClear: true,
+                        placeholder: 'Seleccione...',
+                        language: 'es'
+                    });
+
+                    $('#statusSearchSelect').select2({
+                        dropdownParent: $('#modalAdvancedSearch'),
+                        allowClear: true,
+                        placeholder: 'Seleccione...',
+                        language: 'es'
+                    });
+
+                    $('#civilStatusSearchSelect').select2({
+                        dropdownParent: $('#modalAdvancedSearch'),
+                        allowClear: true,
+                        placeholder: 'Seleccione...',
+                        language: 'es'
+                    });
+
+                    $('#genderSearchSelect').select2({
+                        dropdownParent: $('#modalAdvancedSearch'),
+                        allowClear: true,
+                        placeholder: 'Seleccione...',
+                        language: 'es'
+                    });
+                }
+            }
+        });
+    });
+
+    observer.observe(modal, { attributes: true });
+};
+
 window.changePage = (page) => {
     if (vueApp) vueApp.fetchPeople(page);
 };
@@ -464,4 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     vueApp = app.mount('#personApp');
+    
+    // Inicializar Select2 para el modal de búsqueda avanzada
+    window.initializeSelect2();
 });
