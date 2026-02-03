@@ -14,7 +14,7 @@ SECRET_KEY = config('SECRET_KEY')
 DB_OLD = {'dbname': 'db_talento_2020', 'user': 'postgres', 'password': 'Talento2023**', 'host': '192.168.1.253'}
 DB_NEW = {'dbname': 'db_talento_humano', 'user': 'postgres', 'password': 'admin', 'host': 'localhost'}
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Agregar WhiteNoise después de SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -124,6 +125,16 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para producción
+
+# Configuración de WhiteNoise para archivos estáticos en producción
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # --- CONFIGURACIÓN DE AUTENTICACIÓN PERSONALIZADA ---
 

@@ -31,6 +31,11 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         ).annotate(
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('last_name')
+        
+        # --- FILTRO BASE: Solo personas con estado laboral específico ---
+        # Filtrar solo: EMPLEADO, CONTRATADO, TRABAJADOR, PERSONA, PROFESIONAL
+        allowed_status_codes = ['EMPLEADO', 'CONTRATADO', 'TRABAJADOR', 'PERSONA', 'PROFESIONAL']
+        qs = qs.filter(employee_profile__employment_status__code__in=allowed_status_codes)
 
         # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')

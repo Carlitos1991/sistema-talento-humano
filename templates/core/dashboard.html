@@ -1,11 +1,428 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Dashboard | Inicio{% endblock %}
+{% block title %}Dashboard | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
-    <div style="padding: 2rem;">
-        <h1>Dashboard Principal</h1>
-        <p>Bienvenido, <strong>{{ user.username }}</strong>.</p>
-        <p>Has ingresado al sistema seguro.</p>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div>
+            <h1>Sistema de Gestión de Talento Humano</h1>
+            <p>Análisis de personal del Municipio de Loja</p>
+        </div>
     </div>
+
+    <!-- Estadísticas de Empleados ACTIVOS -->
+    <div class="stats-grid">
+        <!-- TOTAL -->
+        <div class="stat-card total">
+            <div class="stat-content">
+                <div class="stat-label">TOTAL ACTIVOS</div>
+                <div class="stat-number">{{ total_employees }}</div>
+            </div>
+            <div class="stat-icon blue">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+
+        <!-- EMPLEADOS -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">EMPLEADOS</div>
+                <div class="stat-number">{{ empleados }}</div>
+            </div>
+            <div class="stat-icon orange">
+                <i class="fas fa-user-check"></i>
+            </div>
+        </div>
+
+        <!-- TRABAJADORES -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">TRABAJADORES</div>
+                <div class="stat-number">{{ trabajadores }}</div>
+            </div>
+            <div class="stat-icon green">
+                <i class="fas fa-user-tie"></i>
+            </div>
+        </div>
+
+        <!-- CONTRATADOS -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">CONTRATADOS</div>
+                <div class="stat-number">{{ contratados }}</div>
+            </div>
+            <div class="stat-icon cyan">
+                <i class="fas fa-user-clock"></i>
+            </div>
+        </div>
+
+        <!-- PROFESIONALES -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PROFESIONALES</div>
+                <div class="stat-number">{{ profesionales }}</div>
+            </div>
+            <div class="stat-icon red">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Adicional -->
+    <div class="stats-grid" style="margin-top: 20px;">
+        <!-- GÉNERO -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">MASCULINO / FEMENINO</div>
+                <div class="stat-number">{{ empleados_masculino }} / {{ empleados_femenino }}</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-venus-mars"></i>
+            </div>
+        </div>
+
+        <!-- CON TÍTULO -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">CON TÍTULO UNIVERSITARIO</div>
+                <div class="stat-number">{{ empleados_con_titulo }}</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%);">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+        </div>
+
+        <!-- CON DISCAPACIDAD -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">CON DISCAPACIDAD</div>
+                <div class="stat-number">{{ empleados_con_discapacidad }}</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
+                <i class="fas fa-wheelchair"></i>
+            </div>
+        </div>
+
+        <!-- SUSTITUTOS -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">EMPLEADOS SUSTITUTOS</div>
+                <div class="stat-number">{{ empleados_sustitutos }}</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #81fbb8 0%, #28c76f 100%);">
+                <i class="fas fa-user-friends"></i>
+            </div>
+        </div>
+
+        <!-- PRÓXIMOS A JUBILACIÓN -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PRÓXIMOS A JUBILACIÓN</div>
+                <div class="stat-number">{{ proximos_jubilados }}</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f8b500 0%, #fceabb 100%);">
+                <i class="fas fa-user-clock"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas de Partidas -->
+    <div class="stats-grid" style="margin-top: 20px;">
+        <!-- TOTAL PARTIDAS -->
+        <div class="stat-card total">
+            <div class="stat-content">
+                <div class="stat-label">TOTAL PARTIDAS</div>
+                <div class="stat-number">{{ total_partidas }}</div>
+            </div>
+            <div class="stat-icon blue">
+                <i class="fas fa-list"></i>
+            </div>
+        </div>
+
+        <!-- OCUPADAS -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PARTIDAS OCUPADAS</div>
+                <div class="stat-number">{{ partidas_ocupadas }}</div>
+            </div>
+            <div class="stat-icon orange">
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+
+        <!-- LIBRES -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PARTIDAS LIBRES</div>
+                <div class="stat-number">{{ partidas_libres }}</div>
+            </div>
+            <div class="stat-icon green">
+                <i class="fas fa-lock-open"></i>
+            </div>
+        </div>
+
+        <!-- CONCURSO -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PARTIDAS EN CONCURSO</div>
+                <div class="stat-number">{{ partidas_concurso }}</div>
+            </div>
+            <div class="stat-icon cyan">
+                <i class="fas fa-trophy"></i>
+            </div>
+        </div>
+
+        <!-- LITIGIO -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">PARTIDAS EN LITIGIO</div>
+                <div class="stat-number">{{ partidas_litigio }}</div>
+            </div>
+            <div class="stat-icon red">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+        </div>
+
+        <!-- OCUPACIÓN % -->
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">% OCUPACIÓN</div>
+                <div class="stat-number">{{ porcentaje_ocupacion }}%</div>
+            </div>
+            <div class="stat-icon" style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Áreas con Más Empleados -->
+    {% if top_areas %}
+    <div style="margin-top: 30px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 20px 0; color: #1f2937; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-building" style="color: #3b82f6;"></i>
+            Áreas con Más Personal Activo
+        </h3>
+        <div style="display: grid; gap: 12px;">
+            {% for area in top_areas %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                <div style="min-width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-weight: bold;">
+                    {{ forloop.counter }}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #1f2937;">{{ area.name }}</div>
+                </div>
+                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">{{ area.total }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+        <!-- Gráfico de Barras -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <i class="fas fa-chart-bar"></i>
+                <h3>Distribución de Partidas Presupuestarias</h3>
+            </div>
+            <canvas id="budgetBarChart"></canvas>
+        </div>
+
+        <!-- Gráfico de Dona (Empleados) -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <i class="fas fa-chart-pie"></i>
+                <h3>Distribución de Personal Activo</h3>
+            </div>
+            <canvas id="employeeDonutChart"></canvas>
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #f59e0b;"></span>
+                    <span>Empleados</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #10b981;"></span>
+                    <span>Trabajadores</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #3b82f6;"></span>
+                    <span>Contratados</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ef4444;"></span>
+                    <span>Profesionales</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Género -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <i class="fas fa-venus-mars"></i>
+                <h3>Distribución por Género</h3>
+            </div>
+            <canvas id="genderChart"></canvas>
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #3b82f6;"></span>
+                    <span>Masculino</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ec4899;"></span>
+                    <span>Femenino</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Datos desde Django
+        const employeeData = {
+            labels: {{ employee_chart_data.labels|safe }},
+            values: {{ employee_chart_data.values|safe }}
+        };
+        
+        const budgetData = {
+            labels: {{ budget_chart_data.labels|safe }},
+            values: {{ budget_chart_data.values|safe }}
+        };
+
+        const genderData = {
+            labels: {{ gender_chart_data.labels|safe }},
+            values: {{ gender_chart_data.values|safe }}
+        };
+
+        // Configuración común para gráficos
+        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+        Chart.defaults.font.size = 13;
+
+        // Gráfico de Dona (Empleados Activos)
+        const donutCtx = document.getElementById('employeeDonutChart').getContext('2d');
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: employeeData.labels,
+                datasets: [{
+                    data: employeeData.values,
+                    backgroundColor: ['#f59e0b', '#10b981', '#3b82f6', '#ef4444'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Gráfico de Barras (Partidas)
+        const barCtx = document.getElementById('budgetBarChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: budgetData.labels,
+                datasets: [{
+                    label: 'Cantidad',
+                    data: budgetData.values,
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
+                    borderRadius: 8,
+                    barThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Partidas: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            stepSize: 500
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Género
+        const genderCtx = document.getElementById('genderChart').getContext('2d');
+        new Chart(genderCtx, {
+            type: 'doughnut',
+            data: {
+                labels: genderData.labels,
+                datasets: [{
+                    data: genderData.values,
+                    backgroundColor: ['#3b82f6', '#ec4899'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    </script>
 {% endblock %}

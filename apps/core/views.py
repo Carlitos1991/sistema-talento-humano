@@ -31,6 +31,131 @@ class CustomLoginView(LoginView):
 # --- 2. DASHBOARD ---
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from employee.models import Employee
+        from budget.models import BudgetLine
+        from person.models import Person
+        from core.models import CatalogItem
+        from django.db.models import Count, Q, Avg, Sum
+        from datetime import date, timedelta
+        from django.utils import timezone
+        
+        # === ESTADÍSTICAS DE EMPLEADOS (SOLO ACTIVOS) ===
+        active_employees = Employee.objects.filter(is_active=True)
+        
+        employee_stats = active_employees.values(
+            'employment_status__code',
+            'employment_status__name'
+        ).annotate(total=Count('id'))
+        
+        stats_dict = {stat['employment_status__code']: stat['total'] for stat in employee_stats if stat['employment_status__code']}
+        
+        context['total_employees'] = active_employees.count()
+        context['empleados'] = stats_dict.get('EMPLEADO', 0)
+        context['trabajadores'] = stats_dict.get('TRABAJADOR', 0)
+        context['contratados'] = stats_dict.get('CONTRATADO', 0)
+        context['profesionales'] = stats_dict.get('PROFESIONAL', 0)
+        
+        # === ESTADÍSTICAS DE PARTIDAS (SOLO ACTIVAS) ===
+        active_budgets = BudgetLine.objects.exclude(status_item__code='INACTIVA')
+        budget_stats = active_budgets.values(
+            'status_item__code',
+            'status_item__name'
+        ).annotate(total=Count('id'))
+        
+        budget_dict = {stat['status_item__code']: stat['total'] for stat in budget_stats if stat['status_item__code']}
+        
+        context['total_partidas'] = active_budgets.count()
+        context['partidas_ocupadas'] = budget_dict.get('OCUPADA', 0)
+        context['partidas_libres'] = budget_dict.get('LIBRE', 0)
+        context['partidas_concurso'] = budget_dict.get('CONCURSO', 0)
+        context['partidas_litigio'] = budget_dict.get('LITIGIO', 0)
+        
+        # === ESTADÍSTICAS ADICIONALES ===
+        # Porcentaje de ocupación
+        if context['total_partidas'] > 0:
+            context['porcentaje_ocupacion'] = round((context['partidas_ocupadas'] / context['total_partidas']) * 100, 1)
+        else:
+            context['porcentaje_ocupacion'] = 0
+            
+        # Género
+        gender_stats = active_employees.values(
+            'person__gender__name'
+        ).annotate(total=Count('id'))
+        
+        context['empleados_masculino'] = 0
+        context['empleados_femenino'] = 0
+        
+        for stat in gender_stats:
+            if stat['person__gender__name']:
+                gender_name = stat['person__gender__name'].upper()
+                if 'MASCULINO' in gender_name or 'HOMBRE' in gender_name:
+                    context['empleados_masculino'] = stat['total']
+                elif 'FEMENINO' in gender_name or 'MUJER' in gender_name:
+                    context['empleados_femenino'] = stat['total']
+        
+        # Empleados con título universitario (simplificado: solo profesionales)
+        context['empleados_con_titulo'] = active_employees.filter(
+            employment_status__code='PROFESIONAL'
+        ).count()
+        
+        # Empleados con discapacidad
+        context['empleados_con_discapacidad'] = active_employees.filter(
+            person__has_disability=True
+        ).count()
+        
+        # Empleados sustitutos
+        context['empleados_sustitutos'] = active_employees.filter(
+            person__is_substitute=True
+        ).count()
+        
+        # Próximos jubilados (mayores de 60 años)
+        fecha_jubilacion = date.today() - timedelta(days=365*60)
+        context['proximos_jubilados'] = active_employees.filter(
+            person__birth_date__lte=fecha_jubilacion
+        ).count()
+        
+        # Áreas con más empleados
+        top_areas = active_employees.values(
+            'area__name'
+        ).annotate(
+            total=Count('id')
+        ).order_by('-total')[:5]
+        
+        context['top_areas'] = [
+            {'name': area['area__name'] or 'Sin área', 'total': area['total']} 
+            for area in top_areas
+        ]
+        
+        # === DATOS PARA GRÁFICOS ===
+        context['employee_chart_data'] = {
+            'labels': ['Empleados', 'Trabajadores', 'Contratados', 'Profesionales'],
+            'values': [
+                context['empleados'],
+                context['trabajadores'],
+                context['contratados'],
+                context['profesionales']
+            ]
+        }
+        
+        context['budget_chart_data'] = {
+            'labels': ['Libres', 'Ocupadas', 'Litigio', 'Concurso'],
+            'values': [
+                context['partidas_libres'],
+                context['partidas_ocupadas'],
+                context['partidas_litigio'],
+                context['partidas_concurso']
+            ]
+        }
+        
+        context['gender_chart_data'] = {
+            'labels': ['Masculino', 'Femenino'],
+            'values': [context['empleados_masculino'], context['empleados_femenino']]
+        }
+        
+        return context
 
 
 # --- 3. PERFIL DE USUARIO ---
@@ -469,3 +594,22 @@ class LocationJsonView(View):
             'success': True,
             'data': data
         })
+
+
+# === MANEJADORES DE ERRORES PERSONALIZADOS ===
+def custom_page_not_found(request, exception=None):
+    """Manejador personalizado para error 404"""
+    from django.shortcuts import render
+    return render(request, '404.html', status=404)
+
+
+def custom_permission_denied(request, exception=None):
+    """Manejador personalizado para error 403"""
+    from django.shortcuts import render
+    return render(request, '403.html', status=403)
+
+
+def custom_server_error(request):
+    """Manejador personalizado para error 500"""
+    from django.shortcuts import render
+    return render(request, '500.html', status=500)

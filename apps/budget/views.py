@@ -64,14 +64,19 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = BudgetLine
     template_name = 'budget/budget_list.html'
     context_object_name = 'lines'
-    paginate_by = 15
+    paginate_by = 10
     permission_required = 'budget.view_budgetline'
 
     def get_queryset(self):
         qs = BudgetLine.objects.select_related(
             'activity__project__subprogram__program',
             'current_employee__person',
-            'status_item', 'position_item', 'regime_item'
+            'status_item',
+            'position_item',
+            'regime_item',
+            'group_item',
+            'category_item',
+            'grade_item'
         ).all().order_by('number_individual')
 
         q = self.request.GET.get('q')
@@ -99,8 +104,21 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            self.object_list = self.get_queryset()
-            context = self.get_context_data()
+            queryset = self.get_queryset()
+            paginator = self.get_paginator(queryset, self.paginate_by)
+            page_number = request.GET.get(self.page_kwarg, 1)
+            
+            try:
+                page_obj = paginator.get_page(page_number)
+            except:
+                page_obj = paginator.get_page(1)
+            
+            context = {
+                self.context_object_name: page_obj.object_list,
+                'page_obj': page_obj,
+                'paginator': paginator,
+                'is_paginated': page_obj.has_other_pages(),
+            }
             return render(request, 'budget/partials/partial_budget_table.html', context)
         return super().get(request, *args, **kwargs)
 
