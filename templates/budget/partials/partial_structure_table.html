@@ -59,4 +59,16 @@
         {% endfor %}
         </tbody>
     </table>
+
+    <!-- Metadatos Paginación -->
+    {% if page_obj %}
+    <div id="pagination-metadata" class="hidden"
+         data-total="{{ page_obj.paginator.count }}"
+         data-page="{{ page_obj.number }}"
+         data-start="{{ page_obj.start_index }}"
+         data-end="{{ page_obj.end_index }}"
+         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
+         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    </div>
+    {% endif %}
 </div>

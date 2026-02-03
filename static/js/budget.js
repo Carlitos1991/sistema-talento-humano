@@ -15,7 +15,16 @@ const Toast = Swal.mixin({
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.fetchBudgets) window.fetchBudgets();
+    console.log('Budget.js: DOMContentLoaded ejecutado');
+    
+    // NO hacer fetchBudgets en la carga inicial, solo actualizar paginación del HTML ya renderizado
+    // if (window.fetchBudgets) window.fetchBudgets();
+    
+    // Actualizar paginación inicial con el HTML ya cargado por Django
+    if (typeof updatePaginationUI === 'function') {
+        setTimeout(() => updatePaginationUI(), 100); // Pequeño delay para asegurar que el DOM esté listo
+    }
+    
     const searchInput = document.getElementById('table-search-budget');
     if (searchInput) {
         let timeout;
@@ -41,20 +50,49 @@ window.fetchBudgets = function (params = {}) {
         .then(res => res.text())
         .then(html => {
             const wrapper = document.getElementById('table-content-wrapper');
-            if (wrapper) wrapper.innerHTML = html;
+            if (wrapper) {
+                wrapper.innerHTML = html;
+                // Actualizar UI de paginación después de cargar
+                if (typeof updatePaginationUI === 'function') {
+                    updatePaginationUI();
+                }
+            }
         });
 };
 
 function updatePaginationUI() {
     const meta = document.getElementById('pagination-metadata');
-    if (!meta) return;
+    if (!meta) {
+        console.warn('No se encontró pagination-metadata');
+        return;
+    }
+    
+    // Parsear valores como números
+    const total = parseInt(meta.dataset.total) || 0;
+    const start = parseInt(meta.dataset.start) || 0;
+    const end = parseInt(meta.dataset.end) || 0;
+    const page = parseInt(meta.dataset.page) || 1;
+    const hasNext = meta.dataset.hasNext === 'true';
+    const hasPrev = meta.dataset.hasPrev === 'true';
+    
+    // Sincronizar estado local
+    currentFilters.page = page;
+    
+    // Actualizar texto de información
     const pageInfo = document.getElementById('page-info');
-    if (pageInfo) pageInfo.textContent = meta.dataset.total === 0 ? "Sin resultados" : `Mostrando ${meta.dataset.start}-${meta.dataset.end} de ${meta.dataset.total}`;
-
-    document.getElementById('btn-prev').disabled = meta.dataset.hasPrev !== 'true';
-    document.getElementById('btn-next').disabled = meta.dataset.hasNext !== 'true';
+    if (pageInfo) {
+        pageInfo.textContent = total === 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total}`;
+    }
+    
+    // Actualizar botones de paginación
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    if (btnPrev) btnPrev.disabled = !hasPrev;
+    if (btnNext) btnNext.disabled = !hasNext;
+    
+    // Actualizar número de página actual
     const display = document.getElementById('current-page-display');
-    if (display) display.textContent = meta.dataset.page;
+    if (display) display.textContent = page;
 }
 
 // --- 3. ACTUALIZACIÓN DE ESTADÍSTICAS (STATS) ---
@@ -528,8 +566,18 @@ window.toggleStructureActive = function (modelType, pk, isActive) {
 
 // Listeners de paginación finales
 document.addEventListener('click', (e) => {
-    if (e.target.id === 'btn-prev') window.fetchBudgets({page: currentFilters.page - 1});
-    if (e.target.id === 'btn-next') window.fetchBudgets({page: currentFilters.page + 1});
+    if (e.target.id === 'btn-prev' || e.target.closest('#btn-prev')) {
+        const btn = document.getElementById('btn-prev');
+        if (!btn.disabled && currentFilters.page > 1) {
+            window.fetchBudgets({page: currentFilters.page - 1});
+        }
+    }
+    if (e.target.id === 'btn-next' || e.target.closest('#btn-next')) {
+        const btn = document.getElementById('btn-next');
+        if (!btn.disabled) {
+            window.fetchBudgets({page: currentFilters.page + 1});
+        }
+    }
 });
 
 // Inicialización de cascadas si es necesario (para modales inyectados se llama al abrir)

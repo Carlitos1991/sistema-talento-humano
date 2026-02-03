@@ -173,6 +173,7 @@ class BudgetUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 class StructureBaseListView(LoginRequiredMixin, ListView):
     template_name = 'budget/program_list.html'
     context_object_name = 'items'
+    paginate_by = 10
 
     def get_queryset_logic(self, queryset):
         q = self.request.GET.get('q')
