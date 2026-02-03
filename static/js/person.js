@@ -225,13 +225,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 showModal(modal);
 
                 try {
-                    const res = await fetch(`/person/quick-view-partial/${id}/`);
+                    const res = await fetch(`/person/quick-view/${id}/`);
                     if (res.ok) {
                         quickViewHtml.value = await res.text();
                     } else {
+                        const errorText = await res.text();
+                        console.error('Error al cargar vista rápida:', res.status, errorText);
                         quickViewHtml.value = '<p class="text-error p-4">No se pudo cargar la información.</p>';
                     }
                 } catch (e) {
+                    console.error('Error de conexión:', e);
                     quickViewHtml.value = '<p class="text-error p-4">Error de conexión.</p>';
                 } finally {
                     loadingQuickView.value = false;

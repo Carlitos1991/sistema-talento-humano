@@ -1347,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     const emp = data.data;
                     resName.textContent = emp.full_name;
-                    resEmail.textContent = emp.email;
+                    resEmail.textContent = emp.cargo || 'Sin asignar';
 
                     // Foto
                     const photoUrl = emp.photo ? emp.photo : '/static/img/avatar-placeholder.png';

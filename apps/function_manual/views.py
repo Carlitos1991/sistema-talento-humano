@@ -356,6 +356,29 @@ def api_search_employee_simple(request):
                 photo_url = emp.person.photo.url
             except Exception:
                 photo_url = None
+        
+        # Obtener el cargo de la partida presupuestaria
+        from budget.models import BudgetLine
+        cargo_partida = 'Sin asignar'
+        try:
+            # Buscar directamente en la partida donde el empleado es el ocupante actual
+            partida = BudgetLine.objects.filter(
+                current_employee=emp,
+                is_active=True
+            ).select_related('position_item').first()
+            
+            print(f"DEBUG - Buscando partida para empleado ID: {emp.id}")
+            print(f"DEBUG - Partida encontrada: {partida}")
+            
+            if partida:
+                print(f"DEBUG - Position item: {partida.position_item}")
+                if partida.position_item:
+                    cargo_partida = partida.position_item.name
+                    print(f"DEBUG - Cargo encontrado: {cargo_partida}")
+        except Exception as e:
+            print(f"Error al obtener cargo: {e}")
+            import traceback
+            traceback.print_exc()
 
         return JsonResponse({
             'success': True,
@@ -363,7 +386,7 @@ def api_search_employee_simple(request):
                 'id': emp.id,
                 'full_name': str(emp.person),
                 'photo': photo_url,
-                'email': emp.person.email or 'Sin email'
+                'cargo': cargo_partida
             }
         })
     except Employee.DoesNotExist:
