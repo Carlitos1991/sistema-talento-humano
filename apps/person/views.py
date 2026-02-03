@@ -32,6 +32,17 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('last_name')
 
+        # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(document_number__icontains=q) |
+                Q(email__icontains=q) |
+                Q(full_name_str__icontains=q)
+            )
+
         # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
 
         # Recogemos parámetros

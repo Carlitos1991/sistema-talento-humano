@@ -1068,7 +1068,7 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
             job_title = p.specific_job_title
             role = p.job_role.name if p.job_role else ""
             instruction = p.required_instruction.name if p.required_instruction else ""
-            experience = f"{p.required_experience_months} Meses"
+            experience = f"{p.required_experience} Meses" if p.required_experience else "No requerida"
             decision = p.decision_making.name if p.decision_making else ""
             impact = p.management_impact.name if p.management_impact else ""
             complexity = p.final_complexity_level.name if p.final_complexity_level else ""

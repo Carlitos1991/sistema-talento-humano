@@ -74,39 +74,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const credsErrors = ref({});
 
             // ----------------------------------------------------
-            // 2. BÚSQUEDA INMEDIATA (FRONTEND)
+            // 2. BÚSQUEDA RÁPIDA EN BACKEND (como usuarios)
             // ----------------------------------------------------
-            const initLocalSearch = () => {
+            const initQuickSearch = () => {
                 const input = document.getElementById('searchInput');
                 if (!input) return;
 
-                // Clonamos para limpiar eventos previos
-                const newInput = input.cloneNode(true);
-                input.parentNode.replaceChild(newInput, input);
-
-                newInput.addEventListener('input', (e) => {
-                    const term = e.target.value.toLowerCase().trim();
-                    const rows = document.querySelectorAll('#table-body tr.location-row');
-                    let visibleCount = 0;
-
-                    rows.forEach(row => {
-                        const text = row.innerText.toLowerCase();
-                        if (text.includes(term) || term === '') {
-                            row.style.display = '';
-                            visibleCount++;
-                        } else {
-                            row.style.display = 'none';
-                        }
-                    });
-
-                    const noResultsRow = document.getElementById('client-no-results');
-                    if (noResultsRow) {
-                        if (visibleCount === 0 && rows.length > 0) {
-                            noResultsRow.style.display = '';
-                        } else {
-                            noResultsRow.style.display = 'none';
-                        }
-                    }
+                // Debounce para búsqueda mientras escribe
+                let searchTimeout;
+                input.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        const term = e.target.value.trim();
+                        // Al buscar rápido, limpiar filtros avanzados
+                        activeFilters.value = { q: term };
+                        fetchPeople(1);
+                    }, 500);
                 });
             };
 
@@ -131,8 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const container = document.getElementById('tableContainer');
                         if (container) {
                             container.innerHTML = data.html;
+                            // Mantener el valor del input si hay búsqueda activa
                             const searchInput = document.getElementById('searchInput');
-                            if (searchInput) searchInput.value = '';
+                            if (searchInput && activeFilters.value.q) {
+                                searchInput.value = activeFilters.value.q;
+                            }
                         }
                     }
                 } catch (error) {
@@ -148,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const resetFilters = () => {
                 activeFilters.value = {};
+                // Limpiar el input de búsqueda al resetear filtros
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) searchInput.value = '';
                 fetchPeople(1);
             };
 
@@ -449,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // CICLO DE VIDA
             // ----------------------------------------------------
             onMounted(() => {
-                initLocalSearch();
+                initQuickSearch();
                 initTableListeners();
 
                 // Select2 para el modal de búsqueda avanzada (independiente)
