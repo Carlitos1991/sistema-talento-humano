@@ -48,15 +48,18 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
 
 # --- 2. ESTADÍSTICAS (Python Calculation) ---
 def get_budget_stats():
-    qs = BudgetLine.objects.all()
-    return {
-        'total': qs.count(),
-        'libre': qs.filter(status_item__code='LIBRE').count(),
-        'ocupada': qs.filter(status_item__code='OCUPADA').count(),
-        'concurso': qs.filter(status_item__code='CONCURSO').count(),
-        'litigio': qs.filter(status_item__code='LITIGIO').count(),
-        'inactiva': qs.filter(status_item__code='INACTIVA').count(),
-    }
+    from django.db.models import Count, Q, Case, When, IntegerField
+    
+    # Una sola consulta con agregaciones condicionales (más eficiente)
+    result = BudgetLine.objects.aggregate(
+        total=Count('id'),
+        libre=Count(Case(When(status_item__code='LIBRE', then=1), output_field=IntegerField())),
+        ocupada=Count(Case(When(status_item__code='OCUPADA', then=1), output_field=IntegerField())),
+        concurso=Count(Case(When(status_item__code='CONCURSO', then=1), output_field=IntegerField())),
+        litigio=Count(Case(When(status_item__code='LITIGIO', then=1), output_field=IntegerField())),
+        inactiva=Count(Case(When(status_item__code='INACTIVA', then=1), output_field=IntegerField())),
+    )
+    return result
 
 
 # --- 3. LISTADO ---
@@ -68,38 +71,49 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'budget.view_budgetline'
 
     def get_queryset(self):
+        # Optimización: select_related SOLO para lo que se muestra en tabla
+        # only() para cargar solo campos necesarios
         qs = BudgetLine.objects.select_related(
-            'activity__project__subprogram__program',
-            'current_employee__person',
-            'status_item',
-            'position_item',
-            'regime_item',
-            'group_item',
-            'category_item',
-            'grade_item'
-        ).all().order_by('number_individual')
-
+            'activity__project__subprogram__program',  # Para mostrar programa
+            'position_item',  # Para cargo
+            'current_employee__person',  # Para empleado
+            'status_item'  # Para estado
+        ).only(
+            'id', 'number_individual', 'remuneration',
+            'activity__project__subprogram__program__name',
+            'position_item__name',
+            'current_employee__person__first_name',
+            'current_employee__person__last_name', 
+            'status_item__name', 'status_item__code'
+        ).order_by('number_individual')
+        
+        # Búsqueda rápida
         q = self.request.GET.get('q')
-        status = self.request.GET.get('status')
-
         if q:
             qs = qs.filter(
                 Q(number_individual__icontains=q) |
                 Q(code__icontains=q) |
                 Q(position_item__name__icontains=q) |
                 Q(current_employee__person__first_name__icontains=q) |
-                Q(current_employee__person__last_name__icontains=q)
+                Q(current_employee__person__last_name__icontains=q) |
+                Q(current_employee__person__document_number__icontains=q)
             )
-
+        
+        # Filtro rápido por estado
+        status = self.request.GET.get('status')
         if status and status != 'all':
             qs = qs.filter(status_item__code=status)
-
+        
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = BudgetLineForm()  # Formulario vacío para el modal de crear
-        context.update(get_budget_stats())
+        context['form'] = BudgetLineForm()
+        
+        # Solo actualizar estadísticas si NO es petición AJAX (paginación)
+        if not self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            context.update(get_budget_stats())
+        
         return context
 
     def get(self, request, *args, **kwargs):

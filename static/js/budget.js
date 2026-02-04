@@ -42,6 +42,8 @@ let currentFilters = {q: '', status: 'all', page: 1};
 window.fetchBudgets = function (params = {}) {
     Object.assign(currentFilters, params);
     const url = new URL(window.location.href);
+    
+    // Búsqueda rápida
     if (currentFilters.q) url.searchParams.set('q', currentFilters.q);
     if (currentFilters.status) url.searchParams.set('status', currentFilters.status);
     if (currentFilters.page) url.searchParams.set('page', currentFilters.page);

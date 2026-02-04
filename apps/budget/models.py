@@ -261,8 +261,6 @@ class BudgetAssignmentHistory(models.Model):
         return f"{self.employee} en {self.budget_line} ({self.start_date})"
 
     def clean(self):
-        # Esta validación ahora solo saltará si intentamos crear
-        # una asignación cuando el empleado REALMENTE ya tiene una BudgetLine.
         if self.is_current and not self.end_date:
             from .models import BudgetLine
             if BudgetLine.objects.filter(current_employee=self.employee).exclude(pk=self.budget_line.pk).exists():
