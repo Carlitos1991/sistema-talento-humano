@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid" id="payroll-app">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fa-solid fa-file-invoice-dollar"></i> Gestión de Roles de Pago</h2>
+        <div>
+            <!-- Botón que abre el modal controlado por Vue -->
+            <button class="btn btn-primary" @click="openGenerateModal">
+                <i class="fa-solid fa-bolt"></i> Generar Roles
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <label>Seleccionar Periodo:</label>
+            <select id="period-selector" class="form-select select2-init" style="width: 300px;">
+                <option value="">-- Seleccione --</option>
+                {% for p in periods %}
+                    <option value="{{ p.id }}" {% if current_period.id == p.id %}selected{% endif %}>
+                        {{ p }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Contenedor de la Tabla (Se llena vía AJAX) -->
+    <div id="table-container" class="position-relative">
+        {% include 'payroll/partials/partial_payroll_table.html' %}
+    </div>
+
+    <!-- Modal Vue Mount Point -->
+    <generate-payroll-modal ref="generateModal"></generate-payroll-modal>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Lógica Vanilla JS para la Tabla ---
+        const periodSelector = document.getElementById('period-selector');
+        const tableContainer = document.getElementById('table-container');
+
+        // Inicializar Select2
+        $(periodSelector).select2().on('change', function(e) {
+             loadTable(this.value);
+        });
+
+        function loadTable(periodId) {
+            if(!periodId) return;
+
+            // SweetAlert2 Loading
+            Swal.fire({
+                title: 'Cargando...',
+                text: 'Obteniendo roles de pago',
+                timerProgressBar: true,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const url = `?period_id=${periodId}`;
+
+            fetch(url, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                tableContainer.innerHTML = data.html;
+                Swal.close();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // --- Lógica Vue.js para el Modal ---
+        const { createApp } = Vue;
+
+        const app = createApp({
+            methods: {
+                openGenerateModal() {
+                    this.$refs.generateModal.show();
+                }
+            }
+        });
+
+        // Componente Modal
+        app.component('generate-payroll-modal', {
+            template: `
+            <div class="modal fade" id="vueGenModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Generar Roles Masivos</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div v-if="loading" class="text-center">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-2">Procesando cálculos complejos... por favor espere.</p>
+                            </div>
+                            <div v-else>
+                                <p>Se generarán los roles para el periodo seleccionado actualmente.</p>
+                                <p class="text-warning"><i class="fa fa-exclamation-triangle"></i> Esto reemplazará cálculos previos.</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="button" class="btn btn-success" @click="generate" :disabled="loading">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `,
+            data() {
+                return { loading: false, modalInstance: null };
+            },
+            mounted() {
+                this.modalInstance = new bootstrap.Modal(document.getElementById('vueGenModal'));
+            },
+            methods: {
+                show() {
+                    this.modalInstance.show();
+                },
+                generate() {
+                    const periodId = $('#period-selector').val();
+                    if (!periodId) {
+                        Swal.fire('Error', 'Seleccione un periodo primero', 'error');
+                        return;
+                    }
+
+                    this.loading = true;
+                    const formData = new FormData();
+                    formData.append('period_id', periodId);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch('{% url "payroll:generate" %}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        this.loading = false;
+                        this.modalInstance.hide();
+                        if (data.status === 'success') {
+                            Swal.fire('Éxito', data.message, 'success');
+                            // Recargar tabla Vanilla JS
+                            loadTable(periodId);
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    });
+                }
+            }
+        });
+
+        app.mount('#payroll-app');
+    });
+</script>
+{% endblock %}

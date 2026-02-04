@@ -231,6 +231,38 @@
                 </ul>
             </li>
         {% endif %}
+        {% if perms.payroll.view_payrollperiod or perms.payroll.view_payslip %}
+            <li class="has-submenu">
+                <a href="#" class="{% if 'payroll' in request.resolver_match.app_name %}active{% endif %}">
+                    <i class="fa-solid fa-money-check-dollar"></i>
+                    <span class="menu-text">Nómina</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    {% if perms.payroll.view_payrollperiod %}
+                        <li>
+                            <a href="{% url 'payroll:period_list' %}"
+                               class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-calendar-check"></i>
+                                <span class="menu-text">Gestión de Roles</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Enlace directo al Admin para las Constantes (SBU, IESS) por ahora -->
+                    {% if perms.payroll.view_payrollconstant %}
+                        <li>
+                            <!-- URL apuntando a nuestra nueva vista CBV -->
+                            <a href="{% url 'payroll:constant_list' %}"
+                               class="{% if request.resolver_match.url_name == 'constant_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span class="menu-text">Constantes (SBU)</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         <!--  Biométricos -->
         <li class="has-submenu">
             <a href="#" class="nav-link">

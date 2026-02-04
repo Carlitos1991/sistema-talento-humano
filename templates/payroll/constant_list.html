@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Constantes de Nómina | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <!-- Usamos tu CSS principal y añadimos el específico de payroll -->
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div id="payrollApp">
+        <!-- 1. Header (Igual que Personas) -->
+        <div class="header-card">
+            <div>
+                <h1>Configuración de Nómina</h1>
+                <p>Gestión de valores constantes (SBU, Porcentajes IESS, etc.)</p>
+            </div>
+            {% if perms.payroll.add_payrollconstant %}
+                <button type="button" class="btn btn-create"
+                        onclick="openPayrollModal('{% url 'payroll:constant_create' %}')">
+                    <i class="fas fa-plus"></i> Nueva Constante
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- 2. Estadísticas (Simuladas para mantener el estilo visual) -->
+        <div class="stats-row">
+            <div class="stat-card blue-card">
+                <div class="stat-left">
+                    <h3>Total Variables</h3>
+                    <div class="number">{{ constants.count }}</div>
+                </div>
+                <i class="fas fa-calculator stat-icon"></i>
+            </div>
+            <div class="stat-card green-card">
+                <div class="stat-left">
+                    <h3>Activas</h3>
+                    <!-- Asumiendo que todas son activas por ahora -->
+                    <div class="number">{{ constants.count }}</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- 3. Contenedor principal Tabla -->
+        <div id="table-app">
+            <div class="content-table">
+                <!-- Controles de Tabla (Buscador) -->
+                <div class="table-controls">
+                    <div class="search-box" style="width: 100%;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="input-field"
+                               placeholder="Buscar constante por nombre o código...">
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th class="text-center">Código</th>
+                            <th class="text-end">Valor</th>
+                            <th>Descripción</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for c in constants %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ c.name }}</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="payroll-code">{{ c.code }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="payroll-value-badge">{{ c.value }}</span>
+                                </td>
+                                <td class="text-muted small">
+                                    {{ c.description|default:"-"|truncatechars:60 }}
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-icon btn-edit"
+                                            onclick="openPayrollModal('{% url 'payroll:constant_update' c.id %}')"
+                                            title="Editar">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button class="btn-icon btn-delete"
+                                            onclick="deleteConstant('{% url 'payroll:constant_delete' c.id %}', '{{ c.name }}')"
+                                            title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i><br>
+                                    No hay constantes configuradas.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor para Modales Dinámicos -->
+    <div id="modal-container"></div>
+
+    <!-- Token CSRF oculto para JS -->
+    {% csrf_token %}
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll_constants.js' %}"></script>
+{% endblock %}

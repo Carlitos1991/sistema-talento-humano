@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div id="period-app" class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="fa-solid fa-calendar-days"></i> Periodos de Nómina</h3>
+        <button class="btn btn-success" @click="openCreateModal">
+            <i class="fa-solid fa-plus"></i> Nuevo Periodo
+        </button>
+    </div>
+
+    <!-- Tabla de Periodos (Renderizado por Django) -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Periodo</th>
+                        <th>Fechas</th>
+                        <th class="text-center">Días Lab.</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in periods %}
+                    <tr>
+                        <td class="fw-bold">{{ p.month }} {{ p.year }}</td>
+                        <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
+                        <td class="text-center">{{ p.working_days }}</td>
+                        <td class="text-center">
+                            {% if p.is_closed %}
+                                <span class="badge bg-secondary">Cerrado</span>
+                            {% else %}
+                                <span class="badge bg-success">Abierto</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <!-- Botón para Generar Roles -->
+                            <button class="btn btn-sm btn-primary" 
+                                    @click="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')"
+                                    {% if p.is_closed %}disabled{% endif %}>
+                                <i class="fa-solid fa-gears"></i> Procesar
+                            </button>
+                            
+                            <a href="#" class="btn btn-sm btn-info text-white">
+                                <i class="fa-solid fa-list"></i> Ver Roles
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No hay periodos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Vue: Crear Periodo -->
+    <modal-create-period ref="createModal"></modal-create-period>
+    
+    <!-- Modal Vue: Generar Roles -->
+    <modal-generate-payroll ref="generateModal"></modal-generate-payroll>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    const { createApp } = Vue;
+
+    const app = createApp({
+        methods: {
+            openCreateModal() {
+                this.$refs.createModal.show();
+            },
+            openGenerateModal(id, name) {
+                this.$refs.generateModal.show(id, name);
+            }
+        }
+    });
+
+    // --- Componente: Crear Periodo ---
+    app.component('modal-create-period', {
+        template: `
+        <div class="modal fade" id="modalCreate" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Nuevo Periodo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="submitForm">
+                        <div class="modal-body">
+                            <!-- Renderizamos el form de Django manualmente para controlarlo con Vue o HTML puro -->
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label>Mes</label>
+                                    {{ form.month }} 
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Año</label>
+                                    {{ form.year }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Inicio</label>
+                                    {{ form.start_date }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Fin</label>
+                                    {{ form.end_date }}
+                                </div>
+                                <div class="col-md-12">
+                                    <label>Días Laborables</label>
+                                    {{ form.working_days }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        `,
+        data() {
+            return { modal: null };
+        },
+        mounted() {
+            this.modal = new bootstrap.Modal(document.getElementById('modalCreate'));
+        },
+        methods: {
+            show() { this.modal.show(); },
+            submitForm(e) {
+                const formData = new FormData(e.target);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch('{% url "payroll:period_create" %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire('Guardado', data.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', 'Revise los datos', 'error');
+                        console.log(data.errors);
+                    }
+                });
+            }
+        }
+    });
+
+    // --- Componente: Generar Roles (El mismo de la respuesta anterior, adaptado) ---
+    app.component('modal-generate-payroll', {
+        template: `
+        <div class="modal fade" id="modalGen" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Generar Nómina: {{ periodName }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Calculando 4000+ roles... (esto es rápido)</p>
+                        </div>
+                        <div v-else>
+                            <p>¿Está seguro de generar los roles para este periodo?</p>
+                            <div class="alert alert-warning">
+                                <small><i class="fa fa-exclamation-triangle"></i> Si ya existen roles, se recalcularán.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="btn btn-primary" @click="process" :disabled="loading">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `,
+        data() { return { modal: null, periodId: null, periodName: '', loading: false }},
+        mounted() { this.modal = new bootstrap.Modal(document.getElementById('modalGen')); },
+        methods: {
+            show(id, name) {
+                this.periodId = id;
+                this.periodName = name;
+                this.modal.show();
+            },
+            process() {
+                this.loading = true;
+                const formData = new FormData();
+                formData.append('period_id', this.periodId);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch('{% url "payroll:generate" %}', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    this.loading = false;
+                    this.modal.hide();
+                    if(data.status === 'success') {
+                        Swal.fire('Éxito', data.message, 'success');
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    this.loading = false;
+                    Swal.fire('Error Crítico', 'Ver consola', 'error');
+                });
+            }
+        }
+    });
+
+    app.mount('#period-app');
+</script>
+{% endblock %}
