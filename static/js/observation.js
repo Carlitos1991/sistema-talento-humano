@@ -7,6 +7,16 @@ const observationApp = createApp({
         return {
             loading: false, showModal: false, isEdit: false, searchTimer: null,
             filters: {name: '', is_holiday: ''},
+            currentPage: 1,
+            pagination: {
+                current_page: 1,
+                total_pages: 1,
+                has_previous: false,
+                has_next: false,
+                total_count: 0,
+                start_index: 0,
+                end_index: 0
+            },
             stats: {
                 total: parseInt(container?.dataset.total) || 0,
                 holiday: parseInt(container?.dataset.holiday) || 0,
@@ -85,7 +95,7 @@ const observationApp = createApp({
             this.fetchTable();
         },
         async fetchTable() {
-            const params = new URLSearchParams(this.filters).toString();
+            const params = new URLSearchParams({...this.filters, page: this.currentPage}).toString();
             try {
                 const response = await fetch(`/schedule/observations/partial-table/?${params}`);
                 const data = await response.json();
@@ -98,12 +108,19 @@ const observationApp = createApp({
                 if (data.stats) {
                     this.stats = data.stats;
                 }
+                
+                // Actualizar información de paginación
+                if (data.pagination) {
+                    this.pagination = data.pagination;
+                    this.updatePaginationUI();
+                }
             } catch (error) {
                 console.error("Error fetching table:", error);
             }
         },
         debouncedSearch() {
             clearTimeout(this.searchTimer);
+            this.currentPage = 1; // Reset a página 1 al buscar
             this.searchTimer = setTimeout(() => this.fetchTable(), 400);
         },
         resetForm() {
@@ -123,6 +140,40 @@ const observationApp = createApp({
         },
         showToast(icon, title) {
             Swal.fire({icon, title, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
+        },
+        
+        updatePaginationUI() {
+            const pageInfo = document.getElementById('page-info');
+            const currentPageDisplay = document.getElementById('current-page-display');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            if (pageInfo) {
+                pageInfo.textContent = `Mostrando ${this.pagination.start_index} a ${this.pagination.end_index} registros de ${this.pagination.total_count} registros`;
+            }
+            if (currentPageDisplay) {
+                currentPageDisplay.textContent = this.pagination.current_page;
+            }
+            if (btnPrev) {
+                btnPrev.disabled = !this.pagination.has_previous;
+            }
+            if (btnNext) {
+                btnNext.disabled = !this.pagination.has_next;
+            }
+        },
+        
+        nextPage() {
+            if (this.pagination.has_next) {
+                this.currentPage++;
+                this.fetchTable();
+            }
+        },
+        
+        prevPage() {
+            if (this.pagination.has_previous) {
+                this.currentPage--;
+                this.fetchTable();
+            }
         }
     },
     mounted() {
@@ -133,6 +184,13 @@ const observationApp = createApp({
             this.stats.special = parseInt(container.dataset.special) || 0;
         }
         this.fetchTable();
+        
+        // Configurar botones de paginación
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        
+        if (btnPrev) btnPrev.addEventListener('click', () => this.prevPage());
+        if (btnNext) btnNext.addEventListener('click', () => this.nextPage());
     }
 });
 

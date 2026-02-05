@@ -547,13 +547,26 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     else:
                         new_status = 'EMPLEADO'
                 period.employee.set_status(new_status)
-                # --- REGISTRO EN HISTORIAL ---
+                
+                # --- REGISTRO EN HISTORIAL DE CONTRATO ---
                 History.objects.create(
                     employee=period.employee,
                     contract=period,
                     user_register=request.user.get_full_name() or request.user.username,
                     type='FIRMA',
                     reason='CONTRATO FIRMADO'
+                )
+                
+                # --- REGISTRO EN HISTORIAL DE HORARIOS ---
+                from schedule.models import EmployeeScheduleHistory
+                EmployeeScheduleHistory.objects.create(
+                    employee=period.employee,
+                    schedule=period.schedule,
+                    start_date=period.start_date,
+                    end_date=period.end_date,
+                    reason='Asignación de Horario',
+                    is_current=True,
+                    created_by=request.user
                 )
 
             return JsonResponse({

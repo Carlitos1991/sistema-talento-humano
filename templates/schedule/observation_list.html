@@ -55,6 +55,20 @@
                 <div id="table-content-wrapper">
                     {% include 'schedule/partials/partial_observation_table.html' %}
                 </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
 

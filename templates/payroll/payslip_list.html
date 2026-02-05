@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Roles | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/apps/payroll.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div id="payslipApp" class="container-fluid">
+
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1>Roles de Pago: {{ current_period.month }} {{ current_period.year }}</h1>
+                <p>Visualización detallada de la nómina generada.</p>
+            </div>
+            <div>
+                <!-- Botón para regresar a periodos -->
+                <a href="{% url 'payroll:period_list' %}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+                <button class="btn btn-create">
+                    <i class="fas fa-file-pdf"></i> Reporte PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Estadísticas Rápidas del Periodo -->
+        {% if current_period %}
+            <div class="stats-row mt-3">
+                <!-- Puedes calcular estos totales en la vista si deseas -->
+                <div class="stat-card blue-card">
+                    <div class="stat-left">
+                        <h3>Total Empleados</h3>
+                        <div class="number">{{ page_obj.paginator.count }}</div>
+                    </div>
+                    <i class="fas fa-users stat-icon"></i>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- 3. Tabla -->
+        <div class="content-table mt-4">
+            <!-- Buscador -->
+            <div class="table-controls mb-3">
+                <form method="GET" class="search-box" style="width: 100%;">
+                    <input type="hidden" name="period_id" value="{{ current_period.id }}">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" name="q" class="input-field"
+                           placeholder="Buscar por cédula o apellidos..."
+                           value="{{ request.GET.q }}">
+                    <!-- El enter envía el form automáticamente -->
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th>Empleado</th>
+                        <th class="text-center">Días</th>
+                        <th class="text-end">Ingresos</th>
+                        <th class="text-end">Egresos</th>
+                        <th class="text-end">A Pagar</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for p in payslips %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        {{ p.employee.person.name|slice:":1" }}{{ p.employee.person.lastname|slice:":1" }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ p.employee.person.lastname }} {{ p.employee.person.name }}</div>
+                                        <small class="text-muted">{{ p.employee.person.identification }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">{{ p.worked_days }}</span>
+                            </td>
+                            <td class="text-end text-success fw-bold">
+                                $ {{ p.total_income }}
+                            </td>
+                            <td class="text-end text-danger fw-bold">
+                                $ {{ p.total_deduction }}
+                            </td>
+                            <td class="text-end">
+                                <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-icon btn-edit"
+                                        onclick="openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                        title="Ver Detalle Completo">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-search fa-3x mb-3"></i><br>
+                                No se encontraron roles para este criterio.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if is_paginated %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?period_id={{ current_period.id }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Pág {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?period_id={{ current_period.id }}&page={{ page_obj.next_page_number }}">Siguiente</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Contenedor Modal -->
+    <div id="modal-container"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Reutilizamos la lógica de modal que ya creamos en payroll_constants.js
+        // Si no está importado ese JS aquí, puedes copiar la función 'openPayrollModal'
+        // y renombrarla o usarla directamente.
+
+        function openPayslipDetail(url) {
+            const modalContainer = document.getElementById('modal-container');
+
+            // SweetAlert Loading
+            Swal.fire({
+                title: 'Cargando detalle...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            fetch(url, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(response => response.text())
+                .then(html => {
+                    Swal.close();
+                    modalContainer.innerHTML = html;
+                    // IMPORTANTE: Como es un modal custom (sin Bootstrap JS), necesitamos
+                    // asegurarnos de que el HTML incluya la lógica de visualización (v-if) 
+                    // o simplemente usar Bootstrap Modal si decides volver a él.
+
+                    // Para mantener la coherencia con tu modal NATIVO anterior,
+                    // el HTML que devuelve la vista DetailView debe ser compatible.
+                    // O, para simplificar visualización de detalles, podemos usar Bootstrap Modal estándar
+                    // solo para visualización si está disponible, o inyectarlo.
+
+                    // Opción Rápida con Bootstrap (si está cargado en base):
+                    const modalEl = document.getElementById('detailModal');
+                    if (window.bootstrap) {
+                        const bsModal = new bootstrap.Modal(modalEl);
+                        bsModal.show();
+                    } else {
+                        // Fallback si no hay bootstrap JS: mostrarlo manualmente
+                        modalEl.style.display = 'block';
+                        modalEl.classList.add('show');
+                        modalEl.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                    }
+                });
+        }
+
+        // Cerrar modal manual
+        function closeDetailModal() {
+            const modalEl = document.getElementById('detailModal');
+            modalEl.style.display = 'none';
+            modalEl.classList.remove('show');
+        }
+    </script>
+{% endblock %}

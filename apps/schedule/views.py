@@ -14,9 +14,10 @@ class ScheduleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = 'schedule/schedule_list.html'
     context_object_name = 'schedules'
     permission_required = 'schedule.view_schedule'
+    paginate_by = 10
 
     def get_queryset(self):
-        return Schedule.objects.all().order_by('-created_at')[:50]
+        return Schedule.objects.all().order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -102,8 +103,11 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
     """Vista para recargar la tabla mediante filtros AJAX"""
 
     def get(self, request):
+        from django.core.paginator import Paginator
+        
         name = request.GET.get('name', '')
         is_active = request.GET.get('is_active', '')
+        page_number = request.GET.get('page', 1)
 
         # 1. Queryset filtrado para la tabla
         queryset = Schedule.objects.all().order_by('-created_at')
@@ -116,7 +120,11 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
         elif is_active == 'false':
             queryset = queryset.filter(is_active=False)
 
-        # 2. Cálculo de estadísticas (SIEMPRE sobre el total de la base)
+        # 2. Paginación
+        paginator = Paginator(queryset, 10)
+        page_obj = paginator.get_page(page_number)
+
+        # 3. Cálculo de estadísticas (SIEMPRE sobre el total de la base)
         all_schedules = Schedule.objects.all()
         stats_data = {
             'total': all_schedules.count(),
@@ -124,15 +132,24 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
             'inactive': all_schedules.filter(is_active=False).count(),
         }
 
-        # 3. Renderizado del fragmento HTML
+        # 4. Renderizado del fragmento HTML
         html = render_to_string('schedule/partials/partial_schedule_table.html', {
-            'schedules': queryset[:50]
+            'schedules': page_obj.object_list
         }, request=request)
 
-        # 4. Respuesta JSON con HTML y Stats
+        # 5. Respuesta JSON con HTML, Stats y datos de paginación
         return JsonResponse({
             'table_html': html,
-            'stats': stats_data
+            'stats': stats_data,
+            'pagination': {
+                'current_page': page_obj.number,
+                'total_pages': paginator.num_pages,
+                'has_previous': page_obj.has_previous(),
+                'has_next': page_obj.has_next(),
+                'total_count': paginator.count,
+                'start_index': page_obj.start_index(),
+                'end_index': page_obj.end_index()
+            }
         })
 
 
@@ -141,9 +158,10 @@ class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     template_name = 'schedule/observation_list.html'
     permission_required = 'schedule.can_manage_observations'
     context_object_name = 'observations'
+    paginate_by = 10
 
     def get_queryset(self):
-        return ScheduleObservation.objects.all().order_by('-start_date')[:50]
+        return ScheduleObservation.objects.all().order_by('-start_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -157,8 +175,11 @@ class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
 
 class ObservationTablePartialView(LoginRequiredMixin, View):
     def get(self, request):
+        from django.core.paginator import Paginator
+        
         name = request.GET.get('name', '')
         is_holiday = request.GET.get('is_holiday', '')
+        page_number = request.GET.get('page', 1)
 
         queryset = ScheduleObservation.objects.all().order_by('-start_date')
         if name: queryset = queryset.filter(name__icontains=name)
@@ -166,6 +187,10 @@ class ObservationTablePartialView(LoginRequiredMixin, View):
             queryset = queryset.filter(is_holiday=True)
         elif is_holiday == 'false':
             queryset = queryset.filter(is_holiday=False)
+
+        # Paginación
+        paginator = Paginator(queryset, 10)
+        page_obj = paginator.get_page(page_number)
 
         # Estadísticas en tiempo real
         all_qs = ScheduleObservation.objects.all()
@@ -176,9 +201,22 @@ class ObservationTablePartialView(LoginRequiredMixin, View):
         }
 
         html = render_to_string('schedule/partials/partial_observation_table.html', {
-            'observations': queryset[:50]
+            'observations': page_obj.object_list
         }, request=request)
-        return JsonResponse({'table_html': html, 'stats': stats})
+        
+        return JsonResponse({
+            'table_html': html,
+            'stats': stats,
+            'pagination': {
+                'current_page': page_obj.number,
+                'total_pages': paginator.num_pages,
+                'has_previous': page_obj.has_previous(),
+                'has_next': page_obj.has_next(),
+                'total_count': paginator.count,
+                'start_index': page_obj.start_index(),
+                'end_index': page_obj.end_index()
+            }
+        })
 
 
 class ObservationCreateView(LoginRequiredMixin, View):
