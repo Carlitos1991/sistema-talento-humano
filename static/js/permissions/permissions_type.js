@@ -1,177 +1,153 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    // --- REFERENCIAS GLOBALES ---
-    const tableContainer = document.getElementById('table-container');
-    const searchInput = document.getElementById('searchInput');
+    // --- REFERENCIAS ---
+    const tableContainer = document.getElementById('table-content-wrapper');
+    const searchInput = document.getElementById('table-search');
     const btnAdd = document.getElementById('btn-add-type');
     const csrfToken = document.getElementById('csrf-token').value;
     const urlList = document.getElementById('url-list').value;
 
-    // Referencias del Modal Personalizado
+    // Referencias Modal
     const modalOverlay = document.getElementById('customModal');
     const modalContentContainer = document.getElementById('modal-dynamic-content');
 
-    // --- EVENT LISTENERS ---
+    // --- EVENTOS ---
 
-    // 1. Buscador (Debounce)
+    // 1. Buscador
     let timeout = null;
     if (searchInput) {
-        searchInput.addEventListener('keyup', function (e) {
+        searchInput.addEventListener('keyup', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                fetchTableData(e.target.value);
-            }, 300);
+            timeout = setTimeout(() => fetchTableData(urlList + `?q=${e.target.value}`), 300);
         });
     }
 
-    // 2. Abrir Modal (Crear)
+    // 2. Abrir Modal (Botón Principal)
     if (btnAdd) {
         btnAdd.addEventListener('click', function () {
-            const url = this.dataset.url;
-            openModal(url);
+            openModal(this.dataset.url);
         });
     }
 
-    // 3. Cerrar Modal (Botón X o Click fuera)
+    // 3. Cerrar Modal desde overlay o botón cerrar
     if (modalOverlay) {
-        modalOverlay.addEventListener('click', function (e) {
-            // Si clickea en el overlay (fondo oscuro) o en botón cerrar
-            if (e.target === modalOverlay || e.target.closest('.js-close-modal')) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay || e.target.closest('.btn-close-modal') || e.target.closest('.js-close-modal')) {
                 closeModal();
             }
         });
     }
 
-    // 4. Delegación en Tabla (Editar / Eliminar)
+    // 4. DELEGACIÓN DE ACCIONES EN LA TABLA (CRÍTICO)
     if (tableContainer) {
         tableContainer.addEventListener('click', function (e) {
-            // Editar
-            const editBtn = e.target.closest('.js-edit');
-            if (editBtn) {
+
+            // A. EDITAR y CREAR SUB-ITEM (Abren el mismo modal)
+            const modalBtn = e.target.closest('.js-edit') || e.target.closest('.js-add-sub');
+            if (modalBtn) {
                 e.preventDefault();
-                openModal(editBtn.dataset.url);
+                openModal(modalBtn.dataset.url);
                 return;
             }
-            // Eliminar
-            const deleteBtn = e.target.closest('.js-delete');
-            if (deleteBtn) {
+
+            // B. TOGGLE STATUS (Baja/Alta)
+            const toggleBtn = e.target.closest('.js-toggle');
+            if (toggleBtn) {
                 e.preventDefault();
-                confirmDelete(deleteBtn.dataset.url);
+                toggleStatus(toggleBtn.dataset.url);
+                return;
+            }
+
+            // C. VER SUB-ITEMS (Recarga tabla con filtro)
+            const viewSubsBtn = e.target.closest('.js-view-subs') || e.target.closest('.js-load-parent');
+            if (viewSubsBtn) {
+                e.preventDefault();
+                fetchTableData(viewSubsBtn.dataset.url);
                 return;
             }
         });
     }
 
-    // --- FUNCIONES LOGICAS ---
+    // --- FUNCIONES ---
 
     function openModal(url) {
-        // Petición AJAX para obtener el HTML del formulario
-        fetch(url, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(response => response.text())
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.text())
             .then(html => {
-                // Inyectar HTML
                 modalContentContainer.innerHTML = html;
+                modalOverlay.classList.remove('hidden');
 
-                // Mostrar Modal (CSS Class)
-                modalOverlay.style.display = 'flex';
-                // Pequeño delay para permitir transición de opacidad
-                setTimeout(() => {
-                    modalOverlay.classList.add('is-visible');
-                }, 10);
-
-                // Inicializar Plugins (Select2)
                 initModalPlugins();
 
-                // Interceptar el Submit del Formulario
                 const form = modalContentContainer.querySelector('form');
-                if (form) {
-                    form.addEventListener('submit', handleFormSubmit);
-                }
+                if (form) form.addEventListener('submit', handleFormSubmit);
+            })
+            .catch(err => {
+                console.error('Error al abrir modal:', err);
+                Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
             });
     }
 
     function closeModal() {
-        modalOverlay.classList.remove('is-visible');
-        // Esperar a que termine la transición CSS para ocultar display
-        setTimeout(() => {
-            modalOverlay.style.display = 'none';
-            modalContentContainer.innerHTML = ''; // Limpiar memoria
-        }, 300);
+        modalOverlay.classList.add('hidden');
+        modalContentContainer.innerHTML = '';
     }
 
     function initModalPlugins() {
-        // Inicializar Select2 si existe jQuery disponible (requerido por Select2)
         if (typeof $ !== 'undefined' && $.fn.select2) {
             $('.select2').select2({
                 width: '100%',
-                // Importante: No usar dropdownParent si da problemas con z-index fuera de bootstrap,
-                // pero usualmente ayuda a que el select se vea dentro del modal.
+                dropdownParent: modalOverlay
             });
         }
     }
 
-    function handleFormSubmit(event) {
-        event.preventDefault();
-        const form = event.target;
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
         const formData = new FormData(form);
-        const actionUrl = form.action;
 
-        // Limpiar errores visuales
-        clearFormErrors(form);
+        // Limpiar errores previos
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
-        fetch(actionUrl, {
+        fetch(form.action, {
             method: 'POST',
             body: formData,
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
-            .then(async response => {
-                const data = await response.json();
-
-                if (response.ok) { // Éxito
+            .then(async res => {
+                const data = await res.json();
+                if (res.ok) {
                     closeModal();
                     Swal.fire({
                         icon: 'success',
                         title: 'Guardado',
-                        text: data.message,
-                        timer: 1500,
+                        text: data.message || 'Operación exitosa',
+                        timer: 2000,
                         showConfirmButton: false
                     });
-                    fetchTableData(searchInput.value); // Recargar tabla
-                } else { // Error de validación (400)
-                    if (data.errors) {
-                        showFormErrors(form, data.errors);
-                    }
+                    fetchTableData(urlList);
+                } else {
+                    if (data.errors) showErrors(form, data.errors);
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire('Error', 'Error de conexión', 'error');
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
             });
     }
 
-    function fetchTableData(query = '') {
-        const url = `${urlList}?q=${query}`;
-        fetch(url, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(response => response.json())
-            .then(data => {
-                tableContainer.innerHTML = data.html;
-            });
-    }
-
-    function confirmDelete(url) {
+    function toggleStatus(url) {
         Swal.fire({
-            title: '¿Eliminar registro?',
-            text: "No podrás deshacer esta acción",
-            icon: 'warning',
+            title: '¿Cambiar estado?',
+            text: 'Se alternará entre activo e inactivo',
+            icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#aaa',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33'
         }).then((result) => {
             if (result.isConfirmed) {
                 fetch(url, {
@@ -181,48 +157,43 @@ document.addEventListener('DOMContentLoaded', function () {
                         'X-CSRFToken': csrfToken
                     }
                 })
-                    .then(r => r.json())
+                    .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            Swal.fire('Eliminado', data.message, 'success');
-                            fetchTableData(searchInput.value);
+                            const Toast = Swal.mixin({
+                                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
+                            });
+                            Toast.fire({icon: 'success', title: data.message});
+                            fetchTableData(urlList);
                         }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire('Error', 'No se pudo cambiar el estado', 'error');
                     });
             }
-        })
+        });
     }
 
-    // Funciones Auxiliares de Error UI
-    function showFormErrors(form, errors) {
-        // Errores generales
-        if (errors.__all__) {
-            const errorBox = document.getElementById('global-errors');
-            if (errorBox) {
-                errorBox.textContent = errors.__all__.join(', ');
-                errorBox.style.display = 'block';
-            }
-        }
-        // Errores por campo
-        for (const [field, messages] of Object.entries(errors)) {
+    function fetchTableData(url) {
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.json())
+            .then(data => {
+                tableContainer.innerHTML = data.html;
+            })
+            .catch(err => {
+                console.error('Error al cargar datos:', err);
+            });
+    }
+
+    function showErrors(form, errors) {
+        for (const [field, msgs] of Object.entries(errors)) {
             const input = form.querySelector(`[name="${field}"]`);
             if (input) {
-                input.classList.add('input-error');
-                // Crear o actualizar mensaje
-                let msgDiv = input.parentNode.querySelector('.error-msg');
-                if (!msgDiv) {
-                    msgDiv = document.createElement('span');
-                    msgDiv.className = 'error-msg';
-                    input.parentNode.appendChild(msgDiv);
-                }
-                msgDiv.textContent = messages.join(', ');
+                input.classList.add('is-invalid');
+                const feedback = input.parentNode.querySelector('.invalid-feedback');
+                if (feedback) feedback.textContent = Array.isArray(msgs) ? msgs.join(', ') : msgs;
             }
         }
-    }
-
-    function clearFormErrors(form) {
-        form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
-        form.querySelectorAll('.error-msg').forEach(el => el.remove());
-        const globalErr = document.getElementById('global-errors');
-        if (globalErr) globalErr.style.display = 'none';
     }
 });

@@ -11,13 +11,12 @@ class PermitTypeForm(forms.ModelForm):
             'needs_justification', 'affects_vacation', 'requires_attachment'
         ]
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'std-input', 'placeholder': 'Ej. Calamidad Doméstica'}),
-            'parent': forms.Select(attrs={'class': 'std-input select2'}),
-            # select2 se mantiene pq es librería JS independiente
-            'is_active': forms.CheckboxInput(attrs={'class': 'std-check'}),
-            'needs_justification': forms.CheckboxInput(attrs={'class': 'std-check'}),
-            'affects_vacation': forms.CheckboxInput(attrs={'class': 'std-check'}),
-            'requires_attachment': forms.CheckboxInput(attrs={'class': 'std-check'}),
+            'name': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej. Calamidad Doméstica'}),
+            'parent': forms.Select(attrs={'class': 'input-field select2'}),
+            'is_active': forms.CheckboxInput(),
+            'needs_justification': forms.CheckboxInput(),
+            'affects_vacation': forms.CheckboxInput(),
+            'requires_attachment': forms.CheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):

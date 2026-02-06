@@ -1,49 +1,104 @@
-<form id="modalForm" method="post" action="
-        {% if form.instance.pk %}{% url 'permissions:type_update' form.instance.pk %}{% else %}{% url 'permissions:type_create' %}{% endif %}">
-    {% csrf_token %}
+<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
+    <form id="modalForm" method="post" action="
+            {% if form.instance.pk %}{% url 'permissions:type_update' form.instance.pk %}{% else %}{% url 'permissions:type_create' %}{% endif %}">
+        {% csrf_token %}
 
-    <div class="modal-body">
-        <!-- Error global oculto -->
-        <div id="global-errors"
-             style="display:none; color: #842029; background: #f8d7da; padding: 10px; border-radius: 4px; margin-bottom: 15px;"></div>
+        <!-- HEADER con estilo gradient -->
+        <div class="modal-header-medium modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-file-signature me-2"></i>
+                {% if form.instance.pk %}Editar Tipo de Permiso{% else %}Nuevo Tipo de Permiso{% endif %}
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity js-close-modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+    <!-- BODY con estilo gris suave -->
+    <div class="modal-body-content modal-body-custom">
+        <!-- Error global -->
+        <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
 
         <div class="form-group">
-            <label class="form-label">Nombre del Permiso *</label>
+            <label class="form-label">
+                <i class="fa-solid fa-tag"></i> Nombre del Permiso <span class="text-danger">*</span>
+            </label>
             {{ form.name }}
+            <div class="invalid-feedback"></div>
+            <p class="form-hint">Nombre descriptivo del tipo de permiso.</p>
         </div>
 
+        <!-- Campo Parent (Solo visible en edición o cuando viene parent en GET) -->
+        {% if form.instance.pk or request.GET.parent %}
         <div class="form-group">
-            <label class="form-label">Depende de (Opcional)</label>
+            <label class="form-label">
+                <i class="fa-solid fa-sitemap"></i> Depende de (Opcional)
+            </label>
             {{ form.parent }}
+            <p class="form-hint">Seleccione un tipo padre si este es un sub-tipo.</p>
+        </div>
+        {% else %}
+            <!-- Campo oculto para evitar error de validación -->
+            <input type="hidden" name="parent" value="">
+        {% endif %}
+
+        <!-- Título de sección -->
+        <div class="section-title mt-3">
+            <i class="fa-solid fa-sliders"></i> Configuración
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <!-- Grid de toggles usando grid-2-cols -->
+        <div class="grid-2-cols">
 
-        <!-- Grid 2 columnas para checks -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="check-row">
-                {{ form.needs_justification }}
-                <label>Requiere Justificación</label>
+            <!-- Toggle 1: Justificación -->
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label class="form-label mb-0" for="{{ form.needs_justification.id_for_label }}">¿Necesita
+                    Justificar?</label>
+                <label class="toggle-switch">
+                    {{ form.needs_justification }}
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
-            <div class="check-row">
-                {{ form.affects_vacation }}
-                <label>Descuenta Vacaciones</label>
+
+            <!-- Toggle 2: Vacaciones -->
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label class="form-label mb-0" for="{{ form.affects_vacation.id_for_label }}">¿Descuenta
+                    Vacaciones?</label>
+                <label class="toggle-switch">
+                    {{ form.affects_vacation }}
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
-            <div class="check-row">
-                {{ form.requires_attachment }}
-                <label>Obligatorio Adjunto PDF</label>
+
+            <!-- Toggle 3: PDF -->
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Adjuntar PDF?</label>
+                <label class="toggle-switch">
+                    {{ form.requires_attachment }}
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
-            <div class="check-row">
-                {{ form.is_active }}
-                <label>Activo</label>
+
+            <!-- Toggle 4: Activo -->
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
+                <label class="toggle-switch">
+                    {{ form.is_active }}
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
+
         </div>
     </div>
 
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary js-close-modal">Cancelar</button>
-        <button type="submit" class="btn btn-primary">
+    <!-- FOOTER con botones -->
+    <div class="modal-footer-medium modal-footer-spaced">
+        <button type="button" class="btn-cancel js-close-modal">
+            <i class="fa-solid fa-times"></i> Cancelar
+        </button>
+        <button type="submit" class="btn-save">
             <i class="fa-solid fa-save"></i> Guardar
         </button>
     </div>
-</form>
+    </form>
+</div>

@@ -15,4 +15,5 @@ urlpatterns = [
     path('requests/generate/', views.PermitRequestCreateView.as_view(), name='permit_create'),
     path('requests/update/<int:pk>/', views.PermitRequestUpdateView.as_view(), name='permit_update'),
     path('api/type/<int:pk>/', views.permit_type_detail_api, name='api_type_details'),
+    path('types/toggle/<int:pk>/', views.PermitTypeToggleView.as_view(), name='type_toggle'),
 ]

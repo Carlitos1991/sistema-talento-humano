@@ -4,7 +4,7 @@
 {% block title %}Tipos de Permisos{% endblock %}
 
 {% block extra_css %}
-    {#    <link rel="stylesheet" href="{% static 'css/permission.css' %}">#}
+        <link rel="stylesheet" href="{% static 'css/permission.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,7 +20,7 @@
                 <h1>Gestión de Tipos de Permisos</h1>
                 <p>Administra la información de tipos de Permisos.</p>
             </div>
-            {% if perms.core.add_catalog %}
+            {% if perms.permitrequest.add_permittype %}
                 <button id="btn-add-type" type="button"
                         data-url="{% url 'permissions:type_create' %}"
                         class="btn btn-create">
@@ -63,15 +63,10 @@
 {% endblock %}
 
 {% block modals %}
-    <!-- Modal Personalizado (Fuera del flujo normal) -->
-    <div id="customModal" class="modal-overlay" style="display: none !important;">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title">Gestión de Permiso</h3>
-                <!-- Clase js-close-modal agregada al botón X -->
-                <button type="button" class="js-close-modal btn-close">&times;</button>
-            </div>
-            <div id="modal-dynamic-content"></div>
+    <!-- Modal Personalizado -->
+    <div id="customModal" class="modal-overlay hidden">
+        <div id="modal-dynamic-content">
+            <!-- Aquí se carga el contenido dinámico del modal -->
         </div>
     </div>
 {% endblock %}
