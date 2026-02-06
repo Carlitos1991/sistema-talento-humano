@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generar Solicitud de Permiso{% endblock %}
+
+{% block extra_css %}
+    <!-- Estilos específicos del formulario -->
+    <link rel="stylesheet" href="{% static '/css/permission.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary fw-bold mb-0">
+                    <i class="fa-solid fa-file-signature me-2"></i>Generar Permiso
+                </h2>
+                <a href="{% url 'permissions:permit_list' %}" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-pen-to-square me-2"></i>Formulario de Solicitud</h5>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" id="permitForm" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Sección 1: Datos Principales -->
+                        <h6 class="text-muted text-uppercase mb-3 fw-bold small">Información del Empleado</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="id_employee" class="form-label fw-bold">Empleado *</label>
+                                {{ form.employee }}
+                                {% if form.employee.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.employee.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_permit_type" class="form-label fw-bold">Tipo de Permiso *</label>
+                                {{ form.permit_type }}
+                                <!-- Input oculto para lógica JS (Endpoint para consultar detalles del tipo) -->
+                                <input type="hidden" id="url_check_type" data-url="{% url 'permissions:api_type_details' 0 %}">
+                                {% if form.permit_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.permit_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="text-muted opacity-25">
+
+                        <!-- Sección 2: Temporalidad -->
+                        <h6 class="text-muted text-uppercase mb-3 fw-bold small">Duración y Fechas</h6>
+                        
+                        <!-- Alerta dinámica JS -->
+                        <div id="vacation-warning" class="alert alert-warning d-none align-items-center" role="alert">
+                            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                            <div>Este permiso descontará días de vacaciones.</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="id_start_date" class="form-label">Fecha Inicio *</label>
+                                {{ form.start_date }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_start_time" class="form-label">Hora Inicio</label>
+                                {{ form.start_time }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_end_date" class="form-label">Fecha Fin *</label>
+                                {{ form.end_date }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_end_time" class="form-label">Hora Fin</label>
+                                {{ form.end_time }}
+                            </div>
+                        </div>
+
+                        <!-- Calculadora Automática (Readonly) -->
+                        <div class="calculation-box p-3 rounded bg-light mb-4">
+                            <label class="form-label small text-muted fw-bold">TIEMPO TOTAL CALCULADO</label>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        {{ form.days }}
+                                        <span class="input-group-text">Días</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        {{ form.hours }}
+                                        <span class="input-group-text">Horas</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        {{ form.minutes }}
+                                        <span class="input-group-text">Minutos</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted fst-italic mt-2 d-block">
+                                * El cálculo es automático basado en las fechas. Puede ajustarlo manualmente si es necesario.
+                            </small>
+                        </div>
+
+                        <!-- Sección 3: Justificación y Adjuntos -->
+                        <div id="attachment-section" class="mb-4 transition-fade">
+                            <h6 class="text-muted text-uppercase mb-3 fw-bold small">Soporte Documental</h6>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label for="id_justification_file" class="form-label" id="label_file">
+                                        Archivo Adjunto (PDF)
+                                    </label>
+                                    {{ form.justification_file }}
+                                    <div class="form-text" id="file_help_text">Opcional según el tipo de permiso.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button type="reset" class="btn btn-light border">Limpiar</button>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fa-solid fa-save me-2"></i>Guardar Permiso
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Lógica del formulario -->
+    <script src="{% static '/js/permissions/permit_form.js' %}"></script>
+{% endblock %}

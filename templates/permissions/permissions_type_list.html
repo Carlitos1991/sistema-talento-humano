@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Permisos{% endblock %}
+
+{% block extra_css %}
+    {#    <link rel="stylesheet" href="{% static 'css/permission.css' %}">#}
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <!-- Configuración oculta -->
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'permissions:type_list' %}">
+
+        <!-- Encabezado -->
+
+        <div class="header-card">
+            <div>
+                <h1>Gestión de Tipos de Permisos</h1>
+                <p>Administra la información de tipos de Permisos.</p>
+            </div>
+            {% if perms.core.add_catalog %}
+                <button id="btn-add-type" type="button"
+                        data-url="{% url 'permissions:type_create' %}"
+                        class="btn btn-create">
+                    <i class="fas fa-plus"></i> Nuevo Tipo de permiso
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- Buscador -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field"
+                               placeholder="Buscar en la tabla">
+                    </div>
+                </div>
+                <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+                <div id="table-content-wrapper">
+                    {% include 'permissions/partials/partial_permissions_type_list.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Modal Personalizado (Fuera del flujo normal) -->
+    <div id="customModal" class="modal-overlay" style="display: none !important;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">Gestión de Permiso</h3>
+                <!-- Clase js-close-modal agregada al botón X -->
+                <button type="button" class="js-close-modal btn-close">&times;</button>
+            </div>
+            <div id="modal-dynamic-content"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/permissions/permissions_type.js' %}"></script>
+{% endblock %}

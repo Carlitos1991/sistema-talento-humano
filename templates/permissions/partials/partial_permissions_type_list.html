@@ -1,0 +1,69 @@
+<table class="custom-table">
+    <thead>
+    <tr>
+        <th>Nombre</th>
+        <th>Dependencia</th>
+        <th class="text-center">Req. Justificación</th>
+        <th class="text-center">Desc. Vacaciones</th>
+        <th class="text-center">Estado</th>
+        <th class="text-end">Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for type in types %}
+        <tr>
+            <td style="font-weight: 500;">{{ type.name }}</td>
+            <td>
+                {% if type.parent %}
+                    <span class="badge badge-gray">{{ type.parent.name }}</span>
+                {% else %}
+                    <span style="color: #999; font-size: 0.85rem;">Principal</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if type.needs_justification %}
+                    <i class="fa-solid fa-check" style="color: green;"></i>
+                {% else %}
+                    <i class="fa-solid fa-minus" style="color: #ccc;"></i>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if type.affects_vacation %}
+                    <span class="badge badge-danger">Sí</span>
+                {% else %}
+                    <span class="badge badge-success">No</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if type.is_active %}
+                    <span class="badge badge-success">Activo</span>
+                {% else %}
+                    <span class="badge badge-danger">Inactivo</span>
+                {% endif %}
+            </td>
+            <td class="text-end">
+                {% if perms.permissions.change_permittype %}
+                    <button class="btn btn-secondary btn-icon js-edit"
+                            data-url="{% url 'permissions:type_update' type.pk %}">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                {% endif %}
+
+                {% if perms.permissions.delete_permittype %}
+                    <button class="btn btn-danger btn-icon js-delete"
+                            data-url="{% url 'permissions:type_delete' type.pk %}">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                {% endif %}
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="6" class="text-center" style="padding: 30px;">
+                <i class="fa-regular fa-folder-open fa-2x" style="color: #ccc;"></i>
+                <p style="color: #777; margin-top: 10px;">No se encontraron registros.</p>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
