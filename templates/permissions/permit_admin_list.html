@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Administrar Permisos | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión de Permisos</h1>
+            <p>Administra los permisos del personal de la institución</p>
+        </div>
+    </div>
+
+    <!-- 2. Estadísticas (Filtros Rápidos Clicleables) -->
+    <div class="stats-row">
+        <!-- TOTAL -->
+        <div class="stat-card color-one" onclick="filterPermitsByStatus('all')" id="card-filter-all">
+            <div class="stat-left">
+                <h3>TOTAL</h3>
+                <div class="number" id="stat-total">{{ total|default:"0" }}</div>
+            </div>
+            <i class="fas fa-clipboard-list stat-icon"></i>
+        </div>
+
+        <!-- PENDIENTES -->
+        <div class="stat-card color-two opacity-low" onclick="filterPermitsByStatus('REQUESTED')" id="card-filter-requested">
+            <div class="stat-left">
+                <h3>PENDIENTES</h3>
+                <div class="number" id="stat-pendientes">{{ pendientes|default:"0" }}</div>
+            </div>
+            <i class="fas fa-clock stat-icon"></i>
+        </div>
+
+        <!-- APROBADOS -->
+        <div class="stat-card color-three opacity-low" onclick="filterPermitsByStatus('APPROVED')" id="card-filter-approved">
+            <div class="stat-left">
+                <h3>APROBADOS</h3>
+                <div class="number" id="stat-aprobados">{{ aprobados|default:"0" }}</div>
+            </div>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </div>
+
+        <!-- RECHAZADOS -->
+        <div class="stat-card color-four opacity-low" onclick="filterPermitsByStatus('REJECTED')" id="card-filter-rejected">
+            <div class="stat-left">
+                <h3>RECHAZADOS</h3>
+                <div class="number" id="stat-rechazados">{{ rechazados|default:"0" }}</div>
+            </div>
+            <i class="fas fa-times-circle stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- 3. Tabla AJAX -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search-permits" class="input-field"
+                           placeholder="Buscar por empleado, tipo de permiso o estado...">
+                </div>
+                <select id="filter-status" class="input-field" style="max-width: 200px;">
+                    <option value="">Todos los estados</option>
+                    <option value="REQUESTED">Pendientes</option>
+                    <option value="APPROVED">Aprobados</option>
+                    <option value="REJECTED">Rechazados</option>
+                </select>
+            </div>
+
+            <!-- Contenedor donde se inyecta el HTML parcial -->
+            <div id="table-content-wrapper">
+                {% include 'permissions/partials/partial_permit_admin_table.html' %}
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">
+                    Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+                </span>
+                <ul class="pagination-list">
+                    <li>
+                        <button class="pagination-btn" id="btn-prev" 
+                                {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </li>
+                    <li><span class="pagination-current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+                    <li>
+                        <button class="pagination-btn" id="btn-next" 
+                                {% if not page_obj.has_next %}disabled{% endif %}>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ver detalle del permiso -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal-content-container"></div>
+    </div>
+
+    <!-- Modal para aprobar/rechazar -->
+    <div id="modal-response-overlay" class="modal-overlay hidden">
+        <div id="modal-response-container"></div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/permissions/permit_admin.js' %}"></script>
+{% endblock %}

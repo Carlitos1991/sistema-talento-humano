@@ -1,0 +1,161 @@
+{% load static %}
+
+<div class="modal-container-medium shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <h2 class="header-title-main">
+                Detalle del Permiso
+            </h2>
+        </div>
+    </div>
+
+    <!-- Cuerpo con Scroll -->
+    <div class="modal-body-scrolled">
+
+        <!-- Información del Empleado -->
+        <div class="section-card-standard border-left-primary">
+            <h4 class="section-title">
+                <i class="fas fa-user text-primary"></i> EMPLEADO
+            </h4>
+            <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
+                {% if permit.employee.person.photo %}
+                    <img src="{{ permit.employee.person.photo.url }}" 
+                         alt="{{ permit.employee.person.full_name }}"
+                         style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user" style="color: white; font-size: 24px;"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <div class="font-weight-700 text-dark">{{ permit.employee.person.full_name }}</div>
+                    <small class="text-muted">CI: {{ permit.employee.person.document_number }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Permiso -->
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-list-check text-primary"></i> DATOS DEL PERMISO
+            </h4>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Tipo de Permiso</label>
+                    <p class="form-control-static">{{ permit.permit_type.name }}</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Estado</label>
+                    <p class="form-control-static">
+                        {% if permit.status == 'REQUESTED' %}
+                            <span class="badge badge-warning">PENDIENTE</span>
+                        {% elif permit.status == 'APPROVED' %}
+                            <span class="badge badge-success">APROBADO</span>
+                        {% elif permit.status == 'REJECTED' %}
+                            <span class="badge badge-danger">RECHAZADO</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha y Hora de Inicio</label>
+                    <p class="form-control-static">
+                        {{ permit.start_date|date:"d/m/Y" }} 
+                        {% if permit.start_time %}{{ permit.start_time|time:"H:i" }}{% endif %}
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha y Hora de Fin</label>
+                    <p class="form-control-static">
+                        {% if permit.end_date %}{{ permit.end_date|date:"d/m/Y" }}{% else %}--{% endif %}
+                        {% if permit.end_time %}{{ permit.end_time|time:"H:i" }}{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label font-weight-700">Duración</label>
+                <p class="form-control-static">
+                    {% if permit.days > 0 %}{{ permit.days }} día(s) {% endif %}
+                    {% if permit.hours > 0 %}{{ permit.hours }} hora(s) {% endif %}
+                    {% if permit.minutes > 0 %}{{ permit.minutes }} minuto(s){% endif %}
+                    {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}No especificada{% endif %}
+                </p>
+            </div>
+
+            {% if permit.justification_file %}
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Archivo Adjunto</label>
+                    <p class="form-control-static">
+                        <a href="{{ permit.justification_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-file-pdf"></i> Ver Documento
+                        </a>
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Respuesta (si existe) -->
+        {% if permit.response_note %}
+            <div class="section-card-standard border-left-{% if permit.status == 'APPROVED' %}success{% else %}danger{% endif %}">
+                <h4 class="section-title">
+                    <i class="fas fa-comment-dots text-primary"></i> RESPUESTA
+                </h4>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Motivo</label>
+                    <p class="form-control-static">{{ permit.response_note }}</p>
+                </div>
+                {% if permit.response_date %}
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Fecha de Respuesta</label>
+                        <p class="form-control-static">{{ permit.response_date|date:"d/m/Y H:i" }}</p>
+                    </div>
+                {% endif %}
+                {% if permit.response_by %}
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Respondido por</label>
+                        <p class="form-control-static">{{ permit.response_by.get_full_name }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- Auditoría -->
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-history text-primary"></i> AUDITORÍA
+            </h4>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Registrado por</label>
+                    <p class="form-control-static">
+                        {% if permit.created_by %}{{ permit.created_by.get_full_name }}{% else %}--{% endif %}
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha de Registro</label>
+                    <p class="form-control-static">{{ permit.created_at|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer-fixed">
+        <button type="button" class="btn-cancel js-close-modal">
+            <i class="fas fa-times-circle"></i> CERRAR
+        </button>
+    </div>
+</div>

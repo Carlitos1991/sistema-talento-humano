@@ -1,0 +1,56 @@
+{% load static %}
+
+<div class="modal-container-small shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal js-close-response-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle {% if action == 'approve' %}bg-success{% else %}bg-danger{% endif %}">
+                <i class="fas {% if action == 'approve' %}fa-check{% else %}fa-times{% endif %}"></i>
+            </div>
+            <h2 class="header-title-main">
+                {% if action == 'approve' %}Aprobar Permiso{% else %}Rechazar Permiso{% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" id="responsePermitForm">
+        {% csrf_token %}
+        
+        <div class="modal-body-scrolled">
+            <div class="section-card-standard">
+                <p><strong>Empleado:</strong> {{ permit.employee.person.full_name }}</p>
+                <p><strong>Tipo:</strong> {{ permit.permit_type.name }}</p>
+                <p><strong>Fecha:</strong> {{ permit.start_date|date:"d/m/Y" }}</p>
+            </div>
+
+            <div class="section-card-standard">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">
+                        {% if action == 'approve' %}Motivo de Aceptación{% else %}Motivo de Negativa{% endif %}
+                        <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="response_note" id="id_response_note" class="form-control" 
+                              rows="4" required
+                              placeholder="{% if action == 'approve' %}Se acepta el permiso{% else %}Detalle el motivo de la negativa{% endif %}">{% if action == 'approve' %}{{ default_message }}{% endif %}</textarea>
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel js-close-response-modal">
+                <i class="fas fa-times-circle"></i> CANCELAR
+            </button>
+            <button type="submit" class="{% if action == 'approve' %}btn-save{% else %}btn-delete{% endif %}">
+                <i class="fas {% if action == 'approve' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                {% if action == 'approve' %}APROBAR{% else %}RECHAZAR{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

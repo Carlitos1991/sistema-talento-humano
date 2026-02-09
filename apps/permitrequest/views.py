@@ -306,25 +306,36 @@ class EmployeePermitHistoryView(LoginRequiredMixin, PermissionRequiredMixin, Vie
                 'message': 'No tiene permisos para ver esta información'
             }, status=403)
         
-        employee = get_object_or_404(Employee, pk=employee_id)
-        permits = PermitRequest.objects.filter(
-            employee=employee
-        ).select_related('permit_type').order_by('-created_at').values(
-            'id',
-            'permit_type__name',
-            'start_date',
-            'end_date',
-            'status',
-            'created_at',
-            'reason'
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'employee_name': employee.person.get_full_name(),
-            'employee_identification': employee.person.identification,
-            'permits': list(permits)
-        })
+        try:
+            employee = get_object_or_404(Employee, pk=employee_id)
+            permits = PermitRequest.objects.filter(
+                employee=employee
+            ).select_related('permit_type').order_by('-created_at')
+            
+            permits_data = []
+            for permit in permits:
+                permits_data.append({
+                    'id': permit.id,
+                    'permit_type__name': permit.permit_type.name,
+                    'start_date': permit.start_date.strftime('%Y-%m-%d') if permit.start_date else None,
+                    'end_date': permit.end_date.strftime('%Y-%m-%d') if permit.end_date else None,
+                    'status': permit.status,
+                    'created_at': permit.created_at.strftime('%Y-%m-%d %H:%M:%S') if permit.created_at else None
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'employee_name': employee.person.full_name,
+                'employee_identification': employee.person.document_number,
+                'permits': permits_data
+            })
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al cargar historial: {str(e)}',
+                'traceback': traceback.format_exc()
+            }, status=500)
 
 
 class GeneratePermitFormView(LoginRequiredMixin, View):
@@ -349,13 +360,18 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
             }, status=400)
         
         employee = get_object_or_404(Employee, pk=employee_id)
-        permit_types = PermitType.objects.filter(is_active=True).order_by('name')
+        
+        # Obtener tipos padre (sin parent)
+        parent_types = PermitType.objects.filter(
+            is_active=True,
+            parent__isnull=True
+        ).order_by('name')
         
         html = render_to_string(
             'permissions/modals/modal_generate_permit_form.html',
             {
                 'employee': employee,
-                'permit_types': permit_types
+                'parent_types': parent_types,
             },
             request=request
         )
@@ -363,84 +379,85 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
 
 
 # ==========================================
-# VISTAS: SOLICITUDES DE PERMISO (Gestión)
+# VISTAS OBSOLETAS - REEMPLAZADAS POR PermitAdminListView y employee_list
 # ==========================================
+# Estas vistas usaban permissions_permit_list.html y permissions_permit_form.html
+# que fueron reemplazados por el nuevo sistema de administración
+# Se mantienen comentadas por si se necesitan referencias
 
-class PermitRequestListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
-    model = PermitRequest
-    template_name = 'permissions/permissions_permit_list.html'
-    partial_template_name = 'permissions/partial_permissions_permit_list.html'
-    context_object_name = 'permits'
-    permission_required = 'permissions.view_permitrequest'
-    paginate_by = 10
+# class PermitRequestListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
+#     model = PermitRequest
+#     template_name = 'permissions/permissions_permit_list.html'
+#     partial_template_name = 'permissions/partial_permissions_permit_list.html'
+#     context_object_name = 'permits'
+#     permission_required = 'permissions.view_permitrequest'
+#     paginate_by = 10
 
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related('employee', 'permit_type')
-        query = self.request.GET.get('q')
+#     def get_queryset(self):
+#         queryset = super().get_queryset().select_related('employee', 'permit_type')
+#         query = self.request.GET.get('q')
+#         status = self.request.GET.get('status')
 
-        # Filtros adicionales (puedes expandir esto)
-        status = self.request.GET.get('status')
+#         if query:
+#             queryset = queryset.filter(
+#                 Q(employee__person__last_name__icontains=query) |
+#                 Q(employee__person__first_name__icontains=query) |
+#                 Q(employee__person__document_number__icontains=query)
+#             )
 
-        if query:
-            queryset = queryset.filter(
-                Q(employee__first_name__icontains=query) |
-                Q(employee__last_name__icontains=query) |
-                Q(employee__identification__icontains=query)
-            )
+#         if status:
+#             queryset = queryset.filter(status=status)
 
-        if status:
-            queryset = queryset.filter(status=status)
-
-        return queryset
+#         return queryset
 
 
-class PermitRequestCreateView(LoginRequiredMixin, CreateView):
-    model = PermitRequest
-    form_class = PermitRequestForm
-    template_name = 'permissions/permissions_permit_form.html'
-    success_url = reverse_lazy('permissions:permit_list')
+# class PermitRequestCreateView(LoginRequiredMixin, CreateView):
+#     model = PermitRequest
+#     form_class = PermitRequestForm
+#     template_name = 'permissions/permissions_permit_form.html'
+#     success_url = reverse_lazy('permissions:permit_list')
 
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm('permitrequest.add_permitrequest'):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No tiene permisos para crear permisos'
-                }, status=403)
-            return HttpResponse('Acceso denegado', status=403)
-        return super().dispatch(request, *args, **kwargs)
+#     def dispatch(self, request, *args, **kwargs):
+#         if not request.user.has_perm('permitrequest.add_permitrequest'):
+#             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+#                 return JsonResponse({
+#                     'success': False,
+#                     'message': 'No tiene permisos para crear permisos'
+#                 }, status=403)
+#             return HttpResponse('Acceso denegado', status=403)
+#         return super().dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        self.object = form.save()
+#     def form_valid(self, form):
+#         form.instance.created_by = self.request.user
+#         self.object = form.save()
         
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': 'Permiso registrado correctamente'
-            })
-        return super().form_valid(form)
+#         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+#             return JsonResponse({
+#                 'success': True,
+#                 'message': 'Permiso registrado correctamente'
+#             })
+#         return super().form_valid(form)
     
-    def form_invalid(self, form):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'message': 'Error al guardar el permiso',
-                'errors': form.errors
-            }, status=400)
-        return super().form_invalid(form)
+#     def form_invalid(self, form):
+#         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+#             return JsonResponse({
+#                 'success': False,
+#                 'message': 'Error al guardar el permiso',
+#                 'errors': form.errors
+#             }, status=400)
+#         return super().form_invalid(form)
 
 
-class PermitRequestUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
-    model = PermitRequest
-    form_class = PermitRequestForm
-    template_name = 'permissions/permissions_permit_form.html'
-    success_url = reverse_lazy('permissions:permit_list')
-    permission_required = 'permissions.change_permitrequest'
+# class PermitRequestUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+#     model = PermitRequest
+#     form_class = PermitRequestForm
+#     template_name = 'permissions/permissions_permit_form.html'
+#     success_url = reverse_lazy('permissions:permit_list')
+#     permission_required = 'permissions.change_permitrequest'
 
-    def form_valid(self, form):
-        form.instance.updated_by = self.request.user
-        return super().form_valid(form)
+#     def form_valid(self, form):
+#         form.instance.updated_by = self.request.user
+#         return super().form_valid(form)
 
 
 def permit_type_detail_api(request, pk):
@@ -508,3 +525,152 @@ class PermitTypeSubItemsView(LoginRequiredMixin, View):
             'items': list(subtypes)
         })
 
+
+def get_subtypes_api(request, parent_id):
+    """API para obtener subtipos de un tipo de permiso padre"""
+    subtypes = PermitType.objects.filter(
+        parent_id=parent_id,
+        is_active=True
+    ).values('id', 'name', 'needs_justification', 'requires_attachment')
+    
+    return JsonResponse({
+        'success': True,
+        'subtypes': list(subtypes)
+    })
+
+
+# ==========================================
+# VISTAS: ADMINISTRACIÓN DE PERMISOS
+# ==========================================
+
+class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
+    """Vista para administrar permisos (aprobar/rechazar)"""
+    model = PermitRequest
+    template_name = 'permissions/permit_admin_list.html'
+    partial_template_name = 'permissions/partials/partial_permit_admin_table.html'
+    context_object_name = 'permits'
+    permission_required = 'permitrequest.view_permitrequest'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related(
+            'employee__person', 
+            'permit_type'
+        ).order_by('-created_at')
+        
+        query = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+
+        if query:
+            queryset = queryset.filter(
+                Q(employee__person__first_name__icontains=query) |
+                Q(employee__person__last_name__icontains=query) |
+                Q(employee__person__document_number__icontains=query) |
+                Q(permit_type__name__icontains=query)
+            )
+
+        if status:
+            queryset = queryset.filter(status=status)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Estadísticas para las cards
+        all_permits = PermitRequest.objects.all()
+        context['total'] = all_permits.count()
+        context['pendientes'] = all_permits.filter(status='REQUESTED').count()
+        context['aprobados'] = all_permits.filter(status='APPROVED').count()
+        context['rechazados'] = all_permits.filter(status='REJECTED').count()
+        
+        return context
+
+
+class PermitDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para ver el detalle de un permiso"""
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def get(self, request, pk):
+        permit = get_object_or_404(
+            PermitRequest.objects.select_related('employee__person', 'permit_type', 'created_by', 'response_by'),
+            pk=pk
+        )
+        
+        html = render_to_string(
+            'permissions/modals/modal_permit_detail.html',
+            {'permit': permit},
+            request=request
+        )
+        return HttpResponse(html)
+
+
+class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para aprobar o rechazar un permiso"""
+    permission_required = 'permitrequest.change_permitrequest'
+
+    def get(self, request, pk, action):
+        """Muestra el modal para ingresar el motivo"""
+        permit = get_object_or_404(PermitRequest, pk=pk)
+        
+        if permit.status != 'REQUESTED':
+            return JsonResponse({
+                'success': False,
+                'message': 'Este permiso ya fue procesado'
+            }, status=400)
+        
+        default_message = "Se acepta el permiso" if action == 'approve' else ""
+        
+        html = render_to_string(
+            'permissions/modals/modal_permit_response.html',
+            {
+                'permit': permit,
+                'action': action,
+                'default_message': default_message
+            },
+            request=request
+        )
+        return HttpResponse(html)
+
+    def post(self, request, pk, action):
+        """Procesa la aprobación o rechazo"""
+        permit = get_object_or_404(PermitRequest, pk=pk)
+        
+        if permit.status != 'REQUESTED':
+            return JsonResponse({
+                'success': False,
+                'message': 'Este permiso ya fue procesado'
+            }, status=400)
+        
+        response_note = request.POST.get('response_note', '').strip()
+        
+        if action == 'approve':
+            permit.status = 'APPROVED'
+            if not response_note:
+                response_note = "Se acepta el permiso"
+            message = 'Permiso aprobado correctamente'
+        elif action == 'reject':
+            permit.status = 'REJECTED'
+            if not response_note:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe ingresar el motivo de la negativa'
+                }, status=400)
+            message = 'Permiso rechazado correctamente'
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Acción no válida'
+            }, status=400)
+        
+        from django.utils import timezone
+        permit.response_note = response_note
+        permit.response_date = timezone.now()
+        permit.response_by = request.user
+        permit.updated_by = request.user
+        permit.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message
+        })

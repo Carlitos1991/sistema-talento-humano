@@ -59,6 +59,12 @@ class PermitRequest(models.Model):
     status = models.CharField(verbose_name='Estado', max_length=20, choices=STATUS_CHOICES, default='REQUESTED')
     justification_file = models.FileField(upload_to='documents/permits/%Y/%m/', verbose_name='Justificativo PDF',
                                           blank=True, null=True)
+    
+    # Respuesta de aprobación o rechazo
+    response_note = models.TextField(verbose_name='Motivo de aceptación/negativa', blank=True, null=True)
+    response_date = models.DateTimeField(verbose_name='Fecha de respuesta', blank=True, null=True)
+    response_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='Respondido por',
+                                   on_delete=models.SET_NULL, null=True, blank=True, related_name='permits_responded')
 
     # Auditoría (Mejor práctica: Usar User Model)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de registro')

@@ -55,7 +55,7 @@ class PermitRequestForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Solo mostrar empleados activos
-        self.fields['employee'].queryset = Employee.objects.filter(is_active=True).order_by('last_name')
+        self.fields['employee'].queryset = Employee.objects.filter(is_active=True).order_by('person__last_name')
         # Solo mostrar tipos de permisos activos y que sean hijos (opcional, depende de regla de negocio)
         self.fields['permit_type'].queryset = PermitType.objects.filter(is_active=True)
 

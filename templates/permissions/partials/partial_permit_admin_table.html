@@ -1,0 +1,82 @@
+<table class="data-table">
+    <thead>
+        <tr>
+            <th><i class="fas fa-user"></i> EMPLEADO</th>
+            <th><i class="fas fa-id-card"></i> CÉDULA</th>
+            <th><i class="fas fa-list-check"></i> TIPO DE PERMISO</th>
+            <th><i class="fas fa-calendar-day"></i> FECHA INICIO</th>
+            <th><i class="fas fa-calendar-check"></i> FECHA FIN</th>
+            <th><i class="fas fa-hourglass-half"></i> DURACIÓN</th>
+            <th><i class="fas fa-info-circle"></i> ESTADO</th>
+            <th><i class="fas fa-cog"></i> ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for permit in permits %}
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        {% if permit.employee.person.photo %}
+                            <img src="{{ permit.employee.person.photo.url }}" alt="{{ permit.employee.person.full_name }}" class="user-avatar">
+                        {% else %}
+                            <div class="user-avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        {% endif %}
+                        <span>{{ permit.employee.person.full_name }}</span>
+                    </div>
+                </td>
+                <td>{{ permit.employee.person.document_number }}</td>
+                <td>
+                    <span class="badge badge-info">
+                        {{ permit.permit_type.name }}
+                    </span>
+                </td>
+                <td>{{ permit.start_date|date:"d/m/Y" }} {{ permit.start_time|time:"H:i"|default:"--" }}</td>
+                <td>{{ permit.end_date|date:"d/m/Y"|default:"--" }} {{ permit.end_time|time:"H:i"|default:"--" }}</td>
+                <td>
+                    {% if permit.days > 0 %}{{ permit.days }}d {% endif %}
+                    {% if permit.hours > 0 %}{{ permit.hours }}h {% endif %}
+                    {% if permit.minutes > 0 %}{{ permit.minutes }}m{% endif %}
+                    {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}--{% endif %}
+                </td>
+                <td>
+                    {% if permit.status == 'REQUESTED' %}
+                        <span class="badge badge-warning">PENDIENTE</span>
+                    {% elif permit.status == 'APPROVED' %}
+                        <span class="badge badge-success">APROBADO</span>
+                    {% elif permit.status == 'REJECTED' %}
+                        <span class="badge badge-danger">RECHAZADO</span>
+                    {% else %}
+                        <span class="badge badge-secondary">{{ permit.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-info js-view-detail" data-permit-id="{{ permit.id }}" title="Ver Detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        
+                        {% if permit.status == 'REQUESTED' and perms.permitrequest.change_permitrequest %}
+                            <button class="btn-icon btn-success js-approve-permit" data-permit-id="{{ permit.id }}" title="Aprobar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-icon btn-danger js-reject-permit" data-permit-id="{{ permit.id }}" title="Rechazar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">
+                    <div style="padding: 2rem; color: #6c757d;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p style="margin-top: 1rem;">No se encontraron permisos</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

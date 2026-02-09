@@ -186,9 +186,8 @@
                     <!-- 1. Administrar Permisos (Listado General) -->
                     {% if perms.permitrequest.view_permitrequest %}
                         <li>
-                            <!-- Ajusta 'permit_list' al nombre real de tu URL -->
-                            <a href="{% url 'permissions:permit_list' %}"
-                               class="{% if request.resolver_match.url_name == 'permit_list' %}active-child{% endif %}">
+                            <a href="{% url 'permissions:permit_admin' %}"
+                               class="{% if request.resolver_match.url_name == 'permit_admin' %}active-child{% endif %}">
                                 <i class="fa-solid fa-list-check"></i>
                                 <span class="menu-text">Administrar</span>
                             </a>

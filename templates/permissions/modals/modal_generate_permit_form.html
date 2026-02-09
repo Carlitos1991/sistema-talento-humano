@@ -1,81 +1,195 @@
 {% load static %}
 
-<div class="modal-content animate-scale-in">
-    <div class="modal-header">
-        <h3 class="modal-title">Generar Permiso - {{ employee.person.get_full_name }}</h3>
-        <button type="button" class="btn-close-modal js-close-modal">
-            <i class="fas fa-times"></i>
-        </button>
+<div class="modal-container-medium shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera Compacta -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-file-signature"></i>
+            </div>
+            <h2 class="header-title-main">
+                Generar Permiso
+            </h2>
+        </div>
     </div>
 
-    <form method="post" action="{% url 'permissions:permit_create' %}" id="generatePermitForm">
+    <!-- Formulario -->
+    <form method="post" action="{% url 'permissions:permit_create' %}" id="generatePermitForm" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="employee" value="{{ employee.id }}">
-        
-        <div class="modal-body">
-            <div class="form-grid">
-                <!-- Información del Empleado (solo lectura) -->
-                <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label">Empleado</label>
-                    <input type="text" class="form-control" value="{{ employee.person.get_full_name }} - {{ employee.person.identification }}" readonly>
-                </div>
 
-                <!-- Tipo de Permiso -->
-                <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label" for="id_permit_type">
-                        Tipo de Permiso <span class="text-danger">*</span>
-                    </label>
-                    <select name="permit_type" id="id_permit_type" class="form-control select2" required>
-                        <option value="">-- Seleccione --</option>
-                        {% for permit_type in permit_types %}
-                            <option value="{{ permit_type.id }}">{{ permit_type.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="invalid-feedback"></div>
-                </div>
+        <!-- Cuerpo con Scroll -->
+        <div class="modal-body-scrolled">
 
-                <!-- Fecha de Inicio -->
+            <!-- Sección 1: Información del Empleado -->
+            <div class="section-card-standard border-left-primary">
+                <h4 class="section-title">
+                    <i class="fas fa-user text-primary"></i> INFORMACIÓN DEL EMPLEADO
+                </h4>
+                <div class="mb-3">
+                    <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
+                        {% if employee.person.photo %}
+                            <img src="{{ employee.person.photo.url }}" 
+                                 alt="{{ employee.person.get_full_name }}"
+                                 style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-user" style="color: white;"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="font-weight-700 text-dark">{{ employee.person.get_full_name }}</div>
+                            <small class="text-muted">CI: {{ employee.person.document_number }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Tipo de Permiso -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-list-check text-primary"></i> TIPO DE PERMISO
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Tipo Principal <span class="text-danger">*</span></label>
+                        <select name="permit_type_parent" id="id_permit_type_parent" class="form-control" required>
+                            <option value="">-- Seleccione --</option>
+                            {% for permit_type in parent_types %}
+                                <option value="{{ permit_type.id }}" 
+                                        data-needs-justification="{{ permit_type.needs_justification|yesno:'true,false' }}"
+                                        data-requires-attachment="{{ permit_type.requires_attachment|yesno:'true,false' }}">
+                                    {{ permit_type.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group" id="subtype-container" style="display: none;">
+                        <label class="form-label font-weight-700">Subtipo <span class="text-danger">*</span></label>
+                        <select name="permit_type" id="id_permit_type" class="form-control">
+                            <option value="">-- Primero seleccione tipo principal --</option>
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 3: Fecha y Hora de Inicio -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-calendar-day text-primary"></i> INICIO DEL PERMISO
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Fecha de Inicio <span class="text-danger">*</span></label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar input-icon-left"></i>
+                            <input type="date" name="start_date" id="id_start_date" 
+                                   class="form-control with-icon" required>
+                        </div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Hora de Inicio <span class="text-danger">*</span></label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-clock input-icon-left"></i>
+                            <input type="time" name="start_time" id="id_start_time" 
+                                   class="form-control with-icon" value="08:00" required>
+                        </div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 4: Duración del Permiso -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-hourglass-half text-primary"></i> DURACIÓN DEL PERMISO
+                </h4>
+                <div class="grid-3-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Días (0-5)</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-calendar-days input-icon-left"></i>
+                            <input type="number" name="days" id="id_days" 
+                                   class="form-control with-icon" min="0" max="5" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Horas (0-7)</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-clock input-icon-left"></i>
+                            <input type="number" name="hours" id="id_hours" 
+                                   class="form-control with-icon" min="0" max="7" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Minutos (0-59)</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-sliders input-icon-left"></i>
+                            <input type="number" name="minutes" id="id_minutes" 
+                                   class="form-control with-icon" min="0" max="59" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fecha/Hora de Fin Calculada Automáticamente -->
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="font-weight-700 text-muted">
+                            <i class="fas fa-calendar-check"></i> Fin Calculado:
+                        </span>
+                        <span class="font-weight-700 text-primary" id="calculated-end">
+                            --
+                        </span>
+                    </div>
+                </div>
+                <input type="hidden" name="end_date" id="id_end_date">
+                <input type="hidden" name="end_time" id="id_end_time">
+            </div>
+
+            <!-- Sección 5: Motivo (Condicional) -->
+            <div class="section-card-standard" id="reason-section" style="display: none;">
+                <h4 class="section-title">
+                    <i class="fas fa-comment-dots text-primary"></i> MOTIVO
+                </h4>
                 <div class="form-group">
-                    <label class="form-label" for="id_start_date">
-                        Fecha de Inicio <span class="text-danger">*</span>
-                    </label>
-                    <input type="date" name="start_date" id="id_start_date" class="form-control" required>
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <!-- Fecha de Fin -->
-                <div class="form-group">
-                    <label class="form-label" for="id_end_date">
-                        Fecha de Fin <span class="text-danger">*</span>
-                    </label>
-                    <input type="date" name="end_date" id="id_end_date" class="form-control" required>
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <!-- Motivo -->
-                <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label" for="id_reason">
-                        Motivo <span class="text-danger">*</span>
-                    </label>
-                    <textarea name="reason" id="id_reason" class="form-control" rows="3" required></textarea>
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <!-- Observaciones (Opcional) -->
-                <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label" for="id_observations">Observaciones</label>
-                    <textarea name="observations" id="id_observations" class="form-control" rows="2"></textarea>
+                    <label class="form-label font-weight-700">Descripción del Motivo</label>
+                    <textarea name="reason" id="id_reason" class="form-control uppercase-input" 
+                              rows="3" placeholder="DESCRIBA EL MOTIVO DE SU PERMISO"></textarea>
                     <div class="invalid-feedback"></div>
                 </div>
             </div>
+
+            <!-- Sección 6: Adjuntar PDF (Condicional) -->
+            <div class="section-card-standard" id="attachment-section" style="display: none;">
+                <h4 class="section-title">
+                    <i class="fas fa-paperclip text-primary"></i> ADJUNTO
+                </h4>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Documento PDF</label>
+                    <input type="file" name="justification_file" id="id_justification_file" 
+                           class="form-control" accept=".pdf">
+                    <small class="text-muted">Solo archivos PDF. Máximo 5MB.</small>
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+
         </div>
 
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary js-close-modal">
-                <i class="fas fa-times"></i> Cancelar
+        <!-- Footer Fijo con Botones Normalizados -->
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fas fa-times-circle"></i> CANCELAR
             </button>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Guardar Permiso
+            <button type="submit" class="btn-save">
+                <i class="fas fa-check-circle"></i> GENERAR PERMISO
             </button>
         </div>
     </form>

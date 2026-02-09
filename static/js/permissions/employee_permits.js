@@ -224,8 +224,14 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(html => {
                 modalContentContainer.innerHTML = html;
                 modalOverlay.classList.remove('hidden');
+                
+                // Bloquear scroll del body
+                document.body.style.overflow = 'hidden';
 
                 initModalPlugins();
+                
+                // Inicializar la lógica del formulario de permisos
+                initPermitForm();
 
                 const form = modalContentContainer.querySelector('form');
                 if (form) form.addEventListener('submit', handleFormSubmit);
@@ -239,6 +245,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function closeModal() {
         modalOverlay.classList.add('hidden');
         modalContentContainer.innerHTML = '';
+        
+        // Restaurar scroll del body
+        document.body.style.overflow = '';
     }
 
     function initModalPlugins() {
@@ -344,5 +353,173 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (feedback) feedback.textContent = Array.isArray(msgs) ? msgs.join(', ') : msgs;
             }
         }
+    }
+
+    // ========================================================
+    // LÓGICA DEL FORMULARIO DE GENERACIÓN DE PERMISOS
+    // ========================================================
+    function initPermitForm() {
+        const parentSelect = document.getElementById('id_permit_type_parent');
+        const subtypeContainer = document.getElementById('subtype-container');
+        const subtypeSelect = document.getElementById('id_permit_type');
+        const reasonSection = document.getElementById('reason-section');
+        const reasonTextarea = document.getElementById('id_reason');
+        const attachmentSection = document.getElementById('attachment-section');
+        const attachmentInput = document.getElementById('id_justification_file');
+        
+        if (!parentSelect || !subtypeContainer || !subtypeSelect) {
+            console.error('ERROR: No se encontraron elementos del formulario de permisos');
+            return;
+        }
+        
+        const startDateInput = document.getElementById('id_start_date');
+        const startTimeInput = document.getElementById('id_start_time');
+        const daysInput = document.getElementById('id_days');
+        const hoursInput = document.getElementById('id_hours');
+        const minutesInput = document.getElementById('id_minutes');
+        const calculatedEndSpan = document.getElementById('calculated-end');
+        const endDateHidden = document.getElementById('id_end_date');
+        const endTimeHidden = document.getElementById('id_end_time');
+
+        // Cambio de tipo padre - Cargar subtipos dinámicamente
+        parentSelect.addEventListener('change', async function() {
+            const parentId = this.value;
+            const selectedOption = this.options[this.selectedIndex];
+            const needsJustification = selectedOption.dataset.needsJustification === 'true';
+            const requiresAttachment = selectedOption.dataset.requiresAttachment === 'true';
+            
+            subtypeSelect.innerHTML = '<option value="">-- Cargando... --</option>';
+            
+            if (!parentId) {
+                subtypeSelect.innerHTML = '<option value="">-- Primero seleccione tipo principal --</option>';
+                subtypeContainer.style.display = 'none';
+                reasonSection.style.display = 'none';
+                attachmentSection.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`);
+                const data = await response.json();
+                
+                subtypeSelect.innerHTML = '<option value="">-- Seleccione --</option>';
+                
+                if (data.success && data.subtypes && data.subtypes.length > 0) {
+                    data.subtypes.forEach(subtype => {
+                        const option = document.createElement('option');
+                        option.value = subtype.id;
+                        option.textContent = subtype.name;
+                        option.dataset.needsJustification = subtype.needs_justification;
+                        option.dataset.requiresAttachment = subtype.requires_attachment;
+                        subtypeSelect.appendChild(option);
+                    });
+                    
+                    subtypeContainer.style.display = 'block';
+                    subtypeSelect.required = true;
+                    reasonSection.style.display = 'none';
+                    attachmentSection.style.display = 'none';
+                    reasonTextarea.required = false;
+                    attachmentInput.required = false;
+                } else {
+                    subtypeContainer.style.display = 'none';
+                    subtypeSelect.required = false;
+                    subtypeSelect.innerHTML = '<option value="' + parentId + '" selected style="display:none;"></option>';
+                    
+                    if (needsJustification) {
+                        reasonSection.style.display = 'block';
+                        reasonTextarea.required = true;
+                    } else {
+                        reasonSection.style.display = 'none';
+                        reasonTextarea.required = false;
+                    }
+                    
+                    if (requiresAttachment) {
+                        attachmentSection.style.display = 'block';
+                        attachmentInput.required = true;
+                    } else {
+                        attachmentSection.style.display = 'none';
+                        attachmentInput.required = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar subtipos:', error);
+                subtypeSelect.innerHTML = '<option value="">-- Error al cargar --</option>';
+                subtypeContainer.style.display = 'none';
+            }
+        });
+
+        // Cambio de subtipo
+        subtypeSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption || !selectedOption.value) return;
+            
+            const needsJustification = selectedOption.dataset.needsJustification === 'true';
+            const requiresAttachment = selectedOption.dataset.requiresAttachment === 'true';
+            
+            if (needsJustification) {
+                reasonSection.style.display = 'block';
+                reasonTextarea.required = true;
+            } else {
+                reasonSection.style.display = 'none';
+                reasonTextarea.required = false;
+            }
+            
+            if (requiresAttachment) {
+                attachmentSection.style.display = 'block';
+                attachmentInput.required = true;
+            } else {
+                attachmentSection.style.display = 'none';
+                attachmentInput.required = false;
+            }
+        });
+
+        // Calcular fecha/hora de fin
+        function calculateEndDateTime() {
+            const startDate = startDateInput.value;
+            const startTime = startTimeInput.value;
+            const days = parseInt(daysInput.value) || 0;
+            const hours = parseInt(hoursInput.value) || 0;
+            const minutes = parseInt(minutesInput.value) || 0;
+
+            if (!startDate || !startTime) {
+                calculatedEndSpan.textContent = '--';
+                return;
+            }
+
+            const startDateTime = new Date(`${startDate}T${startTime}`);
+            startDateTime.setDate(startDateTime.getDate() + days);
+            startDateTime.setHours(startDateTime.getHours() + hours);
+            startDateTime.setMinutes(startDateTime.getMinutes() + minutes);
+
+            const endDateStr = startDateTime.toLocaleDateString('es-EC', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const endTimeStr = startDateTime.toLocaleTimeString('es-EC', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+
+            calculatedEndSpan.textContent = `${endDateStr} ${endTimeStr}`;
+
+            const year = startDateTime.getFullYear();
+            const month = String(startDateTime.getMonth() + 1).padStart(2, '0');
+            const day = String(startDateTime.getDate()).padStart(2, '0');
+            const hour = String(startDateTime.getHours()).padStart(2, '0');
+            const minute = String(startDateTime.getMinutes()).padStart(2, '0');
+
+            endDateHidden.value = `${year}-${month}-${day}`;
+            endTimeHidden.value = `${hour}:${minute}`;
+        }
+
+        startDateInput.addEventListener('change', calculateEndDateTime);
+        startTimeInput.addEventListener('change', calculateEndDateTime);
+        daysInput.addEventListener('input', calculateEndDateTime);
+        hoursInput.addEventListener('input', calculateEndDateTime);
+        minutesInput.addEventListener('input', calculateEndDateTime);
+
+        calculateEndDateTime();
     }
 });
