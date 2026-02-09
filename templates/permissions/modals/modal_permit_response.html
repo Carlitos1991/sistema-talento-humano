@@ -1,6 +1,6 @@
 {% load static %}
 
-<div class="modal-container-small shadow-card">
+<div class="modal-container-medium shadow-card">
     <!-- Botón de Cerrar (X) -->
     <button type="button" class="btn-close-modal js-close-response-modal" title="Cerrar">
         <i class="fas fa-times"></i>
@@ -47,7 +47,7 @@
             <button type="button" class="btn-cancel js-close-response-modal">
                 <i class="fas fa-times-circle"></i> CANCELAR
             </button>
-            <button type="submit" class="{% if action == 'approve' %}btn-save{% else %}btn-delete{% endif %}">
+            <button type="submit" class="{% if action == 'approve' %}btn-save{% else %}btn-save{% endif %}">
                 <i class="fas {% if action == 'approve' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
                 {% if action == 'approve' %}APROBAR{% else %}RECHAZAR{% endif %}
             </button>
