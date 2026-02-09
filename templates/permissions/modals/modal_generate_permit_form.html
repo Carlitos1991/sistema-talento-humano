@@ -1,0 +1,82 @@
+{% load static %}
+
+<div class="modal-content animate-scale-in">
+    <div class="modal-header">
+        <h3 class="modal-title">Generar Permiso - {{ employee.person.get_full_name }}</h3>
+        <button type="button" class="btn-close-modal js-close-modal">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <form method="post" action="{% url 'permissions:permit_create' %}" id="generatePermitForm">
+        {% csrf_token %}
+        <input type="hidden" name="employee" value="{{ employee.id }}">
+        
+        <div class="modal-body">
+            <div class="form-grid">
+                <!-- Información del Empleado (solo lectura) -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Empleado</label>
+                    <input type="text" class="form-control" value="{{ employee.person.get_full_name }} - {{ employee.person.identification }}" readonly>
+                </div>
+
+                <!-- Tipo de Permiso -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label" for="id_permit_type">
+                        Tipo de Permiso <span class="text-danger">*</span>
+                    </label>
+                    <select name="permit_type" id="id_permit_type" class="form-control select2" required>
+                        <option value="">-- Seleccione --</option>
+                        {% for permit_type in permit_types %}
+                            <option value="{{ permit_type.id }}">{{ permit_type.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <!-- Fecha de Inicio -->
+                <div class="form-group">
+                    <label class="form-label" for="id_start_date">
+                        Fecha de Inicio <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" name="start_date" id="id_start_date" class="form-control" required>
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <!-- Fecha de Fin -->
+                <div class="form-group">
+                    <label class="form-label" for="id_end_date">
+                        Fecha de Fin <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" name="end_date" id="id_end_date" class="form-control" required>
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <!-- Motivo -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label" for="id_reason">
+                        Motivo <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="reason" id="id_reason" class="form-control" rows="3" required></textarea>
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <!-- Observaciones (Opcional) -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label" for="id_observations">Observaciones</label>
+                    <textarea name="observations" id="id_observations" class="form-control" rows="2"></textarea>
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary js-close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Guardar Permiso
+            </button>
+        </div>
+    </form>
+</div>

@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- REFERENCIAS ---
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
-    const btnAdd = document.getElementById('btn-add-type');
     const csrfToken = document.getElementById('csrf-token').value;
     const urlList = document.getElementById('url-list').value;
 
@@ -18,69 +17,76 @@ document.addEventListener('DOMContentLoaded', function () {
     const currentPageDisplay = document.getElementById('current-page-display');
 
     // Estado de paginación
-    let currentPage = 1;
-    let totalPages = 1;
+    let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
+    let totalPages = window.initialPagination ? window.initialPagination.total_pages : 1;
+
+    // Inicializar botones de paginación con datos del servidor
+    if (window.initialPagination) {
+        if (btnPrev) btnPrev.disabled = !window.initialPagination.has_previous;
+        if (btnNext) btnNext.disabled = !window.initialPagination.has_next;
+    }
 
     // =========================================================
-    // MODAL VUE: LISTAR SUB-TIPOS (INICIALIZAR PRIMERO)
+    // MODAL VUE: HISTORIAL DE PERMISOS
     // =========================================================
-    const SUBTYPE_LIST_MOUNT = '#subtype-list-app';
+    const HISTORY_MOUNT = '#permit-history-app';
 
-    if (document.querySelector(SUBTYPE_LIST_MOUNT)) {
+    if (document.querySelector(HISTORY_MOUNT)) {
         const {createApp} = Vue;
-        const appSubtypes = createApp({
+        const appHistory = createApp({
             delimiters: ['[[', ']]'],
             data() {
                 return {
                     isVisible: false,
-                    parentId: null,
-                    parentName: '',
-                    items: [],
+                    employeeId: null,
+                    employeeName: '',
+                    employeeIdentification: '',
+                    permits: [],
                     searchQuery: '',
                     currentPage: 1,
-                    pageSize: 5,
-                    csrfToken: csrfToken // Usar el token del scope padre
+                    pageSize: 10
                 }
             },
             computed: {
-                filteredItems() {
+                filteredPermits() {
                     const term = this.searchQuery.toLowerCase().trim();
-                    if (!term) return this.items;
-                    return this.items.filter(item =>
-                        item.name.toLowerCase().includes(term)
+                    if (!term) return this.permits;
+                    return this.permits.filter(permit =>
+                        permit.permit_type__name.toLowerCase().includes(term) ||
+                        (permit.reason && permit.reason.toLowerCase().includes(term))
                     );
                 },
                 totalPages() {
-                    return Math.ceil(this.filteredItems.length / this.pageSize) || 1;
+                    return Math.ceil(this.filteredPermits.length / this.pageSize) || 1;
                 },
-                paginatedItems() {
+                paginatedPermits() {
                     const start = (this.currentPage - 1) * this.pageSize;
                     const end = start + this.pageSize;
-                    return this.filteredItems.slice(start, end);
+                    return this.filteredPermits.slice(start, end);
                 },
                 startIndex() {
-                    return this.filteredItems.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+                    return this.filteredPermits.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
                 },
                 endIndex() {
-                    return Math.min(this.currentPage * this.pageSize, this.filteredItems.length);
+                    return Math.min(this.currentPage * this.pageSize, this.filteredPermits.length);
                 }
             },
             methods: {
-                async open(parentId) {
-                    this.parentId = parentId;
+                async open(employeeId) {
+                    this.employeeId = employeeId;
                     this.searchQuery = '';
                     this.currentPage = 1;
-                    await this.fetchSubtypes();
+                    await this.fetchHistory();
                     this.isVisible = true;
                 },
                 closeModal() {
                     this.isVisible = false;
-                    this.items = [];
+                    this.permits = [];
                 },
-                async fetchSubtypes() {
-                    if (!this.parentId) return;
+                async fetchHistory() {
+                    if (!this.employeeId) return;
                     try {
-                        const url = `/permitrequest/types/${this.parentId}/subitems/`;
+                        const url = `/permitrequest/employees/${this.employeeId}/history/`;
                         const res = await fetch(url);
                         
                         if (!res.ok) {
@@ -89,72 +95,48 @@ document.addEventListener('DOMContentLoaded', function () {
                         
                         const data = await res.json();
                         if (data.success) {
-                            this.parentName = data.parent_name;
-                            this.items = data.items;
+                            this.employeeName = data.employee_name;
+                            this.employeeIdentification = data.employee_identification;
+                            this.permits = data.permits;
                         } else {
-                            Swal.fire('Error', data.message || 'No se pudieron cargar los sub-tipos', 'error');
+                            Swal.fire('Error', data.message || 'No se pudo cargar el historial', 'error');
                         }
                     } catch (e) {
-                        console.error('Error al cargar sub-tipos:', e);
-                        Swal.fire('Error', 'No se pudieron cargar los sub-tipos. Verifique sus permisos.', 'error');
+                        console.error('Error al cargar historial:', e);
+                        Swal.fire('Error', 'No se pudo cargar el historial de permisos', 'error');
                     }
                 },
-                openCreateSubtype() {
-                    if (this.parentId && window.openPermissionModal) {
-                        window.openPermissionModal(`/permitrequest/types/create/?parent=${this.parentId}`);
-                        this.closeModal();
-                    }
-                },
-                editSubtype(subtypeId) {
-                    if (window.openPermissionModal) {
-                        window.openPermissionModal(`/permitrequest/types/update/${subtypeId}/`);
-                        this.closeModal();
-                    }
-                },
-                async toggleStatus(subtypeId) {
-                    const result = await Swal.fire({
-                        title: '¿Cambiar estado?',
-                        text: 'Se alternará entre activo e inactivo',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, cambiar',
-                        cancelButtonText: 'Cancelar'
+                formatDate(dateString) {
+                    if (!dateString) return '-';
+                    const date = new Date(dateString + 'T00:00:00');
+                    return date.toLocaleDateString('es-EC', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
                     });
-
-                    if (result.isConfirmed) {
-                        try {
-                            const url = `/permitrequest/types/toggle/${subtypeId}/`;
-                            const res = await fetch(url, {
-                                method: 'POST',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'X-CSRFToken': this.csrfToken
-                                }
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Éxito',
-                                    text: data.message,
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                                await this.fetchSubtypes();
-                                if (window.fetchPermissionTableData) {
-                                    window.fetchPermissionTableData('/permitrequest/types/');
-                                }
-                            }
-                        } catch (e) {
-                            console.error(e);
-                            Swal.fire('Error', 'No se pudo cambiar el estado', 'error');
-                        }
-                    }
+                },
+                getStatusLabel(status) {
+                    const labels = {
+                        'PENDING': 'Pendiente',
+                        'APPROVED': 'Aprobado',
+                        'REJECTED': 'Rechazado',
+                        'CANCELLED': 'Cancelado'
+                    };
+                    return labels[status] || status;
+                },
+                getStatusClass(status) {
+                    const classes = {
+                        'PENDING': 'inactive',
+                        'APPROVED': 'active',
+                        'REJECTED': 'inactive',
+                        'CANCELLED': 'inactive'
+                    };
+                    return classes[status] || '';
                 }
             }
         });
 
-        window.vmSubtypeList = appSubtypes.mount(SUBTYPE_LIST_MOUNT);
+        window.vmPermitHistory = appHistory.mount(HISTORY_MOUNT);
     }
 
     // --- EVENTOS ---
@@ -165,20 +147,13 @@ document.addEventListener('DOMContentLoaded', function () {
         searchInput.addEventListener('keyup', (e) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
-                currentPage = 1; // Reset a página 1 al buscar
+                currentPage = 1;
                 fetchTableData(urlList + `?q=${e.target.value}&page=1`);
             }, 300);
         });
     }
 
-    // 2. Abrir Modal (Botón Principal)
-    if (btnAdd) {
-        btnAdd.addEventListener('click', function () {
-            openModal(this.dataset.url);
-        });
-    }
-
-    // 3. Botones de paginación
+    // 2. Botones de paginación
     if (btnPrev) {
         btnPrev.addEventListener('click', () => {
             if (currentPage > 1) {
@@ -199,10 +174,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 4. Cargar tabla inicial con paginación
-    fetchTableData(urlList + '?page=1');
+    // 3. NO cargar tabla inicial por AJAX (ya viene del servidor en la primera carga)
+    // Solo si hay búsqueda activa, recargar
+    // fetchTableData(urlList + '?page=1');
 
-    // 5. Cerrar Modal desde overlay o botón cerrar
+    // 4. Cerrar Modal desde overlay o botón cerrar
     if (modalOverlay) {
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay || e.target.closest('.btn-close-modal') || e.target.closest('.js-close-modal')) {
@@ -211,47 +187,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 6. DELEGACIÓN DE ACCIONES EN LA TABLA (CRÍTICO)
+    // 5. DELEGACIÓN DE ACCIONES EN LA TABLA
     if (tableContainer) {
         tableContainer.addEventListener('click', function (e) {
 
-            // A. EDITAR y CREAR SUB-ITEM (Abren el mismo modal)
-            const modalBtn = e.target.closest('.js-edit') || e.target.closest('.js-add-sub');
-            if (modalBtn) {
+            // A. Generar Permiso
+            const generateBtn = e.target.closest('.js-generate-permit');
+            if (generateBtn) {
                 e.preventDefault();
-                openModal(modalBtn.dataset.url);
+                const employeeId = generateBtn.dataset.employeeId;
+                const employeeName = generateBtn.dataset.employeeName;
+                openGeneratePermitModal(employeeId, employeeName);
                 return;
             }
 
-            // B. TOGGLE STATUS (Baja/Alta)
-            const toggleBtn = e.target.closest('.js-toggle');
-            if (toggleBtn) {
+            // B. Ver Historial
+            const historyBtn = e.target.closest('.js-view-history');
+            if (historyBtn) {
                 e.preventDefault();
-                toggleStatus(toggleBtn.dataset.url);
-                return;
-            }
-
-            // C. VER SUB-ITEMS EN MODAL (Nuevo)
-            const viewSubsModalBtn = e.target.closest('.js-view-subs-modal');
-            if (viewSubsModalBtn) {
-                e.preventDefault();
-                const parentId = viewSubsModalBtn.dataset.parentId;
-                console.log('Click en ver subitems, parentId:', parentId, 'vmSubtypeList existe:', !!window.vmSubtypeList);
-                if (window.vmSubtypeList && parentId) {
-                    window.vmSubtypeList.open(parentId);
-                } else if (!window.vmSubtypeList) {
-                    console.error('window.vmSubtypeList no está definido');
-                } else if (!parentId) {
-                    console.error('parentId no está definido');
+                const employeeId = historyBtn.dataset.employeeId;
+                if (window.vmPermitHistory && employeeId) {
+                    window.vmPermitHistory.open(employeeId);
                 }
-                return;
-            }
-
-            // D. VER SUB-ITEMS (Recarga tabla con filtro) - Para navegación desde header
-            const viewSubsBtn = e.target.closest('.js-view-subs') || e.target.closest('.js-load-parent');
-            if (viewSubsBtn) {
-                e.preventDefault();
-                fetchTableData(viewSubsBtn.dataset.url);
                 return;
             }
         });
@@ -259,7 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- FUNCIONES ---
 
-    function openModal(url) {
+    function openGeneratePermitModal(employeeId, employeeName) {
+        const url = `/permitrequest/requests/generate/?employee=${employeeId}`;
+        
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
@@ -276,9 +235,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
             });
     }
-
-    // Hacer openModal global para que Vue pueda accederlo
-    window.openPermissionModal = openModal;
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
@@ -309,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(async res => {
-                // Verificar si la respuesta es JSON
                 const contentType = res.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     throw new Error('Respuesta no válida del servidor');
@@ -322,15 +277,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     Swal.fire({
                         icon: 'success',
                         title: 'Guardado',
-                        text: data.message || 'Operación exitosa',
+                        text: data.message || 'Permiso registrado correctamente',
                         timer: 2000,
                         showConfirmButton: false
                     });
-                    // Recargar en la página actual
+                    // Recargar tabla
                     const searchQuery = searchInput ? searchInput.value : '';
                     fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + searchQuery : ''}`);
                 } else {
-                    // Manejar errores HTTP
                     if (res.status === 403) {
                         Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');
                     } else if (data.errors) {
@@ -346,52 +300,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function toggleStatus(url) {
-        Swal.fire({
-            title: '¿Cambiar estado?',
-            text: 'Se alternará entre activo e inactivo',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, cambiar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': csrfToken
-                    }
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const Toast = Swal.mixin({
-                                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
-                            });
-                            Toast.fire({icon: 'success', title: data.message});
-                            // Recargar en la página actual
-                            const searchQuery = searchInput ? searchInput.value : '';
-                            fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + searchQuery : ''}`);
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        Swal.fire('Error', 'No se pudo cambiar el estado', 'error');
-                    });
-            }
-        });
-    }
-
     function fetchTableData(url) {
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
                 tableContainer.innerHTML = data.html;
                 
-                // Actualizar información de paginación
                 if (data.pagination) {
                     updatePagination(data.pagination);
                 }
@@ -401,24 +315,18 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // Hacer fetchTableData global para que Vue pueda accederlo
-    window.fetchPermissionTableData = fetchTableData;
-
     function updatePagination(paginationData) {
         currentPage = paginationData.current_page;
         totalPages = paginationData.total_pages;
 
-        // Actualizar texto de información
         if (pageInfo) {
             pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} registros de ${paginationData.total_count} registros`;
         }
 
-        // Actualizar página actual
         if (currentPageDisplay) {
             currentPageDisplay.textContent = currentPage;
         }
 
-        // Habilitar/deshabilitar botones
         if (btnPrev) {
             btnPrev.disabled = !paginationData.has_previous;
         }

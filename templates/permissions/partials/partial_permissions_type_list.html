@@ -92,8 +92,8 @@
                         {% endif %}
 
                         <!-- 4. LISTAR SUB-ITEMS (Azul oscuro) -->
-                        <button class="btn-list-action js-view-subs"
-                                data-url="{% url 'permissions:type_list' %}?parent_id={{ type.pk }}"
+                        <button class="btn-list-action js-view-subs-modal"
+                                data-parent-id="{{ type.pk }}"
                                 title="Ver Sub-items">
                             <i class="fa-solid fa-list-ul"></i>
                         </button>

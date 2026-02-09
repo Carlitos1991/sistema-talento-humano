@@ -1,0 +1,100 @@
+<!-- templates/permissions/modals/modal_employee_permit_history.html -->
+
+<div id="permit-history-app" v-cloak>
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+
+        <!-- Modal container -->
+        <div class="modal-container-medium animate-scale-in">
+
+            <!-- HEADER -->
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-history me-2"></i> Historial de Permisos: [[ employeeName ]]
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom"
+                 style="display: flex; flex-direction: column; height: 100%;">
+
+                <!-- Información del empleado -->
+                <div class="mb-3 p-3" style="background: #f3f4f6; border-radius: 8px;">
+                    <p class="mb-1"><strong>Empleado:</strong> [[ employeeName ]]</p>
+                    <p class="mb-0"><strong>Cédula:</strong> [[ employeeIdentification ]]</p>
+                </div>
+
+                <!-- CONTROLES -->
+                <div class="table-controls mb-3">
+                    <div class="search-box flex-grow-1" style="max-width: 300px;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" v-model="searchQuery" class="input-field" 
+                               placeholder="Buscar permisos..."
+                               @input="currentPage = 1">
+                    </div>
+                </div>
+
+                <!-- TABLA -->
+                <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
+                    <table class="w-100">
+                        <thead>
+                        <tr>
+                            <th style="width: 25%;">Tipo</th>
+                            <th style="width: 15%;">Fecha Inicio</th>
+                            <th style="width: 15%;">Fecha Fin</th>
+                            <th style="width: 15%;">Estado</th>
+                            <th style="width: 30%;">Motivo</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="permit in paginatedPermits" :key="permit.id">
+                            <td>[[ permit.permit_type__name ]]</td>
+                            <td>[[ formatDate(permit.start_date) ]]</td>
+                            <td>[[ formatDate(permit.end_date) ]]</td>
+                            <td>
+                                <span class="status-badge" :class="getStatusClass(permit.status)">
+                                    [[ getStatusLabel(permit.status) ]]
+                                </span>
+                            </td>
+                            <td>[[ permit.reason || 'Sin motivo' ]]</td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- EMPTY STATE -->
+                    <div v-if="filteredPermits.length === 0" class="text-center py-5">
+                        <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="mt-3 text-muted">No hay permisos registrados</p>
+                    </div>
+                </div>
+
+                <!-- PAGINACIÓN -->
+                <div class="pagination-container mt-3" v-if="totalPages > 1">
+                    <span class="pagination-info">
+                        Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ filteredPermits.length ]] registros
+                    </span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button class="page-btn" @click="currentPage--" :disabled="currentPage === 1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </li>
+                        <li>
+                            <span style="padding: 0 10px; font-weight: bold;">[[ currentPage ]]</span>
+                        </li>
+                        <li>
+                            <button class="page-btn" @click="currentPage++" :disabled="currentPage === totalPages">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel" @click="closeModal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

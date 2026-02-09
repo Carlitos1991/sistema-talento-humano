@@ -9,6 +9,8 @@ from django.template.loader import render_to_string
 
 from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
+from employee.models import Employee
+from budget.models import BudgetLine
 
 
 # --- MIXIN PARA BÚSQUEDA AJAX (Híbrido) ---
@@ -65,20 +67,62 @@ class PermitTypeListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespon
                 context['current_parent'] = None
         return context
 
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            
+            # Obtener información de paginación
+            page_obj = context.get('page_obj')
+            if page_obj:
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+            else:
+                pagination_data = {
+                    'start_index': 0,
+                    'end_index': 0,
+                    'total_count': 0,
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'has_previous': False,
+                    'has_next': False,
+                }
+            
+            return JsonResponse({
+                'html': html,
+                'pagination': pagination_data
+            })
+        return super().render_to_response(context, **response_kwargs)
 
-class PermitTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+
+class PermitTypeCreateView(LoginRequiredMixin, CreateView):
     model = PermitType
     form_class = PermitTypeForm
     template_name = 'permissions/modals/modal_permissions_type_form.html'
     success_url = reverse_lazy('permissions:type_list')
-    permission_required = 'permitrequest.add_permittype'
+
+    def dispatch(self, request, *args, **kwargs):
+        # Verificar permisos manualmente para mejor control de respuesta AJAX
+        if not request.user.has_perm('permitrequest.add_permittype'):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear tipos de permiso'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         self.object = None
         form = self.get_form()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            # Renderizar solo el contenido del modal
-            html = render_to_string(self.template_name, {'form': form, 'request': request})
+            # Renderizar solo el contenido del modal con contexto completo
+            context = self.get_context_data(form=form)
+            html = render_to_string(self.template_name, context, request=request)
             return HttpResponse(html)
         return self.render_to_response(self.get_context_data(form=form))
 
@@ -102,21 +146,29 @@ class PermitTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVi
         return initial
 
 
-class PermitTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class PermitTypeUpdateView(LoginRequiredMixin, UpdateView):
     model = PermitType
     form_class = PermitTypeForm
     template_name = 'permissions/modals/modal_permissions_type_form.html'
     success_url = reverse_lazy('permissions:type_list')
-    permission_required = 'permitrequest.change_permittype'
+
+    def dispatch(self, request, *args, **kwargs):
+        # Verificar permisos manualmente para mejor control de respuesta AJAX
+        if not request.user.has_perm('permitrequest.change_permittype'):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para modificar tipos de permiso'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            # Renderizar solo el contenido del modal
-            from django.template.loader import render_to_string
-            html = render_to_string(self.template_name, {'form': form, 'request': request})
-            return JsonResponse({'html': html}) if False else HttpResponse(html)
+            # Renderizar solo el contenido del modal con contexto completo
+            context = self.get_context_data(form=form)
+            html = render_to_string(self.template_name, context, request=request)
+            return HttpResponse(html)
         return self.render_to_response(self.get_context_data(form=form))
 
     def form_valid(self, form):
@@ -142,6 +194,172 @@ class PermitTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVi
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'message': 'Eliminado correctamente.'})
         return super().delete(request, *args, **kwargs)
+
+
+# ==========================================
+# VISTAS: LISTA DE EMPLEADOS PARA GENERAR PERMISOS
+# ==========================================
+
+class EmployeePermitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """Vista para listar empleados activos y gestionar sus permisos"""
+    model = Employee
+    template_name = 'permissions/employee_permit_list.html'
+    context_object_name = 'employees'
+    permission_required = 'permitrequest.view_permitrequest'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = Employee.objects.filter(
+            is_active=True
+        ).select_related(
+            'person',
+            'area',
+            'employment_status'
+        )
+        
+        # Búsqueda por nombres, apellidos o cédula
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            queryset = queryset.filter(
+                Q(person__first_name__icontains=query) |
+                Q(person__last_name__icontains=query) |
+                Q(person__document_number__icontains=query)
+            )
+        
+        return queryset.order_by('person__last_name', 'person__first_name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Obtener IDs de empleados en la página actual
+        employee_ids = [emp.id for emp in context['employees']]
+        
+        # Consulta eficiente: obtener todas las partidas de una vez
+        budgets_dict = {}
+        if employee_ids:
+            budgets = BudgetLine.objects.filter(
+                current_employee_id__in=employee_ids,
+                is_active=True
+            ).select_related('position_item')
+            
+            for budget in budgets:
+                budgets_dict[budget.current_employee_id] = budget
+        
+        # Agregar información de partida presupuestaria para cada empleado
+        employees_with_budget = []
+        for employee in context['employees']:
+            budget = budgets_dict.get(employee.id, None)
+            employees_with_budget.append({
+                'employee': employee,
+                'budget': budget
+            })
+        
+        context['employees_data'] = employees_with_budget
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'permissions/partials/partial_employee_list.html',
+                context,
+                request=self.request
+            )
+            
+            # Información de paginación
+            page_obj = context.get('page_obj')
+            if page_obj:
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+            else:
+                pagination_data = {
+                    'start_index': 0,
+                    'end_index': 0,
+                    'total_count': 0,
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'has_previous': False,
+                    'has_next': False,
+                }
+            
+            return JsonResponse({
+                'html': html,
+                'pagination': pagination_data
+            })
+        return super().render_to_response(context, **response_kwargs)
+
+
+class EmployeePermitHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para obtener el historial de permisos de un empleado"""
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def get(self, request, employee_id):
+        if not request.user.has_perm('permitrequest.view_permitrequest'):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para ver esta información'
+            }, status=403)
+        
+        employee = get_object_or_404(Employee, pk=employee_id)
+        permits = PermitRequest.objects.filter(
+            employee=employee
+        ).select_related('permit_type').order_by('-created_at').values(
+            'id',
+            'permit_type__name',
+            'start_date',
+            'end_date',
+            'status',
+            'created_at',
+            'reason'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'employee_name': employee.person.get_full_name(),
+            'employee_identification': employee.person.identification,
+            'permits': list(permits)
+        })
+
+
+class GeneratePermitFormView(LoginRequiredMixin, View):
+    """Vista para cargar el formulario de generar permiso"""
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm('permitrequest.add_permitrequest'):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No tiene permisos para generar permisos'
+                }, status=403)
+            return HttpResponse('Acceso denegado', status=403)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request):
+        employee_id = request.GET.get('employee')
+        if not employee_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID de empleado no proporcionado'
+            }, status=400)
+        
+        employee = get_object_or_404(Employee, pk=employee_id)
+        permit_types = PermitType.objects.filter(is_active=True).order_by('name')
+        
+        html = render_to_string(
+            'permissions/modals/modal_generate_permit_form.html',
+            {
+                'employee': employee,
+                'permit_types': permit_types
+            },
+            request=request
+        )
+        return HttpResponse(html)
 
 
 # ==========================================
@@ -176,17 +394,41 @@ class PermitRequestListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRes
         return queryset
 
 
-class PermitRequestCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class PermitRequestCreateView(LoginRequiredMixin, CreateView):
     model = PermitRequest
     form_class = PermitRequestForm
-    template_name = 'permissions/permissions_permit_form.html'  # Página completa (no modal)
+    template_name = 'permissions/permissions_permit_form.html'
     success_url = reverse_lazy('permissions:permit_list')
-    permission_required = 'permissions.add_permitrequest'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm('permitrequest.add_permitrequest'):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No tiene permisos para crear permisos'
+                }, status=403)
+            return HttpResponse('Acceso denegado', status=403)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        # Asignar auditoría
         form.instance.created_by = self.request.user
+        self.object = form.save()
+        
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Permiso registrado correctamente'
+            })
         return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'Error al guardar el permiso',
+                'errors': form.errors
+            }, status=400)
+        return super().form_invalid(form)
 
 
 class PermitRequestUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -223,10 +465,16 @@ def permit_type_detail_api(request, pk):
         return JsonResponse({'error': 'Not found'}, status=404)
 
 
-class PermitTypeToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'permitrequest.change_permittype'
+class PermitTypeToggleView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
+        # Verificar permisos manualmente
+        if not request.user.has_perm('permitrequest.change_permittype'):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para cambiar el estado'
+            }, status=403)
+        
         permit_type = get_object_or_404(PermitType, pk=pk)
         permit_type.is_active = not permit_type.is_active
         permit_type.save()
@@ -236,11 +484,27 @@ class PermitTypeToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
             'success': True,
             'message': f'Tipo de permiso "{permit_type.name}" {status_text} correctamente'
         })
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            permit = get_object_or_404(PermitType, pk=pk)
-            permit.is_active = not permit.is_active  # Invertir estado
-            permit.save()
 
-            status_text = "activado" if permit.is_active else "desactivado"
-            return JsonResponse({'success': True, 'message': f'Tipo de permiso {status_text} correctamente.'})
-        return JsonResponse({'success': False, 'message': 'Invalid request'}, status=400)
+
+class PermitTypeSubItemsView(LoginRequiredMixin, View):
+    """Vista para obtener los subitems de un tipo de permiso en JSON."""
+
+    def get(self, request, pk):
+        # Verificar permisos manualmente para respuesta JSON apropiada
+        if not request.user.has_perm('permitrequest.view_permittype'):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para ver esta información'
+            }, status=403)
+        
+        parent = get_object_or_404(PermitType, pk=pk)
+        subtypes = PermitType.objects.filter(parent=parent).values(
+            'id', 'name', 'needs_justification', 'affects_vacation', 'is_active'
+        )
+        return JsonResponse({
+            'success': True,
+            'parent_name': parent.name,
+            'parent_id': parent.id,
+            'items': list(subtypes)
+        })
+

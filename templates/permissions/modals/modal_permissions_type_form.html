@@ -1,5 +1,7 @@
 <div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
     <form id="modalForm" method="post" action="
+
+            
             {% if form.instance.pk %}{% url 'permissions:type_update' form.instance.pk %}{% else %}{% url 'permissions:type_create' %}{% endif %}">
         {% csrf_token %}
 
@@ -14,91 +16,87 @@
             </button>
         </div>
 
-    <!-- BODY con estilo gris suave -->
-    <div class="modal-body-content modal-body-custom">
-        <!-- Error global -->
-        <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
+        <!-- BODY con estilo gris suave -->
+        <div class="modal-body-content modal-body-custom">
+            <!-- Error global -->
+            <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
 
-        <div class="form-group">
-            <label class="form-label">
-                <i class="fa-solid fa-tag"></i> Nombre del Permiso <span class="text-danger">*</span>
-            </label>
-            {{ form.name }}
-            <div class="invalid-feedback"></div>
-            <p class="form-hint">Nombre descriptivo del tipo de permiso.</p>
-        </div>
-
-        <!-- Campo Parent (Solo visible en edición o cuando viene parent en GET) -->
-        {% if form.instance.pk or request.GET.parent %}
-        <div class="form-group">
-            <label class="form-label">
-                <i class="fa-solid fa-sitemap"></i> Depende de (Opcional)
-            </label>
-            {{ form.parent }}
-            <p class="form-hint">Seleccione un tipo padre si este es un sub-tipo.</p>
-        </div>
-        {% else %}
-            <!-- Campo oculto para evitar error de validación -->
-            <input type="hidden" name="parent" value="">
-        {% endif %}
-
-        <!-- Título de sección -->
-        <div class="section-title mt-3">
-            <i class="fa-solid fa-sliders"></i> Configuración
-        </div>
-
-        <!-- Grid de toggles usando grid-2-cols -->
-        <div class="grid-2-cols">
-
-            <!-- Toggle 1: Justificación -->
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label class="form-label mb-0" for="{{ form.needs_justification.id_for_label }}">¿Necesita
-                    Justificar?</label>
-                <label class="toggle-switch">
-                    {{ form.needs_justification }}
-                    <span class="toggle-slider"></span>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fa-solid fa-tag"></i> Nombre del Permiso <span class="text-danger">*</span>
                 </label>
+                {{ form.name }}
+                <div class="invalid-feedback"></div>
+                <p class="form-hint">Nombre descriptivo del tipo de permiso.</p>
             </div>
 
-            <!-- Toggle 2: Vacaciones -->
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label class="form-label mb-0" for="{{ form.affects_vacation.id_for_label }}">¿Descuenta
-                    Vacaciones?</label>
-                <label class="toggle-switch">
-                    {{ form.affects_vacation }}
-                    <span class="toggle-slider"></span>
-                </label>
+            <!-- Campo Parent siempre oculto (se maneja automáticamente desde el botón de crear subitem) -->
+            {% if request.GET.parent %}
+                <input type="hidden" name="parent" value="{{ request.GET.parent }}">
+            {% else %}
+                <input type="hidden" name="parent" value="{% if form.instance.parent %}{{ form.instance.parent.pk }}{% endif %}">
+            {% endif %}
+
+            <!-- Título de sección -->
+            <div class="section-title mt-3">
+                <i class="fa-solid fa-sliders"></i> Configuración
             </div>
 
-            <!-- Toggle 3: PDF -->
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Adjuntar PDF?</label>
-                <label class="toggle-switch">
-                    {{ form.requires_attachment }}
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+            <!-- Grid de toggles usando grid-2-cols -->
+            <div class="grid-2-cols">
 
-            <!-- Toggle 4: Activo -->
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
-                <label class="toggle-switch">
-                    {{ form.is_active }}
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+                <!-- Toggle 1: Vacaciones  -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.affects_vacation.id_for_label }}">¿Descuenta
+                        Vacaciones?</label>
+                    <label class="toggle-switch">
+                        {{ form.affects_vacation }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
 
+
+                <!-- Toggle 2: PDF -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Adjuntar
+                        PDF?</label>
+                    <label class="toggle-switch">
+                        {{ form.requires_attachment }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Toggle 3: Justificación -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.needs_justification.id_for_label }}">¿Necesita
+                        Justificar?</label>
+                    <label class="toggle-switch">
+                        {{ form.needs_justification }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+
+                <!-- Toggle 4: Activo -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
+                    <label class="toggle-switch">
+                        {{ form.is_active }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+            </div>
         </div>
-    </div>
 
-    <!-- FOOTER con botones -->
-    <div class="modal-footer-medium modal-footer-spaced">
-        <button type="button" class="btn-cancel js-close-modal">
-            <i class="fa-solid fa-times"></i> Cancelar
-        </button>
-        <button type="submit" class="btn-save">
-            <i class="fa-solid fa-save"></i> Guardar
-        </button>
-    </div>
+        <!-- FOOTER con botones -->
+        <div class="modal-footer-medium modal-footer-spaced">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fa-solid fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn-save">
+                <i class="fa-solid fa-save"></i> Guardar
+            </button>
+        </div>
     </form>
 </div>

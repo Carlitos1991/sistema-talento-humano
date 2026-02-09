@@ -174,7 +174,7 @@
             </ul>
         </li>
         <!-- MÓDULO DE PERMISOS -->
-        {% if perms.permissions.view_permitrequest or perms.permissions.view_permittype %}
+        {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype %}
             <li class="has-submenu">
                 <a href="#" class="{% if 'permissions' in request.resolver_match.app_name %}active{% endif %}">
                     <i class="fa-solid fa-file-signature"></i>
@@ -184,7 +184,7 @@
                 <ul class="submenu">
 
                     <!-- 1. Administrar Permisos (Listado General) -->
-                    {% if perms.permissions.view_permitrequest %}
+                    {% if perms.permitrequest.view_permitrequest %}
                         <li>
                             <!-- Ajusta 'permit_list' al nombre real de tu URL -->
                             <a href="{% url 'permissions:permit_list' %}"
@@ -195,12 +195,11 @@
                         </li>
                     {% endif %}
 
-                    <!-- 2. Generar Permisos (Crear Nuevo) -->
-                    {% if perms.permissions.add_permitrequest %}
+                    <!-- 2. Generar Permisos (Listado de Empleados) -->
+                    {% if perms.permitrequest.add_permitrequest %}
                         <li>
-                            <!-- Ajusta 'permit_create' al nombre real de tu URL -->
-                            <a href="{% url 'permissions:permit_create' %}"
-                               class="{% if request.resolver_match.url_name == 'permit_create' %}active-child{% endif %}">
+                            <a href="{% url 'permissions:employee_list' %}"
+                               class="{% if request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-plus-circle"></i>
                                 <span class="menu-text">Generar Permiso</span>
                             </a>
@@ -208,7 +207,7 @@
                     {% endif %}
 
                     <!-- 3. Tipos de Permisos (Configuración) -->
-                    {% if perms.permissions.view_permittype %}
+                    {% if perms.permitrequest.view_permittype %}
                         <li>
                             <!-- Ajusta 'type_list' al nombre real de tu URL -->
                             <a href="{% url 'permissions:type_list' %}"
