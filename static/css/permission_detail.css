@@ -1,0 +1,187 @@
+/* Estilos para el detalle del permiso cuando se accede via QR */
+.permit-detail-view {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+.permit-detail-header {
+    background: linear-gradient(135deg, #2971dc 0%, #1736fb 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.permit-detail-header h1 {
+    font-size: 24px;
+    margin: 0 0 5px 0;
+    font-weight: 600;
+}
+
+.permit-detail-header p {
+    font-size: 14px;
+    margin: 0;
+    opacity: 0.9;
+}
+
+.permit-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.permit-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.permit-section-title i {
+    color: #667eea;
+}
+
+.permit-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.permit-info-item {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.permit-info-label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+
+.permit-info-value {
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.permit-employee-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.permit-employee-photo {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #667eea;
+}
+
+.permit-employee-placeholder {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+}
+
+.permit-employee-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    color: #1f2937;
+}
+
+.permit-employee-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.permit-status-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.permit-status-approved {
+    background: #10b981;
+    color: white;
+}
+
+.permit-status-pending {
+    background: #f59e0b;
+    color: white;
+}
+
+.permit-status-rejected {
+    background: #ef4444;
+    color: white;
+}
+
+.permit-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+    text-align: center;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.permit-back-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+.permit-back-button:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .permit-detail-view {
+        margin: 10px;
+        padding: 20px;
+    }
+    
+    .permit-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .permit-employee-card {
+        flex-direction: column;
+        text-align: center;
+    }
+}

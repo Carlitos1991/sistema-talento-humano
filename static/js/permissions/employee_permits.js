@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 getStatusLabel(status) {
                     const labels = {
+                        'REQUESTED': 'Pendiente',
                         'PENDING': 'Pendiente',
                         'APPROVED': 'Aprobado',
                         'REJECTED': 'Rechazado',
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 getStatusClass(status) {
                     const classes = {
+                        'REQUESTED': 'inactive',
                         'PENDING': 'inactive',
                         'APPROVED': 'active',
                         'REJECTED': 'inactive',
@@ -521,5 +523,365 @@ document.addEventListener('DOMContentLoaded', function () {
         minutesInput.addEventListener('input', calculateEndDateTime);
 
         calculateEndDateTime();
+    }
+
+    // =========================================================
+    // BIT\u00c1CORAS: REGISTRAR E LISTAR
+    // =========================================================
+    
+    // Referencias modales bitácora
+    const bitacoraModal = document.getElementById('bitacoraModal');
+    const bitacoraModalContent = document.getElementById('bitacora-modal-content');
+    
+    // Referencias modales listado
+    const bitacoraListModal = document.getElementById('bitacoraListModal');
+    
+    // Event delegation para botones de bitácora
+    document.addEventListener('click', function(e) {
+        // Botón: Registrar Bitácora
+        if (e.target.closest('.js-register-bitacora')) {
+            const btn = e.target.closest('.js-register-bitacora');
+            const employeeId = btn.dataset.employeeId;
+            const employeeName = btn.dataset.employeeName;
+            openBitacoraModal(employeeId, employeeName);
+        }
+        
+        // Botón: Listar Bitácoras
+        if (e.target.closest('.js-list-bitacoras')) {
+            const btn = e.target.closest('.js-list-bitacoras');
+            const employeeId = btn.dataset.employeeId;
+            openBitacoraList(employeeId);
+        }
+        
+        // Cerrar modal bitácora
+        if (e.target.closest('.js-close-bitacora-modal')) {
+            closeBitacoraModal();
+        }
+    });
+    
+    // Abrir listado de bitácoras
+    function openBitacoraList(employeeId) {
+        if (window.appBitacoraList) {
+            bitacoraListModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            window.appBitacoraList.open(employeeId);
+        }
+    }
+    
+    // Abrir modal de registro de bitácora
+    function openBitacoraModal(employeeId, employeeName) {
+        const url = `/permitrequest/bitacora/register/${employeeId}/`;
+        
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.text())
+            .then(html => {
+                bitacoraModalContent.innerHTML = html;
+                bitacoraModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // Agregar event listener al formulario
+                const form = document.getElementById('bitacoraRegisterForm');
+                if (form) {
+                    form.addEventListener('submit', handleBitacoraSubmit);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
+            });
+    }
+    
+    // Cerrar modal bitácora
+    function closeBitacoraModal() {
+        bitacoraModal.classList.add('hidden');
+        bitacoraModalContent.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+    
+    // Manejar submit del formulario de bitácora
+    function handleBitacoraSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        
+        // Validar que al menos una jornada esté completa
+        const firstStart = form.querySelector('#first_start').value;
+        const firstEnd = form.querySelector('#first_end').value;
+        const secondStart = form.querySelector('#second_start').value;
+        const secondEnd = form.querySelector('#second_end').value;
+        
+        const hasFirst = firstStart && firstEnd;
+        const hasSecond = secondStart && secondEnd;
+        
+        if (!hasFirst && !hasSecond) {
+            Swal.fire('Error', 'Debe ingresar al menos una jornada completa (entrada y salida)', 'error');
+            return;
+        }
+        
+        // Validar archivo PDF
+        const fileInput = form.querySelector('#attachment');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            Swal.fire('Error', 'Debe adjuntar un documento PDF', 'error');
+            return;
+        }
+        
+        const file = fileInput.files[0];
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire('Error', 'El archivo no debe superar los 2MB', 'error');
+            return;
+        }
+        
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            Swal.fire('Error', 'Solo se permiten archivos PDF', 'error');
+            return;
+        }
+        
+        const formData = new FormData(form);
+        const employeeId = formData.get('employee_id');
+        const url = `/permitrequest/bitacora/register/${employeeId}/`;
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closeBitacoraModal();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Ocurrió un error', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
+            });
+    }
+    
+    // =========================================================
+    // MODAL VUE: LISTADO DE BIT\u00c1CORAS
+    // =========================================================
+    const BITACORA_LIST_MOUNT = '#bitacora-list-app';
+    
+    if (document.querySelector(BITACORA_LIST_MOUNT)) {
+        const {createApp} = Vue;
+        window.appBitacoraList = createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    isVisible: false,
+                    employeeId: null,
+                    employeeName: '',
+                    employeeIdentification: '',
+                    bitacoras: [],
+                    selectedBitacoras: [],
+                    selectAll: false,
+                    searchQuery: '',
+                    currentPage: 1,
+                    perPage: 10
+                }
+            },
+            computed: {
+                filteredBitacoras() {
+                    const term = this.searchQuery.toLowerCase().trim();
+                    if (!term) return this.bitacoras;
+                    return this.bitacoras.filter(b =>
+                        b.start_date.toLowerCase().includes(term)
+                    );
+                },
+                totalPages() {
+                    return Math.ceil(this.filteredBitacoras.length / this.perPage) || 1;
+                },
+                paginatedBitacoras() {
+                    const start = (this.currentPage - 1) * this.perPage;
+                    const end = start + this.perPage;
+                    return this.filteredBitacoras.slice(start, end);
+                },
+                startIndex() {
+                    return this.filteredBitacoras.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+                },
+                endIndex() {
+                    return Math.min(this.currentPage * this.perPage, this.filteredBitacoras.length);
+                }
+            },
+            methods: {
+                async open(employeeId) {
+                    this.employeeId = employeeId;
+                    this.searchQuery = '';
+                    this.currentPage = 1;
+                    this.selectedBitacoras = [];
+                    this.selectAll = false;
+                    await this.fetchBitacoras();
+                    this.isVisible = true;
+                },
+                closeModal() {
+                    this.isVisible = false;
+                    this.bitacoras = [];
+                    this.selectedBitacoras = [];
+                    // Cerrar overlay padre
+                    if (bitacoraListModal) {
+                        bitacoraListModal.classList.add('hidden');
+                        document.body.style.overflow = '';
+                    }
+                },
+                async fetchBitacoras() {
+                    try {
+                        const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (data.success) {
+                            this.employeeName = data.employee_name;
+                            this.employeeIdentification = data.employee_identification;
+                            this.bitacoras = data.bitacoras;
+                        }
+                    } catch (err) {
+                        console.error('Error:', err);
+                    }
+                },
+                toggleAll() {
+                    if (this.selectAll) {
+                        this.selectedBitacoras = this.paginatedBitacoras.map(b => b.id);
+                    } else {
+                        this.selectedBitacoras = [];
+                    }
+                },
+                async approveSelected() {
+                    if (this.selectedBitacoras.length === 0) return;
+                    
+                    const result = await Swal.fire({
+                        title: '¿Aprobar bitácoras?',
+                        text: `Se aprobarán ${this.selectedBitacoras.length} bitácora(s)`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, aprobar',
+                        cancelButtonText: 'Cancelar'
+                    });
+                    
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch('/permitrequest/bitacora/approve/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({ids: this.selectedBitacoras})
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                Swal.fire('Éxito', data.message, 'success');
+                                this.selectedBitacoras = [];
+                                this.selectAll = false;
+                                await this.fetchBitacoras();
+                            } else {
+                                Swal.fire('Error', data.message, 'error');
+                            }
+                        } catch (err) {
+                            Swal.fire('Error', 'Error de comunicación', 'error');
+                        }
+                    }
+                },
+                async deleteSelected() {
+                    if (this.selectedBitacoras.length === 0) return;
+                    
+                    const result = await Swal.fire({
+                        title: '¿Eliminar bitácoras?',
+                        text: `Se eliminarán ${this.selectedBitacoras.length} bitácora(s)`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch('/permitrequest/bitacora/delete/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({ids: this.selectedBitacoras})
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                Swal.fire('Éxito', data.message, 'success');
+                                this.selectedBitacoras = [];
+                                this.selectAll = false;
+                                await this.fetchBitacoras();
+                            } else {
+                                Swal.fire('Error', data.message, 'error');
+                            }
+                        } catch (err) {
+                            Swal.fire('Error', 'Error de comunicación', 'error');
+                        }
+                    }
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '--';
+                    const date = new Date(dateStr + 'T00:00:00');
+                    return date.toLocaleDateString('es-EC', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                },
+                formatDateShort(dateTimeStr) {
+                    if (!dateTimeStr) return '--';
+                    const date = new Date(dateTimeStr);
+                    return date.toLocaleDateString('es-EC', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: '2-digit'
+                    });
+                },
+                formatTime(timeStr) {
+                    return timeStr || '--:--';
+                },
+                formatDateTime(dateTimeStr) {
+                    if (!dateTimeStr) return '--';
+                    const date = new Date(dateTimeStr);
+                    return date.toLocaleString('es-EC', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                truncateText(text, maxLength) {
+                    if (!text) return '';
+                    if (text.length <= maxLength) return text;
+                    return text.substring(0, maxLength) + '...';
+                },
+                getStatusLabel(status) {
+                    const labels = {
+                        'REQUESTED': 'Pendiente',
+                        'APPROVED': 'Aprobado',
+                        'REJECTED': 'Rechazado'
+                    };
+                    return labels[status] || status;
+                },
+                getStatusClass(status) {
+                    const classes = {
+                        'REQUESTED': 'inactive',
+                        'APPROVED': 'active',
+                        'REJECTED': 'inactive'
+                    };
+                    return classes[status] || '';
+                }
+            }
+        }).mount(BITACORA_LIST_MOUNT);
     }
 });

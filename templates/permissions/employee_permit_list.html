@@ -77,6 +77,16 @@
 
     <!-- Modal para historial de permisos -->
     {% include 'permissions/modals/modal_employee_permit_history.html' %}
+    
+    <!-- Modal para registrar bitácora -->
+    <div id="bitacoraModal" class="modal-overlay hidden">
+        <div id="bitacora-modal-content"></div>
+    </div>
+    
+    <!-- Modal para listar bitácoras -->
+    <div id="bitacoraListModal" class="modal-overlay hidden">
+        {% include 'permissions/modals/modal_bitacora_list.html' %}
+    </div>
 {% endblock %}
 
 {% block extra_js %}

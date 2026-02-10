@@ -143,6 +143,14 @@
                 openResponseModal(permitId, 'reject');
             });
         });
+
+        // Imprimir reporte
+        document.querySelectorAll('.js-print-permit').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const permitId = this.dataset.permitId;
+                printPermitReport(permitId);
+            });
+        });
     }
 
     // ========================================================
@@ -205,6 +213,11 @@
         modalResponseOverlay.classList.add('hidden');
         modalResponseContainer.innerHTML = '';
         document.body.style.overflow = '';
+    }
+
+    function printPermitReport(permitId) {
+        const url = `/permitrequest/admin/${permitId}/report/`;
+        window.open(url, '_blank', 'width=800,height=600');
     }
 
     function handleResponseSubmit(e, permitId, action) {

@@ -1147,7 +1147,8 @@ select.input-field {
 .btn-detail-action,
 .btn-delete-action,
 .btn-restore-action,
-.btn-list-action {
+.btn-list-action,
+.btn-info-action {
     display: inline-flex;
     width: var(--table-btn-size);
     height: var(--table-btn-size);
@@ -1170,12 +1171,14 @@ select.input-field {
 .btn-delete-action i,
 .btn-restore-action i,
 .btn-list-action i,
+.btn-info-action i,
 .btn-create-action svg,
 .btn-success-action svg,
 .btn-views-action svg,
 .btn-restore-action svg,
 .btn-delete-action svg,
-.btn-list-action svg {
+.btn-list-action svg,
+.btn-info-action svg {
     color: #ffffff;
     font-size: 1.15rem;
     line-height: 1;
@@ -1210,13 +1213,18 @@ select.input-field {
     background: linear-gradient(to right, rgba(46, 149, 230, 0.78), #082d7c);
 }
 
+.btn-info-action {
+    background: linear-gradient(to right, #6366f1, #4f46e5);
+}
+
 /* Hover/active más sutil y lento (según petición) */
 .btn-create-action:hover,
 .btn-success-action:hover,
 .btn-views-action:hover,
 .btn-restore-action:hover,
 .btn-delete-action:hover,
-.btn-list-action:hover {
+.btn-list-action:hover,
+.btn-info-action:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 18px rgba(2, 6, 23, 0.1);
 }
@@ -1227,7 +1235,8 @@ select.input-field {
 .btn-detail-action:active,
 .btn-delete-action:active,
 .btn-restore-action:active,
-.btn-list-action:active {
+.btn-list-action:active,
+.btn-info-action:active {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(2, 6, 23, 0.08);
 }
@@ -1240,7 +1249,8 @@ select.input-field {
     .btn-detail-action,
     .btn-delete-action,
     .btn-restore-action,
-    .btn-list-action {
+    .btn-list-action,
+    .btn-info-action {
         width: 36px;
         height: 36px;
         font-size: 0.95rem;
@@ -6038,4 +6048,157 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .empty-state-text {
     font-size: 1.1rem;
     font-weight: 500;
+}
+
+/* --- FILE UPLOAD STYLES --- */
+.file-upload-wrapper {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+
+.file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.file-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    border: 2px dashed transparent;
+}
+
+.file-label:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.file-label i {
+    font-size: 18px;
+}
+
+.file-input:focus + .file-label {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Nuevo diseño de upload box */
+.file-upload-box {
+    width: 100%;
+    height: 120px;
+}
+
+.file-input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.file-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.file-upload-label:hover {
+    border-color: #667eea;
+    background-color: #f1f5f9;
+}
+
+.file-upload-icon {
+    font-size: 2.5rem;
+    color: #ef4444;
+    margin-bottom: 0.5rem;
+}
+
+.file-upload-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.file-upload-subtext {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.file-input-hidden:focus + .file-upload-label {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.form-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* --- LINK PDF BUTTON --- */
+.btn-pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white !important;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-pdf-link:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+    color: white !important;
+    text-decoration: none;
+}
+
+.btn-pdf-link i {
+    font-size: 14px;
 }

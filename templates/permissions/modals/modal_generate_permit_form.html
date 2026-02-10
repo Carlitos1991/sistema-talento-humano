@@ -35,7 +35,7 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
                         {% if employee.person.photo %}
                             <img src="{{ employee.person.photo.url }}" 
-                                 alt="{{ employee.person.get_full_name }}"
+                                 alt="{{ employee.person.full_name }}"
                                  style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
                         {% else %}
                             <div style="width: 50px; height: 50px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
@@ -43,7 +43,7 @@
                             </div>
                         {% endif %}
                         <div>
-                            <div class="font-weight-700 text-dark">{{ employee.person.get_full_name }}</div>
+                            <div class="font-weight-700 text-dark">{{ employee.person.full_name }}</div>
                             <small class="text-muted">CI: {{ employee.person.document_number }}</small>
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
+from io import BytesIO
+import base64
 
 from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
@@ -376,6 +378,45 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
             request=request
         )
         return HttpResponse(html)
+    
+    def post(self, request):
+        """Procesa el formulario de generación de permiso"""
+        try:
+            employee_id = request.POST.get('employee')
+            employee = get_object_or_404(Employee, pk=employee_id)
+            
+            # Crear instancia de PermitRequest
+            permit = PermitRequest()
+            permit.employee = employee
+            permit.permit_type_id = request.POST.get('permit_subtype') or request.POST.get('permit_type')
+            permit.start_date = request.POST.get('start_date')
+            permit.start_time = request.POST.get('start_time')
+            permit.end_date = request.POST.get('end_date')
+            permit.end_time = request.POST.get('end_time')
+            permit.reason = request.POST.get('reason', '')
+            permit.created_by = request.user
+            permit.status = 'REQUESTED'
+            
+            # Manejar archivo adjunto
+            if 'attachment' in request.FILES:
+                permit.attachment = request.FILES['attachment']
+            
+            permit.save()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Permiso generado correctamente'
+                })
+            return redirect('permissions:employee_list')
+            
+        except Exception as e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error al generar el permiso: {str(e)}'
+                }, status=400)
+            return HttpResponse(f'Error: {str(e)}', status=400)
 
 
 # ==========================================
@@ -597,8 +638,18 @@ class PermitDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
             pk=pk
         )
         
+        # Si es una petición AJAX (desde el modal), usar template modal
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'permissions/modals/modal_permit_detail.html',
+                {'permit': permit},
+                request=request
+            )
+            return HttpResponse(html)
+        
+        # Si es acceso directo (desde QR), usar template completo con estilos
         html = render_to_string(
-            'permissions/modals/modal_permit_detail.html',
+            'permissions/permit_detail_public.html',
             {'permit': permit},
             request=request
         )
@@ -674,3 +725,321 @@ class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
             'success': True,
             'message': message
         })
+
+
+class PermitReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para generar reporte imprimible del permiso con código QR"""
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def get(self, request, pk):
+        permit = get_object_or_404(
+            PermitRequest.objects.select_related('employee__person', 'permit_type', 'response_by'),
+            pk=pk
+        )
+        
+        # Solo permitir imprimir si el permiso está aprobado
+        if permit.status != 'APPROVED':
+            return HttpResponse(
+                '<html><body><script>alert("Solo se pueden imprimir permisos aprobados"); window.close();</script></body></html>'
+            )
+        
+        # Generar código QR
+        detail_url = request.build_absolute_uri(
+            reverse_lazy('permissions:permit_detail', kwargs={'pk': permit.id})
+        )
+        
+        # Importar qrcode dentro del método para evitar conflictos
+        import qrcode as qr_module
+        
+        qr = qr_module.QRCode(
+            version=1,
+            error_correction=qr_module.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(detail_url)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convertir imagen a base64
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
+        html = render_to_string(
+            'permissions/permit_report.html',
+            {
+                'permit': permit,
+                'qr_code': img_str,
+                'detail_url': detail_url
+            },
+            request=request
+        )
+        return HttpResponse(html)
+
+
+# ==========================================
+# VISTAS: BITÁCORAS
+# ==========================================
+
+class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para mostrar el modal de registro de bitácoras"""
+    permission_required = 'permitrequest.add_permitrequest'
+
+    def get(self, request, employee_id):
+        employee = get_object_or_404(Employee, pk=employee_id)
+        
+        html = render_to_string(
+            'permissions/modals/modal_bitacora_register.html',
+            {
+                'employee_id': employee.id,
+                'employee_name': employee.person.full_name
+            },
+            request=request
+        )
+        return HttpResponse(html)
+
+    def post(self, request, employee_id):
+        """Procesa el registro de bitácoras"""
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from django.core.files.storage import default_storage
+        
+        employee = get_object_or_404(Employee, pk=employee_id)
+        
+        try:
+            # Validar archivo PDF
+            attachment = request.FILES.get('attachment')
+            if not attachment:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe adjuntar un documento PDF'
+                }, status=400)
+            
+            if not attachment.name.lower().endswith('.pdf'):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Solo se permiten archivos PDF'
+                }, status=400)
+            
+            # Validar tamaño (2MB máximo)
+            if attachment.size > 2 * 1024 * 1024:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El archivo no debe superar los 2MB'
+                }, status=400)
+            
+            # Obtener tipo de permiso "Bitácora"
+            bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
+            if not bitacora_type:
+                # Crear si no existe
+                bitacora_type = PermitType.objects.create(
+                    name='Bitácora',
+                    needs_justification=True,
+                    affects_vacation=False,
+                    requires_attachment=True
+                )
+            
+            # Datos del formulario
+            start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-%d').date()
+            num_days = int(request.POST.get('num_days', 1))
+            first_start = request.POST.get('first_start', '').strip()
+            first_end = request.POST.get('first_end', '').strip()
+            first_crosses_midnight = request.POST.get('first_crosses_midnight') == 'on'
+            second_start = request.POST.get('second_start', '').strip()
+            second_end = request.POST.get('second_end', '').strip()
+            second_crosses_midnight = request.POST.get('second_crosses_midnight') == 'on'
+            justification = request.POST.get('justification', '').strip()
+            
+            # Validar que al menos una jornada esté completa
+            has_first = first_start and first_end
+            has_second = second_start and second_end
+            
+            if not has_first and not has_second:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe ingresar al menos una jornada completa'
+                }, status=400)
+            
+            # Validar justificación
+            if not justification:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe ingresar la justificación'
+                }, status=400)
+            
+            # Guardar archivo
+            from django.utils.text import slugify
+            import os
+            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+            employee_slug = slugify(employee.person.full_name)
+            file_name = f"bitacora_{employee_slug}_{timestamp}.pdf"
+            file_path = os.path.join('permits', 'bitacoras', file_name)
+            saved_path = default_storage.save(file_path, attachment)
+            
+            # Crear permisos para cada día
+            created_count = 0
+            for day_offset in range(num_days):
+                current_date = start_date + timedelta(days=day_offset)
+                
+                # Primera jornada (si está completa)
+                if has_first:
+                    # Si cruza medianoche, el permiso va desde current_date hasta current_date + 1
+                    if first_crosses_midnight:
+                        permit_start_date = current_date
+                        permit_end_date = current_date + timedelta(days=1)
+                    else:
+                        permit_start_date = current_date
+                        permit_end_date = current_date
+                    
+                    PermitRequest.objects.create(
+                        employee=employee,
+                        permit_type=bitacora_type,
+                        start_date=permit_start_date,
+                        end_date=permit_end_date,
+                        start_time=first_start,
+                        end_time=first_end,
+                        justification_file=saved_path,
+                        response_note=justification,  # Guardar justificación en response_note
+                        status='REQUESTED',
+                        created_by=request.user,
+                        updated_by=request.user
+                    )
+                    created_count += 1
+                
+                # Segunda jornada (si está completa)
+                if has_second:
+                    # Si cruza medianoche, el permiso va desde current_date hasta current_date + 1
+                    if second_crosses_midnight:
+                        permit_start_date = current_date
+                        permit_end_date = current_date + timedelta(days=1)
+                    else:
+                        permit_start_date = current_date
+                        permit_end_date = current_date
+                    
+                    PermitRequest.objects.create(
+                        employee=employee,
+                        permit_type=bitacora_type,
+                        start_date=permit_start_date,
+                        end_date=permit_end_date,
+                        start_time=second_start,
+                        end_time=second_end,
+                        justification_file=saved_path,
+                        response_note=justification,  # Guardar justificación en response_note
+                        status='REQUESTED',
+                        created_by=request.user,
+                        updated_by=request.user
+                    )
+                    created_count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Se crearon {created_count} bitácora(s) correctamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al crear bitácoras: {str(e)}'
+            }, status=400)
+
+
+class BitacoraListView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para listar bitácoras pendientes de un empleado"""
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def get(self, request, employee_id):
+        employee = get_object_or_404(Employee, pk=employee_id)
+        
+        # Obtener tipo de permiso "Bitácora"
+        bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
+        
+        if bitacora_type:
+            bitacoras = PermitRequest.objects.filter(
+                employee=employee,
+                permit_type=bitacora_type,
+                status='REQUESTED'
+            ).select_related('created_by').values(
+                'id', 'start_date', 'end_date', 'start_time', 'end_time',
+                'status', 'created_at', 'created_by__first_name', 'created_by__last_name',
+                'response_note', 'justification_file'
+            ).order_by('-start_date', '-start_time')
+            
+            # Construir full_name del created_by
+            for bitacora in bitacoras:
+                first_name = bitacora.pop('created_by__first_name', '')
+                last_name = bitacora.pop('created_by__last_name', '')
+                bitacora['created_by__full_name'] = f"{first_name} {last_name}".strip() if first_name or last_name else 'Sistema'
+                last_name = bitacora.pop('created_by__last_name', '')
+                bitacora['created_by__full_name'] = f"{first_name} {last_name}".strip() if first_name or last_name else 'Sistema'
+        else:
+            bitacoras = []
+        
+        return JsonResponse({
+            'success': True,
+            'bitacoras': list(bitacoras),
+            'employee_name': employee.person.full_name,
+            'employee_identification': employee.person.document_number
+        })
+
+
+class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para aprobar bitácoras seleccionadas"""
+    permission_required = 'permitrequest.change_permitrequest'
+
+    def post(self, request):
+        from django.utils import timezone
+        import json
+        
+        try:
+            data = json.loads(request.body)
+            bitacora_ids = data.get('ids', [])
+            
+            updated = PermitRequest.objects.filter(
+                id__in=bitacora_ids,
+                status='REQUESTED'
+            ).update(
+                status='APPROVED',
+                response_by=request.user,
+                response_date=timezone.now(),
+                response_note='Aprobado masivamente',
+                updated_by=request.user
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Se aprobaron {updated} bitácora(s) correctamente'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }, status=400)
+
+
+class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para eliminar bitácoras seleccionadas"""
+    permission_required = 'permitrequest.delete_permitrequest'
+
+    def post(self, request):
+        import json
+        
+        try:
+            data = json.loads(request.body)
+            bitacora_ids = data.get('ids', [])
+            
+            deleted_count, _ = PermitRequest.objects.filter(
+                id__in=bitacora_ids,
+                status='REQUESTED'
+            ).delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Se eliminaron {deleted_count} bitácora(s) correctamente'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }, status=400)
