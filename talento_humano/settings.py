@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'biometric',
     'personnel_actions',
     'payroll',
-    'permitrequest'
+    'permitrequest',
+    'vacation'
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

@@ -219,6 +219,52 @@
                 </ul>
             </li>
         {% endif %}
+        {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod %}
+            <li class="has-submenu">
+                <!-- El enlace principal activa la clase 'active' si estamos dentro de la app 'vacation' -->
+                <a href="#" class="{% if 'vacation' in request.resolver_match.app_name %}active{% endif %}">
+                    <i class="fa-solid fa-umbrella-beach"></i>
+                    <span class="menu-text">Gestión Vacaciones</span>
+                    <!-- Usamos la misma flecha que el resto del menú para que tu JS la rote automáticamente -->
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+
+                <ul class="submenu">
+                    <!-- 1. Administrar Solicitudes -->
+                    {% if perms.vacation.view_vacationrequest %}
+                        <li>
+                            <a href="{% url 'vacation:request_list' %}"
+                               class="{% if request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span class="menu-text">Administrar Solicitudes</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- 2. Registrar Vacación (Acción directa) -->
+                    {% if perms.vacation.add_vacationrequest %}
+                        <li>
+                            <!-- Mantenemos el onclick para tu lógica de Modales con Vue/JS -->
+                            <a href="#" onclick="openModalCreateVacation()">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span class="menu-text">Registrar Vacación</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- 3. Periodos y Saldos -->
+                    {% if perms.vacation.view_vacationperiod %}
+                        <li>
+                            <a href="{% url 'vacation:period_list' %}"
+                               class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-calendar-days"></i>
+                                <span class="menu-text">Periodos y Saldos</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         {% if perms.contract.view_laborregime or perms.contract.view_managementperiod %}
             <li class="has-submenu">
                 <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">
