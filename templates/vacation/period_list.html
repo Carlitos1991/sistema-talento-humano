@@ -26,13 +26,10 @@
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
-                    <button type="button" class="btn btn-search" onclick="toggleSearchModal(true)">
-                        <i class="fas fa-search"></i> Búsqueda Avanzada
-                    </button>
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" id="searchInput" class="input-field"
-                               placeholder="Buscar por periodo">
+                               placeholder="Buscar por periodo" value="{{ search_query }}">
                     </div>
                 </div>
 

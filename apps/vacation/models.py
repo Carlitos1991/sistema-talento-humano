@@ -45,8 +45,16 @@ class EmployeeVacationBalance(models.Model):
     total_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Total Días', default=0)
     balance_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Saldo Días', default=0)
 
+    # Campos adicionales para el balance
+    additional_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días Adicionales (Balance Anterior)', default=0)
+    vacation_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Liquidación Vacaciones', default=0)
+    permit_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Permisos con Cargo', default=0)
+
     # Contadores históricos
     taken_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días Tomados', default=0)
+    
+    # Observaciones automáticas
+    observation = models.TextField(verbose_name='Observaciones', blank=True, default='')
 
     created_at = models.DateTimeField(verbose_name='Fecha creación', auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name='Creado por',
@@ -92,6 +100,13 @@ class VacationRequest(models.Model):
     employee = models.ForeignKey(Employee, verbose_name='Empleado', on_delete=models.PROTECT)
     balance_used = models.ForeignKey(EmployeeVacationBalance, verbose_name='Periodo Afectado', on_delete=models.PROTECT,
                                      null=True, blank=True)
+    
+    # Relación uno a uno con Acción de Personal
+    personnel_action = models.OneToOneField('personnel_actions.PersonnelAction', 
+                                           verbose_name='Acción de Personal',
+                                           on_delete=models.PROTECT, 
+                                           null=True, blank=True,
+                                           related_name='vacation_request')
 
     start_date = models.DateField(verbose_name='Fecha Desde')
     end_date = models.DateField(verbose_name='Fecha Hasta')

@@ -4,8 +4,30 @@
         <thead>
         <tr>
             <th>#</th>
-            <th><i class="far fa-calendar header-icon"></i> Nombre Periodo</th>
-            <th><i class="fa-solid fa-toggle-on header-icon"></i> Estado</th>
+            <th class="sortable" onclick="sortTable('name')">
+                <i class="far fa-calendar header-icon"></i> Nombre Periodo
+                {% if current_order == 'name' %}
+                    {% if current_direction == 'asc' %}
+                        <i class="fas fa-sort-up sort-icon"></i>
+                    {% else %}
+                        <i class="fas fa-sort-down sort-icon"></i>
+                    {% endif %}
+                {% else %}
+                    <i class="fas fa-sort sort-icon"></i>
+                {% endif %}
+            </th>
+            <th class="sortable" onclick="sortTable('is_active')">
+                <i class="fa-solid fa-toggle-on header-icon"></i> Estado
+                {% if current_order == 'is_active' %}
+                    {% if current_direction == 'asc' %}
+                        <i class="fas fa-sort-up sort-icon"></i>
+                    {% else %}
+                        <i class="fas fa-sort-down sort-icon"></i>
+                    {% endif %}
+                {% else %}
+                    <i class="fas fa-sort sort-icon"></i>
+                {% endif %}
+            </th>
             <th><i class="fas fa-gears header-icon"></i> Acciones</th>
         </tr>
         </thead>
@@ -13,7 +35,7 @@
         <!-- OJO: En la vista definiste context_object_name = 'periods' -->
         {% for period in periods %}
             <tr class="row-hover">
-                <td>{{ forloop.counter }}</td>
+                <td>{% if is_paginated %}{{ page_obj.start_index|add:forloop.counter0 }}{% else %}{{ forloop.counter }}{% endif %}</td>
 
                 <!-- Nombre del Periodo -->
                 <td>
@@ -40,8 +62,8 @@
                 <!-- Acciones -->
                 <td>
                     <div class="actions-wrapper">
-                         <!-- Aquí podrías poner editar en el futuro -->
-                        <button class="btn-list-action" title="Editar (Próximamente)">
+                        <button class="btn-list-action" title="Editar Periodo" 
+                                onclick="open_modal('{% url 'vacation:period_edit' period.pk %}')">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                     </div>
@@ -61,20 +83,75 @@
     </table>
 </div>
 
-<!-- PAGINACIÓN (Simplificada para CBV ListView) -->
-{% if is_paginated %}
+<!-- PAGINACIÓN - Estilo igual al de usuarios -->
 <div class="pagination-container">
-    <span class="pagination-info">
-        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-    </span>
-    <div class="pagination-list">
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
-        {% endif %}
-
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
-        {% endif %}
-    </div>
+    {% if periods %}
+        <span class="pagination-info">
+            {% if is_paginated %}
+                Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+            {% else %}
+                Mostrando {{ periods|length }} de {{ periods|length }}
+            {% endif %}
+        </span>
+        <ul class="pagination-list">
+            {% if is_paginated %}
+                <li>
+                    {% if page_obj.has_previous %}
+                        <button class="page-btn" onclick="loadPeriodTable('?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}')">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    {% else %}
+                        <button class="page-btn" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    {% endif %}
+                </li>
+                <li>
+                    <span style="padding: 0 10px; font-weight: bold;">{{ page_obj.number }}</span>
+                </li>
+                <li>
+                    {% if page_obj.has_next %}
+                        <button class="page-btn" onclick="loadPeriodTable('?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}')">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    {% else %}
+                        <button class="page-btn" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    {% endif %}
+                </li>
+            {% else %}
+                <li>
+                    <button class="page-btn" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </li>
+                <li>
+                    <span style="padding: 0 10px; font-weight: bold;">1</span>
+                </li>
+                <li>
+                    <button class="page-btn" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </li>
+            {% endif %}
+        </ul>
+    {% else %}
+        <span class="pagination-info">Mostrando 0 de 0</span>
+        <ul class="pagination-list">
+            <li>
+                <button class="page-btn" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </li>
+            <li>
+                <span style="padding: 0 10px; font-weight: bold;">1</span>
+            </li>
+            <li>
+                <button class="page-btn" disabled>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>
+        </ul>
+    {% endif %}
 </div>
-{% endif %}

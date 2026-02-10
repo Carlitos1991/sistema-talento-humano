@@ -1,0 +1,81 @@
+{% load static %}
+<div class="modal-container-large shadow-card">
+    <div class="modal-content">
+
+        <!-- HEADER -->
+        <div class="modal-header-refined">
+            <div class="header-title-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-plane"></i>
+                </div>
+                <h2 class="header-title-text">{{ titulo }}</h2>
+            </div>
+
+            <button type="button" class="btn-close-modal js-close-modal-vacation" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Información del Empleado -->
+        <div style="background: #f8f9fa; padding: 1rem; margin: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-user"></i> Empleado Seleccionado
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.8rem;">
+                <div>
+                    <strong>Nombre:</strong> {{ employee.person.full_name }}
+                </div>
+                <div>
+                    <strong>Cargo:</strong> 
+                    {% if employee.budgetline_set.first.position_item %}
+                        {{ employee.budgetline_set.first.position_item.name }}
+                    {% else %}
+                        Sin cargo
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Automática -->
+        <div style="background: #e0f2fe; padding: 1rem; margin: 1rem; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-info-circle"></i> Información Automática
+            </h3>
+            <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                <li><strong>Límite máximo TRABAJADOR:</strong> 45 días (3 períodos)</li>
+                <li><strong>Límite máximo EMPLEADOS:</strong> 60 días</li>
+            </ul>
+        </div>
+
+        <form id="firstVacationForm" action="{{ action_url }}" method="post" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="modal-body">
+                {% for field in form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}" class="control-label">
+                            {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        
+                        {% if field.name == 'period' %}
+                            <small class="form-text text-muted">Seleccione el periodo de vacaciones al que corresponde esta asignación.</small>
+                        {% endif %}
+                        
+                        <div class="field-errors" id="error-{{ field.name }}"></div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer-centered">
+                <button type="button" class="btn-cancel js-close-modal-vacation">
+                    <i class="fas fa-times-circle"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-plane"></i> CREAR VACACIÓN
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,34 +1,60 @@
-<div class="modal-container-medium shadow-card">    
+{% load static %}
+<div class="modal-container-medium shadow-card">
     <div class="modal-content">
-        <div class="modal-header">
-            <h4 class="modal-title">{{ titulo }}</h4>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
+
+        <!-- HEADER: Título centrado, X absoluta a la derecha -->
+        <div class="modal-header-refined">
+            <div class="header-title-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <h2 class="header-title-text">{{ titulo }}</h2>
+            </div>
+
+            <!-- Botón X absoluto -->
+            <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+                <i class="fas fa-times"></i>
             </button>
         </div>
-        
-        <form action="{{ action_url }}" method="post" autocomplete="off">
+
+        <form id="periodForm" action="{{ action_url }}" method="post" autocomplete="off">
             {% csrf_token %}
-            
+
             <div class="modal-body">
                 {% for field in form %}
                     <div class="form-group">
-                        <label for="{{ field.id_for_label }}" class="control-label">{{ field.label }}</label>
-                        {{ field }}
+                        <!-- Lógica especial para el Checkbox (Toggle Switch) -->
+                        {% if field.name == 'is_active' %}
+                            <label class="control-label">{{ field.label }}</label>
+                            <div class="toggle-switch-wrapper">
+                                <label class="switch">
+                                    {{ field }} <!-- El input checkbox original -->
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label-text">Activar / Desactivar</span>
+                            </div>
+
+                            <!-- Inputs normales (Texto, Selects, etc) -->
+                        {% else %}
+                            <label for="{{ field.id_for_label }}" class="control-label">{{ field.label }}</label>
+                            {{ field }}
+                        {% endif %}
+
                         {% if field.help_text %}
                             <small class="form-text text-muted">{{ field.help_text }}</small>
                         {% endif %}
-                        {% for error in field.errors %}
-                            <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
+                        <div class="field-errors" id="error-{{ field.name }}"></div>
                     </div>
                 {% endfor %}
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Guardar
+            <!-- FOOTER: Botones centrados -->
+            <div class="modal-footer-centered">
+                <button type="button" class="btn-cancel js-close-modal">
+                    <i class="fas fa-times-circle"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-check-circle"></i> {% if is_edit %}ACTUALIZAR{% else %}GUARDAR{% endif %}
                 </button>
             </div>
         </form>

@@ -1,36 +1,582 @@
-/* apps/vacation/static/css/vacations.css */
-
-/* El fondo oscuro detrás del modal */
+/* =========================================
+   1. CONTENEDOR PRINCIPAL (EL FONDO OSCURO)
+   ========================================= */
 #popupPeriod {
-    display: none; /* Oculto por defecto */
+    /* Posicionamiento Fijo: Esto lo hace "flotar" sobre todo */
     position: fixed;
-    z-index: 1000;
-    left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* Negro con opacidad */
-    align-items: center;     /* Centrar verticalmente */
-    justify-content: center; /* Centrar horizontalmente */
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6); /* Fondo negro semitransparente */
+    z-index: 9999; /* Asegura que esté encima de todo (sidebar, navbar) */
+
+    /* Flexbox: Esto centra la caja blanca perfectamente */
+    display: none; /* Oculto por defecto */
+    justify-content: center;
+    align-items: center;
+
+    /* Efecto suave */
+    backdrop-filter: blur(2px);
 }
 
-/* Cuando le agreguemos la clase 'open' desde JS, se mostrará flex para centrar */
+/* Esta clase se agrega con JS para mostrarlo */
 #popupPeriod.open {
-    display: flex;
+    display: flex !important;
+    animation: fadeIn 0.2s ease-out forwards;
 }
 
-/* Estilo de la tarjeta del modal (ya tienes clases, pero asegura esto) */
+/* =========================================
+   2. LA CAJA DEL MODAL (ESTRUCTURA)
+   ========================================= */
 .modal-container-medium {
-    background-color: #fff;
-    border-radius: 8px;
-    width: 50%; /* O lo que prefieras */
-    max-width: 600px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: slideIn 0.3s ease-out;
+    /* Quitamos márgenes automáticos que causan problemas */
+    margin: 0;
+
+    /* Tamaño */
+    width: 90%;
+    max-width: 600px; /* Ancho máximo elegante */
+
+    /* Sombra para efecto de elevación */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    background: white;
+
+    /* Animación de entrada */
+    transform: scale(0.95);
+    animation: zoomIn 0.2s ease-out forwards;
 }
 
-@keyframes slideIn {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+.modal-container-large {
+    /* Modal más ancho para formularios complejos */
+    margin: 0;
+    width: 90%;
+    max-width: 1000px;
+
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    background: white;
+
+    transform: scale(0.95);
+    animation: zoomIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* =========================================
+   3. ESTILOS INTERNOS (HEADER Y TEXTO)
+   ========================================= */
+
+/* Header Azul Oscuro */
+.modal-header-refined {
+    background-color: #1a2e44;
+    padding: 15px 20px;
+    border-top-left-radius: 12px; /* Redondear esquinas superiores */
+    border-top-right-radius: 12px;
+
+    /* Flex para alinear X y Título */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+/* Título */
+.header-title-text {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffffff !important; /* FORZAR BLANCO */
+    letter-spacing: 0.5px;
+}
+
+/* Icono circular */
+.header-icon-circle {
+    background-color: rgba(255, 255, 255, 0.2); /* Blanco semitransparente */
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: #ffffff; /* Icono blanco */
+}
+
+/* Grupo Título + Icono (Lado a lado) */
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Espacio entre icono y texto */
+}
+
+.header-icon-circle {
+    background-color: rgba(255, 255, 255, 0.15);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.header-title-text {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Botón X (Posición Absoluta) */
+.btn-close-modal {
+    position: absolute; /* Lo saca del flujo para no empujar el título */
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%); /* Lo centra verticalmente exacto */
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-modal:hover {
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* --- 2. CHECKBOX TOGGLE SWITCH (Estilo iPhone) --- */
+.toggle-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+/* Ocultamos el checkbox feo por defecto */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* El deslizador */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Cuando está activo (Checked) */
+.switch input:checked + .slider {
+    background-color: #1a2e44; /* Tu azul corporativo */
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-label-text {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* --- 3. FOOTER CENTRADO --- */
+.modal-footer-centered {
+    padding: 20px;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center; /* CENTRADO AQUÍ */
+    gap: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-cancel, .btn-save {
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.1s;
+}
+
+.btn-cancel {
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+}
+
+.btn-cancel:hover {
+    background: #f3f4f6;
+}
+
+.btn-save {
+    background: #1a2e44;
+    border: 1px solid #1a2e44;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #2c3e50;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* =========================================
+   ORDENAMIENTO DE TABLA
+   ========================================= */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+th.sortable:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.sort-icon {
+    margin-left: 5px;
+    font-size: 0.85em;
+    color: #94a3b8;
+    transition: color 0.2s;
+}
+
+th.sortable:hover .sort-icon {
+    color: #475569;
+}
+
+.fas.fa-sort-up,
+.fas.fa-sort-down {
+    color: #2563eb;
+}
+
+/* =========================================
+   ESTILOS PARA ERRORES EN FORMULARIO
+   ========================================= */
+.field-errors {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+}
+
+.field-errors .text-danger {
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+}
+
+.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* =========================================
+   BOTONES DE ACCIÓN EN LISTADO
+   ========================================= */
+.btn-action {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-action i {
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+/* Estilos para avatar de empleado */
+.employee-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.employee-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0e7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+/* =========================================
+   MODAL DE VACACIONES (overlay)
+   ========================================= */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+/* =========================================
+   TABLA DE PERIODOS - DETALLE EMPLEADO
+   ========================================= */
+.vacation-detail-table-container {
+    background: white;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.vacation-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.vacation-detail-table thead tr {
+    background: #1e3a8a;
+    color: white;
+}
+
+.vacation-detail-table thead th {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.vacation-detail-table thead th:first-child {
+    text-align: center;
+}
+
+.vacation-detail-table tbody tr {
+    background: white;
+}
+
+.vacation-detail-table tbody td {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.vacation-detail-table tbody td:first-child {
+    text-align: center;
+    font-weight: 500;
+}
+
+.vacation-detail-table tbody td:last-child {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    text-align: left;
+    line-height: 1.6;
+    max-width: 400px;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.vacation-detail-table .observation-row {
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+}
+
+.vacation-detail-table .observation-row td {
+    padding: 1rem;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    text-align: left;
+}
+
+.vacation-detail-table .cell-with-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.vacation-detail-table .btn-ver-detalle {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    min-width: auto;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    background-color: #3b82f6;
+    color: white;
+}
+
+/* Cards de estadísticas */
+.vacation-stats-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.vacation-stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.vacation-stat-card.border-blue {
+    border-left: 4px solid #3b82f6;
+}
+
+.vacation-stat-card.border-orange {
+    border-left: 4px solid #f59e0b;
+}
+
+.vacation-stat-card.border-cyan {
+    border-left: 4px solid #06b6d4;
+}
+
+.vacation-stat-card.border-green {
+    border-left: 4px solid #10b981;
+}
+
+.stat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.stat-card-info h3 {
+    color: inherit;
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.stat-card-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.stat-card-icon {
+    font-size: 2rem;
+    opacity: 0.3;
+}
+
+.stat-card-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.stat-card-buttons .btn-action {
+    padding: 0.6rem;
+}
+
+.stat-card-footer {
+    width: 100%;
+    margin-top: auto;
+}
+
+.stat-card-footer .btn-action {
+    width: 100%;
 }

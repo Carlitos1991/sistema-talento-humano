@@ -241,18 +241,7 @@
                         </li>
                     {% endif %}
 
-                    <!-- 2. Registrar Vacación (Acción directa) -->
-                    {% if perms.vacation.add_vacationrequest %}
-                        <li>
-                            <!-- Mantenemos el onclick para tu lógica de Modales con Vue/JS -->
-                            <a href="#" onclick="openModalCreateVacation()">
-                                <i class="fa-solid fa-plus-circle"></i>
-                                <span class="menu-text">Registrar Vacación</span>
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- 3. Periodos y Saldos -->
+                    <!-- 2. Periodos y Saldos -->
                     {% if perms.vacation.view_vacationperiod %}
                         <li>
                             <a href="{% url 'vacation:period_list' %}"

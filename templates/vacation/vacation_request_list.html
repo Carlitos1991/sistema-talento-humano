@@ -1,10 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block title %}Solicitudes de Vacaciones | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <!-- Configuración oculta -->
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'vacation:request_list' %}">
+
+        <!-- Encabezado -->
+        <div class="header-card">
+            <div>
+                <h1>Administrar Solicitudes de Vacaciones</h1>
+                <p>Seleccione un empleado para gestionar sus vacaciones.</p>
+            </div>
+        </div>
+
+        <!-- Buscador y Tabla -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field"
+                               placeholder="Buscar por nombre, apellido o cédula" value="{{ search_query }}">
+                    </div>
+                </div>
+
+                <!-- Zona de recarga AJAX -->
+                <div id="table-content-wrapper">
+                    {% include 'vacation/partials/partial_vacation_employee_list.html' %}
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">
+                        {% if page_obj %}
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+                        {% else %}
+                            Mostrando 0 de 0
+                        {% endif %}
+                    </span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
+                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
+                            </span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Modal para gestión de vacaciones del empleado -->
+    <div id="vacationModal" class="modal-overlay hidden">
+        <div id="vacation-modal-content"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Inicializar paginación desde el servidor
+        {% if page_obj %}
+        window.initialPagination = {
+            current_page: {{ page_obj.number }},
+            total_pages: {{ page_obj.paginator.num_pages }},
+            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+            has_next: {{ page_obj.has_next|yesno:"true,false" }}
+        };
+        {% endif %}
+    </script>
+    <script src="{% static 'js/vacation/vacation_employees.js' %}"></script>
+{% endblock %}

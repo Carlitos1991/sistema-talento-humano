@@ -1,5 +1,5 @@
 from django import forms
-from .models import VacationPeriod
+from .models import VacationPeriod, EmployeeVacationBalance
 
 class PeriodForm(forms.ModelForm):
     class Meta:
@@ -18,3 +18,56 @@ class PeriodForm(forms.ModelForm):
             'name': 'Nombre del Periodo',
             'is_active': 'Periodo Activo',
         }
+        error_messages = {
+            'name': {
+                'unique': 'Ya existe Periodo con este Nombre Periodo.',
+            }
+        }
+
+
+class FirstVacationForm(forms.ModelForm):
+    """
+    Formulario para crear el primer periodo de vacaciones de un empleado.
+    """
+    class Meta:
+        model = EmployeeVacationBalance
+        fields = ['period']
+        widgets = {
+            'period': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+        }
+        labels = {
+            'period': 'Periodo de Vacaciones',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        employee_id = kwargs.pop('employee_id', None)
+        super().__init__(*args, **kwargs)
+        
+        # Obtener períodos activos
+        periods_qs = VacationPeriod.objects.filter(is_active=True).order_by('name')
+        
+        # Si hay employee_id, filtrar períodos posteriores al último asignado
+        if employee_id:
+            from employee.models import Employee
+            try:
+                employee = Employee.objects.get(pk=employee_id)
+                last_balance = EmployeeVacationBalance.objects.filter(
+                    employee=employee
+                ).select_related('period').order_by('-created_at').first()
+                
+                if last_balance:
+                    # Excluir el último período y todos los anteriores (comparación por nombre)
+                    last_period_name = last_balance.period.name
+                    periods_qs = periods_qs.filter(name__gt=last_period_name)
+            except Employee.DoesNotExist:
+                pass
+        
+        self.fields['period'].queryset = periods_qs
+    
+    def clean_period(self):
+        period = self.cleaned_data.get('period')
+        if not period:
+            raise forms.ValidationError('Este campo es obligatorio.')
+        return period
