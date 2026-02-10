@@ -1,0 +1,100 @@
+{% load static %}
+<div class="modal-container-large shadow-card">
+    <div class="modal-content">
+
+        <!-- HEADER -->
+        <div class="modal-header-refined">
+            <div class="header-title-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-calendar"></i>
+                </div>
+                <h2 class="header-title-text">{{ titulo }}</h2>
+            </div>
+
+            <button type="button" class="btn-close-modal js-close-modal-day-permit" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Información del Empleado y Saldo -->
+        <div class="info-card-blue">
+            <div class="info-row">
+                <div class="info-item">
+                    <strong><i class="fas fa-user"></i> Empleado:</strong> {{ employee.person.full_name }}
+                </div>
+                <div class="info-item">
+                    <strong><i class="fas fa-calendar-alt"></i> Período:</strong> 
+                    {% if active_balance %}
+                        {{ active_balance.period.name }}
+                    {% else %}
+                        Sin período activo
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <strong><i class="fas fa-balance-scale"></i> Saldo Disponible:</strong> 
+                    {% if active_balance %}
+                        {{ active_balance.balance_days|floatformat:3 }} días
+                    {% else %}
+                        0 días
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Automática -->
+        <div class="info-card-cyan">
+            <h3 class="info-title"><i class="fas fa-info-circle"></i> Información:</h3>
+            <ul class="info-list-compact">
+                <li><strong>Tipo:</strong> Cargo a Vacaciones (automático)</li>
+                <li><strong>Hora de inicio:</strong> 08:00 (automático)</li>
+                <li><strong>Descuento:</strong> 1 día = 1.4 días de vacaciones</li>
+            </ul>
+        </div>
+
+        <form id="dayPermitForm" action="{{ action_url }}" method="post" autocomplete="off">
+            {% csrf_token %}
+
+            <div class="modal-body">
+                <div class="form-row-two-col">
+                    <div class="form-group form-col">
+                        <label for="{{ form.start_date.id_for_label }}" class="control-label">
+                            {{ form.start_date.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.start_date }}
+                        {% if form.start_date.help_text %}
+                            <small class="form-text text-muted">{{ form.start_date.help_text }}</small>
+                        {% endif %}
+                        <div class="field-errors" id="error-start_date"></div>
+                    </div>
+                    
+                    <div class="form-group form-col">
+                        <label for="{{ form.days.id_for_label }}" class="control-label">
+                            {{ form.days.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.days }}
+                        {% if form.days.help_text %}
+                            <small class="form-text text-muted">{{ form.days.help_text }}</small>
+                        {% endif %}
+                        <div class="field-errors" id="error-days"></div>
+                    </div>
+                </div>
+                
+                <!-- Errores generales del formulario -->
+                <div class="field-errors" id="error-__all__"></div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer-centered">
+                <button type="button" class="btn-cancel js-close-modal-day-permit">
+                    <i class="fas fa-times-circle"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-check-circle"></i> CREAR PERMISO
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+

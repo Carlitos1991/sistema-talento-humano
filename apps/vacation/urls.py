@@ -11,6 +11,12 @@ urlpatterns = [
     path('requests/create-first/<int:employee_id>/', views.CreateFirstVacationView.as_view(), name='create_first_vacation'),
     path('requests/create-new/<int:employee_id>/', views.CreateNewVacationPeriodView.as_view(), name='create_new_vacation'),
     path('requests/employee/<int:employee_id>/', views.EmployeeVacationDetailView.as_view(), name='employee_vacation_detail'),
+    path('requests/create-hour-permit/<int:employee_id>/', views.CreateHourPermitVacationView.as_view(), name='create_hour_permit'),
+    path('requests/create-day-permit/<int:employee_id>/', views.CreateDayPermitVacationView.as_view(), name='create_day_permit'),
+    path('requests/permit-list/<int:employee_id>/', views.EmployeePermitListView.as_view(), name='permit_list'),
+    path('requests/approve-permit/<int:permit_id>/', views.ApprovePermitView.as_view(), name='approve_permit'),
+    path('requests/reject-permit/<int:permit_id>/', views.RejectPermitView.as_view(), name='reject_permit'),
+    path('requests/cancel-permit/<int:permit_id>/', views.CancelPermitView.as_view(), name='cancel_permit'),
 
     # Periodos
     path('periods/', views.PeriodListView.as_view(), name='period_list'),

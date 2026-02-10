@@ -46,13 +46,16 @@ class EmployeeVacationBalance(models.Model):
     balance_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Saldo Días', default=0)
 
     # Campos adicionales para el balance
-    additional_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días Adicionales (Balance Anterior)', default=0)
-    vacation_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Liquidación Vacaciones', default=0)
-    permit_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Permisos con Cargo', default=0)
+    additional_days = models.DecimalField(max_digits=5, decimal_places=2,
+                                          verbose_name='Días Adicionales (Balance Anterior)', default=0)
+    vacation_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Liquidación Vacaciones',
+                                        default=0)
+    permit_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días de Permisos con Cargo',
+                                      default=0)
 
     # Contadores históricos
     taken_days = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Días Tomados', default=0)
-    
+
     # Observaciones automáticas
     observation = models.TextField(verbose_name='Observaciones', blank=True, default='')
 
@@ -100,13 +103,13 @@ class VacationRequest(models.Model):
     employee = models.ForeignKey(Employee, verbose_name='Empleado', on_delete=models.PROTECT)
     balance_used = models.ForeignKey(EmployeeVacationBalance, verbose_name='Periodo Afectado', on_delete=models.PROTECT,
                                      null=True, blank=True)
-    
+
     # Relación uno a uno con Acción de Personal
-    personnel_action = models.OneToOneField('personnel_actions.PersonnelAction', 
-                                           verbose_name='Acción de Personal',
-                                           on_delete=models.PROTECT, 
-                                           null=True, blank=True,
-                                           related_name='vacation_request')
+    personnel_action = models.OneToOneField('personnel_actions.PersonnelAction',
+                                            verbose_name='Acción de Personal',
+                                            on_delete=models.PROTECT,
+                                            null=True, blank=True,
+                                            related_name='vacation_request')
 
     start_date = models.DateField(verbose_name='Fecha Desde')
     end_date = models.DateField(verbose_name='Fecha Hasta')
@@ -146,9 +149,11 @@ class VacationHistory(models.Model):
     # Si integras permisos que descuentan vacaciones:
     permit_request = models.ForeignKey(PermitRequest, verbose_name='Permiso Relacionado', blank=True, null=True,
                                        on_delete=models.PROTECT)
-
-    action_type = models.CharField(max_length=50, verbose_name='Tipo Acción')  # Ej: DESCUENTO, INCREMENTO, AJUSTE
-    days_value = models.DecimalField(verbose_name='Valor en Días', max_digits=5, decimal_places=2)
+    value_discount = models.FloatField(verbose_name='Valor Descuento', blank=True, null=True)
+    proportional_discount = models.FloatField(verbose_name='Descuento Proporcional', blank=True, null=True)
+    days_discount = models.FloatField(verbose_name='Dias Descuento', blank=True, null=True)
+    hours_discount = models.FloatField(verbose_name='Horas Descuento', blank=True, null=True)
+    minutes_discount = models.FloatField(verbose_name='Minutos Descuento', blank=True, null=True)
 
     observation = models.TextField(verbose_name='Observaciones', blank=True, null=True)
 

@@ -1,5 +1,7 @@
 from django import forms
 from .models import VacationPeriod, EmployeeVacationBalance
+from permitrequest.models import PermitRequest
+import datetime
 
 class PeriodForm(forms.ModelForm):
     class Meta:
@@ -29,9 +31,19 @@ class FirstVacationForm(forms.ModelForm):
     """
     Formulario para crear el primer periodo de vacaciones de un empleado.
     """
+    total_days = forms.DecimalField(
+        label='Días de Vacaciones',
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0'
+        })
+    )
+    
     class Meta:
         model = EmployeeVacationBalance
-        fields = ['period']
+        fields = ['period', 'total_days']
         widgets = {
             'period': forms.Select(attrs={
                 'class': 'form-control',
@@ -43,7 +55,15 @@ class FirstVacationForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         employee_id = kwargs.pop('employee_id', None)
+        initial_days = kwargs.pop('initial_days', None)
         super().__init__(*args, **kwargs)
+        
+        # Establecer valor inicial de días si se proporciona
+        if initial_days is not None:
+            self.fields['total_days'].initial = initial_days
+        
+        # Ordenar campos
+        self.order_fields(['period', 'total_days'])
         
         # Obtener períodos activos
         periods_qs = VacationPeriod.objects.filter(is_active=True).order_by('name')

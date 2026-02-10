@@ -27,8 +27,8 @@
                 </div>
                 <div>
                     <strong>Cargo:</strong> 
-                    {% if employee.budgetline_set.first.position_item %}
-                        {{ employee.budgetline_set.first.position_item.name }}
+                    {% if employee.current_budget_line.first.position_item %}
+                        {{ employee.current_budget_line.first.position_item.name }}
                     {% else %}
                         Sin cargo
                     {% endif %}
@@ -60,6 +60,8 @@
                         
                         {% if field.name == 'period' %}
                             <small class="form-text text-muted">Seleccione el periodo de vacaciones al que corresponde esta asignación.</small>
+                        {% elif field.name == 'total_days' %}
+                            <small class="form-text text-muted">Los días se calculan automáticamente según el estado laboral del empleado.</small>
                         {% endif %}
                         
                         <div class="field-errors" id="error-{{ field.name }}"></div>
