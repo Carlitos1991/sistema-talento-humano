@@ -38,6 +38,19 @@
             </ul>
         </div>
 
+        <!-- Buscador -->
+        <div class="table-controls" style="margin: 1.5rem 0;">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text"
+                       name="search"
+                       id="permitSearchInput"
+                       class="input-field"
+                       placeholder="Buscar por fecha (dd/mm/yyyy)..."
+                       value="{{ search_query|default:'' }}">
+            </div>
+        </div>
+
         <!-- Tabla de permisos -->
         <div class="permit-list-container">
             {% if permits %}
@@ -111,6 +124,32 @@
                     {% endfor %}
                     </tbody>
                 </table>
+
+                <!-- Paginador -->
+                {% if permits.has_other_pages %}
+                    <div class="pagination-container">
+                    <span class="pagination-info">
+                        Mostrando página {{ permits.number }} de {{ permits.paginator.num_pages }} ({{ permits.paginator.count }} permiso{{ permits.paginator.count|pluralize }})
+                    </span>
+                        <ul class="pagination-list">
+                            <li>
+                                <button class="page-btn" {% if not permits.has_previous %}disabled{% endif %}
+                                        onclick="loadPermitPage({{ permits.previous_page_number }})">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                            </li>
+                            <li>
+                                <span style="padding: 0 10px; font-weight: bold;">{{ permits.number }}</span>
+                            </li>
+                            <li>
+                                <button class="page-btn" {% if not permits.has_next %}disabled{% endif %}
+                                        onclick="loadPermitPage({{ permits.next_page_number }})">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                {% endif %}
             {% else %}
                 <div class="empty-message-container">
                     <i class="fas fa-inbox empty-message-icon"></i>

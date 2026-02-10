@@ -33,6 +33,7 @@ class PersonnelAction(models.Model):
     # Identificación
     number = models.CharField(verbose_name='Número de Acción', max_length=50, unique=True)
     explanation = models.TextField(verbose_name='Explicación/Motivo', blank=True, null=True)
+    motivation = models.CharField(verbose_name='Motivación', max_length=255, blank=True, null=True)
 
     # Fechas
     date_issue = models.DateField(verbose_name='Fecha de Emisión')

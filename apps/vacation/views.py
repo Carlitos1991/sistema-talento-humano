@@ -1043,6 +1043,7 @@ class CreateDayPermitVacationView(LoginRequiredMixin, FormView):
 class EmployeePermitListView(LoginRequiredMixin, TemplateView):
     """
     Vista para listar permisos con cargo a vacaciones de un empleado.
+    Incluye búsqueda por fechas y paginación.
     """
     template_name = 'vacation/modals/modal_permit_list.html'
     
@@ -1052,14 +1053,48 @@ class EmployeePermitListView(LoginRequiredMixin, TemplateView):
         
         # Obtener permisos con cargo a vacaciones (tipo Personales)
         from permitrequest.models import PermitRequest, PermitType
+        from datetime import datetime
+        
         try:
             personal_permit_type = PermitType.objects.get(name='Personales', is_active=True)
-            permits = PermitRequest.objects.filter(
+            permits_queryset = PermitRequest.objects.filter(
                 employee=employee,
                 permit_type=personal_permit_type
-            ).select_related('permit_type').order_by('-start_date', '-created_at')
+            ).select_related('permit_type')
+            
+            # Búsqueda por fecha
+            search_query = self.request.GET.get('search', '').strip()
+            if search_query:
+                # Intentar parsear la fecha en formato dd/mm/yyyy
+                try:
+                    search_date = datetime.strptime(search_query, '%d/%m/%Y').date()
+                    permits_queryset = permits_queryset.filter(
+                        Q(start_date=search_date) | Q(end_date=search_date)
+                    )
+                except ValueError:
+                    # Si no es una fecha válida, buscar en el texto de las fechas
+                    permits_queryset = permits_queryset.filter(
+                        Q(start_date__icontains=search_query) | 
+                        Q(end_date__icontains=search_query)
+                    )
+                context['search_query'] = search_query
+            
+            # Ordenar
+            permits_queryset = permits_queryset.order_by('-start_date', '-created_at')
+            
+            # Paginación
+            paginator = Paginator(permits_queryset, 10)  # 10 permisos por página
+            page_number = self.request.GET.get('page', 1)
+            
+            try:
+                permits = paginator.page(page_number)
+            except PageNotAnInteger:
+                permits = paginator.page(1)
+            except EmptyPage:
+                permits = paginator.page(paginator.num_pages)
+            
         except PermitType.DoesNotExist:
-            permits = PermitRequest.objects.none()
+            permits = []
         
         context['employee'] = employee
         context['permits'] = permits
@@ -1268,3 +1303,454 @@ class CancelPermitView(LoginRequiredMixin, View):
                 'success': False,
                 'message': f'Error al anular el permiso: {str(e)}'
             }, status=500)
+
+
+class CreateVacationLiquidationView(LoginRequiredMixin, FormView):
+    """
+    Vista para crear una solicitud de liquidación de vacaciones.
+    """
+    template_name = 'vacation/modals/modal_liquidation_form.html'
+    form_class = VacationLiquidationForm
+
+    def get_employee(self):
+        from employee.models import Employee
+        employee_id = self.kwargs.get('employee_id')
+        return get_object_or_404(Employee, pk=employee_id)
+
+    def get_active_balance(self, employee):
+        """
+        Obtiene el balance activo más reciente del empleado.
+        """
+        try:
+            return EmployeeVacationBalance.objects.filter(
+                employee=employee,
+                is_active=True
+            ).order_by('-created_at').first()
+        except EmployeeVacationBalance.DoesNotExist:
+            return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        employee = self.get_employee()
+        balance = self.get_active_balance(employee)
+        
+        context['employee'] = employee
+        context['balance'] = balance
+        context['available_days'] = balance.balance_days if balance else 0
+        
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        employee = self.get_employee()
+        balance = self.get_active_balance(employee)
+        kwargs['available_days'] = balance.balance_days if balance else 0
+        return kwargs
+
+    def form_valid(self, form):
+        try:
+            from vacation.models import VacationRequest
+            from personnel_actions.models import PersonnelAction, ActionType
+            from decimal import Decimal
+            from django.db import transaction
+            import datetime
+            
+            employee = self.get_employee()
+            balance = self.get_active_balance(employee)
+            
+            if not balance:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El empleado no tiene un saldo de vacaciones activo.'
+                }, status=400)
+            
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            days_requested = form.cleaned_data['days_requested']
+            
+            # Validar que no haya otra solicitud de liquidación en el mismo rango de fechas
+            overlapping = VacationRequest.objects.filter(
+                employee=employee,
+                balance_used=balance,
+                status__in=['PENDING', 'APPROVED']
+            ).filter(
+                start_date__lte=end_date,
+                end_date__gte=start_date
+            ).exists()
+            
+            if overlapping:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ya existe una solicitud de liquidación en este rango de fechas.'
+                }, status=400)
+            
+            # Usar transacción para crear todo junto
+            with transaction.atomic():
+                # Obtener el tipo de acción "VACACIONES"
+                action_type = ActionType.objects.filter(name__iexact='VACACIONES').first()
+                if not action_type:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No se encontró el tipo de acción "VACACIONES".'
+                    }, status=400)
+                
+                # Generar el número de acción automáticamente
+                current_year = datetime.date.today().year
+                last_action = PersonnelAction.objects.filter(
+                    number__endswith=f'-{current_year}'
+                ).order_by('-number').first()
+                
+                if last_action:
+                    # Extraer el número de la última acción y sumar 1
+                    try:
+                        last_number = int(last_action.number.split('-')[0])
+                        new_number = last_number + 1
+                    except (ValueError, IndexError):
+                        new_number = 1
+                else:
+                    new_number = 1
+                
+                action_number = f"{new_number:04d}-{current_year}"
+                
+                # Formatear fechas para la explicación
+                start_date_str = start_date.strftime('%d de %B de %Y')
+                end_date_str = end_date.strftime('%d de %B de %Y')
+                
+                # Mapeo de meses en español
+                meses = {
+                    'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo',
+                    'April': 'Abril', 'May': 'Mayo', 'June': 'Junio',
+                    'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre',
+                    'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+                }
+                for eng, esp in meses.items():
+                    start_date_str = start_date_str.replace(eng, esp)
+                    end_date_str = end_date_str.replace(eng, esp)
+                
+                explanation = (
+                    f'SEGÚN REQUERIMIENTO DEL SERVIDOR Y AUTORIZACIÓN DEL JEFE INMEDIATO SE LIQUIDA '
+                    f'{days_requested} DÍAS DE VACACIONES AL SERVIDOR DESDE EL "{start_date_str}" '
+                    f'AL "{end_date_str}" CORRESPONDIENTE AL PERIODO "{balance.period}"'
+                )
+                
+                # Crear la acción de personal
+                personnel_action = PersonnelAction.objects.create(
+                    employee=employee,
+                    action_type=action_type,
+                    number=action_number,
+                    explanation=explanation,
+                    motivation='SOLICITUD DE VACACIONES',
+                    date_issue=datetime.date.today(),
+                    date_effective=start_date,
+                    is_registered=False,
+                    authority_1=form.cleaned_data['nominating_authority'],
+                    authority_2=form.cleaned_data['human_resources_responsible'],
+                    register=form.cleaned_data['registration_responsible'],
+                    reviewer=form.cleaned_data['review_responsible'],
+                    elaboration=form.cleaned_data['elaborated_by'],
+                    created_by=self.request.user
+                )
+                
+                # Crear la solicitud de liquidación vinculada a la acción de personal
+                vacation_request = VacationRequest.objects.create(
+                    employee=employee,
+                    balance_used=balance,
+                    start_date=start_date,
+                    end_date=end_date,
+                    days_quantity=Decimal(str(days_requested)),
+                    status='PENDING',
+                    personnel_action=personnel_action,
+                    created_by=self.request.user,
+                    date_issued=datetime.date.today()
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Solicitud de liquidación creada exitosamente por {days_requested} días. Acción de Personal No. {action_number}'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al crear la solicitud: {str(e)}'
+            }, status=500)
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        error_message = 'Error en el formulario'
+        
+        if form.non_field_errors():
+            error_message = form.non_field_errors()[0]
+        
+        return JsonResponse({
+            'success': False,
+            'message': error_message,
+            'errors': errors
+        }, status=400)
+
+
+class EmployeeLiquidationListView(LoginRequiredMixin, TemplateView):
+    """
+    Vista para listar las liquidaciones de vacaciones (acciones de personal de tipo VACACIONES) de un empleado.
+    """
+    template_name = 'vacation/modals/modal_liquidation_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from employee.models import Employee
+        from personnel_actions.models import PersonnelAction, ActionType
+        from django.core.paginator import Paginator
+        
+        employee_id = self.kwargs.get('employee_id')
+        employee = get_object_or_404(Employee, pk=employee_id)
+        
+        # Obtener el tipo de acción VACACIONES
+        vacation_action_type = ActionType.objects.filter(name__iexact='VACACIONES').first()
+        
+        # Filtrar acciones de personal del empleado de tipo VACACIONES
+        actions = PersonnelAction.objects.filter(
+            employee=employee,
+            action_type=vacation_action_type
+        ).select_related(
+            'action_type', 'authority_1', 'authority_2', 'reviewer', 'elaboration', 'register'
+        ).order_by('-date_issue')
+        
+        # Búsqueda
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            from datetime import datetime
+            try:
+                search_date = datetime.strptime(search_query, '%d/%m/%Y').date()
+                actions = actions.filter(date_issue=search_date)
+            except ValueError:
+                actions = actions.filter(number__icontains=search_query)
+        
+        # Paginación
+        paginator = Paginator(actions, 10)
+        page_number = self.request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        
+        context['employee'] = employee
+        context['actions'] = page_obj
+        context['search_query'] = search_query
+        
+        return context
+
+
+class RegisterLiquidationView(LoginRequiredMixin, View):
+    """
+    Vista para registrar una liquidación de vacaciones.
+    Cambia is_registered a True, crea el historial y descuenta del balance.
+    """
+    def post(self, request, action_id):
+        try:
+            from personnel_actions.models import PersonnelAction
+            from vacation.models import VacationRequest, VacationHistory
+            from django.db import transaction
+            from decimal import Decimal
+            import datetime
+            
+            action = get_object_or_404(PersonnelAction, pk=action_id)
+            
+            if action.is_registered:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Esta acción ya está registrada.'
+                }, status=400)
+            
+            # Obtener la solicitud de vacaciones asociada
+            try:
+                vacation_request = VacationRequest.objects.get(personnel_action=action)
+            except VacationRequest.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la solicitud de vacaciones asociada.'
+                }, status=400)
+            
+            with transaction.atomic():
+                # Marcar como registrada
+                action.is_registered = True
+                action.date_registered = datetime.date.today()
+                action.save()
+                
+                # Actualizar estado de la solicitud
+                vacation_request.status = 'APPROVED'
+                vacation_request.approved_by = request.user
+                vacation_request.save()
+                
+                # Crear registro en el historial de vacaciones
+                VacationHistory.objects.create(
+                    vacation_balance=vacation_request.balance_used,
+                    vacation_request=vacation_request,
+                    value_discount=vacation_request.days_quantity,
+                    proportional_discount=Decimal('0.00'),
+                    created_by=request.user
+                )
+                
+                # Descontar del balance
+                from django.db.models import F
+                EmployeeVacationBalance.objects.filter(id=vacation_request.balance_used.id).update(
+                    balance_days=F('balance_days') - vacation_request.days_quantity,
+                    vacation_days=F('vacation_days') + vacation_request.days_quantity
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Liquidación registrada exitosamente.'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al registrar la liquidación: {str(e)}'
+            }, status=500)
+
+
+class EditLiquidationView(LoginRequiredMixin, FormView):
+    """
+    Vista para editar una liquidación de vacaciones (solo si no está registrada).
+    """
+    template_name = 'vacation/modals/modal_liquidation_edit.html'
+    form_class = VacationLiquidationForm
+
+    def get_action(self):
+        from personnel_actions.models import PersonnelAction
+        action_id = self.kwargs.get('action_id')
+        return get_object_or_404(PersonnelAction, pk=action_id)
+
+    def get_vacation_request(self):
+        from vacation.models import VacationRequest
+        action = self.get_action()
+        return get_object_or_404(VacationRequest, personnel_action=action)
+
+    def get_active_balance(self, employee):
+        try:
+            return EmployeeVacationBalance.objects.filter(
+                employee=employee,
+                is_active=True
+            ).order_by('-created_at').first()
+        except EmployeeVacationBalance.DoesNotExist:
+            return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        action = self.get_action()
+        vacation_request = self.get_vacation_request()
+        balance = vacation_request.balance_used
+        
+        context['action'] = action
+        context['vacation_request'] = vacation_request
+        context['employee'] = action.employee
+        context['balance'] = balance
+        context['available_days'] = balance.balance_days if balance else 0
+        
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        vacation_request = self.get_vacation_request()
+        balance = vacation_request.balance_used
+        
+        # Agregar días actuales de esta liquidación al balance disponible para validación
+        kwargs['available_days'] = (balance.balance_days if balance else 0) + float(vacation_request.days_quantity)
+        
+        # Prellenar el formulario con datos existentes
+        if not self.request.POST:
+            kwargs['initial'] = {
+                'start_date': vacation_request.start_date,
+                'end_date': vacation_request.end_date,
+                'nominating_authority': self.get_action().authority_1.id if self.get_action().authority_1 else None,
+                'human_resources_responsible': self.get_action().authority_2.id if self.get_action().authority_2 else None,
+                'registration_responsible': self.get_action().register.id if self.get_action().register else None,
+                'review_responsible': self.get_action().reviewer.id if self.get_action().reviewer else None,
+                'elaborated_by': self.get_action().elaboration.id if self.get_action().elaboration else None,
+            }
+        
+        return kwargs
+
+    def form_valid(self, form):
+        try:
+            from vacation.models import VacationRequest
+            from decimal import Decimal
+            from django.db import transaction
+            import datetime
+            
+            action = self.get_action()
+            vacation_request = self.get_vacation_request()
+            
+            if action.is_registered:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se puede editar una liquidación ya registrada.'
+                }, status=400)
+            
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            days_requested = form.cleaned_data['days_requested']
+            
+            with transaction.atomic():
+                # Actualizar la solicitud de vacaciones
+                vacation_request.start_date = start_date
+                vacation_request.end_date = end_date
+                vacation_request.days_quantity = Decimal(str(days_requested))
+                vacation_request.save()
+                
+                # Actualizar la explicación de la acción
+                start_date_str = start_date.strftime('%d de %B de %Y')
+                end_date_str = end_date.strftime('%d de %B de %Y')
+                
+                meses = {
+                    'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo',
+                    'April': 'Abril', 'May': 'Mayo', 'June': 'Junio',
+                    'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre',
+                    'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+                }
+                for eng, esp in meses.items():
+                    start_date_str = start_date_str.replace(eng, esp)
+                    end_date_str = end_date_str.replace(eng, esp)
+                
+                explanation = (
+                    f'SEGÚN REQUERIMIENTO DEL SERVIDOR Y AUTORIZACIÓN DEL JEFE INMEDIATO SE LIQUIDA '
+                    f'{days_requested} DÍAS DE VACACIONES AL SERVIDOR DESDE EL "{start_date_str}" '
+                    f'AL "{end_date_str}" CORRESPONDIENTE AL PERIODO "{vacation_request.balance_used.period}"'
+                )
+                
+                # Actualizar la acción de personal
+                action.explanation = explanation
+                action.date_effective = start_date
+                action.authority_1 = form.cleaned_data['nominating_authority']
+                action.authority_2 = form.cleaned_data['human_resources_responsible']
+                action.register = form.cleaned_data['registration_responsible']
+                action.reviewer = form.cleaned_data['review_responsible']
+                action.elaboration = form.cleaned_data['elaborated_by']
+                action.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Liquidación actualizada exitosamente.'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al actualizar la liquidación: {str(e)}'
+            }, status=500)
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        error_message = 'Error en el formulario'
+        
+        if form.non_field_errors():
+            error_message = form.non_field_errors()[0]
+        
+        return JsonResponse({
+            'success': False,
+            'message': error_message,
+            'errors': errors
+        }, status=400)

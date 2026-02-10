@@ -1,0 +1,201 @@
+{% load static %}
+
+<div class="modal-overlay" id="liquidationListModalOverlay" onclick="closeLiquidationListModal()">
+    <div class="modal-container modal-large" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-list-alt"></i>
+                Liquidaciones de Vacaciones - {{ employee.person.get_full_name }}
+            </h2>
+            <button class="modal-close" onclick="closeLiquidationListModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Controles de búsqueda -->
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" 
+                           id="liquidationSearchInput" 
+                           placeholder="Buscar por número o fecha (dd/mm/aaaa)..." 
+                           value="{{ search_query }}">
+                </div>
+            </div>
+
+            <!-- Tabla de liquidaciones -->
+            {% if actions %}
+            <div class="table-responsive">
+                <table class="data-table" id="liquidation-table">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha Emisión</th>
+                            <th>Fecha Efectiva</th>
+                            <th>Días</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for action in actions %}
+                        <tr>
+                            <td><strong>{{ action.number }}</strong></td>
+                            <td>{{ action.date_issue|date:"d/m/Y" }}</td>
+                            <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                            <td>
+                                {% with vacation_request=action.vacation_request %}
+                                    <span class="badge badge-info">{{ vacation_request.days_quantity }} días</span>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                {% if action.is_registered %}
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-check-circle"></i> Registrada
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-clock"></i> Pendiente
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="action-buttons">
+                                {% if not action.is_registered %}
+                                    <button class="btn-icon btn-edit" 
+                                            onclick="editLiquidation({{ action.id }})"
+                                            title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-icon btn-success" 
+                                            onclick="registerLiquidation({{ action.id }})"
+                                            title="Registrar">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn-icon btn-primary" 
+                                            onclick="printLiquidation({{ action.id }})"
+                                            title="Imprimir">
+                                        <i class="fas fa-print"></i>
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if actions.has_other_pages %}
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Página {{ actions.number }} de {{ actions.paginator.num_pages }}
+                </div>
+                <ul class="pagination-list">
+                    {% if actions.has_previous %}
+                    <li>
+                        <a href="#" onclick="loadLiquidationPage({{ actions.previous_page_number }}); return false;">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="active">
+                        <span>{{ actions.number }}</span>
+                    </li>
+                    
+                    {% if actions.has_next %}
+                    <li>
+                        <a href="#" onclick="loadLiquidationPage({{ actions.next_page_number }}); return false;">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No hay liquidaciones de vacaciones registradas</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-large {
+    max-width: 1000px;
+    width: 90%;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-icon {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #e0a800;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.badge-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+</style>

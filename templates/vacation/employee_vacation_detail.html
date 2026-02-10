@@ -95,8 +95,11 @@
                 <i class="fas fa-plane-departure stat-card-icon stat-card-icon-green"></i>
             </div>
             <div class="stat-card-footer">
-                <button class="btn-action btn-success">
+                <button class="btn-action btn-success" onclick="openLiquidationModal({{ employee.id }})">
                     <i class="fas fa-plus"></i> Nueva Liquidación
+                </button>
+                <button class="btn-action btn-info" onclick="openLiquidationListModal({{ employee.id }})">
+                    <i class="fas fa-list"></i> Ver Listado
                 </button>
             </div>
         </div>
@@ -111,7 +114,7 @@
             </div>
             <div class="stat-card-footer">
                 <button class="btn-action stat-btn-cyan">
-                    <i class="fas fa-file-pdf"></i> Reporte
+                    <i class="fas fa-file-pdf"></i> Reporte Solicitud
                 </button>
             </div>
         </div>

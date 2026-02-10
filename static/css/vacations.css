@@ -589,10 +589,12 @@ th.sortable:hover .sort-icon {
 .stat-card-footer {
     width: 100%;
     margin-top: auto;
+    display: flex;
+    gap: 10px;
 }
 
 .stat-card-footer .btn-action {
-    width: 100%;
+    flex: 1;
 }
 
 /* =========================================

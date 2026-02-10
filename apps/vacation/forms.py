@@ -91,3 +91,96 @@ class FirstVacationForm(forms.ModelForm):
         if not period:
             raise forms.ValidationError('Este campo es obligatorio.')
         return period
+
+class VacationLiquidationForm(forms.Form):
+    """
+    Formulario para liquidar vacaciones.
+    """
+    start_date = forms.DateField(
+        label='Fecha Desde',
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    end_date = forms.DateField(
+        label='Fecha Hasta',
+        required=True,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    # Campos para autoridades
+    nominating_authority = forms.ModelChoiceField(
+        label='Autoridad Nominadora',
+        queryset=None,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    human_resources_responsible = forms.ModelChoiceField(
+        label='Responsable de Talento Humano',
+        queryset=None,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    registration_responsible = forms.ModelChoiceField(
+        label='Responsable de Registro',
+        queryset=None,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    review_responsible = forms.ModelChoiceField(
+        label='Responsable de Revisar',
+        queryset=None,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    elaborated_by = forms.ModelChoiceField(
+        label='Elaborado por',
+        queryset=None,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.available_days = kwargs.pop('available_days', 0)
+        super().__init__(*args, **kwargs)
+        
+        # Cargar autoridades activas
+        from core.models import Authorities
+        active_authorities = Authorities.objects.filter(status=True).order_by('name')
+        self.fields['nominating_authority'].queryset = active_authorities
+        self.fields['human_resources_responsible'].queryset = active_authorities
+        self.fields['registration_responsible'].queryset = active_authorities
+        self.fields['review_responsible'].queryset = active_authorities
+        self.fields['elaborated_by'].queryset = active_authorities
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        
+        if start_date and end_date:
+            if end_date < start_date:
+                raise forms.ValidationError('La fecha hasta debe ser posterior a la fecha desde.')
+            
+            # Calcular días solicitados (incluye ambos días)
+            delta = end_date - start_date
+            days_requested = delta.days + 1
+            
+            if days_requested > self.available_days:
+                raise forms.ValidationError(
+                    f'No puede solicitar {days_requested} días. Saldo disponible: {self.available_days} días.'
+                )
+            
+            cleaned_data['days_requested'] = days_requested
+        
+        return cleaned_data

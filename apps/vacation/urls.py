@@ -17,6 +17,10 @@ urlpatterns = [
     path('requests/approve-permit/<int:permit_id>/', views.ApprovePermitView.as_view(), name='approve_permit'),
     path('requests/reject-permit/<int:permit_id>/', views.RejectPermitView.as_view(), name='reject_permit'),
     path('requests/cancel-permit/<int:permit_id>/', views.CancelPermitView.as_view(), name='cancel_permit'),
+    path('requests/create-liquidation/<int:employee_id>/', views.CreateVacationLiquidationView.as_view(), name='create_liquidation'),
+    path('requests/liquidation-list/<int:employee_id>/', views.EmployeeLiquidationListView.as_view(), name='liquidation_list'),
+    path('requests/register-liquidation/<int:action_id>/', views.RegisterLiquidationView.as_view(), name='register_liquidation'),
+    path('requests/edit-liquidation/<int:action_id>/', views.EditLiquidationView.as_view(), name='edit_liquidation'),
 
     # Periodos
     path('periods/', views.PeriodListView.as_view(), name='period_list'),

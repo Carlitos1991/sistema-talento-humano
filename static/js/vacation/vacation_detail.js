@@ -384,6 +384,7 @@ function openPermitListModal(employeeId) {
             modal.innerHTML = html;
             modal.classList.remove('hidden');
             attachPermitListCloseEvents();
+            attachPermitSearchEvents(employeeId);
         })
         .catch(error => {
             console.error('Error al cargar el modal:', error);
@@ -394,6 +395,60 @@ function openPermitListModal(employeeId) {
                 confirmButtonColor: '#3085d6'
             });
         });
+}
+
+// Cargar página específica de permisos
+function loadPermitPage(pageNumber) {
+    const modal = document.getElementById('modalPermitList');
+    const searchInput = document.getElementById('permitSearchInput');
+    const searchQuery = searchInput ? searchInput.value : '';
+    const employeeId = modal.getAttribute('data-employee-id');
+    
+    let url = `/vacation/requests/permit-list/${employeeId}/?page=${pageNumber}`;
+    if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+    
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            modal.innerHTML = html;
+            attachPermitListCloseEvents();
+            attachPermitSearchEvents(employeeId);
+        })
+        .catch(error => {
+            console.error('Error al cargar la página:', error);
+        });
+}
+
+// Limpiar búsqueda de permisos
+function clearPermitSearch() {
+    const searchInput = document.getElementById('permitSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        const modal = document.getElementById('modalPermitList');
+        const employeeId = modal.getAttribute('data-employee-id');
+        loadPermitPage(1);
+    }
+}
+
+// Adjuntar eventos de búsqueda
+function attachPermitSearchEvents(employeeId) {
+    const modal = document.getElementById('modalPermitList');
+    modal.setAttribute('data-employee-id', employeeId);
+    
+    const searchInput = document.getElementById('permitSearchInput');
+    
+    if (searchInput) {
+        // Búsqueda en tiempo real con debounce
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadPermitPage(1);
+            }, 500);
+        });
+    }
 }
 
 // Cerrar modal de listado de permisos
@@ -610,3 +665,522 @@ function cancelPermit(permitId) {
 }
 
 
+// ============================================================================
+// FUNCIONES PARA LIQUIDACIÓN DE VACACIONES
+// ============================================================================
+
+/**
+ * Abrir modal para crear liquidación de vacaciones
+ */
+function openLiquidationModal(employeeId) {
+    fetch(`/vacation/requests/create-liquidation/${employeeId}/`)
+        .then(response => response.text())
+        .then(html => {
+            // Crear contenedor para el modal si no existe
+            let modalContainer = document.getElementById('liquidationModalContainer');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'liquidationModalContainer';
+                document.body.appendChild(modalContainer);
+            }
+            
+            // Insertar HTML del modal
+            modalContainer.innerHTML = html;
+            
+            // Adjuntar eventos al formulario
+            attachLiquidationFormSubmit(employeeId);
+            
+            // Adjuntar eventos a los campos de fecha para calcular días
+            attachDateChangeListeners();
+            
+            // Mostrar modal
+            const overlay = document.getElementById('liquidationModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el formulario de liquidación',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+}
+
+/**
+ * Cerrar modal de liquidación
+ */
+function closeLiquidationModal() {
+    const overlay = document.getElementById('liquidationModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.remove();
+    }
+}
+
+/**
+ * Adjuntar eventos a los campos de fecha para calcular días automáticamente
+ */
+function attachDateChangeListeners() {
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    const daysCounter = document.getElementById('daysCounter');
+    const calculatedDaysSpan = document.getElementById('calculatedDays');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    const calculateDays = () => {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            if (end >= start) {
+                // Calcular días: diferencia + 1 (inclusivo)
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                calculatedDaysSpan.textContent = diffDays;
+                daysCounter.style.display = 'flex';
+            } else {
+                daysCounter.style.display = 'none';
+            }
+        } else {
+            daysCounter.style.display = 'none';
+        }
+    };
+    
+    startDateInput.addEventListener('change', calculateDays);
+    endDateInput.addEventListener('change', calculateDays);
+}
+
+/**
+ * Adjuntar evento submit al formulario de liquidación
+ */
+function attachLiquidationFormSubmit(employeeId) {
+    const form = document.getElementById('liquidationForm');
+    if (!form) return;
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Mostrar loading
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Creando solicitud de liquidación',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/vacation/requests/create-liquidation/${employeeId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: data.message,
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    closeLiquidationModal();
+                    window.location.reload();
+                });
+            } else {
+                // Mostrar errores del formulario
+                if (data.message) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+                
+                // Mostrar errores específicos de campos
+                if (data.errors) {
+                    const errors = JSON.parse(data.errors);
+                    for (const field in errors) {
+                        const errorDiv = document.getElementById(`${field}_error`);
+                        if (errorDiv) {
+                            errorDiv.textContent = errors[field][0].message;
+                            errorDiv.style.display = 'block';
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al crear la solicitud de liquidación',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+    });
+}
+
+
+// ============================================================================
+// FUNCIONES PARA LISTADO DE LIQUIDACIONES
+// ============================================================================
+
+/**
+ * Abrir modal de listado de liquidaciones
+ */
+function openLiquidationListModal(employeeId) {
+    fetch(`/vacation/requests/liquidation-list/${employeeId}/`)
+        .then(response => response.text())
+        .then(html => {
+            let modalContainer = document.getElementById('liquidationListModalContainer');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'liquidationListModalContainer';
+                document.body.appendChild(modalContainer);
+            }
+            
+            modalContainer.innerHTML = html;
+            
+            // Adjuntar eventos de búsqueda
+            attachLiquidationSearchEvents(employeeId);
+            
+            const overlay = document.getElementById('liquidationListModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el listado de liquidaciones',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+}
+
+/**
+ * Cerrar modal de listado de liquidaciones
+ */
+function closeLiquidationListModal() {
+    const overlay = document.getElementById('liquidationListModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.remove();
+    }
+}
+
+/**
+ * Cargar página de liquidaciones
+ */
+function loadLiquidationPage(pageNumber) {
+    const employeeId = document.getElementById('liquidationSearchInput').getAttribute('data-employee-id');
+    const searchQuery = document.getElementById('liquidationSearchInput').value;
+    
+    let url = `/vacation/requests/liquidation-list/${employeeId}/?page=${pageNumber}`;
+    if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+    
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.querySelector('.modal-body').innerHTML;
+            
+            const modalBody = document.querySelector('#liquidationListModalOverlay .modal-body');
+            if (modalBody) {
+                modalBody.innerHTML = newContent;
+                attachLiquidationSearchEvents(employeeId);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+/**
+ * Adjuntar eventos de búsqueda para liquidaciones
+ */
+function attachLiquidationSearchEvents(employeeId) {
+    const searchInput = document.getElementById('liquidationSearchInput');
+    if (!searchInput) return;
+    
+    searchInput.setAttribute('data-employee-id', employeeId);
+    
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            loadLiquidationPage(1);
+        }, 500);
+    });
+}
+
+/**
+ * Registrar liquidación
+ */
+function registerLiquidation(actionId) {
+    Swal.fire({
+        title: '¿Registrar liquidación?',
+        text: 'Esta acción creará el historial de vacaciones y descontará del balance',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, registrar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Procesando...',
+                text: 'Registrando liquidación',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch(`/vacation/requests/register-liquidation/${actionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Registrada!',
+                        text: data.message,
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al registrar la liquidación',
+                    confirmButtonColor: '#dc3545'
+                });
+            });
+        }
+    });
+}
+
+/**
+ * Editar liquidación
+ */
+function editLiquidation(actionId) {
+    fetch(`/vacation/requests/edit-liquidation/${actionId}/`)
+        .then(response => response.text())
+        .then(html => {
+            let modalContainer = document.getElementById('liquidationEditModalContainer');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'liquidationEditModalContainer';
+                document.body.appendChild(modalContainer);
+            }
+            
+            modalContainer.innerHTML = html;
+            
+            // Adjuntar eventos
+            attachLiquidationEditFormSubmit(actionId);
+            attachDateChangeListenersEdit();
+            
+            // Calcular días iniciales
+            calculateDaysEdit();
+            
+            const overlay = document.getElementById('liquidationEditModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el formulario de edición',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+}
+
+/**
+ * Cerrar modal de edición
+ */
+function closeLiquidationEditModal() {
+    const overlay = document.getElementById('liquidationEditModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.remove();
+    }
+}
+
+/**
+ * Adjuntar eventos de cambio de fecha para edición
+ */
+function attachDateChangeListenersEdit() {
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    startDateInput.addEventListener('change', calculateDaysEdit);
+    endDateInput.addEventListener('change', calculateDaysEdit);
+}
+
+/**
+ * Calcular días para edición
+ */
+function calculateDaysEdit() {
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    const daysCounter = document.getElementById('daysCounterEdit');
+    const calculatedDaysSpan = document.getElementById('calculatedDaysEdit');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    const startDate = startDateInput.value;
+    const endDate = endDateInput.value;
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (end >= start) {
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            
+            calculatedDaysSpan.textContent = diffDays;
+            daysCounter.style.display = 'flex';
+        } else {
+            daysCounter.style.display = 'none';
+        }
+    } else {
+        daysCounter.style.display = 'none';
+    }
+}
+
+/**
+ * Adjuntar submit al formulario de edición
+ */
+function attachLiquidationEditFormSubmit(actionId) {
+    const form = document.getElementById('liquidationEditForm');
+    if (!form) return;
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Guardando cambios',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/vacation/requests/edit-liquidation/${actionId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: data.message,
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    closeLiquidationEditModal();
+                    window.location.reload();
+                });
+            } else {
+                if (data.message) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+                
+                if (data.errors) {
+                    const errors = JSON.parse(data.errors);
+                    for (const field in errors) {
+                        const errorDiv = document.getElementById(`${field}_error`);
+                        if (errorDiv) {
+                            errorDiv.textContent = errors[field][0].message;
+                            errorDiv.style.display = 'block';
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al guardar los cambios',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+    });
+}
+
+/**
+ * Imprimir liquidación (por implementar)
+ */
+function printLiquidation(actionId) {
+    Swal.fire({
+        icon: 'info',
+        title: 'Función en desarrollo',
+        text: 'La impresión de liquidaciones estará disponible próximamente',
+        confirmButtonColor: '#2196F3'
+    });
+}
