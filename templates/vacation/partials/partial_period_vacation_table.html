@@ -1,0 +1,80 @@
+<!-- apps/vacation/templates/vacation/partials/partial_period_vacation_table.html -->
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th>#</th>
+            <th><i class="far fa-calendar header-icon"></i> Nombre Periodo</th>
+            <th><i class="fa-solid fa-toggle-on header-icon"></i> Estado</th>
+            <th><i class="fas fa-gears header-icon"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        <!-- OJO: En la vista definiste context_object_name = 'periods' -->
+        {% for period in periods %}
+            <tr class="row-hover">
+                <td>{{ forloop.counter }}</td>
+
+                <!-- Nombre del Periodo -->
+                <td>
+                    <div class="period-info" style="font-weight: bold; color: #333;">
+                        {{ period.name }}
+                    </div>
+                </td>
+
+                <!-- Estado -->
+                <td class="text-center">
+                    {% if period.is_active %}
+                        <span class="status-badge active"
+                              style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                            ACTIVO
+                        </span>
+                    {% else %}
+                        <span class="status-badge inactive"
+                              style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                            CERRADO
+                        </span>
+                    {% endif %}
+                </td>
+
+                <!-- Acciones -->
+                <td>
+                    <div class="actions-wrapper">
+                         <!-- Aquí podrías poner editar en el futuro -->
+                        <button class="btn-list-action" title="Editar (Próximamente)">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">
+                    <div class="empty-state-container" style="text-align: center; padding: 20px;">
+                        <i class="fas fa-calendar-times empty-state-icon" style="font-size: 2rem; color: #ccc;"></i>
+                        <p class="empty-state-text">No existen periodos vacacionales creados.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- PAGINACIÓN (Simplificada para CBV ListView) -->
+{% if is_paginated %}
+<div class="pagination-container">
+    <span class="pagination-info">
+        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </span>
+    <div class="pagination-list">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

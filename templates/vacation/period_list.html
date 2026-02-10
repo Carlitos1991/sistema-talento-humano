@@ -1,10 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Periodos de Vacaciones | SIGETH{% endblock %}
 
-</body>
-</html>
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div id="popupPeriod" class="modal fade" role="dialog"></div>
+    <div id="periodApp">
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1>Gestión de Periodos</h1>
+                <p>Gestión de periodos anuales de vacaciones</p>
+            </div>
+            {#            {% if perms.person.add_person %}#}
+            <button type="button" class="btn btn-create" onclick="open_modal('{% url 'vacation:period_create' %}')">
+                <i class="fas fa-plus"></i> Nuevo Periodo
+            </button>
+            {#            {% endif %}#}
+        </div>
+
+        <!-- 2. Contenedor principal Tabla -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <button type="button" class="btn btn-search" onclick="toggleSearchModal(true)">
+                        <i class="fas fa-search"></i> Búsqueda Avanzada
+                    </button>
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="input-field"
+                               placeholder="Buscar por periodo">
+                    </div>
+                </div>
+
+                <div id="tableContainer">
+                    {% include 'vacation/partials/partial_period_vacation_table.html' %}
+                </div>
+            </div>
+        </div>
+        {% include 'vacation/modals/modal_vacation_form.html' %}
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/vacation/vacation.js' %}"></script>
+{% endblock %}
