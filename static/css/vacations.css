@@ -1211,3 +1211,63 @@ body.modal-open {
 .text-danger {
     color: #dc3545;
 }
+
+
+/* ===========================================
+   ESTILOS PARA TABLAS DE HISTORIAL
+   =========================================== */
+.table-responsive {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: white;
+}
+
+.data-table thead th {
+    padding: 1rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid #e8ecef;
+    transition: background-color 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.data-table tbody td {
+    padding: 0.85rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.modal-footer-centered {
+    padding: 1.25rem 1.5rem;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    border-top: 1px solid #e9ecef;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}

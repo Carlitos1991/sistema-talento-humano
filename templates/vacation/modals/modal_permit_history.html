@@ -1,0 +1,81 @@
+{% load static %}
+
+<div class="modal-overlay" id="permitHistoryModalOverlay" onclick="closePermitHistoryModal()">
+    <div class="modal-container-xlarge shadow-card" onclick="event.stopPropagation()">
+        <div class="modal-content">
+
+            <!-- HEADER -->
+            <div class="modal-header-refined">
+                <div class="header-title-group">
+                    <div class="header-icon-circle"
+                         style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h2 class="header-title-text">Historial de Permisos - {{ period.name }}</h2>
+                </div>
+
+                <button type="button" class="btn-close-modal" onclick="closePermitHistoryModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Información -->
+            <div class="info-card-cyan">
+                <h3 class="info-title"><i class="fas fa-info-circle"></i> Información:</h3>
+                <ul class="info-list-compact">
+                    <li>Muestra todos los permisos con cargo a vacaciones del periodo seleccionado</li>
+                    <li>Se visualizan los días, horas y minutos descontados</li>
+                </ul>
+            </div>
+
+            <!-- Tabla de historial -->
+            {% if history_records %}
+                <div class="table-responsive" style="margin: 1.5rem 0;">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Fecha Inicio</th>
+                            <th>Hora Inicio</th>
+                            <th>Días</th>
+                            <th>Horas</th>
+                            <th>Minutos</th>
+                            <th>Total Descuento</th>
+                            <th>Adicional</th>
+                            <th>Total con Adicional</th>
+                            <th>Periodo</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for record in history_records %}
+                            <tr>
+                                <td>{{ record.permit_request.start_date|date:"d/m/Y" }}</td>
+                                <td>{% if record.permit_request.start_time %}
+                                    {{ record.permit_request.start_time|time:"H:i" }}{% else %}--:--{% endif %}</td>
+                                <td>{{ record.days_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.hours_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.minutes_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.value_discount|default:"0"|floatformat:4 }}</td>
+                                <td>{{ record.proportional_discount|default:"0"|floatformat:4 }}</td>
+                                <td><strong>{{ record.total_with_additional|floatformat:4 }}</strong></td>
+                                <td>{{ period.name }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-message-container">
+                    <i class="fas fa-inbox empty-message-icon"></i>
+                    <p class="empty-message-text">No hay permisos con cargo a vacaciones en este periodo</p>
+                </div>
+            {% endif %}
+
+            <!-- FOOTER -->
+            <div class="modal-footer-centered">
+                <button type="button" class="btn-cancel" onclick="closePermitHistoryModal()">
+                    <i class="fas fa-times-circle"></i> CERRAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

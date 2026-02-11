@@ -1,0 +1,81 @@
+{% load static %}
+
+<div class="modal-overlay" id="permitReportModalOverlay" onclick="closePermitReportModal()">
+    <div class="modal-container shadow-card" onclick="event.stopPropagation()">
+        <div class="modal-content">
+
+            <!-- HEADER -->
+            <div class="modal-header-refined">
+                <div class="header-title-group">
+                    <div class="header-icon-circle" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h2 class="header-title-text">Reporte de Permisos con Cargo a Vacaciones</h2>
+                </div>
+
+                <button type="button" class="btn-close-modal" onclick="closePermitReportModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Información del Empleado -->
+            <div class="info-card-blue">
+                <div class="info-row">
+                    <div class="info-item">
+                        <strong><i class="fas fa-user"></i> Empleado:</strong> {{ employee.person.full_name }}
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-id-card"></i> Identificación:</strong> {{ employee.person.document_number }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información -->
+            <div class="info-card-cyan">
+                <h3 class="info-title"><i class="fas fa-info-circle"></i> Información:</h3>
+                <ul class="info-list-compact">
+                    <li>Seleccione el rango de fechas para generar el reporte</li>
+                    <li>El reporte incluirá todos los permisos con cargo a vacaciones aprobados</li>
+                    <li>Se generará un resumen con totales de días, horas y minutos</li>
+                </ul>
+            </div>
+
+            <!-- Formulario de fechas -->
+            <form id="permitReportForm" method="GET" action="{% url 'vacation:permit_report_pdf' employee.id %}" target="_blank">
+                <div class="form-grid-2">
+                    <div class="form-group-modern">
+                        <label class="control-label">
+                            <i class="fas fa-calendar-alt"></i> Fecha Desde
+                        </label>
+                        <input type="date" 
+                               name="start_date" 
+                               id="reportStartDate" 
+                               class="form-control-modern" 
+                               required>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label class="control-label">
+                            <i class="fas fa-calendar-alt"></i> Fecha Hasta
+                        </label>
+                        <input type="date" 
+                               name="end_date" 
+                               id="reportEndDate" 
+                               class="form-control-modern" 
+                               required>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer-actions">
+                    <button type="button" class="btn-cancel js-close-modal-day-permit" onclick="closePermitReportModal()">
+                        <i class="fas fa-times-circle"></i> CANCELAR
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-file-pdf"></i> CREAR REPORTE
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

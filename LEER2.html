@@ -1,56 +1,312 @@
-<!-- templates/function_manual/modals/modal_competency_form.html -->
-<div class="modal" :class="{ 'is-active': showModal }" v-if="showModal">
-    <!-- El overlay para cerrar al hacer click fuera -->
-    <div class="modal-overlay" @click="closeModal"></div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 15px;
+        }
+        .logo {
+            max-width: 150px;
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            color: #1e40af;
+            font-size: 18px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .header h2 {
+            color: #1e293b;
+            font-size: 14px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .header .doc-number {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 5px;
+        }
 
-    <div class="modal-container">
-        <div class="modal-header">
-            <h3>[[ isEdit ? 'Editar Competencia' : 'Nueva Competencia' ]]</h3>
-            <button class="btn-close-modal" @click="closeModal">&times;</button>
-        </div>
+        .section-title {
+            background-color: #e0e7ff;
+            color: #1e40af;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-left: 4px solid #1e40af;
+        }
 
-        <form @submit.prevent="saveCompetency">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Nombre de la Competencia</label>
-                    <input type="text" v-model="formData.name" required class="form-control"
-                           placeholder="Ej: Liderazgo Estratégico">
-                </div>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
 
-                <div class="grid-2-cols mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Tipo</label>
-                        <select v-model="formData.type" class="form-control">
-                            <option value="TECHNICAL">Técnica</option>
-                            <option value="BEHAVIORAL">Conductual</option>
-                            <option value="TRANSVERSAL">Transversal</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Nivel Sugerido</label>
-                        <select v-model="formData.suggested_level" class="form-control">
-                            <option value="">Seleccione nivel...</option>
-                            <option v-for="lvl in complexityLevels" :key="lvl.id" :value="lvl.id">
-                                [[ lvl.name ]]
-                            </option>
-                        </select>
-                    </div>
-                </div>
+        .info-table td {
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+        }
+        .info-table td.label {
+            background-color: #e0e7ff;
+            font-weight: bold;
+            width: 35%;
+        }
 
-                <div class="form-group mt-3">
-                    <label class="form-label">Definición / Descripción</label>
-                    <textarea v-model="formData.definition" rows="4" class="form-control"
-                              placeholder="Describa la competencia..."></textarea>
-                </div>
-            </div>
+        .liquidation-table td {
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+        }
+        .liquidation-table td.label {
+            background-color: #fef3c7;
+            font-weight: bold;
+            width: 35%;
+        }
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn btn-save" :disabled="loading">
-                    <span v-if="loading"><i class="fa-solid fa-spinner fa-spin"></i> Guardando...</span>
-                    <span v-else>Guardar Cambios</span>
-                </button>
-            </div>
-        </form>
+        .history-table td {
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+        }
+        .history-table td.label {
+            background-color: #e0f2fe;
+            font-weight: bold;
+            width: 35%;
+        }
+
+        .motivation-box {
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            background-color: #f8fafc;
+            margin-bottom: 15px;
+            text-align: justify;
+            min-height: 60px;
+        }
+
+        .signatures-table {
+            margin-top: 30px;
+        }
+        .signatures-table td {
+            padding: 15px 10px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+            background-color: #f8fafc;
+            vertical-align: middle;
+        }
+        .signature-name {
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 3px;
+        }
+        .signature-charge {
+            color: #64748b;
+            font-size: 10px;
+        }
+        .signature-date {
+            color: #059669;
+            font-size: 10px;
+            margin-top: 3px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #cbd5e1;
+            color: #64748b;
+            font-size: 9px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if logo_path %}
+        <img src="{{ logo_path }}" class="logo" alt="Logo">
+        {% endif %}
+        <h1>ACCIÓN DE PERSONAL</h1>
+        <h2>LIQUIDACIÓN DE VACACIONES</h2>
+        <div class="doc-number">No. {{ action.number }}</div>
     </div>
-</div>
+
+    <!-- Información del Empleado -->
+    <div class="section-title">DATOS DEL EMPLEADO</div>
+    <table class="info-table">
+        <tr>
+            <td class="label">APELLIDOS Y NOMBRES:</td>
+            <td>{{ employee.person.full_name }}</td>
+        </tr>
+        <tr>
+            <td class="label">CÉDULA DE IDENTIDAD:</td>
+            <td>{{ employee.person.document_number }}</td>
+        </tr>
+        <tr>
+            <td class="label">UNIDAD ADMINISTRATIVA:</td>
+            <td>{{ employee.area.name|default:"N/A" }}</td>
+        </tr>
+    </table>
+
+    <!-- Detalles de la Liquidación -->
+    <div class="section-title">DETALLES DE LA LIQUIDACIÓN</div>
+    <table class="liquidation-table">
+        <tr>
+            <td class="label">PERÍODO:</td>
+            <td>{{ vacation_request.balance_used.period.name|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td class="label">FECHA DESDE:</td>
+            <td>{{ vacation_request.start_date|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">FECHA HASTA:</td>
+            <td>{{ vacation_request.end_date|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">DÍAS LIQUIDADOS:</td>
+            <td><strong>{{ vacation_request.days_quantity }} días</strong></td>
+        </tr>
+        <tr>
+            <td class="label">FECHA DE EMISIÓN:</td>
+            <td>{{ action.date_issue|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">RIGE A PARTIR DE:</td>
+            <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">ESTADO:</td>
+            <td>
+                {% if action.is_registered %}
+                    <span class="badge badge-success">✓ REGISTRADA</span>
+                {% else %}
+                    <span class="badge">PENDIENTE</span>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Motivación -->
+    {% if action.explanation %}
+    <div class="section-title">MOTIVACIÓN</div>
+    <div class="motivation-box">
+        {{ action.explanation }}
+    </div>
+    {% endif %}
+
+    <!-- Historial de Descuentos -->
+    {% if history %}
+    <div class="section-title">DESCUENTO APLICADO</div>
+    <table class="history-table">
+        <tr>
+            <td class="label">PERÍODO AFECTADO:</td>
+            <td>{{ history.vacation_balance.period.name }}</td>
+        </tr>
+        <tr>
+            <td class="label">DÍAS DESCONTADOS:</td>
+            <td>{{ history.days_discount|floatformat:2|default:"0.00" }}</td>
+        </tr>
+        <tr>
+            <td class="label">VALOR BASE:</td>
+            <td>${{ history.value_discount|floatformat:4|default:"0.0000" }}</td>
+        </tr>
+        <tr>
+            <td class="label">DESCUENTO PROPORCIONAL (40%):</td>
+            <td>${{ history.proportional_discount|floatformat:4|default:"0.0000" }}</td>
+        </tr>
+        <tr>
+            <td class="label">TOTAL DESCONTADO:</td>
+            <td><strong>${{ total_discount|floatformat:4 }}</strong></td>
+        </tr>
+    </table>
+    {% endif %}
+
+    <!-- Firmas y Responsabilidades -->
+    <div class="section-title">FIRMAS Y RESPONSABILIDADES</div>
+    <table class="signatures-table">
+        {% if action.elaboration %}
+        <tr>
+            <td>
+                <div class="signature-name">ELABORADO POR:</div>
+                <div>{{ action.elaboration.name }}</div>
+                <div class="signature-charge">{{ action.elaboration.charge }}</div>
+            </td>
+        </tr>
+        {% endif %}
+
+        {% if action.reviewer %}
+        <tr>
+            <td>
+                <div class="signature-name">REVISADO POR:</div>
+                <div>{{ action.reviewer.name }}</div>
+                <div class="signature-charge">{{ action.reviewer.charge }}</div>
+            </td>
+        </tr>
+        {% endif %}
+
+        {% if action.authority_1 %}
+        <tr>
+            <td>
+                <div class="signature-name">APROBADO POR:</div>
+                <div>{{ action.authority_1.name }}</div>
+                <div class="signature-charge">{{ action.authority_1.charge }}</div>
+            </td>
+        </tr>
+        {% endif %}
+
+        {% if action.authority_2 %}
+        <tr>
+            <td>
+                <div class="signature-name">SEGUNDA AUTORIDAD:</div>
+                <div>{{ action.authority_2.name }}</div>
+                <div class="signature-charge">{{ action.authority_2.charge }}</div>
+            </td>
+        </tr>
+        {% endif %}
+
+        {% if action.is_registered and action.register %}
+        <tr>
+            <td>
+                <div class="signature-name">REGISTRADO POR:</div>
+                <div>{{ action.register.name }}</div>
+                <div class="signature-charge">{{ action.register.charge }}</div>
+                {% if action.date_registered %}
+                <div class="signature-date">Fecha: {{ action.date_registered|date:"d/m/Y" }}</div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <!-- Footer -->
+    <div class="footer">
+        Documento generado el {{ today|date:"d/m/Y" }} a las {{ today|date:"H:i" }}
+    </div>
+</body>
+</html>

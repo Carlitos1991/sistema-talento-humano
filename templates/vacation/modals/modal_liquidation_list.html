@@ -7,7 +7,8 @@
             <!-- HEADER -->
             <div class="modal-header-refined">
                 <div class="header-title-group">
-                    <div class="header-icon-circle" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <div class="header-icon-circle"
+                         style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                         <i class="fas fa-list-alt"></i>
                     </div>
                     <h2 class="header-title-text">Liquidaciones de Vacaciones</h2>
@@ -43,9 +44,9 @@
 
             <!-- Tabla de liquidaciones -->
             {% if actions %}
-            <div class="table-responsive">
-                <table class="table-container" id="liquidation-table">
-                    <thead>
+                <div class="table-responsive">
+                    <table class="table-container" id="liquidation-table">
+                        <thead>
                         <tr>
                             <th>Número</th>
                             <th>Fecha Emisión</th>
@@ -54,90 +55,97 @@
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
-                    </thead>
-                    <tbody>
+                        </thead>
+                        <tbody>
                         {% for action in actions %}
-                        <tr>
-                            <td><strong>{{ action.number }}</strong></td>
-                            <td>{{ action.date_issue|date:"d/m/Y" }}</td>
-                            <td>{{ action.date_effective|date:"d/m/Y" }}</td>
-                            <td>
-                                {% with vacation_request=action.vacation_request %}
-                                    <span class="badge badge-info">{{ vacation_request.days_quantity }} días</span>
-                                {% endwith %}
-                            </td>
-                            <td>
-                                {% if action.is_registered %}
-                                    <span class="badge badge-success">
+                            <tr>
+                                <td><strong>{{ action.number }}</strong></td>
+                                <td>{{ action.date_issue|date:"d/m/Y" }}</td>
+                                <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% with vacation_request=action.vacation_request %}
+                                        <span class="badge badge-info">{{ vacation_request.days_quantity }} días</span>
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% if action.is_registered %}
+                                        <span class="badge badge-success">
                                         <i class="fas fa-check-circle"></i> Registrada
                                     </span>
-                                {% else %}
-                                    <span class="badge badge-warning">
+                                    {% else %}
+                                        <span class="badge badge-warning">
                                         <i class="fas fa-clock"></i> Pendiente
                                     </span>
-                                {% endif %}
-                            </td>
-                            <td class="action-buttons">
-                                {% if not action.is_registered %}
-                                    <button class="btn-icon btn-edit" 
-                                            onclick="editLiquidation({{ action.id }})"
-                                            title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn-icon btn-success" 
-                                            onclick="registerLiquidation({{ action.id }})"
-                                            title="Registrar">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                {% else %}
-                                    <button class="btn-icon btn-primary" 
-                                            onclick="printLiquidation({{ action.id }})"
-                                            title="Imprimir">
-                                        <i class="fas fa-print"></i>
-                                    </button>
-                                {% endif %}
-                            </td>
-                        </tr>
+                                    {% endif %}
+                                </td>
+                                <td class="action-buttons">
+                                    {% if not action.is_registered %}
+                                        <button class="btn-views-action"
+                                                onclick="editLiquidation({{ action.id }})"
+                                                title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-create-action js-generate-permit"
+                                                onclick="registerLiquidation({{ action.id }})"
+                                                title="Registrar">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn-list-action js-view-history"
+                                                onclick="printLiquidation({{ action.id }})"
+                                                title="Imprimir">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    {% else %}
+                                        <button class="btn-list-action js-view-history"
+                                                onclick="printLiquidation({{ action.id }})"
+                                                title="Imprimir">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Paginación -->
-            {% if actions.has_other_pages %}
-            <div class="pagination-container">
-                <div class="pagination-info">
-                    Página {{ actions.number }} de {{ actions.paginator.num_pages }}
+                        </tbody>
+                    </table>
                 </div>
-                <ul class="pagination-list">
-                    {% if actions.has_previous %}
-                    <li>
-                        <a href="#" onclick="loadLiquidationPage({{ actions.previous_page_number }}); return false;">
-                            <i class="fas fa-chevron-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <li class="active">
-                        <span>{{ actions.number }}</span>
-                    </li>
-                    
-                    {% if actions.has_next %}
-                    <li>
-                        <a href="#" onclick="loadLiquidationPage({{ actions.next_page_number }}); return false;">
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
+
+                <!-- Paginación -->
+                {% if actions.has_other_pages %}
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            Página {{ actions.number }} de {{ actions.paginator.num_pages }}
+                        </div>
+                        <ul class="pagination-list">
+                            {% if actions.has_previous %}
+                                <li>
+                                    <a href="#"
+                                       onclick="loadLiquidationPage({{ actions.previous_page_number }}); return false;">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li class="active">
+                                <span>{{ actions.number }}</span>
+                            </li>
+
+                            {% if actions.has_next %}
+                                <li>
+                                    <a href="#"
+                                       onclick="loadLiquidationPage({{ actions.next_page_number }}); return false;">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
 
             {% else %}
-            <div class="empty-message-container">
-                <i class="fas fa-inbox empty-message-icon"></i>
-                <p class="empty-message-text">No hay liquidaciones de vacaciones registradas</p>
-            </div>
+                <div class="empty-message-container">
+                    <i class="fas fa-inbox empty-message-icon"></i>
+                    <p class="empty-message-text">No hay liquidaciones de vacaciones registradas</p>
+                </div>
             {% endif %}
         </div>
     </div>

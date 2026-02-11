@@ -11,6 +11,9 @@
 {% block content %}
     <!-- CSRF Token para JavaScript -->
     {% csrf_token %}
+    
+    <!-- Employee ID para JavaScript -->
+    <div data-employee-id="{{ employee.id }}" style="display: none;"></div>
 
     <!-- Banner Superior -->
     <div class="vacation-detail-banner">
@@ -103,11 +106,6 @@
                         title="Nueva Liquidación">
                     <i class="fa-solid fa-file-circle-plus"></i>
                 </button>
-                <button class="btn-action liquidation-icon-btn"
-                        onclick="openLiquidationListModal({{ employee.id }})"
-                        title="Solicitud de vacaciones">
-                    <i class="fa-solid fa-file-pdf"></i>
-                </button>
             </div>
             <div class="stat-card-footer stat-card-footer-margin">
                 <button class="btn-action btn-approve" onclick="openLiquidationListModal({{ employee.id }})">
@@ -125,8 +123,8 @@
                 <i class="fas fa-file-alt stat-card-icon stat-card-icon-cyan"></i>
             </div>
             <div class="stat-card-footer">
-                <button class="btn-action stat-btn-cyan">
-                    <i class="fas fa-file-pdf"></i> Reporte Solicitud
+                <button class="btn-action stat-btn-cyan" onclick="openPermitReportModal()">
+                    <i class="fas fa-file-pdf"></i> Reporte de permisos
                 </button>
             </div>
         </div>
@@ -173,7 +171,7 @@
                             <td>
                                 <div class="cell-with-button">
                                     <span>{{ balance.vacation_days|floatformat:2 }}</span>
-                                    <button class=" btn-action btn-ver-detalle">
+                                    <button class="btn-action btn-ver-detalle" onclick="openVacationHistoryModal({{ balance.id }})">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
@@ -181,7 +179,7 @@
                             <td>
                                 <div class="cell-with-button">
                                     <span>{{ balance.permit_days|floatformat:2 }}</span>
-                                    <button class="btn-action btn-ver-detalle">
+                                    <button class="btn-action btn-ver-detalle" onclick="openPermitHistoryModal({{ balance.id }})">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
@@ -285,6 +283,15 @@
 
     <!-- Modal para listado de permisos -->
     <div id="modalPermitList" class="modal-overlay hidden"></div>
+    
+    <!-- Contenedor para modal de historial de liquidaciones -->
+    <div id="vacationHistoryModalContainer"></div>
+    
+    <!-- Contenedor para modal de historial de permisos -->
+    <div id="permitHistoryModalContainer"></div>
+    
+    <!-- Modal para Reporte de Permisos -->
+    <div id="permitReportModalContainer"></div>
 {% endblock %}
 
 {% block extra_js %}

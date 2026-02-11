@@ -496,16 +496,6 @@ function approvePermit(permitId) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Mostrar loading
-            Swal.fire({
-                title: 'Procesando...',
-                text: 'Aprobando permiso',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
             // Llamar a la vista de aprobación
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             fetch(`/vacation/requests/approve-permit/${permitId}/`, {
@@ -785,16 +775,6 @@ function attachLiquidationFormSubmit(employeeId) {
     
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Mostrar loading
-        Swal.fire({
-            title: 'Procesando...',
-            text: 'Creando solicitud de liquidación',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
         
         const formData = new FormData(form);
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -1201,10 +1181,156 @@ function attachLiquidationEditFormSubmit(actionId) {
  * Imprimir liquidación (por implementar)
  */
 function printLiquidation(actionId) {
-    Swal.fire({
-        icon: 'info',
-        title: 'Función en desarrollo',
-        text: 'La impresión de liquidaciones estará disponible próximamente',
-        confirmButtonColor: '#2196F3'
-    });
+    // Abrir PDF en nueva ventana
+    const url = `/vacation/requests/liquidation-print-pdf/${actionId}/`;
+    window.open(url, '_blank');
+}
+
+
+/**
+ * Abrir modal de historial de liquidaciones de vacaciones
+ */
+function openVacationHistoryModal(balanceId) {
+    fetch(`/vacation/requests/vacation-history/${balanceId}/`)
+        .then(response => response.text())
+        .then(html => {
+            let modalContainer = document.getElementById('vacationHistoryModalContainer');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'vacationHistoryModalContainer';
+                document.body.appendChild(modalContainer);
+            }
+            
+            modalContainer.innerHTML = html;
+            
+            // Bloquear scroll del body
+            document.body.classList.add('modal-open');
+            
+            const overlay = document.getElementById('vacationHistoryModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el historial de liquidaciones',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+}
+
+/**
+ * Cerrar modal de historial de liquidaciones
+ */
+function closeVacationHistoryModal() {
+    const overlay = document.getElementById('vacationHistoryModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.remove();
+    }
+    document.body.classList.remove('modal-open');
+}
+
+/**
+ * Abrir modal de historial de permisos
+ */
+function openPermitHistoryModal(balanceId) {
+    fetch(`/vacation/requests/permit-history/${balanceId}/`)
+        .then(response => response.text())
+        .then(html => {
+            let modalContainer = document.getElementById('permitHistoryModalContainer');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'permitHistoryModalContainer';
+                document.body.appendChild(modalContainer);
+            }
+            
+            modalContainer.innerHTML = html;
+            
+            // Bloquear scroll del body
+            document.body.classList.add('modal-open');
+            
+            const overlay = document.getElementById('permitHistoryModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el historial de permisos',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+}
+
+/**
+ * Cerrar modal de historial de permisos
+ */
+function closePermitHistoryModal() {
+    const overlay = document.getElementById('permitHistoryModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.remove();
+    }
+    document.body.classList.remove('modal-open');
+}
+
+
+// ==========================================
+// REPORTE DE PERMISOS
+// ==========================================
+function openPermitReportModal() {
+    const employeeId = document.querySelector('[data-employee-id]').dataset.employeeId;
+    
+    fetch(`/vacation/requests/permit-report-modal/${employeeId}/`)
+        .then(response => response.text())
+        .then(html => {
+            const container = document.getElementById('permitReportModalContainer');
+            container.innerHTML = html;
+            
+            // Mostrar overlay
+            const overlay = document.getElementById('permitReportModalOverlay');
+            overlay.style.display = 'flex';
+            
+            // Bloquear scroll del fondo
+            document.body.classList.add('modal-open');
+            
+            // Configurar fechas por defecto (último año)
+            const today = new Date();
+            const lastYear = new Date();
+            lastYear.setFullYear(today.getFullYear() - 1);
+            
+            document.getElementById('reportEndDate').valueAsDate = today;
+            document.getElementById('reportStartDate').valueAsDate = lastYear;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al cargar el formulario de reporte'
+            });
+        });
+}
+
+function closePermitReportModal() {
+    const overlay = document.getElementById('permitReportModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // Restaurar scroll del fondo
+    document.body.classList.remove('modal-open');
+    
+    // Limpiar contenedor
+    const container = document.getElementById('permitReportModalContainer');
+    if (container) {
+        container.innerHTML = '';
+    }
 }
