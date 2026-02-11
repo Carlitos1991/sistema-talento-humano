@@ -45,22 +45,7 @@
                                    placeholder="Buscar por número, empleado, cédula o tipo">
                         {% endif %}
                     </div>
-                    <div class="filter-group">
-                        <select id="filter-status" class="input-field">
-                            <option value="">Todos los estados</option>
-                            <option value="REGISTERED">Registrada</option>
-                            <option value="ACTIVE">Activa</option>
-                            <option value="COMPLETED">Cumplida</option>
-                            <option value="CANCELED">Anulada</option>
-                        </select>
-                        <select id="filter-severity" class="input-field">
-                            <option value="">Todas las gravedades</option>
-                            <option value="MINOR">Leve</option>
-                            <option value="MODERATE">Moderada</option>
-                            <option value="SEVERE">Grave</option>
-                            <option value="VERY_SEVERE">Muy Grave</option>
-                        </select>
-                    </div>
+
                 </div>
 
                 <!-- Zona de recarga AJAX -->
@@ -97,6 +82,11 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal para detalles y edición -->
+    <div id="sanctionDetailModal" class="modal-overlay hidden">
+        <div id="modal-detail-content"></div>
     </div>
 {% endblock %}
 

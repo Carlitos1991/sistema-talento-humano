@@ -7,7 +7,7 @@
             <th style="width: 15%;">Tipo</th>
             <th style="width: 10%;">Gravedad</th>
             <th style="width: 12%;">Fecha Sanción</th>
-            <th style="width: 10%;">Estado</th>
+            <th style="width: 10%;">Registro</th>
             <th class="text-center actions" style="width: 13%;">Acciones</th>
         </tr>
         </thead>
@@ -24,33 +24,30 @@
                 <td>{{ sanction.employee.person.full_name }}</td>
                 <td>{{ sanction.sanction_type.name }}</td>
                 <td>
-                    {% if sanction.severity == 'MINOR' %}
-                        <span class="badge-code" style="background: #dbeafe; color: #1e40af;">Leve</span>
-                    {% elif sanction.severity == 'MODERATE' %}
-                        <span class="badge-code" style="background: #fef3c7; color: #92400e;">Moderada</span>
-                    {% elif sanction.severity == 'SEVERE' %}
-                        <span class="badge-code" style="background: #fed7aa; color: #9a3412;">Grave</span>
-                    {% elif sanction.severity == 'VERY_SEVERE' %}
-                        <span class="badge-code" style="background: #fecaca; color: #991b1b;">Muy Grave</span>
+                    {% if sanction.severity == 'VERBAL_WARNING' %}
+                        <span class="badge-code" style="background: #dbeafe; color: #1e40af;">AMONESTACIÓN VERBAL</span>
+                    {% elif sanction.severity == 'WRITTEN_WARNING' %}
+                        <span class="badge-code"
+                              style="background: #fef3c7; color: #92400e;">AMONESTACION ESCRITA</span>
+                    {% elif sanction.severity == 'PECUNIARY_WARNING' %}
+                        <span class="badge-code" style="background: #fed7aa; color: #9a3412;">SANCION PECUNIARIA</span>
+                    {% elif sanction.severity == 'ADMINISTRATIVE_SUMMARY' %}
+                        <span class="badge-code" style="background: #fecaca; color: #991b1b;">SUMARIO ADMINISTRATIVO</span>
                     {% endif %}
                 </td>
                 <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
                 <td class="text-center">
-                    {% if sanction.status == 'REGISTERED' %}
+                    {% if sanction.personnel_action.is_registered is True %}
                         <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Registrada</span>
-                    {% elif sanction.status == 'ACTIVE' %}
-                        <span class="status-badge active">Activa</span>
-                    {% elif sanction.status == 'COMPLETED' %}
-                        <span class="status-badge" style="background: #dcfce7; color: #166534;">Cumplida</span>
-                    {% elif sanction.status == 'CANCELED' %}
-                        <span class="status-badge inactive">Anulada</span>
+                    {% elif sanction.personnel_action.is_registered is False %}
+                        <span class="status-badge active">Sin registrar</span>
                     {% endif %}
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper">
                         <!-- Ver Detalle -->
                         {% if perms.sanctions.view_sanction %}
-                            <button class="btn-views-action js-view-detail"
+                            <button class="btn-icon btn-restore-action js-view-detail"
                                     data-url="{% url 'sanctions:sanction_detail' sanction.pk %}"
                                     title="Ver Detalle">
                                 <i class="fa-solid fa-eye"></i>
@@ -59,7 +56,7 @@
 
                         <!-- Editar (solo si no está registrada) -->
                         {% if perms.sanctions.change_sanction and sanction.personnel_action and not sanction.personnel_action.is_registered %}
-                            <button class="btn-edit-action js-edit-sanction"
+                            <button class="btn-icon btn-views-action js-edit-sanction"
                                     data-sanction-id="{{ sanction.pk }}"
                                     title="Editar Sanción">
                                 <i class="fa-solid fa-edit"></i>
@@ -68,7 +65,7 @@
 
                         <!-- Registrar (solo si no está registrada) -->
                         {% if perms.sanctions.change_sanction and sanction.personnel_action and not sanction.personnel_action.is_registered %}
-                            <button class="btn-confirm-action js-register-sanction"
+                            <button class="btn-icon btn-success-action js-register-sanction"
                                     data-sanction-id="{{ sanction.pk }}"
                                     title="Registrar Sanción">
                                 <i class="fa-solid fa-check-circle"></i>
@@ -77,7 +74,7 @@
 
                         <!-- Imprimir PDF -->
                         {% if perms.sanctions.view_sanction %}
-                            <button class="btn-print-action js-print-sanction"
+                            <button class="btn-icon btn-icon btn-icon btn-detail-action js-print-sanction"
                                     data-sanction-id="{{ sanction.pk }}"
                                     title="Imprimir PDF">
                                 <i class="fa-solid fa-print"></i>
