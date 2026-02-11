@@ -8,6 +8,7 @@ function openNewVacationModal(employeeId) {
         .then(html => {
             modal.innerHTML = html;
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open'); // Bloquear scroll
             attachNewVacationFormSubmit();
             attachCloseModalEvents();
         })
@@ -97,6 +98,7 @@ function attachCloseModalEvents() {
         btn.addEventListener('click', () => {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         });
     });
 
@@ -105,6 +107,7 @@ function attachCloseModalEvents() {
         if (e.target === modal) {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         }
     });
 }
@@ -146,6 +149,7 @@ function openHourPermitModal(employeeId) {
         .then(html => {
             modal.innerHTML = html;
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open'); // Bloquear scroll
             attachHourPermitFormSubmit();
             attachHourPermitCloseEvents();
         })
@@ -245,6 +249,7 @@ function attachHourPermitCloseEvents() {
         btn.addEventListener('click', () => {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         });
     });
 
@@ -253,6 +258,7 @@ function attachHourPermitCloseEvents() {
         if (e.target === modal) {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         }
     });
 }
@@ -267,6 +273,7 @@ function openDayPermitModal(employeeId) {
         .then(html => {
             modal.innerHTML = html;
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open'); // Bloquear scroll
             attachDayPermitFormSubmit();
             attachDayPermitCloseEvents();
         })
@@ -362,6 +369,7 @@ function attachDayPermitCloseEvents() {
         btn.addEventListener('click', () => {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         });
     });
 
@@ -369,6 +377,7 @@ function attachDayPermitCloseEvents() {
         if (e.target === modal) {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         }
     });
 }
@@ -383,6 +392,7 @@ function openPermitListModal(employeeId) {
         .then(html => {
             modal.innerHTML = html;
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open'); // Bloquear scroll
             attachPermitListCloseEvents();
             attachPermitSearchEvents(employeeId);
         })
@@ -460,6 +470,7 @@ function attachPermitListCloseEvents() {
         btn.addEventListener('click', () => {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         });
     });
 
@@ -467,6 +478,7 @@ function attachPermitListCloseEvents() {
         if (e.target === modal) {
             modal.classList.add('hidden');
             modal.innerHTML = '';
+            document.body.classList.remove('modal-open'); // Desbloquear scroll
         }
     });
 }
@@ -687,6 +699,9 @@ function openLiquidationModal(employeeId) {
             // Insertar HTML del modal
             modalContainer.innerHTML = html;
             
+            // Bloquear scroll del body
+            document.body.classList.add('modal-open');
+            
             // Adjuntar eventos al formulario
             attachLiquidationFormSubmit(employeeId);
             
@@ -719,6 +734,8 @@ function closeLiquidationModal() {
         overlay.style.display = 'none';
         overlay.remove();
     }
+    // Desbloquear scroll del body
+    document.body.classList.remove('modal-open');
 }
 
 /**
@@ -887,6 +904,8 @@ function closeLiquidationListModal() {
         overlay.style.display = 'none';
         overlay.remove();
     }
+    // Desbloquear scroll del body
+    document.body.classList.remove('modal-open');
 }
 
 /**
@@ -1018,6 +1037,9 @@ function editLiquidation(actionId) {
             
             modalContainer.innerHTML = html;
             
+            // Bloquear scroll del body
+            document.body.classList.add('modal-open');
+            
             // Adjuntar eventos
             attachLiquidationEditFormSubmit(actionId);
             attachDateChangeListenersEdit();
@@ -1050,6 +1072,8 @@ function closeLiquidationEditModal() {
         overlay.style.display = 'none';
         overlay.remove();
     }
+    // Desbloquear scroll del body
+    document.body.classList.remove('modal-open');
 }
 
 /**

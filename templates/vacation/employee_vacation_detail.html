@@ -11,7 +11,7 @@
 {% block content %}
     <!-- CSRF Token para JavaScript -->
     {% csrf_token %}
-    
+
     <!-- Banner Superior -->
     <div class="vacation-detail-banner">
         <div class="vacation-banner-left">
@@ -68,16 +68,18 @@
             <div class="stat-card-header">
                 <div class="stat-card-info">
                     <h3 class="stat-card-title-orange">PERMISO CON CARGO A VACACIONES</h3>
-                    <div class="permit-buttons-container">
-                        <button class="btn-action permit-icon-btn" onclick="openHourPermitModal({{ employee.id }})" title="Permisos por Horas">
-                            <i class="fas fa-clock"></i>
-                        </button>
-                        <button class="btn-action permit-icon-btn" onclick="openDayPermitModal({{ employee.id }})" title="Permisos por días">
-                            <i class="fas fa-calendar"></i>
-                        </button>
-                    </div>
                 </div>
                 <i class="fas fa-file-alt stat-card-icon stat-card-icon-orange"></i>
+            </div>
+            <div class="permit-buttons-container">
+                <button class="btn-action permit-icon-btn" onclick="openHourPermitModal({{ employee.id }})"
+                        title="Permisos por Horas">
+                    <i class="fas fa-clock"></i>
+                </button>
+                <button class="btn-action permit-icon-btn" onclick="openDayPermitModal({{ employee.id }})"
+                        title="Permisos por días">
+                    <i class="fas fa-calendar"></i>
+                </button>
             </div>
             <div class="stat-card-footer stat-card-footer-margin">
                 <button class="btn-action stat-btn-orange" onclick="openPermitListModal({{ employee.id }})">
@@ -91,14 +93,24 @@
             <div class="stat-card-header">
                 <div class="stat-card-info">
                     <h3 class="stat-card-title-green">LIQUIDACIÓN VACACIONES</h3>
+
                 </div>
                 <i class="fas fa-plane-departure stat-card-icon stat-card-icon-green"></i>
             </div>
-            <div class="stat-card-footer">
-                <button class="btn-action btn-success" onclick="openLiquidationModal({{ employee.id }})">
-                    <i class="fas fa-plus"></i> Nueva Liquidación
+            <div class="permit-buttons-container">
+                <button class="btn-action liquidation-icon-btn"
+                        onclick="openLiquidationModal({{ employee.id }})"
+                        title="Nueva Liquidación">
+                    <i class="fa-solid fa-file-circle-plus"></i>
                 </button>
-                <button class="btn-action btn-info" onclick="openLiquidationListModal({{ employee.id }})">
+                <button class="btn-action liquidation-icon-btn"
+                        onclick="openLiquidationListModal({{ employee.id }})"
+                        title="Solicitud de vacaciones">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </button>
+            </div>
+            <div class="stat-card-footer stat-card-footer-margin">
+                <button class="btn-action btn-approve" onclick="openLiquidationListModal({{ employee.id }})">
                     <i class="fas fa-list"></i> Ver Listado
                 </button>
             </div>
@@ -162,7 +174,7 @@
                                 <div class="cell-with-button">
                                     <span>{{ balance.vacation_days|floatformat:2 }}</span>
                                     <button class=" btn-action btn-ver-detalle">
-                                        <i class="fas fa-eye"></i> Ver
+                                        <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
                             </td>
@@ -170,7 +182,7 @@
                                 <div class="cell-with-button">
                                     <span>{{ balance.permit_days|floatformat:2 }}</span>
                                     <button class="btn-action btn-ver-detalle">
-                                        <i class="fas fa-eye"></i> Ver
+                                        <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
                             </td>
@@ -264,13 +276,13 @@
 
     <!-- Modal para nueva vacación -->
     <div id="modalNewVacation" class="modal-overlay hidden"></div>
-    
+
     <!-- Modal para permiso por horas -->
     <div id="modalHourPermit" class="modal-overlay hidden"></div>
-    
+
     <!-- Modal para permiso por días -->
     <div id="modalDayPermit" class="modal-overlay hidden"></div>
-    
+
     <!-- Modal para listado de permisos -->
     <div id="modalPermitList" class="modal-overlay hidden"></div>
 {% endblock %}

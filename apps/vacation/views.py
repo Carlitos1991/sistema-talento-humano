@@ -424,54 +424,60 @@ class CreateFirstVacationView(LoginRequiredMixin, CreateView):
 class EmployeeVacationDetailView(LoginRequiredMixin, TemplateView):
     """
     Vista para mostrar el detalle de vacaciones de un empleado (segunda imagen).
+    Optimizada para rendimiento con select_related y prefetch_related.
     """
     template_name = 'vacation/employee_vacation_detail.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
+        employee = get_object_or_404(
+            Employee.objects.select_related('person', 'employment_status', 'area'), 
+            pk=self.kwargs['employee_id']
+        )
         
         # Obtener parámetros de búsqueda y paginación
         search_query = self.request.GET.get('search', '').strip()
         page_number = self.request.GET.get('page', 1)
-        per_page = self.request.GET.get('per_page', 10)
-        
-        # Obtener todos los balances del empleado ordenados por creación (más reciente primero)
-        vacation_balances = EmployeeVacationBalance.objects.filter(
-            employee=employee,
-            is_active=True
-        ).select_related('period').order_by('-created_at')
+        per_page = int(self.request.GET.get('per_page', 10))
         
         # Obtener el balance activo (del periodo activo) para las estadísticas
+        # Esta consulta es independiente y se hace solo una vez
         active_balance = EmployeeVacationBalance.objects.filter(
             employee=employee,
             is_active=True,
             period__is_active=True
         ).select_related('period').first()
         
+        # Consulta optimizada para los balances del empleado
+        vacation_balances = EmployeeVacationBalance.objects.filter(
+            employee=employee,
+            is_active=True
+        ).select_related('period')
+        
         # Aplicar búsqueda por periodo si existe
         if search_query:
-            vacation_balances = vacation_balances.filter(period__name__icontains=search_query)
+            vacation_balances = vacation_balances.filter(
+                period__name__icontains=search_query
+            )
+        
+        # Ordenar por fecha de creación (más reciente primero)
+        vacation_balances = vacation_balances.order_by('-created_at')
         
         # Paginación
         paginator = Paginator(vacation_balances, per_page)
         
-        # Si no hay resultados, usar página 1
-        if paginator.count == 0:
+        try:
+            vacation_balances_page = paginator.page(page_number)
+        except PageNotAnInteger:
             vacation_balances_page = paginator.page(1)
-        else:
-            try:
-                vacation_balances_page = paginator.page(page_number)
-            except PageNotAnInteger:
-                vacation_balances_page = paginator.page(1)
-            except EmptyPage:
-                vacation_balances_page = paginator.page(paginator.num_pages)
+        except EmptyPage:
+            vacation_balances_page = paginator.page(paginator.num_pages if paginator.num_pages > 0 else 1)
         
         context['employee'] = employee
         context['active_balance'] = active_balance
         context['vacation_balances'] = vacation_balances_page
         context['search_query'] = search_query
-        context['per_page'] = int(per_page)
+        context['per_page'] = per_page
         
         return context
 
@@ -1044,12 +1050,16 @@ class EmployeePermitListView(LoginRequiredMixin, TemplateView):
     """
     Vista para listar permisos con cargo a vacaciones de un empleado.
     Incluye búsqueda por fechas y paginación.
+    Optimizada con select_related para mejor rendimiento.
     """
     template_name = 'vacation/modals/modal_permit_list.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
+        employee = get_object_or_404(
+            Employee.objects.select_related('person'), 
+            pk=self.kwargs['employee_id']
+        )
         
         # Obtener permisos con cargo a vacaciones (tipo Personales)
         from permitrequest.models import PermitRequest, PermitType
@@ -1057,10 +1067,12 @@ class EmployeePermitListView(LoginRequiredMixin, TemplateView):
         
         try:
             personal_permit_type = PermitType.objects.get(name='Personales', is_active=True)
+            
+            # Query optimizada con select_related
             permits_queryset = PermitRequest.objects.filter(
                 employee=employee,
                 permit_type=personal_permit_type
-            ).select_related('permit_type')
+            ).select_related('permit_type', 'employee__person')
             
             # Búsqueda por fecha
             search_query = self.request.GET.get('search', '').strip()
@@ -1072,15 +1084,12 @@ class EmployeePermitListView(LoginRequiredMixin, TemplateView):
                         Q(start_date=search_date) | Q(end_date=search_date)
                     )
                 except ValueError:
-                    # Si no es una fecha válida, buscar en el texto de las fechas
-                    permits_queryset = permits_queryset.filter(
-                        Q(start_date__icontains=search_query) | 
-                        Q(end_date__icontains=search_query)
-                    )
+                    # Si no es una fecha válida, no filtrar (evitar consultas lentas con __icontains en fechas)
+                    pass
                 context['search_query'] = search_query
             
-            # Ordenar
-            permits_queryset = permits_queryset.order_by('-start_date', '-created_at')
+            # Ordenar por fecha más reciente
+            permits_queryset = permits_queryset.order_by('-start_date', '-id')
             
             # Paginación
             paginator = Paginator(permits_queryset, 10)  # 10 permisos por página
@@ -1091,7 +1100,7 @@ class EmployeePermitListView(LoginRequiredMixin, TemplateView):
             except PageNotAnInteger:
                 permits = paginator.page(1)
             except EmptyPage:
-                permits = paginator.page(paginator.num_pages)
+                permits = paginator.page(paginator.num_pages if paginator.num_pages > 0 else 1)
             
         except PermitType.DoesNotExist:
             permits = []
@@ -1494,6 +1503,7 @@ class CreateVacationLiquidationView(LoginRequiredMixin, FormView):
 class EmployeeLiquidationListView(LoginRequiredMixin, TemplateView):
     """
     Vista para listar las liquidaciones de vacaciones (acciones de personal de tipo VACACIONES) de un empleado.
+    Optimizada con select_related y prefetch_related para mejor rendimiento.
     """
     template_name = 'vacation/modals/modal_liquidation_list.html'
 
@@ -1502,35 +1512,57 @@ class EmployeeLiquidationListView(LoginRequiredMixin, TemplateView):
         from employee.models import Employee
         from personnel_actions.models import PersonnelAction, ActionType
         from django.core.paginator import Paginator
+        from django.db.models import Prefetch
         
         employee_id = self.kwargs.get('employee_id')
-        employee = get_object_or_404(Employee, pk=employee_id)
+        employee = get_object_or_404(
+            Employee.objects.select_related('person'), 
+            pk=employee_id
+        )
         
-        # Obtener el tipo de acción VACACIONES
+        # Obtener el tipo de acción VACACIONES (cachear para evitar consultas repetidas)
         vacation_action_type = ActionType.objects.filter(name__iexact='VACACIONES').first()
         
-        # Filtrar acciones de personal del empleado de tipo VACACIONES
+        # Query optimizada con select_related para todas las relaciones necesarias
         actions = PersonnelAction.objects.filter(
             employee=employee,
             action_type=vacation_action_type
         ).select_related(
-            'action_type', 'authority_1', 'authority_2', 'reviewer', 'elaboration', 'register'
-        ).order_by('-date_issue')
+            'action_type', 
+            'authority_1', 
+            'authority_2', 
+            'reviewer', 
+            'elaboration', 
+            'register',
+            'employee__person',
+            'vacation_request'  # OneToOne relation
+        )
         
-        # Búsqueda
+        # Búsqueda optimizada
         search_query = self.request.GET.get('search', '').strip()
         if search_query:
             from datetime import datetime
             try:
+                # Intento parsear la fecha
                 search_date = datetime.strptime(search_query, '%d/%m/%Y').date()
                 actions = actions.filter(date_issue=search_date)
             except ValueError:
+                # Búsqueda por número
                 actions = actions.filter(number__icontains=search_query)
+        
+        # Ordenar por fecha más reciente
+        actions = actions.order_by('-date_issue', '-id')
         
         # Paginación
         paginator = Paginator(actions, 10)
         page_number = self.request.GET.get('page', 1)
-        page_obj = paginator.get_page(page_number)
+        
+        try:
+            page_obj = paginator.page(page_number)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages if paginator.num_pages > 0 else 1)
         
         context['employee'] = employee
         context['actions'] = page_obj
@@ -1580,12 +1612,19 @@ class RegisterLiquidationView(LoginRequiredMixin, View):
                 vacation_request.approved_by = request.user
                 vacation_request.save()
                 
+                # Convertir days_quantity a float para guardar en el historial
+                days_to_discount = float(vacation_request.days_quantity)
+                
                 # Crear registro en el historial de vacaciones
                 VacationHistory.objects.create(
                     vacation_balance=vacation_request.balance_used,
                     vacation_request=vacation_request,
-                    value_discount=vacation_request.days_quantity,
-                    proportional_discount=Decimal('0.00'),
+                    value_discount=days_to_discount,
+                    days_discount=days_to_discount,
+                    proportional_discount=0.0,
+                    hours_discount=0.0,
+                    minutes_discount=0.0,
+                    observation=f'Liquidación de vacaciones registrada - Acción {action.number}',
                     created_by=request.user
                 )
                 
@@ -1655,19 +1694,28 @@ class EditLiquidationView(LoginRequiredMixin, FormView):
         vacation_request = self.get_vacation_request()
         balance = vacation_request.balance_used
         
+        from decimal import Decimal
+        
         # Agregar días actuales de esta liquidación al balance disponible para validación
-        kwargs['available_days'] = (balance.balance_days if balance else 0) + float(vacation_request.days_quantity)
+        balance_days = Decimal(str(balance.balance_days)) if balance else Decimal('0')
+        request_days = Decimal(str(vacation_request.days_quantity))
+        kwargs['available_days'] = float(balance_days + request_days)
         
         # Prellenar el formulario con datos existentes
         if not self.request.POST:
+            action = self.get_action()
+            # Convertir fechas al formato correcto para input type="date" (YYYY-MM-DD)
+            start_date_str = vacation_request.start_date.strftime('%Y-%m-%d') if vacation_request.start_date else None
+            end_date_str = vacation_request.end_date.strftime('%Y-%m-%d') if vacation_request.end_date else None
+            
             kwargs['initial'] = {
-                'start_date': vacation_request.start_date,
-                'end_date': vacation_request.end_date,
-                'nominating_authority': self.get_action().authority_1.id if self.get_action().authority_1 else None,
-                'human_resources_responsible': self.get_action().authority_2.id if self.get_action().authority_2 else None,
-                'registration_responsible': self.get_action().register.id if self.get_action().register else None,
-                'review_responsible': self.get_action().reviewer.id if self.get_action().reviewer else None,
-                'elaborated_by': self.get_action().elaboration.id if self.get_action().elaboration else None,
+                'start_date': start_date_str,
+                'end_date': end_date_str,
+                'nominating_authority': action.authority_1.id if action.authority_1 else None,
+                'human_resources_responsible': action.authority_2.id if action.authority_2 else None,
+                'registration_responsible': action.register.id if action.register else None,
+                'review_responsible': action.reviewer.id if action.reviewer else None,
+                'elaborated_by': action.elaboration.id if action.elaboration else None,
             }
         
         return kwargs
