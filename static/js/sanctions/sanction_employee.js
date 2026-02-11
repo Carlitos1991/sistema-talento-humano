@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(html => {
                 modalContentContainer.innerHTML = html;
                 modalOverlay.classList.remove('hidden');
+                document.body.classList.add('modal-open'); // Block background scroll
 
                 initModalPlugins();
 
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function closeModal() {
         modalOverlay.classList.add('hidden');
         modalContentContainer.innerHTML = '';
+        document.body.classList.remove('modal-open'); // Restore background scroll
     }
 
     // REMOVED - closeHistoryModal function no longer needed
@@ -136,6 +138,50 @@ document.addEventListener('DOMContentLoaded', function () {
             $('.select2').select2({
                 width: '100%',
                 dropdownParent: modalOverlay
+            });
+        }
+
+        // Initialize custom accordion
+        const accordionToggles = document.querySelectorAll('.accordion-toggle');
+        accordionToggles.forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const content = document.getElementById(targetId);
+                
+                if (content) {
+                    const isOpen = content.style.display === 'block';
+                    
+                    if (isOpen) {
+                        content.style.display = 'none';
+                        content.classList.remove('show');
+                        this.classList.add('collapsed');
+                    } else {
+                        content.style.display = 'block';
+                        content.classList.add('show');
+                        this.classList.remove('collapsed');
+                    }
+                }
+            });
+        });
+
+        // Initialize custom file upload
+        const fileInput = document.getElementById('id_attachment_file');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                const fileLabel = this.nextElementSibling;
+                const fileNameSpan = fileLabel.querySelector('.file-name');
+                const fileTextSpan = fileLabel.querySelector('.file-text');
+                const container = this.parentElement;
+                
+                if (this.files && this.files.length > 0) {
+                    fileNameSpan.textContent = this.files[0].name;
+                    fileTextSpan.textContent = 'Archivo seleccionado:';
+                    container.classList.add('has-file');
+                } else {
+                    fileNameSpan.textContent = 'Ningún archivo seleccionado';
+                    fileTextSpan.textContent = 'Seleccionar archivo';
+                    container.classList.remove('has-file');
+                }
             });
         }
     }

@@ -13,23 +13,23 @@ class SanctionTypeAdmin(admin.ModelAdmin):
 @admin.register(Sanction)
 class SanctionAdmin(admin.ModelAdmin):
     list_display = [
-        'sanction_number', 'employee', 'sanction_type', 
+        'get_sanction_number', 'employee', 'sanction_type', 
         'severity', 'sanction_date', 'status', 'created_by'
     ]
     list_filter = ['status', 'severity', 'sanction_type', 'sanction_date']
     search_fields = [
-        'sanction_number', 
+        'personnel_action__number',
         'employee__person__first_name',
         'employee__person__last_name',
         'employee__person__document_number'
     ]
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     date_hierarchy = 'sanction_date'
-    ordering = ['-sanction_date', '-sanction_number']
+    ordering = ['-sanction_date', '-created_at']
     
     fieldsets = (
         ('Información General', {
-            'fields': ('employee', 'sanction_type', 'sanction_number', 'severity')
+            'fields': ('employee', 'sanction_type', 'severity')
         }),
         ('Detalles de la Sanción', {
             'fields': ('description', 'legal_basis', 'attachment_file')
@@ -48,6 +48,10 @@ class SanctionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def get_sanction_number(self, obj):
+        return obj.personnel_action.number if obj.personnel_action else 'N/A'
+    get_sanction_number.short_description = 'Número de Acción'
     
     def save_model(self, request, obj, form, change):
         if not change:

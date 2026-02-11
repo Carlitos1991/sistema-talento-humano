@@ -26,7 +26,7 @@ class SanctionForm(forms.ModelForm):
     class Meta:
         model = Sanction
         fields = [
-            'employee', 'sanction_type', 'sanction_number', 'severity',
+            'employee', 'sanction_type', 'severity',
             'description', 'legal_basis',
             'incident_date', 'sanction_date', 'start_date', 'end_date',
             'days', 'observations', 'attachment_file'
@@ -34,10 +34,6 @@ class SanctionForm(forms.ModelForm):
         widgets = {
             'employee': forms.Select(attrs={'class': 'form-select select2'}),
             'sanction_type': forms.Select(attrs={'class': 'form-select select2'}),
-            'sanction_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej. SAN-2026-001'
-            }),
             'severity': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -86,3 +82,18 @@ class SanctionForm(forms.ModelForm):
         self.fields['employee'].queryset = Employee.objects.filter(is_active=True)
         # Filter active sanction types
         self.fields['sanction_type'].queryset = SanctionType.objects.filter(is_active=True)
+        # Make duration fields not required
+        self.fields['start_date'].required = False
+        self.fields['end_date'].required = False
+        self.fields['days'].required = False
+        
+        # Format dates for input type="date" (YYYY-MM-DD) when editing
+        if self.instance and self.instance.pk:
+            if self.instance.incident_date:
+                self.initial['incident_date'] = self.instance.incident_date.strftime('%Y-%m-%d')
+            if self.instance.sanction_date:
+                self.initial['sanction_date'] = self.instance.sanction_date.strftime('%Y-%m-%d')
+            if self.instance.start_date:
+                self.initial['start_date'] = self.instance.start_date.strftime('%Y-%m-%d')
+            if self.instance.end_date:
+                self.initial['end_date'] = self.instance.end_date.strftime('%Y-%m-%d')

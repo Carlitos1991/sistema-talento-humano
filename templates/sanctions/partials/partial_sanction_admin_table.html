@@ -8,13 +8,19 @@
             <th style="width: 10%;">Gravedad</th>
             <th style="width: 12%;">Fecha Sanción</th>
             <th style="width: 10%;">Estado</th>
-            <th class="text-center actions" style="width: 8%;">Acciones</th>
+            <th class="text-center actions" style="width: 13%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for sanction in sanctions %}
             <tr>
-                <td style="font-weight: 500;">{{ sanction.sanction_number }}</td>
+                <td style="font-weight: 500;">
+                    {% if sanction.personnel_action %}
+                        {{ sanction.personnel_action.number }}
+                    {% else %}
+                        <span class="text-muted">N/A</span>
+                    {% endif %}
+                </td>
                 <td>{{ sanction.employee.person.full_name }}</td>
                 <td>{{ sanction.sanction_type.name }}</td>
                 <td>
@@ -51,13 +57,30 @@
                             </button>
                         {% endif %}
 
-                        <!-- Cambiar Estado -->
-                        {% if perms.sanctions.change_sanction %}
-                            <button class="btn-restore-action js-change-status"
-                                    data-url="{% url 'sanctions:sanction_update_status' sanction.pk %}"
-                                    data-current-status="{{ sanction.status }}"
-                                    title="Cambiar Estado">
-                                <i class="fa-solid fa-rotate"></i>
+                        <!-- Editar (solo si no está registrada) -->
+                        {% if perms.sanctions.change_sanction and sanction.personnel_action and not sanction.personnel_action.is_registered %}
+                            <button class="btn-edit-action js-edit-sanction"
+                                    data-sanction-id="{{ sanction.pk }}"
+                                    title="Editar Sanción">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Registrar (solo si no está registrada) -->
+                        {% if perms.sanctions.change_sanction and sanction.personnel_action and not sanction.personnel_action.is_registered %}
+                            <button class="btn-confirm-action js-register-sanction"
+                                    data-sanction-id="{{ sanction.pk }}"
+                                    title="Registrar Sanción">
+                                <i class="fa-solid fa-check-circle"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Imprimir PDF -->
+                        {% if perms.sanctions.view_sanction %}
+                            <button class="btn-print-action js-print-sanction"
+                                    data-sanction-id="{{ sanction.pk }}"
+                                    title="Imprimir PDF">
+                                <i class="fa-solid fa-print"></i>
                             </button>
                         {% endif %}
                     </div>

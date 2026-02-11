@@ -1,6 +1,6 @@
 {% load static %}
 
-<div class="modal-container-medium shadow-card">
+<div class="modal-container-large shadow-card">
     <!-- Botón de Cerrar (X) -->
     <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
         <i class="fas fa-times"></i>
@@ -13,13 +13,13 @@
                 <i class="fas fa-gavel"></i>
             </div>
             <h2 class="header-title-main">
-                Generar Sanción
+                {% if is_edit %}Editar Sanción{% else %}Generar Sanción{% endif %}
             </h2>
         </div>
     </div>
 
     <!-- Formulario -->
-    <form method="post" action="{% url 'sanctions:generate_sanction' %}" id="generateSanctionForm" enctype="multipart/form-data">
+    <form method="post" action="{% if is_edit %}{% url 'sanctions:sanction_edit' sanction.pk %}{% else %}{% url 'sanctions:generate_sanction' %}{% endif %}" id="generateSanctionForm" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="employee" value="{{ employee.id }}">
 
@@ -62,19 +62,10 @@
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Número de Sanción <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-hashtag input-icon-left"></i>
-                            {{ form.sanction_number }}
-                        </div>
+                        <label class="form-label font-weight-700">Tipo de Amonestación <span class="text-danger">*</span></label>
+                        {{ form.severity }}
                         <div class="invalid-feedback"></div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Gravedad <span class="text-danger">*</span></label>
-                    {{ form.severity }}
-                    <div class="invalid-feedback"></div>
                 </div>
             </div>
 
@@ -94,7 +85,7 @@
                     <label class="form-label font-weight-700">Base Legal</label>
                     {{ form.legal_basis }}
                     <div class="invalid-feedback"></div>
-                    <p class="form-hint">Artículos o normativa aplicable.</p>
+                    <p class="form-hint">Artículos o normativa aplicable según LOSEP.</p>
                 </div>
             </div>
 
@@ -106,64 +97,125 @@
                 <div class="grid-2-cols">
                     <div class="form-group">
                         <label class="form-label font-weight-700">Fecha del Incidente <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-calendar input-icon-left"></i>
-                            {{ form.incident_date }}
-                        </div>
+                        {{ form.incident_date }}
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label font-weight-700">Fecha de la Sanción <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-calendar-check input-icon-left"></i>
-                            {{ form.sanction_date }}
-                        </div>
+                        {{ form.sanction_date }}
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sección 5: Duración (Para suspensiones) -->
+            <!-- Sección 5: Suspensión Laboral (Acordeón Colapsable) -->
             <div class="section-card-standard">
-                <h4 class="section-title">
-                    <i class="fas fa-hourglass-half text-primary"></i> DURACIÓN (Si aplica)
-                </h4>
-                <div class="grid-3-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Inicio</label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-calendar input-icon-left"></i>
-                            {{ form.start_date }}
-                        </div>
-                        <div class="invalid-feedback"></div>
+                <div class="custom-accordion">
+                    <div class="accordion-header" id="durationHeader">
+                        <button type="button" class="accordion-toggle collapsed" data-target="durationContent">
+                            <i class="fas fa-hourglass-half text-primary"></i>
+                            <span>SUSPENSIÓN LABORAL (Si aplica)</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Fin</label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-calendar input-icon-left"></i>
-                            {{ form.end_date }}
+                    <div class="accordion-content" id="durationContent" style="display: none;">
+                        <div class="grid-3-cols">
+                            <div class="form-group">
+                                <label class="form-label font-weight-700">Fecha de Inicio</label>
+                                {{ form.start_date }}
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label font-weight-700">Fecha de Fin</label>
+                                {{ form.end_date }}
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label font-weight-700">Días de Suspensión</label>
+                                {{ form.days }}
+                                <div class="invalid-feedback"></div>
+                            </div>
                         </div>
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Días de Suspensión</label>
-                        <div class="input-icon-wrapper">
-                            <i class="fas fa-clock input-icon-left"></i>
-                            {{ form.days }}
-                        </div>
-                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sección 6: Adjunto y Observaciones -->
+            <!-- Sección 6: Firmas de Responsabilidad -->
+            <div class="section-card-standard border-left-success">
+                <h4 class="section-title">
+                    <i class="fas fa-file-signature text-primary"></i> FIRMAS DE RESPONSABILIDAD
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Primera Autoridad <span class="text-danger">*</span></label>
+                        <select name="authority_1" class="form-select select2" required>
+                            <option value="">Seleccione...</option>
+                            {% for authority in authorities %}
+                                <option value="{{ authority.id }}" {% if selected_authorities.authority_1 == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Segunda Autoridad</label>
+                        <select name="authority_2" class="form-select select2">
+                            <option value="">Seleccione...</option>
+                            {% for authority in authorities %}
+                                <option value="{{ authority.id }}" {% if selected_authorities.authority_2 == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Revisado Por</label>
+                        <select name="reviewer" class="form-select select2">
+                            <option value="">Seleccione...</option>
+                            {% for authority in authorities %}
+                                <option value="{{ authority.id }}" {% if selected_authorities.reviewer == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Elaborado Por</label>
+                        <select name="elaboration" class="form-select select2">
+                            <option value="">Seleccione...</option>
+                            {% for authority in authorities %}
+                                <option value="{{ authority.id }}" {% if selected_authorities.elaboration == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Registrado Por</label>
+                    <select name="register" class="form-select select2">
+                        <option value="">Seleccione...</option>
+                        {% for authority in authorities %}
+                            <option value="{{ authority.id }}" {% if selected_authorities.register == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+
+            <!-- Sección 7: Adjunto y Observaciones -->
             <div class="section-card-standard">
                 <h4 class="section-title">
                     <i class="fas fa-paperclip text-primary"></i> ADJUNTO Y OBSERVACIONES
                 </h4>
                 <div class="form-group">
                     <label class="form-label font-weight-700">Documento Adjunto</label>
-                    {{ form.attachment_file }}
+                    <div class="custom-file-upload">
+                        <input type="file" name="attachment_file" id="id_attachment_file" class="file-input" accept=".pdf,.doc,.docx">
+                        <label for="id_attachment_file" class="file-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span class="file-text">Seleccionar archivo</span>
+                            <span class="file-name">Ningún archivo seleccionado</span>
+                        </label>
+                    </div>
                     <div class="invalid-feedback"></div>
                     <p class="form-hint">Adjunte documentos de respaldo (PDF, DOC, DOCX).</p>
                 </div>
@@ -179,11 +231,11 @@
 
         <!-- Footer con botones -->
         <div class="modal-footer-refined">
-            <button type="button" class="btn-cancel js-close-modal">
+            <button type="button" class="btn-cancel js-close-modal js-close-detail-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
             <button type="submit" class="btn-save">
-                <i class="fas fa-save"></i> Registrar Sanción
+                <i class="fas fa-save"></i> {% if is_edit %}Actualizar Sanción{% else %}Registrar Sanción{% endif %}
             </button>
         </div>
     </form>

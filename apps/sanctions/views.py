@@ -294,14 +294,18 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
     """View to generate a sanction for a specific employee"""
 
     def get(self, request):
+        from personnel_actions.models import Authorities
+        
         employee_id = request.GET.get('employee_id')
         employee = get_object_or_404(Employee, pk=employee_id)
         
         form = SanctionForm(initial={'employee': employee})
+        authorities = Authorities.objects.filter(status=True)
         
         context = {
             'form': form,
-            'employee': employee
+            'employee': employee,
+            'authorities': authorities
         }
         
         html = render_to_string(
@@ -317,50 +321,59 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
         if form.is_valid():
             sanction = form.save(commit=False)
             sanction.created_by = request.user
-            sanction.save()
             
-            # Create Personnel Action
+            # Create Personnel Action first
             try:
-                action_type = ActionType.objects.get(code='SAN')
+                action_type = ActionType.objects.get(code='SANCIONES')
             except ActionType.DoesNotExist:
-                # If sanction action type doesn't exist, create it or handle error
-                action_type = None
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Error: Tipo de acción "SANCIONES" no existe. Por favor, créelo en el admin.'
+                }, status=400)
             
-            if action_type:
-                # Generate unique action number
-                year = datetime.now().year
-                last_action = PersonnelAction.objects.filter(
-                    number__startswith=f'SAN-{year}'
-                ).order_by('-number').first()
-                
-                if last_action:
-                    last_num = int(last_action.number.split('-')[-1])
+            # Generate sequential action number based on all PersonnelActions
+            year = datetime.now().year
+            last_action = PersonnelAction.objects.filter(
+                number__endswith=f'-{year}'
+            ).order_by('-created_at').first()
+            
+            if last_action:
+                # Extract number from format like 0001-2026
+                try:
+                    last_num = int(last_action.number.split('-')[0])
                     new_num = last_num + 1
-                else:
+                except (ValueError, IndexError):
                     new_num = 1
-                
-                action_number = f'SAN-{year}-{new_num:04d}'
-                
-                # Create PersonnelAction
-                personnel_action = PersonnelAction.objects.create(
-                    employee=sanction.employee,
-                    action_type=action_type,
-                    number=action_number,
-                    explanation=f'Sanción: {sanction.description[:100]}',
-                    motivation=sanction.legal_basis or 'Sanción disciplinaria',
-                    date_issue=sanction.sanction_date,
-                    date_effective=sanction.start_date or sanction.sanction_date,
-                    authority_1_id=1,  # Replace with actual authority
-                    created_by=request.user
-                )
-                
-                # Link sanction to personnel action
-                sanction.personnel_action = personnel_action
-                sanction.save()
+            else:
+                new_num = 1
+            
+            action_number = f'{new_num:04d}-{year}'
+            
+            # Create PersonnelAction
+            personnel_action = PersonnelAction.objects.create(
+                employee=sanction.employee,
+                action_type=action_type,
+                number=action_number,
+                explanation=sanction.description,
+                motivation=sanction.legal_basis or 'Sanción disciplinaria según LOSEP',
+                date_issue=sanction.incident_date,
+                date_effective=sanction.sanction_date,
+                is_registered=False,
+                authority_1_id=request.POST.get('authority_1') or None,
+                authority_2_id=request.POST.get('authority_2') or None,
+                reviewer_id=request.POST.get('reviewer') or None,
+                elaboration_id=request.POST.get('elaboration') or None,
+                register_id=request.POST.get('register') or None,
+                created_by=request.user
+            )
+            
+            # Link sanction to personnel action and save
+            sanction.personnel_action = personnel_action
+            sanction.save()
             
             return JsonResponse({
                 'success': True,
-                'message': 'Sanción registrada correctamente.'
+                'message': f'Sanción registrada correctamente con número {action_number}.'
             })
         else:
             return JsonResponse({
@@ -392,18 +405,39 @@ class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         # Filter by search query
         query = self.request.GET.get('q', '').strip()
         if query:
-            # If filtering by employee, search only by date
+            # If filtering by employee, search by date or number
             if employee_id:
-                queryset = queryset.filter(
-                    Q(sanction_date__icontains=query)
-                )
+                # Try to parse as date (dd/mm/yyyy or yyyy-mm-dd)
+                date_query = None
+                try:
+                    # Try dd/mm/yyyy format
+                    from datetime import datetime
+                    if '/' in query:
+                        date_query = datetime.strptime(query, '%d/%m/%Y').date()
+                    elif '-' in query and len(query) == 10:
+                        date_query = datetime.strptime(query, '%Y-%m-%d').date()
+                except:
+                    pass
+                
+                if date_query:
+                    queryset = queryset.filter(
+                        Q(sanction_date=date_query) |
+                        Q(incident_date=date_query)
+                    )
+                else:
+                    # Search by number or other text fields
+                    queryset = queryset.filter(
+                        Q(personnel_action__number__icontains=query) |
+                        Q(sanction_type__name__icontains=query)
+                    )
             else:
-                # Otherwise, search by employee info and number
+                # Otherwise, search by employee info, number, and type
                 queryset = queryset.filter(
-                    Q(sanction_number__icontains=query) |
+                    Q(personnel_action__number__icontains=query) |
                     Q(employee__person__first_name__icontains=query) |
                     Q(employee__person__last_name__icontains=query) |
-                    Q(employee__person__document_number__icontains=query)
+                    Q(employee__person__document_number__icontains=query) |
+                    Q(sanction_type__name__icontains=query)
                 )
         
         # Filter by status
@@ -416,7 +450,7 @@ class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         if severity:
             queryset = queryset.filter(severity=severity)
         
-        return queryset.order_by('-sanction_date', '-sanction_number')
+        return queryset.order_by('-sanction_date', '-created_at')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -516,3 +550,233 @@ class SanctionUpdateStatusView(LoginRequiredMixin, PermissionRequiredMixin, View
             'success': False,
             'message': 'Estado no válido.'
         }, status=400)
+
+
+class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """View to edit an existing sanction"""
+    permission_required = 'sanctions.change_sanction'
+
+    def get(self, request, pk):
+        from personnel_actions.models import Authorities
+        
+        sanction = get_object_or_404(
+            Sanction.objects.select_related('employee__person', 'personnel_action'),
+            pk=pk
+        )
+        
+        # Check if sanction is already registered
+        if sanction.personnel_action and sanction.personnel_action.is_registered:
+            return HttpResponse(
+                '<div class="alert alert-warning" style="padding: 20px; text-align: center;">'
+                '<i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f59e0b;"></i>'
+                '<p style="margin-top: 1rem; font-size: 1.1rem; color: #92400e;">Esta sanción ya está registrada y no puede ser editada.</p>'
+                '</div>',
+                status=403
+            )
+        
+        form = SanctionForm(instance=sanction)
+        authorities = Authorities.objects.filter(status=True)
+        
+        # Get current authorities from PersonnelAction
+        selected_authorities = {}
+        if sanction.personnel_action:
+            if sanction.personnel_action.authority_1:
+                selected_authorities['authority_1'] = sanction.personnel_action.authority_1.id
+            if sanction.personnel_action.authority_2:
+                selected_authorities['authority_2'] = sanction.personnel_action.authority_2.id
+            if sanction.personnel_action.reviewer:
+                selected_authorities['reviewer'] = sanction.personnel_action.reviewer.id
+            if sanction.personnel_action.elaboration:
+                selected_authorities['elaboration'] = sanction.personnel_action.elaboration.id
+            if sanction.personnel_action.register:
+                selected_authorities['register'] = sanction.personnel_action.register.id
+        
+        context = {
+            'form': form,
+            'employee': sanction.employee,
+            'authorities': authorities,
+            'sanction': sanction,
+            'selected_authorities': selected_authorities,
+            'is_edit': True
+        }
+        
+        html = render_to_string(
+            'sanctions/modals/modal_generate_sanction_form.html',
+            context,
+            request=request
+        )
+        return HttpResponse(html)
+
+    def post(self, request, pk):
+        sanction = get_object_or_404(Sanction.objects.select_related('personnel_action'), pk=pk)
+        
+        # Check if sanction is already registered
+        if sanction.personnel_action and sanction.personnel_action.is_registered:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta sanción ya está registrada y no puede ser editada.'
+            }, status=403)
+        
+        form = SanctionForm(request.POST, request.FILES, instance=sanction)
+        
+        if form.is_valid():
+            sanction = form.save(commit=False)
+            sanction.updated_by = request.user
+            
+            # Update PersonnelAction if exists
+            if sanction.personnel_action:
+                personnel_action = sanction.personnel_action
+                personnel_action.explanation = sanction.description
+                personnel_action.motivation = sanction.legal_basis or 'Sanción disciplinaria según LOSEP'
+                personnel_action.date_issue = sanction.incident_date
+                personnel_action.date_effective = sanction.sanction_date
+                
+                # Update authorities from POST
+                authority_1_id = request.POST.get('authority_1')
+                authority_2_id = request.POST.get('authority_2')
+                reviewer_id = request.POST.get('reviewer')
+                elaboration_id = request.POST.get('elaboration')
+                register_id = request.POST.get('register')
+                
+                if authority_1_id:
+                    from personnel_actions.models import Authorities
+                    personnel_action.authority_1 = Authorities.objects.get(pk=authority_1_id)
+                if authority_2_id:
+                    personnel_action.authority_2 = Authorities.objects.get(pk=authority_2_id)
+                if reviewer_id:
+                    personnel_action.reviewer = Authorities.objects.get(pk=reviewer_id)
+                if elaboration_id:
+                    personnel_action.elaboration = Authorities.objects.get(pk=elaboration_id)
+                if register_id:
+                    personnel_action.register = Authorities.objects.get(pk=register_id)
+                
+                personnel_action.save()
+            
+            sanction.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Sanción actualizada correctamente.'
+            })
+        
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors
+        }, status=400)
+
+
+class RegisterSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """View to register a sanction (mark PersonnelAction as registered)"""
+    permission_required = 'sanctions.change_sanction'
+
+    def post(self, request, pk):
+        from django.utils import timezone
+        
+        sanction = get_object_or_404(Sanction.objects.select_related('personnel_action'), pk=pk)
+        
+        if not sanction.personnel_action:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta sanción no tiene una acción de personal asociada.'
+            }, status=400)
+        
+        if sanction.personnel_action.is_registered:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta sanción ya está registrada.'
+            }, status=400)
+        
+        # Update PersonnelAction
+        personnel_action = sanction.personnel_action
+        personnel_action.is_registered = True
+        personnel_action.registration_date = timezone.now().date()
+        personnel_action.save()
+        
+        # Update sanction status to ACTIVE
+        sanction.status = 'ACTIVE'
+        sanction.updated_by = request.user
+        sanction.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Sanción registrada correctamente.'
+        })
+
+
+class SanctionPDFView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """View to generate sanction PDF report"""
+    permission_required = 'sanctions.view_sanction'
+
+    def get(self, request, pk):
+        from django.template.loader import get_template
+        from xhtml2pdf import pisa
+        from io import BytesIO
+        import datetime as dt
+        from django.conf import settings
+        import os
+        
+        sanction = get_object_or_404(
+            Sanction.objects.select_related(
+                'employee__person__document_type',
+                'employee__area',
+                'sanction_type',
+                'personnel_action__authority_1',
+                'personnel_action__authority_2',
+                'personnel_action__reviewer',
+                'personnel_action__elaboration',
+                'personnel_action__register',
+                'created_by'
+            ),
+            pk=pk
+        )
+        
+        # Get budget info
+        from budget.models import BudgetLine
+        budget = None
+        try:
+            budget = BudgetLine.objects.select_related('position_item').only(
+                'id', 'current_employee', 'position_item__name', 'number_individual', 
+                'remuneration', 'status_item__name'
+            ).get(current_employee=sanction.employee.pk)
+        except BudgetLine.DoesNotExist:
+            pass
+        
+        # Render template
+        template = get_template('sanctions/reports/sanction_pdf.html')
+        html = template.render({
+            'sanction': sanction,
+            'employee': sanction.employee,
+            'budget': budget,
+            'today': dt.datetime.now()
+        })
+        
+        # Link callback for static files
+        def link_callback(uri, rel):
+            if uri.startswith(settings.STATIC_URL):
+                path = uri.replace(settings.STATIC_URL, '')
+                if settings.STATICFILES_DIRS:
+                    static_root = settings.STATICFILES_DIRS[0]
+                else:
+                    static_root = settings.STATIC_ROOT or os.path.join(settings.BASE_DIR, 'static')
+                return os.path.join(static_root, path)
+            return uri
+        
+        # Generate PDF
+        response = HttpResponse(content_type='application/pdf')
+        filename = f'Sancion_{sanction.employee.person.full_name.replace(" ", "_")}_{sanction.personnel_action.number.replace("/", "-") if sanction.personnel_action else sanction.pk}.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        result = BytesIO()
+        pdf = pisa.pisaDocument(
+            BytesIO(html.encode("UTF-8")), 
+            result, 
+            encoding='UTF-8',
+            link_callback=link_callback
+        )
+        
+        if not pdf.err:
+            response.write(result.getvalue())
+            return response
+        else:
+            return HttpResponse('Error al generar el PDF', status=500)
+

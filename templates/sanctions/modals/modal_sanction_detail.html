@@ -1,5 +1,7 @@
-<div class="modal-container-large shadow-card">
-    <!-- Botón de Cerrar -->
+{% load static %}
+
+<div class="modal-container-medium shadow-card">
+    <!-- Botón de Cerrar (X) -->
     <button type="button" class="btn-close-modal js-close-detail-modal" title="Cerrar">
         <i class="fas fa-times"></i>
     </button>
@@ -8,7 +10,7 @@
     <div class="modal-header-refined">
         <div class="header-content-group">
             <div class="header-icon-circle">
-                <i class="fas fa-file-alt"></i>
+                <i class="fas fa-gavel"></i>
             </div>
             <h2 class="header-title-main">
                 Detalle de Sanción
@@ -19,46 +21,19 @@
     <!-- Cuerpo con Scroll -->
     <div class="modal-body-scrolled">
 
-        <!-- Información General -->
+        <!-- Información del Empleado -->
         <div class="section-card-standard border-left-primary">
             <h4 class="section-title">
-                <i class="fas fa-info-circle text-primary"></i> INFORMACIÓN GENERAL
-            </h4>
-            <div class="grid-2-cols">
-                <div>
-                    <label class="form-label text-muted">Número de Sanción:</label>
-                    <p class="font-weight-700">{{ sanction.sanction_number }}</p>
-                </div>
-                <div>
-                    <label class="form-label text-muted">Estado:</label>
-                    <p>
-                        {% if sanction.status == 'REGISTERED' %}
-                            <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Registrada</span>
-                        {% elif sanction.status == 'ACTIVE' %}
-                            <span class="status-badge active">Activa</span>
-                        {% elif sanction.status == 'COMPLETED' %}
-                            <span class="status-badge" style="background: #dcfce7; color: #166534;">Cumplida</span>
-                        {% elif sanction.status == 'CANCELED' %}
-                            <span class="status-badge inactive">Anulada</span>
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Información del Empleado -->
-        <div class="section-card-standard">
-            <h4 class="section-title">
-                <i class="fas fa-user text-primary"></i> EMPLEADO SANCIONADO
+                <i class="fas fa-user text-primary"></i> EMPLEADO
             </h4>
             <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
                 {% if sanction.employee.person.photo %}
                     <img src="{{ sanction.employee.person.photo.url }}" 
                          alt="{{ sanction.employee.person.full_name }}"
-                         style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                         style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                 {% else %}
-                    <div style="width: 50px; height: 50px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-user" style="color: white;"></i>
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user" style="color: white; font-size: 24px;"></i>
                     </div>
                 {% endif %}
                 <div>
@@ -68,41 +43,68 @@
             </div>
         </div>
 
-        <!-- Detalles de la Sanción -->
+        <!-- Información de la Sanción -->
         <div class="section-card-standard">
             <h4 class="section-title">
-                <i class="fas fa-gavel text-primary"></i> DETALLES DE LA SANCIÓN
+                <i class="fas fa-list-check text-primary"></i> DATOS DE LA SANCIÓN
             </h4>
             <div class="grid-2-cols">
-                <div>
-                    <label class="form-label text-muted">Tipo de Sanción:</label>
-                    <p class="font-weight-700">{{ sanction.sanction_type.name }}</p>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Número de Acción</label>
+                    <p class="form-control-static">
+                        {% if sanction.personnel_action %}
+                            {{ sanction.personnel_action.number }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
                 </div>
-                <div>
-                    <label class="form-label text-muted">Gravedad:</label>
-                    <p>
-                        {% if sanction.severity == 'MINOR' %}
-                            <span class="badge-code" style="background: #dbeafe; color: #1e40af;">Leve</span>
-                        {% elif sanction.severity == 'MODERATE' %}
-                            <span class="badge-code" style="background: #fef3c7; color: #92400e;">Moderada</span>
-                        {% elif sanction.severity == 'SEVERE' %}
-                            <span class="badge-code" style="background: #fed7aa; color: #9a3412;">Grave</span>
-                        {% elif sanction.severity == 'VERY_SEVERE' %}
-                            <span class="badge-code" style="background: #fecaca; color: #991b1b;">Muy Grave</span>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Estado</label>
+                    <p class="form-control-static">
+                        {% if sanction.status == 'REGISTERED' %}
+                            <span class="badge badge-info">REGISTRADA</span>
+                        {% elif sanction.status == 'ACTIVE' %}
+                            <span class="badge badge-warning">ACTIVA</span>
+                        {% elif sanction.status == 'COMPLETED' %}
+                            <span class="badge badge-success">CUMPLIDA</span>
+                        {% elif sanction.status == 'CANCELED' %}
+                            <span class="badge badge-danger">ANULADA</span>
                         {% endif %}
                     </p>
                 </div>
             </div>
 
-            <div class="mt-3">
-                <label class="form-label text-muted">Descripción de la Falta:</label>
-                <p>{{ sanction.description }}</p>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Tipo de Sanción</label>
+                    <p class="form-control-static">{{ sanction.sanction_type.name }}</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Gravedad</label>
+                    <p class="form-control-static">
+                        {% if sanction.severity == 'MINOR' %}
+                            <span class="badge" style="background: #dbeafe; color: #1e40af;">Leve</span>
+                        {% elif sanction.severity == 'MODERATE' %}
+                            <span class="badge" style="background: #fef3c7; color: #92400e;">Moderada</span>
+                        {% elif sanction.severity == 'SEVERE' %}
+                            <span class="badge" style="background: #fed7aa; color: #9a3412;">Grave</span>
+                        {% elif sanction.severity == 'VERY_SEVERE' %}
+                            <span class="badge" style="background: #fecaca; color: #991b1b;">Muy Grave</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label font-weight-700">Descripción de la Falta</label>
+                <p class="form-control-static">{{ sanction.description }}</p>
             </div>
 
             {% if sanction.legal_basis %}
-            <div class="mt-3">
-                <label class="form-label text-muted">Base Legal:</label>
-                <p>{{ sanction.legal_basis }}</p>
+            <div class="form-group">
+                <label class="form-label font-weight-700">Base Legal</label>
+                <p class="form-control-static">{{ sanction.legal_basis }}</p>
             </div>
             {% endif %}
         </div>
@@ -112,44 +114,43 @@
             <h4 class="section-title">
                 <i class="fas fa-calendar text-primary"></i> FECHAS
             </h4>
-            <div class="grid-3-cols">
-                <div>
-                    <label class="form-label text-muted">Fecha del Incidente:</label>
-                    <p class="font-weight-700">{{ sanction.incident_date|date:"d/m/Y" }}</p>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha del Incidente</label>
+                    <p class="form-control-static">{{ sanction.incident_date|date:"d/m/Y" }}</p>
                 </div>
-                <div>
-                    <label class="form-label text-muted">Fecha de Sanción:</label>
-                    <p class="font-weight-700">{{ sanction.sanction_date|date:"d/m/Y" }}</p>
-                </div>
-                <div>
-                    <label class="form-label text-muted">Días de Suspensión:</label>
-                    <p class="font-weight-700">{{ sanction.days }} días</p>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha de Sanción</label>
+                    <p class="form-control-static">{{ sanction.sanction_date|date:"d/m/Y" }}</p>
                 </div>
             </div>
 
-            {% if sanction.start_date %}
-            <div class="grid-2-cols mt-3">
-                <div>
-                    <label class="form-label text-muted">Fecha de Inicio:</label>
-                    <p class="font-weight-700">{{ sanction.start_date|date:"d/m/Y" }}</p>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Días de Suspensión</label>
+                    <p class="form-control-static">{{ sanction.days }} día(s)</p>
                 </div>
-                <div>
-                    <label class="form-label text-muted">Fecha de Fin:</label>
-                    <p class="font-weight-700">{{ sanction.end_date|date:"d/m/Y"|default:"N/A" }}</p>
+                {% if sanction.start_date %}
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Periodo</label>
+                    <p class="form-control-static">
+                        {{ sanction.start_date|date:"d/m/Y" }} - 
+                        {% if sanction.end_date %}{{ sanction.end_date|date:"d/m/Y" }}{% else %}N/A{% endif %}
+                    </p>
                 </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
 
         <!-- Acción de Personal -->
         {% if sanction.personnel_action %}
-        <div class="section-card-standard">
+        <div class="section-card-standard border-left-success">
             <h4 class="section-title">
                 <i class="fas fa-file-contract text-primary"></i> ACCIÓN DE PERSONAL
             </h4>
-            <div>
-                <label class="form-label text-muted">Número de Acción:</label>
-                <p class="font-weight-700">{{ sanction.personnel_action.number }}</p>
+            <div class="form-group">
+                <label class="form-label font-weight-700">Número de Acción</label>
+                <p class="form-control-static">{{ sanction.personnel_action.number }}</p>
             </div>
         </div>
         {% endif %}
@@ -158,9 +159,11 @@
         {% if sanction.observations %}
         <div class="section-card-standard">
             <h4 class="section-title">
-                <i class="fas fa-comment text-primary"></i> OBSERVACIONES
+                <i class="fas fa-comment-dots text-primary"></i> OBSERVACIONES
             </h4>
-            <p>{{ sanction.observations }}</p>
+            <div class="form-group">
+                <p class="form-control-static">{{ sanction.observations }}</p>
+            </div>
         </div>
         {% endif %}
 
@@ -170,9 +173,11 @@
             <h4 class="section-title">
                 <i class="fas fa-paperclip text-primary"></i> DOCUMENTO ADJUNTO
             </h4>
-            <a href="{{ sanction.attachment_file.url }}" target="_blank" class="btn btn-sm btn-primary">
-                <i class="fas fa-download"></i> Descargar Documento
-            </a>
+            <div class="form-group">
+                <a href="{{ sanction.attachment_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-pdf"></i> Ver Documento
+                </a>
+            </div>
         </div>
         {% endif %}
 
@@ -182,13 +187,15 @@
                 <i class="fas fa-history text-primary"></i> AUDITORÍA
             </h4>
             <div class="grid-2-cols">
-                <div>
-                    <label class="form-label text-muted">Registrado por:</label>
-                    <p>{{ sanction.created_by.get_full_name|default:"Sistema" }}</p>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Registrado por</label>
+                    <p class="form-control-static">
+                        {% if sanction.created_by %}{{ sanction.created_by.get_full_name }}{% else %}--{% endif %}
+                    </p>
                 </div>
-                <div>
-                    <label class="form-label text-muted">Fecha de Registro:</label>
-                    <p>{{ sanction.created_at|date:"d/m/Y H:i" }}</p>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Fecha de Registro</label>
+                    <p class="form-control-static">{{ sanction.created_at|date:"d/m/Y H:i" }}</p>
                 </div>
             </div>
         </div>
@@ -196,9 +203,9 @@
     </div>
 
     <!-- Footer -->
-    <div class="modal-footer-refined">
+    <div class="modal-footer-fixed">
         <button type="button" class="btn-cancel js-close-detail-modal">
-            <i class="fas fa-times"></i> Cerrar
+            <i class="fas fa-times-circle"></i> CERRAR
         </button>
     </div>
 </div>

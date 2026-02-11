@@ -35,10 +35,10 @@ class Sanction(models.Model):
     ]
 
     SEVERITY_CHOICES = [
-        ('MINOR', 'Leve'),
-        ('MODERATE', 'Moderada'),
-        ('SEVERE', 'Grave'),
-        ('VERY_SEVERE', 'Muy Grave'),
+        ('VERBAL_WARNING', 'Amonestación Verbal'),
+        ('WRITTEN_WARNING', 'Amonestación Escrita'),
+        ('PECUNIARY_WARNING', 'Amonestación Pecuniaria'),
+        ('ADMINISTRATIVE_SUMMARY', 'Sumario Administrativo'),
     ]
 
     employee = models.ForeignKey(
@@ -54,16 +54,11 @@ class Sanction(models.Model):
     )
 
     # Sanction details
-    sanction_number = models.CharField(
-        verbose_name='Número de sanción', 
-        max_length=50, 
-        unique=True
-    )
     severity = models.CharField(
         verbose_name='Gravedad', 
-        max_length=20, 
+        max_length=30, 
         choices=SEVERITY_CHOICES, 
-        default='MINOR'
+        default='VERBAL_WARNING'
     )
     description = models.TextField(verbose_name='Descripción de la falta')
     legal_basis = models.TextField(verbose_name='Base legal', blank=True, null=True)
@@ -75,7 +70,7 @@ class Sanction(models.Model):
     end_date = models.DateField(verbose_name='Fecha de fin', blank=True, null=True)
 
     # Duration (for suspensions)
-    days = models.IntegerField(verbose_name='Días de suspensión', default=0)
+    days = models.IntegerField(verbose_name='Días de suspensión', default=0, blank=True, null=True)
 
     # Status
     status = models.CharField(
@@ -127,7 +122,7 @@ class Sanction(models.Model):
     )
 
     class Meta:
-        ordering = ['-sanction_date', '-sanction_number']
+        ordering = ['-sanction_date', '-created_at']
         verbose_name = 'Sanción'
         verbose_name_plural = 'Sanciones'
         indexes = [
@@ -136,4 +131,6 @@ class Sanction(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.sanction_number} - {self.employee}"
+        if self.personnel_action:
+            return f"{self.personnel_action.number} - {self.employee}"
+        return f"Sanción - {self.employee}"

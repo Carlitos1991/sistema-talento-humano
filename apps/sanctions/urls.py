@@ -22,4 +22,7 @@ urlpatterns = [
     path('admin/employee/<int:employee_id>/', views.SanctionAdminListView.as_view(), name='sanction_admin_by_employee'),
     path('admin/<int:pk>/detail/', views.SanctionDetailView.as_view(), name='sanction_detail'),
     path('admin/<int:pk>/update-status/', views.SanctionUpdateStatusView.as_view(), name='sanction_update_status'),
+    path('admin/<int:pk>/edit/', views.EditSanctionView.as_view(), name='sanction_edit'),
+    path('admin/<int:pk>/register/', views.RegisterSanctionView.as_view(), name='sanction_register'),
+    path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
 ]
