@@ -263,18 +263,7 @@
                     <i class="fa-solid fa-chevron-right chevron-icon"></i>
                 </a>
                 <ul class="submenu">
-                    <!-- 1. Administrar Sanciones -->
-                    {% if perms.sanctions.view_sanction %}
-                        <li>
-                            <a href="{% url 'sanctions:sanction_admin' %}"
-                               class="{% if request.resolver_match.url_name == 'sanction_admin' %}active-child{% endif %}">
-                                <i class="fa-solid fa-list-check"></i>
-                                <span class="menu-text">Administrar</span>
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- 2. Generar Sanciones -->
+                    <!-- 1. Generar Sanciones -->
                     {% if perms.sanctions.add_sanction %}
                         <li>
                             <a href="{% url 'sanctions:employee_list' %}"
@@ -285,7 +274,7 @@
                         </li>
                     {% endif %}
 
-                    <!-- 3. Tipos de Sanciones -->
+                    <!-- 2. Tipos de Sanciones -->
                     {% if perms.sanctions.view_sanctiontype %}
                         <li>
                             <a href="{% url 'sanctions:type_list' %}"

@@ -13,13 +13,13 @@ urlpatterns = [
 
     # --- Employee List to Generate Sanctions ---
     path('employees/', views.EmployeeSanctionListView.as_view(), name='employee_list'),
-    path('employees/<int:employee_id>/history/', views.EmployeeSanctionHistoryView.as_view(), name='employee_history'),
 
     # --- Sanction Creation ---
     path('generate/', views.GenerateSanctionFormView.as_view(), name='generate_sanction'),
     
     # --- Sanction Administration ---
     path('admin/', views.SanctionAdminListView.as_view(), name='sanction_admin'),
+    path('admin/employee/<int:employee_id>/', views.SanctionAdminListView.as_view(), name='sanction_admin_by_employee'),
     path('admin/<int:pk>/detail/', views.SanctionDetailView.as_view(), name='sanction_detail'),
     path('admin/<int:pk>/update-status/', views.SanctionUpdateStatusView.as_view(), name='sanction_update_status'),
 ]

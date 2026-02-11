@@ -283,27 +283,7 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
         return super().render_to_response(context, **response_kwargs)
 
 
-class EmployeeSanctionHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """View to show sanction history of an employee"""
-    permission_required = 'sanctions.view_sanction'
-
-    def get(self, request, employee_id):
-        employee = get_object_or_404(Employee, pk=employee_id)
-        sanctions = Sanction.objects.filter(employee=employee).select_related(
-            'sanction_type', 'created_by'
-        ).order_by('-sanction_date')
-        
-        context = {
-            'employee': employee,
-            'sanctions': sanctions
-        }
-        
-        html = render_to_string(
-            'sanctions/modals/modal_employee_sanction_history.html',
-            context,
-            request=request
-        )
-        return HttpResponse(html)
+# REMOVED - EmployeeSanctionHistoryView no longer needed as we redirect to admin page
 
 
 # ==========================================
@@ -404,15 +384,27 @@ class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
             'created_by'
         )
         
+        # Filter by employee_id if provided in URL
+        employee_id = self.kwargs.get('employee_id')
+        if employee_id:
+            queryset = queryset.filter(employee_id=employee_id)
+        
         # Filter by search query
         query = self.request.GET.get('q', '').strip()
         if query:
-            queryset = queryset.filter(
-                Q(sanction_number__icontains=query) |
-                Q(employee__person__first_name__icontains=query) |
-                Q(employee__person__last_name__icontains=query) |
-                Q(employee__person__document_number__icontains=query)
-            )
+            # If filtering by employee, search only by date
+            if employee_id:
+                queryset = queryset.filter(
+                    Q(sanction_date__icontains=query)
+                )
+            else:
+                # Otherwise, search by employee info and number
+                queryset = queryset.filter(
+                    Q(sanction_number__icontains=query) |
+                    Q(employee__person__first_name__icontains=query) |
+                    Q(employee__person__last_name__icontains=query) |
+                    Q(employee__person__document_number__icontains=query)
+                )
         
         # Filter by status
         status = self.request.GET.get('status')
@@ -425,6 +417,20 @@ class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
             queryset = queryset.filter(severity=severity)
         
         return queryset.order_by('-sanction_date', '-sanction_number')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add employee info if filtering by employee
+        employee_id = self.kwargs.get('employee_id')
+        if employee_id:
+            try:
+                from employee.models import Employee
+                context['filtered_employee'] = Employee.objects.select_related('person').get(pk=employee_id)
+            except Employee.DoesNotExist:
+                context['filtered_employee'] = None
+        
+        return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':

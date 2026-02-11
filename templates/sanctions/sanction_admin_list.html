@@ -16,9 +16,19 @@
         <!-- Encabezado -->
         <div class="header-card">
             <div>
-                <h1>Administración de Sanciones</h1>
-                <p>Gestiona todas las sanciones registradas en el sistema.</p>
+                {% if filtered_employee %}
+                    <h1>Historial de Sanciones - {{ filtered_employee.person.full_name }}</h1>
+                    <p>Sanciones registradas para el empleado {{ filtered_employee.person.document_number }}</p>
+                {% else %}
+                    <h1>Administración de Sanciones</h1>
+                    <p>Gestiona todas las sanciones registradas en el sistema.</p>
+                {% endif %}
             </div>
+            {% if filtered_employee %}
+                <button type="button" class="btn btn-create" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left"></i> Volver Atrás
+                </button>
+            {% endif %}
         </div>
 
         <!-- Filtros y búsqueda -->
@@ -27,8 +37,13 @@
                 <div class="table-controls">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por número, empleado o cédula">
+                        {% if filtered_employee %}
+                            <input type="text" id="table-search" class="input-field"
+                                   placeholder="Buscar por fecha (dd/mm/aaaa)">
+                        {% else %}
+                            <input type="text" id="table-search" class="input-field"
+                                   placeholder="Buscar por número, empleado o cédula">
+                        {% endif %}
                     </div>
                     <div class="filter-group">
                         <select id="filter-status" class="input-field">

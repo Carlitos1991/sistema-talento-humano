@@ -11,8 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalContentContainer = document.getElementById('modal-dynamic-content');
 
     // Modal de historial
-    const historyModal = document.getElementById('sanctionHistoryModal');
-    const historyContent = document.getElementById('sanction-history-content');
+    // REMOVED - No longer needed as we redirect to admin page
 
     // Referencias de paginación
     const pageInfo = document.getElementById('page-info');
@@ -74,14 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 4. Cerrar Modal de historial
-    if (historyModal) {
-        historyModal.addEventListener('click', (e) => {
-            if (e.target === historyModal || e.target.closest('.js-close-history-modal')) {
-                closeHistoryModal();
-            }
-        });
-    }
+    // 4. REMOVED - History modal no longer needed
 
     // 5. DELEGACIÓN DE ACCIONES EN LA TABLA
     if (tableContainer) {
@@ -96,12 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // B. VER HISTORIAL
+            // B. VER HISTORIAL - Redirect to admin page filtered by employee
             const historyBtn = e.target.closest('.js-view-history');
             if (historyBtn) {
                 e.preventDefault();
                 const employeeId = historyBtn.dataset.employeeId;
-                openHistoryModal(employeeId);
+                window.location.href = `/sanctions/admin/employee/${employeeId}/`;
                 return;
             }
         });
@@ -129,32 +121,14 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function openHistoryModal(employeeId) {
-        const url = `/sanctions/employees/${employeeId}/history/`;
-        
-        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-            .then(res => res.text())
-            .then(html => {
-                if (historyContent) {
-                    historyContent.innerHTML = html;
-                    historyModal.classList.remove('hidden');
-                }
-            })
-            .catch(err => {
-                console.error('Error al cargar historial:', err);
-                Swal.fire('Error', 'No se pudo cargar el historial de sanciones', 'error');
-            });
-    }
+    // REMOVED - openHistoryModal function no longer needed
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
         modalContentContainer.innerHTML = '';
     }
 
-    function closeHistoryModal() {
-        historyModal.classList.add('hidden');
-        if (historyContent) historyContent.innerHTML = '';
-    }
+    // REMOVED - closeHistoryModal function no longer needed
 
     function initModalPlugins() {
         // Inicializar Select2
