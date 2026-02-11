@@ -1,0 +1,78 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th class="text-center">Req. Adjunto</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center actions">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for type in types %}
+            <tr>
+                <td style="font-weight: 500;">{{ type.name }}</td>
+                <td>{{ type.description|default:"Sin descripción"|truncatewords:15 }}</td>
+                
+                <!-- Icono Requiere Adjunto -->
+                <td class="text-center" style="vertical-align: middle; padding: 0.75rem;">
+                    {% if type.requires_attachment %}
+                        <i class="fa-solid fa-circle-check" style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
+                    {% else %}
+                        <i class="fa-solid fa-circle-xmark" style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
+                    {% endif %}
+                </td>
+
+                <!-- Badge de Estado -->
+                <td class="text-center">
+                    {% if type.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+
+                <!-- ACCIONES -->
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <!-- EDITAR -->
+                        {% if perms.sanctions.change_sanctiontype %}
+                            <button class="btn-views-action js-edit"
+                                    data-url="{% url 'sanctions:type_update' type.pk %}"
+                                    title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- ALTA/BAJA -->
+                        {% if perms.sanctions.change_sanctiontype %}
+                            <button class="btn-restore-action js-toggle"
+                                    data-url="{% url 'sanctions:type_toggle' type.pk %}"
+                                    title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
+                                <i class="fa-solid fa-power-off"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- ELIMINAR -->
+                        {% if perms.sanctions.delete_sanctiontype %}
+                            <button class="btn-delete-action js-delete"
+                                    data-url="{% url 'sanctions:type_delete' type.pk %}"
+                                    title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay tipos de sanciones registrados</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

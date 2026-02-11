@@ -1,0 +1,76 @@
+<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
+    <form id="modalForm" method="post" action="{% if form.instance.pk %}{% url 'sanctions:type_update' form.instance.pk %}{% else %}{% url 'sanctions:type_create' %}{% endif %}">
+        {% csrf_token %}
+
+        <!-- HEADER con estilo gradient -->
+        <div class="modal-header-medium modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-gavel me-2"></i>
+                {% if form.instance.pk %}Editar Tipo de Sanción{% else %}Nuevo Tipo de Sanción{% endif %}
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity js-close-modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- BODY con estilo gris suave -->
+        <div class="modal-body-content modal-body-custom">
+            <!-- Error global -->
+            <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fa-solid fa-tag"></i> Nombre de la Sanción <span class="text-danger">*</span>
+                </label>
+                {{ form.name }}
+                <div class="invalid-feedback"></div>
+                <p class="form-hint">Nombre descriptivo del tipo de sanción.</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fa-solid fa-align-left"></i> Descripción
+                </label>
+                {{ form.description }}
+                <div class="invalid-feedback"></div>
+                <p class="form-hint">Descripción detallada del tipo de sanción.</p>
+            </div>
+
+            <!-- Título de sección -->
+            <div class="section-title mt-3">
+                <i class="fa-solid fa-sliders"></i> Configuración
+            </div>
+
+            <!-- Grid de toggles usando grid-2-cols -->
+            <div class="grid-2-cols">
+                <!-- Toggle 1: Requiere Adjunto -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Requiere Adjunto?</label>
+                    <label class="toggle-switch">
+                        {{ form.requires_attachment }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Toggle 2: Estado Activo -->
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
+                    <label class="toggle-switch">
+                        {{ form.is_active }}
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER con botones -->
+        <div class="modal-footer-medium modal-footer-spaced">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fa-solid fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn-save">
+                <i class="fa-solid fa-save"></i> Guardar
+            </button>
+        </div>
+    </form>
+</div>

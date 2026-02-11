@@ -25,6 +25,7 @@ urlpatterns = [
     path('function_manual/', include('function_manual.urls')),
     path('biometric/', include('biometric.urls')),
     path('vacation/', include('vacation.urls')),
+    path('sanctions/', include('apps.sanctions.urls')),
     path('iclock/cdata', adms_views.adms_receive_attendance),
 
 ]

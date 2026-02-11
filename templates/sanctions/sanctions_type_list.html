@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Sanciones{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <!-- Configuración oculta -->
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'sanctions:type_list' %}">
+
+        <!-- Encabezado -->
+        <div class="header-card">
+            <div>
+                <h1>Gestión de Tipos de Sanciones</h1>
+                <p>Administra la información de tipos de Sanciones.</p>
+            </div>
+            {% if perms.sanctions.add_sanctiontype %}
+                <button id="btn-add-type" type="button"
+                        data-url="{% url 'sanctions:type_create' %}"
+                        class="btn btn-create">
+                    <i class="fas fa-plus"></i> Nuevo Tipo de Sanción
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- Buscador -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field"
+                               placeholder="Buscar en la tabla">
+                    </div>
+                </div>
+                <!-- Zona de recarga AJAX (Solo tabla) -->
+                <div id="table-content-wrapper">
+                    {% include 'sanctions/partials/partial_sanctions_type_list.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Modal Personalizado -->
+    <div id="customModal" class="modal-overlay hidden">
+        <div id="modal-dynamic-content">
+            <!-- Aquí se carga el contenido dinámico del modal -->
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/sanctions/sanction_type.js' %}"></script>
+{% endblock %}

@@ -254,6 +254,50 @@
                 </ul>
             </li>
         {% endif %}
+        <!-- MÓDULO DE SANCIONES -->
+        {% if perms.sanctions.view_sanction or perms.sanctions.view_sanctiontype %}
+            <li class="has-submenu">
+                <a href="#" class="{% if 'sanctions' in request.resolver_match.app_name %}active{% endif %}">
+                    <i class="fa-solid fa-gavel"></i>
+                    <span class="menu-text">Sanciones</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <!-- 1. Administrar Sanciones -->
+                    {% if perms.sanctions.view_sanction %}
+                        <li>
+                            <a href="{% url 'sanctions:sanction_admin' %}"
+                               class="{% if request.resolver_match.url_name == 'sanction_admin' %}active-child{% endif %}">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span class="menu-text">Administrar</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- 2. Generar Sanciones -->
+                    {% if perms.sanctions.add_sanction %}
+                        <li>
+                            <a href="{% url 'sanctions:employee_list' %}"
+                               class="{% if request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span class="menu-text">Generar Sanción</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- 3. Tipos de Sanciones -->
+                    {% if perms.sanctions.view_sanctiontype %}
+                        <li>
+                            <a href="{% url 'sanctions:type_list' %}"
+                               class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span class="menu-text">Tipos de Sanción</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endif %}
         {% if perms.contract.view_laborregime or perms.contract.view_managementperiod %}
             <li class="has-submenu">
                 <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">

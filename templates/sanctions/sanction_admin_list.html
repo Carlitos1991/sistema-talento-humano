@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Administración de Sanciones{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <!-- Configuración oculta -->
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'sanctions:sanction_admin' %}">
+
+        <!-- Encabezado -->
+        <div class="header-card">
+            <div>
+                <h1>Administración de Sanciones</h1>
+                <p>Gestiona todas las sanciones registradas en el sistema.</p>
+            </div>
+        </div>
+
+        <!-- Filtros y búsqueda -->
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field"
+                               placeholder="Buscar por número, empleado o cédula">
+                    </div>
+                    <div class="filter-group">
+                        <select id="filter-status" class="input-field">
+                            <option value="">Todos los estados</option>
+                            <option value="REGISTERED">Registrada</option>
+                            <option value="ACTIVE">Activa</option>
+                            <option value="COMPLETED">Cumplida</option>
+                            <option value="CANCELED">Anulada</option>
+                        </select>
+                        <select id="filter-severity" class="input-field">
+                            <option value="">Todas las gravedades</option>
+                            <option value="MINOR">Leve</option>
+                            <option value="MODERATE">Moderada</option>
+                            <option value="SEVERE">Grave</option>
+                            <option value="VERY_SEVERE">Muy Grave</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Zona de recarga AJAX -->
+                <div id="table-content-wrapper">
+                    {% include 'sanctions/partials/partial_sanction_admin_table.html' %}
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">
+                        {% if page_obj %}
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
+                        {% else %}
+                            Mostrando 0 a 0 registros de 0 registros
+                        {% endif %}
+                    </span>
+                    <ul class="pagination-list">
+                        <li>
+                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </li>
+                        <li>
+                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
+                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
+                            </span>
+                        </li>
+                        <li>
+                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Modal para detalles de sanción -->
+    <div id="sanctionDetailModal" class="modal-overlay hidden">
+        <div id="modal-detail-content"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Inicializar paginación desde el servidor
+        {% if page_obj %}
+        window.initialPagination = {
+            current_page: {{ page_obj.number }},
+            total_pages: {{ page_obj.paginator.num_pages }},
+            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+            has_next: {{ page_obj.has_next|yesno:"true,false" }}
+        };
+        {% else %}
+        window.initialPagination = {
+            current_page: 1,
+            total_pages: 1,
+            has_previous: false,
+            has_next: false
+        };
+        {% endif %}
+    </script>
+    <script src="{% static 'js/sanctions/sanction_admin.js' %}"></script>
+{% endblock %}

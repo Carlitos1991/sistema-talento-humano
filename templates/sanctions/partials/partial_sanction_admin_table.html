@@ -1,0 +1,76 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 10%;">Número</th>
+            <th style="width: 20%;">Empleado</th>
+            <th style="width: 15%;">Tipo</th>
+            <th style="width: 10%;">Gravedad</th>
+            <th style="width: 12%;">Fecha Sanción</th>
+            <th style="width: 10%;">Estado</th>
+            <th class="text-center actions" style="width: 8%;">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for sanction in sanctions %}
+            <tr>
+                <td style="font-weight: 500;">{{ sanction.sanction_number }}</td>
+                <td>{{ sanction.employee.person.full_name }}</td>
+                <td>{{ sanction.sanction_type.name }}</td>
+                <td>
+                    {% if sanction.severity == 'MINOR' %}
+                        <span class="badge-code" style="background: #dbeafe; color: #1e40af;">Leve</span>
+                    {% elif sanction.severity == 'MODERATE' %}
+                        <span class="badge-code" style="background: #fef3c7; color: #92400e;">Moderada</span>
+                    {% elif sanction.severity == 'SEVERE' %}
+                        <span class="badge-code" style="background: #fed7aa; color: #9a3412;">Grave</span>
+                    {% elif sanction.severity == 'VERY_SEVERE' %}
+                        <span class="badge-code" style="background: #fecaca; color: #991b1b;">Muy Grave</span>
+                    {% endif %}
+                </td>
+                <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
+                <td class="text-center">
+                    {% if sanction.status == 'REGISTERED' %}
+                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Registrada</span>
+                    {% elif sanction.status == 'ACTIVE' %}
+                        <span class="status-badge active">Activa</span>
+                    {% elif sanction.status == 'COMPLETED' %}
+                        <span class="status-badge" style="background: #dcfce7; color: #166534;">Cumplida</span>
+                    {% elif sanction.status == 'CANCELED' %}
+                        <span class="status-badge inactive">Anulada</span>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <!-- Ver Detalle -->
+                        {% if perms.sanctions.view_sanction %}
+                            <button class="btn-views-action js-view-detail"
+                                    data-url="{% url 'sanctions:sanction_detail' sanction.pk %}"
+                                    title="Ver Detalle">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Cambiar Estado -->
+                        {% if perms.sanctions.change_sanction %}
+                            <button class="btn-restore-action js-change-status"
+                                    data-url="{% url 'sanctions:sanction_update_status' sanction.pk %}"
+                                    data-current-status="{{ sanction.status }}"
+                                    title="Cambiar Estado">
+                                <i class="fa-solid fa-rotate"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay sanciones registradas</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

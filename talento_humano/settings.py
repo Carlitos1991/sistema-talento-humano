@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'personnel_actions',
     'payroll',
     'permitrequest',
-    'vacation'
+    'vacation',
+    'apps.sanctions'
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [

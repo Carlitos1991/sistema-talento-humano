@@ -1,0 +1,43 @@
+<div id="sanctionHistoryModal" class="modal-overlay hidden">
+    <div class="modal-container-large shadow-card">
+        <!-- Botón de Cerrar -->
+        <button type="button" class="btn-close-modal js-close-history-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Cabecera -->
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h2 class="header-title-main">
+                    Historial de Sanciones
+                </h2>
+            </div>
+        </div>
+
+        <!-- Información del Empleado -->
+        <div class="p-3 bg-light border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <div id="employee-photo-container"></div>
+                <div>
+                    <div class="font-weight-700 text-dark" id="employee-name-display"></div>
+                    <small class="text-muted" id="employee-document-display"></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cuerpo con Scroll -->
+        <div class="modal-body-scrolled" id="sanction-history-content">
+            <!-- El contenido se cargará dinámicamente aquí -->
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer-refined">
+            <button type="button" class="btn-cancel js-close-history-modal">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>
