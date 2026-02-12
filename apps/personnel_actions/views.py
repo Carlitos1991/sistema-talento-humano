@@ -421,10 +421,23 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
             raise PermissionDenied("No se puede editar una acción ya registrada")
         return obj
 
+    def get_form_kwargs(self):
+        """Sobrescribir para pasar datos iniciales con fechas en formato correcto"""
+        kwargs = super().get_form_kwargs()
+        
+        # Si es GET y tenemos un objeto, preparar initial data con fechas correctas
+        if self.request.method == 'GET' and hasattr(self, 'object') and self.object:
+            kwargs['initial'] = {
+                'date_issue': self.object.date_issue.strftime('%Y-%m-%d') if self.object.date_issue else '',
+                'date_effective': self.object.date_effective.strftime('%Y-%m-%d') if self.object.date_effective else '',
+            }
+        
+        return kwargs
+
     def get(self, request, *args, **kwargs):
         """Devolver el formulario con los datos de la acción"""
         self.object = self.get_object()
-        form = self.form_class(instance=self.object)
+        form = self.get_form()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render(request, self.template_name, {

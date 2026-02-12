@@ -37,14 +37,16 @@
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">
                         {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de
+                            {{ page_obj.paginator.count }} registros
                         {% else %}
                             Mostrando 0 a 0 registros de 0 registros
                         {% endif %}
                     </span>
                     <ul class="pagination-list">
                         <li>
-                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <button id="btn-prev" class="page-btn"
+                                    {% if not page_obj.has_previous %}disabled{% endif %}>
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         </li>
@@ -63,10 +65,17 @@
             </div>
         </div>
     </div>
-
     <!-- Modal para detalles -->
     <div id="actionDetailModal" class="modal-overlay hidden">
         <div id="modal-detail-content"></div>
+    </div>
+
+    <!-- Modal para editar -->
+    <div id="actionEditModal" class="modal-overlay hidden">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;"
+             id="modal-edit-content">
+            <!-- Contenido dinámico del formulario -->
+        </div>
     </div>
 {% endblock %}
 
@@ -80,5 +89,6 @@
             has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
         };
     </script>
-    <script src="{% static 'js/personnel_actions/action_admin.js' %}"></script>
+    {#    <script src="{% static 'js/personnel_actions/action_admin.js' %}"></script>#}
+    <script src="{% static 'js/personnel_actions/action_history.js' %}"></script>
 {% endblock %}

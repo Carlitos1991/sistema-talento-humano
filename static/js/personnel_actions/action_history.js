@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     if (editModal) {
         editModal.addEventListener('click', (e) => {
-            if (e.target === editModal) {
+            if (e.target === editModal || e.target.closest('.btn-close-modal')) {
                 closeEditModal();
             }
         });
@@ -200,6 +200,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function closeEditModal() {
+        // Destruir Select2 antes de cerrar (solo si está inicializado)
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $('#modal-edit-content .select2').each(function() {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+            });
+        }
         editModal.classList.add('hidden');
         editContent.innerHTML = '';
         document.body.classList.remove('modal-open');
@@ -210,9 +218,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function initEditModalPlugins() {
         // Inicializar Select2
         if (typeof $ !== 'undefined' && $.fn.select2) {
-            $('.select2').select2({
-                dropdownParent: editModal,
-                width: '100%'
+            $('#modal-edit-content .select2').select2({
+                dropdownParent: $('#modal-edit-content'),
+                width: '100%',
+                language: 'es'
             });
         }
 

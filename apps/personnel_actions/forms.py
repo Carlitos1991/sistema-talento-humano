@@ -12,8 +12,8 @@ class PersonnelActionForm(forms.ModelForm):
             'employee': forms.Select(attrs={'class': 'input-field-select select2'}),
             'action_type': forms.Select(attrs={'class': 'input-field-select select2'}),
             'motivation': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Nombramiento definitivo'}),
-            'date_issue': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}),
-            'date_effective': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}),
+            'date_issue': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d'),
+            'date_effective': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d'),
             'explanation': forms.Textarea(attrs={'rows': 4, 'class': 'input-textarea', 'placeholder': 'Descripción detallada de la acción de personal'}),
             'authority_1': forms.Select(attrs={'class': 'input-field-select select2'}),
             'authority_2': forms.Select(attrs={'class': 'input-field-select select2'}),
@@ -27,6 +27,9 @@ class PersonnelActionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Hacer que el número no sea requerido ya que se genera automáticamente
         self.fields['number'].required = False
+        # Asegurar que los campos de fecha usen el formato correcto
+        self.fields['date_issue'].input_formats = ['%Y-%m-%d']
+        self.fields['date_effective'].input_formats = ['%Y-%m-%d']
 
 
 class ActionMovementForm(forms.ModelForm):
