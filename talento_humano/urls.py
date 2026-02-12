@@ -1,4 +1,3 @@
-# config/urls.py
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
@@ -25,7 +24,8 @@ urlpatterns = [
     path('function_manual/', include('function_manual.urls')),
     path('biometric/', include('biometric.urls')),
     path('vacation/', include('vacation.urls')),
-    path('sanctions/', include('apps.sanctions.urls')),
+    path('documents/', include('documents.urls')),
+    path('sanctions/', include('sanctions.urls')),
     path('iclock/cdata', adms_views.adms_receive_attendance),
 
 ]

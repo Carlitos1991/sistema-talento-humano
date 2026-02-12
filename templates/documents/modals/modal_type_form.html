@@ -1,0 +1,56 @@
+<div id="document-type-app" v-cloak>
+    <!-- Overlay principal controlado por isVisible -->
+    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" id="type-modal-overlay">
+        <div class="modal-container animate-scale-in">
+
+            <!-- HEADER GRADIENTE -->
+            <div class="modal-header modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-tags me-2"></i> [[ modalTitle ]]
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                    &times;
+                </button>
+            </div>
+
+            <form @submit.prevent="submitForm">
+                <!-- BODY -->
+                <div class="modal-body">
+                    {% csrf_token %}
+
+                    <!-- Campo Nombre -->
+                    <div class="form-group mb-3">
+                        <label class="form-label required">Nombre del Tipo</label>
+                        <input
+                                type="text"
+                                v-model="form.name"
+                                required
+                                class="form-control"
+                                :class="{ 'is-invalid': errors.name }"
+                                placeholder="Ej: Memorando, Oficio, Informe Técnico">
+                        <div v-if="errors.name" class="invalid-feedback">
+                            [[ errors.name[0] ]]
+                        </div>
+                    </div>
+
+                    <!-- Campo Activo -->
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="isActiveCheck" v-model="form.is_active">
+                        <label class="form-check-label" for="isActiveCheck">
+                            [[ form.is_active ? 'Registro Activo' : 'Registro Inactivo' ]]
+                        </label>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cancel" @click="closeModal">Cancelar</button>
+                    <button type="submit" class="btn btn-save">
+                        <i class="fas fa-save me-1"></i>
+                        [[ isEditing ? 'Actualizar' : 'Crear' ]]
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -90,6 +90,42 @@
                 </ul>
             </li>
         {% endif %}
+        <!-- MÓDULO GESTIÓN DOCUMENTAL -->
+        {% if perms.documents.view_document or perms.documents.view_documenttype %}
+            <li class="has-submenu">
+                <!-- Se activa si estamos navegando dentro de la app 'documents' -->
+                <a href="#" class="{% if 'documents' in request.resolver_match.app_name %}active{% endif %}">
+                    <i class="fa-solid fa-folder-tree"></i>
+                    <span class="menu-text">Gestión Documental</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+
+                    <!-- 1. Listado Principal de Documentos -->
+                    {% if perms.documents.view_document %}
+                        <li>
+                            <a href="{% url 'documents:document_list' %}"
+                               class="{% if request.resolver_match.url_name == 'document_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-file-invoice"></i>
+                                <span class="menu-text">Documentos</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- 2. CRUD Tipos de Documento (Configuración) -->
+                    {% if perms.documents.view_documenttype %}
+                        <li>
+                            <a href="{% url 'documents:type_list' %}"
+                               class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-tags"></i>
+                                <span class="menu-text">Tipos de Documento</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                </ul>
+            </li>
+        {% endif %}
         {% if perms.budget.view_budget %}
             <li class="has-submenu">
                 <a href="#">

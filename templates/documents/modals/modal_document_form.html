@@ -1,0 +1,35 @@
+<div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nuevo Documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- El formulario se renderiza via JS o se incluye uno estático oculto -->
+                <form id="documentForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <!-- Aquí inyectas los campos del form renderizados o los escribes manualmente para Vue -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nro. Radicado</label>
+                            <input type="text" name="filing_code" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo Documento</label>
+                            <!-- Select2 se inicializa en el JS -->
+                            <select name="category" class="form-select select2-modal" required>
+                                <!-- Opciones cargadas dinámicamente o via Django -->
+                            </select>
+                        </div>
+                        <!-- Resto de campos... -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveDocument()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Documento | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <!-- Header Card -->
+        <div class="header-card">
+            <div>
+                <h1>Tipos de Documento</h1>
+                <p>Configuración de categorías para la gestión documental</p>
+            </div>
+            {% if perms.documents.add_documenttype %}
+                <!-- Llama a la función global definida en document_types.js -->
+                <button class="btn btn-create" onclick="openCreateModal()">
+                    <i class="fa-solid fa-plus"></i> Nuevo Tipo
+                </button>
+            {% endif %}
+        </div>
+
+        <div id="table-app">
+            <div class="content-table">
+                <!-- Controles -->
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="input-field"
+                               placeholder="Buscar tipo de documento...">
+                    </div>
+                </div>
+
+                <!-- Wrapper para recarga AJAX -->
+                <div id="table-content-wrapper">
+                    {% include 'documents/partials/partial_type_table.html' %}
+                </div>
+
+                <!-- Paginación (Si usas la de Django genérica, mantenla aquí) -->
+                <div class="mt-3">
+                    {% if is_paginated %}
+                        {% include 'includes/pagination.html' %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Aquí se monta la Vue App del Modal -->
+    {% include 'documents/modals/modal_type_form.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/documents/document_types.js' %}"></script>
+{% endblock %}

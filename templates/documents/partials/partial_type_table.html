@@ -1,0 +1,47 @@
+{% load static %}
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 50px;">#</th>
+            <th>Nombre</th>
+            <th class="text-center">Estado</th>
+            <th class="text-end">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for type in types %}
+            <tr>
+                <td>{{ type.id }}</td>
+                <td class="fw-medium">{{ type.name }}</td>
+                <td class="text-center">
+                    {% if type.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <!-- Botón Editar: Pasa datos a Vue via dataset -->
+                    <button class="btn-icon btn-views-action"
+                            onclick="openEditModal('{{ type.id }}', '{{ type.name }}', '{{ type.is_active|yesno:'true,false' }}')">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+
+                    <!-- Botón Toggle Estado -->
+                    <button class="btn btn-sm btn-icon {% if type.is_active %}btn-icon btn-delete-action{% else %}btn-icon btn-create-action{% endif %}"
+                            onclick="toggleStatus({{ type.id }})">
+                        <i class="fa-solid {% if type.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                    </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                    No se encontraron registros.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
