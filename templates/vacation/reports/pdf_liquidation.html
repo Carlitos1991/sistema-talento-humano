@@ -299,10 +299,10 @@
     </tr>
     <tr>
         <td class="main-cell" colspan="12" style="text-align: justify;">
-            Yo <b>{{ partida.current_person.name }} {{ partida.current_person.lastname }} </b> con número de cédula
-            <b>{{ partida.current_person.cedula }}</b> JURO LEALTAD AL ESTADO ECUATORIANO
+            Yo <b>{{ employee.person.first_name }} {{ employee.person.last_name }} </b> con número de cédula
+            <b>{{ employee.person.number_document }}</b> JURO LEALTAD AL ESTADO ECUATORIANO
             <br> <b>Lugar:</b>&nbsp;&nbsp; Loja
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Fecha:</b> {{ action_data.date_issue|date:"d-M-Y" }} <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Fecha:</b> {{ action.date_issue|date:"d-M-Y" }} <br>
             **(EN CASO DE GANADOR DE CONCURSO DE MÉRITOS Y OPOSICIÓN))<br>
             NRO. ACTA FINAL: _______________&nbsp;&nbsp;&nbsp;&nbsp;FECHA:________________________ &nbsp;&nbsp;&nbsp;&nbsp;FIRMA:_______________________
 

@@ -4,8 +4,8 @@
         <tr>
             <th style="width: 5%;">Foto</th>
             <th style="width: 22%;">Nombres y Apellidos</th>
-            <th style="width: 12%;">Cédula</th>
             <th style="width: 20%;">Cargo</th>
+            <th style="width: 12%;">Tipo</th>
             <th style="width: 18%;">Área</th>
             <th class="text-center actions" style="width: 13%;">Acciones</th>
         </tr>
@@ -30,12 +30,9 @@
 
                 <!-- Nombres y Apellidos -->
                 <td style="font-weight: 500; padding-left: 8px;">
-                    {{ item.employee.person.full_name }}
+                    {{ item.employee.person.full_name }}<br><small>{{ item.employee.person.document_number }}</small>
+
                 </td>
-
-                <!-- Cédula -->
-                <td>{{ item.employee.person.document_number }}</td>
-
                 <!-- Cargo -->
                 <td>
                     {% if item.budget and item.budget.position_item %}
@@ -44,7 +41,14 @@
                         <span style="color: #999;">Sin cargo asignado</span>
                     {% endif %}
                 </td>
-
+                <!-- Estado -->
+                <td>
+                    {% with status=item.employee.employment_status.code %}
+                        <span class="status-badge {% if status == 'EMPLEADO' or status == 'CONTRATADO' %}active{% else %}inactive{% endif %}">
+                        {{ item.employee.employment_status.name }}
+                    </span>
+                    {% endwith %}
+                </td>
                 <!-- Área -->
                 <td>
                     {% if item.employee.area %}
