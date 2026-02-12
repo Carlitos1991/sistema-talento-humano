@@ -1,20 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Administración de Acciones de Personal{% endblock %}
+{% block title %}Historial de Acciones - {{ filtered_employee.person.full_name }}{% endblock %}
 
 {% block content %}
     <div class="content-wrapper">
         <!-- Configuración oculta -->
         <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_list' %}">
+        <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_history' filtered_employee.pk %}">
 
         <!-- Encabezado -->
         <div class="header-card">
             <div>
-                <h1><i class="fas fa-file-signature"></i> Administración de Acciones de Personal</h1>
-                <p>Gestiona todas las acciones de personal registradas en el sistema.</p>
+                <h1><i class="fas fa-history"></i> Historial de Acciones - {{ filtered_employee.person.full_name }}</h1>
+                <p>Acciones de personal registradas para {{ filtered_employee.person.document_number }}</p>
             </div>
+            <button type="button" class="btn btn-create" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Volver Atrás
+            </button>
         </div>
 
         <!-- Filtros y búsqueda -->
@@ -24,13 +27,13 @@
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por número, empleado, cédula o tipo">
+                               placeholder="Buscar por número, fecha (dd/mm/aaaa) o tipo">
                     </div>
                 </div>
 
                 <!-- Zona de recarga AJAX -->
                 <div id="table-content-wrapper">
-                    {% include 'personnel_action/partials/partial_personnel_action_admin_table.html' %}
+                    {% include 'personnel_action/partials/partial_action_history_table.html' %}
                 </div>
 
                 <!-- Paginación -->
@@ -68,6 +71,13 @@
     <div id="actionDetailModal" class="modal-overlay hidden">
         <div id="modal-detail-content"></div>
     </div>
+    
+    <!-- Modal para editar -->
+    <div id="actionEditModal" class="modal-overlay hidden">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;" id="modal-edit-content">
+            <!-- Contenido dinámico del formulario -->
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -80,5 +90,5 @@
             has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
         };
     </script>
-    <script src="{% static 'js/personnel_actions/action_admin.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/action_history.js' %}"></script>
 {% endblock %}

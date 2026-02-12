@@ -1,0 +1,87 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 10%;">Número</th>
+            <th style="width: 22%;">Empleado</th>
+            <th style="width: 18%;">Tipo</th>
+            <th style="width: 12%;">Fecha Emisión</th>
+            <th style="width: 12%;">Fecha Vigencia</th>
+            <th style="width: 10%;">Registro</th>
+            <th class="text-center actions" style="width: 16%;">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for action in actions %}
+            <tr>
+                <td style="font-weight: 500;">{{ action.number }}</td>
+                <td>
+                    {{ action.employee.person.full_name }}
+                    <br>
+                    <small class="text-muted">CI: {{ action.employee.person.document_number }}</small>
+                </td>
+                <td>
+                    <span class="badge-code" style="background: #dbeafe; color: #1e40af;">
+                        {{ action.action_type.name }}
+                    </span>
+                </td>
+                <td>{{ action.date_issue|date:"d/m/Y" }}</td>
+                <td>{{ action.date_validity|date:"d/m/Y" }}</td>
+                <td class="text-center">
+                    {% if action.is_registered %}
+                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Registrada</span>
+                    {% else %}
+                        <span class="status-badge active">Sin registrar</span>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <!-- Ver Detalle -->
+                        {% if perms.personnel_actions.view_personnelaction %}
+                            <button class="btn-icon btn-restore-action js-view-detail"
+                                    data-url="{% url 'personnel_actions:action_detail' action.pk %}"
+                                    title="Ver Detalle">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Editar (solo si no está registrada) -->
+                        {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
+                            <button class="btn-icon btn-views-action js-edit-action"
+                                    data-action-id="{{ action.pk }}"
+                                    title="Editar Acción">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Registrar (solo si no está registrada) -->
+                        {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
+                            <button class="btn-icon btn-success-action js-register-action"
+                                    data-action-id="{{ action.pk }}"
+                                    title="Registrar Acción">
+                                <i class="fa-solid fa-check-circle"></i>
+                            </button>
+                        {% endif %}
+
+                        <!-- Imprimir PDF -->
+                        {% if perms.personnel_actions.view_personnelaction %}
+                            <button class="btn-icon btn-detail-action js-print-action"
+                                    data-action-id="{{ action.pk }}"
+                                    title="Imprimir PDF">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay acciones de personal registradas</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

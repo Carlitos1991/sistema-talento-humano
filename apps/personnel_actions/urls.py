@@ -8,6 +8,18 @@ urlpatterns = [
     path('', views.PersonnelActionListView.as_view(), name='action_list'),
     path('create/', views.PersonnelActionCreateView.as_view(), name='action_create'),
 
+    # --- Generar Acción (Lista de Empleados) ---
+    path('employees/', views.EmployeeActionListView.as_view(), name='employee_list'),
+    
+    # --- Historial de Acciones por Empleado ---
+    path('history/<int:employee_id>/', views.ActionHistoryView.as_view(), name='action_history'),
+    
+    # --- Detalle, Editar, Registrar, PDF ---
+    path('<int:pk>/detail/', views.ActionDetailView.as_view(), name='action_detail'),
+    path('<int:pk>/edit/', views.ActionUpdateView.as_view(), name='action_update'),
+    path('<int:pk>/register/', views.ActionRegisterView.as_view(), name='action_register'),
+    path('<int:pk>/pdf/', views.ActionPDFView.as_view(), name='action_pdf'),
+
     # --- TIPOS DE ACCIÓN (CRUD VUE) ---
     path('types/', views.ActionTypeListView.as_view(), name='type_list'),
 

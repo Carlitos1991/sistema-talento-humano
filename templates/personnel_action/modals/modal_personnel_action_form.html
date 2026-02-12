@@ -1,55 +1,152 @@
-<form method="post" action="{% url 'personnel_actions:action_create' %}" class="grid-form">
+{% load static %}
+
+<form method="post" action="{% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}" id="form-create-action">
     {% csrf_token %}
-
-    <div class="row">
-        <div class="col-md-12 mb-3">
-            <label class="form-label">Empleado</label>
-            {{ form.employee }}
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Tipo de Acción</label>
-            {{ form.action_type }}
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Número</label>
-            {{ form.number }}
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Fecha Emisión</label>
-            {{ form.date_issue }}
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Fecha Vigencia</label>
-            {{ form.date_effective }}
-        </div>
+    
+    <!-- HEADER -->
+    <div class="modal-header-medium modal-header-gradient">
+        <h3 class="modal-title text-white">
+            <i class="fa-solid fa-file-signature me-2"></i>
+            {% if is_edit %}Editar Acción de Personal{% else %}Nueva Acción de Personal{% endif %}
+        </h3>
+        <button type="button" class="btn-close-modal text-white-opacity" onclick="closeModal()">&times;</button>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">Explicación</label>
-        {{ form.explanation }}
-    </div>
-
-    <!-- Sección de Firmas -->
-    <fieldset class="border p-3 rounded mb-3">
-        <legend class="float-none w-auto px-2 fs-6">Firmas Autorizadas</legend>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Autoridad 1</label>
-                {{ form.authority_1 }}
+    <!-- BODY -->
+    <div class="modal-body-custom">
+        
+        <!-- 1. INFORMACIÓN DEL EMPLEADO -->
+        {% if employee_id %}
+        <div class="form-section-card">
+            <h5 class="section-title">
+                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+            </h5>
+            <div class="alert-info">
+                {% if employee.person.photo %}
+                    <img src="{{ employee.person.photo.url }}"
+                         alt="{{ employee.person.full_name }}"
+                         style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <div style="width: 45px; height: 45px; border-radius: 50%; background: #4a90e2; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user" style="color: white; font-size: 1.2rem;"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem; color: #1e293b;">{{ employee.person.full_name }}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">CI: {{ employee.person.document_number }}</div>
+                </div>
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Revisado Por</label>
-                {{ form.reviewer }}
+            <input type="hidden" name="employee" value="{{ employee_id }}">
+        </div>
+        {% else %}
+        <div class="form-section-card">
+            <h5 class="section-title">
+                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+            </h5>
+            <div class="form-group">
+                <label class="form-label">Empleado <span class="text-danger">*</span></label>
+                {{ form.employee }}
+                <div class="invalid-feedback"></div>
             </div>
         </div>
-    </fieldset>
+        {% endif %}
 
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar</button>
+        <!-- 2. DATOS DE LA ACCIÓN -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
+            </h5>
+            
+            <div class="form-group">
+                <label class="form-label">Tipo de Acción <span class="text-danger">*</span></label>
+                {{ form.action_type }}
+                <div class="invalid-feedback"></div>
+            </div>
+
+            <!-- Campo número oculto, se genera automáticamente -->
+            <input type="hidden" name="number" value="">
+
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label">Fecha de Emisión <span class="text-danger">*</span></label>
+                    {{ form.date_issue }}
+                    <div class="invalid-feedback"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha de Vigencia <span class="text-danger">*</span></label>
+                    {{ form.date_effective }}
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. MOTIVACIÓN Y EXPLICACIÓN -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+            </h5>
+            
+            <div class="form-group">
+                <label class="form-label">Motivación</label>
+                {{ form.motivation }}
+                <p class="form-hint">Breve motivo de la acción de personal.</p>
+                <div class="invalid-feedback"></div>
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label">Explicación</label>
+                {{ form.explanation }}
+                <p class="form-hint">Descripción detallada de la acción.</p>
+                <div class="invalid-feedback"></div>
+            </div>
+        </div>
+
+        <!-- 4. FIRMAS AUTORIZADAS -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
+            </h5>
+            
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label">Director de Talento Humano</label>
+                    {{ form.authority_1 }}
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Autoridad nominadora</label>
+                    {{ form.authority_2 }}
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Elaborado Por</label>
+                    {{ form.elaboration }}
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Revisado Por</label>
+                    {{ form.reviewer }}
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Registrado Por</label>
+                    {{ form.register }}
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="modal-footer-medium modal-footer-spaced">
+        <button type="button" class="btn-cancel">Cancelar</button>
+        <button type="submit" class="btn-save shadow-md">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
     </div>
 </form>

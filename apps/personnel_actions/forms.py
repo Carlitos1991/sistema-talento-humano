@@ -5,21 +5,28 @@ from .models import PersonnelAction, ActionMovement, ActionType
 class PersonnelActionForm(forms.ModelForm):
     class Meta:
         model = PersonnelAction
-        fields = ['employee', 'action_type', 'number',
+        fields = ['employee', 'action_type', 'number', 'motivation',
                   'date_issue', 'date_effective', 'explanation',
                   'authority_1', 'authority_2', 'reviewer', 'elaboration', 'register']
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-select select2'}),
-            'action_type': forms.Select(attrs={'class': 'form-select select2'}),
-            'date_issue': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_effective': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'explanation': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'authority_1': forms.Select(attrs={'class': 'form-select select2'}),
-            'authority_2': forms.Select(attrs={'class': 'form-select select2'}),
-            'reviewer': forms.Select(attrs={'class': 'form-select select2'}),
-            'number': forms.TextInput(attrs={'class': 'form-control'}),
-            'decree_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'employee': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'action_type': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'motivation': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Nombramiento definitivo'}),
+            'date_issue': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}),
+            'date_effective': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}),
+            'explanation': forms.Textarea(attrs={'rows': 4, 'class': 'input-textarea', 'placeholder': 'Descripción detallada de la acción de personal'}),
+            'authority_1': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'authority_2': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'reviewer': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'elaboration': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'register': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'number': forms.TextInput(attrs={'class': 'input-field'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacer que el número no sea requerido ya que se genera automáticamente
+        self.fields['number'].required = False
 
 
 class ActionMovementForm(forms.ModelForm):

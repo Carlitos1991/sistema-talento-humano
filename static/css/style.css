@@ -43,6 +43,11 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* Bloquear scroll cuando modal está abierto */
+body.modal-open {
+    overflow: hidden;
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: var(--primary-color);
     font-weight: 700;
@@ -4007,20 +4012,27 @@ textarea.is-valid:focus,
     flex-direction: column;
     background: white;
     position: relative;
+    overflow: hidden;
 }
 
+/* Formularios dentro del modal deben ser flex */
+.modal-container-medium form,
 #scheduleForm {
     display: flex;
     flex-direction: column;
     overflow: hidden; /* Importante para que el scroll interno funcione */
     height: 100%;
+    flex: 1;
+    max-height: 90vh;
 }
 
 /* Cuerpo del Modal: Aquí activamos el scroll */
 .modal-body-custom {
     flex: 1; /* Ocupa el espacio disponible */
-    overflow-y: auto; /* Scroll vertical si el contenido sobrepasa */
-    padding-right: 10px; /* Espacio para que el scroll no tape el contenido */
+    overflow-y: scroll !important; /* Forzar scroll vertical */
+    overflow-x: hidden;
+    padding-right: 1.5rem; /* Espacio para que el scroll no tape el contenido */
+    max-height: calc(90vh - 180px);
 }
 
 /* Estilo del Scrollbar (Personalizado) */

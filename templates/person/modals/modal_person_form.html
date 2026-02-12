@@ -1,12 +1,7 @@
-<!-- templates/person/modals/modal_person_form.html -->
-
 <div id="modalPersonOverlay" class="modal-overlay hidden">
-
     <div class="modal-container-medium animate-scale-in">
-
         <form id="personFormHtml" method="POST" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
             {% csrf_token %}
-
             <!-- HEADER -->
             <div class="modal-header-medium modal-header-gradient">
                 <h3 class="modal-title text-white">

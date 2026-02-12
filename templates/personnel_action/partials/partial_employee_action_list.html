@@ -1,0 +1,73 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 8%;">Foto</th>
+            <th style="width: 25%;">Empleado</th>
+            <th style="width: 15%;">Cédula</th>
+            <th style="width: 20%;">Área</th>
+            <th style="width: 15%;">Estado</th>
+            <th class="text-center actions" style="width: 10%;">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for employee in employees %}
+            <tr>
+                <td class="text-center">
+                    {% if employee.person.photo %}
+                        <img src="{{ employee.person.photo.url }}" 
+                             alt="{{ employee.person.full_name }}"
+                             style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <div style="width: 45px; height: 45px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <i class="fas fa-user" style="color: white;"></i>
+                        </div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="font-weight: 600;">{{ employee.person.full_name }}</div>
+                    <small class="text-muted">{{ employee.person.email|default:"Sin email" }}</small>
+                </td>
+                <td>{{ employee.person.document_number }}</td>
+                <td>
+                    {% if employee.area %}
+                        {{ employee.area.name }}
+                    {% else %}
+                        <span class="text-muted">Sin área</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if employee.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        {% if perms.personnel_actions.add_personnelaction %}
+                            <button class="btn-create-action js-generate-action"
+                                    data-employee-id="{{ employee.id }}"
+                                    title="Generar Acción">
+                                <i class="fa-solid fa-file-circle-plus"></i>
+                            </button>
+                        {% endif %}
+                        <button class="btn-views-action js-view-history"
+                                data-employee-id="{{ employee.id }}"
+                                title="Ver Historial">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay empleados activos</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

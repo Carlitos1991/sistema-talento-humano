@@ -1,286 +1,252 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acción de Personal - Sanción</title>
-
+    <title>Acción de Personal - {{ action.number }}</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #FFFFFF;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 11px;
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+            padding: 20px;
         }
 
-        .main-table {
-            border: 1px double black;
-            padding: 2px 1px 0px 1px;
-            text-align: left;
-            vertical-align: center;
-        }
-
-        .main-cell {
-            border: 1px solid #999;
-            vertical-align: middle;
-            padding: 4px;
-        }
-
-        .header-cell {
-            background-color: #F0F0F0;
-            font-weight: bold;
+        .header {
             text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #1e293b;
+            padding-bottom: 15px;
         }
 
-        .logo-img {
-            max-width: 80px;
-            max-height: 60px;
-            width: auto;
-            height: auto;
-        }
-
-        .signature-box {
-            height: 60px;
-            border-bottom: 1px solid #000;
+        .header h1 {
+            font-size: 22px;
+            color: #1e293b;
             margin-bottom: 5px;
         }
 
-        .signature-label {
+        .header p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9fafb;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #cbd5e1;
+            text-transform: uppercase;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-item {
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #475569;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            color: #1e293b;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-registered {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .signature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .signature-box {
             text-align: center;
-            font-size: 9px;
-            margin-top: 2px;
+            padding-top: 40px;
+            border-top: 1px solid #333;
+        }
+
+        .signature-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .signature-name {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-top: 5px;
+        }
+
+        @media print {
+            body {
+                padding: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- HEADER -->
+    <div class="header">
+        <h1>ACCIÓN DE PERSONAL</h1>
+        <p>Número: <strong>{{ action.number }}</strong></p>
+    </div>
 
-<table class="main-table">
-    <!-- Header with logo and title -->
-    <tr>
-        <td class="main-cell" rowspan="4" colspan="6" style="text-align: center; vertical-align: middle; padding: 5px;">
-            <img width="80px" height="auto" src="{% static 'img/logo.png' %}" alt="Logo">
-        </td>
-        <td class="main-cell header-cell" colspan="6">
-            ACCIÓN DE PERSONAL - SANCIÓN
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="3">Nro:</td>
-        <td class="main-cell" style="text-align: center; font-size: 12px;" colspan="3">
-            {% if sanction.personnel_action %}{{ sanction.personnel_action.number }}{% else %}N/A{% endif %}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="6">FECHA DE ELABORACIÓN:</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;">
-            {{ sanction.sanction_date|date:"d-M-Y" }}
-        </td>
-    </tr>
+    <!-- INFORMACIÓN DEL EMPLEADO -->
+    <div class="section">
+        <div class="section-title">Información del Empleado</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Nombres y Apellidos:</span>
+                <span class="info-value">{{ action.employee.person.full_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Cédula:</span>
+                <span class="info-value">{{ action.employee.person.document_number }}</span>
+            </div>
+            {% if action.employee.area %}
+            <div class="info-item">
+                <span class="info-label">Área:</span>
+                <span class="info-value">{{ action.employee.area.name }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
-    <!-- Employee name -->
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;">
-            {{ employee.person.last_name }}
-        </td>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;">
-            {{ employee.person.first_name }}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="6">Apellidos</td>
-        <td class="main-cell header-cell" colspan="6">Nombres</td>
-    </tr>
-
-    <!-- Identification -->
-    <tr>
-        <td class="main-cell header-cell" colspan="3">DOCUMENTO DE IDENTIFICACIÓN:</td>
-        <td class="main-cell header-cell" colspan="3">NRO. DE IDENTIFICACIÓN</td>
-        <td class="main-cell header-cell" colspan="3">ÁREA:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">
-            {% if employee.area %}{{ employee.area.name }}{% else %}N/A{% endif %}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="3" style="text-align: center; vertical-align: middle;">
-            {{ employee.person.document_type.name }}
-        </td>
-        <td class="main-cell" colspan="3" style="text-align: center; vertical-align: middle;">
-            {{ employee.person.document_number }}
-        </td>
-        <td class="main-cell header-cell" colspan="3">CARGO:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">
-            {% if budget %}{{ budget.position_item.name }}{% else %}N/A{% endif %}
-        </td>
-    </tr>
-
-    <!-- Sanction details -->
-    <tr>
-        <td class="main-cell header-cell" colspan="12">DETALLES DE LA SANCIÓN</td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="3">TIPO DE SANCIÓN:</td>
-        <td class="main-cell" colspan="9">{{ sanction.sanction_type.name }}</td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="3">TIPO DE AMONESTACIÓN:</td>
-        <td class="main-cell" colspan="9">
-            {% if sanction.severity == 'VERBAL_WARNING' %}Amonestación Verbal
-            {% elif sanction.severity == 'WRITTEN_WARNING' %}Amonestación Escrita
-            {% elif sanction.severity == 'PECUNIARY_WARNING' %}Amonestación Pecuniaria
-            {% elif sanction.severity == 'ADMINISTRATIVE_SUMMARY' %}Sumario Administrativo
-            {% else %}{{ sanction.get_severity_display }}{% endif %}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell header-cell" colspan="3">FECHA DEL INCIDENTE:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">{{ sanction.incident_date|date:"d/m/Y" }}</td>
-        <td class="main-cell header-cell" colspan="3">FECHA DE SANCIÓN:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">{{ sanction.sanction_date|date:"d/m/Y" }}</td>
-    </tr>
-
-    <!-- Suspension period if applicable -->
-    {% if sanction.start_date and sanction.end_date %}
-    <tr>
-        <td class="main-cell header-cell" colspan="3">SUSPENSIÓN DESDE:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">{{ sanction.start_date|date:"d/m/Y" }}</td>
-        <td class="main-cell header-cell" colspan="3">SUSPENSIÓN HASTA:</td>
-        <td class="main-cell" colspan="3" style="text-align: center;">{{ sanction.end_date|date:"d/m/Y" }}</td>
-    </tr>
-    {% endif %}
-
-    {% if sanction.days %}
-    <tr>
-        <td class="main-cell header-cell" colspan="3">DÍAS DE SUSPENSIÓN:</td>
-        <td class="main-cell" colspan="9" style="text-align: center;">{{ sanction.days }}</td>
-    </tr>
-    {% endif %}
-
-    <!-- Description -->
-    <tr>
-        <td class="main-cell header-cell" colspan="12">DESCRIPCIÓN DE LA FALTA:</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="padding: 10px; min-height: 80px; text-align: justify;">
-            {{ sanction.description }}
-        </td>
-    </tr>
-
-    <!-- Legal basis -->
-    <tr>
-        <td class="main-cell header-cell" colspan="12">BASE LEGAL:</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="padding: 10px; min-height: 60px; text-align: justify;">
-            {% if sanction.legal_basis %}{{ sanction.legal_basis }}{% else %}Ley Orgánica de Servicio Público (LOSEP){% endif %}
-        </td>
-    </tr>
-
-    <!-- Observations -->
-    {% if sanction.observations %}
-    <tr>
-        <td class="main-cell header-cell" colspan="12">OBSERVACIONES:</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="padding: 10px; min-height: 60px; text-align: justify;">
-            {{ sanction.observations }}
-        </td>
-    </tr>
-    {% endif %}
-
-    <!-- Status -->
-    <tr>
-        <td class="main-cell header-cell" colspan="3">ESTADO:</td>
-        <td class="main-cell" colspan="9" style="text-align: center;">
-            {% if sanction.status == 'REGISTERED' %}Registrada
-            {% elif sanction.status == 'ACTIVE' %}Activa
-            {% elif sanction.status == 'COMPLETED' %}Cumplida
-            {% elif sanction.status == 'CANCELED' %}Anulada
-            {% else %}{{ sanction.get_status_display }}{% endif %}
-        </td>
-    </tr>
-
-    {% if sanction.personnel_action.is_registered %}
-    <tr>
-        <td class="main-cell header-cell" colspan="3">FECHA DE REGISTRO:</td>
-        <td class="main-cell" colspan="9" style="text-align: center;">
-            {{ sanction.personnel_action.registration_date|date:"d/m/Y" }}
-        </td>
-    </tr>
-    {% endif %}
-
-    <!-- Signatures -->
-    <tr>
-        <td class="main-cell header-cell" colspan="12">FIRMAS DE RESPONSABILIDAD</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style="padding: 10px;">
-            <div class="signature-box"></div>
-            <div class="signature-label">
-                {% if sanction.personnel_action.authority_1 %}
-                    <b>{{ sanction.personnel_action.authority_1.name }}</b><br>
-                    {{ sanction.personnel_action.authority_1.position }}
+    <!-- DATOS DE LA ACCIÓN -->
+    <div class="section">
+        <div class="section-title">Datos de la Acción</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Tipo de Acción:</span>
+                <span class="info-value">{{ action.action_type.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Estado:</span>
+                {% if action.is_registered %}
+                    <span class="badge badge-registered">REGISTRADA</span>
                 {% else %}
-                    <b>PRIMERA AUTORIDAD</b>
+                    <span class="badge badge-pending">SIN REGISTRAR</span>
                 {% endif %}
             </div>
-        </td>
-        <td class="main-cell" colspan="6" style="padding: 10px;">
-            <div class="signature-box"></div>
-            <div class="signature-label">
-                {% if sanction.personnel_action.authority_2 %}
-                    <b>{{ sanction.personnel_action.authority_2.name }}</b><br>
-                    {{ sanction.personnel_action.authority_2.position }}
-                {% else %}
-                    <b>SEGUNDA AUTORIDAD</b>
-                {% endif %}
+            <div class="info-item">
+                <span class="info-label">Fecha de Emisión:</span>
+                <span class="info-value">{{ action.date_issue|date:"d/m/Y" }}</span>
             </div>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="4" style="padding: 10px;">
-            <div class="signature-box"></div>
-            <div class="signature-label">
-                {% if sanction.personnel_action.reviewer %}
-                    <b>{{ sanction.personnel_action.reviewer.name }}</b><br>
-                    {{ sanction.personnel_action.reviewer.position }}
-                {% else %}
-                    <b>REVISADO POR</b>
-                {% endif %}
+            <div class="info-item">
+                <span class="info-label">Fecha de Vigencia:</span>
+                <span class="info-value">{{ action.date_validity|date:"d/m/Y" }}</span>
             </div>
-        </td>
-        <td class="main-cell" colspan="4" style="padding: 10px;">
-            <div class="signature-box"></div>
-            <div class="signature-label">
-                {% if sanction.personnel_action.elaboration %}
-                    <b>{{ sanction.personnel_action.elaboration.name }}</b><br>
-                    {{ sanction.personnel_action.elaboration.position }}
-                {% else %}
-                    <b>ELABORADO POR</b>
-                {% endif %}
-            </div>
-        </td>
-        <td class="main-cell" colspan="4" style="padding: 10px;">
-            <div class="signature-box"></div>
-            <div class="signature-label">
-                {% if sanction.personnel_action.register %}
-                    <b>{{ sanction.personnel_action.register.name }}</b><br>
-                    {{ sanction.personnel_action.register.position }}
-                {% else %}
-                    <b>REGISTRO</b>
-                {% endif %}
-            </div>
-        </td>
-    </tr>
+        </div>
 
-    <!-- Footer -->
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: center; font-size: 9px; padding: 5px;">
-            Documento generado el {{ today|date:"d/m/Y" }} a las {{ today|time:"H:i" }}
-        </td>
-    </tr>
-</table>
+        {% if action.motivation %}
+        <div class="info-item" style="margin-top: 15px;">
+            <span class="info-label">Motivación:</span>
+            <p class="info-value" style="margin-top: 5px;">{{ action.motivation }}</p>
+        </div>
+        {% endif %}
 
+        {% if action.explanation %}
+        <div class="info-item" style="margin-top: 15px;">
+            <span class="info-label">Explicación:</span>
+            <p class="info-value" style="margin-top: 5px; white-space: pre-wrap;">{{ action.explanation }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- FIRMAS -->
+    <div class="footer">
+        <div class="signature-grid">
+            {% if action.elaborated %}
+            <div class="signature-box">
+                <div class="signature-label">Elaborado Por</div>
+                <div class="signature-name">{{ action.elaborated }}</div>
+            </div>
+            {% endif %}
+
+            {% if action.reviewed %}
+            <div class="signature-box">
+                <div class="signature-label">Revisado Por</div>
+                <div class="signature-name">{{ action.reviewed }}</div>
+            </div>
+            {% endif %}
+
+            {% if action.approved %}
+            <div class="signature-box">
+                <div class="signature-label">Aprobado Por</div>
+                <div class="signature-name">{{ action.approved }}</div>
+            </div>
+            {% endif %}
+
+            {% if action.authorized %}
+            <div class="signature-box">
+                <div class="signature-label">Autorizado Por</div>
+                <div class="signature-name">{{ action.authorized }}</div>
+            </div>
+            {% endif %}
+
+            {% if action.register %}
+            <div class="signature-box">
+                <div class="signature-label">Registrado Por</div>
+                <div class="signature-name">{{ action.register }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Auto-imprimir al cargar
+        window.onload = function() {
+            window.print();
+        };
+    </script>
 </body>
 </html>

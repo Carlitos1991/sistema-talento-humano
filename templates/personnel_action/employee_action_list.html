@@ -1,45 +1,47 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Administración de Acciones de Personal{% endblock %}
+{% block title %}Generar Acción de Personal{% endblock %}
 
 {% block content %}
     <div class="content-wrapper">
         <!-- Configuración oculta -->
         <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_list' %}">
+        <input type="hidden" id="url-list" value="{% url 'personnel_actions:employee_list' %}">
 
         <!-- Encabezado -->
         <div class="header-card">
             <div>
-                <h1><i class="fas fa-file-signature"></i> Administración de Acciones de Personal</h1>
-                <p>Gestiona todas las acciones de personal registradas en el sistema.</p>
+                <h1><i class="fas fa-user-plus"></i> Generar Acción de Personal</h1>
+                <p>Seleccione un empleado para generar una nueva acción de personal.</p>
             </div>
         </div>
 
-        <!-- Filtros y búsqueda -->
+        <!-- Tabla de empleados -->
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por número, empleado, cédula o tipo">
+                        <input type="text" 
+                               id="table-search" 
+                               class="input-field"
+                               placeholder="Buscar por nombre, apellido o cédula">
                     </div>
                 </div>
 
                 <!-- Zona de recarga AJAX -->
                 <div id="table-content-wrapper">
-                    {% include 'personnel_action/partials/partial_personnel_action_admin_table.html' %}
+                    {% include 'personnel_action/partials/partial_employee_action_list.html' %}
                 </div>
 
                 <!-- Paginación -->
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">
                         {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} empleados
                         {% else %}
-                            Mostrando 0 a 0 registros de 0 registros
+                            Mostrando 0 a 0 de 0 empleados
                         {% endif %}
                     </span>
                     <ul class="pagination-list">
@@ -64,21 +66,32 @@
         </div>
     </div>
 
-    <!-- Modal para detalles -->
-    <div id="actionDetailModal" class="modal-overlay hidden">
-        <div id="modal-detail-content"></div>
+    <!-- Modal de Creación de Acción -->
+    <div id="modal-create-action" class="modal-overlay hidden">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;" id="modal-body-content">
+            <!-- Contenido dinámico del formulario -->
+        </div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
         // Inicializar paginación desde el servidor
+        {% if page_obj %}
         window.initialPagination = {
-            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
-            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
-            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
-            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
+            current_page: {{ page_obj.number }},
+            total_pages: {{ page_obj.paginator.num_pages }},
+            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+            has_next: {{ page_obj.has_next|yesno:"true,false" }}
         };
+        {% else %}
+        window.initialPagination = {
+            current_page: 1,
+            total_pages: 1,
+            has_previous: false,
+            has_next: false
+        };
+        {% endif %}
     </script>
-    <script src="{% static 'js/personnel_actions/action_admin.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/employee_action.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,137 @@
+<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 800px;">
+    <!-- HEADER -->
+    <div class="modal-header-medium modal-header-gradient">
+        <h3 class="modal-title text-white">
+            <i class="fa-solid fa-file-alt me-2"></i>
+            Detalle de Acción de Personal
+        </h3>
+        <button type="button" class="btn-close-modal text-white-opacity js-close-detail-modal">&times;</button>
+    </div>
+
+    <!-- BODY -->
+    <div class="modal-body-custom">
+        
+        <!-- INFORMACIÓN DEL EMPLEADO -->
+        <div class="form-section-card">
+            <h5 class="section-title">
+                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+            </h5>
+            <div class="alert-info">
+                {% if action.employee.person.photo %}
+                    <img src="{{ action.employee.person.photo.url }}"
+                         alt="{{ action.employee.person.full_name }}"
+                         style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <div style="width: 45px; height: 45px; border-radius: 50%; background: #4a90e2; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user" style="color: white; font-size: 1.2rem;"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem; color: #1e293b;">{{ action.employee.person.full_name }}</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">CI: {{ action.employee.person.document_number }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATOS DE LA ACCIÓN -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
+            </h5>
+            <div class="grid-2-cols">
+                <div>
+                    <label class="form-label">Número:</label>
+                    <p style="margin: 0; font-weight: 600;">{{ action.number }}</p>
+                </div>
+                <div>
+                    <label class="form-label">Tipo de Acción:</label>
+                    <p style="margin: 0;">{{ action.action_type.name }}</p>
+                </div>
+                <div>
+                    <label class="form-label">Fecha de Emisión:</label>
+                    <p style="margin: 0;">{{ action.date_issue|date:"d/m/Y" }}</p>
+                </div>
+                <div>
+                    <label class="form-label">Fecha de Vigencia:</label>
+                    <p style="margin: 0;">{{ action.date_validity|date:"d/m/Y" }}</p>
+                </div>
+                <div>
+                    <label class="form-label">Estado:</label>
+                    <p style="margin: 0;">
+                        {% if action.is_registered %}
+                            <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Registrada</span>
+                        {% else %}
+                            <span class="status-badge active">Sin registrar</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOTIVACIÓN Y EXPLICACIÓN -->
+        {% if action.motivation or action.explanation %}
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+            </h5>
+            {% if action.motivation %}
+            <div class="mb-3">
+                <label class="form-label">Motivación:</label>
+                <p style="margin: 0;">{{ action.motivation }}</p>
+            </div>
+            {% endif %}
+            {% if action.explanation %}
+            <div>
+                <label class="form-label">Explicación:</label>
+                <p style="margin: 0; white-space: pre-wrap;">{{ action.explanation }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- FIRMAS AUTORIZADAS -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
+            </h5>
+            <div class="grid-2-cols">
+                {% if action.elaborated %}
+                <div>
+                    <label class="form-label">Elaborado Por:</label>
+                    <p style="margin: 0;">{{ action.elaborated }}</p>
+                </div>
+                {% endif %}
+                {% if action.reviewed %}
+                <div>
+                    <label class="form-label">Revisado Por:</label>
+                    <p style="margin: 0;">{{ action.reviewed }}</p>
+                </div>
+                {% endif %}
+                {% if action.approved %}
+                <div>
+                    <label class="form-label">Aprobado Por:</label>
+                    <p style="margin: 0;">{{ action.approved }}</p>
+                </div>
+                {% endif %}
+                {% if action.authorized %}
+                <div>
+                    <label class="form-label">Autorizado Por:</label>
+                    <p style="margin: 0;">{{ action.authorized }}</p>
+                </div>
+                {% endif %}
+                {% if action.register %}
+                <div>
+                    <label class="form-label">Registrado Por:</label>
+                    <p style="margin: 0;">{{ action.register }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="modal-footer-medium modal-footer-spaced">
+        <button type="button" class="btn-cancel js-close-detail-modal">Cerrar</button>
+    </div>
+</div>
