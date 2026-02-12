@@ -90,16 +90,17 @@
                                                 title="Registrar">
                                             <i class="fas fa-check"></i>
                                         </button>
-                                        <button class="btn-list-action js-view-history"
-                                                onclick="printLiquidation({{ action.id }})"
-                                                title="Imprimir">
-                                            <i class="fas fa-print"></i>
+
+                                        <button class="btn-icon btn-detail-action js-print-action"
+                                                data-action-id="{{ action.pk }}"
+                                                title="Imprimir PDF">
+                                            <i class="fa-solid fa-print"></i>
                                         </button>
                                     {% else %}
-                                        <button class="btn-list-action js-view-history"
-                                                onclick="printLiquidation({{ action.id }})"
-                                                title="Imprimir">
-                                            <i class="fas fa-print"></i>
+                                        <button class="btn-icon btn-detail-action js-print-action"
+                                                data-action-id="{{ action.pk }}"
+                                                title="Imprimir PDF">
+                                            <i class="fa-solid fa-print"></i>
                                         </button>
                                     {% endif %}
                                 </td>

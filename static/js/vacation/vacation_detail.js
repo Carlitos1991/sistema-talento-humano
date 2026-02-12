@@ -934,6 +934,29 @@ function attachLiquidationSearchEvents(employeeId) {
             loadLiquidationPage(1);
         }, 500);
     });
+    
+    // Adjuntar eventos de impresión a todos los botones
+    const printButtons = document.querySelectorAll('.js-print-action');
+    printButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const actionId = this.getAttribute('data-action-id');
+            printLiquidationPDF(actionId);
+        });
+    });
+}
+
+/**
+ * Imprimir PDF de liquidación
+ */
+function printLiquidationPDF(actionId) {
+    const pdfUrl = `/personnel_actions/${actionId}/pdf/`;
+    const printWindow = window.open(pdfUrl, '_blank', 'width=900,height=700');
+    
+    if (!printWindow) {
+        // Si el popup fue bloqueado, abrir en pestaña nueva
+        window.open(pdfUrl, '_blank');
+    }
 }
 
 /**

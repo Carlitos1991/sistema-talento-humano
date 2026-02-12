@@ -22,7 +22,7 @@
                     {% endif %}
                 </td>
                 <td>{{ sanction.employee.person.full_name }}</td>
-                <td>{{ sanction.sanction_type.name }}</td>
+                <td>{{ sanction.sanction_type.name }} </td>
                 <td>
                     {% if sanction.severity == 'VERBAL_WARNING' %}
                         <span class="badge-code" style="background: #dbeafe; color: #1e40af;">AMONESTACIÓN VERBAL</span>
@@ -32,7 +32,8 @@
                     {% elif sanction.severity == 'PECUNIARY_WARNING' %}
                         <span class="badge-code" style="background: #fed7aa; color: #9a3412;">SANCION PECUNIARIA</span>
                     {% elif sanction.severity == 'ADMINISTRATIVE_SUMMARY' %}
-                        <span class="badge-code" style="background: #fecaca; color: #991b1b;">SUMARIO ADMINISTRATIVO</span>
+                        <span class="badge-code"
+                              style="background: #fecaca; color: #991b1b;">SUMARIO ADMINISTRATIVO</span>
                     {% endif %}
                 </td>
                 <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
@@ -52,6 +53,7 @@
                                     title="Ver Detalle">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
+
                         {% endif %}
 
                         <!-- Editar (solo si no está registrada) -->
@@ -74,8 +76,8 @@
 
                         <!-- Imprimir PDF -->
                         {% if perms.sanctions.view_sanction %}
-                            <button class="btn-icon btn-icon btn-icon btn-detail-action js-print-sanction"
-                                    data-sanction-id="{{ sanction.pk }}"
+                            <button class="btn-icon btn-detail-action js-print-action"
+                                    data-action-id="{{ sanction.personnel_action.pk }}"
                                     title="Imprimir PDF">
                                 <i class="fa-solid fa-print"></i>
                             </button>

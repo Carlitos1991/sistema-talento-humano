@@ -11,7 +11,7 @@
 {% block content %}
     <!-- CSRF Token para JavaScript -->
     {% csrf_token %}
-    
+
     <!-- Employee ID para JavaScript -->
     <div data-employee-id="{{ employee.id }}" style="display: none;"></div>
 
@@ -171,7 +171,8 @@
                             <td>
                                 <div class="cell-with-button">
                                     <span>{{ balance.vacation_days|floatformat:2 }}</span>
-                                    <button class="btn-action btn-ver-detalle" onclick="openVacationHistoryModal({{ balance.id }})">
+                                    <button class="btn-action btn-ver-detalle"
+                                            onclick="openVacationHistoryModal({{ balance.id }})">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
@@ -179,7 +180,8 @@
                             <td>
                                 <div class="cell-with-button">
                                     <span>{{ balance.permit_days|floatformat:2 }}</span>
-                                    <button class="btn-action btn-ver-detalle" onclick="openPermitHistoryModal({{ balance.id }})">
+                                    <button class="btn-action btn-ver-detalle"
+                                            onclick="openPermitHistoryModal({{ balance.id }})">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
@@ -283,17 +285,18 @@
 
     <!-- Modal para listado de permisos -->
     <div id="modalPermitList" class="modal-overlay hidden"></div>
-    
+
     <!-- Contenedor para modal de historial de liquidaciones -->
     <div id="vacationHistoryModalContainer"></div>
-    
+
     <!-- Contenedor para modal de historial de permisos -->
     <div id="permitHistoryModalContainer"></div>
-    
+
     <!-- Modal para Reporte de Permisos -->
     <div id="permitReportModalContainer"></div>
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/action_history.js' %}"></script>
 {% endblock %}

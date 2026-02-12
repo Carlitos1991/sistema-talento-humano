@@ -57,14 +57,16 @@
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">
                         {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de
+                            {{ page_obj.paginator.count }} registros
                         {% else %}
                             Mostrando 0 a 0 registros de 0 registros
                         {% endif %}
                     </span>
                     <ul class="pagination-list">
                         <li>
-                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <button id="btn-prev" class="page-btn"
+                                    {% if not page_obj.has_previous %}disabled{% endif %}>
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         </li>
@@ -101,20 +103,20 @@
     <script>
         // Inicializar paginación desde el servidor
         {% if page_obj %}
-        window.initialPagination = {
-            current_page: {{ page_obj.number }},
-            total_pages: {{ page_obj.paginator.num_pages }},
-            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
-            has_next: {{ page_obj.has_next|yesno:"true,false" }}
-        };
+            window.initialPagination = {
+                current_page: {{ page_obj.number }},
+                total_pages: {{ page_obj.paginator.num_pages }},
+                has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+                has_next: {{ page_obj.has_next|yesno:"true,false" }}
+            };
         {% else %}
-        window.initialPagination = {
-            current_page: 1,
-            total_pages: 1,
-            has_previous: false,
-            has_next: false
-        };
+            window.initialPagination = {
+                current_page: 1,
+                total_pages: 1,
+                has_previous: false,
+                has_next: false
+            };
         {% endif %}
     </script>
-    <script src="{% static 'js/sanctions/sanction_admin.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/action_history.js' %}"></script>
 {% endblock %}

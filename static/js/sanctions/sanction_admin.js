@@ -326,7 +326,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function printSanctionPDF(sanctionId) {
-        window.open(`/sanctions/admin/${sanctionId}/pdf/`, '_blank');
+        const pdfUrl = `/sanctions/admin/${sanctionId}/pdf/`;
+        const printWindow = window.open(pdfUrl, '_blank', 'width=900,height=700');
+        
+        if (!printWindow) {
+            // Si el popup fue bloqueado, abrir en pestaña nueva
+            window.open(pdfUrl, '_blank');
+        }
     }
 
     function showErrors(form, errors) {
