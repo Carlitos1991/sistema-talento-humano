@@ -3,455 +3,383 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acción de Personal (Informativo)</title>
-
+    <title>Acción de Personal - {{ action.employee.person.full_name }} - {{ action.number }}</title>
     <style>
+        @page {
+            size: A4;
+            margin: 10mm 10mm 10mm 18mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #FFFFFF;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 11px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 10px;
+            background: #f5f5f5;
         }
 
-        /* Estilos para tu tabla principal */
-        .main-table {
-            border: 1px double black;
-            padding: 2px 1px 0px 1px;
-            text-align: left;
-            vertical-align: center;
+        .report-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
         }
 
-        .main-cell {
-            border: 1px solid #999;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: -1px;
+            table-layout: fixed;
+        }
+
+        td {
+            border: 1px solid black;
+            padding: 4px;
             vertical-align: middle;
         }
 
-        .page-break {
-            background-color: #eee;
+        .signature-table {
+            page-break-inside: avoid !important;
+        }
+
+        .bg-gray {
+            background-color: #F0F0F0;
+        }
+
+        .text-center {
             text-align: center;
+        }
+
+        .bold {
             font-weight: bold;
-            border: 1px dashed #999;
         }
 
-        .nested-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: none; /* Asegura que no tenga borde */
+        /* Estilos para los tipos de acción */
+        .action-grid td {
+            border: none;
+            font-size: 9px;
+            padding: 2px;
         }
 
-        .nested-table td {
-            border: none; /* Asegura que las celdas internas no tengan borde */
-            padding: 2px; /* Un padding pequeño solo para que no se pegue el texto */
-            vertical-align: top;
+        /* Botón de imprimir original */
+        .print-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #05246c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
         }
 
-        /* Estilo optimizado para logo */
-        .logo-img {
-            max-width: 80px;
-            max-height: 60px;
-            width: auto;
-            height: auto;
+        @media print {
+            .print-button {
+                display: none;
+            }
+
+            body {
+                background: white;
+                /* Doble refuerzo dentro del media query */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .report-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            /* Asegura que las celdas grises mantengan su color al imprimir */
+            .bg-gray {
+                background-color: #F0F0F0 !important;
+            }
         }
     </style>
 </head>
 <body>
 
-<table class="main-table">
-    <tr>
-        <td class="main-cell" rowspan="4" COLSPAN="6" style="text-align: center; vertical-align: middle; padding: 5px;">
-            <img width="80px" height="auto" src="{% static 'img/logo.png' %}" alt="Logo">
-        </td>
-        <td class="main-cell" colspan="6"
-            style="text-align: center; vertical-align: middle; background-color: #F0F0F0;">
-            <b>ACCIÓN DE PERSONAL</b>
-        </td>
+<div class="report-container">
+    <table>
+        <tr>
+            <td colspan="3" rowspan="4" class="text-center">
+                <img width="80px" src="{% static 'img/logo.png' %}" alt="Logo">
+            </td>
+            <td colspan="9" class="bg-gray text-center bold" style="font-size: 12px;">ACCIÓN DE PERSONAL</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="bg-gray text-center bold">Nro:</td>
+            <td colspan="5" class="text-center bold">{{ action.number }}</td>
+        </tr>
+        <tr>
+            <td colspan="9" class="bg-gray text-center bold">FECHA DE ELABORACIÓN:</td>
+        </tr>
+        <tr>
+            <td colspan="9" class="text-center">{{ action.date_issue|date:"d-M-Y" }}</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="text-center">{{ action.employee.person.last_name }}</td>
+            <td colspan="6" class="text-center">{{ action.employee.person.first_name }}</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="bg-gray text-center bold">Apellidos</td>
+            <td colspan="6" class="bg-gray text-center bold">Nombres</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="bg-gray text-center bold">IDENTIFICACIÓN</td>
+            <td colspan="3" class="bg-gray text-center bold">NRO. IDENTIFICACIÓN</td>
+            <td colspan="6" class="bg-gray text-center bold">RIGE</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="text-center">{{ action.employee.person.document_type.name }}</td>
+            <td colspan="3" class="text-center">{{ action.employee.person.document_number }}</td>
+            <td colspan="3" class="text-center"><b>DESDE:</b> {{ action.date_effective|date:"d/m/Y" }}</td>
+            <td colspan="3" class="text-center"><b>HASTA:</b> {{ action.date_effective|date:"d/m/Y" }}</td>
+        </tr>
+    </table>
 
-    </tr>
-    <tr>
-        <td class="main-cell" style="text-align: center;background-color: #F0F0F0;" colspan="3">
-            <b>Nro:</b></td>
-        <td class="main-cell" style="text-align: center; font-size: 12px;" colspan="3">
-            {{ sanction.personnel_action.number }}</td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6"
-            style="text-align: center; vertical-align: middle; background-color: #F0F0F0;">
-            <B>FECHA DE ELABORACIÓN:</B>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;">
-            {{ sanction.personnel_action.date_issue|date:"d-M-Y" }}
-        </td>
-    </tr>
+    <table>
+        <tr>
+            <td class="bg-gray text-center bold" style="font-size: 9px;">EXPLICACIÓN DE LA ACCIÓN</td>
+        </tr>
+        <tr>
+            <td>
+                <table class="action-grid">
+                    <tr>
+                        <td>[{% if action.action_type.name == 'INGRESO' %}X{% else %}&nbsp;{% endif %}] INGRESO</td>
+                        <td>[{% if action.action_type.name == 'TRASPASO' %}X{% else %}&nbsp;{% endif %}] TRASPASO</td>
+                        <td>[{% if action.action_type.name == 'INCREMENTO DE RMU' %}X{% else %}&nbsp;{% endif %}]
+                            INCREMENTO RMU
+                        </td>
+                        <td>[{% if action.action_type.name == 'REVISIÓN CLAS. PUEST.' %}X{% else %}&nbsp;{% endif %}]
+                            REVISIÓN CLAS. PUEST.
+                        </td>
+                        <td>[{% if action.action_type.name == 'REINGRESO' %}X{% else %}&nbsp;{% endif %}]
+                            REINGRESO
+                        </td>
+                        <td>[{% if action.action_type.name == 'CAMBIO ADMINISTRATIVO' %}X{% else %}&nbsp;{% endif %}]
+                            CAMBIO ADMINISTRATIVO
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>[{% if action.action_type.name == 'SUBROGACION' %}X{% else %}&nbsp;{% endif %}] SUBROGACIÓN
+                        </td>
+                        <td>[{% if action.action_type.name == 'RESTITUCION' %}X{% else %}&nbsp;{% endif %}]
+                            RESTITUCIÓN
+                        </td>
+                        <td>[{% if action.action_type.name == 'INTERC. VOLUNTARIO' %}X{% else %}&nbsp;{% endif %}]
+                            INTERC. VOLUNTARIO
+                        </td>
+                        <td>[{% if action.action_type.name == 'ENCARGO' %}X{% else %}&nbsp;{% endif %}]
+                            ENCARGO
+                        </td>
+                        <td>[{% if action.action_type.name == 'REINTEGRO' %}X{% else %}&nbsp;{% endif %}]
+                            REINTEGRO
+                        </td>
+                        <td>[{% if action.action_type.name == 'LICENCIA' %}X{% else %}&nbsp;{% endif %}]
+                            LICENCIA
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>[{% if action.action_type.name == 'CESACIÓN DE FUNCIONES' %}X{% else %}&nbsp;{% endif %}]
+                            CESACIÓN DE FUNCIONES
+                        </td>
+                        <td>[{% if action.action_type.name == 'ASCENSO' %}X{% else %}&nbsp;{% endif %}]
+                            ASCENSO
+                        </td>
+                        <td>[{% if action.action_type.name == 'COMISIÓN DE SERVICIOS' %}X{% else %}&nbsp;{% endif %}]
+                            COMISIÓN DE SERVICIOS
+                        </td>
+                        <td>[{% if action.action_type.name == 'DESTITUCIÓN' %}X{% else %}&nbsp;{% endif %}]
+                            DESTITUCIÓN
+                        </td>
+                        <td>[{% if action.action_type.name == 'TRASLADO' %}X{% else %}&nbsp;{% endif %}]
+                            TRASLADO
+                        </td>
+                        <td>[{% if action.action_type.name == 'SANCIONES' %}X{% else %}&nbsp;{% endif %}]
+                            SANCIONES
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>[{% if action.action_type.name == 'VACACIONES' %}X{% else %}&nbsp;{% endif %}] VACACIONES
+                        </td>
 
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;">
-            {{ employee.person.last_name }}
-        </td>
-        <td class="main-cell" colspan="6"
-            style="text-align: center; vertical-align: middle;">
-            {{ employee.person.first_name }}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style=" text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <b> Apellidos</b>
-        </td>
-        <td class="main-cell" colspan="6"
-            style="  text-align: center; vertical-align: middle; background-color: #F0F0F0;">
-            <b>Nombres</b>
-        </td>
-    </tr>
-    <tr>
-        <td rowspan="2" class="main-cell" colspan="3"
-            style="text-align: center; vertical-align: middle; background-color: #F0F0F0">
-            <b>DOCUMENTO DE IDENTIFICACIÓN:</b>
-        </td>
-        <td rowspan="2" class="main-cell" colspan="3"
-            style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <b>NRO. DE IDENTIFICACIÓN</b>
-        </td>
-        <td colspan="6" class="main-cell"
-            style="text-align: center; vertical-align: middle; background-color: #F0F0F0;">
-            <b>RIGE:</b>
-        </td>
+                        <td colspan="5">[ ] OTRO (_________________________________________________________)</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6"><b>* PRESENTÓ LA DECLARACIÓN JURADA (número 2 del art. 3 RLOSEP):</b> SI [&nbsp;&nbsp;
+                            ] NO APLICA [&nbsp;&nbsp; ]
+                        </td>
+                    </tr>
 
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="3"
-            style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <b>DESDE:</b>
-        </td>
-        <td class="main-cell" colspan="3"
-            style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <b>HASTA: (cuando aplica)</b>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="3" style="  text-align: center; vertical-align: middle;">
-            {{ employee.person.document_type.name }}
-        </td>
-        <td class="main-cell" colspan="3" style=" text-align: center; vertical-align: middle;">
-            {{ employee.person.document_number }}
-        </td>
-        <td class="main-cell" colspan="3" style=" text-align: center; vertical-align: middle;">
-            {{ sanction.personnel_action.date_effective|date:"d/m/Y" }}
-        </td>
-        <td class="main-cell" colspan="3"
-            style="  text-align: center; vertical-align: middle;">
-            ------------
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <span class="label">Escoja una opción (según lo estipulado en el artículo 21 del Reglamento General a la Ley Orgánica del Servicio Público)</span>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12">
-            <table class="nested-table" style="margin-top: 5px;">
-                <tr>
-                    {% if sanction.personnel_action.action.name == 'INGRESO' %}
-                        <td colspan="3">[X] INGRESO</td> {% else %}
-                        <td colspan="3">[ ] INGRESO</td>{% endif %}
-                    {% if sanction.personnel_action.action.name == 'TRASPASO' %}
-                        <td colspan="3">[X] TRASPASO</td> {% else %}
-                        <td colspan="3">[ ] TRASPASO</td>{% endif %}
-                    {% if sanction.personnel_action.action.name == 'INCREMENTO DE RMU' %}
-                        <td colspan="3">[X] INCREMENTO DE RMU</td> {% else %}
-                        <td colspan="3">[ ] INCREMENTO DE RMU</td>{% endif %}
-                    {% if sanction.personnel_action.action.name == 'REVISIÓN CLAS. PUEST.' %}
-                        <td colspan="3">[X] REVISIÓN CLAS. PUEST.</td> {% else %}
-                        <td colspan="3">[ ] REVISIÓN CLAS. PUEST.</td>{% endif %}
-                </tr>
-                <tr>
-                    {% if action_data.action.name == 'REINGRESO' %}
-                        <td colspan="3">[X] REINGRESO</td> {% else %}
-                        <td colspan="3">[ ] REINGRESO</td>{% endif %}
-                    {% if action_data.action.name == 'CAMBIO ADMINISTRATIVO' %}
-                        <td colspan="3">[X] CAMBIO ADMINISTRATIVO</td> {% else %}
-                        <td colspan="3">[ ] CAMBIO ADMINISTRATIVO</td>{% endif %}
-                    {% if action_data.action.name == 'SUBROGACIÓN' %}
-                        <td colspan="3">[X] SUBROGACIÓN</td> {% else %}
-                        <td colspan="3">[ ] SUBROGACIÓN</td>{% endif %}
-                    <td colspan="3">[ ] OTRO (Detallar)</td>
-                </tr>
-                <tr>
-                    {% if action_data.action.name == 'RESTITUCIÓN' %}
-                        <td colspan="3">[X] RESTITUCIÓN</td> {% else %}
-                        <td colspan="3">[ ] RESTITUCIÓN</td>{% endif %}
-                    {% if action_data.action.name == 'INTERC. VOLUNTARIO' %}
-                        <td colspan="3">[X] INTERC. VOLUNTARIO</td> {% else %}
-                        <td colspan="3">[ ] INTERC. VOLUNTARIO</td>{% endif %}
-                    {% if action_data.action.name == 'ENCARGO' %}
-                        <td colspan="3">[X] ENCARGO</td> {% else %}
-                        <td colspan="3">[ ]ENCARGO</td>{% endif %}
-                    <td colspan="3">_________________________</td>
-                </tr>
-                <tr>
-                    {% if action_data.action.name == 'REINTEGRO' %}
-                        <td colspan="3">[X] REINTEGRO</td> {% else %}
-                        <td colspan="3">[ ]REINTEGRO</td>{% endif %}
-                    {% if action_data.action.name == 'LICENCIA' %}
-                        <td colspan="3">[X] LICENCIA</td> {% else %}
-                        <td colspan="3">[ ]LICENCIA</td>{% endif %}
-                    {% if action_data.action.name == 'CESACIÓN DE FUNCIONES' %}
-                        <td colspan="3">[X] CESACIÓN DE FUNCIONES</td> {% else %}
-                        <td colspan="3">[ ]CESACIÓN DE FUNCIONES</td>{% endif %}
-                    <td colspan="3">_________________________</td>
-                </tr>
-                <tr>
-                    {% if action_data.action.name == 'ASCENSO' %}
-                        <td colspan="3">[X] ASCENSO</td> {% else %}
-                        <td colspan="3">[ ]ASCENSO</td>{% endif %}
-                    {% if action_data.action.name == 'COMISIÓN DE SERVICIOS' %}
-                        <td colspan="3">[X] COMISIÓN DE SERVICIOS</td> {% else %}
-                        <td colspan="3">[ ]COMISIÓN DE SERVICIOS</td>{% endif %}
-                    {% if action_data.action.name == 'DESTITUCIÓN' %}
-                        <td colspan="3">[X] DESTITUCIÓN</td> {% else %}
-                        <td colspan="3">[ ]DESTITUCIÓN</td>{% endif %}
-                    <td colspan="3">_________________________</td>
-                </tr>
-                <tr>
-                    {% if action_data.action.name == 'TRASLADO' %}
-                        <td colspan="3">[X] TRASLADO</td> {% else %}
-                        <td colspan="3">[ ]TRASLADO</td>{% endif %}
-                    {% if sanction.personnel_action.action_type.name == 'SANCIONES' %}
-                        <td colspan="3">[X] SANCIONES</td> {% else %}
-                        <td colspan="3">[ ]SANCIONES</td>{% endif %}
-                    {% if action.action_type.name == 'VACACIONES' %}
-                        <td colspan="3">[X] VACACIONES</td> {% else %}
-                        <td colspan="3">[ ]VACACIONES</td>{% endif %}
-                    <td colspan="3">_________________________</td>
-                </tr>
-                <tr>
-                    <td colspan="12" style="font-size: 10px"> EN CASO DE REQUERIR ESPECIFICACIÓN DE LO SELECCIONADO:
-                        ____________________________________________________________________
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="12" style="font-size: 10px"><b>* PRESENTÓ LA DECLARACIÓN JURADA (número 2 del art. 3
-                        RLOSEP): </b> &nbsp;&nbsp;SI [ &nbsp;] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; NO APLICA [ &nbsp;]
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 
-    <tr>
-        <td class="main-cell" colspan="12" style="background-color: #F0F0F0">
-            <span class="label"><b>MOTIVACIÓN:</b> {{ sanction.personnel_action.motivation }}(adjuntar anexo si lo posee)</span>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: justify;">
-            {{ sanction.personnel_action.explanation }}
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <span class="label"><b>SITUACIÓN ACTUAL:</b></span>
-        </td>
-        <td class="main-cell" colspan="6" style="text-align: center; vertical-align: middle;background-color: #F0F0F0">
-            <span class="label"><b>SITUACIÓN PROPUESTA:</b></span>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6">
-            <span class="label"><b>PROCESO INSTITUCIONAL:</b>
-                {% if employee.area.level_id is 1 %}
-                    {{ employee.area.name|default:"N/A" }}{% elif employee.area.level_id is 2 %}
-                    {{ employee.area.parent.name|default:"N/A" }}{% elif employee.area.level_id is 3 %}
-                    {{ employee.area.parent.parent.name|default:"N/A" }}{% elif employee.area.level_id is 4 %}
-                    {{ employee.area.parent.parent.parent.name|default:"N/A" }}{% elif employee.area.level_id is 5 %}
-                    {{ employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% else %}
-                    {{ employee.area.parent.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br></span>
-            <span class="label"><b>NIVEL DE GESTIÓN:</b> {% if employee.area.level_id is 1 %}
-                {{ employee.area.name|default:"N/A" }}{% elif employee.area.level_id is 2 %}
-                {{ employee.area.name|default:"N/A" }}{% elif employee.area.level_id is 3 %}
-                {{ employee.area.parent.name|default:"N/A" }}{% elif employee.area.level_id is 4 %}
-                {{ employee.area.parent.parent.name|default:"N/A" }}{% elif employee.area.level_id is 5 %}
-                {{ employee.area.parent.parent.parent.name|default:"N/A" }}{% else %}
-                {{ employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% endif %} <br></span>
-            <span class="label"><b>UNIDAD ADMINISTRATIVA:</b> {{ employee.area.name|default:"N/A" }}<br></span>
-            <span class="label"><b>DENOMINACIÓN DEL PUESTO:</b> {{ budget.position_item.name }}<br></span>
-            <span class="label"><b>GRUPO OCUPACIONAL:</b> {{ budget.group_item.name }}<br></span>
-            <span class="label"><b>GRADO:</b> {{ budget.grade_item.name }}<br></span>
-            <span class="label"><b>REMUNERACIÓN MENSUAL:</b> {{ budget.remuneration }}<br></span>
-            <span class="label"><b>PARTIDA INDIVIDUAL:</b> {{ budget.number_individual }}<br></span>
-        </td>
-        <td class="main-cell" colspan="6">
-            <span class="label"><b>Sin cambios en la situación actual</b> <br></span>
-            <span class="label"></span>
-            <span class="label"></span>
-            <span class="label"></span>
-            <span class="label"></span>
-            <span class="label"></span>
-            <span class="label"></span>
-            <span class="label"></span>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: justify; background-color: #F0F0F0">
-            <b>POSESIÓN DEL PUESTO</b>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: justify;">
-            Yo <b>{{ employee.person.first_name }} {{ employee.person.last_name }} </b> con
-            número de cédula
-            <b>{{ employee.person.document_number }}</b> JURO LEALTAD AL ESTADO ECUATORIANO
-            <br> <b>Lugar:</b>&nbsp;&nbsp; Loja
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Fecha:</b> {{ sanction.personnel_action.date_issue|date:"d-M-Y" }}
-            <br>
-            **(EN CASO DE GANADOR DE CONCURSO DE MÉRITOS Y OPOSICIÓN))<br>
-            NRO. ACTA FINAL: _______________&nbsp;&nbsp;&nbsp;&nbsp;FECHA:________________________ &nbsp;&nbsp;&nbsp;&nbsp;FIRMA:_______________________
+    <table>
+        <tr>
+            <td class="bg-gray bold">MOTIVACIÓN: {{ action.motivation }}</td>
+        </tr>
+        <tr>
+            <td style="height: 60px;text-align: justify; vertical-align: top;">{{ action.explanation }}</td>
+        </tr>
+    </table>
 
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="12" style="text-align: justify; background-color: #F0F0F0">
-            <b>RESPONSABLES DE APROBACIÓN</b>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="6" style="text-align: justify; background-color: #F0F0F0">
-            <b>DIRECTOR (A) O RESPONSABLE DE TALENTO HUMANO</b>
-        </td>
-        <td class="main-cell" colspan="6" style="text-align: justify; background-color: #F0F0F0">
-            <b>AUTORIDAD NOMINADORA O SU DELEGADO</b>
-        </td>
-    </tr>
-    <tr>
+    <table>
+        <tr>
+            <td colspan="6" class="bg-gray text-center bold">SITUACIÓN ACTUAL</td>
+            <td colspan="6" class="bg-gray text-center bold">SITUACIÓN PROPUESTA</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                <b>PROCESO INSTITUCIONAL:</b>
+                {% if action.employee.area.level_id is 1 %}
+                    {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 2 %}
+                    {{ action.employee.area.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 3 %}
+                    {{ action.employee.area.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 4 %}
+                    {{ action.employee.area.parent.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 5 %}
+                    {{ action.employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% else %}
+                    {{ action.employee.area.parent.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br>
+                <b>NIVEL DE GESTIÓN:</b> {% if action.employee.area.level_id is 1 %}
+                {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 2 %}
+                {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 3 %}
+                {{ action.employee.area.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 4 %}
+                {{ action.employee.area.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 5 %}
+                {{ action.employee.area.parent.parent.parent.name|default:"N/A" }}{% else %}
+                {{ action.employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br>
+                <b>UNIDAD ADMINISTRATIVA:</b> {{ action.employee.area.name }}<br>
+                <b>PUESTO:</b> {{ budget.position_item.name }}<br>
+                <b>GRUPO:</b> {{ budget.group_item.name }}<br>
+                <b>GRADO:</b> {{ budget.grade_item.name }}<br>
+                <b>RMU:</b> {{ budget.remuneration }}<br>
+                <b>PARTIDA:</b> {{ budget.number_individual }}
+            </td>
+            <td colspan="6" class="text-center">Sin cambios en la situación actual</td>
+        </tr>
+    </table>
 
-        <td class="main-cell" colspan="6" style="text-align: justify;">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>Firma:____________________________________________</b> <br>
-            <b>Nombre:</b>{{ sanction.personnel_action.authority_1.name }}<br>
-            <b>Cargo:</b>{{ sanction.personnel_action.authority_1.charge }}
-        </td>
-        <td class="main-cell" colspan="6" style="text-align: justify; ">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>Firma:____________________________________________</b> <br>
-            <b>Nombre:</b>{{ sanction.personnel_action.authority_2.name }}<br>
-            <b>Cargo:</b>{{ sanction.personnel_action.authority_2.charge }}
-        </td>
-    </tr>
-    <tr>
-        <td colspan="12" class="page-break">
-            <b>RESPONSABLES DE FIRMAS</b>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="6" class="page-break">
-            <b>ACEPTACIÓN Y/O RECEPCIÓN DEL SERVIDOR PÚBLICO</b>
-        </td>
-        <td colspan="6" class="page-break">
-            <b>EN CASO DE NEGATIVA DE LA RECEPCIÓN (TESTIGO)</b>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="6" class="main-cell">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>FIRMA:</b>______________________________________________<br>
-            <b>NOMBRE:</b> ____________________________________________ <br>
-            <b>FECHA:</b> ______________________________________________<br>
-            <b>HORA:</b> _______________________________________________
-        </td>
-        <td colspan="6" class="main-cell">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>FIRMA:</b>_____________________________________________ <br>
-            <b>NOMBRE:</b> ___________________________________________ <br>
-            <b>FECHA:</b> _____________________________________________<br>
-            <b STYLE="font-size: 9px">RAZÓN:</b> En presencia del testigo se deja constancia de que la o el servidor
-            público tiene la negativa
-            de recibir la comunicación de registro de esta acción de personal.
-        </td>
-    </tr>
-    <tr>
-        <td class="page-break" colspan="4">
-            <b>RESPONSABLE DE ELABORACIÓN</b>
-        </td>
-        <td class="page-break" colspan="4">
-            <b>RESPONSABLE DE REVISIÓN</b>
-        </td>
-        <td colspan="4" class="page-break">
-            <b>RESPONSABLE DE REGISTRO Y CONTROL</b>
-        </td>
-    </tr>
-    <tr>
-        <td class="main-cell" colspan="4">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>FIRMA:</b>_____________________ <br>
-            <b>NOMBRE:</b> {{ sanction.personnel_action.elaboration.name }} <br>
-            <b>PUESTO:</b> {{ sanction.personnel_action.elaboration.charge }}<br>
-        </td>
-        <td class="main-cell" colspan="4">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>FIRMA:</b>_____________________ <br>
-            <b>NOMBRE:</b> {{ sanction.personnel_action.reviewer.name }} <br>
-            <b>PUESTO:</b> {{ sanction.personnel_action.reviewer.charge }}<br>
-        </td>
-        <td colspan="4" class="main-cell">
-            <br>
-            <br>
-            <br>
-            <br>
-            <b>FIRMA:</b>___________________________ <br>
-            <b>NOMBRE:</b> {{ sanction.personnel_action.register.name }} <br>
-            <b>PUESTO:</b> {{ sanction.personnel_action.register.charge }}<br>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="12" class="page-break">
-            <b>** USO EXCLUSIVO PARA TALENTO HUMANO</b>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="12" class="page-break" style="font-size: 10px">
-            <b>REGISTRO DE NOTIFICACIÓN AL SERVIDOR PÚBLICO DE LA ACCIÓN DE PERSONAL (primer inciso del art. 22 RGLOSEP,
-                art. 101 COA , art. 66 y 126 ERJAFE)</b>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="12" class="main-cell">
-            <br>
-            <b>COMUNICACIÓN ELECTRONICA:</b> &nbsp; &nbsp;[ &nbsp;] <br><br>
-            <p></p>
-            <b>FECHA:</b> __________________________________ <br><br>
-            <b>HORA:</b>&nbsp; __________________________________ <br><br>
-            <b>**MEDIO:</b> _________________________________<br><br>
-            _________________________________________<br><br>
-            <br>
-            <br>
-            <b>FIRMA DEL RESPONSABLE QUE NOTIFICO:</b> ____________________________________ <br><br>
-            <b>NOMBRE:</b> ______________________________________ <br><br>
-            <b>PUESTO:</b> ______________________________________ <br><br>
-            ** Si la comunicación fue electrónica se deberá colocar el medio por el cual se notificó al servidor; así
-            como, el número del documento.
+    <table>
+        <tr class="bg-gray bold">
+            <td>POSESIÓN DEL PUESTO</td>
+        </tr>
+        <tr>
+            <td>
+                Yo <b>{{ action.employee.person.full_name }}</b>, con número de
+                cédula <b>{{ action.employee.person.document_number }}</b> JURO LEALTAD AL ESTADO ECUATORIANO.<br>
+                <b>Lugar:</b> Loja &nbsp;&nbsp;&nbsp; <b>Fecha:</b> {{ action.date_issue|date:"d-M-Y" }}
+                {% if action.action_type.name == 'INGRESO' %}
+                    <br><b>**(EN CASO DE GANADOR DE CONCURSO DE MÉRITOS Y OPOSICIÓN))</b><br>
+                    <br>NRO. ACTA FINAL: ____________________________________
+                    FECHA:__________________________________________ FIRMA:_________________________________________
+                {% else %}&nbsp;{% endif %}
+            </td>
 
-        </td>
-    </tr>
-</table>
+        </tr>
+    </table>
+
+    <table class="signature-table">
+        <tr class="bg-gray bold text-center">
+            <td COLSPAN="2">RESPONSABLES DE APROBACIÓN</td>
+        </tr>
+        <tr class="bg-gray bold text-center">
+            <td>RESPONSABLE DE TALENTO HUMANO</td>
+            <td>AUTORIDAD NOMINADORA O DELEGADO</td>
+        </tr>
+        <tr>
+            <td style="height: 80px; vertical-align: bottom;">
+                Firma:______________________________________________________<br>
+                <b>{{ action.authority_1.name }}</b><br>{{ action.authority_1.charge }}
+            </td>
+            <td style="height: 80px; vertical-align: bottom;">
+                Firma:______________________________________________________<br>
+                <b>{{ action.authority_2.name }}</b><br>{{ action.authority_2.charge }}
+            </td>
+        </tr>
+    </table>
+
+    <table class="signature-table">
+        <tr class="bg-gray bold text-center">
+            <td>ACEPTACIÓN DEL SERVIDOR</td>
+            <td>NEGATIVA (TESTIGO)</td>
+        </tr>
+        <tr>
+            <td style="height: 80px; vertical-align: bottom;">
+                <b>FIRMA:</b> _____________________________________<br>
+                <b>NOMBRE:</b> {{ action.employee.person.full_name }}<br>
+                <b>FECHA:</b> ___________________________ <b>HORA:</b> ___________________________<br>
+            </td>
+            <td style="height: 80px; text-align: justify; vertical-align: bottom;">
+                <br> <b>FIRMA:</b>___________________________________<br>
+                <b>NOMBRE:</b>________________________________<br>
+                <b>FECHA:</b>___________________________________<br>
+                <b>RAZÓN:</b> En presencia del testigo se deja constancia de que la o el
+                servidor público tiene la negativa de recibir la comunicación de registro
+                de esta acción de personal.
+
+            </td>
+        </tr>
+    </table>
+
+    <table class="signature-table">
+        <tr class="bg-gray bold text-center">
+            <td colspan="3">RESPONSABLES DE FIRMAS</td>
+        </tr>
+        <tr class="bg-gray bold text-center">
+            <td>ELABORACIÓN</td>
+            <td>REVISIÓN</td>
+            <td>REGISTRO</td>
+        </tr>
+        <tr>
+            <td style="height: 70px; vertical-align: bottom;">
+                Firma:______________________________<br><b>{{ action.elaboration.name }}</b><br>{{ action.elaboration.charge }}
+            </td>
+            <td style="height: 70px; vertical-align: bottom;">
+                Firma:______________________________<br><b>{{ action.reviewer.name }}</b><br>{{ action.reviewer.charge }}
+            </td>
+            <td style="height: 70px; vertical-align: bottom;">
+                Firma:______________________________<br><b>{{ action.register.name }}</b><br>{{ action.register.charge }}
+            </td>
+        </tr>
+    </table>
+
+    <table class="signature-table">
+        <tr class="bg-gray bold text-center">
+            <td>** USO EXCLUSIVO PARA TALENTO HUMANO</td>
+        </tr>
+        <tr class="bg-gray bold">
+            <td>REGISTRO DE NOTIFICACIÓN AL SERVIDOR PÚBLICO DE LA ACCIÓN DE PERSONAL (primer inciso del art. 22
+                RGLOSEP, art. 101 COA , art. 66 y 126
+                ERJAFE)
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <br><b>COMUNICACIÓN ELECTRÓNICA: </b>[ &nbsp;] &nbsp;&nbsp; <b>FECHA:</b> ______________________ &nbsp;&nbsp;<b>HORA:</b>
+                ______________________ &nbsp;&nbsp; <b>MEDIO:</b> ______________________<br><br>
+                <br><b>FIRMA RESPONSABLE NOTIFICACIÓN:</b> _______________________________________<br>
+                <b>NOMBRE RESPONSABLE NOTIFICACIÓN:</b> ____________________________________<br>
+                <b>CARGO RESPONSABLE NOTIFICACIÓN:</b> ______________________________________
+            </td>
+        </tr>
+    </table>
+
+    <div style="text-align: center; font-size: 8px; margin-top: 10px;">
+        Documento generado electrónicamente | {% now "d/m/Y H:i" %} | SIGETH v1.0
+    </div>
+</div>
+
+<button class="print-button" onclick="window.print()">Imprimir Acción</button>
 
 </body>
 </html>

@@ -8,6 +8,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 
+from budget.models import BudgetLine
 from .models import PersonnelAction, ActionMovement, ActionType
 from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
 
@@ -64,16 +65,16 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
     def get(self, request, *args, **kwargs):
         """Devolver el formulario vacío o con empleado preseleccionado"""
         from employee.models import Employee
-        
+
         employee_id = request.GET.get('employee_id')
         employee = None
-        
+
         if employee_id:
             employee = get_object_or_404(Employee, pk=employee_id)
             form = self.form_class()
         else:
             form = self.form_class()
-        
+
         # Si es AJAX, devolver solo el HTML del formulario
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render(request, self.template_name, {
@@ -81,7 +82,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 'employee': employee,
                 'employee_id': employee_id
             })
-        
+
         # Si no es AJAX, renderizar la página completa
         return render(request, self.template_name, {'form': form})
 
@@ -90,7 +91,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
         with transaction.atomic():
             self.object = form.save(commit=False)
             self.object.created_by = self.request.user
-            
+
             # Generar número automáticamente si está vacío
             if not self.object.number or self.object.number.strip() == '':
                 from datetime import datetime
@@ -98,7 +99,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 last_action = PersonnelAction.objects.filter(
                     number__endswith=f'-{year}'
                 ).order_by('-created_at').first()
-                
+
                 if last_action:
                     try:
                         last_num = int(last_action.number.split('-')[0])
@@ -107,9 +108,9 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                         new_num = 1
                 else:
                     new_num = 1
-                
+
                 self.object.number = f'{new_num:04d}-{year}'
-            
+
             self.object.save()
 
             # Crear detalle vacío o procesar segundo form aquí si se envía junto
@@ -129,7 +130,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
                        :10]
         })
-    
+
     def form_invalid(self, form):
         # Si es AJAX, devolver errores en JSON
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -137,7 +138,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 'success': False,
                 'errors': form.errors
             }, status=400)
-        
+
         return super().form_invalid(form)
 
 
@@ -199,8 +200,10 @@ class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
         else:
             return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
+
 class ActionTypeDetailJsonView(LoginRequiredMixin, View):
     """Devuelve los datos de un registro en JSON para cargarlos en Vue"""
+
     def get(self, request, pk):
         obj = get_object_or_404(ActionType, pk=pk)
         data = {
@@ -210,6 +213,7 @@ class ActionTypeDetailJsonView(LoginRequiredMixin, View):
             'is_active': obj.is_active
         }
         return JsonResponse(data)
+
 
 class ActionTypeDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
@@ -272,14 +276,14 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         from employee.models import Employee
-        
+
         queryset = Employee.objects.filter(
             is_active=True
         ).select_related(
             'person',
             'area'
         ).order_by('person__last_name', 'person__first_name')
-        
+
         # Search filter
         query = self.request.GET.get('q', '').strip()
         if query:
@@ -288,19 +292,19 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
                 Q(person__last_name__icontains=query) |
                 Q(person__document_number__icontains=query)
             )
-        
+
         return queryset
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             from employee.models import Employee
-            
+
             html = render_to_string(
                 'personnel_action/partials/partial_employee_action_list.html',
                 context,
                 request=self.request
             )
-            
+
             # Pagination information
             page_obj = context.get('page_obj')
             if page_obj:
@@ -323,7 +327,7 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
                     'has_previous': False,
                     'has_next': False,
                 }
-            
+
             return JsonResponse({
                 'html': html,
                 'pagination': pagination_data
@@ -341,11 +345,11 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         from employee.models import Employee
         self.employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
-        
+
         queryset = PersonnelAction.objects.filter(
             employee=self.employee
         ).select_related('action_type').order_by('-date_issue', '-number')
-        
+
         # Búsqueda
         query = self.request.GET.get('q', '').strip()
         if query:
@@ -354,14 +358,14 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
                 Q(action_type__name__icontains=query) |
                 Q(date_issue__icontains=query)
             )
-        
+
         return queryset
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filtered_employee'] = self.employee
         return context
-    
+
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html = render_to_string(
@@ -370,7 +374,7 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
                 request=self.request
             )
             page_obj = context['page_obj']
-            
+
             return JsonResponse({
                 'html': html,
                 'page_number': page_obj.number,
@@ -384,21 +388,22 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
 
 class ActionDetailView(LoginRequiredMixin, View):
     """Vista para mostrar detalles de una acción en modal"""
+
     def get(self, request, pk):
         action = get_object_or_404(
             PersonnelAction.objects.select_related('employee__person', 'action_type'),
             pk=pk
         )
-        
+
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
             {'action': action},
             request=request
         )
-        
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'html': html})
-        
+
         from django.http import HttpResponse
         return HttpResponse(html)
 
@@ -408,19 +413,19 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
     model = PersonnelAction
     form_class = PersonnelActionForm
     template_name = 'personnel_action/modals/modal_personnel_action_form.html'
-    
+
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
         if obj.is_registered:
             from django.core.exceptions import PermissionDenied
             raise PermissionDenied("No se puede editar una acción ya registrada")
         return obj
-    
+
     def get(self, request, *args, **kwargs):
         """Devolver el formulario con los datos de la acción"""
         self.object = self.get_object()
         form = self.form_class(instance=self.object)
-        
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render(request, self.template_name, {
                 'form': form,
@@ -429,23 +434,23 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
                 'employee_id': self.object.employee.id,
                 'is_edit': True
             })
-        
+
         return render(request, self.template_name, {
             'form': form,
             'action': self.object,
             'is_edit': True
         })
-    
+
     def form_valid(self, form):
         self.object = form.save()
-        
+
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'message': 'Acción actualizada correctamente'
             })
         return super().form_valid(form)
-    
+
     def form_invalid(self, form):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
@@ -457,18 +462,19 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
 
 class ActionRegisterView(LoginRequiredMixin, View):
     """Vista para registrar una acción (cambiar is_registered a True)"""
+
     def post(self, request, pk):
         action = get_object_or_404(PersonnelAction, pk=pk)
-        
+
         if action.is_registered:
             return JsonResponse({
                 'success': False,
                 'message': 'Esta acción ya está registrada'
             }, status=400)
-        
+
         action.is_registered = True
         action.save()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Acción registrada correctamente'
@@ -477,17 +483,19 @@ class ActionRegisterView(LoginRequiredMixin, View):
 
 class ActionPDFView(LoginRequiredMixin, View):
     """Vista para generar PDF de la acción"""
+
     def get(self, request, pk):
         action = get_object_or_404(
             PersonnelAction.objects.select_related('employee__person', 'action_type'),
             pk=pk
         )
-        
+        budget = BudgetLine.objects.get(current_employee_id=action.employee.pk)
+
         html = render_to_string(
             'personnel_action/pdf/action_pdf.html',
-            {'action': action},
+            {'action': action, 'budget': budget},
             request=request
         )
-        
+
         from django.http import HttpResponse
         return HttpResponse(html)
