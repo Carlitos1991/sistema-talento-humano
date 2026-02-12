@@ -951,12 +951,7 @@ function attachLiquidationSearchEvents(employeeId) {
  */
 function printLiquidationPDF(actionId) {
     const pdfUrl = `/personnel_actions/${actionId}/pdf/`;
-    const printWindow = window.open(pdfUrl, '_blank', 'width=900,height=700');
-    
-    if (!printWindow) {
-        // Si el popup fue bloqueado, abrir en pestaña nueva
-        window.open(pdfUrl, '_blank');
-    }
+    window.open(pdfUrl, '_blank');
 }
 
 /**
