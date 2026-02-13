@@ -1,3 +1,5 @@
+# apps/biometric/adms_views.py
+
 import logging
 from datetime import datetime
 from django.http import HttpResponse, JsonResponse
@@ -10,109 +12,130 @@ logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
+def iclock_registry(request):
+    sn = request.GET.get('SN') or request.GET.get('sn')
+    return HttpResponse(f"RegistryCode={sn}", content_type="text/plain")
+
+
+@csrf_exempt
+def iclock_getrequest(request):
+    return HttpResponse("OK", content_type="text/plain")
+
+
+@csrf_exempt
+def iclock_ping(request):
+    return HttpResponse("OK", content_type="text/plain")
+
+
+@csrf_exempt
 def adms_receive_attendance(request):
-    """
-    Main endpoint for ZKTeco ADMS (Push Mode).
-    GET: Handshake / POST: Real-time data reception.
-    """
-    # 1. Identify the device by Serial Number
     sn = request.GET.get('SN') or request.GET.get('sn')
     table = request.GET.get('table')
 
-    # HANDSHAKE (Handing GET request from the device)
     if request.method == 'GET':
-        logger.info(f"[ADMS] Handshake GET - Device SN: {sn}")
         return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
 
-    # DATA RECEPTION (Handling POST request from the device)
-    try:
-        # Ignore system tables that don't contain attendance
-        if table in ['options', 'INFO', 'OPERLOG']:
-            return HttpResponse("OK", content_type="text/plain")
-
-        if table == 'ATTLOG':
-            raw_body = request.body.decode('utf-8').strip()
-            if not raw_body:
+    if request.method == 'POST':
+        try:
+            if table == 'rtstate':
                 return HttpResponse("OK", content_type="text/plain")
 
-            # Check if device exists and is active
-            device = BiometricDevice.objects.filter(serial_number=sn, is_active=True).first()
-            if not device:
-                logger.warning(f"[ADMS] Received data from unregistered SN: {sn}")
-                return HttpResponse("OK", content_type="text/plain")
+            raw_body = request.body.decode('utf-8', errors='ignore').strip()
 
-            lines = raw_body.splitlines()
-            saved_count = 0
+            if (table == 'ATTLOG' or table == 'rtlog') and raw_body:
 
-            with transaction.atomic():
-                # Create a load record for this batch
-                load_log = BiometricLoad.objects.create(
-                    biometric=device,
-                    load_type="ADMS_PUSH",
-                    reason=f"Automatic Push from SN: {sn}"
-                )
+                device = BiometricDevice.objects.filter(serial_number=sn, is_active=True).first()
+                if not device:
+                    print(f"⚠️ Dispositivo desconocido: {sn}")
+                    return HttpResponse("OK", content_type="text/plain")
 
-                for line in lines:
-                    # ZKTeco sends fields separated by tabs
-                    fields = line.strip().split('\t')
-                    if len(fields) < 2:
-                        continue
+                lines = raw_body.splitlines()
+                saved_count = 0
 
-                    # Extract data: User ID and Timestamp
-                    user_id_bio = fields[0].strip().lstrip('0')
-                    time_str = fields[1].strip()  # Format: YYYY-MM-DD HH:MM:SS
+                with transaction.atomic():
+                    load_log = BiometricLoad.objects.create(
+                        biometric=device,
+                        load_type="REAL_TIME" if table == 'rtlog' else "ADMS_SYNC",
+                        reason=f"Push automático ({table})"
+                    )
 
-                    # FIND EMPLOYEE
-                    employee_info = InstitutionalData.objects.filter(biometric_id=user_id_bio).first()
+                    for line in lines:
+                        if not line.strip(): continue
 
-                    if employee_info:
-                        try:
-                            # --- FIX FOR AUDIT / DATABASE TIME OFFSET ---
-                            # 1. Convert string to datetime object
-                            parsed_date = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                        user_pin = None
+                        time_str = None
 
-                            # 2. FORCE NAIVE: Remove any timezone metadata (tzinfo=None)
-                            # This ensures PostgreSQL saves EXACTLY what's in the clock
-                            clean_registry_date = parsed_date.replace(tzinfo=None)
+                        # --- DETECCIÓN DE FORMATO ---
 
-                            # 3. Avoid exact duplicates
-                            if not AttendanceRegistry.objects.filter(
-                                    employee=employee_info.employee,
-                                    registry_date=clean_registry_date
-                            ).exists():
-                                AttendanceRegistry.objects.create(
-                                    employee=employee_info.employee,
-                                    biometric_load=load_log,
-                                    employee_id_bio=user_id_bio,
-                                    registry_date=clean_registry_date
-                                )
-                                saved_count += 1
-                        except ValueError:
-                            continue
+                        # 1. FORMATO NUEVO (Clave=Valor)
+                        # Ejemplo: time=2026-02-13... pin=2...
+                        if 'pin=' in line and 'time=' in line:
+                            data_dict = {}
+                            # Separar por tabuladores y luego por signo igual
+                            pairs = line.split('\t')
+                            for p in pairs:
+                                if '=' in p:
+                                    key, val = p.split('=', 1)
+                                    data_dict[key] = val
 
-                # Finalize load log
-                load_log.num_records = saved_count
-                load_log.save()
+                            user_pin = data_dict.get('pin')
+                            time_str = data_dict.get('time')
 
-            logger.info(f"[ADMS] SN:{sn} - Saved {saved_count} records.")
+                        # 2. FORMATO ANTIGUO (Solo valores)
+                        # Ejemplo: 2 \t 2026-02-13... \t 0 \t 1
+                        else:
+                            parts = line.split('\t')
+                            if len(parts) >= 2:
+                                user_pin = parts[0]
+                                time_str = parts[1]
+
+                        # --- PROCESAMIENTO ---
+
+                        if user_pin and time_str:
+                            # Limpieza de ID (quitar ceros a la izquierda y espacios)
+                            clean_pin = user_pin.strip().lstrip('0')
+
+                            # DEBUG VISUAL
+                            print(f"📥 Marcación: ID Reloj='{user_pin}' -> ID BD='{clean_pin}' | Hora={time_str}")
+
+                            # Buscar empleado
+                            inst_data = InstitutionalData.objects.filter(biometric_id=clean_pin).first()
+
+                            if inst_data:
+                                try:
+                                    reg_date = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+                                    if not AttendanceRegistry.objects.filter(
+                                            employee=inst_data.employee,
+                                            registry_date=reg_date
+                                    ).exists():
+                                        AttendanceRegistry.objects.create(
+                                            employee=inst_data.employee,
+                                            biometric_load=load_log,
+                                            employee_id_bio=clean_pin,
+                                            registry_date=reg_date
+                                        )
+                                        saved_count += 1
+                                        print(f"   ✅ GUARDADO: {inst_data.employee}")
+                                    else:
+                                        print(f"   ⚠️ Duplicado ignorado.")
+                                except ValueError:
+                                    print(f"   ❌ Error formato fecha: {time_str}")
+                            else:
+                                print(f"   ❌ Empleado no encontrado en BD (ID: {clean_pin})")
+
+                    load_log.num_records = saved_count
+                    load_log.save()
+
             return HttpResponse("OK", content_type="text/plain")
 
-        return HttpResponse("OK", content_type="text/plain")
+        except Exception as e:
+            print(f"❌ Error ADMS: {e}")
+            return HttpResponse("OK", content_type="text/plain")
 
-    except Exception as e:
-        logger.error(f"[ADMS] Critical Error: {str(e)}", exc_info=True)
-        return HttpResponse("Error", status=500)
+    return HttpResponse("OK", content_type="text/plain")
 
 
 @csrf_exempt
 def adms_stats(request):
-    """Real-time stats for the ADMS Dashboard."""
-    from datetime import date
-    today_date = date.today()
-    return JsonResponse({
-        'success': True,
-        'stats': {
-            'records_today': AttendanceRegistry.objects.filter(registry_date__date=today_date).count(),
-            'active_devices': BiometricDevice.objects.filter(is_active=True).count(),
-        }
-    })
+    return JsonResponse({'success': True})

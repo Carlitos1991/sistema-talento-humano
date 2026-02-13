@@ -26,7 +26,11 @@ urlpatterns = [
     path('vacation/', include('vacation.urls')),
     path('documents/', include('documents.urls')),
     path('sanctions/', include('sanctions.urls')),
+    path('iclock/registry', adms_views.iclock_registry),
+    path('iclock/pushoptions', adms_views.iclock_registry),
     path('iclock/cdata', adms_views.adms_receive_attendance),
+    path('iclock/getrequest', adms_views.iclock_getrequest),
+    path('iclock/ping', adms_views.iclock_ping),
 
 ]
 
