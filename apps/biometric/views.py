@@ -75,7 +75,15 @@ def save_biometric_ajax(request):
             'updated_by': request.user
         }
         if device_id and device_id != 'null':
-            BiometricDevice.objects.filter(id=device_id).update(**data)
+            # 👇 Cambiamos update por obtención y guardado manual
+            device = BiometricDevice.objects.get(id=device_id)
+            device.name = request.POST.get('name')
+            device.ip_address = request.POST.get('ip_address')
+            device.serial_number = request.POST.get('serial_number')
+            device.model_name = request.POST.get('model_name')
+            device.location = request.POST.get('location')
+            device.is_active = request.POST.get('is_active') == 'true'
+            device.save()
             msg = "Dispositivo actualizado."
         else:
             data['created_by'] = request.user
@@ -104,12 +112,13 @@ def load_attendance_ajax(request, pk):
                 if inst:
                     # El dispositivo devuelve hora local naive, usarla directamente sin conversiones
                     registry_datetime = rec.timestamp
-                    
+
                     # Si por alguna razón viene con tzinfo, removerlo para mantener la hora local
                     if hasattr(registry_datetime, 'tzinfo') and registry_datetime.tzinfo is not None:
                         registry_datetime = registry_datetime.replace(tzinfo=None)
 
-                    if not AttendanceRegistry.objects.filter(employee=inst.employee, registry_date=registry_datetime).exists():
+                    if not AttendanceRegistry.objects.filter(employee=inst.employee,
+                                                             registry_date=registry_datetime).exists():
                         AttendanceRegistry.objects.create(
                             employee=inst.employee,
                             biometric_load=load_entry,
