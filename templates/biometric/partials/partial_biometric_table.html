@@ -5,6 +5,8 @@
         <tr>
             <th><i class="fas fa-clock header-icon"></i>Nombre</th>
             <th><i class="fas fa-server header-icon"></i>IP/Puerto</th>
+            <th><i class="fa-solid fa-barcode header-icon"></i> N° Serie</th>
+            <th><i class="fa-solid fa-microchip header-icon"></i> Modelo</th>
             <th><i class="fas fa-map-location header-icon"></i>Ubicación</th>
             <th><i class="fas fa-toggle-on header-icon"></i>Estado</th>
             <th><i class="fas fa-bars header-icon"></i> Acciones</th>
@@ -19,6 +21,8 @@
                     <span class="pill-separator">:</span>
                     <span class="pill pill-port">{{ device.port }}</span>
                 </td>
+                <td>{{ device.serial_number|default:'—' }}</td>
+                <td>{{ device.model_name|default:'—' }}</td>
                 <td class="device-secondary-info">{{ device.location }}</td>
                 <td>
                     {% if device.is_active %}

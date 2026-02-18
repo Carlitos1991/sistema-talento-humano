@@ -29,6 +29,8 @@ const BiometricService = {
         formData.append('port', data.port);
         formData.append('location', data.location);
         formData.append('is_active', data.is_active);
+        formData.append('serial_number', data.serial_number || '');
+        formData.append('model_name', data.model_name || '');
 
         const response = await fetch(url, {
             method: 'POST',

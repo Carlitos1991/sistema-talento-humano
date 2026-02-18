@@ -70,6 +70,8 @@ def save_biometric_ajax(request):
             'port': request.POST.get('port', 4370),
             'is_active': is_active,
             'location': request.POST.get('location'),
+            'serial_number': request.POST.get('serial_number', ''),
+            'model_name': request.POST.get('model_name', ''),
             'updated_by': request.user
         }
         if device_id and device_id != 'null':
@@ -129,8 +131,14 @@ def get_biometric_data(request, pk):
     return JsonResponse({
         'success': True,
         'biometric': {
-            'id': device.id, 'name': device.name, 'ip_address': device.ip_address,
-            'port': device.port, 'location': device.location, 'is_active': device.is_active,
+            'id': device.id,
+            'name': device.name,
+            'ip_address': device.ip_address,
+            'port': device.port,
+            'location': device.location,
+            'is_active': device.is_active,
+            'serial_number': device.serial_number or '',
+            'model_name': device.model_name or '',
         }
     })
 
