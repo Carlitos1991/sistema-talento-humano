@@ -31,6 +31,10 @@ const biometricApp = createApp({
                 location: '',
                 is_active: true
             }
+            showAdmsModal: false,
+            admsDevice: {id: null, name: '', ip_address: ''},
+            admsForm: {start: '', end: ''},
+            isDownloadingAdms: false
         }
     },
     methods: {
@@ -39,6 +43,66 @@ const biometricApp = createApp({
             this.selectedDeviceName = name;
             this.uploadForm.file = null;
             this.showUploadModal = true;
+        },
+        openModalAdms(id, name, ip_address) {
+            this.admsDevice = {id, name, ip_address};
+            this.admsForm = {start: '', end: ''};
+            this.showAdmsModal = true;
+        },
+        closeAdmsModal() {
+            this.showAdmsModal = false;
+        },
+        async downloadAdmsAttendance() {
+            if (!this.admsForm.start) {
+                this.notifyError('Debe seleccionar la fecha desde.');
+                return;
+            }
+            this.isDownloadingAdms = true;
+            const start = this.admsForm.start;
+            const end = this.admsForm.end;
+            let startTime = `${start} 00:01:00`;
+            let endTime = end ? `${end} 23:59:00` : `${start} 23:59:00`;
+            try {
+                Swal.fire({
+                    title: 'Descargando marcaciones ADMS...',
+                    text: 'Espere mientras se consulta el dispositivo.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+                const response = await fetch(`/biometric/adms-download/${this.admsDevice.id}/`, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': this.getCsrfToken(), 'Content-Type': 'application/json'},
+                    body: JSON.stringify({start_time: startTime, end_time: endTime})
+                });
+                const data = await response.json();
+                Swal.close();
+                if (response.ok && data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Descarga exitosa!',
+                        text: data.message || 'Marcaciones descargadas correctamente.',
+                        confirmButtonText: 'Aceptar',
+                        customClass: {confirmButton: 'btn-swal-confirm-green-centered'},
+                        buttonsStyling: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'No se pudo descargar las marcaciones.',
+                        confirmButtonText: 'Cerrar',
+                        customClass: {confirmButton: 'btn-swal-confirm-red-centered'},
+                        buttonsStyling: false
+                    });
+                }
+                this.showAdmsModal = false;
+            } catch (e) {
+                Swal.close();
+                this.notifyError('Error técnico al descargar marcaciones.');
+            } finally {
+                this.isDownloadingAdms = false;
+            }
         },
 
         onFileSelected(event) {

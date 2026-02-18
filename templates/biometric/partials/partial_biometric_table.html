@@ -60,6 +60,12 @@
                                 title="Descargar Marcaciones">
                             <i class="fa-solid fa-cloud-arrow-down"></i>
                         </button>
+                        <button onclick="window.biometricVM.openModalAdms({{ device.id }}, '{{ device.name }}', '{{ device.ip_address }}')"
+                                class="btn-list-action"
+                                style="background: linear-gradient(to right, #0ea5e9, #0369a1);"
+                                title="Bajar marcaciones ADMS">
+                            <i class="fa-solid fa-database"></i>
+                        </button>
                         <!-- Botón Editar (Amarillo) -->
                         <button onclick="window.biometricVM.openModalEdit({{ device.id }})"
                                 class="btn-views-action"

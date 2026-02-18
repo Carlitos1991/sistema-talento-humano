@@ -1,0 +1,31 @@
+<div v-if="showAdmsModal" class="modal-overlay" @click.self="closeAdmsModal">
+    <div class="modal-container-medium" style="max-width: 420px;">
+        <div class="modal-header-gradient" style="background: linear-gradient(to right, #4f46e5, #3730a3);">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-database"></i></div>
+                <h3 class="header-title-main">Bajar marcaciones ADMS</h3>
+            </div>
+            <button @click="closeAdmsModal" class="btn-close-modal-refined">&times;</button>
+        </div>
+        <div class="modal-body-custom">
+            <div class="swal-connection-box" style="margin-top:0; border-left: 4px solid #4f46e5;">
+                <p class="mb-1"><strong>Dispositivo:</strong> [[ admsDevice.name ]]</p>
+                <p class="mb-0"><strong>IP:</strong> [[ admsDevice.ip_address ]]</p>
+            </div>
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-calendar-plus me-1"></i> Fecha Desde:</label>
+                <input type="date" v-model="admsForm.start" class="form-control">
+            </div>
+            <div class="form-group mt-3">
+                <label class="form-label"><i class="fa-solid fa-calendar-minus me-1"></i> Fecha Hasta (opcional):</label>
+                <input type="date" v-model="admsForm.end" class="form-control">
+            </div>
+        </div>
+        <div class="modal-footer-fixed">
+            <button @click="closeAdmsModal" class="btn-cancel">Cancelar</button>
+            <button @click="downloadAdmsAttendance" class="btn-save" style="background: #4f46e5;" :disabled="!admsForm.start">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Descargar
+            </button>
+        </div>
+    </div>
+</div>
