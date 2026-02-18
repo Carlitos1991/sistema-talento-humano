@@ -11,6 +11,7 @@ class BiometricDevice(BaseModel):
     location = models.CharField(max_length=250, verbose_name="Ubicación Física")
     serial_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Número de Serie")
     model_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Modelo")
+    is_active = models.BooleanField(default=True, verbose_name="¿Está Activo?")
 
     class Meta:
         verbose_name = "Biométrico"

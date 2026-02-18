@@ -30,11 +30,11 @@ const biometricApp = createApp({
                 port: 4370,
                 location: '',
                 is_active: true
-            }
-            showAdmsModal: false,
-            admsDevice: {id: null, name: '', ip_address: ''},
-            admsForm: {start: '', end: ''},
-            isDownloadingAdms: false
+                },
+                showAdmsModal: false,
+                admsDevice: {id: null, name: '', ip_address: ''},
+                admsForm: {start: '', end: ''},
+                isDownloadingAdms: false
         }
     },
     methods: {
