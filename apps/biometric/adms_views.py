@@ -21,9 +21,11 @@ def iclock_registry(request):
 @csrf_exempt
 def iclock_getrequest(request):
     sn = request.GET.get('SN') or request.GET.get('sn')
+    print(f"🔔 [ADMS] Heartbeat recibido de SN: '{sn}'")
 
     device = BiometricDevice.objects.filter(serial_number=sn, is_active=True).first()
     if not device:
+        print(f"⚠️ [ADMS] Rechazado: El SN '{sn}' no existe en BD o está inactivo.")  # <--- Y ESTA
         return HttpResponse("OK", content_type="text/plain")
 
     # Buscar el comando más antiguo pendiente (FIFO)
