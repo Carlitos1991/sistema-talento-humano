@@ -35,6 +35,7 @@ urlpatterns = [
     path('iclock/getrequest', adms_views.iclock_getrequest, name='iclock_getrequest'),
     path('iclock/ping', adms_views.iclock_ping, name='iclock_ping'),
     path('iclock/devicecmd', adms_views.iclock_devicecmd, name='iclock_devicecmd'),
+    path('adms-download/<int:pk>/', adms_views.adms_download_command, name='adms_download_command'),
 
     # Reports
     path('reports/employees/', views.EmployeeReportListView.as_view(), name='employee_report_list'),

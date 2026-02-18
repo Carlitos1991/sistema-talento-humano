@@ -1,8 +1,9 @@
 # apps/biometric/adms_views.py
-
+import json
 import logging
 from datetime import datetime
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from .models import BiometricDevice, AttendanceRegistry, BiometricLoad
@@ -200,3 +201,31 @@ def adms_receive_attendance(request):
 @csrf_exempt
 def adms_stats(request):
     return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def adms_download_command(request, pk):
+    if request.method == 'POST':
+        try:
+            device = get_object_or_404(BiometricDevice, pk=pk)
+            data = json.loads(request.body)
+            start_time = data.get('start_time')
+            end_time = data.get('end_time')
+
+            # Creamos el comando ADMS para que el reloj lo lea en su próximo Heartbeat
+            # Formato: DATA QUERY ATTLOG StartTime=... EndTime=...
+            command_text = f"DATA QUERY ATTLOG StartTime={start_time} EndTime={end_time}"
+
+            BiometricCommand.objects.create(
+                device=device,
+                command=command_text,
+                status='PENDING'
+            )
+
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Comando de descarga enviado al equipo {device.name}. Se procesará en el próximo latido (Heartbeat).'
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)

@@ -1,7 +1,6 @@
 import calendar
 import logging
 from datetime import datetime
-
 from django.views.generic import ListView, View
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string, get_template
@@ -11,7 +10,7 @@ from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 
 from xhtml2pdf import pisa
-from .models import BiometricDevice, BiometricLoad, AttendanceRegistry
+from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand
 from .utils import test_connection, BiometricConnection
 from employee.models import InstitutionalData
 
