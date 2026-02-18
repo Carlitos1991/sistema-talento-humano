@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from .models import BiometricDevice, AttendanceRegistry, BiometricLoad
 from employee.models import InstitutionalData
+from .models import BiometricCommand
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,64 @@ def iclock_registry(request):
 
 @csrf_exempt
 def iclock_getrequest(request):
+    sn = request.GET.get('SN') or request.GET.get('sn')
+
+    device = BiometricDevice.objects.filter(serial_number=sn, is_active=True).first()
+    if not device:
+        return HttpResponse("OK", content_type="text/plain")
+
+    # Buscar el comando más antiguo pendiente (FIFO)
+    cmd = BiometricCommand.objects.filter(device=device, status='PENDING').order_by('created_at').first()
+
+    if cmd:
+        # Formato ADMS: C:ID_UNICO:COMANDO
+        response_str = f"C:{cmd.id}:{cmd.command}"
+
+        # Marcar como enviado para no enviarlo doble
+        cmd.status = 'SENT'
+        cmd.save()
+
+        print(f"📤 [ADMS] Enviando comando a {sn}: {cmd.command}")
+        return HttpResponse(response_str, content_type="text/plain")
+
+    return HttpResponse("OK", content_type="text/plain")
+
+
+@csrf_exempt
+def iclock_devicecmd(request):
+    """
+    Endpoint donde el dispositivo reporta el resultado de un comando.
+    El reloj envía POST con: ID=123&Return=0&CMD=DATA...
+    """
+    if request.method == 'POST':
+        try:
+            # Los datos suelen venir en el body como texto plano: ID=1&Return=0
+            raw_body = request.body.decode('utf-8', errors='ignore')
+            print(f"📩 [ADMS] Respuesta de comando: {raw_body}")
+
+            # Parsear respuesta
+            data = {}
+            parts = raw_body.split('&')
+            for p in parts:
+                if '=' in p:
+                    k, v = p.split('=', 1)
+                    data[k] = v
+
+            cmd_id = data.get('ID')
+            ret_val = data.get('Return')  # 0 = Éxito, otros valores = Error
+
+            if cmd_id:
+                cmd = BiometricCommand.objects.filter(id=cmd_id).first()
+                if cmd:
+                    cmd.status = 'SUCCESS' if ret_val == '0' else 'ERROR'
+                    cmd.return_value = ret_val
+                    cmd.execution_time = datetime.now()
+                    cmd.save()
+                    print(f"✅ Comando {cmd_id} ejecutado con código {ret_val}")
+
+        except Exception as e:
+            print(f"❌ Error procesando devicecmd: {e}")
+
     return HttpResponse("OK", content_type="text/plain")
 
 

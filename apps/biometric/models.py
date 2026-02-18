@@ -47,3 +47,15 @@ class AttendanceRegistry(BaseModel):
         verbose_name = "Registro de Asistencia"
         verbose_name_plural = "Registros de Asistencia"
         ordering = ['-registry_date']
+
+
+class BiometricCommand(BaseModel):
+    """Cola de comandos enviados al dispositivo via ADMS"""
+    device = models.ForeignKey(BiometricDevice, on_delete=models.CASCADE, related_name='commands')
+    command = models.TextField(verbose_name="Comando Técnico")  # Ej: DATA QUERY ATTLOG
+    status = models.CharField(max_length=20, default='PENDING', verbose_name="Estado")  # PENDING, SENT, SUCCESS, ERROR
+    execution_time = models.DateTimeField(null=True, blank=True)
+    return_value = models.TextField(null=True, blank=True)  # Lo que responde el reloj
+
+    def __str__(self):
+        return f"{self.device.name} - {self.command} ({self.status})"

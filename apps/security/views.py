@@ -110,7 +110,6 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Group
     form_class = RoleForm
     template_name = 'security/groups/modals/modal_role_matrix.html'
-    # CORREGIDO: auth.add_group
     permission_required = 'auth.add_group'
 
     def post(self, request, *args, **kwargs):
@@ -119,7 +118,6 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             role = form.save()
             perm_ids = request.POST.getlist('permissions[]')
             if perm_ids:
-                # Agregar permisos can_admin automáticamente
                 perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
                 role.permissions.set([int(pid) for pid in perm_ids_with_admin])
 
@@ -243,8 +241,6 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
 # --- 3. GESTIÓN DE CREDENCIALES ---
 class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    # CORREGIDO: Faltaba definir el permiso aquí.
-    # Usamos change_user porque permite crear o editar credenciales.
     permission_required = 'core.change_user'
 
     def post(self, request, person_id):
@@ -294,7 +290,6 @@ class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View)
 
 
 @method_decorator(require_POST, name='dispatch')
-# Nota: Aquí usamos el Mixin en la clase, no el decorador en la clase para evitar el error de as_view()
 class UserToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'core.change_user'
     raise_exception = True
