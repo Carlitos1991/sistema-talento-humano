@@ -30,11 +30,11 @@ const biometricApp = createApp({
                 port: 4370,
                 location: '',
                 is_active: true
-                },
-                showAdmsModal: false,
-                admsDevice: {id: null, name: '', ip_address: ''},
-                admsForm: {start: '', end: ''},
-                isDownloadingAdms: false
+            },
+            showAdmsModal: false,
+            admsDevice: {id: null, name: '', ip_address: ''},
+            admsForm: {start: '', end: ''},
+            isDownloadingAdms: false
         }
     },
     methods: {
@@ -68,7 +68,9 @@ const biometricApp = createApp({
                     text: 'Espere mientras se consulta el dispositivo.',
                     allowOutsideClick: false,
                     showConfirmButton: false,
-                    didOpen: () => { Swal.showLoading(); }
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
                 const response = await fetch(`/biometric/adms-download/${this.admsDevice.id}/`, {
                     method: 'POST',
@@ -347,15 +349,37 @@ const biometricApp = createApp({
         async saveDevice() {
             this.isSaving = true;
             try {
-                const result = await BiometricService.save(this.form);
+                // Creamos un FormData manual para asegurar que el ID viaje
+                const formData = new FormData();
+                formData.append('id', this.form.id || ''); // Aquí aseguramos el ID
+                formData.append('name', this.form.name);
+                formData.append('ip_address', this.form.ip_address);
+                formData.append('port', this.form.port);
+                formData.append('location', this.form.location);
+                formData.append('serial_number', this.form.serial_number || '');
+                formData.append('model_name', this.form.model_name || '');
+                formData.append('is_active', this.form.is_active);
+
+                // Enviamos el FormData al servicio
+                const response = await fetch('/biometric/save-ajax/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
                 if (result.status === 'success') {
                     this.notifySuccess(result.message);
                     this.closeModal();
-                    // Refrescamos la tabla
                     await this.search();
+                } else {
+                    this.notifyError(result.message);
                 }
             } catch (error) {
-                this.notifyError('Error al guardar');
+                this.notifyError('Error al guardar: ' + error);
             } finally {
                 this.isSaving = false;
             }
