@@ -26,6 +26,20 @@
             <label>Fecha Ingreso:</label>
             <span>{{ person.employee_profile.date_joined|date:"d/m/Y"|default:"—" }}</span>
         </div>
+        <div class="info-data-row">
+            <label>Fecha de Ingreso (Institucional):</label>
+            <span>{{ person.employee_profile.institutional_data.entry_date|date:"d/m/Y"|default:"—" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>Contrato Colectivo:</label>
+            <span class="fw-bold">
+                {% if person.employee_profile.institutional_data.collective_contract %}
+                    SÍ
+                {% else %}
+                    NO
+                {% endif %}
+            </span>
+        </div>
     </div>
 
     <!-- Contacto Institucional -->
@@ -130,10 +144,27 @@
                 <div class="form-text text-muted" style="font-size: 0.75rem;">Estado actual del empleado (Activo, Comisión, etc.)</div>
             </div>
 
+
             <div class="form-group mb-3">
                 <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-folder-open me-1"></i> Número de Expediente</label>
                 <input type="text" v-model="institutionalForm.file_number" class="form-control" placeholder="TC 360">
                  <div class="form-text text-muted" style="font-size: 0.75rem;">Número de expediente institucional del empleado</div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-calendar-day me-1"></i> Fecha de Ingreso (Institucional)</label>
+                <input type="date" v-model="institutionalForm.entry_date" class="form-control">
+                <div class="form-text text-muted" style="font-size: 0.75rem;">Fecha de ingreso institucional del empleado</div>
+            </div>
+
+            <div class="form-group mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" v-model="institutionalForm.collective_contract" id="collectiveContractCheck">
+                    <label class="form-check-label text-orange fw-bold small" for="collectiveContractCheck">
+                        <i class="fa-solid fa-file-contract me-1"></i> Es contrato colectivo
+                    </label>
+                </div>
+                <div class="form-text text-muted" style="font-size: 0.75rem;">Marcar si el empleado pertenece a un contrato colectivo</div>
             </div>
 
              <div class="form-group mb-3">

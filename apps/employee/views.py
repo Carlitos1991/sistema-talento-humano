@@ -552,12 +552,14 @@ def get_institutional_data_api(request, person_id):
             'employment_status_name': employee.employment_status.name if employee.employment_status else 'Sin Definir',
             'regime_name': regime_name,
             'position': position_name,
-            
+
             # Campos Editables de InstitutionalData
             'file_number': inst_data.file_number or '',
             'biometric_id': inst_data.biometric_id or '',
             'institutional_email': inst_data.institutional_email or '',
-            'observations': inst_data.observations or ''
+            'observations': inst_data.observations or '',
+            'collective_contract': inst_data.collective_contract,
+            'entry_date': inst_data.entry_date.isoformat() if inst_data.entry_date else ''
         }
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
@@ -596,7 +598,12 @@ def save_institutional_data_api(request, person_id):
             inst_data.biometric_id = request.POST.get('biometric_id')
             inst_data.institutional_email = request.POST.get('institutional_email')
             inst_data.observations = request.POST.get('observations')
-            
+            # Nuevos campos
+            collective_contract = request.POST.get('collective_contract')
+            inst_data.collective_contract = (collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
+            entry_date = request.POST.get('entry_date')
+            inst_data.entry_date = entry_date if entry_date else None
+
             inst_data.save()
             
             return JsonResponse({'success': True, 'message': 'Datos institucionales actualizados correctamente'})

@@ -91,6 +91,8 @@ class InstitutionalData(BaseModel):
         verbose_name='Correo Institucional'
     )
     observations = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+    collective_contract = models.BooleanField(default=False, verbose_name='Es contrato colectivo')
+    entry_date = models.DateField(verbose_name='Fecha de ingreso')
 
     class Meta:
         verbose_name = 'Datos Institucionales'
