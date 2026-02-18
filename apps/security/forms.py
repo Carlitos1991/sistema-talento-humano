@@ -33,6 +33,15 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
             'function_manual': 'Manual de Funciones',
             'core': 'Sistema y Usuarios',  # Aquí están User, Catalog, Location
             'auth': 'Seguridad (Roles)',  # Aquí está el modelo Group
+            'biometric': 'Biometría',
+            'budget': 'Presupuesto',
+            'contract': 'Contratos',
+            'payroll': 'Nómina',
+            'permitrequest': 'Permisos y Licencias',
+            'sanctions': 'Sanciones',
+            'schedule': 'Horarios',
+            'security': 'Seguridad',
+            'vacation': 'Vacaciones',
         }
 
         grouped_data = {}

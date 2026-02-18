@@ -154,6 +154,8 @@
                 </ul>
             </li>
         {% endif %}
+        {# Mostrar menú solo si el usuario tiene algún permiso relevante del módulo function_manual #}
+        {% if perms.function_manual.view_profile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
         <!-- Manual de Funciones -->
         <li class="has-submenu">
             <a href="#" class="submenu-toggle">
@@ -162,12 +164,14 @@
                 <i class="fa-solid fa-chevron-right chevron-icon"></i>
             </a>
             <ul class="submenu">
+                {% if perms.function_manual.view_profile %}
                 <li>
                     <a href="{% url 'function_manual:profile_list' %}">
                         <i class="fa-solid fa-id-badge"></i>
                         <span class="menu-text">Perfiles de Puestos</span>
                     </a>
                 </li>
+                {% endif %}
 
                 <!-- Sub-sección Administración -->
                 {% if perms.function_manual.can_admin %}
@@ -215,6 +219,7 @@
                 {% endif %}
             </ul>
         </li>
+        {% endif %}
         <!-- MÓDULO DE PERMISOS -->
         {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype %}
             <li class="has-submenu">
