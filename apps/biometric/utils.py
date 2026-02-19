@@ -85,49 +85,44 @@ class BiometricConnection:
             self.conn.test_voice()
 
 
+# apps/biometric/utils.py
+
 def test_connection(ip_address, port=4370):
-    """
-    Función de utilidad independiente para el botón 'Probar Conexión'.
-    Realiza un 'ping' TCP rápido antes de intentar el protocolo ZK.
-    """
-    result = {
-        'success': False,
-        'message': '',
-        'device_info': None,
-        'error_details': None
-    }
+    result = {'success': False, 'message': '', 'device_info': None, 'error_details': None}
 
-    # 1. Verificación rápida de Socket (TCP Handshake)
-    # Esto evita que el servidor se quede colgado si la IP no existe
+    # 1. Socket directo (TCP Handshake) - Esto ya lo tienes y es lo más fiable
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(3)  # Timeout de 3 segundos para el socket
-
+    sock.settimeout(3)
     try:
         sock.connect((ip_address, port))
         sock.close()
-    except (socket.timeout, ConnectionRefusedError, OSError) as e:
+    except Exception as e:
         result['message'] = "Dispositivo inalcanzable"
-        result[
-            'error_details'] = f"No hay respuesta en {ip_address}:{port}. Verifique la red o si el equipo está encendido."
+        result['error_details'] = f"Error de red: {str(e)}"
         return result
 
-    # 2. Intento de conexión vía Protocolo ZK
-    bio = BiometricConnection(ip_address, port)
-    if bio.connect():
-        try:
-            device_info = bio.get_device_info()
-            bio.test_voice()
-
+    # 2. Conexión ZK - FORZAMOS UDP=False para evitar problemas de ping
+    try:
+        from pyzk2 import ZK
+        zk = ZK(ip_address, port=port, timeout=5, force_udp=False)  # <--- Forzar TCP
+        conn = zk.connect()
+        if conn:
+            # Si conecta, sacamos la info
+            info = {
+                'serialNumber': conn.get_serialnumber(),
+                'deviceName': conn.get_device_name(),
+                'platform': conn.get_platform(),
+                'firmware': conn.get_firmware_version(),
+                'userCount': len(conn.get_users())
+            }
+            conn.disconnect()
             result['success'] = True
-            result['message'] = "Conexión establecida exitosamente."
-            result['device_info'] = device_info
-        except Exception as e:
-            result['message'] = "Error de protocolo"
-            result['error_details'] = str(e)
-        finally:
-            bio.disconnect()
-    else:
-        result['message'] = "Fallo de autenticación/protocolo"
-        result['error_details'] = "El socket respondió, pero el protocolo ZKTeco falló. Verifique el puerto."
+            result['device_info'] = info
+            result['message'] = "Conexión exitosa"
+        else:
+            result['message'] = "Fallo de protocolo"
+    except Exception as e:
+        result['message'] = "Error de comunicación"
+        result['error_details'] = str(e)
 
     return result
