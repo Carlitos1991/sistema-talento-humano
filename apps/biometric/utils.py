@@ -13,7 +13,7 @@ class BiometricConnection:
         self.ip_address = ip_address
         self.port = int(port)
         self.timeout = timeout
-        self.zk = ZK(self.ip_address, port=self.port, timeout=self.timeout)
+        self.zk = ZK(self.ip_address, port=self.port, timeout=self.timeout, force_udp=False, ommit_ping=True)
         self.conn = None
 
     def connect(self):
