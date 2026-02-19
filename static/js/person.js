@@ -101,27 +101,39 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.error(e);
     }
-    $('#form-relocate-employee').on('submit', function (e) {
+    // Delegación de eventos para el submit del formulario de reubicación
+    $(document).on('submit', '#form-relocate-employee', async function (e) {
         e.preventDefault();
-
         // Buscar el último valor seleccionado
         let finalUnitId = null;
+        let finalUnitText = '';
         $('#relocate-combos-wrapper select').each(function () {
             const val = $(this).val();
-            if (val) finalUnitId = val;
+            if (val) {
+                finalUnitId = val;
+                finalUnitText = $(this).find('option:selected').text();
+            }
         });
-
         if (!finalUnitId) {
-            alert("Por favor seleccione una unidad administrativa final.");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Por favor seleccione una unidad administrativa final.',
+                showConfirmButton: false,
+                timer: 2500
+            });
             return;
         }
-
         const btn = $(this).find('button[type="submit"]');
         const originalText = btn.html();
         btn.prop('disabled', true).html('Guardando...');
-
+        // Usar el área previa guardada globalmente
+        let prevUnitText = window.selectedRelocatePersonArea || '';
+        // Usar el nombre guardado globalmente
+        let personName = window.selectedRelocatePersonName || '';
         $.ajax({
-            url: '/person/relocate/', // Esta URL la crearemos en el paso 2
+            url: '/person/relocate/',
             method: 'POST',
             headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || window.getCookie('csrftoken')},
             data: {
@@ -130,15 +142,38 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             success: function (resp) {
                 if (resp.success) {
-                    alert(resp.message);
+                    // Mensaje HTML personalizado
+                    const htmlMsg = `<b>Reubicación exitosa:</b> <span style='font-size:0.95em;font-weight:normal;'>${personName}</span><br><b>pasó de</b> <b>"${prevUnitText}"</b> a <b>"${finalUnitText}"</b>`;
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        html: htmlMsg,
+                        showConfirmButton: false,
+                        timer: 3500
+                    });
                     window.closeRelocateModal();
-                    location.reload(); // Recargar para ver cambios
+                    setTimeout(function(){ location.reload(); }, 1800);
                 } else {
-                    alert("Error: " + resp.message);
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: resp.message,
+                        showConfirmButton: false,
+                        timer: 2500
+                    });
                 }
             },
             error: function () {
-                alert("Error de conexión con el servidor.");
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Error de conexión con el servidor.',
+                    showConfirmButton: false,
+                    timer: 2500
+                });
             },
             complete: function () {
                 btn.prop('disabled', false).html(originalText);
@@ -533,9 +568,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             // --- Reubicación de empleado ---
-            window.openRelocateEmployeeModal = function (personId, personName) {
+            window.openRelocateEmployeeModal = function (personId, personFullName, personArea) {
                 // 1. Guardar referencias globales
                 window.selectedRelocatePersonId = personId;
+                window.selectedRelocatePersonName = personFullName;
+                window.selectedRelocatePersonArea = personArea;
 
                 // 2. Limpiar modal anterior
                 $('#relocate-combos-wrapper').empty();
@@ -548,8 +585,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 4. Cargar nivel raíz (Nivel 1)
-                // NOTA: Asegúrate de que 'urls' esté definido globalmente o pásalo como argumento si falla.
-                // Si urls no es global, usa la ruta harcodeada temporalmente para probar:
                 loadUnitLevel(null);
             };
 

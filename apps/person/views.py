@@ -323,7 +323,7 @@ class RelocateEmployeeView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
             return JsonResponse({
                 'success': True,
-                'message': f'Reubicación exitosa: {person.first_name} pasó de "{old_unit_name}" a "{new_unit.name}".'
+                'message': f'Reubicación exitosa: {person.first_name}  {person.last_name} pasó de "{old_unit_name}" a "{new_unit.name}".'
             })
 
         except Exception as e:

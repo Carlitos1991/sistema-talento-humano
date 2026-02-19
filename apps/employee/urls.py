@@ -37,5 +37,6 @@ urlpatterns = [
     # Catálogos para modales
     path('api/areas-list/', views.get_areas_list_api, name='api_areas_list'),
     path('api/employment-statuses/', views.get_employment_statuses_api, name='api_employment_statuses'),
+    path('relocate/', views.relocate_employee, name='relocate_employee'),
 
 ]

@@ -84,7 +84,9 @@
                             </a>
                             <button type="button"
                                     class="btn-list-action" style="background: #22c55e;" title="Reubicar"
-                                    onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}')">
+                                    onclick="window.openRelocateEmployeeModal('{{ person.id }}', this.dataset.fullname, this.dataset.area)"
+                                    data-fullname="{{ person.first_name }} {{ person.last_name }}"
+                                    data-area="{{ person.employee_profile.area.name|default:'Sin unidad asignada' }}">
                                 <i class="fa-solid fa-sitemap"></i>
                             </button>
                         </div>

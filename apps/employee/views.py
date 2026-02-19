@@ -1,3 +1,7 @@
+from django.views.decorators.csrf import csrf_exempt
+
+# Vista para reubicar empleado (relocate_employee)
+
 # apps/employee/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
@@ -85,7 +89,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['blood_type_list'] = CatalogItem.objects.filter(catalog__code='BLOOD_TYPES', is_active=True)
         context['disability_types'] = CatalogItem.objects.filter(catalog__code='DISABILITY_TYPES', is_active=True)
         context['relationships'] = CatalogItem.objects.filter(catalog__code='RELATIONSHIPS', is_active=True)
-        
+
         # Jerarquía Institucional
         employee = getattr(self.object, 'employee_profile', None)
         hierarchy_list = []
@@ -163,18 +167,19 @@ def update_payroll_info(request, person_id):
     if request.method == 'POST':
         person = get_object_or_404(Person, pk=person_id)
         economic_data, created = EconomicData.objects.get_or_create(person=person)
-        
+
         instance = getattr(economic_data, 'payroll_info', None)
         form = PayrollInfoForm(request.POST, instance=instance)
-        
+
         if form.is_valid():
             payroll = form.save(commit=False)
             payroll.economic_data = economic_data
             payroll.save()
             return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
-            
+
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     return None
+
 
 @login_required
 def get_payroll_info_api(request, person_id):
@@ -193,6 +198,7 @@ def get_payroll_info_api(request, person_id):
     except Exception:
         return JsonResponse({'success': False, 'data': {}})
 
+
 @login_required
 def get_bank_account_api(request, person_id):
     person = get_object_or_404(Person, pk=person_id)
@@ -207,6 +213,7 @@ def get_bank_account_api(request, person_id):
         return JsonResponse({'success': True, 'data': data})
     except Exception:
         return JsonResponse({'success': False, 'data': {}})
+
 
 @transaction.atomic
 def upload_cv_pdf(request, person_id):
@@ -268,18 +275,19 @@ def update_payroll_info(request, person_id):
     if request.method == 'POST':
         person = get_object_or_404(Person, pk=person_id)
         economic_data, created = EconomicData.objects.get_or_create(person=person)
-        
+
         instance = getattr(economic_data, 'payroll_info', None)
         form = PayrollInfoForm(request.POST, instance=instance)
-        
+
         if form.is_valid():
             payroll = form.save(commit=False)
             payroll.economic_data = economic_data
             payroll.save()
             return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
-            
+
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     return None
+
 
 @login_required
 @require_POST
@@ -533,17 +541,19 @@ def get_institutional_data_api(request, person_id):
     try:
         person = get_object_or_404(Person, pk=person_id)
         employee = getattr(person, 'employee_profile', None)
-        
+
         if not employee:
-             return JsonResponse({'success': False, 'message': 'Empleado no encontrado'}, status=404)
-        
+            return JsonResponse({'success': False, 'message': 'Empleado no encontrado'}, status=404)
+
         # Obtener o crear datos institucionales
         inst_data, created = InstitutionalData.objects.get_or_create(employee=employee)
-        
+
         # Datos derivados de Presupuesto (Solo lectura por ahora)
-        current_budget = employee.current_budget_line.first() # Reverse relation
-        regime_name = current_budget.regime_item.name if (current_budget and current_budget.regime_item) else 'Sin definir'
-        position_name = current_budget.position_item.name if (current_budget and current_budget.position_item) else 'Sin definir'
+        current_budget = employee.current_budget_line.first()  # Reverse relation
+        regime_name = current_budget.regime_item.name if (
+                    current_budget and current_budget.regime_item) else 'Sin definir'
+        position_name = current_budget.position_item.name if (
+                    current_budget and current_budget.position_item) else 'Sin definir'
 
         data = {
             'area': employee.area.id if employee.area else None,
@@ -565,6 +575,7 @@ def get_institutional_data_api(request, person_id):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+
 @login_required
 @transaction.atomic
 def save_institutional_data_api(request, person_id):
@@ -572,43 +583,44 @@ def save_institutional_data_api(request, person_id):
         try:
             person = get_object_or_404(Person, pk=person_id)
             employee = person.employee_profile
-            
+
             # 1. Actualizar Datos del Empleado (Area y Estado)
             area_id = request.POST.get('area')
             status_id = request.POST.get('employment_status')
-            
+
             if area_id:
-                 if area_id == 'null' or area_id == '':
-                     employee.area = None
-                 else:
-                     employee.area_id = area_id
-            
+                if area_id == 'null' or area_id == '':
+                    employee.area = None
+                else:
+                    employee.area_id = area_id
+
             if status_id:
-                 if status_id == 'null' or status_id == '':
-                     employee.employment_status = None
-                 else:
-                     employee.employment_status_id = status_id
-            
+                if status_id == 'null' or status_id == '':
+                    employee.employment_status = None
+                else:
+                    employee.employment_status_id = status_id
+
             employee.save()
-            
+
             # 2. Actualizar Datos Institucionales (Expediente)
             inst_data, created = InstitutionalData.objects.get_or_create(employee=employee)
-            
+
             inst_data.file_number = request.POST.get('file_number')
             inst_data.biometric_id = request.POST.get('biometric_id')
             inst_data.institutional_email = request.POST.get('institutional_email')
             inst_data.observations = request.POST.get('observations')
             # Nuevos campos
             collective_contract = request.POST.get('collective_contract')
-            inst_data.collective_contract = (collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
+            inst_data.collective_contract = (
+                        collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
             entry_date = request.POST.get('entry_date')
             inst_data.entry_date = entry_date if entry_date else None
 
             inst_data.save()
-            
+
             return JsonResponse({'success': True, 'message': 'Datos institucionales actualizados correctamente'})
         except Exception as e:
-             return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
     return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
 
 
@@ -625,7 +637,26 @@ def get_employment_statuses_api(request):
     """Retorna los estados laborales activos para select2"""
     from apps.core.models import CatalogItem
     statuses = CatalogItem.objects.filter(
-        catalog__code='EMPLOYMENT_STATUS', 
+        catalog__code='EMPLOYMENT_STATUS',
         is_active=True
     ).values('id', 'name')
     return JsonResponse({'success': True, 'data': list(statuses)})
+
+
+@login_required
+def relocate_employee(request):
+    """Recibe un POST con employee_id y area_id, y actualiza el área del empleado."""
+    try:
+        person_id = request.POST.get('person_id')
+        unit_id = request.POST.get('unit_id')
+        if not person_id or not unit_id:
+            return JsonResponse({'success': False, 'message': 'Faltan parámetros.'}, status=400)
+        person = get_object_or_404(Person, pk=person_id)
+        employee = getattr(person, 'employee_profile', None)
+        if not employee:
+            return JsonResponse({'success': False, 'message': 'No se encontró el perfil de empleado para esta persona.'}, status=404)
+        employee.area_id = unit_id
+        employee.save()
+        return JsonResponse({'success': True, 'message': 'Empleado reubicado correctamente.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
