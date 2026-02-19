@@ -14,7 +14,7 @@
         <tbody id="table-body">
         {% if levels %}
             {% for lvl in levels %}
-                <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}" style="height:32px;">
+                <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}">
                     <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
                     <td>{{ lvl.name }}</td>
                     <td>

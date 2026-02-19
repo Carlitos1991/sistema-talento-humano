@@ -8,31 +8,20 @@ document.addEventListener('DOMContentLoaded', function () {
             th.style.cursor = 'pointer';
             th.innerHTML += ' <span class="sort-arrow">⇅</span>';
             th.addEventListener('click', function () {
-                const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => r.parentNode === table.querySelector('tbody'));
-                const asc = th.classList.toggle('sorted-asc');
-                th.classList.remove('sorted-desc');
-                headers.forEach(h => {
-                    if (h !== th) h.classList.remove('sorted-asc', 'sorted-desc');
-                });
-                if (!asc) th.classList.add('sorted-desc');
-                // Ordenar
-                rows.sort(function (a, b) {
-                    let cellA = a.children[colIdx].innerText.trim();
-                    let cellB = b.children[colIdx].innerText.trim();
-                    // Detectar número
-                    if (!isNaN(cellA) && !isNaN(cellB)) {
-                        cellA = parseFloat(cellA);
-                        cellB = parseFloat(cellB);
-                    }
-                    if (asc) {
-                        return cellA > cellB ? 1 : cellA < cellB ? -1 : 0;
-                    } else {
-                        return cellA < cellB ? 1 : cellA > cellB ? -1 : 0;
-                    }
-                });
-                // Reinsertar filas ordenadas
-                const tbody = table.querySelector('tbody');
-                rows.forEach(row => tbody.appendChild(row));
+                // Ordenar todas las filas filtradas (no solo las visibles)
+                // Ordenar sobre el filtro actual
+                if (window.filteredRows && window.filteredRows.length > 0) {
+                    console.log('Sort triggered:', { colIdx, filteredRows: window.filteredRows.length });
+                    const asc = th.classList.toggle('sorted-asc');
+                    th.classList.remove('sorted-desc');
+                    headers.forEach(h => {
+                        if (h !== th) h.classList.remove('sorted-asc', 'sorted-desc');
+                    });
+                    if (!asc) th.classList.add('sorted-desc');
+                    window.currentSortCol = colIdx;
+                    window.currentSortAsc = asc;
+                    if (window.renderTable) window.renderTable();
+                }
             });
         });
     });

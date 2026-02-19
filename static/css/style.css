@@ -1,3 +1,21 @@
+.loader-spinner {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #28af23;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 /* Flechas de ordenamiento en tablas */
 .sort-arrow {
     font-size: 1.4em;
@@ -7,14 +25,17 @@
     transition: color 0.2s, transform 0.2s;
     display: inline-block;
 }
+
 th.sorted-asc .sort-arrow {
     color: #28af23;
     transform: rotate(180deg);
 }
+
 th.sorted-desc .sort-arrow {
     color: #ef4444;
     transform: rotate(0deg);
 }
+
 /* Centrado absoluto para mensaje de tabla vacía */
 .empty-table-message {
     position: absolute;
@@ -38,7 +59,7 @@ th.sorted-desc .sort-arrow {
 }
 
 .table-container {
-    min-height: 460px; /* Ajusta este valor según la altura que desees */
+    min-height: 610px; /* Ajusta este valor según la altura que desees */
     display: flex;
     flex-direction: column;
     justify-content: flex-start;

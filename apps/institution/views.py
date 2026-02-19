@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 
 from .forms import AssignBossForm
 from employee.models import Employee
@@ -672,3 +674,10 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
                 'message': f'Jefe asignado correctamente a {self.object.name}.'
             })
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+def level_partial_table(request):
+    levels = OrganizationalLevel.objects.all()
+    context = {'levels': levels}
+    html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
+    return HttpResponse(html)

@@ -1,79 +1,139 @@
-/* static/js/levels.js */
+// Estado global de sort (necesario para table-sort.js)
+window.currentSortCol = null;
+window.currentSortAsc = true;
 
+/* static/js/levels.js */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Variables y referencias ---
     const tableBody = document.getElementById('table-body');
     const searchInput = document.getElementById('table-search');
     const pageSize = 10;
+
     let currentPage = 1;
     let allRows = Array.from(document.querySelectorAll('tr.level-row'));
     let filteredRows = allRows;
+    window.filteredRows = filteredRows; // Referencia global
+
     let currentSearchTerm = '';
     let currentStatusFilter = 'all';
 
+    // --- FUNCIÓN AUXILIAR DE ORDENAMIENTO ---
+    function sortRowsData(rows) {
+        if (window.currentSortCol === null) return rows;
+
+        return rows.sort(function (a, b) {
+            let cellA = a.children[window.currentSortCol] ? a.children[window.currentSortCol].innerText.trim() : '';
+            let cellB = b.children[window.currentSortCol] ? b.children[window.currentSortCol].innerText.trim() : '';
+
+            // Detectar si son números para ordenar correctamente
+            let numA = parseFloat(cellA);
+            let numB = parseFloat(cellB);
+
+            if (!isNaN(numA) && !isNaN(numB) && cellA !== '' && cellB !== '') {
+                cellA = numA;
+                cellB = numB;
+            } else {
+                cellA = cellA.toString().toLowerCase();
+                cellB = cellB.toString().toLowerCase();
+            }
+
+            if (window.currentSortAsc) {
+                return cellA > cellB ? 1 : cellA < cellB ? -1 : 0;
+            } else {
+                return cellA < cellB ? 1 : cellA > cellB ? -1 : 0;
+            }
+        });
+    }
+
+    // --- FILTRADO PRINCIPAL ---
     function applyFilters() {
+        // Refrescar lista completa (por si hubo cambios en DOM)
         allRows = Array.from(document.querySelectorAll('tr.level-row'));
+
+        // 1. Filtrar
         filteredRows = allRows.filter(row => {
-            const rowStatus = row.dataset.status;
+            const rowStatus = row.dataset.status; // 'true' o 'false'
+
+            // Filtro de estado
             if (currentStatusFilter !== 'all' && rowStatus !== currentStatusFilter) return false;
+
+            // Filtro de búsqueda texto
             if (currentSearchTerm && !row.innerText.toLowerCase().includes(currentSearchTerm)) return false;
+
             return true;
         });
+
+        // 2. Ordenar (si hay columna seleccionada)
+        if (window.currentSortCol !== null) {
+            filteredRows = sortRowsData(filteredRows);
+        }
+
+        // 3. Actualizar globales y reiniciar página
+        window.filteredRows = filteredRows;
+        window.allRows = allRows;
         currentPage = 1;
+
         renderTable();
     }
 
-    function renderTable() {
-        const totalRows = filteredRows.length;
+    // --- RENDERIZADO DE TABLA (CORREGIDO) ---
+    window.renderTable = function renderTable() {
+        let rows = window.filteredRows || [];
+
+        // Asegurar que el ordenamiento esté aplicado (por si se llamó desde el header click)
+        if (window.currentSortCol !== null) {
+            rows = sortRowsData(rows); // Ordenamos el array en memoria
+            window.filteredRows = rows;
+        }
+
+        console.log('RenderTable:', {count: rows.length, page: currentPage, sortCol: window.currentSortCol});
+
+        const totalRows = rows.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
+
+        // Validar página actual
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
 
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
 
+        // 1. Ocultar todas las filas primero
         allRows.forEach(row => row.style.display = 'none');
-        let rowsShown = 0;
+
+        // 2. Mostrar y REORDENAR filas de la página actual
         if (totalRows > 0) {
-            const rowsToShow = filteredRows.slice(start, end);
+            const rowsToShow = rows.slice(start, end);
+
             rowsToShow.forEach(row => {
                 row.style.display = '';
-                row.style.height = '32px'; // Compactar filas con datos
+                row.style.height = '32px';
+                // [FIX IMPORTANTE] Esto mueve físicamente el TR en el DOM para respetar el orden visual
+                tableBody.appendChild(row);
             });
-            rowsShown = rowsToShow.length;
         }
 
-        // Fila de 'No se encontraron niveles' dinámica
+        // 3. Manejo de "No resultados"
         let noResultsRow = document.getElementById('no-levels-row');
         if (totalRows === 0) {
             if (!noResultsRow) {
                 noResultsRow = document.createElement('tr');
                 noResultsRow.id = 'no-levels-row';
                 noResultsRow.innerHTML = `<td colspan="4" style="text-align:center; padding: 20px 0; color: #888; font-size: 1.1em; background: #fff; border: none; height: 32px;">
-                    <div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center;\">
-                        <i class=\"fas fa-inbox\" style=\"font-size: 2.5em; color: #d1d5db;\"></i>
-                        <div style=\"margin-top: 10px;\">No se encontraron niveles</div>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <i class="fas fa-inbox" style="font-size: 2.5em; color: #d1d5db;"></i>
+                        <div style="margin-top: 10px;">No se encontraron niveles</div>
                     </div>
                 </td>`;
                 if (tableBody) tableBody.appendChild(noResultsRow);
             }
         } else {
             if (noResultsRow) noResultsRow.remove();
-            // Agregar filas vacías para mantener el alto fijo
-            const emptyRowsNeeded = pageSize - rowsShown;
-            // Elimina filas vacías previas
-            Array.from(document.querySelectorAll('.empty-row')).forEach(r => r.remove());
-            for (let i = 0; i < emptyRowsNeeded; i++) {
-                const tr = document.createElement('tr');
-                tr.className = 'empty-row';
-                tr.innerHTML = '<td colspan="4" style="background:#fff; border:none; height:32px;">&nbsp;</td>';
-                if (tableBody) tableBody.appendChild(tr);
-            }
         }
 
         updatePaginationUI(totalRows, totalPages);
         updateStatsFrontend();
-    }
+    };
 
     function updatePaginationUI(totalRows, totalPages) {
         const pageInfo = document.getElementById('page-info');
@@ -93,21 +153,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnNext) btnNext.disabled = (currentPage === totalPages || totalPages === 0);
     }
 
-    window.filterByStatus = function(status) {
+    // --- LISTENERS DE INTERFAZ ---
+
+    // 1. Filtros de Estado (Tarjetas)
+    window.filterByStatus = function (status) {
         currentStatusFilter = status;
         const cards = {
             'all': document.getElementById('card-filter-all'),
             'true': document.getElementById('card-filter-active'),
             'false': document.getElementById('card-filter-inactive')
         };
+        // Actualizar UI de tarjetas
         Object.values(cards).forEach(card => {
             if (card) card.classList.add('opacity-low');
         });
         const activeCard = cards[status];
         if (activeCard) activeCard.classList.remove('opacity-low');
+
         applyFilters();
     };
 
+    // 2. Búsqueda
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchTerm = e.target.value.toLowerCase();
@@ -116,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 3. Paginación
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     if (btnPrev) btnPrev.addEventListener('click', () => {
@@ -133,25 +200,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 4. Actualizar contadores
     function updateStatsFrontend() {
         const elTotal = document.getElementById('stat-total');
         const elActive = document.getElementById('stat-active');
         const elInactive = document.getElementById('stat-inactive');
+
         const total = allRows.length;
         const active = allRows.filter(r => r.dataset.status === 'true').length;
         const inactive = allRows.filter(r => r.dataset.status === 'false').length;
+
         if (elTotal) elTotal.textContent = total;
         if (elActive) elActive.textContent = active;
         if (elInactive) elInactive.textContent = inactive;
     }
 
-    window.filterByStatus('all');
+    // Inicialización de vista
+    const statsRow = document.getElementById('stats-row');
+    window.filterByStatus('true'); // Filtro por defecto: Activos
+
+    setTimeout(() => {
+        if (statsRow) statsRow.style.display = 'flex';
+    }, 120);
+
+    // Render inicial
     renderTable();
+
 
     // --- MODAL VUE PARA FORMULARIO DE NIVELES ---
     const modalApp = document.getElementById('level-modal-app');
     if (modalApp && !modalApp.__vue_app__) {
-        const { createApp, ref } = Vue;
+        const {createApp, ref} = Vue;
         const app = createApp({
             delimiters: ['[[', ']]'],
             setup() {
@@ -167,7 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentId.value = null;
                     errors.value = {};
                     formName.value = '';
-                    document.getElementById(formEl).reset();
+                    const f = document.getElementById(formEl);
+                    if (f) f.reset();
                     isVisible.value = true;
                     document.body.classList.add('no-scroll');
                 };
@@ -231,11 +311,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnNew) btnNew.onclick = () => window.openCreateLevel();
     }
 
-    // --- TOGGLE STATUS ---
+    // --- TOGGLE STATUS (AJAX) ---
+    function showTableLoader() {
+        let loader = document.getElementById('table-loader');
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'table-loader';
+            loader.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; z-index:10;';
+            loader.innerHTML = '<div class="loader-spinner"></div>';
+            const container = document.querySelector('.table-container');
+            if (container) container.appendChild(loader);
+        }
+        loader.style.display = 'flex';
+    }
+
+    function hideTableLoader() {
+        const loader = document.getElementById('table-loader');
+        if (loader) loader.style.display = 'none';
+    }
+
     window.toggleLevelStatus = async (btnElement, url, name) => {
         const isCurrentlyActive = btnElement.classList.contains('btn-delete-action');
         const actionVerb = isCurrentlyActive ? 'Desactivar' : 'Activar';
         const btnClass = isCurrentlyActive ? 'btn-swal-danger' : 'btn-swal-success';
+
         const result = await Swal.fire({
             title: `¿${actionVerb} nivel?`,
             text: `Vas a cambiar el estado de "${name}"`,
@@ -250,31 +349,52 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButtonText: `Sí, ${actionVerb.toLowerCase()}`,
             cancelButtonText: 'Cancelar'
         });
+
         if (result.isConfirmed) {
+            showTableLoader();
             try {
                 const formData = new FormData();
-                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
+
                 const res = await fetch(url, {
                     method: 'POST',
                     body: formData,
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
                 const data = await res.json();
+
                 if (data.success) {
-                    location.reload();
+                    // Recargar solo HTML de la tabla
+                    const r = await fetch('/institution/levels/partial_table/');
+                    const html = await r.text();
+
+                    document.getElementById('table-content-wrapper').innerHTML = html;
+                    hideTableLoader();
+
+                    // IMPORTANTE: Re-inicializar referencias de filas y reaplicar filtros
+                    allRows = Array.from(document.querySelectorAll('tr.level-row'));
+                    applyFilters();
+
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: data.message,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
+                    hideTableLoader();
                     Swal.fire('Error', data.message, 'error');
                 }
             } catch (e) {
+                hideTableLoader();
                 Swal.fire('Error', 'Error de conexión', 'error');
             }
         }
     };
 
-    // Listeners para stats (tarjetas)
-    const cardAll = document.getElementById('card-filter-all');
-    const cardActive = document.getElementById('card-filter-active');
-    const cardInactive = document.getElementById('card-filter-inactive');
+    // Eventos Cards
     if (cardAll) cardAll.addEventListener('click', () => window.filterByStatus('all'));
     if (cardActive) cardActive.addEventListener('click', () => window.filterByStatus('true'));
     if (cardInactive) cardInactive.addEventListener('click', () => window.filterByStatus('false'));
