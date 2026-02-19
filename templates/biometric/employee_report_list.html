@@ -1,32 +1,84 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/biometric.css' %}">
+{% endblock %}
 {% block content %}
-<div id="report-app" v-cloak>
-    <div class="header-card">
-        <div>
-            <h1>Reportes de Asistencia</h1>
-            <p>Generación de archivos PDF basados en marcaciones de hardware.</p>
+    <div id="report-app" v-cloak>
+        <div class="header-card">
+            <div>
+                <h1>Reportes de Asistencia</h1>
+                <p>Generación de archivos PDF basados en marcaciones de hardware.</p>
+            </div>
         </div>
-    </div>
+        <div class="search-panel">
+            <div class="search-form-row">
+                <div class="form-group">
+                    <label for="searchName" class="input-label">Nombres/Apellidos</label>
+                    <input id="searchName" type="text" class="custom-input"
+                           v-model="backendParams.name"
+                           placeholder="Buscar por nombre..."
+                           @keyup.enter="performBackendSearch">
+                </div>
 
-    <div class="content-table">
-        <div class="table-controls">
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" v-model="searchQuery" @input="search" placeholder="Buscar empleado o cédula...">
+                <div class="form-group">
+                    <label for="searchDni" class="input-label">Cédula</label>
+                    <input id="searchDni" type="text" class="custom-input"
+                           v-model="backendParams.dni"
+                           placeholder="Buscar por cédula..."
+                           @keyup.enter="performBackendSearch">
+                </div>
+                <div class="form-actions-search">
+                    <button class="btn-custom btn-search" @click="performBackendSearch">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button class="btn-custom btn-clean" @click="clearBackendSearch">
+                        <i class="fas fa-sync-alt"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="content-table">
+            <!-- BUSCADOR FRONTEND -->
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" v-model="frontendFilter" @input="handleFrontendInput"
+                           placeholder="Filtrar resultados...">
+                </div>
+            </div>
+            <!-- WRAPPER DE LA TABLA -->
+            <div id="table-content-wrapper">
+                {% include 'biometric/partials/partial_report_employee_table.html' %}
+            </div>
+            <!-- Mensaje sin resultados (Frontend) -->
+            <div v-if="pagination.totalItems === 0" class="alert alert-warning text-center mt-3">
+                <i class="fas fa-info-circle"></i> No se encontraron registros con los filtros actuales.
+            </div>
+
+            <!-- PAGINADOR FRONTEND -->
+            <div class="pagination-container" v-if="pagination.totalItems > 0">
+                <div>
+                    Mostrando <b>[[ pagination.start + 1 ]]</b> a <b>[[ Math.min(pagination.end, pagination.totalItems)
+                    ]]</b> de <b>[[ pagination.totalItems ]]</b> registros
+                </div>
+                <div>
+                    <button class="pagination-btn" @click="changePage(-1)" :disabled="pagination.currentPage === 1">
+                        Anterior
+                    </button>
+                    <span class="mx-2">Página [[ pagination.currentPage ]] de [[ pagination.totalPages ]]</span>
+                    <button class="pagination-btn" @click="changePage(1)"
+                            :disabled="pagination.currentPage === pagination.totalPages">
+                        Siguiente
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div id="table-content-wrapper">
-            {% include 'biometric/partials/partial_report_employee_table.html' %}
-        </div>
+        <!-- INCLUSIÓN DE MODALES -->
+        {% include 'biometric/modals/modal_report_monthly.html' %}
+        {% include 'biometric/modals/modal_report_specific.html' %}
     </div>
-
-    <!-- INCLUSIÓN DE MODALES -->
-    {% include 'biometric/modals/modal_report_monthly.html' %}
-    {% include 'biometric/modals/modal_report_specific.html' %}
-</div>
 {% endblock %}
 
 {% block extra_js %}

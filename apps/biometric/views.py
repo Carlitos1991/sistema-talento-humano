@@ -299,21 +299,28 @@ class EmployeeReportListView(ListView):
     model = InstitutionalData
     template_name = 'biometric/employee_report_list.html'
     context_object_name = 'employees'
-    paginate_by = 15
+    paginate_by = 10
 
     def get_queryset(self):
-        # Solo empleados con ID biométrico
+        # Solo empleados con ID biométrico y que sean empleados activos
         qs = InstitutionalData.objects.select_related('employee__person').filter(
-            biometric_id__isnull=False
-        ).exclude(biometric_id='')
+            biometric_id__isnull=False,
+            employee__is_active=True
+        )
+        # Capturamos los parámetros del nuevo buscador
+        name_query = self.request.GET.get('name', '').strip()
+        dni_query = self.request.GET.get('dni', '').strip()
+        if name_query or dni_query:
+            if name_query:
+                qs = qs.filter(
+                    models.Q(employee__person__first_name__icontains=name_query) |
+                    models.Q(employee__person__last_name__icontains=name_query)
+                )
+            if dni_query:
+                qs = qs.filter(employee__person__document_number__icontains=dni_query)
+        else:
+            qs = qs.order_by('-id')[:100]
 
-        q = self.request.GET.get('q')
-        if q:
-            qs = qs.filter(
-                models.Q(employee__person__first_name__icontains=q) |
-                models.Q(employee__person__last_name__icontains=q) |
-                models.Q(employee__person__document_number__icontains=q)
-            )
         return qs
 
     def get(self, request, *args, **kwargs):
@@ -322,7 +329,8 @@ class EmployeeReportListView(ListView):
             html = render_to_string('biometric/partials/partial_report_employee_table.html', {
                 'employees': self.object_list
             }, request=request)
-            return JsonResponse({'html': html})
+            # Retornamos también el conteo para validación visual
+            return JsonResponse({'html': html, 'count': len(self.object_list)})
         return super().get(request, *args, **kwargs)
 
 

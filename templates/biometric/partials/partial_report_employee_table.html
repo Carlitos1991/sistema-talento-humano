@@ -1,14 +1,15 @@
 <div class="table-container">
-    <table class="custom-table">
+    <table class="table table-hover">
         <thead>
-            <tr>
-                <th>Empleado</th>
-                <th>Cédula</th>
-                <th class="text-center">Acciones</th>
-            </tr>
+        <tr>
+            <th style="width: 30%">Empleado</th>
+            <th style="width: 25%">Cédula</th>
+            <th style="width: 20%">ID Biométrico</th>
+            <th style="width: 25%" class="text-center">Acciones</th>
+        </tr>
         </thead>
         <tbody>
-            {% for data in employees %}
+        {% for data in employees %}
             <tr>
                 <td>
                     <div class="person-info">
@@ -19,12 +20,14 @@
                         {% endif %}
                         <div class="person-details">
                             <h4>{{ data.employee.person.full_name }}</h4>
-                            <p>ID Bio: <strong>{{ data.biometric_id }}</strong></p>
                         </div>
                     </div>
                 </td>
                 <td>
                     <span class="badge-code">{{ data.employee.person.document_number }}</span>
+                </td>
+                <td>
+                    <span class="badge-status-active">{{ data.biometric_id }}</span>
                 </td>
                 <td class="actions-cell">
                     <div class="actions-wrapper">
@@ -41,7 +44,7 @@
                     </div>
                 </td>
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 </div>
