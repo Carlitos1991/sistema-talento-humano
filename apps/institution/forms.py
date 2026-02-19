@@ -126,7 +126,18 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Solo mostrar el jefe actual si existe, si no, queryset vacío
+        boss_qs = Employee.objects.none()
+        boss_id = None
         if self.instance and self.instance.boss:
-            self.fields['boss'].queryset = Employee.objects.filter(pk=self.instance.boss.pk)
-        else:
-            self.fields['boss'].queryset = Employee.objects.none()
+            boss_id = self.instance.boss.pk
+            boss_qs = Employee.objects.filter(pk=boss_id)
+        # Si viene un valor por POST (Select2), incluirlo también
+        data = kwargs.get('data') or getattr(self, 'data', None)
+        if data and data.get('boss'):
+            try:
+                post_boss_id = int(data.get('boss'))
+                if not boss_qs.filter(pk=post_boss_id).exists():
+                    boss_qs = Employee.objects.filter(pk__in=filter(None, [boss_id, post_boss_id]))
+            except Exception:
+                pass
+        self.fields['boss'].queryset = boss_qs
