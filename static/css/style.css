@@ -1,3 +1,20 @@
+/* Flechas de ordenamiento en tablas */
+.sort-arrow {
+    font-size: 1.4em;
+    color: #b0b7c3;
+    margin-left: 8px;
+    vertical-align: middle;
+    transition: color 0.2s, transform 0.2s;
+    display: inline-block;
+}
+th.sorted-asc .sort-arrow {
+    color: #28af23;
+    transform: rotate(180deg);
+}
+th.sorted-desc .sort-arrow {
+    color: #ef4444;
+    transform: rotate(0deg);
+}
 /* Centrado absoluto para mensaje de tabla vacía */
 .empty-table-message {
     position: absolute;

@@ -149,9 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTable();
 
     // --- MODAL VUE PARA FORMULARIO DE NIVELES ---
-    if (document.getElementById('level-modal-app')) {
+    const modalApp = document.getElementById('level-modal-app');
+    if (modalApp && !modalApp.__vue_app__) {
         const { createApp, ref } = Vue;
-        createApp({
+        const app = createApp({
             delimiters: ['[[', ']]'],
             setup() {
                 const isVisible = ref(false);
@@ -223,7 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 return {isVisible, isEditing, errors, closeModal, submitForm, formName};
             }
-        }).mount('#level-modal-app');
+        });
+        modalApp.__vue_app__ = app.mount('#level-modal-app');
 
         const btnNew = document.getElementById('btn-add-level');
         if (btnNew) btnNew.onclick = () => window.openCreateLevel();
