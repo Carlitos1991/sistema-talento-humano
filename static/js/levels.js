@@ -7,6 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Variables y referencias ---
     const tableBody = document.getElementById('table-body');
     const searchInput = document.getElementById('table-search');
+
+    // Referencias a las tarjetas de filtro (Stats)
+    const cardAll = document.getElementById('card-filter-all');
+    const cardActive = document.getElementById('card-filter-active');
+    const cardInactive = document.getElementById('card-filter-inactive');
+
     const pageSize = 10;
 
     let currentPage = 1;
@@ -47,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FILTRADO PRINCIPAL ---
     function applyFilters() {
-        // Refrescar lista completa (por si hubo cambios en DOM)
+        // Refrescar lista completa (por si hubo cambios en DOM tras editar/crear)
         allRows = Array.from(document.querySelectorAll('tr.level-row'));
 
         // 1. Filtrar
@@ -76,17 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable();
     }
 
-    // --- RENDERIZADO DE TABLA (CORREGIDO) ---
+    // --- RENDERIZADO DE TABLA ---
     window.renderTable = function renderTable() {
         let rows = window.filteredRows || [];
 
-        // Asegurar que el ordenamiento esté aplicado (por si se llamó desde el header click)
+        // Asegurar que el ordenamiento esté aplicado
         if (window.currentSortCol !== null) {
             rows = sortRowsData(rows); // Ordenamos el array en memoria
             window.filteredRows = rows;
         }
 
-        console.log('RenderTable:', {count: rows.length, page: currentPage, sortCol: window.currentSortCol});
 
         const totalRows = rows.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
@@ -101,14 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Ocultar todas las filas primero
         allRows.forEach(row => row.style.display = 'none');
 
-        // 2. Mostrar y REORDENAR filas de la página actual
+        // 2. Mostrar y REORDENAR filas de la página actual en el DOM
         if (totalRows > 0) {
             const rowsToShow = rows.slice(start, end);
 
             rowsToShow.forEach(row => {
                 row.style.display = '';
                 row.style.height = '32px';
-                // [FIX IMPORTANTE] Esto mueve físicamente el TR en el DOM para respetar el orden visual
+                // Esto es vital para que el orden visual coincida con el array ordenado
                 tableBody.appendChild(row);
             });
         }
@@ -155,15 +160,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LISTENERS DE INTERFAZ ---
 
-    // 1. Filtros de Estado (Tarjetas)
+    // 1. Función Filtros de Estado (Tarjetas)
     window.filterByStatus = function (status) {
         currentStatusFilter = status;
+
         const cards = {
-            'all': document.getElementById('card-filter-all'),
-            'true': document.getElementById('card-filter-active'),
-            'false': document.getElementById('card-filter-inactive')
+            'all': cardAll,
+            'true': cardActive,
+            'false': cardInactive
         };
-        // Actualizar UI de tarjetas
+
+        // Actualizar UI de tarjetas (opacidad)
         Object.values(cards).forEach(card => {
             if (card) card.classList.add('opacity-low');
         });
@@ -173,7 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFilters();
     };
 
-    // 2. Búsqueda
+    // 2. Eventos Click en Tarjetas (CORREGIDO: Las variables ya existen)
+    if (cardAll) cardAll.addEventListener('click', () => window.filterByStatus('all'));
+    if (cardActive) cardActive.addEventListener('click', () => window.filterByStatus('true'));
+    if (cardInactive) cardInactive.addEventListener('click', () => window.filterByStatus('false'));
+
+    // 3. Búsqueda
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchTerm = e.target.value.toLowerCase();
@@ -182,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. Paginación
+    // 4. Paginación
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     if (btnPrev) btnPrev.addEventListener('click', () => {
@@ -200,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4. Actualizar contadores
+    // 5. Actualizar contadores
     function updateStatsFrontend() {
         const elTotal = document.getElementById('stat-total');
         const elActive = document.getElementById('stat-active');
@@ -372,8 +384,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('table-content-wrapper').innerHTML = html;
                     hideTableLoader();
 
-                    // IMPORTANTE: Re-inicializar referencias de filas y reaplicar filtros
+                    // RE-INICIALIZAR REFERENCIAS
                     allRows = Array.from(document.querySelectorAll('tr.level-row'));
+
+                    // IMPORTANTE: Volver a aplicar el filtro actual para mantener la vista consistente
                     applyFilters();
 
                     Swal.fire({
@@ -393,9 +407,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
-    // Eventos Cards
-    if (cardAll) cardAll.addEventListener('click', () => window.filterByStatus('all'));
-    if (cardActive) cardActive.addEventListener('click', () => window.filterByStatus('true'));
-    if (cardInactive) cardInactive.addEventListener('click', () => window.filterByStatus('false'));
 });
