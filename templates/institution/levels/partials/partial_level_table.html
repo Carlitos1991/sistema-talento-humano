@@ -12,41 +12,45 @@
         </tr>
         </thead>
         <tbody id="table-body">
-        {% for lvl in levels %}
-            <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}">
-                <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
-                <td>{{ lvl.name }}</td>
-                <td>
-                    <span id="badge-{{ lvl.id }}" class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
-                        {% if lvl.is_active %}Activo{% else %}Inactivo{% endif %}
-                    </span>
-                </td>
+        {% if levels %}
+            {% for lvl in levels %}
+                <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}" style="height:32px;">
+                    <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
+                    <td>{{ lvl.name }}</td>
+                    <td>
+                        <span id="badge-{{ lvl.id }}" class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
+                            {% if lvl.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </td>
 
-                {% if perms.institution.change_organizationallevel %}
-                <td class="actions text-center">
-                    <div class="actions-wrapper">
-                        <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})" title="Editar">
-                            <i class="fas fa-pencil"></i>
-                        </button>
+                    {% if perms.institution.change_organizationallevel %}
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})" title="Editar">
+                                <i class="fas fa-pencil"></i>
+                            </button>
 
-                        {% if lvl.is_active %}
-                            <button class="btn-icon btn-delete-action"
-                                    onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                    title="Desactivar">
-                                <i class="fas fa-power-off"></i>
-                            </button>
-                        {% else %}
-                            <button class="btn-icon btn-create-action"
-                                    onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                    title="Activar">
-                                <i class="fas fa-toggle-on"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
-                {% endif %}
-            </tr>
-        {% endfor %}
+                            {% if lvl.is_active %}
+                                <button class="btn-icon btn-delete-action"
+                                        onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                        title="Desactivar">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            {% else %}
+                                <button class="btn-icon btn-create-action"
+                                        onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                        title="Activar">
+                                    <i class="fas fa-toggle-on"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        {% else %}
+            <!-- Sin filas, el overlay se encarga del mensaje -->
+        {% endif %}
         </tbody>
     </table>
 

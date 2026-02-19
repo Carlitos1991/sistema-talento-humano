@@ -53,11 +53,7 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
     def get(self, request):
         term = request.GET.get('term', '').strip()
 
-        qs = Employee.objects.filter(is_active=True).exclude(
-            Q(employment_status__name__icontains='EX EMPLEADO') |
-            Q(employment_status__name__icontains='EX TRABAJADOR') |
-            Q(employment_status__name__icontains='PASIVO')
-        ).select_related('person')
+        qs = Employee.objects.filter(is_active=True).select_related('person')
 
         if term:
             qs = qs.filter(
@@ -260,7 +256,7 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = OrganizationalLevel
     template_name = 'institution/levels/level_list.html'
     context_object_name = 'levels'
-    paginate_by = 10
+    # Sin paginación backend, todo el filtrado y paginación será frontend
     permission_required = 'institution.view_organizationallevel'
 
     def get_queryset(self):
@@ -278,17 +274,27 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         return qs
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = OrganizationalLevelForm()
-        context.update(get_level_stats())
-        return context
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context['form'] = OrganizationalLevelForm()
+            context['total'] = OrganizationalLevel.objects.all().count()
+            context['active'] = OrganizationalLevel.objects.filter(is_active=True).count()
+            context['inactive'] = OrganizationalLevel.objects.filter(is_active=False).count()
+            return context
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            return render(request, 'institution/levels/partials/partial_level_table.html', context)
+            from django.template.loader import render_to_string
+            from django.http import JsonResponse
+            html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
+            stats = {
+                'total': context.get('total', 0),
+                'active': context.get('active', 0),
+                'inactive': context.get('inactive', 0),
+            }
+            return JsonResponse({'html': html, 'stats': stats})
         return super().get(request, *args, **kwargs)
 
 

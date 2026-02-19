@@ -21,7 +21,7 @@
                         <!-- Solo mostramos el nombre -->
                         <div class="form-group mb-3">
                             <label class="form-label">Nombre del Nivel <span class="text-danger">*</span></label>
-                            {{ form.name }}
+                            <input type="text" name="name" class="form-control" v-model="formName" required maxlength="100" placeholder="Nombre del Nivel">
                             <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
                         </div>
 
