@@ -17,6 +17,33 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold">Funcionario</label>
                     {{ form.boss }}
+                    <script>
+                    $(function() {
+                        $('#id_boss_assign').select2({
+                            theme: 'bootstrap-5',
+                            width: '100%',
+                            placeholder: 'Buscar empleado...',
+                            allowClear: true,
+                            minimumInputLength: 3,
+                            ajax: {
+                                url: '/institution/api/employee/search/',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                    return {
+                                        term: params.term
+                                    };
+                                },
+                                processResults: function (data) {
+                                    return {
+                                        results: data.results
+                                    };
+                                },
+                                cache: true
+                            }
+                        });
+                    });
+                    </script>
                     <div class="form-text text-muted">
                         Puede buscar por nombre o número de cédula. No se muestran ex-empleados.
                     </div>

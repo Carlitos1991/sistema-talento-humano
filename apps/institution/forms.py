@@ -111,10 +111,22 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
         widgets = {
             'boss': forms.Select(attrs={
                 'class': 'form-control',
-                'id': 'id_boss_assign',  # ID único para este modal
-                'data-placeholder': 'Buscar empleado...'
+                'id': 'id_boss_assign',
+                'data-placeholder': 'Buscar empleado...',
+                'data-ajax-url': '/institution/api/employee/search/',
+                'data-minimum-input-length': '3',
+                'data-allow-clear': 'true',
+                'style': 'width:100%'
             }),
         }
         labels = {
             'boss': 'Seleccione Funcionario Responsable'
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo mostrar el jefe actual si existe, si no, queryset vacío
+        if self.instance and self.instance.boss:
+            self.fields['boss'].queryset = Employee.objects.filter(pk=self.instance.boss.pk)
+        else:
+            self.fields['boss'].queryset = Employee.objects.none()
