@@ -104,7 +104,7 @@ def test_connection(ip_address, port=4370):
     # 2. Conexión ZK - FORZAMOS UDP=False para evitar problemas de ping
     try:
         from pyzk2 import ZK
-        zk = ZK(ip_address, port=port, timeout=5, force_udp=False)  # <--- Forzar TCP
+        zk = ZK(ip_address, port=port, timeout=5, force_udp=False, ommit_ping=True)  # <--- Forzar TCP
         conn = zk.connect()
         if conn:
             # Si conecta, sacamos la info
