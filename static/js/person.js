@@ -73,7 +73,7 @@ window.initializeSelect2 = () => {
         });
     });
 
-    observer.observe(modal, { attributes: true });
+    observer.observe(modal, {attributes: true});
 };
 
 window.changePage = (page) => {
@@ -101,7 +101,50 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.error(e);
     }
+    $('#form-relocate-employee').on('submit', function (e) {
+        e.preventDefault();
 
+        // Buscar el último valor seleccionado
+        let finalUnitId = null;
+        $('#relocate-combos-wrapper select').each(function () {
+            const val = $(this).val();
+            if (val) finalUnitId = val;
+        });
+
+        if (!finalUnitId) {
+            alert("Por favor seleccione una unidad administrativa final.");
+            return;
+        }
+
+        const btn = $(this).find('button[type="submit"]');
+        const originalText = btn.html();
+        btn.prop('disabled', true).html('Guardando...');
+
+        $.ajax({
+            url: '/person/relocate/', // Esta URL la crearemos en el paso 2
+            method: 'POST',
+            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || window.getCookie('csrftoken')},
+            data: {
+                person_id: window.selectedRelocatePersonId,
+                unit_id: finalUnitId
+            },
+            success: function (resp) {
+                if (resp.success) {
+                    alert(resp.message);
+                    window.closeRelocateModal();
+                    location.reload(); // Recargar para ver cambios
+                } else {
+                    alert("Error: " + resp.message);
+                }
+            },
+            error: function () {
+                alert("Error de conexión con el servidor.");
+            },
+            complete: function () {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
     const app = createApp({
         setup() {
             // --- 1. DEFINICIÓN DE VARIABLES REACTIVAS ---
@@ -139,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     searchTimeout = setTimeout(() => {
                         const term = e.target.value.trim();
                         // Al buscar rápido, limpiar filtros avanzados
-                        activeFilters.value = { q: term };
+                        activeFilters.value = {q: term};
                         fetchPeople(1);
                     }, 500);
                 });
@@ -489,6 +532,115 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+            // --- Reubicación de empleado ---
+            window.openRelocateEmployeeModal = function (personId, personName) {
+                // 1. Guardar referencias globales
+                window.selectedRelocatePersonId = personId;
+
+                // 2. Limpiar modal anterior
+                $('#relocate-combos-wrapper').empty();
+
+                // 3. Mostrar el modal (Quitando display:none y clase hidden)
+                const modal = document.getElementById('modal-relocate-employee');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.classList.remove('hidden');
+                }
+
+                // 4. Cargar nivel raíz (Nivel 1)
+                // NOTA: Asegúrate de que 'urls' esté definido globalmente o pásalo como argumento si falla.
+                // Si urls no es global, usa la ruta harcodeada temporalmente para probar:
+                loadUnitLevel(null);
+            };
+
+            window.closeRelocateModal = function () {
+                const modal = document.getElementById('modal-relocate-employee');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.classList.add('hidden'); // Por si usas Tailwind/Bootstrap classes
+                }
+                // Limpiar selección para evitar errores futuros
+                window.selectedRelocatePersonId = null;
+                $('#relocate-combos-wrapper').empty();
+            };
+
+            function loadUnitLevel(parentId) {
+                // Recuperamos la URL del dataset del HTML principal si la variable global urls no está accesible aquí
+                let apiUrl = '/institution/api/unit-children/';
+                const appEl = document.getElementById('personApp');
+                if (appEl) {
+                    try {
+                        const u = JSON.parse(appEl.dataset.urls);
+                        if (u.administrative_units) apiUrl = u.administrative_units;
+                    } catch (e) {
+                    }
+                }
+
+                const params = parentId ? {parent_id: parentId} : {};
+
+                $.ajax({
+                    url: apiUrl,
+                    data: params,
+                    success: function (data) {
+                        if (!data.units || data.units.length === 0) return;
+
+                        const uniqueId = 'unit-select-' + (parentId || 'root');
+                        const $wrapper = $('<div class="form-group mb-3"></div>');
+                        const $label = $('<label class="text-xs font-bold text-gray-600 mb-1 block">Seleccione Unidad:</label>');
+
+                        const $select = $('<select>')
+                            .attr('id', uniqueId)
+                            .addClass('form-control select2-relocate w-full border p-2 rounded')
+                            .css('width', '100%')
+                            .append('<option value="">-- Seleccione --</option>');
+
+                        data.units.forEach(function (u) {
+                            // El backend debe devolver 'has_children' (true/false)
+                            $select.append(`<option value="${u.id}" data-has-children="${u.has_children}">${u.name}</option>`);
+                        });
+
+                        $wrapper.append($label).append($select);
+                        $('#relocate-combos-wrapper').append($wrapper);
+
+                        // Inicializar Select2 si está disponible
+                        if ($.fn.select2) {
+                            $select.select2({
+                                dropdownParent: $('#modal-relocate-employee'),
+                                width: '100%'
+                            });
+                        }
+
+                        // Evento Change
+                        $select.on('change', function () {
+                            const val = $(this).val();
+                            const hasChild = $(this).find(':selected').data('has-children');
+
+                            // Borrar siguientes niveles
+                            $(this).closest('.form-group').nextAll().remove();
+
+                            if (val && (hasChild === true || hasChild === "true" || hasChild === "True")) {
+                                loadUnitLevel(val);
+                            }
+                        });
+                    }
+                });
+            }
+
+            $('#form-relocate-employee').on('submit', function (e) {
+                e.preventDefault();
+                const selects = $('#relocate-combos-wrapper select');
+                const lastSelect = selects.last();
+                const unitId = lastSelect.val();
+                $.post('/person/relocate/', {
+                    person_id: window.selectedRelocatePersonId,
+                    unit_id: unitId,
+                    csrfmiddlewaretoken: window.getCookie('csrftoken')
+                }, function (resp) {
+                    window.closeRelocateModal();
+                    // Actualizar tabla si es necesario
+                });
+            });
+
             // ----------------------------------------------------
             // CICLO DE VIDA
             // ----------------------------------------------------
@@ -519,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     vueApp = app.mount('#personApp');
-    
+
     // Inicializar Select2 para el modal de búsqueda avanzada
     window.initializeSelect2();
 });

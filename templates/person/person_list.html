@@ -8,12 +8,13 @@
 
 {% block content %}
     <div id="personApp" data-urls='{
-        "list": "{% url "person:person_list" %}",
-        "create": "{% url "person:person_create" %}",
-        "update": "{% url "person:person_update" 0 %}",
-        "detail": "{% url "person:person_detail" 0 %}",
-        "locations": "{% url "core:location_list_json" %}",
-        "createCredentials": "{% url "security:user_create_credentials" 0 %}"
+    "list": "{% url "person:person_list" %}",
+    "create": "{% url "person:person_create" %}",
+    "update": "{% url "person:person_update" 0 %}",
+    "detail": "{% url "person:person_detail" 0 %}",
+    "locations": "{% url "core:location_list_json" %}",
+    "createCredentials": "{% url "security:user_create_credentials" 0 %}",
+    "administrative_units": "{% url "institution:api_unit_children" %}"  
     }'>
         <!-- 1. Header -->
         <div class="header-card">
@@ -64,6 +65,7 @@
         {% include 'person/modals/modal_credentials.html' %}
         {% include 'person/modals/modal_person_quick_view.html' %}
         {% include 'person/modals/modal_person_advanced_search.html' %}
+        {% include 'person/modals/modal_relocate_employee.html' %}
     </div>
 
 {% endblock %}

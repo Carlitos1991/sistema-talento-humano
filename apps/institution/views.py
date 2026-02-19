@@ -373,12 +373,20 @@ def level_toggle_status(request, pk):
 def api_get_administrative_children(request):
     parent_id = request.GET.get('parent_id')
 
-    # Si no hay parent_id, traemos las de nivel raíz (sin padre)
+    # Filtros base
     filters = {'parent__isnull': True} if not parent_id else {'parent_id': parent_id}
     filters['is_active'] = True
 
     units = AdministrativeUnit.objects.filter(**filters).order_by('name')
-    data = [{'id': u.id, 'name': u.name} for u in units]
+
+    data = []
+    for u in units:
+        has_children = u.children.filter(is_active=True).exists()
+        data.append({
+            'id': u.id,
+            'name': u.name,
+            'has_children': has_children
+        })
 
     return JsonResponse({'success': True, 'units': data})
 

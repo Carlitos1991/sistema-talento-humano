@@ -4,6 +4,9 @@ from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView
 from django.db.models import Q, Value, CharField
 from django.db.models.functions import Concat
@@ -31,10 +34,10 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         ).annotate(
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('last_name')
-        
+
         # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')
-        
+
         # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
         # Recogemos parámetros
         cedula = self.request.GET.get('cedula')
@@ -43,14 +46,14 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         status_id = self.request.GET.get('status')
         marital_id = self.request.GET.get('marital_status')
         gender_id = self.request.GET.get('gender')
-        
+
         # Detectar si hay búsqueda avanzada activa
         has_advanced_search = any([cedula, nombres, area_id, status_id, marital_id, gender_id])
-        
+
         # --- FILTRO BASE: Solo empleados activos si NO hay búsqueda avanzada ---
         if not has_advanced_search and not q:
             qs = qs.filter(employee_profile__is_active=True)
-        
+
         # Búsqueda rápida
         if q:
             qs = qs.filter(
@@ -81,7 +84,7 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if marital_id:
             qs = qs.filter(marital_status_id=marital_id)
-            
+
         if gender_id:
             qs = qs.filter(gender_id=gender_id)
 
@@ -100,16 +103,16 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # --- 3. ESTADÍSTICAS DINÁMICAS (Solo Estados Activos) ---
         from employee.models import Employee
-        
+
         # Códigos de estados activos
         active_status_codes = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
-        
+
         # Estadísticas solo de empleados activos
         active_employees = Employee.objects.filter(
             employment_status__code__in=active_status_codes,
             is_active=True
         )
-        
+
         stats_qs = active_employees.values(
             'employment_status__name',
             'employment_status__code',
@@ -137,7 +140,7 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'PROFESIONAL': 'fa-user-graduate'
         }
         colors = ['color-two', 'color-three', 'color-four', 'color-five']
-        
+
         for idx, item in enumerate(stats_qs):
             code = item['employment_status__code']
             stats.append({
@@ -191,7 +194,7 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     def post(self, request, *args, **kwargs):
         try:
             self.object = self.get_object()
-            
+
             # Verificar si la foto actual existe físicamente
             if self.object.photo:
                 try:
@@ -206,7 +209,7 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
                     print(f"Error al verificar foto: {e}, limpiando campo...")
                     self.object.photo = None
                     self.object.save(update_fields=['photo'])
-            
+
             # Procesar el formulario
             if 'photo' in request.FILES:
                 # Hay una nueva foto
@@ -214,7 +217,7 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             else:
                 # No hay nueva foto
                 form = PersonForm(request.POST, instance=self.object)
-            
+
             if form.is_valid():
                 form.save()
                 return JsonResponse({'success': True, 'message': 'Datos actualizados correctamente.'})
@@ -287,3 +290,41 @@ def person_quick_view_partial(request, pk):
     return render(request, 'person/partials/partial_person_quick_view.html', {
         'person': person
     })
+
+
+@method_decorator(require_POST, name='dispatch')
+class RelocateEmployeeView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'  # Ajusta según tus permisos
+
+    def post(self, request, *args, **kwargs):
+        person_id = request.POST.get('person_id')
+        unit_id = request.POST.get('unit_id')
+
+        if not person_id or not unit_id:
+            return JsonResponse({'success': False, 'message': 'Faltan datos (Persona o Unidad).'})
+
+        try:
+            # 1. Obtener la persona
+            person = get_object_or_404(Person, pk=person_id)
+
+            # 2. Verificar que tenga perfil de empleado
+            if not hasattr(person, 'employee_profile'):
+                return JsonResponse({'success': False, 'message': 'Esta persona no tiene perfil de empleado activo.'})
+
+            # 3. Obtener la unidad destino
+            new_unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+
+            # 4. Actualizar
+            employee = person.employee_profile
+            old_unit_name = employee.area.name if employee.area else "Sin Unidad"
+
+            employee.area = new_unit
+            employee.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Reubicación exitosa: {person.first_name} pasó de "{old_unit_name}" a "{new_unit.name}".'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
