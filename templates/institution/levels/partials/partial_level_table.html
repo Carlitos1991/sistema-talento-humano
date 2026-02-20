@@ -1,13 +1,16 @@
 {% load static %}
 <div class="table-container">
-    <table class="sortable-table">
+    <table class="managed-table exportable-table"
+           data-title="Reporte de Nueva Tabla"
+           data-filename="Reporte_Nuevo"
+           data-page-size="10">
         <thead>
         <tr>
             <th><i class="fa-solid fa-arrow-down-1-9"></i> Orden</th>
             <th><i class="fa-solid fa-tag"></i> Nombre del Nivel</th>
             <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
             {% if perms.institution.change_organizationallevel %}
-            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
             {% endif %}
         </tr>
         </thead>
@@ -18,33 +21,35 @@
                     <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
                     <td>{{ lvl.name }}</td>
                     <td>
-                        <span id="badge-{{ lvl.id }}" class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
+                        <span id="badge-{{ lvl.id }}"
+                              class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
                             {% if lvl.is_active %}Activo{% else %}Inactivo{% endif %}
                         </span>
                     </td>
 
                     {% if perms.institution.change_organizationallevel %}
-                    <td class="actions text-center">
-                        <div class="actions-wrapper">
-                            <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})" title="Editar">
-                                <i class="fas fa-pencil"></i>
-                            </button>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})"
+                                        title="Editar">
+                                    <i class="fas fa-pencil"></i>
+                                </button>
 
-                            {% if lvl.is_active %}
-                                <button class="btn-icon btn-delete-action"
-                                        onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                        title="Desactivar">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                            {% else %}
-                                <button class="btn-icon btn-create-action"
-                                        onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                        title="Activar">
-                                    <i class="fas fa-toggle-on"></i>
-                                </button>
-                            {% endif %}
-                        </div>
-                    </td>
+                                {% if lvl.is_active %}
+                                    <button class="btn-icon btn-delete-action"
+                                            onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                            title="Desactivar">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn-icon btn-create-action"
+                                            onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                            title="Activar">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
                     {% endif %}
                 </tr>
             {% endfor %}

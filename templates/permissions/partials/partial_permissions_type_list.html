@@ -12,7 +12,7 @@
         </div>
     {% endif %}
 
-    <table>
+    <table class="sortable-table exportable-table" data-title="Reporte Empleados">
         <thead>
         <tr>
             <th>Nombre</th>
@@ -38,16 +38,20 @@
                 <!-- Iconos Booleanos Limpios -->
                 <td class="text-center" style="vertical-align: middle; padding: 0.75rem;">
                     {% if type.needs_justification %}
-                        <i class="fa-solid fa-circle-check" style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
+                        <i class="fa-solid fa-circle-check"
+                           style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
                     {% else %}
-                        <i class="fa-solid fa-circle-xmark" style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
+                        <i class="fa-solid fa-circle-xmark"
+                           style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
                     {% endif %}
                 </td>
                 <td class="text-center" style="vertical-align: middle; padding: 0.75rem;">
                     {% if type.affects_vacation %}
-                        <i class="fa-solid fa-circle-check" style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
+                        <i class="fa-solid fa-circle-check"
+                           style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
                     {% else %}
-                        <i class="fa-solid fa-circle-xmark" style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
+                        <i class="fa-solid fa-circle-xmark"
+                           style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
                     {% endif %}
                 </td>
 

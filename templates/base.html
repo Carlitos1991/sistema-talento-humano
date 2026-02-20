@@ -16,6 +16,8 @@
     <!-- CSS Personalizado Consolidated -->
     <link rel="stylesheet" href="{% static 'css/swal2-toast-font-sm.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
+    <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
     {% block extra_css %}{% endblock %}
     <style>[v-cloak] {
         display: none !important;
@@ -54,7 +56,10 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<script src="{% static 'js/table-manager.js' %}"></script>
 <script src="{% static 'js/table-sort.js' %}"></script>
+<script src="{% static 'js/table-export.js' %}"></script>
 
 <!-- Inicialización Select2 (jQuery Legacy) -->
 <script>

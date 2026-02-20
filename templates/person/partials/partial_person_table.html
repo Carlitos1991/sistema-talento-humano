@@ -1,7 +1,10 @@
 {% load static %}
 <div class="table-container">
     <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
-    <table>
+    <table class="managed-table exportable-table"
+           data-title="Reporte Empleados"
+           data-filename="Reporte_Nuevo"
+           data-page-size="10">
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
