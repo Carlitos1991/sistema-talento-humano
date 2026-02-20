@@ -1,23 +1,28 @@
 {% load static %}
 <div class="table-container">
-    <table class="sortable-table exportable-table" data-title="Reporte Estructura Organizacional">
+    <table class="managed-table exportable-table"
+           data-title="Reporte Estructura Organizacional"
+           data-filename="reporte_estructura_organizacional"
+           data-page-size="10">
         <thead>
         <tr>
-            <th><i class="fa-solid fa-list-ol"></i>Código</th>
+            <th><i class="fa-solid fa-list-ol"></i> Código</th>
             <th><i class="fa-solid fa-building"></i> Unidad Administrativa</th>
             <th><i class="fa-solid fa-building"></i> Depende de</th>
             <th><i class="fa-solid fa-layer-group"></i> Nivel</th>
             <th><i class="fa-solid fa-user-tie"></i> Jefe Inmediato</th>
             <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
-
             {% if perms.institution.change_administrativeunit %}
-                <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
             {% endif %}
         </tr>
         </thead>
         <tbody id="table-body">
         {% for unit in units %}
-            <tr class="unit-row" id="row-{{ unit.id }}" data-status="{{ unit.is_active|yesno:'true,false' }}">
+            <tr class="unit-row" id="row-{{ unit.id }}"
+                data-status="{{ unit.is_active|yesno:'true,false' }}"
+                data-level="{{ unit.level.id }}"
+                data-parent="{{ unit.parent.id|default:'' }}">
                 <td><span class="badge-code">{{ unit.code|default:"--" }}</span></td>
                 <td>
                     <a href="javascript:void(0);"
@@ -48,7 +53,6 @@
                 <td>
                     {% if unit.boss %}
                         <div class="boss-mini-profile">
-                            <!-- Foto -->
                             {% if unit.boss.person.photo %}
                                 <img src="{{ unit.boss.person.photo.url }}" class="boss-avatar-img" alt="Foto">
                             {% else %}
@@ -57,8 +61,6 @@
                                     {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
                                 </div>
                             {% endif %}
-
-                            <!-- Info Texto -->
                             <div class="boss-info">
                                 <span class="boss-name-highlight">{{ unit.boss.person.first_name }}</span>
                                 <span class="boss-lastname-highlight">{{ unit.boss.person.last_name }}</span>
@@ -79,7 +81,6 @@
                 {% if perms.institution.change_administrativeunit %}
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <!-- Editar -->
                             <button class="btn-icon btn-views-action"
                                     onclick="openEditUnit({{ unit.id }})"
                                     title="Editar Unidad">
@@ -98,8 +99,6 @@
                                     <i class="fas fa-user-tie"></i>
                                 </button>
                             {% endif %}
-
-                            <!-- Toggle Status -->
                             {% if unit.is_active %}
                                 <button class="btn-icon btn-delete-action"
                                         onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', {{ unit.id }})"
@@ -117,15 +116,13 @@
                     </td>
                 {% endif %}
             </tr>
-
-            {# AQUI EMPIEZA LO NUEVO: Si no hay unidades en el for, se ejecuta esto #}
         {% empty %}
             <tr class="empty-state-row">
-                <td colspan="7" class="empty-state-cell">
+                <td colspan="{% if perms.institution.change_administrativeunit %}7{% else %}6{% endif %}"
+                    class="empty-state-cell">
                     <div class="empty-state-content">
                         <i class="fas fa-network-wired empty-state-icon"></i>
                         <h5 class="empty-state-text">No existen dependencias</h5>
-
                         <button onclick="window.fetchUnits({level: '', parent: ''})" class="btn-empty-reset">
                             <i class="fas fa-undo me-1"></i> Volver al inicio
                         </button>
@@ -135,14 +132,4 @@
         {% endfor %}
         </tbody>
     </table>
-
-    <!-- Metadatos Paginación -->
-    <div id="pagination-metadata" class="hidden"
-         data-total="{{ page_obj.paginator.count }}"
-         data-page="{{ page_obj.number }}"
-         data-start="{{ page_obj.start_index }}"
-         data-end="{{ page_obj.end_index }}"
-         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
-         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
-    </div>
 </div>

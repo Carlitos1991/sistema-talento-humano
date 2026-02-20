@@ -12,26 +12,82 @@ class TableManager {
         this.sortCol = null;
         this.sortAsc = true;
 
-        this.wrapper = this.table.closest('.content-table') || this.table.parentElement;
-        this.searchInput = this.wrapper.querySelector('.table-search-input');
+        this.filterState = {
+            search: '',
+            column: null,
+            value: 'all'
+        };
 
-        // Inicializar
+        // Wrapper: el .content-table que agrupa controles + tabla
+        this.wrapper = this.table.closest('.content-table') || this.table.parentElement;
+
+        // Input de búsqueda: busca dentro del wrapper primero, luego por ID global
+        this.searchInput = this.wrapper.querySelector('.table-search-input')
+            || document.getElementById('table-search');
+
         this.initSortHeaders();
         this.initSearch();
         this.initPagination();
-        this.updateStats(); // Stats iniciales
         this.render();
 
         this.table._tableManager = this;
     }
 
-    /* ... (initSortHeaders y handleSort se mantienen igual que la versión anterior) ... */
+    // ─── BÚSQUEDA ────────────────────────────────────────────────────────────
+
+    initSearch() {
+        if (!this.searchInput) {
+            console.warn('TableManager: No se encontró el input de búsqueda.');
+            return;
+        }
+        this.searchInput.addEventListener('input', (e) => {
+            this.filterState.search = e.target.value.toLowerCase().trim();
+            this.applyGlobalFilters();
+        });
+    }
+
+    // ─── FILTROS ──────────────────────────────────────────────────────────────
+
+    filterByColumnData(dataAttribute, value) {
+        this.filterState.column = dataAttribute;
+        this.filterState.value = value;
+        this.applyGlobalFilters();
+    }
+
+    applyGlobalFilters() {
+        let result = [...this.originalRows];
+
+        // Filtro de columna (tarjetas)
+        if (this.filterState.value !== 'all' && this.filterState.column) {
+            result = result.filter(row =>
+                row.getAttribute(`data-${this.filterState.column}`) === this.filterState.value
+            );
+        }
+
+        // Búsqueda de texto
+        if (this.filterState.search) {
+            result = result.filter(row =>
+                row.innerText.toLowerCase().includes(this.filterState.search)
+            );
+        }
+
+        this.currentRows = result;
+        this.currentPage = 1;
+
+        if (this.sortCol !== null) this.sortData();
+        this.render();
+    }
+
+    // ─── SORT ─────────────────────────────────────────────────────────────────
+
     initSortHeaders() {
         const headers = this.table.querySelectorAll('thead th');
         headers.forEach((th, index) => {
             if (th.classList.contains('no-sort')) return;
             th.classList.add('sortable-header');
-            if (!th.querySelector('.sort-arrow')) th.innerHTML += ' <span class="sort-arrow">⇅</span>';
+            if (!th.querySelector('.sort-arrow')) {
+                th.innerHTML += ' <span class="sort-arrow">⇅</span>';
+            }
             th.addEventListener('click', () => this.handleSort(index, th, headers));
         });
     }
@@ -57,68 +113,63 @@ class TableManager {
         this.render();
     }
 
+    /**
+     * Compara dos strings que pueden ser:
+     *  - Enteros puros:          "1", "2", "10"
+     *  - Versión jerárquica:     "1.1", "1.2", "2.3.1"  ← caso código de unidades
+     *  - Texto:                  "PROCESOS", "Dirección..."
+     *
+     * Estrategia:
+     *  1. Si ambos son versión semántica (segmentos todos numéricos separados por "."),
+     *     se compara segmento a segmento como enteros → 1 < 1.1 < 1.2 < 2 < 10
+     *  2. Si ambos son número puro, se compara como float.
+     *  3. Si no, localeCompare (texto).
+     */
+    compareValues(a, b) {
+        const isVersionStr = (s) => /^\d+(\.\d+)*$/.test(s.trim());
+
+        if (isVersionStr(a) && isVersionStr(b)) {
+            const partsA = a.trim().split('.').map(Number);
+            const partsB = b.trim().split('.').map(Number);
+            const len = Math.max(partsA.length, partsB.length);
+            for (let i = 0; i < len; i++) {
+                const na = partsA[i] ?? 0;
+                const nb = partsB[i] ?? 0;
+                if (na !== nb) return na - nb;
+            }
+            return 0;
+        }
+
+        // Intento numérico puro (ignora símbolos como $ o %)
+        const numA = parseFloat(a.replace(/[^0-9.-]+/g, ''));
+        const numB = parseFloat(b.replace(/[^0-9.-]+/g, ''));
+        if (!isNaN(numA) && !isNaN(numB) && a !== '' && b !== '') {
+            return numA - numB;
+        }
+
+        // Texto
+        return a.localeCompare(b, undefined, {sensitivity: 'base'});
+    }
+
     sortData() {
         if (this.sortCol === null) return;
         this.currentRows.sort((rowA, rowB) => {
             const cellA = rowA.children[this.sortCol]?.innerText.trim() || '';
             const cellB = rowB.children[this.sortCol]?.innerText.trim() || '';
-            const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-            const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-            const isNum = !isNaN(numA) && !isNaN(numB) && cellA !== '' && cellB !== '';
-
-            let comparison = isNum ? numA - numB : cellA.localeCompare(cellB);
-            return this.sortAsc ? comparison : -comparison;
+            const cmp = this.compareValues(cellA, cellB);
+            return this.sortAsc ? cmp : -cmp;
         });
     }
 
-    initSearch() {
-        if (!this.searchInput) return;
-        this.searchInput.addEventListener('input', (e) => {
-            this.filterByText(e.target.value);
-        });
-    }
-
-    filterByText(term) {
-        term = term.toLowerCase();
-        this.currentPage = 1;
-        if (!term) {
-            this.currentRows = [...this.originalRows];
-        } else {
-            this.currentRows = this.originalRows.filter(row => row.innerText.toLowerCase().includes(term));
-        }
-        if (this.sortCol !== null) this.sortData();
-        this.render();
-    }
-
-    /* Método para filtros externos (Como los Cards de Levels) */
-    filterByColumnData(dataAttribute, value) {
-        this.currentPage = 1;
-        if (value === 'all') {
-            this.currentRows = [...this.originalRows];
-        } else {
-            this.currentRows = this.originalRows.filter(row => {
-                return row.getAttribute(`data-${dataAttribute}`) === value;
-            });
-        }
-        // Reaplicar búsqueda de texto si existe
-        if (this.searchInput && this.searchInput.value) {
-            const term = this.searchInput.value.toLowerCase();
-            this.currentRows = this.currentRows.filter(row => row.innerText.toLowerCase().includes(term));
-        }
-
-        if (this.sortCol !== null) this.sortData();
-        this.render();
-    }
+    // ─── ESTADÍSTICAS (Levels) ────────────────────────────────────────────────
 
     updateStats() {
-        // Actualiza contadores visuales si existen en el DOM
+        // Solo aplica en la vista de Niveles (stat-total / stat-active / stat-inactive)
         const elTotal = document.getElementById('stat-total');
-        if (elTotal) elTotal.innerText = this.originalRows.length; // Total absoluto
-
-        // Para activos/inactivos, miramos el data-status de las filas originales
         const elActive = document.getElementById('stat-active');
         const elInactive = document.getElementById('stat-inactive');
 
+        if (elTotal) elTotal.innerText = this.originalRows.length;
         if (elActive || elInactive) {
             const active = this.originalRows.filter(r => r.dataset.status === 'true').length;
             const inactive = this.originalRows.filter(r => r.dataset.status === 'false').length;
@@ -127,39 +178,100 @@ class TableManager {
         }
     }
 
+    // ─── PAGINACIÓN ───────────────────────────────────────────────────────────
+
     initPagination() {
-        let pagContainer = this.wrapper.querySelector('.pagination-container');
+        /*
+         * FIX #1 — Posición del paginador:
+         * El paginador debe vivir FUERA de .content-table (igual que en levels),
+         * pero DENTRO de #table-app, para que herede el fondo correcto y quede
+         * siempre pegado al borde inferior del card.
+         *
+         * Jerarquía esperada:
+         *   #table-app
+         *     .content-table        ← wrapper (tabla + controles)
+         *     .pagination-container ← paginador (hermano de .content-table)
+         *
+         * Si ya existe un .pagination-container hermano, lo reutilizamos.
+         * Si no, lo creamos justo después de .content-table.
+         */
+        const tableApp = this.table.closest('#table-app');
+        const contentTable = this.table.closest('.content-table');
+
+        // Buscar un .pagination-container hermano de .content-table
+        let pagContainer = null;
+        if (tableApp) {
+            // Hermano directo dentro de #table-app, fuera de .content-table
+            pagContainer = Array.from(tableApp.children).find(
+                el => el.classList.contains('pagination-container') && el !== contentTable
+            );
+        }
+
         if (!pagContainer) {
+            // Fallback: buscar dentro del wrapper (caso levels donde ya existe en HTML)
+            pagContainer = this.wrapper.querySelector('.pagination-container');
+        }
+
+        if (!pagContainer) {
+            // Crear y colocar como hermano de .content-table (fuera de ella)
             pagContainer = document.createElement('div');
             pagContainer.className = 'pagination-container';
-            this.table.parentNode.insertBefore(pagContainer, this.table.nextSibling);
+
+            if (contentTable && contentTable.parentNode) {
+                contentTable.parentNode.insertBefore(pagContainer, contentTable.nextSibling);
+            } else {
+                this.table.parentNode.insertBefore(pagContainer, this.table.nextSibling);
+            }
         }
+
         this.pagContainer = pagContainer;
     }
 
     renderPaginationControls(totalPages) {
-        if (totalPages <= 1 && this.currentRows.length > 0) {
-            this.pagContainer.style.display = 'none';
-            return;
-        }
+        /*
+         * FIX #2 — Paginador siempre visible (incluso con 0 resultados):
+         * Antes: se ocultaba cuando totalPages <= 1 Y había filas.
+         * Ahora: SIEMPRE se muestra el paginador con la info "Mostrando 0 de 0"
+         * para que no "suba" al quedarse sin contenido y el layout no salte.
+         *
+         * Solo se oculta si hay exactamente 1 página CON resultados (no hace
+         * falta navegar) — y aun así se muestra el texto informativo.
+         */
+        const totalRows = this.currentRows.length;
+        const start = totalRows === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+        const end = Math.min(this.currentPage * this.pageSize, totalRows);
+
         this.pagContainer.style.display = 'flex';
+
+        const prevDisabled = this.currentPage === 1;
+        const nextDisabled = this.currentPage === totalPages || totalRows === 0;
+        const showControls = totalPages > 1 && totalRows > 0;
 
         this.pagContainer.innerHTML = `
             <div class="pagination-info">
-                Mostrando ${(this.currentPage - 1) * this.pageSize + 1}-${Math.min(this.currentPage * this.pageSize, this.currentRows.length)} de ${this.currentRows.length}
+                Mostrando ${start}-${end} de ${totalRows}
             </div>
-            <div class="pagination-controls">
-                <button class="page-btn btn-first" title="Primera"><i class="fas fa-angle-double-left"></i></button>
-                <button class="page-btn btn-prev" title="Anterior"><i class="fas fa-angle-left"></i></button>
-                
+            <div class="pagination-controls" style="${!showControls ? 'visibility:hidden;' : ''}">
+                <button class="page-btn btn-first" title="Primera" ${prevDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button class="page-btn btn-prev" title="Anterior" ${prevDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-angle-left"></i>
+                </button>
                 <div class="page-input-wrapper">
                     <input type="number" class="page-input" value="${this.currentPage}" min="1" max="${totalPages}">
+                    <span class="total-pages-badge">de ${totalPages}</span>
                 </div>
-
-                <button class="page-btn btn-next" title="Siguiente"><i class="fas fa-angle-right"></i></button>
-                <button class="page-btn btn-last" title="Última"><i class="fas fa-angle-double-right"></i></button>
+                <button class="page-btn btn-next" title="Siguiente" ${nextDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button class="page-btn btn-last" title="Última" ${nextDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
             </div>
         `;
+
+        if (!showControls) return; // No conectar eventos si los controles están ocultos
 
         const input = this.pagContainer.querySelector('.page-input');
         const go = (page) => {
@@ -174,24 +286,20 @@ class TableManager {
         this.pagContainer.querySelector('.btn-next').onclick = () => go(this.currentPage + 1);
         this.pagContainer.querySelector('.btn-last').onclick = () => go(totalPages);
 
-        // Manejo del Input
-        input.addEventListener('change', () => go(parseInt(input.value)));
+        input.addEventListener('change', () => go(parseInt(input.value) || 1));
         input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') go(parseInt(input.value));
+            if (e.key === 'Enter') go(parseInt(input.value) || 1);
         });
-
-        // Estado de botones
-        this.pagContainer.querySelector('.btn-first').disabled = (this.currentPage === 1);
-        this.pagContainer.querySelector('.btn-prev').disabled = (this.currentPage === 1);
-        this.pagContainer.querySelector('.btn-next').disabled = (this.currentPage === totalPages);
-        this.pagContainer.querySelector('.btn-last').disabled = (this.currentPage === totalPages);
     }
 
+    // ─── RENDER PRINCIPAL ─────────────────────────────────────────────────────
+
     render() {
-        this.updateStats(); // Actualizar stats
+        this.updateStats();
 
         const totalRows = this.currentRows.length;
-        const totalPages = Math.ceil(totalRows / this.pageSize) || 1;
+        const totalPages = Math.max(Math.ceil(totalRows / this.pageSize), 1);
+
         if (this.currentPage > totalPages) this.currentPage = totalPages;
         if (this.currentPage < 1) this.currentPage = 1;
 
@@ -206,8 +314,17 @@ class TableManager {
                 this.tbody.appendChild(row);
             });
         } else {
+            // Fila de "sin resultados" — ocupa todo el ancho
             const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = `<td colspan="100%" style="text-align:center; padding:30px; color:#94a3b8;">Sin resultados</td>`;
+            emptyRow.className = 'empty-results-row';
+            emptyRow.innerHTML = `
+                <td colspan="100%">
+                    <div style="display:flex;flex-direction:column;align-items:center;
+                                padding:40px 0;color:#94a3b8;">
+                        <i class="fas fa-search" style="font-size:1.6em;margin-bottom:10px;"></i>
+                        <span>Sin resultados</span>
+                    </div>
+                </td>`;
             this.tbody.appendChild(emptyRow);
         }
 
@@ -215,6 +332,7 @@ class TableManager {
     }
 }
 
+// Auto-inicializar todas las tablas con clase .managed-table al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.managed-table').forEach(t => new TableManager(t));
 });

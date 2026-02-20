@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-
+from django.core.cache import cache
 from .forms import AssignBossForm
 from employee.models import Employee
 from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
@@ -21,28 +21,21 @@ class ParentOptionsJsonView(LoginRequiredMixin, View):
     def get(self, request):
         level_id = request.GET.get('level_id')
 
-        # Validación básica
         if not level_id or not str(level_id).isdigit():
             return JsonResponse({'results': []})
 
         try:
             current_level = OrganizationalLevel.objects.get(pk=int(level_id))
 
-            # Si es el nivel 1 (Raíz), no hay padres posibles.
             if current_level.level_order <= 1:
                 return JsonResponse({'results': []})
+
             parents = AdministrativeUnit.objects.filter(
                 level__level_order__lt=current_level.level_order,
                 is_active=True
             ).select_related('level').order_by('level__level_order', 'name')
 
-            results = []
-            for p in parents:
-                results.append({
-                    'id': p.id,
-                    'text': f"{p.name} ➝ {p.level.name}"
-                })
-
+            results = [{'id': p.id, 'text': f"{p.name} ➝ {p.level.name}"} for p in parents]
             return JsonResponse({'results': results})
 
         except OrganizationalLevel.DoesNotExist:
@@ -50,11 +43,8 @@ class ParentOptionsJsonView(LoginRequiredMixin, View):
 
 
 class EmployeeSearchJsonView(LoginRequiredMixin, View):
-    """Búsqueda optimizada de empleados para Select2 (Maneja miles de registros)."""
-
     def get(self, request):
         term = request.GET.get('term', '').strip()
-
         qs = Employee.objects.filter(is_active=True).select_related('person')
 
         if term:
@@ -65,16 +55,11 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
             )
 
         qs = qs[:20]
-
         results = []
         for emp in qs:
             full_name = f"{emp.person.last_name} {emp.person.first_name}"
             document = emp.person.document_number
-            # Agregamos el cargo si existe (opcional pero útil)
-            results.append({
-                'id': str(emp.id),
-                'text': f"{full_name} ({document})"
-            })
+            results.append({'id': str(emp.id), 'text': f"{full_name} ({document})"})
 
         return JsonResponse({'results': results})
 
@@ -93,68 +78,46 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = AdministrativeUnit
     template_name = 'institution/unit_list.html'
     context_object_name = 'units'
-    paginate_by = 10
     permission_required = 'institution.view_administrativeunit'
 
+    # Sin paginate_by: enviamos TODOS los registros al frontend
+
     def get_queryset(self):
-        qs = AdministrativeUnit.objects.filter(is_active=True).select_related(
+        # Cargamos TODAS las unidades (activas e inactivas) para que
+        qs = AdministrativeUnit.objects.all().select_related(
             'level', 'parent', 'boss__person'
-        )
-
-        # Parámetros GET
-        q = self.request.GET.get('q')
-        level_id = self.request.GET.get('level')
-        parent_id = self.request.GET.get('parent')  # Para el drill-down
-
-        # 1. Búsqueda por texto (Prioridad alta)
-        if q:
-            qs = qs.filter(
-                Q(name__icontains=q) |
-                Q(code__icontains=q) |
-                Q(boss__person__first_name__icontains=q) |
-                Q(boss__person__last_name__icontains=q)
-            )
-
-        # 2. Filtro por Padre (Drill-down)
-        elif parent_id:
-            qs = qs.filter(parent_id=parent_id)
-
-        # 3. Filtro por Nivel
-        elif level_id:
-            qs = qs.filter(level_id=level_id)
-
-        # 4. DEFAULT
-        else:
-            first_lvl = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order').first()
-            if first_lvl:
-                qs = qs.filter(level=first_lvl)
-                self.default_level_id = first_lvl.id
-
-        return qs.order_by('code', 'name')
+        ).only(
+            'id', 'name', 'code', 'is_active',
+            'level__id', 'level__name', 'level__level_order',
+            'parent__id', 'parent__name',
+            'boss__id', 'boss__person__first_name',
+            'boss__person__last_name', 'boss__person__photo',
+        ).order_by('level__level_order', 'code', 'name')
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = AdministrativeUnitForm()
         context.update(get_level_stats())
-        if hasattr(self, 'default_level_id'):
-            context['active_level_id'] = self.default_level_id
+
+        # Estadísticas para las tarjetas de nivel (conteos por nivel)
+        context['total'] = AdministrativeUnit.objects.count()
+        context['active'] = AdministrativeUnit.objects.filter(is_active=True).count()
+        context['inactive'] = AdministrativeUnit.objects.filter(is_active=False).count()
 
         return context
 
-    # El método get (AJAX) se mantiene igual
     def get(self, request, *args, **kwargs):
+        # Soporte AJAX para recargar solo la tabla parcial
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            # Incluir level_stats actualizado en la respuesta
-            from django.http import JsonResponse
-            from django.template.loader import render_to_string
-            import json
-            html = render_to_string('institution/partials/partial_unit_table.html', context, request=request)
-            return JsonResponse({
-                'html': html,
-                'level_stats': context.get('level_stats', [])
-            }, safe=False)
+            html = render_to_string(
+                'institution/partials/partial_unit_table.html',
+                context,
+                request=request
+            )
+            return JsonResponse({'html': html})
         return super().get(request, *args, **kwargs)
 
 
@@ -209,14 +172,28 @@ class UnitToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request, pk):
         unit = get_object_or_404(AdministrativeUnit, pk=pk)
         unit.is_active = not unit.is_active
+        cache.delete('level_stats')
         unit.save()
 
         status_label = "activada" if unit.is_active else "desactivada"
         return JsonResponse({
             'success': True,
             'message': f'La unidad "{unit.name}" ha sido {status_label}.',
-            'level_stats': get_level_stats()['level_stats']
         })
+
+
+@login_required
+def unit_partial_table(request):
+    units = AdministrativeUnit.objects.all().select_related(
+        'level', 'parent', 'boss__person'
+    ).order_by('level__level_order', 'code', 'name')
+    context = {'units': units}
+    html = render_to_string(
+        'institution/partials/partial_unit_table.html',
+        context,
+        request=request
+    )
+    return HttpResponse(html)
 
 
 # ==========================================
@@ -227,18 +204,24 @@ def get_level_stats():
     """
     Retorna niveles con conteo, colores e ICONOS dinámicos.
     """
+    cached = cache.get('level_stats')
+    if cached:
+        return cached
     levels = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')[:5]
     stats = []
+    cache.set('level_stats', stats, timeout=300)  # 5 minutos
+    total_count = AdministrativeUnit.objects.filter(is_active=True).count()
+    stats.append({
+        'id': 'total',
+        'name': 'Total',
+        'order': 0,
+        'count': total_count,
+        'color': 'color-zero',
+        'icon': 'fa-layer-group'
+    })
 
     colors = ['color-one', 'color-two', 'color-three', 'color-four', 'color-five']
-    # Iconos mapeados por índice (0=Raíz, 1=Direcciones, 2=Deptos, etc.)
-    icons = [
-        'fa-globe',  # Nivel 1 (Ej: Institución)
-        'fa-building',  # Nivel 2 (Ej: Direcciones)
-        'fa-briefcase',  # Nivel 3 (Ej: Departamentos)
-        'fa-users',  # Nivel 4 (Ej: Unidades/Equipos)
-        'fa-user-tag'  # Nivel 5 (Ej: Auxiliares)
-    ]
+    icons = ['fa-globe', 'fa-building', 'fa-briefcase', 'fa-users', 'fa-user-tag']
 
     for i, lvl in enumerate(levels):
         count = AdministrativeUnit.objects.filter(level=lvl, is_active=True).count()
@@ -248,17 +231,19 @@ def get_level_stats():
             'order': lvl.level_order,
             'count': count,
             'color': colors[i] if i < len(colors) else 'color-one',
-            'icon': icons[i] if i < len(icons) else 'fa-sitemap'  # Icono dinámico
+            'icon': icons[i] if i < len(icons) else 'fa-sitemap'
         })
 
     return {'level_stats': stats}
 
 
+# ============================================================
+# GESTIÓN DE NIVELES JERÁRQUICOS
+# ============================================================
 class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = OrganizationalLevel
     template_name = 'institution/levels/level_list.html'
     context_object_name = 'levels'
-    # Sin paginación backend, todo el filtrado y paginación será frontend
     permission_required = 'institution.view_organizationallevel'
 
     def get_queryset(self):
@@ -276,21 +261,23 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         return qs
 
-        def get_context_data(self, **kwargs):
-            context = super().get_context_data(**kwargs)
-            context['form'] = OrganizationalLevelForm()
-            context['total'] = OrganizationalLevel.objects.all().count()
-            context['active'] = OrganizationalLevel.objects.filter(is_active=True).count()
-            context['inactive'] = OrganizationalLevel.objects.filter(is_active=False).count()
-            return context
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = OrganizationalLevelForm()
+        context['total'] = OrganizationalLevel.objects.all().count()
+        context['active'] = OrganizationalLevel.objects.filter(is_active=True).count()
+        context['inactive'] = OrganizationalLevel.objects.filter(is_active=False).count()
+        return context
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            from django.template.loader import render_to_string
-            from django.http import JsonResponse
-            html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
+            html = render_to_string(
+                'institution/levels/partials/partial_level_table.html',
+                context,
+                request=request
+            )
             stats = {
                 'total': context.get('total', 0),
                 'active': context.get('active', 0),
@@ -348,12 +335,8 @@ class LevelUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 @permission_required('institution.change_organizationallevel', raise_exception=True)
 def level_toggle_status(request, pk):
     lvl = get_object_or_404(OrganizationalLevel, pk=pk)
-
-    # Lógica de Cambio
     next_status = not lvl.is_active
 
-    # --- VALIDACIÓN NUEVA ---
-    # Si vamos a ACTIVAR (next_status es True), verificamos conflicto
     if next_status:
         conflict = OrganizationalLevel.objects.filter(
             level_order=lvl.level_order,
@@ -366,7 +349,6 @@ def level_toggle_status(request, pk):
                 'message': f"Conflicto: Ya existe un nivel jerárquico #{lvl.level_order} activo. Desactive el anterior primero."
             }, status=400)
 
-    # Si pasa la validación, guardamos
     lvl.is_active = next_status
     lvl.save()
 
@@ -380,21 +362,14 @@ def level_toggle_status(request, pk):
 
 def api_get_administrative_children(request):
     parent_id = request.GET.get('parent_id')
-
-    # Filtros base
     filters = {'parent__isnull': True} if not parent_id else {'parent_id': parent_id}
     filters['is_active'] = True
 
     units = AdministrativeUnit.objects.filter(**filters).order_by('name')
-
     data = []
     for u in units:
         has_children = u.children.filter(is_active=True).exists()
-        data.append({
-            'id': u.id,
-            'name': u.name,
-            'has_children': has_children
-        })
+        data.append({'id': u.id, 'name': u.name, 'has_children': has_children})
 
     return JsonResponse({'success': True, 'units': data})
 
@@ -402,11 +377,7 @@ def api_get_administrative_children(request):
 class DeliverableListJsonView(LoginRequiredMixin, View):
     def get(self, request, unit_id):
         deliverables = Deliverable.objects.filter(unit_id=unit_id, is_active=True).order_by('-created_at')
-        data = [{
-            'id': d.id,
-            'name': d.name,
-            'description': d.description or ''
-        } for d in deliverables]
+        data = [{'id': d.id, 'name': d.name, 'description': d.description or ''} for d in deliverables]
         return JsonResponse({'success': True, 'data': data})
 
 
@@ -482,45 +453,31 @@ def api_unit_deliverables(request, unit_id):
 
 
 class GetNextCodeJsonView(LoginRequiredMixin, View):
-    """
-    Calcula el siguiente código disponible basado en el padre o nivel.
-    Lógica: Busca el último código hermano, extrae el último segmento numérico y suma 1.
-    """
-
     def get(self, request):
         parent_id = request.GET.get('parent_id')
 
-        # Caso 1: Tiene Padre (Niveles 2, 3, 4, 5...)
         if parent_id and parent_id != 'null':
             parent = get_object_or_404(AdministrativeUnit, pk=parent_id)
             parent_code = parent.code if parent.code else "0"
 
-            # Buscamos hijos directos
             last_sibling = AdministrativeUnit.objects.filter(
                 parent=parent
             ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
 
             if last_sibling and last_sibling.code:
-                # Intentamos extraer el último segmento del código hermano
                 try:
                     parts = last_sibling.code.split('.')
                     last_num = int(parts[-1])
                     new_last_num = last_num + 1
-                    # Reconstruimos: prefijo del padre + nuevo número
                     base_prefix = ".".join(parts[:-1])
                     next_code = f"{base_prefix}.{new_last_num}"
                 except ValueError:
-                    # Si el código hermano no es numérico estándar, fallback
                     next_code = f"{parent_code}.1"
             else:
-                # Es el primer hijo
                 next_code = f"{parent_code}.1"
 
-            level_id = parent.level.level_order + 1  # El nivel será el siguiente al del padre
-
-        # Caso 2: Nivel Raíz (Nivel 1)
+            level_id = parent.level.level_order + 1
         else:
-            # Buscamos el último nivel 1
             last_root = AdministrativeUnit.objects.filter(
                 parent__isnull=True
             ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
@@ -540,48 +497,31 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
             except OrganizationalLevel.DoesNotExist:
                 level_id = None
 
-        return JsonResponse({
-            'success': True,
-            'next_code': next_code,
-            'suggested_level': level_id
-        })
+        return JsonResponse({'success': True, 'next_code': next_code, 'suggested_level': level_id})
 
 
 class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'institution.view_administrativeunit'  # O un permiso específico si prefieres
+    permission_required = 'institution.view_administrativeunit'
     template_name = 'institution/organigram.html'
 
     def get(self, request):
-        # Obtener el último organigrama subido
         organigram = InstitutionOrganigram.objects.last()
         form = OrganigramForm()
-        return render(request, self.template_name, {
-            'organigram': organigram,
-            'form': form
-        })
+        return render(request, self.template_name, {'organigram': organigram, 'form': form})
 
     def post(self, request):
-        # Verificar permisos de escritura solo al subir
         if not request.user.has_perm('institution.change_administrativeunit'):
             return render(request, '403.html', status=403)
 
         form = OrganigramForm(request.POST, request.FILES)
         if form.is_valid():
-            # Guardamos el nuevo registro
             instance = form.save(commit=False)
             instance.updated_by = request.user
             instance.save()
-
-            # Opcional: Borrar los anteriores para no llenar el disco
-            # InstitutionOrganigram.objects.exclude(pk=instance.pk).delete()
-
             return redirect('institution:organigram_view')
 
         organigram = InstitutionOrganigram.objects.last()
-        return render(request, self.template_name, {
-            'organigram': organigram,
-            'form': form
-        })
+        return render(request, self.template_name, {'organigram': organigram, 'form': form})
 
 
 class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -594,45 +534,34 @@ class RootLevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context = {}
 
         if pk:
-            # --- ESTADO 2: DETALLE (DRILL-DOWN) ---
             current_unit = get_object_or_404(AdministrativeUnit, pk=pk)
-
-            # 1. Hijos ordenados por código y nombre
             children = AdministrativeUnit.objects.filter(
-                parent=current_unit,
-                is_active=True
+                parent=current_unit, is_active=True
             ).order_by('code', 'name')
             employees = Employee.objects.filter(
-                area_id=current_unit.pk,
-                is_active=True
+                area_id=current_unit.pk, is_active=True
             ).exclude(
-                # Excluimos explícitamente si el nombre del estado contiene estas palabras
                 Q(employment_status__name__icontains='EX EMPLEADO') |
                 Q(employment_status__name__icontains='EX TRABAJADOR')
             ).select_related('person').prefetch_related(
-                'current_budget_line',
-                'current_budget_line__position_item'
+                'current_budget_line', 'current_budget_line__position_item'
             )
-
             context = {
                 'mode': 'detail',
                 'current_unit': current_unit,
                 'children': children,
                 'employees': employees,
             }
-
         else:
-            # --- ESTADO 1: RAÍZ ---
             units = AdministrativeUnit.objects.filter(
-                level__level_order=1,
-                is_active=True
+                level__level_order=1, is_active=True
             ).select_related('level').order_by('code', 'name')
-
             context = {
                 'mode': 'root',
                 'units': units,
                 'total_active': units.count()
             }
+
         context['form'] = AdministrativeUnitForm()
         return render(request, self.template_name, context)
 
@@ -646,25 +575,18 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-
-        # 1. Guardamos referencia al jefe anterior (si existía)
         old_boss = self.object.boss
-
         form = self.get_form()
+
         if form.is_valid():
-            # 2. Guardamos la unidad con el nuevo jefe
             unit = form.save()
             new_boss = unit.boss
 
-            # 3. Actualizamos al NUEVO jefe (is_boss = True)
             if new_boss:
                 new_boss.is_boss = True
                 new_boss.save(update_fields=['is_boss'])
 
-            # 4. Actualizamos al ANTIGUO jefe (is_boss = False)
-            # Solo si es diferente al nuevo y NO dirige otras unidades
             if old_boss and old_boss != new_boss:
-                # Verificamos si sigue siendo jefe de alguna OTRA unidad
                 if not old_boss.managed_units.exists():
                     old_boss.is_boss = False
                     old_boss.save(update_fields=['is_boss'])
@@ -676,6 +598,7 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+@login_required
 def level_partial_table(request):
     levels = OrganizationalLevel.objects.all()
     context = {'levels': levels}

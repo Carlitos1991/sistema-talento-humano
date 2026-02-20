@@ -1,35 +1,33 @@
-/* --- Flechas de Ordenamiento --- */
+/* ─── SORT ──────────────────────────────────────────────────────────────────── */
+
 .sortable-header {
     cursor: pointer;
     user-select: none;
     position: relative;
-    padding-right: 20px; /* Espacio para la flecha */
+    padding-right: 20px;
 }
 
 .sort-arrow {
     display: inline-block;
     margin-left: 5px;
-    font-size: 1.2em; /* Flechas más grandes */
+    font-size: 1.2em;
     font-weight: bold;
-    color: #cbd5e1; /* Gris suave por defecto */
+    color: #cbd5e1;
     transition: transform 0.2s, color 0.2s;
 }
 
-/* Estado Ascendente (Verde) */
 th.sorted-asc .sort-arrow {
-    color: #16a34a; /* Verde */
-    content: "↑"; /* Forzar contenido visual si se pierde */
+    color: #16a34a;
     transform: translateY(-2px);
 }
 
-/* Estado Descendente (Rojo) */
 th.sorted-desc .sort-arrow {
-    color: #dc2626; /* Rojo */
-    content: "↓";
+    color: #dc2626;
     transform: translateY(2px);
 }
 
-/* --- PAGINACIÓN --- */
+/* ─── PAGINACIÓN ────────────────────────────────────────────────────────────── */
+
 .pagination-container {
     display: flex;
     justify-content: space-between;
@@ -48,14 +46,15 @@ th.sorted-desc .sort-arrow {
     gap: 6px;
 }
 
-/* Botones con Iconos */
+/* ─── BOTONES ────────────────────────────────────────────────────────────────── */
+
 .page-btn {
     width: 32px;
     height: 32px;
     border: 1px solid #e2e8f0;
     background: #fff;
     border-radius: 6px;
-    color: #3b82f6; /* Color azul moderno para iconos */
+    color: #3b82f6;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -78,47 +77,62 @@ th.sorted-desc .sort-arrow {
     transform: none;
 }
 
-/* Input Numérico Personalizado */
+/* ─── INPUT + BADGE DE PÁGINA ────────────────────────────────────────────────── */
+
 .page-input-wrapper {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 10px 0 6px;
+    height: 32px;
 }
 
-.page-input {
-    width: 40px; /* Cajón pequeño */
-    height: 32px;
+/* Especificidad alta para ganarle al selector global input[type="number"] de style.css */
+.page-input-wrapper .page-input,
+.page-input-wrapper input[type="number"].page-input {
+    width: 32px;
+    height: 100%;
     text-align: center;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
     font-weight: 600;
+    font-size: 0.9em;
     color: #334155;
-    outline: none;
-    transition: border-color 0.2s;
+    padding: 0;
+    border-radius: 0;
 
-    /* Quitar flechas nativas en Firefox */
+    /* Quitar flechas nativas */
     -moz-appearance: textfield;
 }
 
-.page-input::-webkit-outer-spin-button,
-.page-input::-webkit-inner-spin-button {
+.page-input-wrapper .page-input::-webkit-outer-spin-button,
+.page-input-wrapper .page-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-.page-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.page-input-wrapper .page-input:focus,
+.page-input-wrapper input[type="number"].page-input:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: #3b82f6;
 }
 
-.total-pages-label {
+/* "de N" — texto discreto a la derecha del input */
+.total-pages-badge {
+    font-size: 0.8em;
     font-weight: 500;
     color: #94a3b8;
-}
-
-.total-pages-text {
-    color: #64748b;
-    font-size: 1.2em;
-    margin-left: 5px;
+    white-space: nowrap;
+    /* Separador visual sutil antes del texto */
+    padding-left: 6px;
+    border-left: 1px solid #e2e8f0;
 }

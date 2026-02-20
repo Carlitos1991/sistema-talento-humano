@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Organigrama | SIGETH{% endblock %}
+{% block title %}Estructura Organizacional | SIGETH{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 {% block content %}
-    <!-- 1. Header -->
+
+    {# ── HEADER ── #}
     <div class="header-card">
         <div>
             <h1>Estructura Organizacional</h1>
@@ -18,18 +19,17 @@
         {% endif %}
     </div>
 
-    <!-- 2. Estadísticas -->
-    <div class="stats-row">
+    {# ── TARJETAS DE ESTADÍSTICAS POR NIVEL ── #}
+    {# Ocultas al inicio, se muestran con JS igual que en levels #}
+    <div class="stats-row" id="stats-row" style="display:none;">
         {% for stat in level_stats %}
-            <div class="stat-card {{ stat.color }} {% if active_level_id != stat.id %}opacity-low{% endif %}"
-                 onclick="filterByLevel('{{ stat.id }}', this)"
-                 id="stat-card-{{ stat.id }}">
-
+            <div class="stat-card {{ stat.color }} {% if not forloop.first %}opacity-low{% endif %}"
+                 id="card-filter-{{ stat.id }}"
+                 style="cursor:pointer;">
                 <div class="stat-left">
-                    <h3 style="font-size: 0.8rem; text-transform: uppercase;">{{ stat.name }}</h3>
-                    <div class="number">{{ stat.count }}</div>
+                    <h3>{{ stat.name }}</h3>
+                    <div class="number" id="stat-count-{{ stat.id }}">{{ stat.count }}</div>
                 </div>
-                <!-- ICONO DINÁMICO DEL BACKEND -->
                 <i class="fas {{ stat.icon }} stat-icon"></i>
             </div>
         {% empty %}
@@ -37,35 +37,21 @@
         {% endfor %}
     </div>
 
-    <!-- 3. Tabla AJAX -->
+    {# ── TABLA (TableManager maneja búsqueda, sort y paginación local) ── #}
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls">
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search" class="input-field" placeholder="Buscar unidad o jefe...">
+                    <input type="text" class="input-field table-search-input" placeholder="Buscar unidad o jefe...">
                 </div>
             </div>
-
             <div id="table-content-wrapper">
                 {% include 'institution/partials/partial_unit_table.html' %}
             </div>
-
-            <!-- Paginación -->
-            <div class="pagination-container" id="js-pagination">
-                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    </li>
-                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
-                    <li>
-                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                    </li>
-                </ul>
-            </div>
         </div>
     </div>
+
 {% endblock %}
 
 {% block modals %}

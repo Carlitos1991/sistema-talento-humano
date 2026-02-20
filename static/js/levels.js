@@ -1,7 +1,8 @@
 /* static/js/levels.js */
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Manejo de Cards (Filtros Activo/Inactivo)
-    // Usamos el TableManager para filtrar, no lógica manual.
+
+    // --- 1. FILTROS DE TARJETAS (Delegados al TableManager) ---
     const cards = {
         'all': document.getElementById('card-filter-all'),
         'true': document.getElementById('card-filter-active'),
@@ -9,35 +10,36 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.filterByStatus = function (status) {
-        // Estilos de tarjetas
+        // Efecto visual en tarjetas
         Object.values(cards).forEach(card => {
             if (card) card.classList.add('opacity-low');
         });
         const activeCard = cards[status];
         if (activeCard) activeCard.classList.remove('opacity-low');
 
-        // BUSCAR LA TABLA Y PEDIRLE QUE FILTRE
+        // COMUNICACIÓN CON TABLE MANAGER
         const table = document.querySelector('.managed-table');
         if (table && table._tableManager) {
-            // Usa el método filterByColumnData que agregamos al TableManager
-            // Asume que las filas tienen data-status="true"
+            // Esto aplica el filtro de columna Y mantiene la búsqueda de texto si existe
             table._tableManager.filterByColumnData('status', status);
         }
     };
 
-    // Event listeners para cards
+    // Listeners Tarjetas
     if (cards.all) cards.all.addEventListener('click', () => window.filterByStatus('all'));
     if (cards['true']) cards['true'].addEventListener('click', () => window.filterByStatus('true'));
     if (cards['false']) cards['false'].addEventListener('click', () => window.filterByStatus('false'));
 
-    // Filtro inicial visual
+    // Filtro inicial
     const statsRow = document.getElementById('stats-row');
-    window.filterByStatus('all');
+    // Pequeño delay para asegurar que TableManager esté listo
     setTimeout(() => {
+        window.filterByStatus('all');
         if (statsRow) statsRow.style.display = 'flex';
-    }, 100);
+    }, 50);
 
-    // --- LOGICA DE MODAL (VUE) ---
+
+    // --- 2. MODAL VUE (Crear/Editar) ---
     const modalApp = document.getElementById('level-modal-app');
     if (modalApp && !modalApp.__vue_app__) {
         const {createApp, ref} = Vue;
@@ -96,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = await res.json();
                         if (data.success) {
                             closeModal();
-                            location.reload(); // Recarga simple para asegurar que todo se sincroniza
+                            location.reload();
                         } else {
                             errors.value = data.errors;
                         }
@@ -115,26 +117,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnNew) btnNew.onclick = () => window.openCreateLevel();
     }
 
-    // --- TOGGLE STATUS (AJAX) ---
-    function showLoader() { /* Tu loader existente */
-    }
 
-    function hideLoader() { /* Tu loader existente */
-    }
-
+    // --- 3. TOGGLE STATUS (Activar/Desactivar) ---
     window.toggleLevelStatus = async (btnElement, url, name) => {
-        // Lógica de SweetAlert (se mantiene igual)
         const isDelete = btnElement.classList.contains('btn-delete-action');
         const result = await Swal.fire({
             title: `¿${isDelete ? 'Desactivar' : 'Activar'} nivel?`,
             text: `Vas a cambiar el estado de "${name}"`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sí, cambiar'
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
         });
 
         if (result.isConfirmed) {
-            // showLoader();
             try {
                 const formData = new FormData();
                 const token = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -148,18 +144,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    // Recargar tabla PARCIAL
+                    // Recargar HTML tabla
                     const r = await fetch('/institution/levels/partial_table/');
                     const html = await r.text();
                     document.getElementById('table-content-wrapper').innerHTML = html;
 
-                    // IMPORTANTE: RE-INICIALIZAR TABLE MANAGER
-                    // Como reemplazamos el HTML, el TableManager viejo murió. Creamos uno nuevo.
+                    // Reiniciar TableManager sobre la nueva tabla
                     const newTable = document.querySelector('.managed-table');
                     if (newTable) new TableManager(newTable);
 
-                    // Reaplicar filtro actual (visual)
-                    window.filterByStatus(currentStatusFilter || 'all');
+                    // Reaplicar filtro visual actual
+                    // (Nota: al recargar HTML se pierde el input de búsqueda, pero se mantiene el filtro de Cards)
+                    const activeCard = document.querySelector('.stat-card:not(.opacity-low)');
+                    if (activeCard && activeCard.id === 'card-filter-active') window.filterByStatus('true');
+                    else if (activeCard && activeCard.id === 'card-filter-inactive') window.filterByStatus('false');
+                    else window.filterByStatus('all');
 
                     Swal.fire('Éxito', data.message, 'success');
                 } else {
@@ -168,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 Swal.fire('Error', 'Conexión', 'error');
             }
-            // hideLoader();
         }
     };
 });
