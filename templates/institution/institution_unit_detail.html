@@ -57,7 +57,8 @@
             <div class="card-section">
                 <div class="card-section-header accordion-header" @click="showDeliverables = !showDeliverables">
                     <span><i class="fa-solid fa-box"></i> Entregables</span>
-                    <i :class="showDeliverables ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" style="margin-left:6px;"></i>
+                    <i :class="showDeliverables ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"
+                       style="margin-left:6px;"></i>
                     <button class="btn btn-nuevo-entregable" @click.stop="openModal()">
                         <i class="fa-solid fa-plus"></i> Nuevo Entregable
                     </button>
@@ -79,7 +80,8 @@
                                 <td>[[ d.description ]]</td>
                                 <td>
                                     <button class="btn btn-outline-primary btn-sm" @click="openModal(d)">Editar</button>
-                                    <button class="btn btn-outline-danger btn-sm" @click="deleteItem(d.id)">Eliminar</button>
+                                    <button class="btn btn-outline-danger btn-sm" @click="deleteItem(d.id)">Eliminar
+                                    </button>
                                 </td>
                             </tr>
                             <tr v-if="deliverables.length === 0">
@@ -92,15 +94,20 @@
             </div>
 
             <!-- Modal Vue para nuevo/edit entregable -->
-            <div v-if="showModal" class="custom-modal-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:1000;display:flex;align-items:center;justify-content:center;">
-                <div class="custom-modal-dialog" style="background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.13);padding:32px 24px;min-width:340px;max-width:420px;width:100%;">
-                    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <div v-if="showModal" class="custom-modal-overlay"
+                 style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:1000;display:flex;align-items:center;justify-content:center;">
+                <div class="custom-modal-dialog"
+                     style="background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.13);padding:32px 24px;min-width:340px;max-width:420px;width:100%;">
+                    <div class="modal-header"
+                         style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
                         <h5 class="modal-title" style="font-weight:600;font-size:1.15rem;color:#198754;">
                             <i class="fa-solid fa-box"></i>
                             <span v-if="editingId">Editar Entregable</span>
                             <span v-else>Nuevo Entregable</span>
                         </h5>
-                        <button type="button" class="btn-close" @click="closeModal" style="background:none;border:none;font-size:1.2rem;color:#888;">&times;</button>
+                        <button type="button" class="btn-close" @click="closeModal"
+                                style="background:none;border:none;font-size:1.2rem;color:#888;">&times;
+                        </button>
                     </div>
                     <form @submit.prevent="saveDeliverable">
                         <div class="mb-3">
@@ -111,7 +118,8 @@
                             <label>Descripción</label>
                             <textarea v-model="form.description" class="form-control"></textarea>
                         </div>
-                        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:18px;">
+                        <div class="modal-footer"
+                             style="display:flex;justify-content:flex-end;gap:12px;margin-top:18px;">
                             <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
                             <button type="submit" class="btn btn-success">Guardar</button>
                         </div>
@@ -125,27 +133,34 @@
                 <div class="nomina-list">
                     {% if employees and employees|length > 0 %}
                         {% for emp in employees %}
-                        {% if unit.boss and emp.id == unit.boss.id %}
-                            {# Omitir jefe inmediato #}
-                        {% else %}
-                            <div class="nomina-card">
-                                {% if emp.person.photo %}
-                                    <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
-                                {% else %}
-                                    <div class="nomina-photo"
-                                         style="display:flex;align-items:center;justify-content:center;background:#e2e8f0;color:#198754;font-weight:700;font-size:1rem;">
-                                        {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
-                                    </div>
-                                {% endif %}
-                                <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
-                                <span class="nomina-role">{{ emp.position|default:'-' }}</span>
-                                <a href="{% url 'employee:employee_detail' emp.person.id %}"
-                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                   title="Ver Detalle Completo">
-                                    <i class="fa-solid fa-user"></i> Ver perfil
-                                </a>
-                            </div>
-                        {% endif %}
+                            {% if unit.boss and emp.id == unit.boss.id %}
+                                {# Omitir jefe inmediato #}
+                            {% else %}
+                                <div class="nomina-card">
+                                    {% if emp.person.photo %}
+                                        <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
+                                    {% else %}
+                                        <div class="nomina-photo"
+                                             style="display:flex;align-items:center;justify-content:center;background:#e2e8f0;color:#198754;font-weight:700;font-size:1rem;">
+                                            {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                        </div>
+                                    {% endif %}
+                                    <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
+                                    <span class="nomina-role">
+                                    {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
+                                        {{ emp.current_budget_line.first.position_item.name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                                    <a href="{% url 'employee:employee_detail' emp.person.id %}"
+                                       class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                       style="font-size:0.65rem;"
+                                       title="Ver Detalle Completo">
+                                        <i class="fa-solid fa-user"></i> Ver perfil
+                                    </a>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     {% else %}
                         <div class="nomina-card">
@@ -157,11 +172,14 @@
 
             <!-- Subdependencias -->
             <div class="subdependencias-section">
-                <div class="institution-section-title" style="margin-bottom:12px;"><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</div>
+                <div class="institution-section-title" style="margin-bottom:12px;"><i class="fa-solid fa-sitemap"></i>
+                    Sub-dependencias / Áreas
+                </div>
                 <div class="subdependencias-list">
                     {% if children and children|length > 0 %}
                         {% for sub in children %}
-                            <div class="subdependencia-card-blue" onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
+                            <div class="subdependencia-card-blue"
+                                 onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
                                 <i class="fa-solid fa-users"></i>
                                 <span class="sub-name">{{ sub.name }}</span>
                             </div>

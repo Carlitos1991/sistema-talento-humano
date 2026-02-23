@@ -5,6 +5,7 @@
     gap: 18px;
     margin-bottom: 24px;
 }
+
 .subdependencia-card-blue {
     background: #183a7a;
     border-radius: 10px;
@@ -21,18 +22,21 @@
     font-weight: 700;
     font-size: 1.08rem;
     text-align: center;
-    box-shadow: 0 1px 6px rgba(24,58,122,0.08);
+    box-shadow: 0 1px 6px rgba(24, 58, 122, 0.08);
     cursor: pointer;
     transition: box-shadow 0.18s, background 0.18s;
 }
+
 .subdependencia-card-blue:hover {
-    box-shadow: 0 4px 16px rgba(24,58,122,0.18);
+    box-shadow: 0 4px 16px rgba(24, 58, 122, 0.18);
     background: #2050b3;
 }
+
 .subdependencia-card-blue i {
     font-size: 1.35rem;
     margin-bottom: 4px;
 }
+
 .subdependencia-card-empty {
     background: #f8fafc;
     color: #198754;
@@ -40,6 +44,7 @@
     border: 1.5px dashed #e9f7ef;
     box-shadow: none;
 }
+
 /* Tarjeta suave tipo acordeón para entregables */
 .card-section {
     background: transparent;
@@ -49,6 +54,7 @@
     padding: 0;
     border: none;
 }
+
 .card-section-header {
     display: flex;
     align-items: center;
@@ -66,9 +72,11 @@
     border: 1.5px solid #e9f7ef;
     transition: box-shadow 0.18s;
 }
+
 .card-section-header:hover {
-    box-shadow: 0 2px 12px rgba(25,135,84,0.08);
+    box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
 }
+
 .card-section-header .btn-nuevo-entregable {
     background: #198754;
     color: #fff;
@@ -77,64 +85,76 @@
     border-radius: 8px;
     padding: 7px 18px;
     font-size: 0.98rem;
-    box-shadow: 0 1px 4px rgba(25,135,84,0.07);
+    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
     transition: background 0.18s, color 0.18s;
     margin-left: auto;
     display: flex;
     align-items: center;
     gap: 6px;
 }
+
 .card-section-header .btn-nuevo-entregable:hover {
     background: #157347;
     color: #fff;
 }
+
 .card-section-header .btn {
     margin-left: auto;
 }
+
 .card-section-content {
     padding: 0 0 0 0;
 }
+
 .card-section-content table {
     background: transparent;
     border-radius: 10px;
     box-shadow: none;
     margin-bottom: 0;
 }
+
 .card-section-content table thead tr {
     background: #e9f7ef;
 }
+
 .card-section-content table thead th {
     color: #198754;
     font-weight: 700;
     border-bottom: 2px solid #19875422;
 }
+
 .card-section-content table tbody tr {
     background: #fff;
     border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     margin-bottom: 8px;
     transition: box-shadow 0.18s;
 }
+
 .card-section-content table tbody tr:hover {
-    box-shadow: 0 2px 12px rgba(25,135,84,0.08);
+    box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
 }
+
 /* Color de fondo para la fila de títulos de la tabla de entregables */
 .card-section-content table thead tr {
     background: #e9f7ef;
 }
+
 .card-section-content table thead th {
     color: #198754;
     font-weight: 700;
     border-bottom: 2px solid #19875422;
 }
+
 /* Estilos para sección tipo tarjeta/acordeón (entregables, nómina, subdependencias) */
 .card-section {
     background: #fff;
     border-radius: 14px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
     margin-bottom: 24px;
     padding: 0 0 18px 0;
 }
+
 .card-section-header {
     display: flex;
     align-items: center;
@@ -148,25 +168,31 @@
     cursor: pointer;
     user-select: none;
 }
+
 .card-section-header .btn {
     margin-left: auto;
 }
+
 .card-section-content {
     padding: 0 24px 12px 24px;
 }
+
 .fade-enter-active, .fade-leave-active {
     transition: all 0.25s;
 }
+
 .fade-enter-from, .fade-leave-to {
     opacity: 0;
     max-height: 0;
     transform: scaleY(0.95);
 }
+
 .fade-enter-to, .fade-leave-from {
     opacity: 1;
     max-height: 1000px;
     transform: scaleY(1);
 }
+
 .header-boss-card .boss-name {
     font-size: 0.50rem;
     text-align: center;
@@ -775,11 +801,13 @@
     font-weight: 600;
     color: #212529;
     text-align: center;
+    font-size: 0.70rem;
 }
 
 .nomina-card .nomina-role {
     color: #6c757d;
-    font-size: 0.95rem;
+    font-size: 0.60rem;
+    text-align: center;
 }
 
 .subdependencias-section {
