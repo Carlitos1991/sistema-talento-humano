@@ -20,7 +20,6 @@
     </div>
 
     {# ── TARJETAS DE ESTADÍSTICAS POR NIVEL ── #}
-    {# Ocultas al inicio, se muestran con JS igual que en levels #}
     <div class="stats-row" id="stats-row" style="display:none;">
         {% for stat in level_stats %}
             <div class="stat-card {{ stat.color }} {% if not forloop.first %}opacity-low{% endif %}"

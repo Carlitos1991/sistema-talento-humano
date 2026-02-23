@@ -58,6 +58,17 @@
                                 <div class="text-error" v-if="errors.phone">[[ errors.phone[0] ]]</div>
                             </div>
                         </div>
+
+                        <!-- Campo ESTADO -->
+                        <div class="form-group mt-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Estado (Activo/Inactivo)
+                                </label>
+                            </div>
+                            <div class="text-error" v-if="errors.is_active">[[ errors.is_active[0] ]]</div>
+                        </div>
                     </div>
                 </div>
 

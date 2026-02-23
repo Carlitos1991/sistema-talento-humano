@@ -419,7 +419,7 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
         data = {
             'name': unit.name, 'level': unit.level_id, 'parent': unit.parent_id,
             'boss': unit.boss_id, 'boss_data': boss_data, 'code': unit.code,
-            'address': unit.address, 'phone': unit.phone
+            'address': unit.address, 'phone': unit.phone, 'is_active': unit.is_active
         }
         return JsonResponse({'success': True, 'data': data})
 
@@ -456,6 +456,7 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
     def get(self, request):
         parent_id = request.GET.get('parent_id')
 
+        # Si viene un parent_id, es una dependencia
         if parent_id and parent_id != 'null':
             parent = get_object_or_404(AdministrativeUnit, pk=parent_id)
             parent_code = parent.code if parent.code else "0"
@@ -477,27 +478,40 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
                 next_code = f"{parent_code}.1"
 
             level_id = parent.level.level_order + 1
+            
+            # Buscar el objeto nivel correspondiente al orden
+            try:
+                level_obj = OrganizationalLevel.objects.get(level_order=level_id)
+                level_pk = level_obj.id
+            except OrganizationalLevel.DoesNotExist:
+                level_pk = None
+
         else:
+            # Si NO hay parent_id, es una unidad de NIVEL 1 (Raíz)
+            # Buscamos el último código de nivel raíz que sea numérico simple (1, 2, 3...)
             last_root = AdministrativeUnit.objects.filter(
                 parent__isnull=True
-            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
-
-            if last_root and last_root.code:
+            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at')
+            
+            # Intentamos encontrar el máximo numérico
+            max_code = 0
+            for unit in last_root:
                 try:
-                    last_num = int(last_root.code)
-                    next_code = str(last_num + 1)
+                    val = int(unit.code)
+                    if val > max_code:
+                        max_code = val
                 except ValueError:
-                    next_code = "1"
-            else:
-                next_code = "1"
+                    continue
+            
+            next_code = str(max_code + 1)
 
             try:
                 level_obj = OrganizationalLevel.objects.get(level_order=1)
-                level_id = level_obj.id
+                level_pk = level_obj.id
             except OrganizationalLevel.DoesNotExist:
-                level_id = None
+                level_pk = None
 
-        return JsonResponse({'success': True, 'next_code': next_code, 'suggested_level': level_id})
+        return JsonResponse({'success': True, 'next_code': next_code, 'suggested_level': level_pk})
 
 
 class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):

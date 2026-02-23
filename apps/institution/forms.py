@@ -7,12 +7,13 @@ from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, Instit
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = AdministrativeUnit
-        fields = ['name', 'level', 'parent', 'boss', 'code', 'address', 'phone']
+        fields = ['name', 'level', 'parent', 'boss', 'code', 'address', 'phone', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Dirección Financiera'}),
             'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Generado automáticamente'}),
             'address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ubicación física'}),
             'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Extensión'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
 
             # CAMPOS OCULTOS
             'level': forms.HiddenInput(),
@@ -23,7 +24,8 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'name': 'Nombre de la Unidad',
             'code': 'Código / Partida (Único)',
             'address': 'Ubicación',
-            'phone': 'Teléfono'
+            'phone': 'Teléfono',
+            'is_active': 'Estado'
         }
 
     def clean_code(self):

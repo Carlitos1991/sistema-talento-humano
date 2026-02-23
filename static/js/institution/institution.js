@@ -196,7 +196,18 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`/institution/api/next-code/?${params}`);
             const data = await res.json();
-            if (data.success) codeInput.value = data.next_code;
+            if (data.success) {
+                codeInput.value = data.next_code;
+                // Si el backend sugiere un nivel (ej: al crear dependencia), lo seleccionamos
+                if (data.suggested_level) {
+                    const levelSelect = document.getElementById('id_level');
+                    if (levelSelect && levelSelect.value != data.suggested_level) {
+                        levelSelect.value = data.suggested_level;
+                        // Disparamos evento change manualmente si es necesario, 
+                        // pero cuidado con bucles infinitos si loadParents llama a fetchNextCode
+                    }
+                }
+            }
         } catch (e) {
             console.error('Error fetchNextCode:', e);
         }
@@ -213,31 +224,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentId = ref(null);
                 const formEl = 'unitForm';
 
-                const openCreate = async () => {
+                const openCreate = async (parentId = null, levelOrder = null) => {
                     isEditing.value = false;
                     currentId.value = null;
                     errors.value = {};
                     const f = document.getElementById(formEl);
                     if (f) f.reset();
+                    
+                    // Resetear checkbox de estado a true por defecto en creación
+                    const isActiveCheckbox = document.getElementById('id_is_active');
+                    if (isActiveCheckbox) isActiveCheckbox.checked = true;
+
                     isVisible.value = true;
                     document.body.classList.add('no-scroll');
-                    await loadParents('');
 
+                    // Lógica diferenciada: Crear Raíz vs Crear Dependencia
+                    if (parentId) {
+                        // Crear Dependencia
+                        // 1. Buscar el nivel correspondiente al orden (levelOrder)
+                        // Esto requiere que el select de niveles tenga los IDs correctos.
+                        // Como no tenemos el ID del nivel directamente, podemos inferirlo o dejar que fetchNextCode lo sugiera.
+                        // Pero para cargar los padres correctos necesitamos el ID del nivel HIJO.
+                        
+                        // Estrategia: 
+                        // a) Cargar next-code con parent_id. El backend nos dará el código y el ID del nivel sugerido.
+                        // b) Usar ese ID de nivel para cargar la lista de padres (donde parentId debería estar).
+                        // c) Preseleccionar parentId.
+
+                        const res = await fetch(`/institution/api/next-code/?parent_id=${parentId}`);
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            const codeInput = document.getElementById('id_code');
+                            if (codeInput) codeInput.value = data.next_code;
+
+                            if (data.suggested_level) {
+                                const levelSelect = document.getElementById('id_level');
+                                if (levelSelect) levelSelect.value = data.suggested_level;
+                                
+                                // Cargar padres para este nivel y preseleccionar el padre
+                                await loadParents(data.suggested_level, parentId);
+                            }
+                        }
+
+                    } else {
+                        // Crear Unidad Raíz (Nivel 1)
+                        // 1. Obtener código para nivel raíz (sin padre)
+                        const res = await fetch(`/institution/api/next-code/?parent_id=null`);
+                        const data = await res.json();
+
+                        if (data.success) {
+                            const codeInput = document.getElementById('id_code');
+                            if (codeInput) codeInput.value = data.next_code;
+
+                            if (data.suggested_level) {
+                                const levelSelect = document.getElementById('id_level');
+                                if (levelSelect) levelSelect.value = data.suggested_level;
+                                
+                                // Cargar padres (debería ser vacío o N/A para nivel 1)
+                                await loadParents(data.suggested_level);
+                            }
+                        }
+                    }
+
+                    // Configurar listeners
                     const levelSelect = document.getElementById('id_level');
                     if (levelSelect) {
                         shouldLoadParentsOnLevelChange = true;
-                        levelSelect.addEventListener('change', async function () {
+                        levelSelect.onchange = async function () {
                             if (!shouldLoadParentsOnLevelChange) return;
                             await loadParents(this.value);
                             const parentEl = document.getElementById('id_parent');
                             await fetchNextCode(this.value, parentEl ? parentEl.value : null);
+                        };
+                        
+                        $('#id_parent').off('change').on('change', async function () {
+                            await fetchNextCode(levelSelect.value, $(this).val());
                         });
-                        const parentEl = document.getElementById('id_parent');
-                        if (parentEl) {
-                            parentEl.addEventListener('change', async function () {
-                                await fetchNextCode(levelSelect.value, this.value);
-                            });
-                        }
                     }
                 };
 
@@ -262,20 +325,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             };
                             setVal('id_name', d.name);
                             setVal('id_code', d.code);
-                            setVal('id_mission', d.mission);
+                            setVal('id_address', d.address);
+                            setVal('id_phone', d.phone);
+                            
+                            // Checkbox estado
+                            const isActiveCheckbox = document.getElementById('id_is_active');
+                            if (isActiveCheckbox) isActiveCheckbox.checked = d.is_active;
 
                             const levelSelect = document.getElementById('id_level');
                             if (levelSelect) {
-                                levelSelect.value = d.level_id;
+                                levelSelect.value = d.level;
                                 shouldLoadParentsOnLevelChange = false;
-                                await loadParents(d.level_id, d.parent_id);
+                                await loadParents(d.level, d.parent);
                                 shouldLoadParentsOnLevelChange = true;
 
-                                levelSelect.addEventListener('change', async function () {
+                                levelSelect.onchange = async function () {
                                     if (!shouldLoadParentsOnLevelChange) return;
                                     await loadParents(this.value);
                                     const parentEl = document.getElementById('id_parent');
                                     await fetchNextCode(this.value, parentEl ? parentEl.value : null);
+                                };
+                                
+                                $('#id_parent').off('change').on('change', async function () {
+                                    await fetchNextCode(levelSelect.value, $(this).val());
                                 });
                             }
                         } else {
@@ -324,8 +396,16 @@ document.addEventListener('DOMContentLoaded', () => {
         unitModalEl.__vue_app__ = app.mount('#unit-modal-app');
     }
 
+    // Vincular botón de crear (NUEVA UNIDAD - NIVEL 1)
     const btnAdd = document.getElementById('btn-add-unit');
-    if (btnAdd) btnAdd.onclick = () => window.openCreateUnit();
+    if (btnAdd) btnAdd.onclick = () => window.openCreateUnit(); // Sin argumentos = Raíz
+
+    // Función global para el botón de "Crear Dependencia" en la tabla
+    window.openCreateDependency = function(parentId, levelOrder) {
+        if (window.openCreateUnit) {
+            window.openCreateUnit(parentId, levelOrder);
+        }
+    };
 });
 
 
