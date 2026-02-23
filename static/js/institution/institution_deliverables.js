@@ -10,6 +10,7 @@ createApp({
 
         const deliverables = ref([]);
         const showModal = ref(false); // DEBE empezar en false
+        const showDeliverables = ref(false); // Ahora inicia colapsado
         const editingId = ref(null);
         const form = ref({name: '', description: ''});
 
@@ -116,6 +117,7 @@ createApp({
         return {
             deliverables,
             showModal,
+            showDeliverables,
             form,
             editingId,
             openModal,

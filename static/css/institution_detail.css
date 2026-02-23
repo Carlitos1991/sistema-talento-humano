@@ -1,3 +1,172 @@
+/* Tarjetas azules para subdependencias/áreas */
+.subdependencias-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+.subdependencia-card-blue {
+    background: #183a7a;
+    border-radius: 10px;
+    color: #fff;
+    min-width: 270px;
+    max-width: 340px;
+    flex: 1 1 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px 16px 14px 16px;
+    font-weight: 700;
+    font-size: 1.08rem;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(24,58,122,0.08);
+    cursor: pointer;
+    transition: box-shadow 0.18s, background 0.18s;
+}
+.subdependencia-card-blue:hover {
+    box-shadow: 0 4px 16px rgba(24,58,122,0.18);
+    background: #2050b3;
+}
+.subdependencia-card-blue i {
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+}
+.subdependencia-card-empty {
+    background: #f8fafc;
+    color: #198754;
+    font-weight: 600;
+    border: 1.5px dashed #e9f7ef;
+    box-shadow: none;
+}
+/* Tarjeta suave tipo acordeón para entregables */
+.card-section {
+    background: transparent;
+    border-radius: 12px;
+    box-shadow: none;
+    margin-bottom: 24px;
+    padding: 0;
+    border: none;
+}
+.card-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: #212529;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 22px 14px 18px;
+    margin-bottom: 0;
+    box-shadow: none;
+    cursor: pointer;
+    user-select: none;
+    border: 1.5px solid #e9f7ef;
+    transition: box-shadow 0.18s;
+}
+.card-section-header:hover {
+    box-shadow: 0 2px 12px rgba(25,135,84,0.08);
+}
+.card-section-header .btn-nuevo-entregable {
+    background: #198754;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 7px 18px;
+    font-size: 0.98rem;
+    box-shadow: 0 1px 4px rgba(25,135,84,0.07);
+    transition: background 0.18s, color 0.18s;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.card-section-header .btn-nuevo-entregable:hover {
+    background: #157347;
+    color: #fff;
+}
+.card-section-header .btn {
+    margin-left: auto;
+}
+.card-section-content {
+    padding: 0 0 0 0;
+}
+.card-section-content table {
+    background: transparent;
+    border-radius: 10px;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+.card-section-content table thead tr {
+    background: #e9f7ef;
+}
+.card-section-content table thead th {
+    color: #198754;
+    font-weight: 700;
+    border-bottom: 2px solid #19875422;
+}
+.card-section-content table tbody tr {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    margin-bottom: 8px;
+    transition: box-shadow 0.18s;
+}
+.card-section-content table tbody tr:hover {
+    box-shadow: 0 2px 12px rgba(25,135,84,0.08);
+}
+/* Color de fondo para la fila de títulos de la tabla de entregables */
+.card-section-content table thead tr {
+    background: #e9f7ef;
+}
+.card-section-content table thead th {
+    color: #198754;
+    font-weight: 700;
+    border-bottom: 2px solid #19875422;
+}
+/* Estilos para sección tipo tarjeta/acordeón (entregables, nómina, subdependencias) */
+.card-section {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+    padding: 0 0 18px 0;
+}
+.card-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #212529;
+    background: #f8fafc;
+    border-radius: 14px 14px 0 0;
+    padding: 16px 24px 12px 24px;
+    cursor: pointer;
+    user-select: none;
+}
+.card-section-header .btn {
+    margin-left: auto;
+}
+.card-section-content {
+    padding: 0 24px 12px 24px;
+}
+.fade-enter-active, .fade-leave-active {
+    transition: all 0.25s;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+    max-height: 0;
+    transform: scaleY(0.95);
+}
+.fade-enter-to, .fade-leave-from {
+    opacity: 1;
+    max-height: 1000px;
+    transform: scaleY(1);
+}
 .header-boss-card .boss-name {
     font-size: 0.50rem;
     text-align: center;
@@ -15,14 +184,13 @@
 }
 
 .title-wide {
-    text-align: center !important;
+    text-align: center;
     display: block;
     font-size: 1.25rem;
     font-weight: 700;
     max-width: 900px;
     width: 100%;
     overflow-wrap: break-word;
-    letter-spacing: 0.3px;
 }
 
 .btn-header-back {
@@ -36,8 +204,8 @@
 }
 
 .btn-header-back:hover {
-    background: #198754 !important;
-    color: #fff !important;
+    background: #198754;
+    color: #fff;
 }
 
 /* --- Header layout y utilidades --- */
@@ -59,10 +227,6 @@
     align-items: center;
     gap: 18px;
     min-width: 120px;
-}
-
-.btn-header-back {
-    margin-top: 8px;
 }
 
 .header-center {
@@ -93,11 +257,9 @@
 
 .header-boss-card {
     background: #e9f7ef;
-    padding: 18px 18px;
     border-radius: 10px;
     padding: 4px 8px 2px 8px;
     margin-bottom: 4px;
-    gap: 8px;
     gap: 8px;
     height: 100%;
     max-width: 320px;
@@ -212,10 +374,6 @@
     background: #198754;
     color: #fff;
     border: 1px solid #198754;
-}
-
-.boss-role-gray {
-    color: #55585c;
 }
 
 .info-card-green-light {
@@ -488,13 +646,6 @@
     margin-bottom: 32px;
 }
 
-.institution-header {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
 .institution-header .icon {
     font-size: 2.5rem;
     color: #198754;
@@ -567,12 +718,6 @@
     object-fit: cover;
     border: 2px solid #198754;
     background: #fff;
-}
-
-.boss-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
 }
 
 .boss-info .boss-name {

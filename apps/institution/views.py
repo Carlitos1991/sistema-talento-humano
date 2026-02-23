@@ -147,6 +147,15 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     context_object_name = 'unit'
     permission_required = 'institution.view_administrativeunit'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        current_unit = self.object
+        children = AdministrativeUnit.objects.filter(
+            parent=current_unit, is_active=True
+        ).order_by('code', 'name')
+        context['children'] = children
+        return context
+
 
 # --- DETALLES JSON (para modal de edición) ---
 from django.core.exceptions import PermissionDenied
