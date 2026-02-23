@@ -222,6 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isEditing = ref(false);
                 const errors = ref({});
                 const currentId = ref(null);
+                const modalTitle = ref('Nueva Unidad Administrativa');
+                const contextInfo = ref('');
                 const formEl = 'unitForm';
 
                 const openCreate = async (parentId = null, levelOrder = null) => {
@@ -230,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     errors.value = {};
                     const f = document.getElementById(formEl);
                     if (f) f.reset();
-                    
+
                     // Resetear checkbox de estado a true por defecto en creación
                     const isActiveCheckbox = document.getElementById('id_is_active');
                     if (isActiveCheckbox) isActiveCheckbox.checked = true;
@@ -240,20 +242,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Lógica diferenciada: Crear Raíz vs Crear Dependencia
                     if (parentId) {
+                        modalTitle.value = 'Nueva Unidad Dependiente';
                         // Crear Dependencia
                         // 1. Buscar el nivel correspondiente al orden (levelOrder)
                         // Esto requiere que el select de niveles tenga los IDs correctos.
                         // Como no tenemos el ID del nivel directamente, podemos inferirlo o dejar que fetchNextCode lo sugiera.
                         // Pero para cargar los padres correctos necesitamos el ID del nivel HIJO.
-                        
-                        // Estrategia: 
+
+                        // Estrategia:
                         // a) Cargar next-code con parent_id. El backend nos dará el código y el ID del nivel sugerido.
                         // b) Usar ese ID de nivel para cargar la lista de padres (donde parentId debería estar).
                         // c) Preseleccionar parentId.
 
                         const res = await fetch(`/institution/api/next-code/?parent_id=${parentId}`);
                         const data = await res.json();
-                        
+
                         if (data.success) {
                             const codeInput = document.getElementById('id_code');
                             if (codeInput) codeInput.value = data.next_code;
@@ -261,14 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (data.suggested_level) {
                                 const levelSelect = document.getElementById('id_level');
                                 if (levelSelect) levelSelect.value = data.suggested_level;
-                                
-                                // Cargar padres para este nivel y preseleccionar el padre
                                 await loadParents(data.suggested_level, parentId);
                             }
+                            contextInfo.value = `Código: ${data.next_code} · Nivel sugerido automáticamente`;
                         }
 
                     } else {
                         // Crear Unidad Raíz (Nivel 1)
+                        modalTitle.value = 'Nueva Unidad Administrativa';
                         // 1. Obtener código para nivel raíz (sin padre)
                         const res = await fetch(`/institution/api/next-code/?parent_id=null`);
                         const data = await res.json();
@@ -280,10 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (data.suggested_level) {
                                 const levelSelect = document.getElementById('id_level');
                                 if (levelSelect) levelSelect.value = data.suggested_level;
-                                
-                                // Cargar padres (debería ser vacío o N/A para nivel 1)
                                 await loadParents(data.suggested_level);
                             }
+                            contextInfo.value = `Código: ${data.next_code} · Nivel Raíz (sin unidad padre)`;
                         }
                     }
 
@@ -297,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const parentEl = document.getElementById('id_parent');
                             await fetchNextCode(this.value, parentEl ? parentEl.value : null);
                         };
-                        
+
                         $('#id_parent').off('change').on('change', async function () {
                             await fetchNextCode(levelSelect.value, $(this).val());
                         });
@@ -309,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentId.value = id;
                     errors.value = {};
                     try {
-                        const res = await fetch(`/institution/units/detail/${id}/`, {
+                        const res = await fetch(`/institution/units/detail/${id}/json/`, {
                             headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
                         });
                         const data = await res.json();
@@ -327,7 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             setVal('id_code', d.code);
                             setVal('id_address', d.address);
                             setVal('id_phone', d.phone);
-                            
+                            setVal('id_mission', d.mission);
+
+                            modalTitle.value = 'Editar Unidad Administrativa';
+                            contextInfo.value = `Editando: ${d.name}`;
+
                             // Checkbox estado
                             const isActiveCheckbox = document.getElementById('id_is_active');
                             if (isActiveCheckbox) isActiveCheckbox.checked = d.is_active;
@@ -345,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const parentEl = document.getElementById('id_parent');
                                     await fetchNextCode(this.value, parentEl ? parentEl.value : null);
                                 };
-                                
+
                                 $('#id_parent').off('change').on('change', async function () {
                                     await fetchNextCode(levelSelect.value, $(this).val());
                                 });
@@ -378,7 +384,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = await res.json();
                         if (data.success) {
                             closeModal();
-                            location.reload();
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: isEditing.value ? 'Unidad editada correctamente.' : 'Unidad creada correctamente.',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1800);
                         } else {
                             errors.value = data.errors || {};
                         }
@@ -389,8 +406,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 window.openCreateUnit = openCreate;
                 window.openEditUnit = openEdit;
+                window.openCreateDependency = (unitId, levelOrder) => openCreate(unitId, levelOrder);
 
-                return {isVisible, isEditing, errors, closeModal, submitForm};
+                return {isVisible, isEditing, errors, modalTitle, contextInfo, closeModal, submitForm};
             }
         });
         unitModalEl.__vue_app__ = app.mount('#unit-modal-app');
@@ -401,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAdd) btnAdd.onclick = () => window.openCreateUnit(); // Sin argumentos = Raíz
 
     // Función global para el botón de "Crear Dependencia" en la tabla
-    window.openCreateDependency = function(parentId, levelOrder) {
+    window.openCreateDependency = function (parentId, levelOrder) {
         if (window.openCreateUnit) {
             window.openCreateUnit(parentId, levelOrder);
         }

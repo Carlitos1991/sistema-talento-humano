@@ -140,12 +140,48 @@ class UnitCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
-# --- DETALLES (JSON para Modal) ---
+# --- DETALLES (HTML) ---
 class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     model = AdministrativeUnit
     template_name = 'institution/institution_unit_detail.html'
     context_object_name = 'unit'
     permission_required = 'institution.view_administrativeunit'
+
+
+# --- DETALLES JSON (para modal de edición) ---
+from django.core.exceptions import PermissionDenied
+
+class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'institution.view_administrativeunit'
+
+    def handle_no_permission(self):
+        # Devuelve JSON en vez de redirigir a login o error HTML
+        return JsonResponse({'success': False, 'error': 'Permiso denegado.'}, status=403)
+
+    def get(self, request, pk):
+        # Verificar permisos manualmente para AJAX
+        if not request.user.has_perm(self.permission_required):
+            return self.handle_no_permission()
+        unit = get_object_or_404(AdministrativeUnit, pk=pk)
+        boss_data = None
+        if unit.boss:
+            boss_data = {
+                'id': unit.boss.id,
+                'text': f"{unit.boss.person.last_name} {unit.boss.person.first_name}"
+            }
+        data = {
+            'name': unit.name,
+            'level': unit.level_id,
+            'parent': unit.parent_id,
+            'boss': unit.boss_id,
+            'boss_data': boss_data,
+            'code': unit.code,
+            'address': getattr(unit, 'address', '') or '',
+            'phone': getattr(unit, 'phone', '') or '',
+            'mission': getattr(unit, 'mission', '') or '',
+            'is_active': unit.is_active,
+        }
+        return JsonResponse({'success': True, 'data': data})
 
 
 # --- ACTUALIZAR ---
@@ -405,51 +441,21 @@ class DeliverableDeleteView(LoginRequiredMixin, View):
         return JsonResponse({'success': True, 'message': 'Entregable eliminado.'})
 
 
-class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'institution.view_administrativeunit'
-
-    def get(self, request, pk):
-        unit = get_object_or_404(AdministrativeUnit, pk=pk)
-        boss_data = None
-        if unit.boss:
-            boss_data = {
-                'id': unit.boss.id,
-                'text': f"{unit.boss.person.last_name} {unit.boss.person.first_name}"
-            }
-        data = {
-            'name': unit.name, 'level': unit.level_id, 'parent': unit.parent_id,
-            'boss': unit.boss_id, 'boss_data': boss_data, 'code': unit.code,
-            'address': unit.address, 'phone': unit.phone, 'is_active': unit.is_active
-        }
-        return JsonResponse({'success': True, 'data': data})
-
-
 @login_required
 def api_unit_deliverables(request, unit_id):
     """
-    Endpoint para obtener los entregables de una unidad administrativa específica.
+    Endpoint para obtener los entregables de una unidad administrativa.
     Utilizado por Vue.js en la vista de detalle y en el Wizard de Perfiles de Puesto.
     """
     try:
-        # Filtramos por la unidad y que el entregable esté activo
         deliverables = Deliverable.objects.filter(
             unit_id=unit_id,
             is_active=True
         ).order_by('name')
-
-        # Construir la lista con todos los campos necesarios
-        data = [{
-            'id': d.id,
-            'name': d.name,
-            'description': d.description or ''
-        } for d in deliverables]
-
+        data = [{'id': d.id, 'name': d.name, 'description': d.description or ''} for d in deliverables]
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
-        return JsonResponse(
-            {'success': False, 'error': str(e)},
-            status=500
-        )
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 class GetNextCodeJsonView(LoginRequiredMixin, View):
@@ -478,7 +484,7 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
                 next_code = f"{parent_code}.1"
 
             level_id = parent.level.level_order + 1
-            
+
             # Buscar el objeto nivel correspondiente al orden
             try:
                 level_obj = OrganizationalLevel.objects.get(level_order=level_id)
@@ -492,7 +498,7 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
             last_root = AdministrativeUnit.objects.filter(
                 parent__isnull=True
             ).exclude(code__isnull=True).exclude(code='').order_by('-created_at')
-            
+
             # Intentamos encontrar el máximo numérico
             max_code = 0
             for unit in last_root:
@@ -502,7 +508,7 @@ class GetNextCodeJsonView(LoginRequiredMixin, View):
                         max_code = val
                 except ValueError:
                     continue
-            
+
             next_code = str(max_code + 1)
 
             try:
