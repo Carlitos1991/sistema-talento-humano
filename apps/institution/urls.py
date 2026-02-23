@@ -9,6 +9,7 @@ urlpatterns = [
     path('units/update/<int:pk>/', views.UnitUpdateView.as_view(), name='unit_update'),
     path('units/detail/<int:pk>/', views.UnitDetailView.as_view(), name='unit_detail'),
     path('units/toggle/<int:pk>/', views.UnitToggleStatusView.as_view(), name='unit_toggle'),
+     path('units/partial_table/', views.unit_partial_table, name='unit_partial_table'),
     # Niveles Jerárquicos
      path('levels/', views.LevelListView.as_view(), name='level_list'),
      path('levels/partial_table/', views.level_partial_table, name='level_partial_table'),

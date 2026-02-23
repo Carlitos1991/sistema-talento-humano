@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statsRow = document.getElementById('stats-row');
 
     setTimeout(() => {
-        window.filterByLevel('total');
+        window.filterByLevel('1');
         if (statsRow) statsRow.style.display = 'flex';
     }, 50);
 
@@ -404,9 +404,44 @@ document.addEventListener('DOMContentLoaded', () => {
                                 timer: 2000,
                                 timerProgressBar: true
                             });
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1800);
+                            setTimeout(async () => {
+                                // Guardar estado de filtros y búsqueda
+                                const tm = document.querySelector('.managed-table')?._tableManager;
+                                const savedSearch = tm?.filterState.search || '';
+                                const savedFilter = {...tm?.filterState};
+                                // Parpadeo visual
+                                const tableWrapper = document.getElementById('table-content-wrapper');
+                                if (tableWrapper) {
+                                    tableWrapper.style.opacity = '0.5';
+                                }
+                                const r = await fetch('/institution/units/partial_table/');
+                                const html = await r.text();
+                                document.getElementById('table-content-wrapper').innerHTML = html;
+                                // Reiniciar TableManager sobre la nueva tabla
+                                const newTable = document.querySelector('.managed-table');
+                                if (newTable) new TableManager(newTable);
+                                // Restaurar búsqueda y filtros
+                                if (savedSearch) {
+                                    const input = document.querySelector('.table-search-input');
+                                    if (input) {
+                                        input.value = savedSearch;
+                                    }
+                                }
+                                if (newTable && newTable._tableManager) {
+                                    newTable._tableManager.filterState = savedFilter;
+                                    newTable._tableManager.applyGlobalFilters();
+                                }
+                                // Restaurar selección visual del filtro stat
+                                const activeCard = document.querySelector('.stat-card:not(.opacity-low)');
+                                if (activeCard) {
+                                    const activeLevelId = activeCard.id.replace('card-filter-', '');
+                                    window.filterByLevel(activeLevelId, activeCard);
+                                }
+                                // Quitar parpadeo
+                                if (tableWrapper) {
+                                    setTimeout(() => { tableWrapper.style.opacity = '1'; }, 300);
+                                }
+                            }, 1200);
                         } else {
                             errors.value = data.errors || {};
                         }

@@ -4,137 +4,168 @@
     <link rel="stylesheet" href="{% static 'css/institution_detail.css' %}">
 {% endblock %}
 {% block content %}
-    <div class="detail-wrapper" id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}" v-cloak>
+    <div id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}" v-cloak>
 
-        <!-- 1. HERO HEADER: Nombre de la Unidad y Botón Volver -->
-        <div class="hero-detail-card">
-            <div class="hero-content">
-                <a href="{% url 'institution:unit_list' %}" class="back-link-circle" title="Volver al listado">
-                    <i class="fas fa-arrow-left"></i>
-                </a>
-                <div class="hero-text">
-                    <span class="category-label">Unidad Administrativa</span>
-                    <h1>{{ unit.name }}</h1>
-                </div>
-            </div>
-            <div class="hero-actions">
-            <span class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
-                {% if unit.is_active %}Activa{% else %}Inactiva{% endif %}
-            </span>
-            </div>
-        </div>
+        <!-- DETALLE DE INSTITUCIÓN -->
+        <div class="institution-detail-container">
 
-        <!-- 2. INFO BAR: Datos clave en formato horizontal -->
-        <div class="info-stats-bar">
-            <div class="info-stat-item">
-                <i class="fas fa-layer-group"></i>
-                <div>
-                    <label>Nivel Jerárquico</label>
-                    <p>{{ unit.level.name }}</p>
+            <!-- Header  -->
+            <div class="institution-header institution-header-flex">
+                <div class="header-left">
+                    <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
+                    <button class="btn btn-back-custom btn-back-large btn-header-back" onclick="window.history.back()">
+                        <i class="fa-solid fa-arrow-left"></i> Regresar
+                    </button>
+                </div>
+                <div class="header-center">
+                    <span class="title title-wide">{{ unit.name }}</span>
+                    <div class="info-card-single info-card-compact header-data-card">
+                        <div class="info-green-grid">
+                            <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
+                            <div><b>Nivel:</b> <span>{{ unit.level.name|default:'-' }}</span></div>
+                            <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
+                            <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    {% if unit.boss %}
+                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                            {% if unit.boss.person.photo %}
+                                <img src="{{ unit.boss.person.photo.url }}" class="boss-photo boss-photo-xl"
+                                     alt="Foto Jefe">
+                            {% else %}
+                                <div class="boss-photo boss-photo-xl boss-photo-initials">
+                                    {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+                                </div>
+                            {% endif %}
+                            <div class="boss-info">
+                                <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
+                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i> JEFE INMEDIATO</span>
+                                <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
+                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                   title="Ver Detalle Completo">
+                                    <i class="fa-solid fa-user"></i> Ver perfil completo
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="info-stat-item">
-                <i class="fas fa-user-tie"></i>
-                <div>
-                    <label>Jefe Responsable</label>
-                    <p>{{ unit.boss.person.get_full_name|default:"Sin asignar" }}</p>
-                </div>
-            </div>
-            <div class="info-stat-item">
-                <i class="fas fa-fingerprint"></i>
-                <div>
-                    <label>Código Interno</label>
-                    <p>{{ unit.code|default:"N/A" }}</p>
-                </div>
-            </div>
-            <div class="info-stat-item">
-                <i class="fas fa-map-marker-alt"></i>
-                <div>
-                    <label>Ubicación</label>
-                    <p>{{ unit.address|default:"No registrada" }}</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- 3. SECCIÓN DE ENTREGABLES -->
-        <div class="main-content-card">
-            <div class="section-header">
-                <div class="section-title">
-                    <i class="fas fa-clipboard-list"></i>
-                    <h2>Portafolio de Entregables</h2>
-                    <span class="count-badge">[[ deliverables.length ]]</span>
-                </div>
-                <!-- BOTÓN NUEVO -->
-                <button type="button" @click="openModal()" class="btn-elegant-create">
-                    <i class="fas fa-plus"></i> Nuevo Entregable
+            <!-- Entregables -->
+            <div class="institution-section-title" style="justify-content:space-between;">
+                <span><i class="fa-solid fa-box"></i> Entregables</span>
+                <button class="btn btn-success btn-sm" onclick="$('#modal-entregable').modal('show')">
+                    <i class="fa-solid fa-plus"></i> Nuevo Entregable
                 </button>
             </div>
-
-            <!-- Tabla Elegante (Se mantiene igual) -->
-            <div class="elegant-table-container" v-if="deliverables.length > 0">
-                <table class="elegant-table">
+            <div class="deliverables-list">
+                <table class="table table-striped table-bordered"
+                       style="background:#fff;border-radius:12px;overflow:hidden;">
                     <thead>
                     <tr>
-                        <th width="35%">Entregable</th>
-                        <th width="50%">Descripción</th>
-                        <th width="15%" class="text-center">Acciones</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr v-for="item in deliverables" :key="item.id" class="elegant-row">
-                        <td><strong>[[ item.name ]]</strong></td>
-                        <td class="description-cell">[[ item.description || 'Sin descripción' ]]</td>
-                        <td>
-                            <div class="action-buttons-group">
-                                <button type="button" @click="openModal(item)" class="action-btn edit">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                                <button type="button" @click="deleteItem(item.id)" class="action-btn delete">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                    {% if deliverables and deliverables|length > 0 %}
+                        {% for d in deliverables %}
+                            <tr>
+                                <td>{{ d.name }}</td>
+                                <td>{{ d.description }}</td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm">Editar</button>
+                                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Sin entregables registrados.</td>
+                        </tr>
+                    {% endif %}
                     </tbody>
                 </table>
             </div>
-            <div v-else class="elegant-empty-state">
-                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
-                <h3>Sin entregables registrados</h3>
-                <p>Haga clic en "Nuevo Entregable" para comenzar.</p>
+
+            <!-- Modal para nuevo entregable -->
+            <div class="modal fade" id="modal-entregable" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fa-solid fa-box"></i> Nuevo Entregable</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Cerrar"></button>
+                        </div>
+                        <form method="post" action="/institution/units/{{ unit.id }}/deliverables/new/">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label>Nombre</label>
+                                    <input type="text" name="name" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Descripción</label>
+                                    <textarea name="description" class="form-control"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-success">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
-            <!-- MODAL ELEGANTE DE ENTREGABLES -->
-            <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-                <div class="modal-card animate__animated animate__fadeInDown">
-                    <div class="modal-header">
-                        <h3>[[ editingId ? 'Editar Entregable' : 'Nuevo Entregable' ]]</h3>
-                        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="form-grid-modal">
-                            <div class="form-group full-width">
-                                <label>Nombre del Entregable *</label>
-                                <input type="text" v-model="form.name" class="modern-input"
-                                       placeholder="Ej: Reporte Mensual">
+            <!-- Nómina de personal -->
+            <div class="nomina-section">
+                <div class="nomina-title"><i class="fa-solid fa-users"></i> Nómina de Personal</div>
+                <div class="nomina-list">
+                    {% if employees and employees|length > 0 %}
+                        {% for emp in employees %}
+                            <div class="nomina-card">
+                                {% if emp.person.photo %}
+                                    <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
+                                {% else %}
+                                    <div class="nomina-photo"
+                                         style="display:flex;align-items:center;justify-content:center;background:#e2e8f0;color:#198754;font-weight:700;font-size:1rem;">
+                                        {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                                <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
+                                <span class="nomina-role">{{ emp.position|default:'Empleado' }}</span>
                             </div>
-                            <div class="form-group full-width">
-                                <label>Descripción</label>
-                                <textarea v-model="form.description" class="modern-input" rows="4"></textarea>
-                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="nomina-card">
+                            <span class="nomina-name">Sin personal registrado.</span>
                         </div>
-                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
-                    <div class="modal-footer">
-                        <!-- BOTONES CON CLASES Y CLICKS CORREGIDOS -->
-                        <button type="button" class="btn-cancel-elegant" @click="closeModal">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button type="button" class="btn-save-elegant" @click="saveDeliverable">
-                            <i class="fas fa-save"></i> [[ editingId ? 'Actualizar' : 'Guardar' ]]
-                        </button>
-                    </div>
+            <!-- Subdependencias -->
+            <div class="subdependencias-section">
+                <div class="institution-section-title"><i class="fa-solid fa-sitemap"></i> Subdependencias</div>
+                <div class="subdependencias-list">
+                    {% if children and children|length > 0 %}
+                        {% for sub in children %}
+                            <div class="subdependencia-card"
+                                 onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
+                                <span class="sub-name">{{ sub.name }}</span>
+                                <span class="sub-code">Código: {{ sub.code }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="subdependencia-card">
+                            <span class="sub-name">Sin subdependencias.</span>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
