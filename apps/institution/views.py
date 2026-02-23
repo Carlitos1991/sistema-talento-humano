@@ -153,7 +153,16 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         children = AdministrativeUnit.objects.filter(
             parent=current_unit, is_active=True
         ).order_by('code', 'name')
+        employees = Employee.objects.filter(
+            area_id=current_unit.pk, is_active=True
+        ).exclude(
+            Q(employment_status__name__icontains='EX EMPLEADO') |
+            Q(employment_status__name__icontains='EX TRABAJADOR')
+        ).select_related('person').prefetch_related(
+            'current_budget_line', 'current_budget_line__position_item'
+        )
         context['children'] = children
+        context['employees'] = employees
         return context
 
 

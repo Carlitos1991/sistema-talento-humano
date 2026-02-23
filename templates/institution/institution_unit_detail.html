@@ -125,6 +125,9 @@
                 <div class="nomina-list">
                     {% if employees and employees|length > 0 %}
                         {% for emp in employees %}
+                        {% if unit.boss and emp.id == unit.boss.id %}
+                            {# Omitir jefe inmediato #}
+                        {% else %}
                             <div class="nomina-card">
                                 {% if emp.person.photo %}
                                     <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
@@ -135,8 +138,14 @@
                                     </div>
                                 {% endif %}
                                 <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
-                                <span class="nomina-role">{{ emp.position|default:'Empleado' }}</span>
+                                <span class="nomina-role">{{ emp.position|default:'-' }}</span>
+                                <a href="{% url 'employee:employee_detail' emp.person.id %}"
+                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                   title="Ver Detalle Completo">
+                                    <i class="fa-solid fa-user"></i> Ver perfil
+                                </a>
                             </div>
+                        {% endif %}
                         {% endfor %}
                     {% else %}
                         <div class="nomina-card">
