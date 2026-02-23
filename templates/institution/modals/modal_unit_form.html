@@ -64,18 +64,18 @@
                         </div>
 
                         <!-- ESTADO — solo visible al editar -->
-                        <div class="form-group mt-3" v-if="isEditing">
-                            <div class="form-check form-switch">
-                                {{ form.is_active }}
-                                <label class="form-check-label"
-                                       for="{{ form.is_active.id_for_label }}">
-                                    Estado (Activo/Inactivo)
-                                </label>
+                            <div class="form-group mt-3" v-if="isEditing">
+                                <label class="form-label mb-2">Estado del Registro</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="id_is_active" name="is_active" v-model="isActive">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="text-error" v-if="errors.is_active">
+                                    [[ errors.is_active[0] ]]
+                                </div>
                             </div>
-                            <div class="text-error" v-if="errors.is_active">
-                                [[ errors.is_active[0] ]]
-                            </div>
-                        </div>
 
                     </div>
                 </div>

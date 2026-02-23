@@ -225,6 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const modalTitle = ref('Nueva Unidad Administrativa');
                 const contextInfo = ref('');
                 const formEl = 'unitForm';
+                const isActive = ref(true);
+
+                Vue.onMounted(() => {
+                    const checkbox = document.getElementById('id_is_active');
+                    if (checkbox) {
+                        isActive.value = checkbox.checked;
+                        checkbox.onchange = () => {
+                            isActive.value = checkbox.checked;
+                        };
+                    }
+                });
 
                 const openCreate = async (parentId = null, levelOrder = null) => {
                     isEditing.value = false;

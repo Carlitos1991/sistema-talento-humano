@@ -13,7 +13,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Generado automáticamente'}),
             'address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ubicación física'}),
             'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Extensión'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'toggle-slider', 'role': 'switch'}),
 
             # CAMPOS OCULTOS
             'level': forms.HiddenInput(),

@@ -80,12 +80,17 @@
                     <td class="actions text-center">
                         <div class="actions-wrapper">
                             {% if perms.institution.change_administrativeunit %}
+                                {# Solo mostrar si NO es el último nivel #}
+                                {% with max_level=level_stats|last %}
+                                {% if unit.level.level_order < max_level.order %}
                                 <button type="button"
                                         class="btn-icon btn-success-action"
                                         onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
                                         title="Crear Dependencia">
                                     <i class="fas fa-plus"></i>
                                 </button>
+                                {% endif %}
+                                {% endwith %}
                                 <button type="button"
                                         class="btn-icon btn-list-action"
                                         onclick="openAssignBoss('{{ unit.id }}')"

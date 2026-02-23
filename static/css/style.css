@@ -6293,3 +6293,33 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .btn-pdf-link i {
     font-size: 14px;
 }
+
+.custom-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+input[type="checkbox"]#id_is_active {
+    width: 40px;
+    height: 20px;
+    accent-color: #198754; /* Verde Bootstrap */
+    cursor: pointer;
+}
+
+.switch-label {
+    font-weight: bold;
+    padding: 0.2em 0.8em;
+    border-radius: 12px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.switch-label.active {
+    background: #d1e7dd;
+    color: #198754;
+}
+
+.switch-label.inactive {
+    background: #f8d7da;
+    color: #842029;
+}
