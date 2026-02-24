@@ -75,7 +75,10 @@ function getTableData(table) {
 async function getAllRowsFromServer(table) {
     // Solo si la tabla usa paginación externa (backend/Vue)
     if (table.dataset.externalPagination !== 'true') return null;
-    if (!window._personExport || !window._personExport.listUrl) return null;
+    if (!window._personExport || !window._personExport.listUrl) {
+        console.warn("Exportación completa abortada: Falta listUrl en window._personExport");
+        return null;
+    }
 
     const filters = window._personExport.getFilters ? window._personExport.getFilters() : {};
     const params = new URLSearchParams(filters);

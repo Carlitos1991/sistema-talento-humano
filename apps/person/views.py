@@ -168,7 +168,6 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get(self, request, *args, **kwargs):
         # AJAX: devuelve solo la tabla parcial (búsqueda, paginación, filtros)
-        # paginate_queryset ya se encarga de nunca lanzar EmptyPage
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
 

@@ -95,6 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!appElement) return;
 
     const {createApp, ref, onMounted, nextTick} = Vue;
+    window._personExport = {
+        listUrl: null,
+        getFilters: () => ({})
+    };
     let urls = {};
     try {
         urls = JSON.parse(appElement.dataset.urls);
@@ -191,10 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeFilters = ref({});
 
             // Exponer filtros y URL para exportación completa desde table-export.js
-            window._personExport = {
-                getFilters: () => activeFilters.value,
-                listUrl: null  // se asigna tras parsear urls
-            };
+            window._personExport.getFilters = () => activeFilters.value;
 
             // Vista Rápida
             const loadingQuickView = ref(false);
@@ -254,6 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (container) {
                             container.innerHTML = data.html;
                             // Mantener el valor del input si hay búsqueda activa
+                            if (typeof addExportButtonsToTables === 'function') {
+                                addExportButtonsToTables();
+                            }
                             const searchInput = document.getElementById('searchInput');
                             if (searchInput && activeFilters.value.q) {
                                 searchInput.value = activeFilters.value.q;
@@ -695,7 +699,9 @@ document.addEventListener('DOMContentLoaded', () => {
             onMounted(() => {
                 initQuickSearch();
                 initTableListeners();
-
+                if (typeof addExportButtonsToTables === 'function') {
+                    addExportButtonsToTables();
+                }
                 // Select2 para el modal de búsqueda avanzada (independiente)
                 $('.select2-field', '#modalAdvancedSearch').select2({
                     dropdownParent: $('#modalAdvancedSearch')
