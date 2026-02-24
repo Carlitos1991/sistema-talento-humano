@@ -23,6 +23,18 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 10
     permission_required = 'person.view_person'
 
+    def paginate_queryset(self, queryset, page_size):
+        """Nunca lanza EmptyPage — corrige page fuera de rango."""
+        paginator = self.get_paginator(queryset, page_size)
+        try:
+            page_num = int(self.request.GET.get('page', 1))
+        except (ValueError, TypeError):
+            page_num = 1
+        # Clamp: nunca menor que 1, nunca mayor que el total
+        page_num = max(1, min(page_num, paginator.num_pages or 1))
+        page = paginator.page(page_num)
+        return paginator, page, page.object_list, page.has_other_pages()
+
     def get_queryset(self):
         # 1. Base Query con optimización y ANOTACIÓN de Nombre Completo
         qs = Person.objects.select_related(
@@ -155,10 +167,30 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return context
 
     def get(self, request, *args, **kwargs):
-        # Si es petición AJAX (Búsqueda o Paginación), devolvemos solo la tabla parcial
+        # AJAX: devuelve solo la tabla parcial (búsqueda, paginación, filtros)
+        # paginate_queryset ya se encarga de nunca lanzar EmptyPage
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
-            context = self.get_context_data()
+
+            # Modo exportación: devolver TODOS los registros sin paginación
+            if request.GET.get('page_size') == '99999':
+                from django.core.paginator import Paginator
+                qs = self.object_list
+                total = qs.count()
+                # Un único "página" con todos los registros
+                paginator = Paginator(qs, max(total, 1))
+                page_obj = paginator.page(1)
+                # Construir contexto mínimo sin pasar por paginate_queryset
+                context = {
+                    'people': qs,  # todos los registros
+                    'page_obj': page_obj,
+                    'paginator': paginator,
+                    'is_paginated': False,
+                    'request': request,
+                }
+            else:
+                context = self.get_context_data()
+
             html = render_to_string('person/partials/partial_person_table.html', context, request=request)
             return JsonResponse({'success': True, 'html': html})
 

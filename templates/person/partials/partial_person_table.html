@@ -4,7 +4,8 @@
     <table class="managed-table exportable-table"
            data-title="Reporte Empleados"
            data-filename="Reporte_Nuevo"
-           data-page-size="10">
+           data-external-pagination="true"
+           data-external-search="true">
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
@@ -20,10 +21,33 @@
         </thead>
         <tbody id="table-body">
         {% for person in people %}
-            <tr class="location-row" id="row-{{ person.id }}"
-                data-status="{{ person.is_active|yesno:'true,false' }}">
+            <tr class="location-row" id="row-{{ person.id }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-
+{#                <td>#}
+{#                    <div class="person-info">#}
+{#                        <div class="avatar-wrapper">#}
+{#                            {% if person.photo %}#}
+{#                                <img src="{{ person.photo.url }}"#}
+{#                                     class="person-avatar"#}
+{#                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">#}
+{#                                <div class="person-avatar-placeholder">#}
+{#                                    {{ person.first_name|first }}{{ person.last_name|first }}#}
+{#                                </div>#}
+{#                            {% else %}#}
+{#                                <div class="person-avatar-placeholder" style="display:flex;">#}
+{#                                    {{ person.first_name|first }}{{ person.last_name|first }}#}
+{#                                </div>#}
+{#                            {% endif %}#}
+{#                        </div>#}
+{#                        <div class="person-name-info">#}
+{#                            <span class="person-full-name">{{ person.first_name }} {{ person.last_name }}</span>#}
+{#                            <span class="person-doc">#}
+{#                                <i class="fas fa-id-card" style="color:#94a3b8; font-size:0.7rem;"></i>#}
+{#                                {{ person.document_number|default:"--" }}#}
+{#                            </span>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </td>#}
                 <td>
                     <div class="person-info">
                         {% if person.photo %}
@@ -117,36 +141,41 @@
         </tbody>
     </table>
 </div>
-<!-- PAGINACIÓN -->
+<!-- PAGINACIÓN — server-side, navegación via Vue fetchPeople() -->
 <div class="pagination-container">
     <span class="pagination-info">
-        Mostrando {{ page_obj.start_index|default:"0" }} - {{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
     </span>
-    {% if is_paginated %}
-        <ul class="pagination-list">
-            <li>
-                <button {% if page_obj.has_previous %}onclick="changePage({{ page_obj.previous_page_number }})"
-                        {% else %}disabled{% endif %} class="page-btn">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </li>
-            {% for i in paginator.page_range %}
-                {% if page_obj.number == i %}
-                    <li>
-                        <button class="page-btn active">{{ i }}</button>
-                    </li>
-                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                    <li>
-                        <button onclick="changePage({{ i }})" class="page-btn">{{ i }}</button>
-                    </li>
-                {% endif %}
-            {% endfor %}
-            <li>
-                <button {% if page_obj.has_next %}onclick="changePage({{ page_obj.next_page_number }})"
-                        {% else %}disabled{% endif %} class="page-btn">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </li>
-        </ul>
-    {% endif %}
+    <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+        <button class="page-btn" title="Primera"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                onclick="changePage(1)">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button class="page-btn" title="Anterior"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                onclick="changePage(
+                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+            <i class="fas fa-angle-left"></i>
+        </button>
+        <div class="page-input-wrapper">
+            <input type="number" class="page-input"
+                   value="{{ page_obj.number }}"
+                   min="1" max="{{ paginator.num_pages }}"
+                   onchange="changePage(parseInt(this.value)||1)"
+                   onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
+            <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+        </div>
+        <button class="page-btn" title="Siguiente"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                onclick="changePage(
+                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
+            <i class="fas fa-angle-right"></i>
+        </button>
+        <button class="page-btn" title="Última"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                onclick="changePage({{ paginator.num_pages }})">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    </div>
 </div>

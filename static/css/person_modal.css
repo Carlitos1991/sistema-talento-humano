@@ -225,3 +225,74 @@
     border-color: #1e40af !important;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1) !important;
 }
+
+.person-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.person-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar-wrapper {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e2e8f0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* La foto ocupa todo el wrapper */
+.person-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+/* Placeholder de iniciales — oculto por defecto con display:none en CSS.
+   El HTML lo activa con style="display:flex" cuando no hay foto,
+   y el onerror del img lo activa si la foto falla. */
+.person-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: #3b82f6;
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    border-radius: 50%;
+}
+
+.person-name-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.4;
+}
+
+.person-full-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1e293b;
+}
+
+.person-doc {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}

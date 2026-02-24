@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let urls = {};
     try {
         urls = JSON.parse(appElement.dataset.urls);
+        if (window._personExport) window._personExport.listUrl = urls.list;
     } catch (e) {
         console.error(e);
     }
@@ -153,7 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         timer: 3500
                     });
                     window.closeRelocateModal();
-                    setTimeout(function(){ location.reload(); }, 1800);
+                    setTimeout(function () {
+                        location.reload();
+                    }, 1800);
                 } else {
                     Swal.fire({
                         toast: true,
@@ -186,6 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Filtros y Búsqueda
             const activeFilters = ref({});
+
+            // Exponer filtros y URL para exportación completa desde table-export.js
+            window._personExport = {
+                getFilters: () => activeFilters.value,
+                listUrl: null  // se asigna tras parsear urls
+            };
 
             // Vista Rápida
             const loadingQuickView = ref(false);
@@ -248,6 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             const searchInput = document.getElementById('searchInput');
                             if (searchInput && activeFilters.value.q) {
                                 searchInput.value = activeFilters.value.q;
+                            }
+                            // Reinsertar botones Excel/PDF sobre la nueva tabla
+                            if (typeof addExportButtonsToTables === 'function') {
+                                addExportButtonsToTables();
                             }
                         }
                     }

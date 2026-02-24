@@ -12,6 +12,11 @@ class TableManager {
         this.sortCol = null;
         this.sortAsc = true;
 
+        // data-external-pagination="true" → paginación manejada por backend/Vue
+        // data-external-search="true"     → búsqueda manejada por backend/Vue
+        this.externalPagination = this.table.dataset.externalPagination === 'true';
+        this.externalSearch = this.table.dataset.externalSearch === 'true';
+
         this.filterState = {
             search: '',
             column: null,
@@ -26,9 +31,9 @@ class TableManager {
             || document.getElementById('table-search');
 
         this.initSortHeaders();
-        this.initSearch();
-        this.initPagination();
-        this.render();
+        if (!this.externalSearch) this.initSearch();
+        if (!this.externalPagination) this.initPagination();
+        if (!this.externalPagination) this.render();
 
         this.table._tableManager = this;
     }

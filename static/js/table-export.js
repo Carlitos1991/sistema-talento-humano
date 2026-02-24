@@ -1,18 +1,16 @@
-/* static/js/table-export.js */
-
 (function loadDeps() {
     if (!window.XLSX) {
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        script.src = '/static/vendor/xlsx.full.min.js';
         document.head.appendChild(script);
     }
     if (!window.jspdf) {
         const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.src = '/static/vendor/jspdf.umd.min.js';
         script.onload = () => {
             if (!window.jspdf.plugin?.autotable) {
                 const atScript = document.createElement('script');
-                atScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.1/jspdf.plugin.autotable.min.js';
+                atScript.src = '/static/vendor/jspdf.plugin.autotable.min.js';
                 document.head.appendChild(atScript);
             }
         };
@@ -22,9 +20,19 @@
 
 function getCleanText(element) {
     const clone = element.cloneNode(true);
-    const garbage = clone.querySelectorAll('.sort-arrow, i, svg, .fa, .fas, .far, button, .btn');
+
+    // Si la celda tiene .person-details, extraer nombre y cédula directamente
+    const personDetails = clone.querySelector('.person-details');
+    if (personDetails) {
+        const name = personDetails.querySelector('h4')?.innerText?.trim() || '';
+        const doc = personDetails.querySelector('p')?.innerText?.trim().replace(/\s+/g, ' ') || '';
+        return name + (doc ? ' - ' + doc : '');
+    }
+
+    // Caso general: eliminar íconos, flechas y botones
+    const garbage = clone.querySelectorAll('.sort-arrow, i, svg, button, .btn, .avatar-wrapper, .person-avatar, .person-avatar-placeholder');
     garbage.forEach(el => el.remove());
-    return clone.innerText.trim();
+    return clone.innerText.trim().replace(/\s+/g, ' ');
 }
 
 function getTableMetadata(table) {
@@ -34,82 +42,145 @@ function getTableMetadata(table) {
     return {title, filename};
 }
 
-// --- FUNCIÓN CLAVE MODIFICADA ---
+// ─── OBTENER DATOS DE LA TABLA (solo filas visibles del DOM) ─────────────────
 function getTableData(table) {
     const headers = [];
     const body = [];
 
-    // Header
     const ths = Array.from(table.querySelectorAll('thead th'));
     const headerRow = ths.slice(0, -1).map(th => getCleanText(th));
     headers.push(headerRow);
 
-    // Body: Intentar obtener datos del TableManager Global
     let sourceRows = [];
-
     if (table._tableManager && table._tableManager.currentRows) {
-        // CASO 1: Tabla gestionada por table-manager.js (Tiene TODOS los datos)
         sourceRows = table._tableManager.currentRows;
     } else if (window.filteredRows && window.filteredRows.length > 0) {
-        // CASO 2: Compatibilidad antigua con levels.js
         sourceRows = window.filteredRows;
     } else {
-        // CASO 3: Tabla HTML estática (Solo lo visible)
         sourceRows = Array.from(table.querySelectorAll('tbody tr')).filter(tr => tr.style.display !== 'none');
     }
 
     sourceRows.forEach(tr => {
-        // Ignorar filas de "No resultados"
         if (tr.innerText.includes('No se encontraron registros')) return;
-
         const tds = Array.from(tr.querySelectorAll('td'));
         if (tds.length > 0) {
-            const rowData = tds.slice(0, -1).map(td => getCleanText(td));
-            body.push(rowData);
+            body.push(tds.slice(0, -1).map(td => getCleanText(td)));
         }
     });
 
     return {headers, body};
 }
 
-// (Las funciones exportTableToExcel, exportTableToPDF y addExportButtonsToTables
-//  se mantienen IGUAL que en tu versión anterior, solo usan el nuevo getTableData)
+// ─── FETCH DE TODOS LOS DATOS (paginación backend) ───────────────────────────
+async function getAllRowsFromServer(table) {
+    // Solo si la tabla usa paginación externa (backend/Vue)
+    if (table.dataset.externalPagination !== 'true') return null;
+    if (!window._personExport || !window._personExport.listUrl) return null;
 
-function exportTableToExcel(table) {
-    if (!window.XLSX) {
-        alert("Cargando Excel...");
-        return;
+    const filters = window._personExport.getFilters ? window._personExport.getFilters() : {};
+    const params = new URLSearchParams(filters);
+    params.set('page_size', '99999');  // pedir todo
+    params.set('page', '1');
+
+    try {
+        const resp = await fetch(window._personExport.listUrl + '?' + params.toString(), {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const json = await resp.json();
+        if (!json.success) return null;
+
+        // Parsear el HTML recibido y extraer filas
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(json.html, 'text/html');
+        const rows = Array.from(doc.querySelectorAll('tbody tr')).filter(tr =>
+            !tr.innerText.includes('No se encontraron') && tr.querySelectorAll('td').length > 1
+        );
+
+        // Extraer headers del DOM actual
+        const ths = Array.from(table.querySelectorAll('thead th'));
+        const headers = [ths.slice(0, -1).map(th => getCleanText(th))];
+
+        const body = rows.map(tr =>
+            Array.from(tr.querySelectorAll('td')).slice(0, -1).map(td => getCleanText(td))
+        );
+
+        return {headers, body};
+    } catch (e) {
+        console.error('Error al obtener todos los datos:', e);
+        return null;
     }
-    const {filename} = getTableMetadata(table);
-    const {headers, body} = getTableData(table);
-    const data = [...headers, ...body];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Datos");
-    XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-function exportTableToPDF(table) {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("Cargando PDF...");
+// ─── EXPORTAR EXCEL ───────────────────────────────────────────────────────────
+async function exportTableToExcel(table) {
+    if (!window.XLSX) {
+        alert('Cargando dependencias, intente en un momento...');
         return;
     }
+
+    const {filename} = getTableMetadata(table);
+
+    // Mostrar indicador mientras carga
+    const btn = document.querySelector('.btn-export-excel');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+    }
+
+    // Intentar obtener todos los datos del servidor
+    const allData = await getAllRowsFromServer(table);
+    const {headers, body} = allData || getTableData(table);
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-excel"></i> Excel';
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet([...headers, ...body]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+    XLSX.writeFile(wb, filename + '.xlsx');
+}
+
+// ─── EXPORTAR PDF ─────────────────────────────────────────────────────────────
+async function exportTableToPDF(table) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Cargando dependencias, intente en un momento...');
+        return;
+    }
+
     const {jsPDF} = window.jspdf;
-    const doc = new jsPDF();
     const {title, filename} = getTableMetadata(table);
-    const {headers, body} = getTableData(table);
+
+    const btn = document.querySelector('.btn-export-pdf');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+    }
+
+    const allData = await getAllRowsFromServer(table);
+    const {headers, body} = allData || getTableData(table);
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+    }
+
+    const doc = new jsPDF({orientation: body.length > 20 ? 'landscape' : 'portrait'});
+    doc.setFontSize(13);
     doc.text(title, 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
+    doc.setFontSize(9);
+    doc.text('Generado el: ' + new Date().toLocaleDateString(), 14, 22);
     doc.autoTable({
         head: headers,
         body: body,
-        startY: 26,
+        startY: 27,
         theme: 'grid',
-        styles: {fontSize: 8, cellPadding: 2},
-        headStyles: {fillColor: [22, 163, 74]}
+        styles: {fontSize: 7, cellPadding: 2},
+        headStyles: {fillColor: [30, 64, 175]},
+        alternateRowStyles: {fillColor: [245, 247, 250]}
     });
-    doc.save(`${filename}.pdf`);
+    doc.save(filename + '.pdf');
 }
 
 function addExportButtonsToTables() {
@@ -117,18 +188,30 @@ function addExportButtonsToTables() {
     tables.forEach(table => {
         const wrapper = table.closest('.content-table');
         const controls = wrapper ? wrapper.querySelector('.table-controls') : null;
-        if (controls) {
-            if (controls.querySelector('.table-export-btns')) return;
-            const btnContainer = document.createElement('div');
-            btnContainer.className = 'table-export-btns';
-            btnContainer.innerHTML = `
-                <button type="button" class="btn-export-excel" title="Excel"><i class="fas fa-file-excel"></i> Excel</button>
-                <button type="button" class="btn-export-pdf" title="PDF"><i class="fas fa-file-pdf"></i> PDF</button>
-            `;
-            btnContainer.querySelector('.btn-export-excel').onclick = () => exportTableToExcel(table);
-            btnContainer.querySelector('.btn-export-pdf').onclick = () => exportTableToPDF(table);
-            controls.insertBefore(btnContainer, controls.firstChild);
-        }
+        if (!controls) return;
+
+        // Eliminar botones viejos — tras AJAX apuntaban a tabla anterior
+        const existing = controls.querySelector('.table-export-btns');
+        if (existing) existing.remove();
+
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'table-export-btns';
+        btnContainer.innerHTML =
+            '<button type="button" class="btn-export-excel" title="Excel">' +
+            '<i class="fas fa-file-excel"></i> Excel</button>' +
+            '<button type="button" class="btn-export-pdf" title="PDF">' +
+            '<i class="fas fa-file-pdf"></i> PDF</button>';
+
+        // Closure sobre la tabla actual — no buscar en el DOM de nuevo
+        (function (t) {
+            btnContainer.querySelector('.btn-export-excel').onclick = function () {
+                exportTableToExcel(t);
+            };
+            btnContainer.querySelector('.btn-export-pdf').onclick = function () {
+                exportTableToPDF(t);
+            };
+        })(table);
+        controls.insertBefore(btnContainer, controls.firstChild);
     });
 }
 
