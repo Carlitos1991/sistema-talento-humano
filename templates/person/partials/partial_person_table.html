@@ -3,13 +3,14 @@
     <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
     <table class="managed-table exportable-table"
            data-title="Reporte Empleados"
-           data-filename="Reporte_Nuevo"
+           data-filename="Reporte_empleados"
            data-external-pagination="true"
            data-external-search="true">
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
             <th>Empleado</th>
+            <th>Cédula</th>
             <th><i class="far fa-envelope header-icon"></i> Email</th>
             <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
             <th class="text-center"><i class="fas fa-building header-icon"></i> Dependencia</th>
@@ -23,31 +24,6 @@
         {% for person in people %}
             <tr class="location-row" id="row-{{ person.id }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-{#                <td>#}
-{#                    <div class="person-info">#}
-{#                        <div class="avatar-wrapper">#}
-{#                            {% if person.photo %}#}
-{#                                <img src="{{ person.photo.url }}"#}
-{#                                     class="person-avatar"#}
-{#                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">#}
-{#                                <div class="person-avatar-placeholder">#}
-{#                                    {{ person.first_name|first }}{{ person.last_name|first }}#}
-{#                                </div>#}
-{#                            {% else %}#}
-{#                                <div class="person-avatar-placeholder" style="display:flex;">#}
-{#                                    {{ person.first_name|first }}{{ person.last_name|first }}#}
-{#                                </div>#}
-{#                            {% endif %}#}
-{#                        </div>#}
-{#                        <div class="person-name-info">#}
-{#                            <span class="person-full-name">{{ person.first_name }} {{ person.last_name }}</span>#}
-{#                            <span class="person-doc">#}
-{#                                <i class="fas fa-id-card" style="color:#94a3b8; font-size:0.7rem;"></i>#}
-{#                                {{ person.document_number|default:"--" }}#}
-{#                            </span>#}
-{#                        </div>#}
-{#                    </div>#}
-{#                </td>#}
                 <td>
                     <div class="person-info">
                         {% if person.photo %}
@@ -59,10 +35,10 @@
                         {% endif %}
                         <div class="person-details">
                             <h4>{{ person.first_name }} {{ person.last_name }}</h4>
-                            <p><i class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}</p>
                         </div>
                     </div>
                 </td>
+                <td>{{ person.document_number|default:"--" }}</td>
                 <td>{{ person.email|default:"--" }}</td>
                 <td>{{ person.phone_number|default:"--" }}</td>
                 <td class="text-center">
