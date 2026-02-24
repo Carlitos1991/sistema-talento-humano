@@ -25,12 +25,16 @@
                 data-parent="{{ unit.parent.id|default:'' }}">
                 <td><span class="badge-code">{{ unit.code|default:"--" }}</span></td>
                 <td>
-                    <a href="javascript:void(0);"
-                       onclick="filterByParent('{{ unit.id }}', '{{ unit.level.level_order|add:"1" }}')"
-                       class="link"
-                       title="Ver dependencias de {{ unit.name }}">
-                        {{ unit.name }}
-                    </a>
+                    {% if unit.children.all|length > 0 %}
+                        <a href="javascript:void(0);"
+                           onclick="filterByParent('{{ unit.id }}', '{{ unit.level.level_order|add:"1" }}')"
+                           class="link"
+                           title="Ver dependencias de {{ unit.name }}">
+                            {{ unit.name }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted" title="Sin dependencias">{{ unit.name }}</span>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="status-badge general">{{ unit.level.name }}</span>

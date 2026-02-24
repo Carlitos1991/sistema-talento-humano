@@ -1,20 +1,23 @@
 # apps/institution/views.py
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import get_object_or_404, render, redirect
-from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
-from django.http import JsonResponse
-from django.db.models import Q
-from django.views.decorators.http import require_POST
-from django.utils.decorators import method_decorator
-from django.template.loader import render_to_string
-from django.http import HttpResponse
 from django.core.cache import cache
-from .forms import AssignBossForm
+from django.db.models import Q
+from django.db.models.functions import Length
+from django.http import HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
+from django.db.models import Max
+from django.db.models.functions import Cast
+from django.db.models import IntegerField
 from employee.models import Employee
-from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
-from django.apps import apps
+from .forms import AssignBossForm
+from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 
 
 class ParentOptionsJsonView(LoginRequiredMixin, View):
@@ -80,31 +83,24 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     context_object_name = 'units'
     permission_required = 'institution.view_administrativeunit'
 
-    # Sin paginate_by: enviamos TODOS los registros al frontend
-
     def get_queryset(self):
-        # Cargamos TODAS las unidades (activas e inactivas) para que
-        qs = AdministrativeUnit.objects.all().select_related(
+        return AdministrativeUnit.objects.all().select_related(
             'level', 'parent', 'boss__person'
-        ).only(
-            'id', 'name', 'code', 'is_active',
-            'level__id', 'level__name', 'level__level_order',
-            'parent__id', 'parent__name',
-            'boss__id', 'boss__person__first_name',
-            'boss__person__last_name', 'boss__person__photo',
-        ).order_by('level__level_order', 'code', 'name')
-        return qs
+        ).annotate(
+            code_len=Length('code')
+        ).order_by('level__level_order', 'code_len', 'code', 'name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = AdministrativeUnitForm()
-        context.update(get_level_stats())
-
-        # Estadísticas para las tarjetas de nivel (conteos por nivel)
+        level_stats = get_level_stats()
+        if isinstance(level_stats, dict) and 'level_stats' in level_stats:
+            context['level_stats'] = level_stats['level_stats']
+        else:
+            context['level_stats'] = []
         context['total'] = AdministrativeUnit.objects.count()
         context['active'] = AdministrativeUnit.objects.filter(is_active=True).count()
         context['inactive'] = AdministrativeUnit.objects.filter(is_active=False).count()
-
         return context
 
     def get(self, request, *args, **kwargs):
@@ -131,7 +127,9 @@ class UnitCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         form = self.get_form()
         if form.is_valid():
-            unit = form.save()
+            unit = form.save(commit=False)
+            unit.is_active = True
+            unit.save()
             return JsonResponse({
                 'success': True,
                 'message': 'Unidad creada correctamente.',
@@ -163,11 +161,12 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         )
         context['children'] = children
         context['employees'] = employees
+        context['form'] = AdministrativeUnitForm()
         return context
 
 
 # --- DETALLES JSON (para modal de edición) ---
-from django.core.exceptions import PermissionDenied
+
 
 class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'institution.view_administrativeunit'
@@ -238,10 +237,7 @@ class UnitToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 @login_required
 def unit_partial_table(request):
-    units = AdministrativeUnit.objects.all().select_related(
-        'level', 'parent', 'boss__person'
-    ).order_by('level__level_order', 'code', 'name')
-    context = {'units': units}
+    context = get_units_context()
     html = render_to_string(
         'institution/partials/partial_unit_table.html',
         context,
@@ -479,63 +475,57 @@ def api_unit_deliverables(request, unit_id):
 class GetNextCodeJsonView(LoginRequiredMixin, View):
     def get(self, request):
         parent_id = request.GET.get('parent_id')
+        next_code = "1"
+        suggested_level_id = None
 
-        # Si viene un parent_id, es una dependencia
-        if parent_id and parent_id != 'null':
-            parent = get_object_or_404(AdministrativeUnit, pk=parent_id)
-            parent_code = parent.code if parent.code else "0"
+        try:
+            if parent_id and parent_id != 'null' and parent_id != 'undefined':
+                # --- DEPENDENCIAS ---
+                parent = get_object_or_404(AdministrativeUnit, pk=parent_id)
+                parent_code = parent.code or "0"
+                last_child = AdministrativeUnit.objects.filter(parent=parent).order_by('-id').first()
 
-            last_sibling = AdministrativeUnit.objects.filter(
-                parent=parent
-            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at').first()
-
-            if last_sibling and last_sibling.code:
-                try:
-                    parts = last_sibling.code.split('.')
-                    last_num = int(parts[-1])
-                    new_last_num = last_num + 1
-                    base_prefix = ".".join(parts[:-1])
-                    next_code = f"{base_prefix}.{new_last_num}"
-                except ValueError:
+                if last_child and last_child.code:
+                    try:
+                        parts = last_child.code.split('.')
+                        last_num = int(parts[-1])
+                        next_code = f"{'.'.join(parts[:-1])}.{last_num + 1}"
+                    except:
+                        next_code = f"{parent_code}.1"
+                else:
                     next_code = f"{parent_code}.1"
+
+                lvl = OrganizationalLevel.objects.filter(level_order=(parent.level.level_order + 1)).first()
+                if lvl: suggested_level_id = lvl.id
+
             else:
-                next_code = f"{parent_code}.1"
+                # --- UNIDADES PADRE (NIVEL 1) ---
+                # Buscamos el código numérico más alto entre las raíces
+                from django.db.models.functions import Cast
+                from django.db.models import IntegerField, Max
 
-            level_id = parent.level.level_order + 1
+                max_code_root = AdministrativeUnit.objects.filter(
+                    parent__isnull=True,
+                    code__regex=r'^\d+$'  # Solo los que sean números
+                ).annotate(
+                    code_int=Cast('code', output_field=IntegerField())
+                ).aggregate(max_val=Max('code_int'))['max_val']
 
-            # Buscar el objeto nivel correspondiente al orden
-            try:
-                level_obj = OrganizationalLevel.objects.get(level_order=level_id)
-                level_pk = level_obj.id
-            except OrganizationalLevel.DoesNotExist:
-                level_pk = None
+                if max_code_root is not None:
+                    next_code = str(max_code_root + 1)
+                else:
+                    next_code = "1"
 
-        else:
-            # Si NO hay parent_id, es una unidad de NIVEL 1 (Raíz)
-            # Buscamos el último código de nivel raíz que sea numérico simple (1, 2, 3...)
-            last_root = AdministrativeUnit.objects.filter(
-                parent__isnull=True
-            ).exclude(code__isnull=True).exclude(code='').order_by('-created_at')
+                lvl = OrganizationalLevel.objects.filter(level_order=1).first()
+                if lvl: suggested_level_id = lvl.id
 
-            # Intentamos encontrar el máximo numérico
-            max_code = 0
-            for unit in last_root:
-                try:
-                    val = int(unit.code)
-                    if val > max_code:
-                        max_code = val
-                except ValueError:
-                    continue
-
-            next_code = str(max_code + 1)
-
-            try:
-                level_obj = OrganizationalLevel.objects.get(level_order=1)
-                level_pk = level_obj.id
-            except OrganizationalLevel.DoesNotExist:
-                level_pk = None
-
-        return JsonResponse({'success': True, 'next_code': next_code, 'suggested_level': level_pk})
+            return JsonResponse({
+                'success': True,
+                'next_code': next_code,
+                'suggested_level': suggested_level_id
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -642,3 +632,22 @@ def level_partial_table(request):
     context = {'levels': levels}
     html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
     return HttpResponse(html)
+
+
+def get_units_context(units_queryset=None):
+    """Auxiliar para mantener consistencia de contexto en vistas y AJAX"""
+    if units_queryset is None:
+        units_queryset = AdministrativeUnit.objects.all().select_related(
+            'level', 'parent', 'boss__person'
+        ).annotate(
+            code_len=Length('code')
+        ).order_by('level__level_order', 'code_len', 'code', 'name')
+
+    stats_data = get_level_stats()
+    return {
+        'units': units_queryset,
+        'level_stats': stats_data.get('level_stats', []),
+        'total': AdministrativeUnit.objects.count(),
+        'active': AdministrativeUnit.objects.filter(is_active=True).count(),
+        'inactive': AdministrativeUnit.objects.filter(is_active=False).count(),
+    }
