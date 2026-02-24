@@ -850,3 +850,60 @@
     color: #6c757d;
     font-size: 0.95rem;
 }
+
+/* Contenedor principal */
+.nomina-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Espacio generoso entre botones */
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Botón Circular Base */
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px; /* Tamaño más grande y cómodo */
+    height: 42px;
+    border-radius: 50%;
+    border: 1.5px solid transparent; /* Preparado para hover */
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    font-size: 1.15rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* --- BOTÓN AZUL (Perfil) --- */
+.btn-profile-blue {
+    background-color: #e0f2fe; /* Azul claro pero visible */
+    color: #0369a1; /* Azul oceánico fuerte */
+}
+
+.btn-profile-blue:hover {
+    background-color: #0369a1;
+    color: #ffffff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(3, 105, 161, 0.3);
+}
+
+/* --- BOTÓN VERDE (Reubicar) --- */
+.btn-relocate-green {
+    background-color: #dcfce7; /* Verde claro más saturado */
+    color: #15803d; /* Verde bosque/esmeralda */
+}
+
+.btn-relocate-green:hover {
+    background-color: #15803d;
+    color: #ffffff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(21, 128, 61, 0.3);
+}
+
+/* Efecto de pulsación activa */
+.action-btn:active {
+    transform: translateY(0) scale(0.95);
+}

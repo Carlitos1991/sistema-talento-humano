@@ -147,18 +147,28 @@
                                     {% endif %}
                                     <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
                                     <span class="nomina-role">
-                                    {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
-                                        {{ emp.current_budget_line.first.position_item.name }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </span>
-                                    <a href="{% url 'employee:employee_detail' emp.person.id %}"
-                                       class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                       style="font-size:0.65rem;"
-                                       title="Ver Detalle Completo">
-                                        <i class="fa-solid fa-user"></i> Ver perfil
-                                    </a>
+                                        {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
+                                            {{ emp.current_budget_line.first.position_item.name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </span>
+                                    <div class="nomina-actions">
+                                        <!-- Botón Perfil: Azul -->
+                                        <a href="{% url 'employee:employee_detail' emp.person.id %}"
+                                           class="action-btn btn-profile-blue"
+                                           title="Ver Perfil Completo">
+                                            <i class="fa-solid fa-user"></i>
+                                        </a>
+
+                                        <!-- Botón Reubicar: Verde -->
+                                        <button type="button"
+                                                class="action-btn btn-relocate-green"
+                                                title="Reubicar Empleado"
+                                                onclick="window.openRelocateEmployeeModal('{{ emp.person.id }}', '{{ emp.person.first_name }} {{ emp.person.last_name }}', '{{ unit.name }}')">
+                                            <i class="fa-solid fa-sitemap"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             {% endif %}
                         {% endfor %}
@@ -202,10 +212,11 @@
 
         </div>
     </div>
+    {% include 'person/modals/modal_relocate_employee.html' %}
     {% include 'institution/modals/modal_unit_form.html' %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/institution/institution_deliverables.js' %}"></script>
-    <script src="{% static 'js/institution/institution.js' %}"></script>    
+    <script src="{% static 'js/institution/institution.js' %}"></script>
 {% endblock %}

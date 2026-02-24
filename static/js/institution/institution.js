@@ -409,3 +409,119 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 });
+/* --- LÓGICA DE REUBICACIÓN DE EMPLEADOS (Migrada de person.js) --- */
+
+window.openRelocateEmployeeModal = function (personId, personFullName, personArea) {
+    window.selectedRelocatePersonId = personId;
+    window.selectedRelocatePersonName = personFullName;
+    window.selectedRelocatePersonArea = personArea;
+
+    $('#relocate-combos-wrapper').empty();
+
+    const modal = document.getElementById('modal-relocate-employee');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    }
+    loadUnitLevelRelocate(null);
+};
+
+window.closeRelocateModal = function () {
+    const modal = document.getElementById('modal-relocate-employee');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+    }
+    window.selectedRelocatePersonId = null;
+    $('#relocate-combos-wrapper').empty();
+};
+
+function loadUnitLevelRelocate(parentId) {
+    // Endpoint definido en institution:api_unit_children
+    const apiUrl = '/institution/api/unit-children/';
+    const params = parentId ? {parent_id: parentId} : {};
+
+    $.ajax({
+        url: apiUrl,
+        data: params,
+        success: function (data) {
+            if (!data.units || data.units.length === 0) return;
+
+            const uniqueId = 'unit-select-' + (parentId || 'root');
+            const $wrapper = $('<div class="form-group mb-3"></div>');
+            const $label = $('<label class="text-xs font-bold text-gray-600 mb-1 block">Seleccione Unidad:</label>');
+
+            const $select = $('<select>')
+                .attr('id', uniqueId)
+                .addClass('form-control select2-relocate w-full border p-2 rounded')
+                .append('<option value="">-- Seleccione --</option>');
+
+            data.units.forEach(u => {
+                $select.append(`<option value="${u.id}" data-has-children="${u.has_children}">${u.name}</option>`);
+            });
+
+            $wrapper.append($label).append($select);
+            $('#relocate-combos-wrapper').append($wrapper);
+
+            $select.select2({
+                dropdownParent: $('#modal-relocate-employee'),
+                width: '100%'
+            }).on('change', function () {
+                const val = $(this).val();
+                const hasChild = $(this).find(':selected').data('has-children');
+                $(this).closest('.form-group').nextAll().remove();
+                if (val && (hasChild === true || hasChild === "true" || hasChild === "True")) {
+                    loadUnitLevelRelocate(val);
+                }
+            });
+        }
+    });
+}
+
+// Handler para el envío del formulario de reubicación
+$(document).on('submit', '#form-relocate-employee', function (e) {
+    e.preventDefault();
+    let finalUnitId = null;
+    let finalUnitText = '';
+
+    $('#relocate-combos-wrapper select').each(function () {
+        if ($(this).val()) {
+            finalUnitId = $(this).val();
+            finalUnitText = $(this).find('option:selected').text();
+        }
+    });
+
+    if (!finalUnitId) {
+        Swal.fire({icon: 'warning', title: 'Seleccione una unidad final', toast: true, position: 'top-end'});
+        return;
+    }
+
+    const btn = $(this).find('button[type="submit"]');
+    btn.prop('disabled', true).html('Guardando...');
+
+    $.ajax({
+        url: '/person/relocate/',
+        method: 'POST',
+        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+        data: {
+            person_id: window.selectedRelocatePersonId,
+            unit_id: finalUnitId
+        },
+        success: function (resp) {
+            if (resp.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Reubicación exitosa',
+                    html: `Empleado movido a <b>${finalUnitText}</b>`,
+                    timer: 2000
+                }).then(() => {
+                    location.reload(); // Recargamos para actualizar la nómina de la unidad
+                });
+            } else {
+                Swal.fire({icon: 'error', title: resp.message});
+            }
+        },
+        error: () => Swal.fire({icon: 'error', title: 'Error de servidor'}),
+        complete: () => btn.prop('disabled', false).html('Confirmar Reubicación')
+    });
+});
