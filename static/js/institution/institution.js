@@ -344,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. ASIGNAR JEFE
     // =============================================================================
     window.openAssignBoss = async function (unitId) {
+        console.log('click openAssignBoss', unitId);
         let modalContainer = document.getElementById('assign-boss-modal-container');
         if (!modalContainer) {
             modalContainer = document.createElement('div');
@@ -358,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = await res.text();
             modalContainer.firstElementChild.innerHTML = html;
             modalContainer.style.display = 'flex';
+            console.log('Modal debería estar visible');
             document.body.classList.add('modal-open');
             modalContainer.dataset.unitId = unitId;
 
@@ -400,7 +402,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 window.closeAssignModal();
                 Swal.fire('Éxito', data.message, 'success');
-                await refreshTablePartial();
+                // Si estamos en la vista detalle (tiene #deliverables-app) actualizamos solo el header
+                if (document.getElementById('deliverables-app')) {
+                    try {
+                        const detailRes = await fetch(`/institution/units/detail/${unitId}/json/`);
+                        const detailData = await detailRes.json();
+                        if (detailData.success && detailData.data) {
+                            const hdr = document.querySelector('.institution-header .header-right');
+                            if (hdr) {
+                                const d = detailData.data;
+                                if (d.boss_data) {
+                                    const photo = d.boss_data.photo_url ? `<img src="${d.boss_data.photo_url}" class="boss-photo boss-photo-xl" alt="Foto Jefe">` : `<div class="boss-photo boss-photo-xl boss-photo-initials">${(d.boss_data.text||'').split(' ').map(n=>n[0]||'').slice(0,2).join('')}</div>`;
+                                    const profileBtn = d.boss_data.person_id ? `<a href="/employee/detail/${d.boss_data.person_id}/" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" title="Ver Detalle Completo"><i class="fa-solid fa-user"></i> Ver perfil completo</a>` : '';
+                                    hdr.innerHTML = `\n                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">\n                                            ${photo}\n                                            <div class="boss-info">\n                                                <span class="boss-name">${d.boss_data.text}</span>\n                                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i> JEFE INMEDIATO</span>\n                                                ${profileBtn}\n                                            </div>\n                                        </div>`;
+                                } else {
+                                    hdr.innerHTML = `\n                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">\n                                            <h2 class="boss-name" style="font-size: 14px"><i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>\n                                            <button type="button" class="btn-icon btn-list-action" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato">\n                                                <i class="fas fa-user-tie"></i>\n                                            </button>\n                                        </div>`;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error actualizando header tras asignar jefe:', e);
+                        // Fallback: recargar la página si ocurre un error
+                        setTimeout(function() { window.location.reload(); }, 600);
+                    }
+                } else {
+                    await refreshTablePartial();
+                }
             } else {
                 Swal.fire('Error', 'Revise los datos', 'error');
             }

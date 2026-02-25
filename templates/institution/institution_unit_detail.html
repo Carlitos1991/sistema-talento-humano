@@ -2,6 +2,7 @@
 {% load static %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/institution_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 {% block content %}
     <div id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}" v-cloak>
@@ -41,13 +42,33 @@
                             {% endif %}
                             <div class="boss-info">
                                 <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
-                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i> JEFE INMEDIATO</span>
-                                <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
-                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                   title="Ver Detalle Completo">
-                                    <i class="fa-solid fa-user"></i> Ver perfil completo
-                                </a>
+                                <span class="boss-role boss-role-gray"><i
+                                        class="fa-solid fa-user-tie"></i> JEFE INMEDIATO</span>
+                                <div class="nomina-actions">
+                                    <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
+                                       class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                       title="Ver Detalle Completo">
+                                        <i class="fa-solid fa-user"></i> Ver perfil
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                            onclick="openAssignBoss('{{ unit.id }}')"
+                                            title="Asignar Jefe Inmediato">
+                                        <i class="fa-solid fa-retweet"></i> Cambiar
+                                    </button>
+                                </div>
                             </div>
+                        </div>
+                    {% else %}
+                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                            <h2 class="boss-name" style="font-size: 14px"><i
+                                    class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
+                            <button type="button"
+                                    class="btn-icon btn-list-action"
+                                    onclick="openAssignBoss('{{ unit.id }}')"
+                                    title="Asignar Jefe Inmediato">
+                                <i class="fas fa-user-tie"></i>
+                            </button>
                         </div>
                     {% endif %}
                 </div>
@@ -217,6 +238,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/person.js' %}"></script>
     <script src="{% static 'js/institution/institution_deliverables.js' %}"></script>
     <script src="{% static 'js/institution/institution.js' %}"></script>
 {% endblock %}

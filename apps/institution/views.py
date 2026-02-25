@@ -184,7 +184,9 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
         if unit.boss:
             boss_data = {
                 'id': unit.boss.id,
-                'text': f"{unit.boss.person.last_name} {unit.boss.person.first_name}"
+                'text': f"{unit.boss.person.first_name} {unit.boss.person.last_name}",
+                'person_id': unit.boss.person.id,
+                'photo_url': unit.boss.person.photo.url if getattr(unit.boss.person, 'photo', None) else ''
             }
         data = {
             'name': unit.name,
