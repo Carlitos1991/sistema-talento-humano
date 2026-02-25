@@ -96,15 +96,30 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 elif 'FEMENINO' in gender_name or 'MUJER' in gender_name:
                     context['empleados_femenino'] = stat['total']
         
-        # Empleados con título universitario (Tercer Nivel según catálogo EDUCATION_LEVELS -> code 'TERCER_NIVEL')
-        from employee.models import AcademicTitle
+        # Empleados con título universitario (sumar TERCER_NIVEL, CUARTO_NIVEL y TECNOLOGO)
         try:
-            tercer_nivel_person_ids = AcademicTitle.objects.filter(
-                education_level__code='TERCER_NIVEL'
-            ).values_list('curriculum__person_id', flat=True).distinct()
-            context['empleados_con_titulo'] = tercer_nivel_person_ids.count()
+            levels = ['TERCER_NIVEL', 'CUARTO_NIVEL', 'TECNOLOGO']
+            # Personas únicas (deduplicadas) que tengan al menos un título en cualquiera de los niveles indicados
+            person_ids = Employee.objects.filter(
+                is_active=True,
+                person__curriculum__academic_titles__education_level__code__in=levels
+            ).values_list('person_id', flat=True).distinct()
+            context['empleados_con_titulo'] = person_ids.count()
+
+            # Mantener desglose por código por si se necesita mostrar por separado
+            context['empleados_cuarto_nivel'] = Employee.objects.filter(
+                is_active=True,
+                person__curriculum__academic_titles__education_level__code='CUARTO_NIVEL'
+            ).values_list('person_id', flat=True).distinct().count()
+
+            context['empleados_tecnologo'] = Employee.objects.filter(
+                is_active=True,
+                person__curriculum__academic_titles__education_level__code='TECNOLOGO'
+            ).values_list('person_id', flat=True).distinct().count()
         except Exception:
             context['empleados_con_titulo'] = 0
+            context['empleados_cuarto_nivel'] = 0
+            context['empleados_tecnologo'] = 0
         
         # Empleados con discapacidad
         context['empleados_con_discapacidad'] = active_employees.filter(

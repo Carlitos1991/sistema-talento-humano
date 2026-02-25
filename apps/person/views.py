@@ -52,6 +52,8 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')
+        # Filtro por nivel de instrucción desde dashboard
+        education_level_code = self.request.GET.get('education_level')
 
         # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
         # Recogemos parámetros
@@ -93,6 +95,14 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if area_id:
             qs = qs.filter(employee_profile__area_id=area_id)
+
+        # Filtrar por nivel de instrucción (acepta un código o lista separada por comas)
+        if education_level_code:
+            codes = [c.strip() for c in education_level_code.split(',') if c.strip()]
+            if len(codes) > 1:
+                qs = qs.filter(curriculum__academic_titles__education_level__code__in=codes).distinct()
+            else:
+                qs = qs.filter(curriculum__academic_titles__education_level__code=codes[0]).distinct()
 
         if status_id:
             qs = qs.filter(employee_profile__employment_status_id=status_id)

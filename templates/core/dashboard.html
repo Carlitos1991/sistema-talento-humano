@@ -5,6 +5,13 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <style>
+        /* Quitar subrayado del enlace que envuelve la stat-card */
+        .stat-card-link { text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: space-between; }
+        .stat-card-link:hover { text-decoration: none; }
+        .stat-card-link .stat-content { flex: 1 1 auto; }
+        .stat-card-link .stat-icon { margin-left: 16px; flex: 0 0 auto; }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -90,8 +97,8 @@
             </div>
         </div>
 
-        <!-- CON TÍTULO -->
-        <div class="stat-card">
+        <!-- CON TÍTULO (click filtra la lista de personas por TERCER_NIVEL) -->
+        <a class="stat-card stat-card-link" href="{% url 'person:person_list' %}?education_level=TERCER_NIVEL,CUARTO_NIVEL,TECNOLOGO">
             <div class="stat-content">
                 <div class="stat-label">CON TÍTULO UNIVERSITARIO</div>
                 <div class="stat-number">{{ empleados_con_titulo }}</div>
@@ -99,7 +106,7 @@
             <div class="stat-icon" style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%);">
                 <i class="fas fa-graduation-cap"></i>
             </div>
-        </div>
+        </a>
 
         <!-- CON DISCAPACIDAD -->
         <div class="stat-card">
