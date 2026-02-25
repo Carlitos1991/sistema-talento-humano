@@ -10,7 +10,10 @@ from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView
 from django.db.models import Q, Value, CharField
 from django.db.models.functions import Concat
+
+from budget.models import BudgetLine
 from core.models import CatalogItem
+from employee.models import Employee, InstitutionalData
 from institution.models import AdministrativeUnit
 from .models import Person
 from .forms import PersonForm
@@ -318,8 +321,11 @@ def person_quick_view_partial(request, pk):
         ),
         pk=pk
     )
+    employee_pk = Employee.objects.get(person=pk)
+    budget = BudgetLine.objects.get(current_employee=employee_pk)
+    institutional_data = InstitutionalData.objects.get(employee=employee_pk)
     return render(request, 'person/partials/partial_person_quick_view.html', {
-        'person': person
+        'person': person, 'budget': budget, 'institutional_data': institutional_data
     })
 
 

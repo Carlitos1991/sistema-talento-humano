@@ -16,6 +16,9 @@
         <h2 class="text-primary-bold mb-1" style="font-size: 1.8rem; letter-spacing: -0.02em;">
             {{ person.full_name }}
         </h2>
+        <h2 class="text-primary-bold mb-1" style="font-size: 1.2rem; letter-spacing: -0.02em;">
+            {{ person.document_number }}
+        </h2>
 
         <!-- Botón Pill Centrado -->
         <a href="{% url 'employee:employee_detail' person.id %}" class="btn-pill-action">
@@ -28,32 +31,68 @@
         <div class="quick-view-info-grid">
 
             <!-- Columna 1: Identificación -->
-            <div class="section-card-standard shadow-sm">
-                <h4 class="section-title"><i class="fa-solid fa-id-card"></i> Identificación</h4>
+            <div class="section-card-standard shadow-sm border-left-primary">
+                <h4 class="section-title"><i class="fa-solid fa-briefcase"></i> Datos Personales</h4>
                 <div class="grid-2-cols mt-3">
                     <div class="info-group">
-                        <label class="info-label">Documento</label>
-                        <p class="info-value">{{ person.document_type.name }}</p>
+                        <label class="info-label">Fecha de Nacimiento / Edad</label>
+                        <p class="info-value"><span class="status-badge general">{{ person.birth_date }} / <b
+                                style="color: #1e293b">{{ person.age }}
+                            años</b></span></p>
+                    </div>
+
+                </div>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">Estado Civil</label>
+                        <p class="info-value">{{ person.marital_status.name }} </p>
                     </div>
                     <div class="info-group">
-                        <label class="info-label">Número</label>
-                        <p class="info-value">{{ person.document_number }}</p>
+                        <label class="info-label">Tipo de Sangre</label>
+                        <p class="info-value">{{ person.blood_type.name }}</p>
+                    </div>
+                </div>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">Domicilio</label>
+                        <p class="info-value"><span class="status-badge general">{{ person.address_reference }}</span>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Columna 2: Estructura -->
+            <!-- Columna 2: Datos Institucionales -->
             <div class="section-card-standard shadow-sm border-left-primary">
-                <h4 class="section-title"><i class="fa-solid fa-briefcase"></i> Estructura</h4>
+                <h4 class="section-title"><i class="fa-solid fa-briefcase"></i> Datos Institucionales</h4>
                 <div class="grid-2-cols mt-3">
                     <div class="info-group">
-                        <label class="info-label">Unidad</label>
-                        <p class="info-value">{{ person.employee_profile.area.name|default:"Sin Unidad" }}</p>
+                        <label class="info-label">Expediente</label>
+                        <p class="info-value">{{ institutional_data.file_number|default:"Sin Numero de Expediente" }}</p>
                     </div>
                     <div class="info-group">
-                        <label class="info-label">Estado</label>
+                        <label class="info-label">Código Biométrico</label>
                         <p class="info-value">
-                            <span class="status-badge general">{{ person.employee_profile.employment_status.name|default:"PERSONA" }}</span>
+                            <b>{{ institutional_data.biometric_id|default:"Sin Código Biométrico" }}</b>
+                        </p>
+                    </div>
+                </div>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">R.M.U.</label>
+                        <p class="info-value">{{ budget.remuneration|default:"Sin cargo asignado" }}</p>
+                    </div>
+                    <div class="info-group">
+                        <label class="info-label">Partida/Individual</label>
+                        <p class="info-value">
+                            <span class="status-badge general">{{ budget.code|default:"Sin partida asignada" }} /<u>{{ budget.number_individual|default:"Sin partida asignada" }}</u></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="grid-2-cols mt-3">
+                    <div class="info-group">
+                        <label class="info-label">Cargo</label>
+                        <p class="info-value">
+                            <span class="status-badge general">{{ budget.position_item.name|default:"Sin cargo asignado" }}</span>
                         </p>
                     </div>
                 </div>
