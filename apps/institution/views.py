@@ -182,11 +182,21 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
         unit = get_object_or_404(AdministrativeUnit, pk=pk)
         boss_data = None
         if unit.boss:
+            # Obtener cargo/posición del funcionario si existe
+            position = ''
+            try:
+                cb = unit.boss.current_budget_line.first()
+                if cb and getattr(cb, 'position_item', None):
+                    position = cb.position_item.name
+            except Exception:
+                position = ''
+
             boss_data = {
                 'id': unit.boss.id,
                 'text': f"{unit.boss.person.first_name} {unit.boss.person.last_name}",
                 'person_id': unit.boss.person.id,
-                'photo_url': unit.boss.person.photo.url if getattr(unit.boss.person, 'photo', None) else ''
+                'photo_url': unit.boss.person.photo.url if getattr(unit.boss.person, 'photo', None) else '',
+                'position': position,
             }
         data = {
             'name': unit.name,

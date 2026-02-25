@@ -42,8 +42,13 @@
                             {% endif %}
                             <div class="boss-info">
                                 <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
-                                <span class="boss-role boss-role-gray"><i
-                                        class="fa-solid fa-user-tie"></i> JEFE INMEDIATO</span>
+                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i>
+                                    {% if unit.boss.current_budget_line.first and unit.boss.current_budget_line.first.position_item %}
+                                        {{ unit.boss.current_budget_line.first.position_item.name }}
+                                    {% else %}
+                                        JEFE INMEDIATO
+                                    {% endif %}
+                                </span>
                                 <div class="nomina-actions">
                                     <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
                                        class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
