@@ -98,7 +98,7 @@
         </div>
 
         <!-- CON TÍTULO (click filtra la lista de personas por TERCER_NIVEL) -->
-        <a class="stat-card stat-card-link" href="{% url 'person:person_list' %}?education_level=TERCER_NIVEL,CUARTO_NIVEL,TECNOLOGO">
+        <div class="stat-card">
             <div class="stat-content">
                 <div class="stat-label">CON TÍTULO UNIVERSITARIO</div>
                 <div class="stat-number">{{ empleados_con_titulo }}</div>
@@ -106,7 +106,7 @@
             <div class="stat-icon" style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%);">
                 <i class="fas fa-graduation-cap"></i>
             </div>
-        </a>
+        </div>
 
         <!-- CON DISCAPACIDAD -->
         <div class="stat-card">

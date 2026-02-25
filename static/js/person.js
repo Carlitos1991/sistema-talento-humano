@@ -226,8 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearTimeout(searchTimeout);
                     searchTimeout = setTimeout(() => {
                         const term = e.target.value.trim();
-                        // Al buscar rápido, limpiar filtros avanzados
-                        activeFilters.value = {q: term};
+                                // Al buscar rápido, mantener los filtros activos y solo actualizar la clave `q`
+                                const current = Object.assign({}, activeFilters.value || {});
+                                if (term) {
+                                    current.q = term;
+                                } else {
+                                    delete current.q;
+                                }
+                                activeFilters.value = current;
                         fetchPeople(1);
                     }, 500);
                 });
