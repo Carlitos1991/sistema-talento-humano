@@ -337,7 +337,18 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const closeQuickView = () => {
-                hideModal(document.getElementById('modalQuickViewOverlay'));
+                const el = document.getElementById('modalQuickViewOverlay');
+                hideModal(el);
+                // Fallback: asegurar eliminación de no-scroll si no hay overlays visibles
+                setTimeout(() => {
+                    const overlays = Array.from(document.querySelectorAll('.modal-overlay'));
+                    const anyVisible = overlays.some(o => {
+                        if (o.classList.contains('hidden')) return false;
+                        const cs = window.getComputedStyle(o);
+                        return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+                    });
+                    if (!anyVisible) document.body.classList.remove('no-scroll');
+                }, 80);
             };
 
             // ----------------------------------------------------
@@ -352,9 +363,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const hideModal = (el) => {
                 if (el) {
                     el.classList.add('hidden');
-                    if (document.querySelectorAll('.modal-overlay:not(.hidden)').length === 0) {
-                        document.body.classList.remove('no-scroll');
-                    }
+                    // Dar un pequeño retardo para asegurar que otros modales reaccionen
+                    setTimeout(() => {
+                        // Comprobar si existe algún overlay que esté realmente visible
+                        const overlays = Array.from(document.querySelectorAll('.modal-overlay'));
+                        const anyVisible = overlays.some(o => {
+                            if (o.classList.contains('hidden')) return false;
+                            const cs = window.getComputedStyle(o);
+                            return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+                        });
+                        if (!anyVisible) {
+                            document.body.classList.remove('no-scroll');
+                        }
+                    }, 50);
                 }
             };
 
