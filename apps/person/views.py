@@ -185,6 +185,7 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 'filter_val': item['employment_status__id']
             })
 
+
         context['stats_cards'] = stats
         return context
 

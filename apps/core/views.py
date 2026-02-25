@@ -96,10 +96,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 elif 'FEMENINO' in gender_name or 'MUJER' in gender_name:
                     context['empleados_femenino'] = stat['total']
         
-        # Empleados con título universitario (simplificado: solo profesionales)
-        context['empleados_con_titulo'] = active_employees.filter(
-            employment_status__code='PROFESIONAL'
-        ).count()
+        # Empleados con título universitario (Tercer Nivel según catálogo EDUCATION_LEVELS -> code 'TERCER_NIVEL')
+        from employee.models import AcademicTitle
+        try:
+            tercer_nivel_person_ids = AcademicTitle.objects.filter(
+                education_level__code='TERCER_NIVEL'
+            ).values_list('curriculum__person_id', flat=True).distinct()
+            context['empleados_con_titulo'] = tercer_nivel_person_ids.count()
+        except Exception:
+            context['empleados_con_titulo'] = 0
         
         # Empleados con discapacidad
         context['empleados_con_discapacidad'] = active_employees.filter(
