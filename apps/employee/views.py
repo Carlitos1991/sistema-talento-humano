@@ -521,8 +521,14 @@ def get_cv_item_detail_api(request, item_type, item_id):
     item = get_object_or_404(models[item_type], pk=item_id)
     # Serialización manual para evitar errores de fecha
     if item_type == 'academic':
-        data = {'id': item.id, 'education_level': item.education_level_id, 'title_obtained': item.title_obtained,
-                'educational_institution': item.educational_institution, 'graduation_year': item.graduation_year}
+        data = {
+            'id': item.id,
+            'education_level': item.education_level_id,
+            'title_obtained': item.title_obtained,
+            'educational_institution': item.educational_institution,
+            'graduation_year': item.graduation_year,
+            'senescyt_number': item.senescyt_number or ''
+        }
     elif item_type == 'experience':
         data = {'id': item.id, 'company_name': item.company_name, 'position': item.position,
                 'start_date': item.start_date.isoformat(),

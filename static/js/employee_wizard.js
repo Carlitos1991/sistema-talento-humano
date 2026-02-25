@@ -33,9 +33,10 @@ const app = createApp({
     delimiters: ['[[', ']]'],
     setup() {
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
-        const activeTab = ref(localStorage.getItem('wizardActiveTab') || 'personal');
+        // Forzar que al entrar en el detalle el tab inicial sea 'personal'
+        const activeTab = ref('personal');
         
-        // Watch for changes and save to localStorage
+        // Watch for changes and save to localStorage (se mantiene por si el usuario navega internamente)
         Vue.watch(activeTab, (newTab) => {
             localStorage.setItem('wizardActiveTab', newTab);
         });
@@ -111,7 +112,7 @@ const app = createApp({
             const selector = map[type];
             if (action === 'new') {
                 // RESET FORMS
-                if (type === 'academic') titleForm.value = {id: null, education_level: ''};
+                if (type === 'academic') titleForm.value = {id: null, education_level: '', senescyt_number: ''};
                 if (type === 'experience') expForm.value = {id: null, is_current: false};
                 if (type === 'training') trainForm.value = {id: null};
                 if (type === 'bank') { // No action 'new' usually but for consistency
@@ -132,6 +133,16 @@ const app = createApp({
                 // Simplified for now:
                 $(selector).removeClass('hidden');
                 initSelect2(selector);
+            } else if (action === 'edit' && (type === 'academic' || type === 'experience' || type === 'training')) {
+                // Show modal for edit WITHOUT resetting the form (form was populated before calling openModal)
+                $(selector).removeClass('hidden');
+                // Evitar scroll del body mientras el modal esté abierto
+                document.body.classList.add('no-scroll');
+                // Inicializar select2 y refrescar selects para que muestren los valores precargados
+                initSelect2(selector);
+                // Pequeña espera para asegurar que Vue haya aplicado los datos y luego refrescar selects
+                setTimeout(() => refreshSelect2(selector), 200);
+                console.debug('openModal edit:', type, action, 'selector:', selector);
             } else if(action === 'edit' && type === 'payroll') {
                  // Similar to bank
                  $(selector).removeClass('hidden');
@@ -148,7 +159,7 @@ const app = createApp({
         const bankErrors = ref({});
         const payrollForm = ref({monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0});
         const payrollErrors = ref({});
-        const titleForm = ref({education_level: ''});
+        const titleForm = ref({education_level: '', senescyt_number: ''});
         const titleErrors = ref({});
         const expForm = ref({is_current: false});
         const expErrors = ref({});
@@ -277,20 +288,21 @@ const app = createApp({
         const handleEditCvItem = async (type, id) => {
             try {
                 const res = await (await fetch(`/employee/api/cv/detail/${type}/${id}/`)).json();
-                if (res.success) {
-                    $('#modalCVListOverlay').addClass('hidden');
-                    if (type === 'academic') {
-                        titleForm.value = res.data;
-                        openModal('academic', 'new');
-                    }
-                    if (type === 'experience') {
-                        expForm.value = res.data;
-                        openModal('experience', 'new');
-                    }
-                    if (type === 'training') {
-                        trainForm.value = res.data;
-                        openModal('training', 'new');
-                    }
+                    if (res.success) {
+                        $('#modalCVListOverlay').addClass('hidden');
+                        console.debug('handleEditCvItem loaded data for', type, res.data);
+                        if (type === 'academic') {
+                            titleForm.value = res.data;
+                            openModal('academic', 'edit');
+                        }
+                        if (type === 'experience') {
+                            expForm.value = res.data;
+                            openModal('experience', 'edit');
+                        }
+                        if (type === 'training') {
+                            trainForm.value = res.data;
+                            openModal('training', 'edit');
+                        }
                 }
             } catch (e) {
                 console.error(e);
@@ -552,6 +564,9 @@ const app = createApp({
 
         const closeListModal = () => {
             $('#modalCVListOverlay').addClass('hidden');
+            currentListType.value = '';
+            // Asegurar que el body recupere scroll si el modal de edición quedó abierto
+            document.body.classList.remove('no-scroll');
         };
 
         const editItem = (item) => {

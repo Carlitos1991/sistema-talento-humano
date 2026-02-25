@@ -1,18 +1,22 @@
 <div id="modalTitleOverlay" class="modal-overlay hidden" v-cloak>
     <div class="modal-container" style="max-width: 650px;">
         <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main"><i class="fa-solid fa-graduation-cap me-2"></i>Nuevo Título Académico</h3>
+            <h3 class="header-title-main"><i class="fa-solid fa-graduation-cap me-2"></i>[[ titleForm.id ? 'Editar Título Académico' : 'Nuevo Título Académico' ]]</h3>
             <button @click="closeModal('academic')" class="btn-close-modal-refined">&times;</button>
         </div>
         <form @submit.prevent="submitAcademicTitle">
             <div class="modal-body-custom p-4">
                 <div class="form-group mb-3">
                     <label class="form-label">Institución Educativa</label>
-                    <input type="text" v-model="titleForm.educational_institution" class="input-field uppercase-input" required>
+                    <input type="text" v-model="titleForm.educational_institution" class="input-field uppercase-input" placeholder="Ej: Universidad Central" required>
                 </div>
                 <div class="form-group mb-3">
                     <label class="form-label">Título Obtenido</label>
-                    <input type="text" v-model="titleForm.title_obtained" class="input-field uppercase-input" required>
+                    <input type="text" v-model="titleForm.title_obtained" class="input-field uppercase-input" placeholder="Ej: Ingeniero en Sistemas" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">N° SENESCYT</label>
+                    <input type="text" v-model="titleForm.senescyt_number" class="input-field" placeholder="Opcional: 1234567890">
                 </div>
                 <div class="grid-2-cols gap-3">
                     <div class="form-group">
@@ -24,7 +28,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Año Graduación</label>
-                        <input type="number" v-model="titleForm.graduation_year" class="input-field">
+                        <input type="number" v-model="titleForm.graduation_year" class="input-field" placeholder="Ej: 2015">
                     </div>
                 </div>
             </div>
