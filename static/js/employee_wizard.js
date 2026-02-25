@@ -735,53 +735,9 @@ const app = createApp({
                  if (res.success) {
                      institutionalForm.value = res.data;
                      
-                     // Abrir modal
+                     // Abrir modal (solo mostrar campos editables en este modal)
                      $('#modalInstitutionalOverlay').removeClass('hidden');
-
-                     // Cargar opciones y configurar Select2
-                     setTimeout(async () => {
-                        const $modal = $('#modalInstitutionalOverlay');
-                        
-                        // Cargar áreas
-                        const areasResponse = await fetch('/employee/api/areas-list/');
-                        const areasData = await areasResponse.json();
-                        if (areasData.success) {
-                            const $areaSelect = $modal.find('.select2-institutional-area');
-                            $areaSelect.empty().append('<option value="">Seleccione una unidad</option>');
-                            areasData.data.forEach(area => {
-                                $areaSelect.append(`<option value="${area.id}">${area.name}</option>`);
-                            });
-                            $areaSelect.select2({
-                                dropdownParent: $modal,
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                placeholder: 'Seleccione una unidad',
-                                allowClear: true
-                            }).val(res.data.area).trigger('change').on('change', function(){
-                                institutionalForm.value.area = $(this).val();
-                            });
-                        }
-                        
-                        // Cargar estados laborales
-                        const statusResponse = await fetch('/employee/api/employment-statuses/');
-                        const statusData = await statusResponse.json();
-                        if (statusData.success) {
-                            const $statusSelect = $modal.find('.select2-employment-status');
-                            $statusSelect.empty().append('<option value="">Seleccione un estado</option>');
-                            statusData.data.forEach(status => {
-                                $statusSelect.append(`<option value="${status.id}">${status.name}</option>`);
-                            });
-                            $statusSelect.select2({
-                                dropdownParent: $modal,
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                placeholder: 'Seleccione un estado',
-                                allowClear: true
-                            }).val(res.data.employment_status).trigger('change').on('change', function(){
-                                institutionalForm.value.employment_status = $(this).val();
-                            });
-                        }
-                     }, 150);
+                     document.body.classList.add('no-scroll');
                  } else {
                      window.Toast.fire({icon: 'error', title: 'Error al cargar datos institucionales'});
                  }

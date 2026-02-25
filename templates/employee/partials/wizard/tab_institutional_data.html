@@ -130,29 +130,6 @@
             </div>
             <hr class="mt-1 mb-4 border-orange">
 
-            <div class="form-group mb-3">
-                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-sitemap me-1"></i> Unidad
-                    Administrativa</label>
-                <select v-model="institutionalForm.area" class="form-control select2-institutional-area"
-                        style="width: 100%;">
-                    <option value="">Seleccione una unidad</option>
-                </select>
-                <div class="form-text text-muted" style="font-size: 0.75rem;">Área o departamento al que pertenece el
-                    empleado
-                </div>
-            </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-user-check me-1"></i> Estado
-                    Laboral</label>
-                <select v-model="institutionalForm.employment_status" class="form-control select2-employment-status"
-                        style="width: 100%;">
-                    <option value="">Seleccione un estado</option>
-                </select>
-                <div class="form-text text-muted" style="font-size: 0.75rem;">Estado actual del empleado (Activo,
-                    Comisión, etc.)
-                </div>
-            </div>
 
 
             <div class="form-group mb-3">
@@ -164,14 +141,7 @@
                 </div>
             </div>
 
-            <div class="form-group mb-3">
-                <label class="form-label text-orange fw-bold small"><i class="fa-solid fa-calendar-day me-1"></i> Fecha
-                    de Ingreso (Institucional)</label>
-                <input type="date" v-model="institutionalForm.entry_date" class="form-control">
-                <div class="form-text text-muted" style="font-size: 0.75rem;">Fecha de ingreso institucional del
-                    empleado
-                </div>
-            </div>
+            <!-- Nota: Los campos Unidad Administrativa, Estado Laboral y Fecha de Ingreso se ocultan en este modal de Actualizar -->
 
             <div class="form-group mb-3">
                 <div class="form-check">
