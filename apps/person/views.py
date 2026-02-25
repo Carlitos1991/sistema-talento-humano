@@ -103,6 +103,25 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if gender_id:
             qs = qs.filter(gender_id=gender_id)
 
+        # Aplicar ordenamiento personalizado desde parámetros GET (solo campos permitidos)
+        sort_field = self.request.GET.get('sort_field')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        # Parámetros de orden enviados por el cliente
+        allowed = {
+            'full_name_str': 'last_name',
+            'document_number': 'document_number',
+            'email': 'email',
+            'phone_number': 'phone_number',
+            'employee_profile__area__name': 'employee_profile__area__name',
+            'employee_profile__employment_status__name': 'employee_profile__employment_status__name'
+        }
+        if sort_field in allowed:
+            field = allowed[sort_field]
+            if sort_dir == 'desc':
+                field = '-' + field
+            qs = qs.order_by(field)
+            # Orden aplicado correctamente (sin logs de depuración)
+
         return qs
 
     def get_context_data(self, **kwargs):

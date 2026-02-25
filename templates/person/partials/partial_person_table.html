@@ -9,12 +9,16 @@
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
-            <th>Empleado</th>
-            <th>Cédula</th>
-            <th><i class="far fa-envelope header-icon"></i> Correo Institucional</th>
-            <th><i class="fas fa-phone header-icon"></i> Teléfono</th>
-            <th class="text-center"><i class="fas fa-building header-icon"></i> Dependencia</th>
-            <th class="text-center"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th data-field="full_name_str">Empleado</th>
+            <th data-field="document_number">Cédula</th>
+            <th data-field="email"><i class="far fa-envelope header-icon"></i> Correo Institucional</th>
+            <th data-field="phone_number"><i class="fas fa-phone header-icon"></i> Teléfono</th>
+            <th class="text-center" data-field="employee_profile__area__name"><i
+                    class="fas fa-building header-icon"></i> Dependencia
+            </th>
+            <th class="text-center" data-field="employee_profile__employment_status__name"><i
+                    class="fas fa-toggle-on header-icon"></i> Estado
+            </th>
             {% if perms.person.change_person or perms.person.delete_person %}
                 <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
             {% endif %}
@@ -34,7 +38,7 @@
                             </div>
                         {% endif %}
                         <div class="person-details">
-                            <h4>{{ person.first_name }} {{ person.last_name }}</h4>
+                            <h4>{{ person.last_name }} {{ person.first_name }}</h4>
                         </div>
                     </div>
                 </td>
@@ -84,14 +88,18 @@
                                title="Ver Detalle Completo">
                                 <i class="fa-solid fa-user-gear"></i>
                             </a>
-                           
+
                         </div>
                     </td>
                 {% endif %}
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7">
+                {% if perms.person.change_person or perms.person.delete_person %}
+                    <td colspan="8">
+                {% else %}
+                    <td colspan="7">
+                {% endif %}
                     <div class="empty-state-container">
                         <i class="fas fa-calendar-times empty-state-icon"></i>
                         <p class="empty-state-text">No se encontraron registros registrados.</p>
@@ -100,7 +108,11 @@
             </tr>
         {% endfor %}
         <tr id="client-no-results" style="display: none;">
-            <td colspan="7">
+            {% if perms.person.change_person or perms.person.delete_person %}
+                <td colspan="8">
+            {% else %}
+                <td colspan="7">
+            {% endif %}
                 <div class="empty-state-container">
                     <i class="fas fa-search empty-state-icon"></i>
                     <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>

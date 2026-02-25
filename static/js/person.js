@@ -243,6 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const [key, value] of Object.entries(activeFilters.value)) {
                     if (value) params.append(key, value);
                 }
+                // Añadir parámetros de ordenamiento si existen
+                if (window._personExport && window._personExport.sort && window._personExport.sort.field) {
+                    params.append('sort_field', window._personExport.sort.field);
+                    params.append('sort_dir', window._personExport.sort.asc ? 'asc' : 'desc');
+                }
 
                 try {
                     const response = await fetch(`${urls.list}?${params.toString()}`, {
@@ -257,6 +262,40 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Mantener el valor del input si hay búsqueda activa
                             if (typeof addExportButtonsToTables === 'function') {
                                 addExportButtonsToTables();
+                            }
+                            // Inicializar TableManager para la nueva tabla y reaplicar sort si existe
+                            const newTable = container.querySelector('.managed-table');
+                            if (newTable) {
+                                // Crear instancia TableManager para manejar paginación cliente cuando aplique
+                                let mgr = null;
+                                try {
+                                    new TableManager(newTable);
+                                    mgr = newTable._tableManager;
+                                } catch (e) {
+                                    console.error('Error inicializando TableManager:', e);
+                                }
+                                // Reaplicar clase de sort guardada globalmente y sincronizar el estado interno
+                                if (window._personExport && window._personExport.sort) {
+                                    const s = window._personExport.sort;
+                                    // Sincronizar estado interno del TableManager para que el siguiente
+                                    // click alterne correctamente entre asc/desc.
+                                    if (mgr) {
+                                        try {
+                                            mgr.sortCol = parseInt(s.col, 10);
+                                            mgr.sortAsc = !!s.asc;
+                                        } catch (err) {
+                                            console.warn('No se pudo sincronizar estado de orden en TableManager', err);
+                                        }
+                                    }
+                                    const ths = newTable.querySelectorAll('thead th');
+                                    const th = ths[s.col];
+                                    if (th) {
+                                        th.classList.remove('sorted-asc', 'sorted-desc');
+                                        th.classList.add(s.asc ? 'sorted-asc' : 'sorted-desc');
+                                        const arrow = th.querySelector('.sort-arrow');
+                                        if (arrow) arrow.innerText = s.asc ? '↑' : '↓';
+                                    }
+                                }
                             }
                             const searchInput = document.getElementById('searchInput');
                             if (searchInput && activeFilters.value.q) {
@@ -746,6 +785,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     vueApp = app.mount('#personApp');
+    // Exponer un wrapper global para la función fetchPeople del app Vue
+    window.fetchPeople = (page) => {
+        if (vueApp && typeof vueApp.fetchPeople === 'function') {
+            return vueApp.fetchPeople(page);
+        }
+        console.warn('fetchPeople no está inicializado aún');
+        return Promise.resolve();
+    };
 
     // Inicializar Select2 para el modal de búsqueda avanzada
     window.initializeSelect2();

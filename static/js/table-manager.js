@@ -93,7 +93,11 @@ class TableManager {
             if (!th.querySelector('.sort-arrow')) {
                 th.innerHTML += ' <span class="sort-arrow">⇅</span>';
             }
-            th.addEventListener('click', () => this.handleSort(index, th, headers));
+            th.addEventListener('click', (e) => {
+                // Si un manejador delegado ya está procesando este click, ignorar
+                if (th._tm_handling) return;
+                this.handleSort(index, th, headers);
+            });
         });
     }
 
@@ -113,6 +117,104 @@ class TableManager {
         clickedTh.classList.add(this.sortAsc ? 'sorted-asc' : 'sorted-desc');
         const arrow = clickedTh.querySelector('.sort-arrow');
         if (arrow) arrow.innerText = this.sortAsc ? '↑' : '↓';
+
+        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
+        if (this.externalPagination || this.externalSearch) {
+            // Determinar campo de orden desde el encabezado (data-field)
+            const headerEl = allHeaders[colIndex];
+            const field = headerEl?.dataset?.field || null;
+            // Guardar estado globalmente para que el cliente que reciba el HTML lo reaplique
+            window._personExport = window._personExport || {};
+            window._personExport.sort = {col: colIndex, asc: this.sortAsc, field: field};
+            // Intentar invocar fetchPeople; si no existe todavía (Vue no montado), hacer fallback directo
+            if (typeof window.fetchPeople === 'function') {
+                window.fetchPeople(1);
+                return;
+            }
+
+            // Fallback: si conocemos la URL del listado, realizar fetch directo al endpoint
+            if (!window._personExport) window._personExport = {};
+            // Intentar recuperar la URL desde el DOM si aún no la expuso person.js
+            if (!window._personExport.listUrl) {
+                const appEl = document.getElementById('personApp');
+                if (appEl && appEl.dataset && appEl.dataset.urls) {
+                    try {
+                        // dataset.urls contiene JSON con saltos de línea en template; limpiarlos
+                        const raw = appEl.dataset.urls.replace(/\n/g, '');
+                        const parsed = JSON.parse(raw);
+                        if (parsed && parsed.list) window._personExport.listUrl = parsed.list;
+                    } catch (e) {
+                        console.warn('TableManager: no se pudo parsear data-urls de #personApp', e);
+                    }
+                }
+            }
+            if (window._personExport && window._personExport.listUrl) {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('page', 1);
+                    if (window._personExport.sort && window._personExport.sort.field) {
+                        params.append('sort_field', window._personExport.sort.field);
+                        params.append('sort_dir', window._personExport.sort.asc ? 'asc' : 'desc');
+                    }
+                    const url = `${window._personExport.listUrl}?${params.toString()}`;
+                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success && data.html) {
+                                const container = document.getElementById('tableContainer') || document.getElementById('table-app') || document.querySelector('.table-container');
+                                if (container) {
+                                    container.innerHTML = data.html;
+                                    // Inicializar nueva tabla y reaplicar sort
+                                    const newTable = container.querySelector('.managed-table');
+                                    if (newTable) {
+                                        try {
+                                            new TableManager(newTable);
+                                        } catch (e) {
+                                            console.error('Error inicializando TableManager en fallback:', e);
+                                        }
+                                        // Reaplicar clase de sort
+                                        if (window._personExport && window._personExport.sort) {
+                                            const s = window._personExport.sort;
+                                            const ths = newTable.querySelectorAll('thead th');
+                                            const th = ths[s.col];
+                                            if (th) {
+                                                th.classList.remove('sorted-asc', 'sorted-desc');
+                                                th.classList.add(s.asc ? 'sorted-asc' : 'sorted-desc');
+                                                const arrow = th.querySelector('.sort-arrow');
+                                                if (arrow) arrow.innerText = s.asc ? '↑' : '↓';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .catch(e => console.warn('TableManager fallback fetch error:', e));
+                    return;
+                } catch (e) {
+                    console.warn('TableManager: error during fallback fetch', e);
+                }
+            }
+
+            // Si no hay URL conocida, reintentar corto (compatibilidad)
+            let attempts = 0;
+            const maxAttempts = 20; // hasta ~2s
+            const retryInterval = 100;
+            const interval = setInterval(() => {
+                attempts += 1;
+                if (typeof window.fetchPeople === 'function') {
+                    clearInterval(interval);
+                    try {
+                        window.fetchPeople(1);
+                    } catch (e) {
+                        console.warn('TableManager: error calling fetchPeople after it became available', e);
+                    }
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    console.warn('TableManager: fetchPeople not available after retries.');
+                }
+            }, retryInterval);
+            return;
+        }
 
         this.sortData();
         this.render();
@@ -341,3 +443,40 @@ class TableManager {
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.managed-table').forEach(t => new TableManager(t));
 });
+
+// Delegado global: asegurar que clicks en th de tablas manejadas siempre invoquen el orden
+document.addEventListener('click', (e) => {
+    const th = e.target.closest('.managed-table thead th');
+    if (!th) return;
+
+    const table = th.closest('.managed-table');
+    if (!table) return;
+
+    // Determinar índice de la columna
+    const headers = Array.from(table.querySelectorAll('thead th'));
+    const colIndex = headers.indexOf(th);
+    if (colIndex === -1) return;
+
+    // Obtener o crear TableManager
+    let mgr = table._tableManager;
+    if (!mgr) {
+        try {
+            new TableManager(table);
+            mgr = table._tableManager;
+        } catch (err) {
+            console.warn('TableManager: no se pudo crear instancia al click delegado', err);
+            return;
+        }
+    }
+
+    // Evitar doble ejecución: marcar el th temporalmente
+    try {
+        th._tm_handling = true;
+        mgr.handleSort(colIndex, th, headers);
+    } catch (err) {
+        console.warn('TableManager: error en handleSort delegado', err);
+    } finally {
+        setTimeout(() => { try { delete th._tm_handling; } catch(_){} }, 60);
+    }
+
+}, true);
