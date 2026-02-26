@@ -457,6 +457,52 @@ const app = createApp({
             }
         };
 
+        const refreshInstitutionalTab = async (pId) => {
+            try {
+                const pid = pId || appElement.dataset.personId;
+                const res = await (await fetch(`/employee/person/${pid}/get-institutional-data/`)).json();
+                if (res.success && res.data) {
+                    // Update reactive form
+                    institutionalForm.value = res.data;
+
+                    // Update DOM elements in the institutional tab (so we don't reload whole page)
+                    const setText = (id, value) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = (value !== null && value !== undefined && value !== '') ? value : '—';
+                    };
+
+                    setText('inst_file_number', res.data.file_number || '—');
+                    setText('inst_biometric_id', res.data.biometric_id || 'No registrado');
+                    setText('inst_entry_date', res.data.entry_date ? new Date(res.data.entry_date).toLocaleDateString('es-ES') : '—');
+                    setText('inst_institutional_email', res.data.institutional_email || 'Sin especificar');
+                    setText('inst_area', res.data.area_name || (appElement.dataset.areaName || 'Sin asignar'));
+                    setText('inst_employment_status', res.data.employment_status_name || '—');
+                    // Es jefe
+                    const isBossEl = document.getElementById('inst_is_boss');
+                    if (isBossEl) {
+                        const isBoss = !!res.data.is_boss;
+                        isBossEl.textContent = isBoss ? 'SÍ' : 'NO';
+                        isBossEl.classList.remove('active','neutral');
+                        isBossEl.classList.add(isBoss ? 'active' : 'neutral');
+                    }
+                    // Contrato colectivo
+                    const collEl = document.getElementById('inst_collective_contract');
+                    if (collEl) {
+                        collEl.innerHTML = res.data.collective_contract ? '<span class="status-badge neutral">SÍ</span>' : '<span class="status-badge neutral">NO</span>';
+                    }
+                    setText('inst_observations', res.data.observations || 'Ninguna observación registrada.');
+
+                    // Set active tab to institutional so UI remains there
+                    activeTab.value = 'institutional';
+                }
+            } catch (e) {
+                console.error('Error refreshing institutional tab', e);
+            } finally {
+                // Ensure body scroll is enabled
+                document.body.classList.remove('no-scroll');
+            }
+        };
+
         const handlePdfUpload = async (event, pId) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -808,11 +854,12 @@ const app = createApp({
                  });
                  const res = await response.json();
                  
-                 if (res.success) {
-                     window.Toast.fire({icon: 'success', title: res.message});
-                     $('#modalInstitutionalOverlay').addClass('hidden');
-                     setTimeout(() => location.reload(), 500);
-                 } else {
+                if (res.success) {
+                    window.Toast.fire({icon: 'success', title: res.message});
+                    $('#modalInstitutionalOverlay').addClass('hidden');
+                    // Refrescar sólo el tab institucional y mantenerlo activo
+                    await refreshInstitutionalTab(pid);
+                } else {
                      institutionalErrors.value = res.errors;
                      window.Toast.fire({icon: 'warning', title: 'Revise los campos'});
                  }

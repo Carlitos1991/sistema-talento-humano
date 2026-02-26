@@ -16,15 +16,15 @@
         <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-folder-open"></i> Expediente</h6>
         <div class="info-data-row">
             <label>N° Expediente:</label>
-            <span class="fw-bold">{{ person.employee_profile.institutional_data.file_number|default:"—" }}</span>
+            <span id="inst_file_number" class="fw-bold">{{ person.employee_profile.institutional_data.file_number|default:"—" }}</span>
         </div>
         <div class="info-data-row">
             <label>ID Biométrico:</label>
-            <span>{{ person.employee_profile.institutional_data.biometric_id|default:"No registrado" }}</span>
+            <span id="inst_biometric_id">{{ person.employee_profile.institutional_data.biometric_id|default:"No registrado" }}</span>
         </div>
         <div class="info-data-row">
             <label>Fecha de Ingreso (Institucional):</label>
-            <span>{{ person.employee_profile.institutional_data.entry_date|date:"d/m/Y"|default:"—" }}</span>
+            <span id="inst_entry_date">{{ person.employee_profile.institutional_data.entry_date|date:"d/m/Y"|default:"—" }}</span>
         </div>
     </div>
 
@@ -34,12 +34,12 @@
         </h6>
         <div class="info-data-row">
             <label>Email:</label>
-            <span class="text-primary"
+            <span id="inst_institutional_email" class="text-primary"
                   style="font-size: 0.85rem; word-break: break-all;">{{ person.employee_profile.institutional_data.institutional_email|default:"Sin especificar" }}</span>
         </div>
         <div class="info-data-row">
             <label>Dependencia:</label>
-            <span class="fw-bold">{{ person.employee_profile.area.name|default:"Sin asignar" }}</span>
+            <span id="inst_area" class="fw-bold">{{ person.employee_profile.area.name|default:"Sin asignar" }}</span>
         </div>
     </div>
 
@@ -48,18 +48,18 @@
         <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-briefcase"></i> Estado Laboral</h6>
         <div class="info-data-row">
             <label>Estado:</label>
-            <span class="status-badge active"
+            <span id="inst_employment_status" class="status-badge active"
                   style="font-size: 0.65rem;">{{ person.employee_profile.employment_status.name|default:"ACTIVO" }}</span>
         </div>
         <div class="info-data-row">
             <label>Es Jefe:</label>
-            <span class="status-badge {% if person.employee_profile.is_boss %}active{% else %}neutral{% endif %}">
+            <span id="inst_is_boss" class="status-badge {% if person.employee_profile.is_boss %}active{% else %}neutral{% endif %}">
                 {{ person.employee_profile.is_boss|yesno:"SÍ,NO" }}
             </span>
         </div>
         <div class="info-data-row">
             <label>Contrato Colectivo:</label>
-            <span class="fw-bold">
+            <span id="inst_collective_contract" class="fw-bold">
                 {% if person.employee_profile.institutional_data.collective_contract %}
                     <span class="status-badge neutral">SÍ</span>
                 {% else %}
@@ -102,7 +102,7 @@
 <div class="grid-info-personal mt-3">
     <div class="info-box-styled" style="border-left: 4px solid #64748b; grid-column: span 3;">
         <h6 class="section-title"><i class="fa-solid fa-comment-dots"></i> Observaciones</h6>
-        <p class="mb-0 text-dark small">{{ person.employee_profile.institutional_data.observations|default:"Ninguna observación registrada." }}</p>
+        <p id="inst_observations" class="mb-0 text-dark small">{{ person.employee_profile.institutional_data.observations|default:"Ninguna observación registrada." }}</p>
     </div>
 </div>
 

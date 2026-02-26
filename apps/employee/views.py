@@ -566,6 +566,7 @@ def get_institutional_data_api(request, person_id):
             'area_name': employee.area.name if employee.area else 'Sin Asignar',
             'employment_status': employee.employment_status.id if employee.employment_status else None,
             'employment_status_name': employee.employment_status.name if employee.employment_status else 'Sin Definir',
+            'is_boss': employee.is_boss if hasattr(employee, 'is_boss') else False,
             'regime_name': regime_name,
             'position': position_name,
 
