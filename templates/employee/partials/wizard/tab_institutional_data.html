@@ -113,25 +113,12 @@
             <h3 class="header-title-main fs-5"><i class="fa-solid fa-building-user me-2"></i>
                 <span v-if="institutionalForm.id">Editar</span><span v-else>Crear</span> Datos Institucionales
             </h3>
-            <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+            <button class="btn-close-modal-refined"
+                    onclick="this.closest('.modal-overlay').classList.add('hidden'); document.body.classList.remove('no-scroll')">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
         <div class="modal-body-custom p-4">
-            <div class="mb-4">
-                <small class="text-white d-block p-2 rounded" style="background-color: #f97316;">
-                    Empleado: {{ person.full_name }} <span class="float-end">{{ person.document_number }}</span>
-                </small>
-            </div>
-
-            <div class="d-flex align-items-center mb-2">
-                <i class="fa-solid fa-circle-info text-orange me-2"></i>
-                <h6 class="fw-bold mb-0 text-orange">Información Institucional</h6>
-            </div>
-            <hr class="mt-1 mb-4 border-orange">
-
-
-
             <div class="form-group mb-3">
                 <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-folder-open me-1"></i>
                     Número de Expediente</label>
@@ -140,22 +127,6 @@
                     empleado
                 </div>
             </div>
-
-            <!-- Nota: Los campos Unidad Administrativa, Estado Laboral y Fecha de Ingreso se ocultan en este modal de Actualizar -->
-
-            <div class="form-group mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" v-model="institutionalForm.collective_contract"
-                           id="collectiveContractCheck">
-                    <label class="form-check-label text-orange fw-bold small" for="collectiveContractCheck">
-                        <i class="fa-solid fa-file-contract me-1"></i> Es contrato colectivo
-                    </label>
-                </div>
-                <div class="form-text text-muted" style="font-size: 0.75rem;">Marcar si el empleado pertenece a un
-                    contrato colectivo
-                </div>
-            </div>
-
             <div class="form-group mb-3">
                 <label class="form-label text-muted fw-bold small">Identificador Biométrico</label>
                 <input type="text" v-model="institutionalForm.biometric_id" class="form-control"
@@ -174,7 +145,18 @@
                     empleado
                 </div>
             </div>
-
+            <div class="form-group mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" v-model="institutionalForm.collective_contract"
+                           id="collectiveContractCheck">
+                    <label class="form-check-label text-orange fw-bold small" for="collectiveContractCheck">
+                        <i class="fa-solid fa-file-contract me-1"></i> Es contrato colectivo
+                    </label>
+                </div>
+                <div class="form-text text-muted" style="font-size: 0.75rem;">Marcar si el empleado pertenece a un
+                    contrato colectivo
+                </div>
+            </div>
             <div class="form-group mb-3">
                 <label class="form-label text-orange fw-bold small"><i class="fa-regular fa-comment me-1"></i>
                     Observaciones</label>
@@ -187,7 +169,8 @@
 
         </div>
         <div class="modal-footer d-flex justify-content-end gap-2 p-3 bg-light border-top">
-            <button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+            <button class="btn btn-secondary btn-sm"
+                    onclick="this.closest('.modal-overlay').classList.add('hidden'); document.body.classList.remove('no-scroll')">
                 <i class="fa-solid fa-xmark me-1"></i> Cancelar
             </button>
             <button class="btn btn-warning text-white btn-sm fw-bold" style="background-color: #f97316; border:none;"
