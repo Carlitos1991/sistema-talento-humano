@@ -197,6 +197,28 @@ const app = createApp({
             );
         });
 
+        const formatDate = (iso) => {
+            if (!iso) return '';
+            const d = new Date(iso);
+            if (isNaN(d)) return iso;
+            return d.toLocaleDateString('es-ES');
+        };
+
+        const durationBetween = (startIso, endIso, isCurrent) => {
+            if (!startIso) return '';
+            const start = new Date(startIso);
+            const end = (isCurrent || !endIso) ? new Date() : new Date(endIso);
+            if (isNaN(start) || isNaN(end)) return '';
+            let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+            if (totalMonths < 0) totalMonths = 0;
+            const years = Math.floor(totalMonths / 12);
+            const months = totalMonths % 12;
+            const parts = [];
+            if (years > 0) parts.push(years + (years === 1 ? ' año' : ' años'));
+            if (months > 0) parts.push(months + (months === 1 ? ' mes' : ' meses'));
+            return parts.length ? parts.join(' ') : '0 meses';
+        };
+
         // --- 4. CONFIGURACIÓN DE PESTAÑAS ---
         const tabs = [
             {
@@ -261,6 +283,13 @@ const app = createApp({
             },
             {id: 'vacations', name: 'Vacaciones', icon: 'fa-solid fa-plane', class: 'employee-detail-button-vacations'},
         ];
+
+        // Inicializar estadísticas del CV al montar
+        onMounted(() => {
+            if (personId) {
+                refreshCvTab(personId);
+            }
+        });
 
         const loadLocations = async (parentId, targetId, selectedValue = null) => {
             const target = document.getElementById(targetId);
@@ -538,6 +567,13 @@ const app = createApp({
                     const res = await (await fetch(url)).json();
                     if (res.success) {
                         listItems.value = res.items;
+                        // Si pedimos experiencia, actualizar los contadores de tiempo total
+                        if (type === 'experience') {
+                            personStats.value.experienceYears = res.total_years || 0;
+                            personStats.value.experienceMonths = res.total_months || 0;
+                            // También mantener contaje de ítems
+                            personStats.value.experiences = res.items ? res.items.length : 0;
+                        }
                     }
                 }
             } catch (e) {
@@ -570,12 +606,14 @@ const app = createApp({
         };
 
         const editItem = (item) => {
+            console.debug('editItem called', currentListType.value, item);
             if (currentListType.value && item) {
                 handleEditCvItem(currentListType.value, item.id);
             }
         };
 
         const deleteItem = (item) => {
+             console.debug('deleteItem called', currentListType.value, item);
              if (currentListType.value && item) {
                 handleDeleteCvItem(currentListType.value, item.id);
             }
@@ -825,6 +863,7 @@ const app = createApp({
             searchQuery,
             listItems,
             filteredItems,
+            currentListType,
 
             // Métodos Persona
             openEditPersonModal, closeEditModal, submitPersonEdit, handlePhotoChange,
@@ -833,6 +872,7 @@ const app = createApp({
             handlePdfUpload, closeModal, closeListModal, handleEditCvItem, handleDeleteCvItem,
             submitAcademicTitle, submitExperience, submitTraining,
             editItem, deleteItem,
+            formatDate, durationBetween,
 
             // Métodos Bancos
             openBankModal, saveBankAccount, refreshCvTab,

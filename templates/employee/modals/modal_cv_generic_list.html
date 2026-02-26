@@ -28,31 +28,56 @@
             <div v-else class="table-wrapper-clean">
                 <table class="table-clean-cv">
                     <thead>
-                        <tr>
+                        <tr v-if="currentListType !== 'experience'">
                             <th>NOMBRE</th>
                             <th>CÓDIGO</th>
                             <th>ESTADO</th>
                             <th class="text-center">ACCIONES</th>
                         </tr>
+                        <tr v-else>
+                            <th>NOMBRE</th>
+                            <th>FECHA DESDE</th>
+                            <th>FECHA HASTA</th>
+                            <th>TIEMPO</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(item, index) in filteredItems" :key="index">
-                            <td>[[ item.name ]]</td>
-                            <td><span class="badge-code">[[ item.code ]]</span></td>
-                            <td><span class="badge-status-active">Activo</span></td>
-                            <td class="text-center">
-                                <div class="action-buttons-group">
-                                    <button @click="editItem(item)" class="btn-action-edit" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button @click="deleteItem(item)" class="btn-action-delete" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            <template v-if="currentListType !== 'experience'">
+                                <td>[[ item.name ]]</td>
+                                <td><span class="badge-code">[[ item.code ]]</span></td>
+                                <td><span class="badge-status-active">Activo</span></td>
+                                <td class="text-center" >
+                                    <div class="action-buttons-group">
+                                        <button @click="editItem(item)" class="btn-action-edit" title="Editar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="deleteItem(item)" class="btn-action-delete" title="Eliminar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </template>
+                            <template v-else>
+                                <td>[[ item.name ]]</td>
+                                <td>[[ formatDate(item.start_date) ]]</td>
+                                <td>[[ item.is_current ? 'Presente' : formatDate(item.end_date) ]]</td>
+                                <td>[[ durationBetween(item.start_date, item.end_date, item.is_current) ]]</td>
+                                <td class="text-center" >
+                                    <div class="action-buttons-group">
+                                        <button @click="editItem(item)" class="btn-action-edit" title="Editar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="deleteItem(item)" class="btn-action-delete" title="Eliminar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </template>
                         </tr>
                         <tr v-if="filteredItems.length === 0">
-                            <td colspan="4" class="text-center text-muted py-4">
+                            <td :colspan="currentListType === 'experience' ? 5 : 4" class="text-center text-muted py-4">
                                 <i class="fa-solid fa-inbox fa-2x mb-2"></i>
                                 <p>No se encontraron registros</p>
                             </td>
