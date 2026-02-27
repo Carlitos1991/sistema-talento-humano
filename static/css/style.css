@@ -1499,6 +1499,19 @@ input:checked + .toggle-slider:before {
     transform: translateX(20px);
 }
 
+/* Ajustes para switches dentro de modales y contenedores responsivos */
+.toggle-switch {
+    min-width: 44px;
+    flex-shrink: 0;
+}
+.toggle-slider {
+    overflow: visible;
+}
+.toggle-slider:before {
+    /* Usar un desplazamiento relativo para evitar desbordes si se cambia el tamaño */
+    transform: translateX(calc(100% - 21px));
+}
+
 /* Photo uploader */
 .photo-uploader-wrapper {
     width: 120px;

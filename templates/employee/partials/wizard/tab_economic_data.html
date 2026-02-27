@@ -1,11 +1,4 @@
 <!-- Header Datos Económicos -->
-<div class="economic-header">
-    <div class="economic-header-content">
-        <h4><i class="fa-solid fa-coins me-2"></i>Datos Económicos</h4>
-        <p>Información bancaria y configuración de nómina del empleado</p>
-    </div>
-</div>
-
 <div class="grid-info-personal">
     <!-- Cuenta Bancaria -->
     <div class="info-box-styled personal-border shadow-sm">
@@ -16,25 +9,25 @@
         {% if person.economic_data.bank_account %}
             <div class="info-data-row">
                 <label>Institución:</label>
-                <span class="fw-bold text-dark">{{ person.economic_data.bank_account.bank.name }}</span>
+                <span id="econ_bank_institution" class="fw-bold text-dark">{{ person.economic_data.bank_account.bank.name }}</span>
             </div>
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Tipo de Cuenta:</label>
-                <span>{{ person.economic_data.bank_account.account_type.name }}</span>
+                <span id="econ_bank_type">{{ person.economic_data.bank_account.account_type.name }}</span>
             </div>
             <div class="info-data-row">
                 <label>Número:</label>
-                <span class="text-primary fw-bold" style="letter-spacing: 0.5px;">{{ person.economic_data.bank_account.account_number }}</span>
+                <span id="econ_bank_number" class="text-primary fw-bold" style="letter-spacing: 0.5px;">{{ person.economic_data.bank_account.account_number }}</span>
             </div>
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Titular:</label>
-                <span class="small text-muted">{{ person.economic_data.bank_account.holder_name }}</span>
+                <span id="econ_bank_holder" class="small text-muted">{{ person.economic_data.bank_account.holder_name }}</span>
             </div>
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Estado:</label>
-                <span class="status-badge active" style="font-size: 0.7rem;">Activa</span>
+                <span id="econ_bank_status" class="status-badge active" style="font-size: 0.7rem;">Activa</span>
             </div>
-            
+
             <!-- Footer con botón centrado -->
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
@@ -43,12 +36,12 @@
             </div>
         {% else %}
             <div class="text-center py-4">
-                 <div class="mb-3 text-secondary opacity-50">
+                <div class="mb-3 text-secondary opacity-50">
                     <i class="fa-solid fa-building-columns fa-2x"></i>
-                 </div>
+                </div>
                 <p class="text-muted small mb-3">No hay cuenta bancaria registrada</p>
                 <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
-                   <i class="fa-solid fa-plus tiny-icon"></i> Agregar
+                    <i class="fa-solid fa-plus tiny-icon"></i> Agregar
                 </button>
             </div>
         {% endif %}
@@ -61,31 +54,33 @@
         </div>
 
         {% if person.economic_data.payroll_info %}
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Mensualiza Décimos:</label>
-                <span class="status-badge {% if person.economic_data.payroll_info.monthly_payment %}active{% else %}neutral{% endif %}" style="font-size: 0.7rem;">
+                <span id="econ_payroll_monthly" class="status-badge {% if person.economic_data.payroll_info.monthly_payment %}active{% else %}neutral{% endif %}"
+                      style="font-size: 0.7rem;">
                     {% if person.economic_data.payroll_info.monthly_payment %}SÍ{% else %}NO{% endif %}
                 </span>
             </div>
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Fondos de Reserva:</label>
-                <span class="status-badge {% if person.economic_data.payroll_info.reserve_funds %}active{% else %}neutral{% endif %}" style="font-size: 0.7rem;">
+                <span id="econ_payroll_reserve" class="status-badge {% if person.economic_data.payroll_info.reserve_funds %}active{% else %}neutral{% endif %}"
+                      style="font-size: 0.7rem;">
                     {% if person.economic_data.payroll_info.reserve_funds %}ACUMULA{% else %}NO ACUMULA{% endif %}
                 </span>
             </div>
             <div class="info-data-row mt-3 pt-2 border-top">
                 <label>Cargas Familiares:</label>
-                <span class="fw-bold">{{ person.economic_data.payroll_info.family_dependents }}</span>
+                <span id="econ_payroll_family" class="fw-bold">{{ person.economic_data.payroll_info.family_dependents }}</span>
             </div>
-             <div class="info-data-row">
+            <div class="info-data-row">
                 <label>Cargas Educación:</label>
-                <span class="fw-bold">{{ person.economic_data.payroll_info.education_dependents }}</span>
+                <span id="econ_payroll_education" class="fw-bold">{{ person.economic_data.payroll_info.education_dependents }}</span>
             </div>
-             <div class="info-data-row mt-2">
+            <div class="info-data-row mt-2">
                 <label>Ingreso a Roles:</label>
-                <span class="small">{{ person.economic_data.payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
+                <span id="econ_payroll_roles_entry" class="small">{{ person.economic_data.payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
             </div>
-            
+
             <!-- Footer con botón centrado -->
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
@@ -93,13 +88,13 @@
                 </button>
             </div>
         {% else %}
-             <div class="text-center py-4">
-                 <div class="mb-3 text-secondary opacity-50">
+            <div class="text-center py-4">
+                <div class="mb-3 text-secondary opacity-50">
                     <i class="fa-regular fa-calendar-check fa-2x"></i>
-                 </div>
+                </div>
                 <p class="text-muted small mb-3">Sin configuración de nómina</p>
-                 <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
-                   <i class="fa-solid fa-plus tiny-icon"></i> Configurar
+                <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
+                    <i class="fa-solid fa-plus tiny-icon"></i> Configurar
                 </button>
             </div>
         {% endif %}
@@ -116,16 +111,10 @@
             </button>
         </div>
         <div class="modal-body-custom">
-            
-            <div class="mb-3">
-                 <small class="text-white d-block p-2 rounded" style="background-color: #0d9488;">
-                    Empleado: {{ person.full_name }}
-                 </small>
-            </div>
 
-            <div class="form-group mb-3">
+                <div class="form-group mb-3">
                 <label class="form-label required">Institución Bancaria</label>
-                <select v-model="bankForm.bank" class="input-field select2-wizard-bank">
+                <select v-model="bankForm.bank" name="bank" class="input-field select2-wizard select2-wizard-bank">
                     <option value="">---------</option>
                     {% for b in banks_list %}
                         <option value="{{ b.id }}">{{ b.name }}</option>
@@ -135,40 +124,35 @@
                 <span v-if="bankErrors.bank" class="text-error">[[ bankErrors.bank[0] ]]</span>
             </div>
 
-            <div class="form-group mb-3">
-                 <label class="form-label required">Tipo de Cuenta</label>
-                 <select v-model="bankForm.account_type" class="input-field select2-wizard-bank">
-                        <option value="">---------</option>
-                        {% for t in account_types_list %}
-                            <option value="{{ t.id }}">{{ t.name }}</option>
-                        {% endfor %}
-                 </select>
+                <div class="form-group mb-3">
+                <label class="form-label required">Tipo de Cuenta</label>
+                <select v-model="bankForm.account_type" name="account_type" class="input-field select2-wizard select2-wizard-bank">
+                    <option value="">---------</option>
+                    {% for t in account_types_list %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-             <div class="form-group mb-3">
-                <label class="form-label required">Número de Cuenta</label>
-                <input type="text" v-model="bankForm.account_number" class="input-field" placeholder="Ingrese el número de cuenta">
-            </div>
+                <div class="form-group mb-3">
+                    <label class="form-label required">Número de Cuenta</label>
+                    <input type="text" name="account_number" v-model="bankForm.account_number" class="input-field"
+                           placeholder="Ingrese el número de cuenta">
+                </div>
 
-            <div class="form-group mb-3">
-                <label class="form-label required">Titular de la Cuenta</label>
-                <input type="text" v-model="bankForm.holder_name" class="input-field uppercase-input" placeholder="NOMBRE DEL TITULAR">
-            </div>
-
-             <div class="form-group mb-3">
-                <label class="form-label">Estado de la Cuenta</label>
-                 <div class="form-check">
-                     <input class="form-check-input" type="checkbox" checked disabled>
-                     <label class="form-check-label fw-bold">
-                         Cuenta activa
-                     </label>
-                 </div>
-            </div>
-
+                <div class="form-group mb-3">
+                    <label class="form-label required">Titular de la Cuenta</label>
+                    <input type="text" name="holder_name" v-model="bankForm.holder_name" class="input-field uppercase-input"
+                           placeholder="NOMBRE DEL TITULAR">
+                </div>
         </div>
         <div class="modal-footer-fixed">
-            <button class="btn-save" @click="saveBankAccount({{ person.id }})"><i class="fa-solid fa-floppy-disk me-2"></i>Guardar</button>
-             <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i class="fa-solid fa-xmark me-2"></i>Cancelar</button>
+            <button class="btn-save" @click="saveBankAccount({{ person.id }})"><i
+                    class="fa-solid fa-floppy-disk me-2"></i>Guardar
+            </button>
+            <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i
+                    class="fa-solid fa-xmark me-2"></i>Cancelar
+            </button>
         </div>
     </div>
 </div>
@@ -178,68 +162,73 @@
     <div class="modal-container" style="max-width: 600px;">
         <div class="modal-header modal-header-gradient">
             <h3 class="header-title-main">Configuración de Nómina</h3>
-             <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
+            <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
         <div class="modal-body-custom">
-               <div class="mb-3">
-                 <small class="text-white d-block p-2 rounded" style="background-color: #0d9488;">
-                    Empleado: {{ person.full_name }}
-                 </small>
-            </div>
-
             <h6 class="text-primary mb-3"><i class="fa-solid fa-toggle-on"></i> Estados</h6>
             <div class="grid-2-cols gap-3 mb-4">
-                <div class="border p-3 rounded bg-light">
-                    <div class="form-check">
-                         <input class="form-check-input" type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly">
-                         <label class="form-check-label fw-bold" for="checkMonthly">Mensualiza</label>
+                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="fw-bold">Mensualiza</div>
+                        <small class="text-muted">Marque si el empleado mensualiza décimos</small>
                     </div>
-                     <small class="text-muted d-block mt-1">Marque si el empleado mensualiza décimos</small>
+                    <label class="toggle-switch">
+                        <input type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly" name="monthly_payment">
+                        <span class="toggle-slider"></span>
+                    </label>
                 </div>
-                 <div class="border p-3 rounded bg-light">
-                    <div class="form-check">
-                         <input class="form-check-input" type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve">
-                         <label class="form-check-label fw-bold" for="checkReserve">Fondos de Reserva</label>
+                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="fw-bold">Fondos de Reserva</div>
+                        <small class="text-muted">Marque si acumula fondos de reserva</small>
                     </div>
-                     <small class="text-muted d-block mt-1">Marque si acumula fondos de reserva</small>
+                    <label class="toggle-switch">
+                        <input type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve" name="reserve_funds">
+                        <span class="toggle-slider"></span>
+                    </label>
                 </div>
             </div>
 
             <hr>
 
-             <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Cargas Familiares</h6>
-             <div class="grid-2-cols gap-3 mb-4">
+            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Cargas Familiares</h6>
+            <div class="grid-2-cols gap-3 mb-4">
                 <div class="form-group">
                     <label class="form-label required">Número de Cargas</label>
                     <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
                 </div>
-                 <div class="form-group">
+                <div class="form-group">
                     <label class="form-label required">Educación a Cargo</label>
-                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0" max="20">
+                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
+                           max="20">
                 </div>
-             </div>
+            </div>
 
-             <hr>
+            <hr>
 
-              <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-file-invoice"></i> Información de Roles</h6>
-             <div class="grid-2-cols gap-3 mb-4">
+            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-file-invoice"></i> Información de Roles</h6>
+            <div class="grid-2-cols gap-3 mb-4">
                 <div class="form-group">
                     <label class="form-label">Fecha Ingreso a Roles</label>
                     <input type="date" v-model="payrollForm.roles_entry_date" class="input-field">
                 </div>
-                 <div class="form-group">
+                <div class="form-group">
                     <label class="form-label required">Número de Roles</label>
                     <input type="number" v-model="payrollForm.roles_count" class="input-field" min="0">
                 </div>
-             </div>
+            </div>
 
 
         </div>
         <div class="modal-footer-fixed">
-            <button class="btn-save" @click="savePayrollInfo({{ person.id }})"><i class="fa-solid fa-floppy-disk me-2"></i>Guardar</button>
-             <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i class="fa-solid fa-xmark me-2"></i>Cancelar</button>
+            <button class="btn-save" @click="savePayrollInfo({{ person.id }})"><i
+                    class="fa-solid fa-floppy-disk me-2"></i>Guardar
+            </button>
+            <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i
+                    class="fa-solid fa-xmark me-2"></i>Cancelar
+            </button>
         </div>
     </div>
 </div>

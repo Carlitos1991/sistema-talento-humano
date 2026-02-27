@@ -70,11 +70,13 @@ const app = createApp({
                     }).on('change', function () {
                         const name = $(this).attr('name');
                         const val = $(this).val();
-                        // Sincronización manual según el formulario activo
-                        if (selector.includes('Title')) titleForm.value[name] = val;
-                        if (selector.includes('Experience')) expForm.value[name] = val;
-                        if (selector.includes('Training')) trainForm.value[name] = val;
-                        if (selector.includes('Person')) editForm.value[name] = val;
+                        const lower = selector.toLowerCase();
+                        if (lower.includes('title')) titleForm.value[name] = val;
+                        if (lower.includes('experience')) expForm.value[name] = val;
+                        if (lower.includes('training')) trainForm.value[name] = val;
+                        if (lower.includes('person')) editForm.value[name] = val;
+                        if (lower.includes('bank')) bankForm.value[name] = val;
+                        if (lower.includes('payroll')) payrollForm.value[name] = val;
                     });
                 });
             }, 300);
@@ -503,6 +505,72 @@ const app = createApp({
             }
         };
 
+        const refreshEconomicTab = async (pId) => {
+            try {
+                const pid = pId || appElement.dataset.personId;
+                console.debug('refreshEconomicTab: pid=', pid);
+                // Fetch both bank and payroll summaries
+                const [bankRes, payrollRes] = await Promise.all([
+                    fetch(`/employee/person/${pid}/get-bank-account/`),
+                    fetch(`/employee/person/${pid}/get-payroll-info/`)
+                ]);
+
+                const bankData = await bankRes.json();
+                const payrollData = await payrollRes.json();
+                console.debug('refreshEconomicTab: bankData=', bankData, 'payrollData=', payrollData);
+
+                // Update DOM elements if present
+                if (bankData && bankData.success) {
+                    const b = bankData.data || {};
+                    // Support multiple response shapes
+                    const bankName = b.bank_name || (b.bank && (b.bank.name || b.bank_name)) || '';
+                    const accountTypeName = b.account_type_name || (b.account_type && (b.account_type.name || b.account_type)) || '';
+                    const accountNumber = b.account_number || b.account || '';
+                    const holderName = b.holder_name || b.holder || '';
+                    const isActive = (typeof b.is_active !== 'undefined') ? b.is_active : (b.active || false);
+                    const setText = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : '—';
+                    };
+                    setText('econ_bank_institution', bankName || '—');
+                    setText('econ_bank_type', accountTypeName || '—');
+                    setText('econ_bank_number', accountNumber || '—');
+                    setText('econ_bank_holder', holderName || '—');
+                    const statusEl = document.getElementById('econ_bank_status');
+                    if (statusEl) {
+                        statusEl.textContent = isActive ? 'Activa' : 'Inactiva';
+                        statusEl.classList.remove('active','neutral');
+                        statusEl.classList.add(isActive ? 'active' : 'neutral');
+                    }
+                }
+                else {
+                    console.debug('refreshEconomicTab: bankData missing or success=false', bankData);
+                }
+
+                if (payrollData && payrollData.success) {
+                    const p = payrollData.data || {};
+                    // Update small summary fields in the tab if exist
+                    const setText = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : '—';
+                    };
+                    setText('econ_payroll_monthly', p.monthly_payment ? 'SÍ' : 'NO');
+                    setText('econ_payroll_reserve', p.reserve_funds ? 'ACUMULA' : 'NO ACUMULA');
+                    setText('econ_payroll_family', p.family_dependents ?? '0');
+                    setText('econ_payroll_education', p.education_dependents ?? '0');
+                    setText('econ_payroll_roles_entry', p.roles_entry_date ? new Date(p.roles_entry_date).toLocaleDateString('es-ES') : '—');
+                    // Mantener la pestaña activa en económico
+                    activeTab.value = 'economic';
+                } else {
+                    console.debug('refreshEconomicTab: payrollData missing or success=false', payrollData);
+                }
+            } catch (e) {
+                console.error('Error refreshing economic tab', e);
+            } finally {
+                document.body.classList.remove('no-scroll');
+            }
+        };
+
         const handlePdfUpload = async (event, pId) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -709,10 +777,15 @@ const app = createApp({
                 const result = await response.json();
                 if (result.success && result.data && Object.keys(result.data).length > 0) {
                      bankForm.value = result.data;
-                     // Trigger change for select2
+                     // Set underlying select values so select2 shows the correct items
                      setTimeout(() => {
-                         $('.select2-wizard-bank').trigger('change');
-                     }, 100);
+                         try {
+                             if (bankForm.value.bank) $('.select2-wizard-bank[name="bank"]').val(bankForm.value.bank).trigger('change');
+                             if (bankForm.value.account_type) $('.select2-wizard-bank[name="account_type"]').val(bankForm.value.account_type).trigger('change');
+                         } catch (e) {
+                             console.warn('select2 set value failed', e);
+                         }
+                     }, 120);
                 }
              } catch(e) {
                  console.log("No existing bank data or error fetching it", e);
@@ -743,12 +816,13 @@ const app = createApp({
 
         const saveBankAccount = async (personId) => {
              try {
+                const pid = personId || appElement.dataset.personId;
                 const formData = new FormData();
                 Object.keys(bankForm.value).forEach(key => {
                     formData.append(key, bankForm.value[key] || '');
                 });
 
-                const response = await fetch(`/employee/person/${personId}/add-bank-account/`, {
+                const response = await fetch(`/employee/person/${pid}/add-bank-account/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken')
@@ -758,19 +832,27 @@ const app = createApp({
                 const data = await response.json();
                 if (data.success) {
                     $('#modalBankOverlay').addClass('hidden');
-                    // Reload tab or page
-                    location.reload(); 
+                    // Mensaje de éxito (SweetAlert2 si está disponible)
+                    if (window.Swal) {
+                        Swal.fire({position: 'top-end', icon: 'success', title: data.message || 'Guardado', showConfirmButton: false, timer: 1400});
+                    } else if (window.Toast) {
+                        window.Toast.fire({icon: 'success', title: data.message || 'Guardado'});
+                    }
+                    // Refrescar sólo el tab económico
+                    await refreshEconomicTab(pid);
                 } else {
                     bankErrors.value = data.errors;
                 }
             } catch (error) {
                 console.error(error);
-                alert("Error al guardar cuenta bancaria");
+                if (window.Swal) Swal.fire({position: 'top-end', icon: 'error', title: 'Error al guardar'});
+                else alert("Error al guardar cuenta bancaria");
             }
         };
 
          const savePayrollInfo = async (personId) => {
              try {
+                const pid = personId || appElement.dataset.personId;
                 const formData = new FormData();
                 const form = payrollForm.value;
 
@@ -786,7 +868,7 @@ const app = createApp({
                 // Dates: Send empty string if null, which Django blank=True accepts
                 formData.append('roles_entry_date', form.roles_entry_date || '');
 
-                const response = await fetch(`/employee/person/${personId}/update-payroll-info/`, {
+                const response = await fetch(`/employee/person/${pid}/update-payroll-info/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken')
@@ -796,14 +878,21 @@ const app = createApp({
                 const data = await response.json();
                 if (data.success) {
                     $('#modalPayrollOverlay').addClass('hidden');
-                    location.reload(); 
+                    if (window.Swal) {
+                        Swal.fire({position: 'top-end', icon: 'success', title: data.message || 'Guardado', showConfirmButton: false, timer: 1400});
+                    } else if (window.Toast) {
+                        window.Toast.fire({icon: 'success', title: data.message || 'Guardado'});
+                    }
+                    // Refrescar sólo el tab económico
+                    await refreshEconomicTab(pid);
                 } else {
                     payrollErrors.value = data.errors;
                     console.error("Payroll save errors:", data.errors);
                 }
             } catch (error) {
                 console.error(error);
-                alert("Error al guardar informacion de nomina");
+                if (window.Swal) Swal.fire({position: 'top-end', icon: 'error', title: 'Error al guardar'});
+                else alert("Error al guardar informacion de nomina");
             }
         };
 
@@ -922,13 +1011,13 @@ const app = createApp({
             formatDate, durationBetween,
 
             // Métodos Bancos
-            openBankModal, saveBankAccount, refreshCvTab,
+            openBankModal, saveBankAccount, refreshEconomicTab, refreshCvTab,
 
             // Métodos Nómina
             openPayrollModal, savePayrollInfo,
 
             // Métodos Institucionales
-            institutionalForm, institutionalErrors, openInstitutionalModal, saveInstitutionalData,
+            institutionalForm, institutionalErrors, openInstitutionalModal, saveInstitutionalData, refreshInstitutionalTab,
         };
     }
 });
