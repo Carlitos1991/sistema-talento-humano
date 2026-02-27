@@ -2050,7 +2050,18 @@ input:checked + .toggle-slider:before {
     border: none;
     cursor: pointer;
     white-space: nowrap;
+    line-height: 1.1;
 }
+
+/* Ensure header action buttons (anchor + button) look identical */
+.header-actions-wrapper .btn-header-premium {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+}
+.header-actions-wrapper .btn-header-premium i { font-size: 1rem; }
 
 .btn-header-back {
     background: rgba(255, 255, 255, 0.1);

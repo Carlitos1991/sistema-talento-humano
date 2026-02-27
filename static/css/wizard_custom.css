@@ -327,3 +327,107 @@
 .btn-edit-action.btn-edit-sm i {
     font-size: 0.75rem;
 }
+
+/* =========================================
+   BUDGET TAB - HISTORIAL STYLES
+   ========================================= */
+.budget-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.budget-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 14px 16px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e6edf3;
+    margin-bottom: 10px;
+}
+.budget-history-item + .budget-history-item {
+    margin-top: 10px;
+}
+.budget-history-left {
+    flex: 1 1 auto;
+    padding-right: 12px;
+}
+.budget-history-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 1rem;
+}
+.budget-history-sub {
+    color: #064e3b;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    display: inline-block;
+    background: #ecfdf5; /* light green similar to border */
+    padding: 4px 8px;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(6,78,59,0.03);
+}
+.budget-history-right {
+    flex: 0 0 260px;
+    text-align: right;
+}
+.budget-history-right .budget-history-rem {
+    font-size: 0.98rem;
+}
+
+/* Compact layout for current budget */
+.compact-budget {
+    padding: 10px 14px;
+    background: #ffffff;
+    border-radius: 8px;
+}
+.compact-budget-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.compact-budget-row:last-child { border-bottom: none; }
+.compact-budget-label {
+    color: #0f766e;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+.compact-budget-value {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 68%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.compact-budget-value.text-primary { color: #065f46; }
+
+/* Reduce height of history container to give more vertical space overall */
+.p-3.bg-light.rounded { max-height: 320px; }
+.budget-history-rem {
+    font-weight: 600;
+    color: #0f172a;
+}
+.budget-history-cat {
+    color: #6b7280;
+    font-size: 0.85rem;
+    margin-top: 6px;
+}
+
+/* Scrollbar styling for the history container (light) */
+.p-3.bg-light.rounded {
+    scrollbar-width: thin;
+}
+.p-3.bg-light.rounded::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+.p-3.bg-light.rounded::-webkit-scrollbar-thumb {
+    background: rgba(15,23,42,0.08);
+    border-radius: 8px;
+}
+

@@ -583,6 +583,33 @@ const app = createApp({
                 })).json();
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
+                    // Attempt to update the CV action banner buttons without reloading the page
+                    try {
+                        const wrapper = document.querySelector('.cv-action-banner .header-actions-wrapper');
+                        if (wrapper) {
+                            // Keep the existing file input (Vue attached handler) if present
+                            const fileInput = wrapper.querySelector('#pdfInput');
+                            // Remove existing action buttons
+                            Array.from(wrapper.querySelectorAll('.btn-header-premium')).forEach(n => n.remove());
+
+                            // Determine file URL from response (try multiple possible keys)
+                            const url = (res.data && (res.data.pdf_file && res.data.pdf_file.url)) || res.data?.file_url || res.data?.url || res.file_url || res.url || null;
+
+                            // Build buttons HTML
+                            let buttonsHtml = '';
+                            if (url) {
+                                buttonsHtml += `<a href="${url}" target="_blank" class="btn-header-premium" style="background: #3b82f6; color: white;"><i class="fa-solid fa-eye"></i> VER DOCUMENTO</a>`;
+                            }
+                            buttonsHtml += `<button class="btn-header-premium" style="background: #10b981; color: white;" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-arrows-rotate"></i> ACTUALIZAR</button>`;
+
+                            // Insert after the file input if it exists, otherwise append to wrapper
+                            if (fileInput) fileInput.insertAdjacentHTML('afterend', buttonsHtml);
+                            else wrapper.insertAdjacentHTML('beforeend', buttonsHtml);
+                        }
+                    } catch (e) {
+                        console.warn('Error updating CV banner buttons', e);
+                    }
+                    // Refresh counters and small UI on the CV tab
                     refreshCvTab(pId);
                 }
             } catch (e) {

@@ -1,0 +1,53 @@
+<!-- Mostrar Partida Actual (compacto) -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled" style="border-left: 4px solid #10b981; grid-column: span 3;">
+        <h6 class="section-title" style="color: #059669;"><i class="fa-solid fa-file-contract"></i> Partida Actual</h6>
+        <div class="budget-history-item">
+            <div class="budget-history-left">
+                <div class="budget-history-title">{{ current_partida.name }}</div>
+                <div class="budget-history-sub">
+                    Pl.
+                    {% if current_partida %}{{ current_partida.code }} - Partida {{ current_partida.budget }}{% else %}
+                        Sin partida asignada{% endif %}</div>
+            </div>
+            <div class="budget-history-right">
+                <div class="budget-history-rem">Remuneración:
+                    {% if current_partida %}{{ current_partida.remuneration|default:'—' }}{% else %}—{% endif %}</div>
+                <div class="budget-history-cat">Categoría:
+                    {% if current_partida %}{{ current_partida.category|default:'—' }}{% else %}—{% endif %}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Partidas Asignadas -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled" style="border-left: 4px solid #10b981; grid-column: span 3;">
+        <h6 class="section-title" style="color: #059669;"><i class="fa-solid fa-history"></i> Historial Partidas</h6>
+        <div class="p-3 bg-light rounded" style="max-height: 240px; overflow-y: auto;">
+            {% if partida_history and partida_history|length > 0 %}
+                <div class="budget-history-list">
+                    {% for p in partida_history %}
+                        <div class="budget-history-item">
+                            <div class="budget-history-left">
+                                <div class="budget-history-title">{{ p.position_name|default:p.partida_name|default:'Partida' }}</div>
+                                <div class="budget-history-sub">
+                                    Pl. {{ p.partida_code|default:'Sin partida individual' }} &nbsp;
+                                    Partida: {{ p.code }}</div>
+                            </div>
+                            <div class="budget-history-right">
+                                <div class="budget-history-rem">Remuneración: {{ p.remuneration|default:'0.00' }}</div>
+                                <div class="budget-history-cat">Categoría: {{ p.position_name|default:'-' }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-3 opacity-50">
+                    <i class="fa-solid fa-box-open fa-2x mb-2 text-secondary"></i>
+                    <p class="text-muted mb-0 small">Sin partidas asignadas históricamente.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

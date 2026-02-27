@@ -17,6 +17,7 @@ from person.models import Person
 from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
 from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData
 from budget.models import BudgetLine
+from budget.models import BudgetAssignmentHistory
 
 
 @login_required
@@ -103,6 +104,43 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 })
                 unit = unit.parent
         context['hierarchy_list'] = hierarchy_list
+
+        # Partida presupuestaria actual y su historial
+        try:
+            if employee:
+                # Partida actual (si existe)
+                current = BudgetLine.objects.filter(current_employee=employee).first()
+                if current:
+                    context['current_partida'] = {
+                        'code': current.number_individual,
+                        'budget': current.code,
+                        'name': (current.position_item.name if current.position_item else '') or str(current),
+                        'remuneration': str(current.remuneration) if current.remuneration is not None else '—',
+                        'category': (current.category_item.name if getattr(current, 'category_item', None) else '')
+                    }
+                else:
+                    context['current_partida'] = None
+
+                # Historial de partidas asignadas a este empleado
+                assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line')[
+                              :50]
+                history = []
+                for a in assignments:
+                    bl = a.budget_line
+                    history.append({
+                        'partida_code': bl.number_individual or bl.code,
+                        'position_name': (bl.position_item.name if bl.position_item else ''),
+                        'remuneration': str(bl.remuneration),
+                        'partida_name': str(bl),
+                        'code': bl.code
+                    })
+                context['partida_history'] = history
+            else:
+                context['current_partida'] = None
+                context['partida_history'] = []
+        except Exception:
+            context['current_partida'] = None
+            context['partida_history'] = []
 
         return context
 
@@ -557,9 +595,9 @@ def get_institutional_data_api(request, person_id):
         # Datos derivados de Presupuesto (Solo lectura por ahora)
         current_budget = employee.current_budget_line.first()  # Reverse relation
         regime_name = current_budget.regime_item.name if (
-                    current_budget and current_budget.regime_item) else 'Sin definir'
+                current_budget and current_budget.regime_item) else 'Sin definir'
         position_name = current_budget.position_item.name if (
-                    current_budget and current_budget.position_item) else 'Sin definir'
+                current_budget and current_budget.position_item) else 'Sin definir'
 
         data = {
             'area': employee.area.id if employee.area else None,
@@ -619,7 +657,7 @@ def save_institutional_data_api(request, person_id):
             # Nuevos campos
             collective_contract = request.POST.get('collective_contract')
             inst_data.collective_contract = (
-                        collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
+                    collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
             entry_date = request.POST.get('entry_date')
             inst_data.entry_date = entry_date if entry_date else None
 
@@ -661,7 +699,8 @@ def relocate_employee(request):
         person = get_object_or_404(Person, pk=person_id)
         employee = getattr(person, 'employee_profile', None)
         if not employee:
-            return JsonResponse({'success': False, 'message': 'No se encontró el perfil de empleado para esta persona.'}, status=404)
+            return JsonResponse(
+                {'success': False, 'message': 'No se encontró el perfil de empleado para esta persona.'}, status=404)
         employee.area_id = unit_id
         employee.save()
         return JsonResponse({'success': True, 'message': 'Empleado reubicado correctamente.'})

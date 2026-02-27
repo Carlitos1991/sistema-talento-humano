@@ -81,6 +81,11 @@
                 {% include 'employee/partials/wizard/tab_institutional_data.html' %}
             </div>
 
+            <!-- PESTAÑA: PARTIDA PRESUPUESTARIA -->
+            <div v-if="activeTab === 'budget'">
+                {% include 'employee/partials/wizard/tab_budget_data.html' %}
+            </div>
+
         </div>
         {% include 'employee/modals/modal_person_edit_wizard.html' %}
         {% include 'employee/modals/modal_academic_title.html' %}
