@@ -86,15 +86,41 @@
                 {% include 'employee/partials/wizard/tab_budget_data.html' %}
             </div>
 
+            <!-- PESTAÑA: CONTRATOS -->
+            <div v-if="activeTab === 'contracts'">
+                {% include 'employee/partials/wizard/tab_contracts_data.html' %}
+            </div>
+
+            <!-- PESTAÑA: ACCIONES DE PERSONAL -->
+            <div v-if="activeTab === 'actions'">
+                {% include 'employee/partials/wizard/tab_actions_personal.html' %}
+            </div>
+
+            <!-- PESTAÑA: PERMISOS -->
+            <div v-if="activeTab === 'permissions'">
+                {% include 'employee/partials/wizard/tab_permissions_data.html' %}
+            </div>
+
         </div>
         {% include 'employee/modals/modal_person_edit_wizard.html' %}
         {% include 'employee/modals/modal_academic_title.html' %}
         {% include 'employee/modals/modal_work_experience.html' %}
         {% include 'employee/modals/modal_training.html' %}
         {% include 'employee/modals/modal_cv_generic_list.html' %}
+        
     </div>
+        {# Incluir modal de detalle de contrato y una pequeña instancia Vue para manejarlo fuera del main Vue root #}
+        <div id="period-app-employee">
+            {% include 'contract/modals/modal_management_period_detail.html' %}
+        </div>
+        <div id="permission-modal-employee"></div>
+        <div id="action-modal-employee"></div>
+
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
     <script src="{% static 'js/employee_wizard.js' %}"></script>
+    <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
+    <script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
 {% endblock %}

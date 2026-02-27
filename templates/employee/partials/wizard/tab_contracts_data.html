@@ -1,0 +1,70 @@
+<!-- Partida Contratos - Pestaña de Contratos -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled info-box-accent-gold" style="grid-column: span 3;">
+        <h6 class="section-title section-title-accent-gold"><i class="fa-solid fa-file-contract"></i> Contrato Actual</h6>
+        {% if current_contract %}
+            <div class="budget-history-item">
+                <div class="budget-history-left">
+                        <div class="budget-history-title">
+                            <a href="#" class="open-contract contract-title-link" data-id="{{ current_contract.id }}">{{ current_contract.position_name|default:current_contract.document_number }}</a>
+                        </div>
+                    <div class="budget-history-sub">Tipo: {{ current_contract.contract_type_name }} &nbsp; | &nbsp; Unidad: {{ current_contract.administrative_unit }}</div>
+                </div>
+                <div class="budget-history-right" style="display:flex;flex-direction:column;align-items:flex-end">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div class="budget-history-rem">Estado: <span class="status-badge">{{ current_contract.status_name }}</span></div>
+                        {% if current_contract.signed_document_url %}
+                            <a href="{{ current_contract.signed_document_url }}" class="btn btn-sm btn-outline" target="_blank" download title="Descargar contrato">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="budget-history-cat" style="margin-top:6px">Período: {{ current_contract.start_date|default:'—' }}{% if current_contract.end_date %} - {{ current_contract.end_date }}{% endif %}</div>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-3 opacity-60">
+                <i class="fa-solid fa-file-circle-xmark fa-2x mb-2 text-secondary"></i>
+                <p class="text-muted mb-0 small">Sin contrato vigente.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Historial de Contratos -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled info-box-accent-gold" style="grid-column: span 3;">
+        <h6 class="section-title section-title-accent-gold"><i class="fa-solid fa-history"></i> Historial de Contratos</h6>
+        <div class="p-3 bg-light rounded" style="max-height: 260px; overflow-y: auto;">
+            {% if contract_history and contract_history|length > 0 %}
+                <div class="budget-history-list">
+                    {% for c in contract_history %}
+                        <div class="budget-history-item">
+                            <div class="budget-history-left">
+                                <div class="budget-history-title">
+                                    <a href="#" class="open-contract contract-title-link" data-id="{{ c.id }}">{{ c.position_name|default:c.document_number|default:'Contrato' }}</a>
+                                </div>
+                                <div class="budget-history-sub">Tipo: {{ c.contract_type_name|default:'—' }} &nbsp; | &nbsp; Unidad: {{ c.administrative_unit|default:'—' }}</div>
+                            </div>
+                            <div class="budget-history-right">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="budget-history-cat">Período: {{ c.start_date|default:'—' }}{% if c.end_date %} - {{ c.end_date }}{% endif %}</div>
+                                    {% if c.signed_document_url %}
+                                        <a href="{{ c.signed_document_url }}" class="btn btn-sm btn-outline" target="_blank" download title="Descargar contrato">
+                                            <i class="fa-solid fa-download"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-3 opacity-50">
+                    <i class="fa-solid fa-box-open fa-2x mb-2 text-secondary"></i>
+                    <p class="text-muted mb-0 small">No hay historial de contratos.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

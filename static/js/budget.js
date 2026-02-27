@@ -15,7 +15,7 @@ const Toast = Swal.mixin({
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Budget.js: DOMContentLoaded ejecutado');
+    
     
     // NO hacer fetchBudgets en la carga inicial, solo actualizar paginación del HTML ya renderizado
     // if (window.fetchBudgets) window.fetchBudgets();

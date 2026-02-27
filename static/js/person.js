@@ -249,6 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const [key, value] of Object.entries(activeFilters.value)) {
                     if (value) params.append(key, value);
                 }
+                // Capturar la query usada en esta petición para evitar sobrescribir
+                // el input si el usuario ya escribió algo distinto mientras se cargaba
+                const requestQuery = activeFilters.value && activeFilters.value.q ? String(activeFilters.value.q) : '';
                 // Añadir parámetros de ordenamiento si existen
                 if (window._personExport && window._personExport.sort && window._personExport.sort.field) {
                     params.append('sort_field', window._personExport.sort.field);
@@ -304,8 +307,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
                             const searchInput = document.getElementById('searchInput');
-                            if (searchInput && activeFilters.value.q) {
-                                searchInput.value = activeFilters.value.q;
+                            if (searchInput) {
+                                // Si el usuario no ha modificado el campo desde que se lanzó
+                                // la petición (o está vacío), podemos restablecerlo al valor
+                                // de la query de la petición. Evitar sobrescribir si el
+                                // valor actual difiere (usuario escribió más texto).
+                                const currentVal = searchInput.value || '';
+                                if (requestQuery === '' ) {
+                                    // Si la petición no llevaba q, no hacemos overwrite
+                                } else if (currentVal === '' || currentVal === requestQuery) {
+                                    searchInput.value = requestQuery;
+                                }
                             }
                             // Reinsertar botones Excel/PDF sobre la nueva tabla
                             if (typeof addExportButtonsToTables === 'function') {

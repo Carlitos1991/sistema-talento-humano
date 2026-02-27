@@ -743,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Ajuste según estructura de tu API (si devuelve .data o el array directo)
                             this.currentUnitDeliverables = result.success ? result.data : result;
 
-                            console.log("Entregables actualizados para unidad:", unitId, this.currentUnitDeliverables);
+                            
                         } catch (e) {
                             console.error("Error cargando entregables:", e);
                             this.currentUnitDeliverables = [];
@@ -814,14 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
-                        console.log('Filtros aplicados (convertidos a números):', {
-                            roleId,
-                            instructionId,
-                            experienceMonths,
-                            decisionId,
-                            impactId,
-                            complexityId
-                        });
+                        
 
                         // Filtrar la matriz - TODOS los campos deben coincidir exactamente (comparación numérica)
                         this.filteredMatrix = this.catalogs.matrix.filter(m => {
@@ -836,22 +829,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 matchDecision && matchImpact && matchComplexity;
 
                             if (matchComplexity) {
-                                console.log(`Registro ${m.occupational_group}-G${m.grade}:`, {
-                                    'Rol': matchRole ? '✓' : `✗ (esperado: ${roleId}, tiene: ${m.required_role_id})`,
-                                    'Instrucción': matchInstruction ? '✓' : `✗ (esperado: ${instructionId}, tiene: ${m.minimum_instruction_id})`,
-                                    'Experiencia': matchExperience ? '✓' : `✗ (esperado: ${experienceMonths}, tiene: ${m.minimum_experience_months})`,
-                                    'Decisión': matchDecision ? '✓' : `✗ (esperado: ${decisionId}, tiene: ${m.required_decision_id})`,
-                                    'Impacto': matchImpact ? '✓' : `✗ (esperado: ${impactId}, tiene: ${m.required_impact_id})`,
-                                    'Complejidad': matchComplexity ? '✓' : '✗',
-                                    'PASA': passAll ? 'SÍ ✓' : 'NO ✗'
-                                });
+                                
                             }
 
                             return passAll;
                         });
 
-                        console.log('Matriz filtrada:', this.filteredMatrix);
-                        console.log('Total resultados:', this.filteredMatrix.length);
+                        
 
                         if (this.filteredMatrix.length === 0) {
                             console.warn('No se encontraron registros que coincidan con todos los criterios');

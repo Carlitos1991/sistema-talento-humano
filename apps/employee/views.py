@@ -18,6 +18,10 @@ from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
 from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData
 from budget.models import BudgetLine
 from budget.models import BudgetAssignmentHistory
+from contract.models import ManagementPeriod
+from permitrequest.models import PermitRequest
+from personnel_actions.models import PersonnelAction
+from django.urls import reverse
 
 
 @login_required
@@ -122,8 +126,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     context['current_partida'] = None
 
                 # Historial de partidas asignadas a este empleado
-                assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line')[
-                              :50]
+                assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line')
                 history = []
                 for a in assignments:
                     bl = a.budget_line
@@ -141,6 +144,118 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         except Exception:
             context['current_partida'] = None
             context['partida_history'] = []
+
+        # Contrato actual y historial de contratos
+        try:
+            if employee:
+                latest = ManagementPeriod.objects.filter(employee=employee).order_by('-start_date').first()
+                if latest and latest.is_currently_active:
+                    current_contract = latest
+                else:
+                    current_contract = latest
+
+                if current_contract:
+                    context['current_contract'] = {
+                        'id': current_contract.id,
+                        'document_number': current_contract.document_number,
+                        'position_name': current_contract.budget_line.position_item.name if getattr(current_contract, 'budget_line', None) and getattr(current_contract.budget_line, 'position_item', None) else '',
+                        'contract_type_name': str(current_contract.contract_type) if current_contract.contract_type else '',
+                        'start_date': current_contract.start_date.strftime('%d/%m/%Y') if current_contract.start_date else '',
+                        'end_date': current_contract.end_date.strftime('%d/%m/%Y') if current_contract.end_date else '',
+                        'administrative_unit': current_contract.administrative_unit.name if current_contract.administrative_unit else '',
+                        'status_name': current_contract.status.name if current_contract.status else '',
+                        'signed_document_url': current_contract.signed_document.url if getattr(current_contract, 'signed_document', None) else None
+                    }
+                else:
+                    context['current_contract'] = None
+
+                periods = ManagementPeriod.objects.filter(employee=employee).select_related('contract_type', 'status', 'administrative_unit').order_by('-start_date')[:50]
+                ch = []
+                for per in periods:
+                    ch.append({
+                        'id': per.id,
+                        'document_number': per.document_number,
+                        'position_name': per.budget_line.position_item.name if getattr(per, 'budget_line', None) and getattr(per.budget_line, 'position_item', None) else '',
+                        'contract_type_name': str(per.contract_type) if per.contract_type else '',
+                        'start_date': per.start_date.strftime('%d/%m/%Y') if per.start_date else '',
+                        'end_date': per.end_date.strftime('%d/%m/%Y') if per.end_date else '',
+                        'administrative_unit': per.administrative_unit.name if per.administrative_unit else '',
+                        'status_name': per.status.name if per.status else '',
+                        'signed_document_url': per.signed_document.url if getattr(per, 'signed_document', None) else None
+                    })
+                context['contract_history'] = ch
+            else:
+                context['current_contract'] = None
+                context['contract_history'] = []
+        except Exception:
+            context['current_contract'] = None
+            context['contract_history'] = []
+
+        # Permiso actual y historial de permisos (vacaciones/horas/otros)
+        try:
+            if employee:
+                latest_perm = PermitRequest.objects.filter(employee=employee).order_by('-start_date', '-created_at').first()
+                if latest_perm:
+                    context['current_permission'] = {
+                        'id': latest_perm.id,
+                        'permit_type': latest_perm.permit_type.name if latest_perm.permit_type else str(latest_perm.permit_type),
+                        'start_date': latest_perm.start_date if latest_perm.start_date else None,
+                        'end_date': latest_perm.end_date if latest_perm.end_date else None,
+                        'status': dict(PermitRequest.STATUS_CHOICES).get(latest_perm.status, latest_perm.status),
+                        'status_code': latest_perm.status,
+                        'days': latest_perm.days,
+                        'hours': latest_perm.hours,
+                        'justification_file_url': latest_perm.justification_file.url if getattr(latest_perm, 'justification_file', None) else None
+                    }
+                else:
+                    context['current_permission'] = None
+
+                perms = PermitRequest.objects.filter(employee=employee).order_by('-start_date')[:50]
+                ph = []
+                for p in perms:
+                    ph.append({
+                        'id': p.id,
+                        'permit_type': p.permit_type.name if p.permit_type else '',
+                        'start_date': p.start_date if p.start_date else None,
+                        'end_date': p.end_date if p.end_date else None,
+                        'status': dict(PermitRequest.STATUS_CHOICES).get(p.status, p.status),
+                        'status_code': p.status,
+                        'days': p.days,
+                        'hours': p.hours,
+                        'justification_file_url': p.justification_file.url if getattr(p, 'justification_file', None) else None
+                    })
+                context['permissions_history'] = ph
+            else:
+                context['current_permission'] = None
+                context['permissions_history'] = []
+        except Exception:
+            context['current_permission'] = None
+            context['permissions_history'] = []
+
+        # Acciones de personal (historial)
+        try:
+            if employee:
+                actions_qs = PersonnelAction.objects.filter(employee=employee).select_related('action_type').order_by('-date_issue')[:50]
+                actions_list = []
+                for a in actions_qs:
+                    mv = a.movement.first() if hasattr(a, 'movement') else None
+                    from_area = mv.previous_unit.name if mv and mv.previous_unit else ''
+                    to_area = mv.new_unit.name if mv and mv.new_unit else ''
+                    actions_list.append({
+                        'id': a.pk,
+                        'number': a.number,
+                        'action_name': a.action_type.name if a.action_type else '',
+                        'from_area': from_area,
+                        'to_area': to_area,
+                        'issued_date': a.date_issue,
+                        'effective_date': a.date_effective,
+                        'document_url': reverse('personnel_actions:action_pdf', args=[a.pk])
+                    })
+                context['actions_list'] = actions_list
+            else:
+                context['actions_list'] = []
+        except Exception:
+            context['actions_list'] = []
 
         return context
 

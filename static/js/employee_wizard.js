@@ -144,7 +144,7 @@ const app = createApp({
                 initSelect2(selector);
                 // Pequeña espera para asegurar que Vue haya aplicado los datos y luego refrescar selects
                 setTimeout(() => refreshSelect2(selector), 200);
-                console.debug('openModal edit:', type, action, 'selector:', selector);
+                
             } else if(action === 'edit' && type === 'payroll') {
                  // Similar to bank
                  $(selector).removeClass('hidden');
@@ -254,7 +254,7 @@ const app = createApp({
                 class: 'employee-detail-button-budget'
             },
             {
-                id: 'history',
+                id: 'contracts',
                 name: 'Historia Lab.',
                 icon: 'fa-solid fa-clock-rotate-left',
                 class: 'employee-detail-button-history'
@@ -321,7 +321,7 @@ const app = createApp({
                 const res = await (await fetch(`/employee/api/cv/detail/${type}/${id}/`)).json();
                     if (res.success) {
                         $('#modalCVListOverlay').addClass('hidden');
-                        console.debug('handleEditCvItem loaded data for', type, res.data);
+                        
                         if (type === 'academic') {
                             titleForm.value = res.data;
                             openModal('academic', 'edit');
@@ -426,7 +426,7 @@ const app = createApp({
 
         const refreshCvTab = async (pId) => {
             // En lugar de reemplazar todo el HTML, actualizar solo los contadores
-            console.log('refreshCvTab: Actualizando estadísticas reactivamente');
+            
             try {
                 // Obtener la persona actualizada para los contadores
                 const [titlesRes, expRes, trainRes] = await Promise.all([
@@ -453,7 +453,7 @@ const app = createApp({
                     personStats.value.courses = trainData.items.length;
                 }
                 
-                console.log('refreshCvTab: Estadísticas actualizadas', personStats.value);
+                
             } catch (e) {
                 console.error('Error actualizando estadísticas:', e);
             }
@@ -508,7 +508,7 @@ const app = createApp({
         const refreshEconomicTab = async (pId) => {
             try {
                 const pid = pId || appElement.dataset.personId;
-                console.debug('refreshEconomicTab: pid=', pid);
+                
                 // Fetch both bank and payroll summaries
                 const [bankRes, payrollRes] = await Promise.all([
                     fetch(`/employee/person/${pid}/get-bank-account/`),
@@ -517,7 +517,7 @@ const app = createApp({
 
                 const bankData = await bankRes.json();
                 const payrollData = await payrollRes.json();
-                console.debug('refreshEconomicTab: bankData=', bankData, 'payrollData=', payrollData);
+                
 
                 // Update DOM elements if present
                 if (bankData && bankData.success) {
@@ -544,7 +544,7 @@ const app = createApp({
                     }
                 }
                 else {
-                    console.debug('refreshEconomicTab: bankData missing or success=false', bankData);
+                    
                 }
 
                 if (payrollData && payrollData.success) {
@@ -562,7 +562,7 @@ const app = createApp({
                     // Mantener la pestaña activa en económico
                     activeTab.value = 'economic';
                 } else {
-                    console.debug('refreshEconomicTab: payrollData missing or success=false', payrollData);
+                    
                 }
             } catch (e) {
                 console.error('Error refreshing economic tab', e);
@@ -747,14 +747,14 @@ const app = createApp({
         };
 
         const editItem = (item) => {
-            console.debug('editItem called', currentListType.value, item);
+            
             if (currentListType.value && item) {
                 handleEditCvItem(currentListType.value, item.id);
             }
         };
 
         const deleteItem = (item) => {
-             console.debug('deleteItem called', currentListType.value, item);
+             
              if (currentListType.value && item) {
                 handleDeleteCvItem(currentListType.value, item.id);
             }
@@ -815,7 +815,7 @@ const app = createApp({
                      }, 120);
                 }
              } catch(e) {
-                 console.log("No existing bank data or error fetching it", e);
+                 
              }
 
              $('#modalBankOverlay').removeClass('hidden');
@@ -835,7 +835,7 @@ const app = createApp({
                     payrollForm.value = result.data;
                 }
              } catch (e) {
-                 console.log("No existing payroll data", e);
+                 
              }
 
              $('#modalPayrollOverlay').removeClass('hidden');

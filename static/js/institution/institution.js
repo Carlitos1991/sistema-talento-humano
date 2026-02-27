@@ -344,7 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. ASIGNAR JEFE
     // =============================================================================
     window.openAssignBoss = async function (unitId) {
-        console.log('click openAssignBoss', unitId);
         let modalContainer = document.getElementById('assign-boss-modal-container');
         if (!modalContainer) {
             modalContainer = document.createElement('div');
@@ -359,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = await res.text();
             modalContainer.firstElementChild.innerHTML = html;
             modalContainer.style.display = 'flex';
-            console.log('Modal debería estar visible');
             document.body.classList.add('modal-open');
             modalContainer.dataset.unitId = unitId;
 

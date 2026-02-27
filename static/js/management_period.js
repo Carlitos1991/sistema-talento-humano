@@ -109,8 +109,6 @@ const periodApp = createApp({
         },
         // --- MÉTODOS DE BÚSQUEDA ---
         openSearchModal() {
-            console.log("Iniciando secuencia de apertura...");
-
             // Forzamos la actualización del estado
             this.showAdvancedModal = true;
             document.body.classList.add('no-scroll');
@@ -120,7 +118,6 @@ const periodApp = createApp({
             this.loading = true;
             this.$nextTick(() => {
                 this.loading = false;
-                console.log("DOM actualizado: Modal de búsqueda debería ser visible.");
             });
         },
         closeAdvancedModal() {

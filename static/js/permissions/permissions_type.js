@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (viewSubsModalBtn) {
                 e.preventDefault();
                 const parentId = viewSubsModalBtn.dataset.parentId;
-                console.log('Click en ver subitems, parentId:', parentId, 'vmSubtypeList existe:', !!window.vmSubtypeList);
+                
                 if (window.vmSubtypeList && parentId) {
                     window.vmSubtypeList.open(parentId);
                 } else if (!window.vmSubtypeList) {

@@ -196,10 +196,7 @@ const biometricApp = createApp({
             try {
                 const response = await fetch(`/biometric/get-device-time/${id}/`);
 
-                console.log('Response status:', response.status);
-
                 const data = await response.json();
-                console.log('Data recibida:', data);
 
                 // Si la respuesta no es exitosa, mostrar error
                 if (!response.ok || !data.success) {
@@ -255,9 +252,7 @@ const biometricApp = createApp({
                 };
 
                 // Abrir el modal
-                console.log('Abriendo modal, showTimeModal:', this.showTimeModal);
                 this.showTimeModal = true;
-                console.log('Modal abierto, showTimeModal:', this.showTimeModal);
 
             } catch (e) {
                 console.error('Error en openModalTime:', e);
@@ -282,11 +277,7 @@ const biometricApp = createApp({
             fd.append('mode', this.timeForm.mode);
             fd.append('new_time', this.timeForm.custom_time);
 
-            console.log('Enviando actualización de hora:', {
-                id: this.timeForm.id,
-                mode: this.timeForm.mode,
-                custom_time: this.timeForm.custom_time
-            });
+            
 
             try {
                 const response = await fetch(`/biometric/update-device-time/${this.timeForm.id}/`, {
@@ -297,9 +288,7 @@ const biometricApp = createApp({
                     body: fd
                 });
 
-                console.log('Response status:', response.status);
                 const result = await response.json();
-                console.log('Response data:', result);
 
                 if (response.ok && result.status === 'success') {
                     Swal.fire({

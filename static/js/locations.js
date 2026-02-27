@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                         this.parentNameDisplay = parentData.name;
                         
-                        console.log('Creando hijo de:', parentData.name, '- Nivel padre:', parentData.level, '- Nuevo nivel:', nextLevel);
+                        
                     } else {
                         // Sin padre = crear país (nivel 1)
                         this.form = {name: '', level: 1, parent: ''};

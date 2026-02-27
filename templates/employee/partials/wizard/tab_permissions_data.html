@@ -33,16 +33,6 @@
                             </div>
                             <div class="budget-history-right">
                                 <div class="permission-action-group">
-                                    {% comment %} Mostrar descarga solo si existe un justificativo (no vacío) {% endcomment %}
-                                    {% if p.justification_file_url and 'pdf' in p.justification_file_url|lower %}
-                                        <a href="{{ p.justification_file_url }}"
-                                           class="btn btn-sm btn-outline btn-action-download" target="_blank"
-                                           rel="noopener noreferrer" title="Abrir justificativo PDF">
-                                            <i class="fa-solid fa-download" aria-hidden="true"></i>
-                                            <span class="sr-only">Abrir justificativo PDF</span>
-                                        </a>
-                                    {% endif %}
-
                                     {% if p.status_code == 'APPROVED' %}
                                         <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
                                            class="btn btn-sm btn-outline btn-action-print" title="Imprimir reporte">

@@ -540,11 +540,11 @@ th.sortable:hover .sort-icon {
 }
 
 .vacation-stat-card.border-orange {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid #6b3e2d;
 }
 
 .vacation-stat-card.border-cyan {
-    border-left: 4px solid #06b6d4;
+    border-left: 4px solid #6b3e2d;
 }
 
 .vacation-stat-card.border-green {
@@ -684,11 +684,11 @@ th.sortable:hover .sort-icon {
 }
 
 .stat-card-title-orange {
-    color: #f59e0b;
+    color: #6b3e2d;
 }
 
 .stat-card-icon-orange {
-    color: #f59e0b;
+    color: #6b3e2d;
 }
 
 .stat-card-title-green {
@@ -700,11 +700,11 @@ th.sortable:hover .sort-icon {
 }
 
 .stat-card-title-cyan {
-    color: #06b6d4;
+    color: #6b3e2d;
 }
 
 .stat-card-icon-cyan {
-    color: #06b6d4;
+    color: #6b3e2d;
 }
 
 /* Contenedor de botones de permiso */
@@ -718,7 +718,7 @@ th.sortable:hover .sort-icon {
 }
 
 .permit-icon-btn {
-    background: #f59e0b;
+    background: #b08b61;
     color: white;
     width: 40px;
     height: 40px;
@@ -769,13 +769,13 @@ th.sortable:hover .sort-icon {
 
 /* Botones de estadísticas */
 .stat-btn-orange {
-    background: #f59e0b;
+    background: #6b3e2d;
     color: white;
     width: 100%;
 }
 
 .stat-btn-cyan {
-    background: #06b6d4;
+    background: #6b3e2d;
     color: white;
 }
 
