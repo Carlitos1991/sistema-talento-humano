@@ -207,15 +207,28 @@ function addExportButtonsToTables() {
 
         // Closure sobre la tabla actual — no buscar en el DOM de nuevo
         (function (t) {
-            btnContainer.querySelector('.btn-export-excel').onclick = function () {
-                exportTableToExcel(t);
-            };
-            btnContainer.querySelector('.btn-export-pdf').onclick = function () {
-                exportTableToPDF(t);
-            };
+            const excelBtn = btnContainer.querySelector('.btn-export-excel');
+            const pdfBtn = btnContainer.querySelector('.btn-export-pdf');
+            if (excelBtn) {
+                excelBtn.addEventListener('click', function (e) {
+                    exportTableToExcel(t);
+                });
+            }
+            if (pdfBtn) {
+                pdfBtn.addEventListener('click', function (e) {
+                    exportTableToPDF(t);
+                });
+            }
         })(table);
         controls.insertBefore(btnContainer, controls.firstChild);
     });
 }
 
-document.addEventListener('DOMContentLoaded', addExportButtonsToTables);
+// Try to initialize export buttons safely: if DOMContentLoaded already passed, call immediately.
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    try { addExportButtonsToTables(); } catch(e){ console.warn('table-export init failed', e); }
+} else {
+    document.addEventListener('DOMContentLoaded', function(){ try { addExportButtonsToTables(); } catch(e){ console.warn('table-export init failed', e); } });
+}
+
+// debug badge removed

@@ -1,17 +1,138 @@
 // Init TableManager for tables loaded after DOMContentLoaded, attach export fallbacks,
 // and handle AJAX modal opening for action detail.
 (function(){
+
     function initTables() {
         document.querySelectorAll('.managed-table').forEach(function(table){
-            if (!table._tableManager && window.TableManager) {
-                try { new TableManager(table); } catch(e){ console.warn('TableManager init failed', e); }
+            if (!table._tableManager) {
+                try {
+                    if (window.TableManager) {
+                        // Use explicit window.TableManager to avoid scope issues
+                        table._tableManager = new window.TableManager(table);
+                    } else {
+                        // try fallback to global identifier
+                        table._tableManager = new TableManager ? new TableManager(table) : null;
+                    }
+                } catch(e){ console.warn('TableManager init failed', e); }
             }
         });
         if (window.addExportButtonsToTables) {
             try { addExportButtonsToTables(); } catch(e){ console.warn('addExportButtonsToTables failed', e); }
         }
         attachExportFallbacks();
+        // initialization complete
     }
+
+    // quick diagnostics removed in production
+
+    // Ensure TableManager is ready: retry if script loaded later
+    function ensureTableManagerInit(retries = 10, delay = 150) {
+        let attempts = 0;
+        const iv = setInterval(() => {
+            attempts += 1;
+            const tables = document.querySelectorAll('.managed-table');
+            if (window.TableManager) {
+                tables.forEach(t => { if (!t._tableManager) { try { new TableManager(t); } catch(e){ console.warn('TableManager init failed on retry', e); } } });
+                if (window.addExportButtonsToTables) {
+                    try { addExportButtonsToTables(); } catch(e){ console.warn('addExportButtonsToTables failed on retry', e); }
+                }
+                attachExportFallbacks();
+                // ready
+                clearInterval(iv);
+                return;
+            }
+            if (attempts >= retries) {
+                clearInterval(iv);
+                console.warn('TableManager not available after retries');
+            }
+        }, delay);
+    }
+
+    // Global fallback: delegated handlers if per-table listeners weren't attached
+    function attachGlobalFallbacks() {
+        // Export buttons fallback
+        document.addEventListener('click', function(e){
+            const bex = e.target.closest('.btn-export-excel');
+            const bpdf = e.target.closest('.btn-export-pdf');
+            if (bex) {
+                const wrapper = bex.closest('.content-table');
+                const table = wrapper ? wrapper.querySelector('.exportable-table') : document.querySelector('.exportable-table');
+                if (table) {
+                    try { exportTableToExcel(table); } catch(err){ console.warn('Global fallback export excel failed', err); }
+                }
+            }
+            if (bpdf) {
+                const wrapper = bpdf.closest('.content-table');
+                const table = wrapper ? wrapper.querySelector('.exportable-table') : document.querySelector('.exportable-table');
+                if (table) {
+                    try { exportTableToPDF(table); } catch(err){ console.warn('Global fallback export pdf failed', err); }
+                }
+            }
+        });
+
+        // Search input fallback: delegated input handler
+        document.addEventListener('input', function(e){
+            if (!e.target.matches || !e.target.matches('.table-search-input')) return;
+            const input = e.target;
+            const wrapper = input.closest('.content-table');
+            const table = wrapper ? wrapper.querySelector('.managed-table') : document.querySelector('.managed-table');
+            if (!table) return;
+            let manager = table._tableManager;
+            // If manager missing but constructor available, create it on-demand
+            if (!manager && window.TableManager) {
+                try { table._tableManager = new window.TableManager(table); manager = table._tableManager; } catch(err){ console.warn('create TableManager on-demand failed', err); }
+            }
+            if (manager) {
+                manager.filterState.search = input.value.toLowerCase().trim();
+                manager.applyGlobalFilters();
+            }
+        });
+    }
+
+    // Helper: attach close listeners to known selectors inside the injected modal (top-level)
+    function attachModalCloseBindings(container) {
+        try {
+            // Delegated click handler on the container: covers many variants and dynamically-added controls
+            const clickHandler = function(ev){
+                try {
+                    const target = ev.target;
+                    const box = container.querySelector('.modal-box');
+                    // If clicked an explicit close control
+                    const closeSel = target.closest('.modal-close, .js-close-detail-modal, [data-dismiss="modal"], [data-bs-dismiss], .close, .btn-close, [aria-label="Close"]');
+                    if (closeSel) {
+                        ev.preventDefault();
+                        container.innerHTML = '';
+                        document.body.classList.remove('no-scroll');
+                        cleanup();
+                        return;
+                    }
+                    // If clicked outside the modal box but inside overlay → close
+                    const overlay = target.closest('.modal-overlay');
+                    if (overlay && box && !target.closest('.modal-box')) {
+                        ev.preventDefault();
+                        container.innerHTML = '';
+                        document.body.classList.remove('no-scroll');
+                        cleanup();
+                        return;
+                    }
+                } catch(e){ console.warn('modal delegated click handler error', e); }
+            };
+
+            const escHandler = function(ev){ if (ev.key === 'Escape') { container.innerHTML = ''; document.body.classList.remove('no-scroll'); cleanup(); } };
+
+            function cleanup(){
+                try { container.removeEventListener('click', clickHandler); } catch(_){}
+                try { document.removeEventListener('keydown', escHandler); } catch(_){}
+            }
+
+            // Attach
+            container.addEventListener('click', clickHandler);
+            document.addEventListener('keydown', escHandler);
+        } catch (e) { console.warn('attachModalCloseBindings failed', e); }
+    }
+
+    // diagnostics removed
+
 
     function getTableDataForCSV(table) {
         const rows = [];
@@ -113,6 +234,8 @@
                     }
                     container.innerHTML = `<div class="modal-overlay"><div class="modal-box">${html}<button class="modal-close">Cerrar</button></div></div>`;
                     document.body.classList.add('no-scroll');
+                    // Attach explicit close listeners to any close controls inside injected HTML
+                    attachModalCloseBindings(container);
                 }).catch(err=>{
                     console.error('Error cargando detalle de acción', err);
                     // Try fetch text fallback
@@ -121,13 +244,14 @@
                         if (!container) { container = document.createElement('div'); container.id='action-modal-employee'; document.body.appendChild(container); }
                         container.innerHTML = `<div class="modal-overlay"><div class="modal-box">${t}<button class="modal-close">Cerrar</button></div></div>`;
                         document.body.classList.add('no-scroll');
+                        attachModalCloseBindings(container);
                     });
                 });
         });
 
         // Close handler: support multiple variants (.modal-close, [data-dismiss], .close)
         document.addEventListener('click', function(e){
-            const clickedClose = e.target.closest('.modal-close') || e.target.closest('[data-dismiss="modal"]') || e.target.closest('.close');
+            const clickedClose = e.target.closest('.modal-close') || e.target.closest('.js-close-detail-modal') || e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss]') || e.target.closest('.close') || e.target.closest('.btn-close');
             const overlay = e.target.closest('.modal-overlay');
             const box = e.target.closest('.modal-box');
             // Close when explicit close clicked OR when clicking overlay outside the box
@@ -137,12 +261,14 @@
                 document.body.classList.remove('no-scroll');
             }
         });
+
+        // (modal binding is implemented at top-level attachModalCloseBindings)
     }
 
     // Run on load (if DOMContentLoaded already passed, run immediately)
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(()=>{ initTables(); attachActionModalHandler(); }, 50);
+        setTimeout(()=>{ initTables(); attachActionModalHandler(); ensureTableManagerInit(); attachGlobalFallbacks(); }, 50);
     } else {
-        document.addEventListener('DOMContentLoaded', function(){ initTables(); attachActionModalHandler(); });
+        document.addEventListener('DOMContentLoaded', function(){ initTables(); attachActionModalHandler(); ensureTableManagerInit(); attachGlobalFallbacks(); });
     }
 })();

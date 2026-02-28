@@ -52,13 +52,6 @@ class TableManager {
     }
 
     // ─── FILTROS ──────────────────────────────────────────────────────────────
-
-    filterByColumnData(dataAttribute, value) {
-        this.filterState.column = dataAttribute;
-        this.filterState.value = value;
-        this.applyGlobalFilters();
-    }
-
     applyGlobalFilters() {
         let result = [...this.originalRows];
 
@@ -90,14 +83,25 @@ class TableManager {
         headers.forEach((th, index) => {
             if (th.classList.contains('no-sort')) return;
             th.classList.add('sortable-header');
+            // Añadir el indicador de orden SIN sobrescribir innerHTML (evita romper estructura)
             if (!th.querySelector('.sort-arrow')) {
-                th.innerHTML += ' <span class="sort-arrow">⇅</span>';
+                const spacer = document.createTextNode(' ');
+                const span = document.createElement('span');
+                span.className = 'sort-arrow';
+                span.textContent = '⇅';
+                th.appendChild(spacer);
+                th.appendChild(span);
             }
-            th.addEventListener('click', (e) => {
-                // Si un manejador delegado ya está procesando este click, ignorar
-                if (th._tm_handling) return;
-                this.handleSort(index, th, headers);
-            });
+
+            // Evitar doble-binding si ya fue inicializado
+            if (!th.dataset.tmInit) {
+                th.addEventListener('click', (e) => {
+                    // Si un manejador delegado ya está procesando este click, ignorar
+                    if (th._tm_handling) return;
+                    this.handleSort(index, th, headers);
+                });
+                th.dataset.tmInit = '1';
+            }
         });
     }
 
@@ -305,22 +309,29 @@ class TableManager {
         const tableApp = this.table.closest('#table-app');
         const contentTable = this.table.closest('.content-table');
 
-        // Buscar un .pagination-container hermano de .content-table
-        let pagContainer = null;
-        if (tableApp) {
-            // Hermano directo dentro de #table-app, fuera de .content-table
-            pagContainer = Array.from(tableApp.children).find(
-                el => el.classList.contains('pagination-container') && el !== contentTable
-            );
+        // Ensure table has an id for pagination association
+        if (!this.table.dataset.tmId) this.table.dataset.tmId = 'tm-' + Math.random().toString(36).slice(2,8);
+
+        // Try to reuse an existing pagination container already associated to this table
+        let pagContainer = document.querySelector('.pagination-container[data-tm-for="' + this.table.dataset.tmId + '"]');
+
+        if (!pagContainer) {
+            // Search within #table-app for a pagination container that is not inside a content-table
+            if (tableApp) {
+                const candidates = Array.from(tableApp.querySelectorAll('.pagination-container'));
+                pagContainer = candidates.find(el => !el.closest('.content-table')) || null;
+            }
         }
 
         if (!pagContainer) {
-            // Fallback: buscar dentro del wrapper (caso levels donde ya existe en HTML)
-            pagContainer = this.wrapper.querySelector('.pagination-container');
+            // Fallback: search near the contentTable parent for any pagination-container not inside the contentTable
+            const parent = (contentTable && contentTable.parentNode) ? contentTable.parentNode : this.table.parentNode;
+            const candidates = Array.from(parent.querySelectorAll('.pagination-container'));
+            pagContainer = candidates.find(el => !el.closest('.content-table')) || null;
         }
 
         if (!pagContainer) {
-            // Crear y colocar como hermano de .content-table (fuera de ella)
+            // Create and place as sibling of .content-table (outside it)
             pagContainer = document.createElement('div');
             pagContainer.className = 'pagination-container';
 
@@ -331,6 +342,8 @@ class TableManager {
             }
         }
 
+        // Associate this pagContainer explicitly to this table to avoid other managers reusing it
+        try { pagContainer.dataset.tmFor = this.table.dataset.tmId; } catch(e) {}
         this.pagContainer = pagContainer;
     }
 
@@ -348,6 +361,7 @@ class TableManager {
         const start = totalRows === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
         const end = Math.min(this.currentPage * this.pageSize, totalRows);
 
+        if (!this.pagContainer) return;
         this.pagContainer.style.display = 'flex';
 
         const prevDisabled = this.currentPage === 1;
@@ -421,18 +435,55 @@ class TableManager {
                 this.tbody.appendChild(row);
             });
         } else {
-            // Fila de "sin resultados" — ocupa todo el ancho
+            // Construir una fila vacía con tantas celdas como encabezados para
+            // preservar el ancho calculado de cada columna cuando no hay datos.
+            const headerThs = Array.from(this.table.querySelectorAll('thead th'));
             const emptyRow = document.createElement('tr');
             emptyRow.className = 'empty-results-row';
-            emptyRow.innerHTML = `
-                <td colspan="100%">
-                    <div style="display:flex;flex-direction:column;align-items:center;
-                                padding:40px 0;color:#94a3b8;">
+
+            if (headerThs.length > 0) {
+                // 1) Spacer row: una fila invisible con una celda por columna
+                const spacerRow = document.createElement('tr');
+                spacerRow.className = 'spacer-row';
+                headerThs.forEach((th) => {
+                    const td = document.createElement('td');
+                    td.innerHTML = '&nbsp;';
+                    try {
+                        const w = th.offsetWidth;
+                        if (w && w > 0) td.style.minWidth = w + 'px';
+                    } catch (e) {}
+                    // Hacerla de altura mínima para no afectar layout vertical
+                    td.style.padding = '0';
+                    td.style.border = 'none';
+                    spacerRow.appendChild(td);
+                });
+                this.tbody.appendChild(spacerRow);
+
+                // 2) Mensaje centrado en una sola fila que abarca todas las columnas
+                const msgRow = document.createElement('tr');
+                msgRow.className = 'empty-results-row';
+                const msgTd = document.createElement('td');
+                msgTd.colSpan = headerThs.length;
+                msgTd.style.textAlign = 'center';
+                msgTd.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;padding:40px 0;color:#94a3b8;">
                         <i class="fas fa-search" style="font-size:1.6em;margin-bottom:10px;"></i>
                         <span>Sin resultados</span>
-                    </div>
-                </td>`;
-            this.tbody.appendChild(emptyRow);
+                    </div>`;
+                msgRow.appendChild(msgTd);
+                this.tbody.appendChild(msgRow);
+            } else {
+                // Fallback: una sola celda que ocupa todo el ancho
+                const td = document.createElement('td');
+                td.colSpan = 100;
+                td.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;padding:40px 0;color:#94a3b8;">
+                        <i class="fas fa-search" style="font-size:1.6em;margin-bottom:10px;"></i>
+                        <span>Sin resultados</span>
+                    </div>`;
+                emptyRow.appendChild(td);
+                this.tbody.appendChild(emptyRow);
+            }
         }
 
         this.renderPaginationControls(totalPages);
@@ -480,3 +531,6 @@ document.addEventListener('click', (e) => {
     }
 
 }, true);
+
+// Expose constructor on window explicitly in case environments differ
+try { window.TableManager = TableManager; } catch (e) { /* ignore */ }
