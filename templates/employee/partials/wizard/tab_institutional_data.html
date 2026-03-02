@@ -5,7 +5,7 @@
         <p>Datos del expediente y ubicación organizacional del empleado</p>
     </div>
     <button class="btn-institutional-action" @click="openInstitutionalModal({{ person.id }})">
-        <i class="fa-solid fa-pen-to-square"></i> Actualizar
+        <i class="fa-solid fa-pen-to-square me-1"></i> Actualizar
     </button>
 </div>
 
@@ -75,16 +75,13 @@
     <div class="info-box-styled" style="border-left: 4px solid #f97316; grid-column: span 3;">
         <h6 class="section-title" style="color: #ea580c;"><i class="fa-solid fa-sitemap"></i> Jerarquía Institucional
         </h6>
-        <div class="p-3 bg-light rounded">
+        <div class="p-4 bg-light rounded">
             {% if hierarchy_list %}
                 {% for unit in hierarchy_list %}
-                    <div class="d-flex align-items-center mb-2 p-2 bg-white rounded border">
-                        <span class="badge me-3"
-                              style="background-color: #f97316; min-width: 28px;">{{ forloop.counter }}</span>
-                        <div class="d-flex flex-column">
-                            <span class="text-muted small fw-bold text-uppercase">{{ unit.level_name }}:</span>
-                            <span class="fw-bold text-dark"><i class="fa-solid fa-building me-2"
-                                                               style="color: #f97316;"></i>{{ unit.name }}</span>
+                    <div class="d-flex align-items-center mb-3 p-2 bg-white rounded border hierarchy-item">
+                        <div class="hierarchy-item-content" style="width:100%; display:flex; align-items:center; gap:12px;">
+                            <span class="level-name">{{ unit.level_name }}</span>
+                            <span class="unit-name"><i class="fa-solid fa-building" style="color:#f97316; margin-right:8px;"></i>{{ unit.name }}</span>
                         </div>
                     </div>
                 {% endfor %}

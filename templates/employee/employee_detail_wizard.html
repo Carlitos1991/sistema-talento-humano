@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
 <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
 <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+<link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
     <div id="employeeWizardApp"
          v-cloak
          data-person-id="{{ person.id }}"
@@ -101,6 +102,11 @@
             <!-- PESTAÑA: PERMISOS -->
             <div v-if="activeTab === 'permissions'">
                 {% include 'employee/partials/wizard/tab_permissions_data.html' %}
+            </div>
+
+            <!-- PESTAÑA: ROLES DE PAGO -->
+            <div v-if="activeTab === 'payments'">
+                {% include 'employee/partials/wizard/tab_payment_roles.html' %}
             </div>
 
             <!-- PESTAÑA: SANCIONES -->

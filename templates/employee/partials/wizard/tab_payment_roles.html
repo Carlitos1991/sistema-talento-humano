@@ -1,0 +1,47 @@
+<!-- Pestaña Roles de pago -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled info-box-accent-green" style="grid-column: span 3;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <h6 class="section-title section-title-accent-green" style="margin:0"><i class="fa-solid fa-file-invoice-dollar"></i>
+                Roles de pago</h6>
+            <div class="payment-filters">
+                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="ALL">Todos</button>
+                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="NET_POSITIVE">Neto positivo</button>
+                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="NEGATIVE">Con descuentos</button>
+            </div>
+        </div>
+        <div class="p-3 bg-light rounded" style="max-height: 320px; overflow-y: auto;">
+            {% if payment_roles_history and payment_roles_history|length > 0 %}
+                <div class="budget-history-list">
+                    {% for role in payment_roles_history %}
+                        <div class="budget-history-item" data-period="{{ role.period_month }} {{ role.period_year }}">
+                            <div class="budget-history-left">
+                                <div class="budget-history-title">
+                                    <span style="font-weight: 600; font-size: 0.95rem;">{{ role.period_month }} {{ role.period_year }}</span>
+                                </div>
+                                <div class="budget-history-sub">
+                                    Ingresos: {{ role.total_income|floatformat:2 }} &nbsp;|&nbsp; Egresos: {{ role.total_deduction|floatformat:2 }}
+                                </div>
+                                <div class="budget-history-cat">
+                                    Total a cancelar: <strong>{{ role.net_pay|floatformat:2 }}</strong>
+                                </div>
+                            </div>
+                            <div class="budget-history-right">
+                                <div class="permission-action-group">
+                                    <a href="{{ role.print_url }}" target="_blank" class="btn btn-sm btn-outline btn-action-print" title="Imprimir rol de pago">
+                                        <i class="fa-solid fa-print"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-3 opacity-50">
+                    <i class="fa-solid fa-file-invoice-dollar fa-2x mb-2 text-secondary"></i>
+                    <p class="text-muted mb-0 small">No hay roles de pago registrados.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

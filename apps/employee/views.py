@@ -21,6 +21,7 @@ from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
 from permitrequest.models import PermitRequest
 from personnel_actions.models import PersonnelAction
+from payroll.models import Payslip
 from sanctions.models import Sanction
 from vacation.models import EmployeeVacationBalance
 from decimal import Decimal
@@ -259,6 +260,28 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 context['actions_list'] = []
         except Exception:
             context['actions_list'] = []
+
+        # Roles de pago (historial)
+        try:
+            if employee:
+                payslips_qs = Payslip.objects.filter(employee=employee).select_related('period').order_by('-period__year', '-period__id')[:12]
+                roles_history = []
+                for payslip in payslips_qs:
+                    period = payslip.period
+                    roles_history.append({
+                        'id': payslip.pk,
+                        'period_month': period.month if period else '',
+                        'period_year': period.year if period else '',
+                        'total_income': float(payslip.total_income or 0),
+                        'total_deduction': float(payslip.total_deduction or 0),
+                        'net_pay': float(payslip.net_pay or 0),
+                        'print_url': reverse('payroll:payslip_detail', args=[payslip.pk])
+                    })
+                context['payment_roles_history'] = roles_history
+            else:
+                context['payment_roles_history'] = []
+        except Exception:
+            context['payment_roles_history'] = []
 
         # Historial de sanciones
         try:

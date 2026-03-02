@@ -232,7 +232,7 @@
                         container.id = 'action-modal-employee';
                         document.body.appendChild(container);
                     }
-                    container.innerHTML = `<div class="modal-overlay"><div class="modal-box">${html}<button class="modal-close">Cerrar</button></div></div>`;
+                    container.innerHTML = `<div class="action-detail-overlay">${html}</div>`;
                     document.body.classList.add('no-scroll');
                     // Attach explicit close listeners to any close controls inside injected HTML
                     attachModalCloseBindings(container);
@@ -242,7 +242,7 @@
                     fetch(url).then(r=>r.text()).then(t=>{
                         let container = document.getElementById('action-modal-employee');
                         if (!container) { container = document.createElement('div'); container.id='action-modal-employee'; document.body.appendChild(container); }
-                        container.innerHTML = `<div class="modal-overlay"><div class="modal-box">${t}<button class="modal-close">Cerrar</button></div></div>`;
+                        container.innerHTML = `<div class="action-detail-overlay">${t}</div>`;
                         document.body.classList.add('no-scroll');
                         attachModalCloseBindings(container);
                     });
@@ -251,11 +251,11 @@
 
         // Close handler: support multiple variants (.modal-close, [data-dismiss], .close)
         document.addEventListener('click', function(e){
-            const clickedClose = e.target.closest('.modal-close') || e.target.closest('.js-close-detail-modal') || e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss]') || e.target.closest('.close') || e.target.closest('.btn-close');
-            const overlay = e.target.closest('.modal-overlay');
-            const box = e.target.closest('.modal-box');
-            // Close when explicit close clicked OR when clicking overlay outside the box
-            if (clickedClose || (overlay && !box)){
+            const clickedClose = e.target.closest('.modal-close') || e.target.closest('.js-close-detail-modal') || e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss]') || e.target.closest('.close') || e.target.closest('.btn-close') || e.target.closest('.action-detail-close');
+            const overlay = e.target.closest('.action-detail-overlay');
+            const card  = e.target.closest('.action-detail-card');
+            // Close when explicit close clicked OR when clicking outside the card
+            if (clickedClose || (overlay && !card)){
                 const cont = document.getElementById('action-modal-employee');
                 if (cont) cont.innerHTML='';
                 document.body.classList.remove('no-scroll');

@@ -48,6 +48,33 @@
     background: white;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hierarchy-item .level-name {
+    color: #6b7280;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.hierarchy-item .unit-name {
+    color: #0f172a;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ensure content doesn't wrap on small widths; allow truncation */
+.hierarchy-item-content {
+    min-width: 0; /* allow flex children to shrink */
 }
 
 /* Info Cards with Orange Border */
@@ -159,6 +186,24 @@
 
 .btn-institutional-action i {
     font-size: 0.75rem;
+}
+
+/* Ensure institutional header button doesn't expand to full width and is properly aligned */
+.institutional-header .btn-institutional-action {
+    margin-left: auto;
+    align-self: center;
+    flex: 0 0 auto;
+    max-width: 240px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: linear-gradient(90deg,#f97316 0%,#ea580c 100%);
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(234,88,12,0.12);
+}
+
+.institutional-header .btn-institutional-action:hover {
+    transform: translateY(-2px);
 }
 
 /* =========================================
@@ -571,6 +616,22 @@
     min-height: 0 !important;
 }
 
+/* Verde para la pestaña Roles de pago (combina con el botón de la barra) */
+.info-box-accent-green {
+    border-left: 4px solid #44a641;
+}
+
+.section-title-accent-green {
+    color: #44a641 !important;
+}
+
+.info-box-accent-green .budget-history-sub {
+    color: #14532d;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
 /* budget-history-list will be constrained by the parent scroll container */
 
 /* Permission filter buttons */
@@ -669,6 +730,42 @@
 /* Ensure consistent gap between header (filters) and the history list */
 .info-box-styled .budget-history-list {
     margin-top: 12px;
+}
+
+/* Roles de pago filters follow the same pill shape but in green */
+.payment-filters {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.payment-filter-btn {
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 0.84rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: white;
+    color: #333;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    transition: all 180ms ease;
+}
+
+.payment-filter-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(68, 166, 65, 0.15);
+}
+
+.payment-filter-btn.active,
+.payment-filter-btn.btn-outline.active {
+    background: linear-gradient(90deg, #7fe373, #44a641);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(68, 166, 65, 0.15);
+}
+
+.info-box-styled .payment-filters {
+    margin-left: 8px;
+    margin-top: 0;
 }
 
 /* The scroll constraint is handled by the inner .p-3.bg-light container above */

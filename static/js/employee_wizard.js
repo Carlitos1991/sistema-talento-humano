@@ -277,13 +277,13 @@ const app = createApp({
                 icon: 'fa-solid fa-gavel',
                 class: 'employee-detail-button-sanctions'
             },
+            {id: 'vacations', name: 'Vacaciones', icon: 'fa-solid fa-plane', class: 'employee-detail-button-vacations'},
             {
                 id: 'payments',
                 name: 'Roles de pago',
                 icon: 'fa-solid fa-money-bill',
                 class: 'employee-detail-button-payments'
             },
-            {id: 'vacations', name: 'Vacaciones', icon: 'fa-solid fa-plane', class: 'employee-detail-button-vacations'},
         ];
 
         // Inicializar estadísticas del CV al montar
