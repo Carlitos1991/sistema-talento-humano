@@ -3,6 +3,8 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+<link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+<link rel="stylesheet" href="{% static 'css/permission.css' %}">
     <div id="employeeWizardApp"
          v-cloak
          data-person-id="{{ person.id }}"
@@ -101,6 +103,16 @@
                 {% include 'employee/partials/wizard/tab_permissions_data.html' %}
             </div>
 
+            <!-- PESTAÑA: SANCIONES -->
+            <div v-if="activeTab === 'sanctions'">
+                {% include 'employee/partials/wizard/tab_sanctions_data.html' %}
+            </div>
+
+            <!-- PESTAÑA: VACACIONES -->
+            <div v-if="activeTab === 'vacations'">
+                {% include 'employee/partials/wizard/tab_vacations_data.html' %}
+            </div>
+
         </div>
         {% include 'employee/modals/modal_person_edit_wizard.html' %}
         {% include 'employee/modals/modal_academic_title.html' %}
@@ -116,6 +128,16 @@
         <div id="permission-modal-employee"></div>
         <div id="action-modal-employee"></div>
 
+        <!-- Placeholders para modales de Vacaciones (usados por static/js/vacation/vacation_detail.js) -->
+        <div id="modalNewVacation" class="modal-overlay hidden"></div>
+        <div id="modalHourPermit" class="modal-overlay hidden"></div>
+        <div id="modalDayPermit" class="modal-overlay hidden"></div>
+        <div id="modalPermitList" class="modal-overlay hidden"></div>
+        <div id="liquidationListModalContainer"></div>
+        <div id="vacationHistoryModalContainer"></div>
+        <div id="permitHistoryModalContainer"></div>
+        <div id="permitReportModalContainer"></div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -123,4 +145,8 @@
     <script src="{% static 'js/employee_wizard.js' %}"></script>
     <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
     <script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
+    <!-- Chart.js CDN (global para todas las instancias) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
+    <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
 {% endblock %}

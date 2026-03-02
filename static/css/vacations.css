@@ -30,49 +30,83 @@
    2. LA CAJA DEL MODAL (ESTRUCTURA)
    ========================================= */
 .modal-container-medium {
-    /* Quitamos márgenes automáticos que causan problemas */
     margin: 0;
-
-    /* Tamaño */
     width: 90%;
-    max-width: 600px; /* Ancho máximo elegante */
-
-    /* Sombra para efecto de elevación */
+    max-width: 600px;
+    max-height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
     background: white;
-
-    /* Animación de entrada */
     transform: scale(0.95);
     animation: zoomIn 0.2s ease-out forwards;
 }
 
 .modal-container-large {
-    /* Modal más ancho para formularios complejos */
     margin: 0;
     width: 90%;
     max-width: 1000px;
-
+    max-height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
     background: white;
-
     transform: scale(0.95);
     animation: zoomIn 0.2s ease-out forwards;
 }
 
 .modal-container-xlarge {
-    /* Modal extra ancho para listados */
     margin: 0;
     width: 95%;
     max-width: 1400px;
-
+    max-height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
     background: white;
-
     transform: scale(0.95);
     animation: zoomIn 0.2s ease-out forwards;
+}
+
+/* Anula el max-height de style.css dentro de estos contenedores */
+.modal-container-xlarge .modal-content,
+.modal-container-large .modal-content,
+.modal-container-medium .modal-content {
+    max-height: none !important;
+    overflow-y: visible !important;
+    padding: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Cuerpo desplazable del modal de vacaciones */
+.vac-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem;
+    min-height: 0;
+}
+
+/* Footer fijo en la parte inferior */
+.vac-modal-footer {
+    flex-shrink: 0;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
 @keyframes fadeIn {
@@ -101,12 +135,11 @@
 
 /* Header Azul Oscuro */
 .modal-header-refined {
+    flex-shrink: 0;
     background-color: #1a2e44;
     padding: 15px 20px;
-    border-top-left-radius: 12px; /* Redondear esquinas superiores */
+    border-top-left-radius: 12px;
     border-top-right-radius: 12px;
-
-    /* Flex para alinear X y Título */
     display: flex;
     justify-content: center;
     align-items: center;

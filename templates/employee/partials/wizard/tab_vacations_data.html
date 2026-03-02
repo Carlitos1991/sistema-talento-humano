@@ -1,0 +1,149 @@
+{% load l10n %}
+<!-- Pestaña Vacaciones -->
+
+<!-- Fila superior: 3 tarjetas de métricas -->
+<div class="grid-info-personal mt-3">
+
+    <!-- Permisos cargados a vacaciones -->
+    <div class="info-box-styled" style="border-top: 3px solid #f59e0b;">
+        <h6 class="section-title" style="color:#b45309;">
+            <i class="fa-solid fa-clock"></i> Permisos
+        </h6>
+        <div class="info-data-row">
+            <label>Días cargados:</label>
+            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                {% localize off %}{{ vacation_chart.permits|floatformat:2|default:"0.00" }}{% endlocalize %}
+            </span>
+        </div>
+        <div class="info-data-row">
+            <label>Acción:</label>
+            <span>
+                {% if vacation_balances and vacation_balances|length > 0 %}
+                    <button class="btn btn-sm btn-outline" style="border-color:#f59e0b; color:#b45309;"
+                            onclick="openPermitHistoryModal({{ vacation_balances.0.id }})">
+                        <i class="fa-solid fa-list-ul"></i> Ver listado
+                    </button>
+                {% elif person.employee_profile %}
+                    <span class="text-muted small">Sin períodos registrados</span>
+                {% else %}
+                    <span class="text-muted small">Sin empleado</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Vacaciones liquidadas -->
+    <div class="info-box-styled" style="border-top: 3px solid #0ea5a4;">
+        <h6 class="section-title" style="color:#0ea5a4;">
+            <i class="fa-solid fa-plane-departure"></i> Liquidaciones
+        </h6>
+        <div class="info-data-row">
+            <label>Días liquidados:</label>
+            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                {% localize off %}{{ vacation_chart.vacations|floatformat:2|default:"0.00" }}{% endlocalize %}
+            </span>
+        </div>
+        <div class="info-data-row">
+            <label>Acción:</label>
+            <span>
+                {% if vacation_balances and vacation_balances|length > 0 %}
+                    <button class="btn btn-sm btn-outline" style="border-color:#0ea5a4; color:#0ea5a4;"
+                            onclick="openVacationHistoryModal({{ vacation_balances.0.id }})">
+                        <i class="fa-solid fa-file-lines"></i> Ver detalle
+                    </button>
+                {% elif person.employee_profile %}
+                    <span class="text-muted small">Sin períodos registrados</span>
+                {% else %}
+                    <span class="text-muted small">Sin empleado</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Saldo disponible -->
+    <div class="info-box-styled" style="border-top: 3px solid #06b6d4;">
+        <h6 class="section-title" style="color:#0891b2;">
+            <i class="fa-solid fa-piggy-bank"></i> Saldo Actual
+        </h6>
+        <div class="info-data-row">
+            <label>Días disponibles:</label>
+            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                {% localize off %}{{ vacation_chart.saldo|floatformat:2|default:"0.00" }}{% endlocalize %}
+            </span>
+        </div>
+        <div class="info-data-row">
+        </div>
+    </div>
+
+</div>
+
+<!-- Fila inferior: gráfico donut + lista de periodos -->
+<div class="grid-info-personal mt-2">
+    <div class="info-box-styled" style="grid-column: span 3;">
+        <h6 class="section-title" style="color:#0ea5a4;">
+            <i class="fa-solid fa-calendar-days"></i> Distribución y Periodos Vacacionales
+        </h6>
+
+        <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
+
+            <!-- Donut fijo 150x150 + leyenda manual -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:10px; flex-shrink:0;">
+                <canvas id="vacationPieChart-{{ person.id }}"
+                        data-saldo="{% localize off %}{{ vacation_chart.saldo|default:0 }}{% endlocalize %}"
+                        data-permits="{% localize off %}{{ vacation_chart.permits|default:0 }}{% endlocalize %}"
+                        data-vacations="{% localize off %}{{ vacation_chart.vacations|default:0 }}{% endlocalize %}"
+                        data-total="{% localize off %}{{ vacation_chart.total_capacity|default:0 }}{% endlocalize %}"
+                        width="150" height="150"
+                        style="display:block;"></canvas>
+                <!-- Leyenda manual -->
+                <div style="display:flex; flex-direction:column; gap:4px; width:150px;">
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+                        <span style="width:10px; height:10px; border-radius:3px; background:#06b6d4; flex-shrink:0;"></span>
+                        Saldo: <strong>{% localize off %}{{ vacation_chart.saldo|floatformat:2|default:"0.00" }}{% endlocalize %}</strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+                        <span style="width:10px; height:10px; border-radius:3px; background:#f59e0b; flex-shrink:0;"></span>
+                        Permisos: <strong>{% localize off %}{{ vacation_chart.permits|floatformat:2|default:"0.00" }}{% endlocalize %}</strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+                        <span style="width:10px; height:10px; border-radius:3px; background:#0ea5a4; flex-shrink:0;"></span>
+                        Liquidado: <strong>{% localize off %}{{ vacation_chart.vacations|floatformat:2|default:"0.00" }}{% endlocalize %}</strong>
+                    </div>
+                    <div style="border-top:1px solid #e2e8f0; padding-top:4px; margin-top:2px; font-size:11px; color:#64748b;">
+                        Total acumulado: <strong style="color:#0f172a;">{% localize off %}{{ vacation_chart.total_capacity|floatformat:2|default:"0.00" }}{% endlocalize %}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de periodos -->
+            <div style="flex:1; min-width:260px;">
+                {% if vacation_balances and vacation_balances|length > 0 %}
+                    <div class="budget-history-list" style="max-height:200px; overflow-y:auto;">
+                        {% for b in vacation_balances %}
+                            <div class="budget-history-item">
+                                <div class="budget-history-left">
+                                    <div class="budget-history-title">{{ b.period }}</div>
+                                    <div class="budget-history-sub">
+                                        Total: <strong>{{ b.total_days|add:b.additional_days }}</strong>
+                                        &nbsp;|&nbsp; Saldo: <strong>{{ b.balance_days }}</strong>
+                                        &nbsp;|&nbsp; Permisos: <strong>{{ b.permit_days }}</strong>
+                                        &nbsp;|&nbsp; Liquidado: <strong>{{ b.vacation_days }}</strong>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3 opacity-50">
+                        <i class="fa-solid fa-box-open fa-2x mb-2 text-secondary"></i>
+                        <p class="text-muted mb-0 small">No hay saldos vacacionales registrados.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- El inicializador del gráfico se encuentra en static/js/employee_vacation_chart.js -->

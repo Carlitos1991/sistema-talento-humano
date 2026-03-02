@@ -4,19 +4,85 @@
     <div class="modal-container-xlarge shadow-card" onclick="event.stopPropagation()">
         <div class="modal-content">
 
-            <!-- HEADER -->
+            <!-- HEADER fijo -->
             <div class="modal-header-refined">
                 <div class="header-title-group">
                     <div class="header-icon-circle" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
                         <i class="fas fa-history"></i>
                     </div>
-                    <h2 class="header-title-text">Historial de Liquidaciones - {{ period.name }}</h2>
+                    <h2 class="header-title-text">Historial de Vacaciones — {{ period.name }}</h2>
                 </div>
-
                 <button type="button" class="btn-close-modal" onclick="closeVacationHistoryModal()" title="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+
+            <!-- CUERPO desplazable -->
+            <div class="vac-modal-body">
+
+                <!-- Información -->
+                <div class="info-card-cyan">
+                    <h3 class="info-title"><i class="fas fa-info-circle"></i> Información:</h3>
+                    <ul class="info-list-compact">
+                        <li>Muestra todas las liquidaciones de vacaciones del periodo seleccionado</li>
+                        <li>Se visualizan los días descontados y las fechas de inicio y fin</li>
+                    </ul>
+                </div>
+
+                <!-- Tabla de historial -->
+                {% if history_records %}
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Fin</th>
+                                <th>Días</th>
+                                <th>Horas</th>
+                                <th>Minutos</th>
+                                <th>Total Descuento</th>
+                                <th>Adicional</th>
+                                <th>Total con Adicional</th>
+                                <th>Periodo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in history_records %}
+                            <tr>
+                                <td>{{ record.vacation_request.start_date|date:"d/m/Y" }}</td>
+                                <td>{{ record.vacation_request.end_date|date:"d/m/Y" }}</td>
+                                <td>{{ record.days_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.hours_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.minutes_discount|default:"0"|floatformat:0 }}</td>
+                                <td>{{ record.value_discount|default:"0"|floatformat:4 }}</td>
+                                <td>{{ record.proportional_discount|default:"0"|floatformat:4 }}</td>
+                                <td><strong>{{ record.total_with_additional|floatformat:4 }}</strong></td>
+                                <td>{{ period.name }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-message-container">
+                    <i class="fas fa-inbox empty-message-icon"></i>
+                    <p class="empty-message-text">No hay liquidaciones de vacaciones en este periodo</p>
+                </div>
+                {% endif %}
+
+            </div><!-- /vac-modal-body -->
+
+            <!-- FOOTER fijo -->
+            <div class="vac-modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeVacationHistoryModal()">
+                    <i class="fas fa-times-circle"></i> CERRAR
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
             <!-- Información -->
             <div class="info-card-cyan">
                 <h3 class="info-title"><i class="fas fa-info-circle"></i> Información:</h3>

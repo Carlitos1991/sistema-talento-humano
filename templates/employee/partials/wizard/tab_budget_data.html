@@ -10,7 +10,7 @@
                     {% if current_partida %}{{ current_partida.code }} - Partida {{ current_partida.budget }}{% else %}
                         Sin partida asignada{% endif %}</div>
             </div>
-            <div class="budget-history-right">
+            <div class="budget-history-right" style="display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:0.125rem;">
                 <div class="budget-history-rem">Remuneración:
                     {% if current_partida %}{{ current_partida.remuneration|default:'—' }}{% else %}—{% endif %}</div>
                 <div class="budget-history-cat">Categoría:
@@ -35,7 +35,7 @@
                                     Pl. {{ p.partida_code|default:'Sin partida individual' }} &nbsp;
                                     Partida: {{ p.code }}</div>
                             </div>
-                            <div class="budget-history-right">
+                            <div class="budget-history-right" style="display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:0.125rem;">
                                 <div class="budget-history-rem">Remuneración: {{ p.remuneration|default:'0.00' }}</div>
                                 <div class="budget-history-cat">Categoría: {{ p.position_name|default:'-' }}</div>
                             </div>

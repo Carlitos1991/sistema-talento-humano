@@ -1,0 +1,35 @@
+<!-- Pestaña Sanciones - Historial de sanciones del empleado -->
+<div class="grid-info-personal mt-3">
+    <div class="info-box-styled info-box-accent-red" style="grid-column: span 3;">
+        <h6 class="section-title section-title-accent-red" style="margin:0"><i class="fa-solid fa-scale-balanced"></i>
+            Historial de Sanciones</h6>
+        <div class="p-3 bg-light rounded" style="max-height: 320px; overflow-y: auto;">
+            {% if sanctions_history and sanctions_history|length > 0 %}
+                <div class="budget-history-list">
+                    {% for s in sanctions_history %}
+                        <div class="budget-history-item">
+                            <div class="budget-history-left">
+                                <div class="budget-history-title">{{ s.type|default:'Sanción' }}</div>
+                                <div class="budget-history-sub">{{ s.description|default:'' }}</div>
+                                <div class="budget-history-cat">Motivo: {{ s.reason|default:'—' }}</div>
+                            </div>
+                            <div class="budget-history-right" style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:0.25rem;">
+                                <div>
+                                    <span class="status-badge status-badge-mini {% if s.severity_code == 'ADMINISTRATIVE_SUMMARY' %}inactive{% elif s.severity_code == 'VERBAL_WARNING' %}active{% else %}neutral{% endif %}">
+                                        {{ s.severity|default:'—' }}
+                                    </span>
+                                </div>
+                                <div class="small text-muted">{{ s.date|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;" class="opacity-50">
+                    <i class="fa-solid fa-box-open fa-2x text-secondary"></i>
+                    <p class="text-muted mb-0 small">No hay historial de sanciones.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

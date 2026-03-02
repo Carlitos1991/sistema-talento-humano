@@ -21,6 +21,9 @@ from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
 from permitrequest.models import PermitRequest
 from personnel_actions.models import PersonnelAction
+from sanctions.models import Sanction
+from vacation.models import EmployeeVacationBalance
+from decimal import Decimal
 from django.urls import reverse
 
 
@@ -256,6 +259,73 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 context['actions_list'] = []
         except Exception:
             context['actions_list'] = []
+
+        # Historial de sanciones
+        try:
+            if employee:
+                sanctions_qs = Sanction.objects.filter(employee=employee).select_related('sanction_type').order_by('-sanction_date')[:50]
+                sh = []
+                for s in sanctions_qs:
+                    sh.append({
+                        'type': s.sanction_type.name if s.sanction_type else '',
+                        'description': s.description,
+                        'reason': s.legal_basis,
+                        'severity': dict(Sanction.SEVERITY_CHOICES).get(s.severity, s.severity) if hasattr(Sanction, 'SEVERITY_CHOICES') else s.severity,
+                        'severity_code': s.severity,
+                        'date': s.sanction_date
+                    })
+                context['sanctions_history'] = sh
+            else:
+                context['sanctions_history'] = []
+        except Exception:
+            context['sanctions_history'] = []
+
+        # Vacaciones: saldos por periodo
+        try:
+            if employee:
+                # Traer balances (lista) para mostrar en la UI
+                balances_qs = EmployeeVacationBalance.objects.filter(employee=employee).select_related('period').order_by('-created_at')[:50]
+                vb = []
+                for b in balances_qs:
+                    vb.append({
+                        'id': b.id,
+                        'period': b.period.name if b.period else '',
+                        'total_days': float(b.total_days or 0),
+                        'balance_days': float(b.balance_days or 0),
+                        'additional_days': float(b.additional_days or 0),
+                        'permit_days': float(b.permit_days or 0),
+                        'vacation_days': float(b.vacation_days or 0),
+                        'taken_days': float(getattr(b, 'taken_days', 0) or 0),
+                        'observation': b.observation
+                    })
+
+                # Calcular totales para el gráfico circular usando EL ÚLTIMO período creado
+                last_balance = EmployeeVacationBalance.objects.filter(employee=employee).order_by('-created_at').select_related('period').first()
+                if last_balance:
+                    total_capacity = Decimal(str(last_balance.total_days or 0)) + Decimal(str(last_balance.additional_days or 0))
+                    permits_used = Decimal(str(last_balance.permit_days or 0))
+                    vacations_used = Decimal(str(last_balance.vacation_days or 0))
+                    # saldo esperado (por seguridad usar balance_days de la BD si existe)
+                    saldo_db = Decimal(str(last_balance.balance_days or (total_capacity - (permits_used + vacations_used))))
+                else:
+                    total_capacity = Decimal('0.0')
+                    permits_used = Decimal('0.0')
+                    vacations_used = Decimal('0.0')
+                    saldo_db = Decimal('0.0')
+
+                context['vacation_balances'] = vb
+                context['vacation_chart'] = {
+                    'total_capacity': float(total_capacity),
+                    'permits': float(permits_used),
+                    'vacations': float(vacations_used),
+                    'saldo': float(saldo_db)
+                }
+            else:
+                context['vacation_balances'] = []
+                context['vacation_chart'] = {'total_capacity': 0, 'permits': 0, 'vacations': 0, 'saldo': 0}
+        except Exception:
+            context['vacation_balances'] = []
+            context['vacation_chart'] = {'total_capacity': 0, 'permits': 0, 'vacations': 0, 'saldo': 0}
 
         return context
 
