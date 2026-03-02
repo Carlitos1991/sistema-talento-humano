@@ -124,7 +124,7 @@
                                 <div class="budget-history-left">
                                     <div class="budget-history-title">{{ b.period }}</div>
                                     <div class="budget-history-sub">
-                                        Total: <strong>{{ b.total_days|add:b.additional_days }}</strong>
+                                        Total: <strong>{{ b.total_with_previous_balance|default:0|floatformat:2 }}</strong>
                                         &nbsp;|&nbsp; Saldo: <strong>{{ b.balance_days }}</strong>
                                         &nbsp;|&nbsp; Permisos: <strong>{{ b.permit_days }}</strong>
                                         &nbsp;|&nbsp; Liquidado: <strong>{{ b.vacation_days }}</strong>

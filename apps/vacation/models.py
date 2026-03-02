@@ -88,6 +88,11 @@ class EmployeeVacationBalance(models.Model):
         remainder_hours = current_hours_dec - (hours_only * FACTOR_HOUR)
         return int(remainder_hours * 60 * 8)
 
+    @property
+    def total_with_previous_balance(self):
+        """Total del periodo incluyendo el arrastre del balance anterior."""
+        return (self.total_days or Decimal('0')) + (self.additional_days or Decimal('0'))
+
 
 class VacationRequest(models.Model):
     """

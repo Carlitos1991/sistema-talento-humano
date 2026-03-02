@@ -287,10 +287,12 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 balances_qs = EmployeeVacationBalance.objects.filter(employee=employee).select_related('period').order_by('-created_at')[:50]
                 vb = []
                 for b in balances_qs:
+                    total_with_previous = (Decimal(str(b.total_days or 0)) + Decimal(str(b.additional_days or 0)))
                     vb.append({
                         'id': b.id,
                         'period': b.period.name if b.period else '',
                         'total_days': float(b.total_days or 0),
+                        'total_with_previous_balance': float(total_with_previous),
                         'balance_days': float(b.balance_days or 0),
                         'additional_days': float(b.additional_days or 0),
                         'permit_days': float(b.permit_days or 0),

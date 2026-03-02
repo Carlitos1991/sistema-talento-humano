@@ -1217,8 +1217,12 @@ function openVacationHistoryModal(balanceId) {
                 modalContainer = document.createElement('div');
                 modalContainer.id = 'vacationHistoryModalContainer';
                 document.body.appendChild(modalContainer);
+            } else if (modalContainer.parentElement !== document.body) {
+                // Si existe dentro del flujo del documento (p.ej. dentro del tab), moverlo al <body>
+                document.body.appendChild(modalContainer);
             }
-            
+
+            // Insertar el HTML una vez el contenedor esté en el <body>
             modalContainer.innerHTML = html;
             
             // Bloquear scroll del body
@@ -1264,8 +1268,11 @@ function openPermitHistoryModal(balanceId) {
                 modalContainer = document.createElement('div');
                 modalContainer.id = 'permitHistoryModalContainer';
                 document.body.appendChild(modalContainer);
+            } else if (modalContainer.parentElement !== document.body) {
+                // Mover al body para evitar render dentro de otros contenedores
+                document.body.appendChild(modalContainer);
             }
-            
+
             modalContainer.innerHTML = html;
             
             // Bloquear scroll del body
