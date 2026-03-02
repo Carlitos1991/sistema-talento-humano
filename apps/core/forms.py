@@ -1,6 +1,6 @@
 # apps/core/forms.py
 from django import forms
-from .models import User, Catalog, CatalogItem, Location
+from .models import User, Catalog, CatalogItem, Location, Authority
 
 
 class BaseFormMixin:
@@ -113,3 +113,24 @@ class LocationForm(forms.ModelForm):
         if name:
             return name.upper()
         return name
+
+
+class AuthorityForm(forms.ModelForm):
+    """
+    Formulario para creación y edición de Autoridades.
+    """
+
+    class Meta:
+        model = Authority
+        fields = ['name', 'position', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Dr. Juan Pérez Gómez'
+            }),
+            'position': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Director General'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

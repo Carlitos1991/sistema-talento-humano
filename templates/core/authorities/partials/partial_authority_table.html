@@ -1,0 +1,57 @@
+{% load static %}
+<div class="table-container">
+    <table class="managed-table exportable-table"
+           data-title="Reporte Autoridades"
+           data-filename="Reporte_autoridades"
+           data-external-pagination="false"
+           data-external-search="false">
+        <thead>
+        <tr>
+            <th style="width: 50px;" class="no-sort">#</th>
+            <th>Nombre</th>
+            <th>Cargo</th>
+            <th class="text-center no-sort">Estado</th>
+            <th class="text-end no-sort">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for authority in authorities %}
+            <tr>
+                <td>{{ authority.id }}</td>
+                <td class="fw-medium">{{ authority.name }}</td>
+                <td>{{ authority.position }}</td>
+                <td class="text-center">
+                    {% if authority.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <!-- Botón Editar -->
+                    {% if perms.core.change_authority %}
+                        <button class="btn-icon btn-views-action"
+                                onclick="openEditModal('{{ authority.id }}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    {% endif %}
+
+                    <!-- Botón Toggle Estado -->
+                    {% if perms.core.change_authority %}
+                        <button class="btn btn-sm btn-icon {% if authority.is_active %}btn-icon btn-delete-action{% else %}btn-icon btn-create-action{% endif %}"
+                                onclick="toggleStatus({{ authority.id }})">
+                            <i class="fa-solid {% if authority.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                        </button>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    No se encontraron registros.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

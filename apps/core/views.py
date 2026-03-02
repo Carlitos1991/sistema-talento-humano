@@ -5,9 +5,9 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.views.generic import TemplateView, ListView, UpdateView
-from .forms import CatalogForm, CatalogItemForm, LocationForm
+from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm
 from .forms import UserProfileForm
-from .models import Catalog, CatalogItem, Location
+from .models import Catalog, CatalogItem, Location, Authority
 from .models import User
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
@@ -614,6 +614,103 @@ class LocationJsonView(View):
             'success': True,
             'data': data
         })
+
+
+# --- AUTORIDADES ---
+class AuthorityListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Authority
+    template_name = 'core/authorities/authority_list.html'
+    context_object_name = 'authorities'
+    permission_required = 'core.view_authority'
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        qs = Authority.objects.all()
+        if query:
+            qs = qs.filter(name__icontains=query) | qs.filter(position__icontains=query)
+        return qs.order_by('-created_at')
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            from django.template.loader import render_to_string
+            html = render_to_string(
+                'core/authorities/partials/partial_authority_table.html',
+                {'authorities': self.object_list},
+                request=request
+            )
+            return JsonResponse({'html': html})
+        return super().get(request, *args, **kwargs)
+
+
+class AuthorityCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = Authority
+    form_class = AuthorityForm
+    permission_required = 'core.add_authority'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Autoridad creada correctamente.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors
+        }, status=400)
+
+
+class AuthorityUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Authority
+    form_class = AuthorityForm
+    permission_required = 'core.change_authority'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Autoridad actualizada correctamente.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors
+        }, status=400)
+
+
+def authority_detail(request, pk):
+    """Retorna los datos de una autoridad específica para editar"""
+    authority = get_object_or_404(Authority, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': authority.id,
+            'name': authority.name,
+            'position': authority.position,
+            'is_active': authority.is_active
+        }
+    })
+
+
+@require_POST
+@permission_required('core.change_authority', raise_exception=True)
+def authority_toggle_status(request, pk):
+    """Alterna el estado (Activo/Inactivo) de una autoridad"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+
+    authority = get_object_or_404(Authority, pk=pk)
+    authority.toggle_status()
+
+    status_label = "activado" if authority.is_active else "desactivado"
+    return JsonResponse({
+        'success': True,
+        'message': f'La autoridad "{authority.name}" ha sido {status_label} correctamente.',
+        'is_active': authority.is_active
+    })
 
 
 # === MANEJADORES DE ERRORES PERSONALIZADOS ===

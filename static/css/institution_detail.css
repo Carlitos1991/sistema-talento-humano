@@ -77,7 +77,8 @@
     box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
 }
 
-.card-section-header .btn-nuevo-entregable {
+/* Estilo global para botones de acción verde */
+.btn-nuevo-entregable {
     background: #198754;
     color: #fff;
     border: none;
@@ -86,16 +87,22 @@
     padding: 7px 18px;
     font-size: 0.98rem;
     box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
-    transition: background 0.18s, color 0.18s;
-    margin-left: auto;
-    display: flex;
+    transition: background 0.18s, color 0.18s, transform 0.18s;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
+    cursor: pointer;
 }
 
-.card-section-header .btn-nuevo-entregable:hover {
+.btn-nuevo-entregable:hover {
     background: #157347;
     color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.15);
+}
+
+.card-section-header .btn-nuevo-entregable {
+    margin-left: auto;
 }
 
 .card-section-header .btn {
@@ -267,7 +274,8 @@
 }
 
 .header-data-card {
-    margin-top: 10px;
+    margin-top: 16px !important;
+    margin-bottom: 8px !important;
 }
 
 .header-right {
@@ -340,24 +348,39 @@
 
 /* --- Ajustes compactos tarjeta de datos y botón perfil --- */
 .info-card-compact {
-    max-width: 420px;
-    min-width: 320px;
-    margin: 0 auto;
-    padding: 12px 18px;
+    max-width: 420px !important;
+    min-width: 320px !important;
+    margin: 0 auto !important;
+    padding: 14px 20px !important;
     background: #e9f7ef;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(25, 135, 84, 0.08);
-    display: flex;
+    display: flex !important;
     justify-content: center;
     align-items: center;
+    flex-direction: row !important;
 }
 
 .info-green-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 8px;
+    gap: 10px 12px;
     width: 100%;
+}
+
+.info-green-grid div {
+    color: #198754;
+    font-size: 0.95rem;
+}
+
+.info-green-grid div b {
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.info-green-grid div span {
+    font-weight: 500;
 }
 
 .info-green-content {
@@ -412,11 +435,15 @@
 
 .info-card-single {
     width: 100%;
-    max-width: 900px;
+    max-width: 700px;
+    min-width: 320px;
     margin: 0 auto;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: 4px;
+    padding: 18px 32px;
 }
 
 .info-green-content {
@@ -430,17 +457,6 @@
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-}
-
-.info-card-single {
-    min-width: 320px;
-    max-width: 700px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 18px 32px;
 }
 
 .info-green-row {

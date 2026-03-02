@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Autoridades | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <!-- Header Card -->
+        <div class="header-card">
+            <div>
+                <h1>Autoridades</h1>
+                <p>Gestión de autoridades de la institución</p>
+            </div>
+            {% if perms.core.add_authority %}
+                <button class="btn btn-create" onclick="openCreateModal()">
+                    <i class="fa-solid fa-plus"></i> Nueva Autoridad
+                </button>
+            {% endif %}
+        </div>
+
+        <div id="table-app">
+            <div class="content-table">
+                <!-- Controles -->
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="input-field table-search-input"
+                               placeholder="Buscar por nombre o cargo...">
+                    </div>
+                </div>
+
+                <!-- Wrapper para recarga AJAX -->
+                <div id="table-content-wrapper">
+                    {% include 'core/authorities/partials/partial_authority_table.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Aquí se monta la Vue App del Modal -->
+    {% include 'core/authorities/modals/modal_authority_form.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/table-manager.js' %}"></script>
+    <script src="{% static 'js/core/authorities.js' %}"></script>
+{% endblock %}

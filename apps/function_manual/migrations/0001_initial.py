@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0002_authorities'),
+        ('core', '0004_authority_model_migration'),
         ('employee', '0003_alter_employee_is_boss_curriculum_academictitle_and_more'),
         ('institution', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -72,11 +72,11 @@ class Migration(migrations.Migration):
                 ('required_experience_months', models.PositiveIntegerField(default=0, verbose_name='Experiencia (Meses)')),
                 ('experience_details', models.TextField(verbose_name='Detalle de Experiencia')),
                 ('administrative_unit', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='job_profiles', to='institution.administrativeunit', verbose_name='Unidad Administrativa')),
-                ('approved_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='approved_profiles', to='core.authorities')),
+                ('approved_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='approved_profiles', to='core.authority')),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='%(app_label)s_%(class)s_created', to=settings.AUTH_USER_MODEL, verbose_name='Creado por')),
-                ('prepared_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='prepared_profiles', to='core.authorities')),
+                ('prepared_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='prepared_profiles', to='core.authority')),
                 ('referential_employee', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='employee.employee', verbose_name='Empleado Referencial')),
-                ('reviewed_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reviewed_profiles', to='core.authorities')),
+                ('reviewed_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='reviewed_profiles', to='core.authority')),
                 ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='%(app_label)s_%(class)s_updated', to=settings.AUTH_USER_MODEL, verbose_name='Actualizado por')),
                 ('decision_making', models.ForeignKey(limit_choices_to={'catalog__code': 'DECISION_LEVELS'}, on_delete=django.db.models.deletion.PROTECT, related_name='profiles_by_decision', to='function_manual.manualcatalogitem', verbose_name='Toma de Decisiones')),
                 ('final_complexity_level', models.ForeignKey(limit_choices_to={'catalog__code': 'COMPLEXITY_LEVELS'}, on_delete=django.db.models.deletion.PROTECT, related_name='profiles_by_complexity', to='function_manual.manualcatalogitem', verbose_name='Complejidad Resultante')),

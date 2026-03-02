@@ -479,6 +479,14 @@
                             </a>
                         </li>
                     {% endif %}
+                    {% if perms.core.view_authority %}
+                        <li>
+                            <a href="{% url 'core:authority_list' %}">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <span class="menu-text">Autoridades</span>
+                            </a>
+                        </li>
+                    {% endif %}
                     {% if perms.core.view_location %}
                         <li>
                             <a href="{% url 'core:location_list' %}">

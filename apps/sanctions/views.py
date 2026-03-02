@@ -294,13 +294,13 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
     """View to generate a sanction for a specific employee"""
 
     def get(self, request):
-        from personnel_actions.models import Authorities
+        from core.models import Authority
         
         employee_id = request.GET.get('employee_id')
         employee = get_object_or_404(Employee, pk=employee_id)
         
         form = SanctionForm(initial={'employee': employee})
-        authorities = Authorities.objects.filter(status=True)
+        authorities = Authority.objects.filter(is_active=True)
         
         context = {
             'form': form,
@@ -557,7 +557,7 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'sanctions.change_sanction'
 
     def get(self, request, pk):
-        from personnel_actions.models import Authorities
+        from core.models import Authority
         
         sanction = get_object_or_404(
             Sanction.objects.select_related('employee__person', 'personnel_action'),
@@ -575,7 +575,7 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
             )
         
         form = SanctionForm(instance=sanction)
-        authorities = Authorities.objects.filter(status=True)
+        authorities = Authority.objects.filter(is_active=True)
         
         # Get current authorities from PersonnelAction
         selected_authorities = {}
@@ -639,16 +639,16 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 register_id = request.POST.get('register')
                 
                 if authority_1_id:
-                    from personnel_actions.models import Authorities
-                    personnel_action.authority_1 = Authorities.objects.get(pk=authority_1_id)
+                    from core.models import Authority
+                    personnel_action.authority_1 = Authority.objects.get(pk=authority_1_id)
                 if authority_2_id:
-                    personnel_action.authority_2 = Authorities.objects.get(pk=authority_2_id)
+                    personnel_action.authority_2 = Authority.objects.get(pk=authority_2_id)
                 if reviewer_id:
-                    personnel_action.reviewer = Authorities.objects.get(pk=reviewer_id)
+                    personnel_action.reviewer = Authority.objects.get(pk=reviewer_id)
                 if elaboration_id:
-                    personnel_action.elaboration = Authorities.objects.get(pk=elaboration_id)
+                    personnel_action.elaboration = Authority.objects.get(pk=elaboration_id)
                 if register_id:
-                    personnel_action.register = Authorities.objects.get(pk=register_id)
+                    personnel_action.register = Authority.objects.get(pk=register_id)
                 
                 personnel_action.save()
             

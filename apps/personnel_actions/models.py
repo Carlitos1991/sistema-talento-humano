@@ -1,6 +1,6 @@
 from django.db import models
 
-from core.models import User, Authorities, CatalogItem
+from core.models import User, Authority, CatalogItem
 from employee.models import Employee
 from institution.models import AdministrativeUnit
 
@@ -44,19 +44,19 @@ class PersonnelAction(models.Model):
     date_registered = models.DateField(verbose_name='Fecha de Registro', blank=True, null=True)
 
     # Firmas (Relaciones optimizadas)
-    authority_1 = models.ForeignKey(Authorities, verbose_name='Primera Autoridad', on_delete=models.PROTECT,
-                                    related_name='actions_signed_auth1', limit_choices_to={'status': True})
-    authority_2 = models.ForeignKey(Authorities, verbose_name='Segunda Autoridad', on_delete=models.PROTECT,
-                                    related_name='actions_signed_auth2', limit_choices_to={'status': True}, null=True,
+    authority_1 = models.ForeignKey(Authority, verbose_name='Primera Autoridad', on_delete=models.PROTECT,
+                                    related_name='actions_signed_auth1', limit_choices_to={'is_active': True})
+    authority_2 = models.ForeignKey(Authority, verbose_name='Segunda Autoridad', on_delete=models.PROTECT,
+                                    related_name='actions_signed_auth2', limit_choices_to={'is_active': True}, null=True,
                                     blank=True)
-    reviewer = models.ForeignKey(Authorities, verbose_name='Revisado por', on_delete=models.PROTECT,
-                                 related_name='actions_reviewed', limit_choices_to={'status': True}, null=True,
+    reviewer = models.ForeignKey(Authority, verbose_name='Revisado por', on_delete=models.PROTECT,
+                                 related_name='actions_reviewed', limit_choices_to={'is_active': True}, null=True,
                                  blank=True)
-    elaboration = models.ForeignKey(Authorities, verbose_name='Elaborado por', on_delete=models.PROTECT,
-                                 related_name='actions_elaboration', limit_choices_to={'status': True}, null=True,
+    elaboration = models.ForeignKey(Authority, verbose_name='Elaborado por', on_delete=models.PROTECT,
+                                 related_name='actions_elaboration', limit_choices_to={'is_active': True}, null=True,
                                  blank=True)
-    register = models.ForeignKey(Authorities, verbose_name='Registrado   por', on_delete=models.PROTECT,
-                                    related_name='actions_register', limit_choices_to={'status': True}, null=True,
+    register = models.ForeignKey(Authority, verbose_name='Registrado   por', on_delete=models.PROTECT,
+                                    related_name='actions_register', limit_choices_to={'is_active': True}, null=True,
                                     blank=True)
 
     # Auditoría

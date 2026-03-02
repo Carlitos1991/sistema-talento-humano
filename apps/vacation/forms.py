@@ -155,8 +155,8 @@ class VacationLiquidationForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Cargar autoridades activas
-        from core.models import Authorities
-        active_authorities = Authorities.objects.filter(status=True).order_by('name')
+        from core.models import Authority
+        active_authorities = Authority.objects.filter(is_active=True).order_by('name')
         self.fields['nominating_authority'].queryset = active_authorities
         self.fields['human_resources_responsible'].queryset = active_authorities
         self.fields['registration_responsible'].queryset = active_authorities

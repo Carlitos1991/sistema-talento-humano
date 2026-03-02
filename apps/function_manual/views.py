@@ -21,7 +21,7 @@ from institution.models import AdministrativeUnit
 from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
     JobActivity, ProfileCompetency
 from .forms import ManualCatalogForm, ManualCatalogItemForm
-from core.models import BaseModel, Authorities
+from core.models import BaseModel, Authority
 
 
 # ============================================================================
@@ -894,7 +894,7 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile, pk=pk)
-        authorities = Authorities.objects.filter(is_active=True)
+        authorities = Authority.objects.filter(is_active=True)
         return render(request, 'function_manual/modals/modal_legalize_profile.html', {
             'profile': profile,
             'authorities': authorities

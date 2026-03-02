@@ -268,14 +268,23 @@ class SystemConfiguration(BaseModel):
             effective_date__lte=timezone.now().date()
         ).first()
 
-class Authorities(BaseModel):
-    name = models.CharField(verbose_name='Nombre* :', max_length=255)
-    charge = models.CharField(verbose_name='Cargo* :', max_length=255)
-    status = models.BooleanField(verbose_name='estado :', max_length=10)
+class Authority(BaseModel):
+    """
+    Representa una autoridad de la institución.
+    """
+    name = models.CharField(
+        max_length=255,
+        verbose_name="Nombre Completo"
+    )
+    position = models.CharField(
+        max_length=255,
+        verbose_name="Cargo"
+    )
 
     class Meta:
-        verbose_name = "autoridades"
-        ordering = ['pk']
+        verbose_name = "Autoridad"
+        verbose_name_plural = "Autoridades"
+        ordering = ['name']
 
     def __str__(self):
-        return '%s' % self.name
+        return f"{self.name} - {self.position}"
