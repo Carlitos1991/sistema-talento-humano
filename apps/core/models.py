@@ -48,6 +48,7 @@ class User(AbstractUser):
     """
 
     class Meta:
+        app_label = 'core'
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
 
