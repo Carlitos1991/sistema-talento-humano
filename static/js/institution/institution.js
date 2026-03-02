@@ -552,3 +552,11 @@ $(document).on('submit', '#form-relocate-employee', function (e) {
         complete: () => btn.prop('disabled', false).html('Confirmar Reubicación')
     });
 });
+
+// =========================================================================
+// FUNCIÓN PARA EXPORTAR EMPLEADOS DE UNA UNIDAD A EXCEL
+// =========================================================================
+window.exportUnitEmployees = function(unitId, statusCode) {
+    const url = `/institution/units/${unitId}/export-employees/?status=${statusCode}`;
+    window.location.href = url;
+};

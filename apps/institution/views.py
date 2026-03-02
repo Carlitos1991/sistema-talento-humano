@@ -159,8 +159,26 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         ).select_related('person').prefetch_related(
             'current_budget_line', 'current_budget_line__position_item'
         )
+        
+        # Estadísticas por estado laboral
+        from django.db.models import Count
+        stats_qs = employees.values(
+            'employment_status__code'
+        ).annotate(total=Count('id'))
+        
+        stats_dict = {stat['employment_status__code']: stat['total'] 
+                      for stat in stats_qs if stat['employment_status__code']}
+        
+        unit_stats = {
+            'total': employees.count(),
+            'empleado': stats_dict.get('EMPLEADO', 0),
+            'trabajador': stats_dict.get('TRABAJADOR', 0),
+            'contratado': stats_dict.get('CONTRATADO', 0),
+        }
+        
         context['children'] = children
         context['employees'] = employees
+        context['unit_stats'] = unit_stats
         context['form'] = AdministrativeUnitForm()
         return context
 
@@ -646,6 +664,97 @@ def level_partial_table(request):
     return HttpResponse(html)
 
 
+@login_required
+@permission_required('institution.view_administrativeunit', raise_exception=True)
+def export_unit_employees_excel(request, pk):
+    """
+    Exporta empleados de una unidad administrativa a Excel
+    Filtrado por estado laboral si se proporciona
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    
+    unit = get_object_or_404(AdministrativeUnit, pk=pk)
+    status_code = request.GET.get('status', 'total')
+    
+    # Obtener empleados de la unidad
+    employees = Employee.objects.filter(
+        area_id=unit.pk, 
+        is_active=True
+    ).exclude(
+        Q(employment_status__name__icontains='EX EMPLEADO') |
+        Q(employment_status__name__icontains='EX TRABAJADOR')
+    ).select_related(
+        'person', 
+        'employment_status'
+    ).prefetch_related(
+        'current_budget_line',
+        'current_budget_line__position_item'
+    )
+    
+    # Filtrar por estado si no es "total"
+    if status_code and status_code.upper() != 'TOTAL':
+        employees = employees.filter(employment_status__code=status_code.upper())
+    
+    # Crear workbook
+    wb = Workbook()
+    ws = wb.active
+    
+    # Título del estado
+    if status_code and status_code.upper() != 'TOTAL':
+        ws.title = f"{status_code.capitalize()}"
+    else:
+        ws.title = "Todos"
+    
+    # Encabezados
+    headers = ['N°', 'Apellidos y Nombres', 'Cédula/Documento', 'Cargo', 'Remuneración']
+    ws.append(headers)
+    
+    # Estilo del encabezado
+    header_fill = PatternFill(start_color="198754", end_color="198754", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    # Datos
+    for idx, emp in enumerate(employees, start=1):
+        full_name = f"{emp.person.last_name} {emp.person.first_name}"
+        document = emp.person.document_number or '-'
+        
+        # Obtener cargo
+        cargo = '-'
+        budget_line = emp.current_budget_line.first()
+        if budget_line and budget_line.position_item:
+            cargo = budget_line.position_item.name
+        
+        # Obtener remuneración
+        remuneracion = '-'
+        if budget_line and budget_line.salary:
+            remuneracion = f"${budget_line.salary:,.2f}"
+        
+        ws.append([idx, full_name, document, cargo, remuneracion])
+    
+    # Ajustar ancho de columnas
+    column_widths = [8, 40, 18, 35, 15]
+    for i, width in enumerate(column_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    
+    # Respuesta HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    filename = f"Empleados_{unit.name.replace(' ', '_')}_{status_code}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    wb.save(response)
+    return response
 def get_units_context(units_queryset=None):
     """Auxiliar para mantener consistencia de contexto en vistas y AJAX"""
     if units_queryset is None:

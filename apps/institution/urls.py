@@ -37,4 +37,5 @@ urlpatterns = [
     # Ruta con ID (Detalle)
     path('organigram/navigation/<int:pk>/', views.RootLevelListView.as_view(), name='organigram_nav_detail'),
     path('units/assign-boss/<int:pk>/', views.UnitAssignBossView.as_view(), name='unit_assign_boss'),
+    path('units/<int:pk>/export-employees/', views.export_unit_employees_excel, name='unit_export_employees'),
 ]
