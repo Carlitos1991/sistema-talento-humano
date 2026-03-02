@@ -145,12 +145,22 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     context_object_name = 'unit'
     permission_required = 'institution.view_administrativeunit'
 
+    def get_all_descendant_units(self, unit):
+        """Obtiene recursivamente todos los IDs de descendientes de una unidad"""
+        descendants = [unit.pk]
+        children = AdministrativeUnit.objects.filter(parent=unit, is_active=True)
+        for child in children:
+            descendants.extend(self.get_all_descendant_units(child))
+        return descendants
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_unit = self.object
         children = AdministrativeUnit.objects.filter(
             parent=current_unit, is_active=True
         ).order_by('code', 'name')
+        
+        # Empleados solo de la unidad actual (para mostrar en la lista)
         employees = Employee.objects.filter(
             area_id=current_unit.pk, is_active=True
         ).exclude(
@@ -160,9 +170,20 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             'current_budget_line', 'current_budget_line__position_item'
         )
         
-        # Estadísticas por estado laboral
+        # Obtener IDs de todas las subdependencias (recursivo)
+        all_unit_ids = self.get_all_descendant_units(current_unit)
+        
+        # Empleados de la unidad actual + todas sus subdependencias
+        all_employees = Employee.objects.filter(
+            area_id__in=all_unit_ids, is_active=True
+        ).exclude(
+            Q(employment_status__name__icontains='EX EMPLEADO') |
+            Q(employment_status__name__icontains='EX TRABAJADOR')
+        )
+        
+        # Estadísticas por estado laboral (incluyendo todas las subdependencias)
         from django.db.models import Count
-        stats_qs = employees.values(
+        stats_qs = all_employees.values(
             'employment_status__code'
         ).annotate(total=Count('id'))
         
@@ -170,15 +191,15 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
                       for stat in stats_qs if stat['employment_status__code']}
         
         unit_stats = {
-            'total': employees.count(),
+            'total': all_employees.count(),
             'empleado': stats_dict.get('EMPLEADO', 0),
             'trabajador': stats_dict.get('TRABAJADOR', 0),
             'contratado': stats_dict.get('CONTRATADO', 0),
         }
         
         context['children'] = children
-        context['employees'] = employees
-        context['unit_stats'] = unit_stats
+        context['employees'] = employees  # Solo de la unidad actual para mostrar
+        context['unit_stats'] = unit_stats  # Incluye todas las subdependencias
         context['form'] = AdministrativeUnitForm()
         return context
 
@@ -664,11 +685,21 @@ def level_partial_table(request):
     return HttpResponse(html)
 
 
+def get_all_descendant_unit_ids(unit):
+    """Función auxiliar para obtener recursivamente todos los IDs de descendientes"""
+    descendants = [unit.pk]
+    children = AdministrativeUnit.objects.filter(parent=unit, is_active=True)
+    for child in children:
+        descendants.extend(get_all_descendant_unit_ids(child))
+    return descendants
+
+
 @login_required
 @permission_required('institution.view_administrativeunit', raise_exception=True)
 def export_unit_employees_excel(request, pk):
     """
     Exporta empleados de una unidad administrativa a Excel
+    Incluye empleados de la unidad y todas sus subdependencias recursivamente
     Filtrado por estado laboral si se proporciona
     """
     from openpyxl import Workbook
@@ -678,20 +709,24 @@ def export_unit_employees_excel(request, pk):
     unit = get_object_or_404(AdministrativeUnit, pk=pk)
     status_code = request.GET.get('status', 'total')
     
-    # Obtener empleados de la unidad
+    # Obtener IDs de todas las subdependencias (recursivo)
+    all_unit_ids = get_all_descendant_unit_ids(unit)
+    
+    # Obtener empleados de la unidad + todas sus subdependencias
     employees = Employee.objects.filter(
-        area_id=unit.pk, 
+        area_id__in=all_unit_ids, 
         is_active=True
     ).exclude(
         Q(employment_status__name__icontains='EX EMPLEADO') |
         Q(employment_status__name__icontains='EX TRABAJADOR')
     ).select_related(
         'person', 
-        'employment_status'
+        'employment_status',
+        'area'
     ).prefetch_related(
         'current_budget_line',
         'current_budget_line__position_item'
-    )
+    ).order_by('area__name', 'person__last_name')
     
     # Filtrar por estado si no es "total"
     if status_code and status_code.upper() != 'TOTAL':
@@ -707,8 +742,8 @@ def export_unit_employees_excel(request, pk):
     else:
         ws.title = "Todos"
     
-    # Encabezados
-    headers = ['N°', 'Apellidos y Nombres', 'Cédula/Documento', 'Cargo', 'Remuneración']
+    # Encabezados (agregamos columna de Dependencia)
+    headers = ['N°', 'Apellidos y Nombres', 'Cédula/Documento', 'Dependencia', 'Cargo', 'Remuneración']
     ws.append(headers)
     
     # Estilo del encabezado
@@ -726,6 +761,7 @@ def export_unit_employees_excel(request, pk):
     for idx, emp in enumerate(employees, start=1):
         full_name = f"{emp.person.last_name} {emp.person.first_name}"
         document = emp.person.document_number or '-'
+        dependencia = emp.area.name if emp.area else '-'
         
         # Obtener cargo
         cargo = '-'
@@ -738,10 +774,10 @@ def export_unit_employees_excel(request, pk):
         if budget_line and budget_line.salary:
             remuneracion = f"${budget_line.salary:,.2f}"
         
-        ws.append([idx, full_name, document, cargo, remuneracion])
+        ws.append([idx, full_name, document, dependencia, cargo, remuneracion])
     
-    # Ajustar ancho de columnas
-    column_widths = [8, 40, 18, 35, 15]
+    # Ajustar ancho de columnas (agregamos ancho para la columna Dependencia)
+    column_widths = [8, 40, 18, 35, 35, 15]
     for i, width in enumerate(column_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     

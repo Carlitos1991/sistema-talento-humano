@@ -82,7 +82,7 @@
             <!-- Botones de Estadísticas de Personal -->
             <div class="stats-buttons-container">
                 {% if unit_stats.total > 0 %}
-                    <button class="stat-btn stat-btn-total" onclick="exportUnitEmployees('{{ unit.id }}', 'total')" title="Exportar todos a Excel">
+                    <button class="stat-btn stat-btn-total" onclick="exportUnitEmployees('{{ unit.id }}', 'total')" title="Total de empleados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-users"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Total</span>
@@ -92,7 +92,7 @@
                 {% endif %}
                 
                 {% if unit_stats.empleado > 0 %}
-                    <button class="stat-btn stat-btn-employee" onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')" title="Exportar empleados a Excel">
+                    <button class="stat-btn stat-btn-employee" onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')" title="Empleados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-user-tie"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Empleados</span>
@@ -102,7 +102,7 @@
                 {% endif %}
                 
                 {% if unit_stats.trabajador > 0 %}
-                    <button class="stat-btn stat-btn-worker" onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')" title="Exportar trabajadores a Excel">
+                    <button class="stat-btn stat-btn-worker" onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')" title="Trabajadores (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-hard-hat"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Trabajadores</span>
@@ -112,7 +112,7 @@
                 {% endif %}
                 
                 {% if unit_stats.contratado > 0 %}
-                    <button class="stat-btn stat-btn-contractor" onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')" title="Exportar contratados a Excel">
+                    <button class="stat-btn stat-btn-contractor" onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')" title="Contratados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-user-clock"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Contratados</span>
