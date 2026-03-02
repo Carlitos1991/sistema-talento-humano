@@ -771,8 +771,8 @@ def export_unit_employees_excel(request, pk):
         
         # Obtener remuneración
         remuneracion = '-'
-        if budget_line and budget_line.salary:
-            remuneracion = f"${budget_line.salary:,.2f}"
+        if budget_line and hasattr(budget_line, 'remuneration') and budget_line.remuneration:
+            remuneracion = f"${budget_line.remuneration:,.2f}"
         
         ws.append([idx, full_name, document, dependencia, cargo, remuneracion])
     
