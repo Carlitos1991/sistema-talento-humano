@@ -6,12 +6,12 @@
            data-external-search="true">
         <thead class="table-light">
         <tr>
-            <th>Número</th>
-            <th>Tipo</th>
-            <th>Asunto</th>
-            <th>Dirigido A</th>
-            <th>Responsable</th>
-            <th>Fecha</th>
+            <th data-sortable="filing_code">Número</th>
+            <th data-sortable="category">Tipo</th>
+            <th data-sortable="subject">Asunto</th>
+            <th data-sortable="recipient_name">Dirigido A</th>
+            <th data-sortable="sender_name">Responsable</th>
+            <th data-sortable="registration_date">Fecha</th>
             <th>Archivo</th>
             <th>Acciones</th>
         </tr>
@@ -45,6 +45,12 @@
                 <td colspan="8" class="text-center py-4">No se encontraron documentos.</td>
             </tr>
         {% endfor %}
+        <!-- Fila para mostrar cuando la búsqueda no retorna resultados -->
+        <tr id="frontend-no-results" class="hidden">
+            <td colspan="8" class="text-center py-4">
+                <i class="fa-solid fa-search"></i> No se encontraron registros
+            </td>
+        </tr>
         </tbody>
     </table>
 </div>
