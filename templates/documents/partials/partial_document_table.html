@@ -1,22 +1,28 @@
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
+<div class="table-container">
+    <table class="managed-table exportable-table"
+           data-title="Reporte Documentos"
+           data-filename="Reporte_documentos"
+           data-external-pagination="true"
+           data-external-search="true">
         <thead class="table-light">
-            <tr>
-                <th>Radicado</th>
-                <th>Tipo</th>
-                <th>Asunto</th>
-                <th>Remitente</th>
-                <th>Fecha</th>
-                <th>Archivo</th>
-                <th>Acciones</th>
-            </tr>
+        <tr>
+            <th>Número</th>
+            <th>Tipo</th>
+            <th>Asunto</th>
+            <th>Dirigido A</th>
+            <th>Responsable</th>
+            <th>Fecha</th>
+            <th>Archivo</th>
+            <th>Acciones</th>
+        </tr>
         </thead>
         <tbody>
-            {% for doc in documents %}
+        {% for doc in documents %}
             <tr>
                 <td><span class="badge bg-secondary">{{ doc.filing_code }}</span></td>
                 <td>{{ doc.category.name }}</td>
                 <td>{{ doc.subject|truncatechars:30 }}</td>
+                <td>{{ doc.recipient_name|truncatechars:25 }}</td>
                 <td>{{ doc.sender_name }}</td>
                 <td>{{ doc.registration_date|date:"d/m/Y H:i" }}</td>
                 <td>
@@ -34,11 +40,11 @@
                     </button>
                 </td>
             </tr>
-            {% empty %}
+        {% empty %}
             <tr>
-                <td colspan="7" class="text-center py-4">No se encontraron documentos.</td>
+                <td colspan="8" class="text-center py-4">No se encontraron documentos.</td>
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 </div>

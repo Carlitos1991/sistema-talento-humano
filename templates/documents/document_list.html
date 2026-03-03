@@ -1,43 +1,85 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Gestión Documental | SIGETH{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2 class="page-title"><i class="fa-solid fa-folder-open"></i> Gestión Documental</h2>
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión Documental</h1>
+            <p>Gestión de documentos, como memorandos, oficios, informes técnicos</p>
         </div>
-        <div class="col-md-6 text-end">
-            <!-- Botón que activa el Modal Vue -->
-            <button class="btn btn-primary" onclick="openDocumentModal()">
-                <i class="fa-solid fa-plus"></i> Nuevo Registro
+        {% if perms.documents.add_documents %}
+            <button id="btn-add-budget" type="button" class="btn btn-create" onclick="openDocumentModal()">
+                <i class="fas fa-plus-circle"></i> Nuevo Documento
             </button>
+        {% endif %}
+    </div>
+    <!-- 2. Estadísticas (Filtros Rápidos) -->
+    <div id="documents-app" v-cloak data-current-user="{{ user.get_full_name }}">
+        <div class="stats-row" v-if="stats.regimes">
+        <!-- Tarjeta Fija: Total -->
+        <div class="stat-card color-one"
+             @click="clearSearch"
+             :class="{'opacity-low': isAdvancedSearch}">
+            <div class="stat-left">
+                <h3>TOTAL ACTIVOS</h3>
+                <div class="number">[[ stats.total ]]</div>
+            </div>
+            <i class="fas fa-users-check stat-icon"></i>
+        </div>
+
+        <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
+        <div v-for="(regime, index) in stats.regimes"
+             :key="regime.code"
+             class="stat-card"
+             :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.regime_code !== regime.code}]"
+             @click="filterByRegime(regime.code)">
+            <div class="stat-left">
+                <h3>[[ regime.name ]]</h3>
+                <div class="number">[[ regime.count ]]</div>
+            </div>
+            <i class="fas fa-file-document stat-icon"></i>
         </div>
     </div>
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Input de búsqueda -->
+                    <input type="text" id="table-search-budget" class="input-field"
+                           placeholder="Buscar por partida, cargo, empleado o cédula">
+                </div>
+            </div>
 
-    <!-- Barra de Búsqueda -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="input-group">
-                <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
-                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por radicado o asunto..." onkeyup="filterDocuments()">
+            <!-- Contenedor donde se inyecta el HTML parcial -->
+            <div id="table-content-wrapper">
+                {% include 'documents/partials/partial_document_table.html' %}
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
+                <ul class="pagination-list">
+                    <li>
+                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    </li>
+                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
+                    <li>
+                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- Contenedor Tabla Híbrida -->
-    <div id="tableContainer" class="card shadow-sm">
-        {% include 'documents/partials/partial_document_table.html' %}
-    </div>
-</div>
-
-<!-- Placeholder para el Modal (Vue lo monta aquí si es necesario o usamos HTML estático controlado por JS) -->
+<!-- Modal: FUERA del árbol Vue para evitar conflicto en compilación de templates -->
 {% include 'documents/modals/modal_document_form.html' %}
 
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/documents/documents.js' %}"></script>
+    <script src="{% static 'js/documents/modal-document-form.js' %}"></script>
+    <script src="{% static 'js/documents/documents.js' %}"></script>
 {% endblock %}

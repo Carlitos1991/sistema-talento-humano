@@ -1,0 +1,382 @@
+/* ============================================
+   MODAL DOCUMENT FORM - MAXIMUM SPECIFICITY
+   ============================================ */
+
+/* Control main modal overlay and backdrop */
+#documentModal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(0, 0, 0, 0.92) !important;
+    z-index: 99999 !important;
+    animation: fadeInModal 0.3s ease-in-out !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    outline: none !important;
+}
+
+#documentModal.hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Dialog container */
+#documentModal .modal-dialog {
+    width: 95% !important;
+    min-width: 350px !important;
+    max-width: 950px !important;
+    max-height: 85vh !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    margin: auto !important;
+}
+
+/* Main content wrapper */
+#documentModal .modal-content {
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.15) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: fit-content !important;
+    max-height: 85vh !important;
+    overflow: hidden !important;
+}
+
+/* Header section */
+#documentModal .modal-header {
+    padding: 2rem 2.5rem !important;
+    border-bottom: none !important;
+    background: linear-gradient(135deg, #0f766e 0%, #1fb4a9 50%, #14919b 100%) !important;
+    border-radius: 14px 14px 0 0 !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+#documentModal .modal-title {
+    margin: 0 !important;
+    font-weight: 700 !important;
+    font-size: 1.6rem !important;
+    color: #ffffff !important;
+    letter-spacing: -0.5px !important;
+    flex: 1 !important;
+}
+
+#documentModal .btn-close {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    font-size: 1.75rem !important;
+    cursor: pointer !important;
+    color: #ffffff !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.25s ease !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+#documentModal .btn-close:hover {
+    background: rgba(255, 255, 255, 0.35) !important;
+    transform: scale(1.1) !important;
+}
+
+#documentModal .btn-close:active {
+    background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Body section */
+#documentModal .modal-body {
+    padding: 2.5rem 2.5rem !important;
+    background: #ffffff !important;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    color: #000000 !important;
+}
+
+#documentModal .modal-body form {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Form labels */
+#documentModal .form-label {
+    display: block !important;
+    margin-bottom: 0.6rem !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #1e293b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.75px !important;
+    height: 18px !important;
+}
+
+/* Form inputs and controls - MAXIMUM FORCE with nested selectors - EXCLUDES TEXTAREA */
+#documentModal .modal-body .row .form-control:not(textarea),
+#documentModal .modal-body .row .form-select,
+#documentModal .modal-body .row input[type="text"],
+#documentModal .modal-body .row input[type="email"],
+#documentModal .modal-body .row input[type="number"],
+#documentModal .modal-body .row input[type="date"],
+#documentModal .modal-body .row select,
+#documentModal .form-control:not(textarea),
+#documentModal .form-select,
+#documentModal input[type="text"],
+#documentModal input[type="email"],
+#documentModal input[type="number"],
+#documentModal input[type="date"],
+#documentModal select {
+    padding: 0.75rem 0.875rem !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 0.95rem !important;
+    font-family: inherit !important;
+    transition: all 0.25s ease !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    height: 42px !important;
+    line-height: 1.5 !important;
+}
+
+#documentModal input[type="file"] {
+    padding: 0.65rem 0.875rem !important;
+}
+
+#documentModal .form-control:focus,
+#documentModal .form-select:focus,
+#documentModal input:focus,
+#documentModal textarea:focus,
+#documentModal select:focus {
+    border-color: #0f766e !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: 0 0 0 5px rgba(15, 118, 110, 0.12), inset 0 0 0 1px #0f766e !important;
+    outline: none !important;
+}
+
+#documentModal input[readonly],
+#documentModal .form-control[readonly] {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    border-color: #cbd5e1 !important;
+}
+
+#documentModal input[id="modal_quantity"] {
+    text-align: center !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+}
+
+/* CRITICAL: Override textarea height to auto */
+#documentModal .modal-body textarea,
+#documentModal textarea {
+    height: auto !important;
+    min-height: 120px !important;
+    resize: vertical !important;
+    padding: 0.75rem 0.875rem !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Row and column grid */
+#documentModal .row {
+    display: grid !important;
+    gap: 1.5rem !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+    width: 100% !important;
+}
+
+#documentModal .row.g-3 {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+}
+
+#documentModal .col-md-3,
+#documentModal .col-md-4,
+#documentModal .col-md-5,
+#documentModal .col-md-7,
+#documentModal .col-12 {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#documentModal .col-12 {
+    grid-column: 1 / -1 !important;
+}
+
+/* Footer section */
+#documentModal .modal-footer {
+    padding: 1.75rem 2.5rem !important;
+    border-top: 2px solid #e8ecf1 !important;
+    display: flex !important;
+    gap: 1rem !important;
+    justify-content: center !important;
+    background: #f8fafc !important;
+    border-radius: 0 0 14px 14px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Buttons */
+#documentModal .btn {
+    padding: 0.75rem 1.75rem !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    cursor: pointer !important;
+    transition: all 0.25s ease !important;
+    letter-spacing: 0.4px !important;
+    text-transform: uppercase !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+}
+
+#documentModal .btn-primary {
+    background: linear-gradient(135deg, #0f766e 0%, #1fb4a9 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25) !important;
+}
+
+#documentModal .btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(15, 118, 110, 0.35) !important;
+}
+
+#documentModal .btn-primary:active {
+    transform: translateY(0) !important;
+}
+
+#documentModal .btn-secondary {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+    box-shadow: none !important;
+}
+
+#documentModal .btn-secondary:hover {
+    background: #cbd5e1 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    #documentModal .modal-dialog {
+        width: 98% !important;
+        max-height: 90vh !important;
+    }
+    
+    #documentModal .modal-content {
+        max-height: 90vh !important;
+    }
+    
+    #documentModal .modal-header {
+        padding: 1.5rem !important;
+    }
+    
+    #documentModal .modal-body {
+        padding: 1.5rem !important;
+    }
+    
+    #documentModal .modal-footer {
+        padding: 1.25rem 1.5rem !important;
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+    }
+    
+    #documentModal .btn {
+        padding: 0.75rem 1.5rem !important;
+        min-width: 100px !important;
+    }
+}
+
+.no-scroll {
+    overflow: hidden !important;
+}
+
+/* Grid Cantidad-Asunto: 1fr 3fr proportion */
+#documentModal-overlay .grid-cantidad-asunto {
+    display: grid !important;
+    grid-template-columns: 1fr 3fr !important;
+    gap: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+    width: 100% !important;
+}
+
+#documentModal-overlay .grid-cantidad-asunto .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+#documentModal-overlay #modal_quantity {
+    text-align: center !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+}
+
+/* ULTRA SPECIFICITY RULE - Override all global styles completely */
+.modal#documentModal .modal-body .row div input[type="text"],
+.modal#documentModal .modal-body .row div input[type="email"],
+.modal#documentModal .modal-body .row div input[type="number"],
+.modal#documentModal .modal-body .row div input[type="date"],
+.modal#documentModal .modal-body .row div select {
+    height: 42px !important;
+    padding: 0.75rem 0.875rem !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    line-height: 1.5 !important;
+    background-color: #ffffff !important;
+}
+
+.modal#documentModal .modal-body .row div textarea,
+.modal#documentModal .modal-body textarea {
+    height: auto !important;
+    min-height: 120px !important;
+    padding: 0.75rem 0.875rem !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+}

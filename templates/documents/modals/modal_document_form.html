@@ -1,35 +1,76 @@
-<div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Nuevo Documento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- El formulario se renderiza via JS o se incluye uno estático oculto -->
-                <form id="documentForm" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <!-- Aquí inyectas los campos del form renderizados o los escribes manualmente para Vue -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nro. Radicado</label>
-                            <input type="text" name="filing_code" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo Documento</label>
-                            <!-- Select2 se inicializa en el JS -->
-                            <select name="category" class="form-select select2-modal" required>
-                                <!-- Opciones cargadas dinámicamente o via Django -->
-                            </select>
-                        </div>
-                        <!-- Resto de campos... -->
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="saveDocument()">Guardar</button>
-            </div>
+<div id="documentModal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-container animate-scale-in">
+
+        <!-- HEADER -->
+        <div class="modal-header modal-header-gradient">
+            <h3 class="modal-title text-white" id="modalTitle">
+                <i class="fa-solid fa-file-circle-plus me-2"></i> Nuevo Documento
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" id="modal-close-btn">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
         </div>
+
+        <!-- FORM WRAPPER (includes body + footer) -->
+        <form id="documentForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; height: 100%;">
+            {% csrf_token %}
+
+            <!-- BODY -->
+            <div class="modal-body modal-body-custom">
+                <!-- Campos ocultos -->
+                <input type="hidden" id="modal_category_name" name="modal_category_name">
+                <input type="hidden" id="modal_filing_code" name="filing_code">
+                <input type="hidden" id="modal_category" name="category">
+                <input type="hidden" id="modal_sender_name" name="sender_name">
+
+                <!-- Cantidad y Asunto en la misma fila: Cantidad pequeño, Asunto grande -->
+                <div class="grid-cantidad-asunto" style="display: grid !important; grid-template-columns: 1fr 3fr !important; gap: 1rem !important; align-items: flex-start !important;">
+                    <div class="form-group" style="margin-bottom: 0 !important;">
+                        <label class="form-label">
+                            <i class="fa-solid fa-file"></i> Cantidad (*)
+                        </label>
+                        <input type="text" id="modal_quantity" name="quantity" class="form-control input-field" value="1"
+                               inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0 !important;">
+                        <label class="form-label">
+                            <i class="fa-solid fa-heading"></i> Asunto (*)
+                        </label>
+                        <input type="text" name="subject" class="form-control input-field" required
+                               placeholder="Ej: Solicitud de disponibilidad">
+                    </div>
+                </div>
+
+                <!-- A Quién va Dirigido -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fa-solid fa-user-check"></i> A Quién va Dirigido
+                    </label>
+                    <input type="text" name="recipient_name" class="form-control input-field"
+                           placeholder="Ej: Dirección General">
+                </div>
+
+                <!-- Observaciones -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fa-solid fa-note-sticky"></i> Observaciones / Notas
+                    </label>
+                    <textarea name="observation" class="form-control input-field" rows="4"
+                              placeholder="Palabras clave, referencias o notas adicionales..."></textarea>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel" id="modal-cancel-btn">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </form>
+
     </div>
 </div>
