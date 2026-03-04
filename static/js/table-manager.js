@@ -30,7 +30,9 @@ class TableManager {
         this.searchInput = this.wrapper.querySelector('.table-search-input')
             || document.getElementById('table-search');
 
-        this.initSortHeaders();
+        // Evitar inicializar manejadores de ordenamiento en tablas que delegan
+        // paginación/búsqueda al backend (evita conflicto con código específico)
+        if (!this.externalPagination && !this.externalSearch) this.initSortHeaders();
         if (!this.externalSearch) this.initSearch();
         if (!this.externalPagination) this.initPagination();
         if (!this.externalPagination) this.render();
@@ -502,6 +504,11 @@ document.addEventListener('click', (e) => {
 
     const table = th.closest('.managed-table');
     if (!table) return;
+
+    // Evitar que el delegado global gestione ordenamiento para tablas que
+    // usan paginación/búsqueda externa (servidor/Vue) — esas vistas gestionan
+    // su propio comportamiento y evitar esto previene conflictos.
+    if (table.dataset.externalPagination === 'true' || table.dataset.externalSearch === 'true') return;
 
     // Determinar índice de la columna
     const headers = Array.from(table.querySelectorAll('thead th'));

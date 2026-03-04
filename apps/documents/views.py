@@ -40,15 +40,43 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             except (ValueError, TypeError):
                 # Si no es convertible, ignoramos el filtro
                 pass
+        # Ordenamiento (opcional)
+        sort_field = self.request.GET.get('sort_field')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        if sort_field:
+            # Mapear campos seguros desde la plantilla a campos del modelo
+            mapping = {
+                'filing_code': 'filing_code',
+                'category': 'category__name',
+                'subject': 'subject',
+                'recipient_name': 'recipient_name',
+                'sender_name': 'sender_name',
+                'registration_date': 'registration_date'
+            }
+            field = mapping.get(sort_field, None)
+            if field:
+                if sort_dir == 'desc':
+                    field = f'-{field}'
+                try:
+                    queryset = queryset.order_by(field)
+                except Exception:
+                    pass
         return queryset
 
     def get(self, request, *args, **kwargs):
         # Si es petición AJAX, devolvemos solo la tabla parcial
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object_list = self.get_queryset()
+            # Aplicar paginación al resultado antes de renderizar el partial
+            page = request.GET.get('page') or 1
+            try:
+                page = int(page)
+            except (ValueError, TypeError):
+                page = 1
+            paginator, page_obj, object_list, is_paginated = self.paginate_queryset(self.object_list, self.paginate_by)
             html = render_to_string(
                 'documents/partials/partial_document_table.html',
-                {'documents': self.object_list},
+                {'documents': object_list},
                 request=request
             )
             # Estadísticas por tipo de documento
@@ -64,7 +92,12 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 ]
             }
 
-            return JsonResponse({'html': html, 'stats': stats})
+            pagination = {
+                'current_page': page_obj.number,
+                'total_pages': paginator.num_pages,
+                'total_items': paginator.count
+            }
+            return JsonResponse({'html': html, 'stats': stats, 'pagination': pagination})
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):

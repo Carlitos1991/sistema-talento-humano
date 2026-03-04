@@ -34,6 +34,10 @@ const documentsApp = createApp({
             stats: { total: 0, regimes: [] },
             isAdvancedSearch: false,
             advancedFilters: { regime_code: '', q: '' }
+            ,
+            // Ordenamiento
+            sortField: null,
+            sortAsc: true
         };
     },
     mounted() {
@@ -46,10 +50,17 @@ const documentsApp = createApp({
         initDelegatedListeners() {
             const searchInput = document.getElementById('table-search-budget');
             if (searchInput) {
+                // Debounce búsqueda para evitar peticiones en cada tecla
+                let to = null;
                 searchInput.addEventListener('input', (e) => {
-                    this.searchTerm = e.target.value.toLowerCase().trim();
-                    this.currentPage = 1;
-                    this.applyFrontendLogic();
+                    clearTimeout(to);
+                    const val = e.target.value.trim();
+                    to = setTimeout(() => {
+                        // Usar búsqueda en backend (tabla con external_search)
+                        this.advancedFilters.q = val;
+                        this.currentPage = 1;
+                        this.fetchTable(this.isAdvancedSearch, 1);
+                    }, 350);
                 });
             }
 
@@ -62,6 +73,9 @@ const documentsApp = createApp({
                     const id = btn.dataset.id;
                     if (action === 'edit') this.editDocument(id);
                     if (action === 'advanced-search-empty') this.openSearchModal && this.openSearchModal();
+                    // Paginación básica: botones con id
+                    if (btn.id === 'btn-prev') return this.prevPage();
+                    if (btn.id === 'btn-next') return this.nextPage();
                     // Si el click proviene de una tarjeta stat que tiene data-regime-code
                     const statEl = e.target.closest('.stat-card');
                     if (statEl && statEl.dataset && statEl.dataset.code) {
@@ -72,6 +86,27 @@ const documentsApp = createApp({
                         this.setAddButtonEnabled(this.selectedTypeId !== '');
                     }
                 });
+
+                // Click en encabezados para ordenar (delegado)
+                tableWrapper.addEventListener('click', (e) => {
+                    const th = e.target.closest('thead th');
+                    if (!th) return;
+                    // Usar atributo data-sortable o data-field
+                    const field = th.dataset.sortable || th.dataset.field || null;
+                    if (!field) return;
+                    // Alternar dirección si ya estamos ordenando por ese campo
+                    if (this.sortField === field) this.sortAsc = !this.sortAsc;
+                    else { this.sortField = field; this.sortAsc = true; }
+                    // Refrescar desde servidor con nuevo orden
+                    this.currentPage = 1;
+                    this.fetchTable(this.isAdvancedSearch);
+                });
+
+                // Botones de paginación externos al wrapper (hermanos dentro de .content-table)
+                const btnPrevGlobal = document.getElementById('btn-prev');
+                const btnNextGlobal = document.getElementById('btn-next');
+                if (btnPrevGlobal) btnPrevGlobal.addEventListener('click', (ev) => { ev.preventDefault(); this.prevPage(); });
+                if (btnNextGlobal) btnNextGlobal.addEventListener('click', (ev) => { ev.preventDefault(); this.nextPage(); });
             }
         },
 
@@ -93,15 +128,22 @@ const documentsApp = createApp({
             }
         },
 
-        async fetchTable(advanced = false) {
+        async fetchTable(advanced = false, page = 1) {
             this.loading = true;
             this.isAdvancedSearch = advanced;
 
-            const params = new URLSearchParams({
+            const paramsObj = {
                 advanced: advanced ? 1 : 0,
                 q: this.advancedFilters.q || '',
-                regime_code: this.advancedFilters.regime_code || ''
-            }).toString();
+                regime_code: this.advancedFilters.regime_code || '',
+                page: page
+            };
+            // Añadir orden si está definido
+            if (this.sortField) {
+                paramsObj.sort_field = this.sortField;
+                paramsObj.sort_dir = this.sortAsc ? 'asc' : 'desc';
+            }
+            const params = new URLSearchParams(paramsObj).toString();
 
             try {
                 const url = `${window.location.pathname}?${params}`;
@@ -113,6 +155,20 @@ const documentsApp = createApp({
                 const container = document.getElementById('table-content-wrapper');
                 if (container) container.innerHTML = data.table_html || data.html || container.innerHTML;
 
+                // Inicializar TableManager para la nueva tabla (compatibilidad)
+                const newTable = container ? container.querySelector('.managed-table') : null;
+                if (newTable) {
+                    try {
+                        new TableManager(newTable);
+                    } catch (e) {
+                        console.warn('No se pudo inicializar TableManager en documents:', e);
+                    }
+                    // Exponer orden actual globalmente para compatibilidad con otros módulos
+                    window._personExport = window._personExport || {};
+                    if (this.sortField) window._personExport.sort = {field: this.sortField, asc: this.sortAsc};
+
+                    }
+
                 if (data.stats) {
                     // Asegurar que los códigos vienen como strings para comparación en plantilla
                     const regimes = (data.stats.regimes || []).map(r => ({
@@ -122,10 +178,28 @@ const documentsApp = createApp({
                     this.stats = { total: data.stats.total || 0, regimes };
                 }
 
+                // Si el servidor devuelve info de paginación, sincronizar estado
+                if (data.pagination) {
+                    this.totalRows = data.pagination.total_items || 0;
+                    this.currentPage = data.pagination.current_page || page;
+                }
+
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.indexRows();
-                        this.applyFrontendLogic();
+                        // Si la búsqueda/paginación es manejada por el servidor, no aplicar
+                        // filtrado frontend sino mostrar filas tal cual
+                        if (this.isAdvancedSearch || this.advancedFilters.q) {
+                            // Mostrar/ocultar mensaje "no results" si totalRows == 0
+                            const emptyRow = document.getElementById('frontend-no-results');
+                            if (emptyRow) {
+                                const showMsg = (this.totalRows === 0 && (this.advancedFilters.q || this.isAdvancedSearch));
+                                showMsg ? emptyRow.classList.remove('hidden') : emptyRow.classList.add('hidden');
+                            }
+                        } else {
+                            this.applyFrontendLogic();
+                        }
+                        this.updatePaginationUI(Math.ceil((this.totalRows || 0) / this.pageSize) || 1);
                     }, 50);
                 });
             } catch (e) {
@@ -186,15 +260,17 @@ const documentsApp = createApp({
         },
 
         nextPage() {
-            if (this.currentPage < Math.ceil(this.totalRows / this.pageSize)) {
+            const last = Math.ceil((this.totalRows || 0) / this.pageSize) || 1;
+            if (this.currentPage < last) {
                 this.currentPage++;
-                this.applyFrontendLogic();
+                // Solicitar siguiente página al servidor
+                this.fetchTable(this.isAdvancedSearch, this.currentPage);
             }
         },
         prevPage() {
             if (this.currentPage > 1) {
                 this.currentPage--;
-                this.applyFrontendLogic();
+                this.fetchTable(this.isAdvancedSearch, this.currentPage);
             }
         },
 
