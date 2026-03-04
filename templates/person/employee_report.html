@@ -5,6 +5,8 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
+    <link rel="stylesheet" href="{% static 'css/report.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
@@ -30,10 +32,12 @@
                     <div style="display:flex;flex-direction:column;gap:20px;">
                         <div style="width:100%;">
                             <div style="font-weight:600;margin-bottom:8px;">Datos Institucionales</div>
-                            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                            <div class="fields-grid">
                                 {% for key,label in available_fields.institutional %}
-                                    <label style="width:220px;display:flex;align-items:center;gap:8px;">
-                                        <input type="checkbox" name="fields" value="{{ key }}"> {{ label }}
+                                    <label class="radio-target">
+                                        <input type="checkbox" name="fields" value="{{ key }}" class="rt-input">
+                                        <span class="rt-indicator" aria-hidden="true"></span>
+                                        <span class="rt-name">{{ label }}</span>
                                     </label>
                                 {% endfor %}
                             </div>
@@ -41,19 +45,22 @@
 
                         <div style="width:100%;">
                             <div style="font-weight:600;margin-bottom:8px;">Datos Personales</div>
-                            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                            <div class="fields-grid">
                                 {% for key,label in available_fields.personal %}
-                                    <label style="width:220px;display:flex;align-items:center;gap:8px;">
-                                        <input type="checkbox" name="fields" value="{{ key }}"> {{ label }}
+                                    <label class="radio-target">
+                                        <input type="checkbox" name="fields" value="{{ key }}" class="rt-input">
+                                        <span class="rt-indicator" aria-hidden="true"></span>
+                                        <span class="rt-name">{{ label }}</span>
                                     </label>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
 
-                    <div style="margin-top:20px;">
+                    <hr class="report-divider">
+                    <div class="report-actions">
                         <button type="button" id="exportBtn" class="btn btn-success"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-                        <button type="button" id="clearBtn" class="btn btn-secondary">Limpiar</button>
+                        <button type="button" id="clearBtn" class="btn btn-secondary"><i class="fa-solid fa-filter-circle-xmark"></i> Limpiar</button>
                     </div>
                 </form>
             </div>
@@ -89,6 +96,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         (function(){
             const unitsApi = '{{ units_api_url }}';
@@ -105,13 +113,29 @@
                 return sel;
             }
 
+            function initSelect2(element){
+                if(window.$ && $.fn.select2){
+                    $(element).select2({
+                        placeholder: 'Seleccione una opción...',
+                        allowClear: true,
+                        width: '100%'
+                    }).on('change', onSelectChange);
+                }
+            }
+
             function onSelectChange(e){
                 const sel = e.target;
                 const parentId = sel.value;
                 // Remove selects that are deeper than current level
                 const level = parseInt(sel.dataset.level,10);
                 const toRemove = Array.from(selectsContainer.querySelectorAll('select')).filter(s=>parseInt(s.dataset.level,10)>level);
-                toRemove.forEach(n=>n.remove());
+                toRemove.forEach(n=>{
+                    // Destroy Select2 if it exists
+                    if(window.$ && $.fn.select2 && $(n).data('select2')){
+                        $(n).select2('destroy');
+                    }
+                    n.remove();
+                });
 
                 if(parentId){
                     selectedUnitId = parentId;
@@ -124,6 +148,7 @@
                                     const o = document.createElement('option'); o.value = u.id; o.text = u.name; next.appendChild(o);
                                 });
                                 selectsContainer.appendChild(next);
+                                initSelect2(next);
                             }
                         });
                 } else {
@@ -135,6 +160,12 @@
 
             // cargar selects iniciales (raíz)
             function loadRoot(){
+                // Destroy any existing Select2 instances
+                Array.from(selectsContainer.querySelectorAll('select')).forEach(sel=>{
+                    if(window.$ && $.fn.select2 && $(sel).data('select2')){
+                        $(sel).select2('destroy');
+                    }
+                });
                 selectsContainer.innerHTML = '';
                 fetch(unitsApi)
                     .then(r=>r.json())
@@ -146,6 +177,7 @@
                             });
                         }
                         selectsContainer.appendChild(first);
+                        initSelect2(first);
                     });
             }
 
@@ -155,9 +187,57 @@
             const progressPercent = document.getElementById('progressPercent');
             const cancelBtn = document.getElementById('cancelExport');
             let abortController = null;
+            // Fake progress state (iniciar al mostrar overlay)
+            let fakeProgress = 1;
+            let fastInterval = null;
+            let slowInterval = null;
+
+            function updateUI(realPct){
+                const displayPct = Math.max(typeof realPct === 'number' ? realPct : 0, fakeProgress);
+                progressBar.style.width = displayPct + '%';
+                progressPercent.textContent = displayPct + '%';
+            }
+
+            function startFakeProgress(){
+                if(fastInterval || slowInterval) return;
+                fakeProgress = Math.max(1, fakeProgress);
+                updateUI();
+                fastInterval = setInterval(()=>{
+                    if(fakeProgress < 95){
+                        fakeProgress = Math.min(95, fakeProgress + 1);
+                        updateUI();
+                    }
+                    if(fakeProgress >= 95){
+                        if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
+                        if(!slowInterval){
+                            slowInterval = setInterval(()=>{
+                                if(fakeProgress < 99){
+                                    fakeProgress = Math.min(99, fakeProgress + 1);
+                                    updateUI();
+                                }
+                                if(fakeProgress >= 99){
+                                    clearInterval(slowInterval); slowInterval = null;
+                                }
+                            }, 30000);
+                        }
+                    }
+                }, 1000);
+            }
+
+            function stopFakeProgress(){
+                if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
+                if(slowInterval){ clearInterval(slowInterval); slowInterval = null; }
+            }
 
             document.getElementById('exportBtn').addEventListener('click', async function(){
-                if(!selectedUnitId){ alert('Seleccione una unidad administrativa'); return; }
+                if(!selectedUnitId){ 
+                    if(window.Swal){
+                        Swal.fire({ icon: 'info', title: 'Seleccione una unidad administrativa', confirmButtonText: 'Aceptar' });
+                    } else {
+                        alert('Seleccione una unidad administrativa');
+                    }
+                    return; 
+                }
                 const checked = Array.from(document.querySelectorAll('input[name=fields]:checked')).map(i=>i.value);
                 const params = new URLSearchParams();
                 params.set('unit_id', selectedUnitId);
@@ -165,10 +245,10 @@
 
                 const url = exportUrl + '?' + params.toString();
 
-                // Mostrar overlay
+                // Mostrar overlay y arrancar progreso ficticio inmediatamente
                 overlay.style.display = 'flex';
-                progressBar.style.width = '0%';
-                progressPercent.textContent = '0%';
+                startFakeProgress();
+                updateUI();
                 progressText.textContent = 'Enviando solicitud...';
 
                 abortController = new AbortController();
@@ -201,40 +281,7 @@
                     let received = 0;
                     progressText.textContent = 'Descargando archivo...';
 
-                    // Fake progress (funciona como piso) — aplica tanto si hay Content-Length como si no
-                    let fakeProgress = 1; // iniciar en 1% para evitar ver 0% estancado
-                    let fastInterval = null;
-                    let slowInterval = null;
-
-                    function updateUI(realPct){
-                        const displayPct = Math.max(typeof realPct === 'number' ? realPct : 0, fakeProgress);
-                        progressBar.style.width = displayPct + '%';
-                        progressPercent.textContent = displayPct + '%';
-                    }
-
-                    // Iniciar fake progress: +1%/s hasta 95%, luego +1% cada 30s hasta 99%
-                    updateUI(0);
-                    fastInterval = setInterval(()=>{
-                        if(fakeProgress < 95){
-                            fakeProgress = Math.min(95, fakeProgress + 1);
-                            updateUI();
-                        }
-                        if(fakeProgress >= 95){
-                            if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
-                            if(!slowInterval){
-                                slowInterval = setInterval(()=>{
-                                    if(fakeProgress < 99){
-                                        fakeProgress = Math.min(99, fakeProgress + 1);
-                                        updateUI();
-                                    }
-                                    if(fakeProgress >= 99){
-                                        clearInterval(slowInterval); slowInterval = null;
-                                    }
-                                }, 30000);
-                            }
-                        }
-                    }, 1000);
-
+                    
                     while(true){
                         const { done, value } = await reader.read();
                         if(done) break;
@@ -254,8 +301,7 @@
                     }
 
                     // Lectura completada: limpiar timers y forzar 100%
-                    if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
-                    if(slowInterval){ clearInterval(slowInterval); slowInterval = null; }
+                    stopFakeProgress();
                     fakeProgress = 100;
                     updateUI(100);
                     progressText.textContent = 'Generado, preparando descarga...';
@@ -282,22 +328,60 @@
                         console.error(err);
                         progressText.textContent = 'Error: ' + (err.message || 'Falló la descarga');
                     }
+                    stopFakeProgress();
                     setTimeout(()=> overlay.style.display = 'none', 1200);
                 } finally {
+                    stopFakeProgress();
                     abortController = null;
                 }
             });
 
             cancelBtn.addEventListener('click', function(){
                 if(abortController){ abortController.abort(); }
+                stopFakeProgress();
             });
 
             document.getElementById('clearBtn').addEventListener('click', function(){
+                // reset selects / unit
                 loadRoot();
-                Array.from(document.querySelectorAll('input[name=fields]')).forEach(i=>i.checked=false);
+                selectedUnitId = null;
+                // Uncheck all fields and ensure labels lose 'active'
+                Array.from(document.querySelectorAll('input[name=fields]')).forEach(i=>{
+                    if(i.checked){ i.checked = false; }
+                    // dispatch change so syncLabels removes the active class
+                    i.dispatchEvent(new Event('change', { bubbles: true }));
+                    // fallback: remove class directly
+                    const lbl = i.closest('label.radio-target'); if(lbl) lbl.classList.remove('active');
+                });
+                // reset any overlay/progress UI if visible
+                if(overlay.style.display === 'flex'){
+                    stopFakeProgress();
+                    overlay.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    progressPercent.textContent = '0%';
+                    progressText.textContent = 'Preparando solicitud';
+                    fakeProgress = 1;
+                }
             });
 
             loadRoot();
+        })();
+    </script>
+    <script>
+        // Small helper to toggle 'active' class on labels when checkboxes change
+        (function(){
+            function syncLabels(){
+                Array.from(document.querySelectorAll('input[name="fields"]')).forEach(function(inp){
+                    const lbl = inp.closest('label.radio-target');
+                    if(!lbl) return;
+                    if(inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active');
+                    inp.addEventListener('change', function(){ if(inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active'); });
+                });
+            }
+            // Run on DOMContentLoaded and also when content might be re-rendered
+            document.addEventListener('DOMContentLoaded', syncLabels);
+            // If inputs are present immediately, run once
+            setTimeout(syncLabels, 200);
         })();
     </script>
 {% endblock %}

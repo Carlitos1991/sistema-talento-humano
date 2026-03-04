@@ -1,0 +1,120 @@
+/* RADIO TARGET - estilos específicos para el reporte */
+.radio-target {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(2,6,23,0.01));
+    border: 1px solid rgba(15,23,42,0.04);
+    transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+    cursor: pointer;
+    /* sizing controlled by grid container */
+    flex: 0 0 auto;
+    min-height: 56px;
+    box-sizing: border-box;
+}
+
+.radio-target:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+.radio-target .rt-name { flex: 1 1 auto; font-weight: 600; color: #1e293b; font-size: 0.98rem; }
+.radio-target .rt-name { margin-left: 6px; }
+
+.radio-target .rt-input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+
+ .radio-target .rt-indicator {
+    width: 28px; height: 28px; border-radius: 50%; background: #ffffff;
+    border: 2px solid #cbd5e1; box-shadow: 0 2px 6px rgba(2,6,23,0.06);
+    flex-shrink: 0; display: inline-block; transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease; position: relative; box-sizing: border-box;
+}
+
+/* Al seleccionar: pintar TODO el círculo (sin cuadro interior ni icono blanco) */
+.radio-target .rt-input:checked + .rt-indicator {
+    /* seleccionado: verde muy claro (fondo del círculo) */
+    background: #e6fbf0; /* verde muy claro */
+    border-color: #c6efd6; box-shadow: 0 6px 16px rgba(34,197,94,0.12); transform: scale(1.02);
+}
+
+/* No dibujar marca interna - la selección se indica por el círculo pintado y el estado activo del label */
+.radio-target .rt-input:checked + .rt-indicator::after { content: none; }
+
+.radio-target .rt-input:focus + .rt-indicator { box-shadow: 0 0 0 4px rgba(37,99,235,0.15); outline: none; }
+
+.radio-target.small { padding: 6px 10px; border-radius: 8px; }
+/* aseguramos que incluso variantes "small" conserven el mismo tamaño del indicador */
+.radio-target.small .rt-indicator { width: 28px; height: 28px; }
+
+/* Fallback para radios nativos con name=target */
+input[type="radio"][name="target"] { transform: scale(1.35); margin-left: 10px; margin-right: 6px; accent-color: #06b6d4; }
+
+label > input[type="radio"][name="target"] { vertical-align: middle; }
+
+/* Estado activo (checkbox/radio seleccionado) */
+.radio-target.active {
+    background: linear-gradient(90deg, #0ea5a4 0%, #06b6d4 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+.radio-target.active .rt-name { color: #fff; }
+
+.radio-target.active .rt-indicator {
+    /* cuando el label está activo, usar el mismo verde muy claro para el indicador */
+    background: #e6fbf0; border-color: #c6efd6; box-shadow: 0 6px 16px rgba(34,197,94,0.12); transform: scale(1.02);
+}
+
+/* Check mark drawing for checkbox/radio */
+.radio-target .rt-indicator::after { content: none; }
+.radio-target.active .rt-indicator::after { content: none; }
+
+/* small polish: make check crisp on retina */
+.radio-target .rt-indicator::after,
+.radio-target.active .rt-indicator::after,
+.radio-target .rt-input:checked + .rt-indicator::after {
+    box-sizing: content-box;
+}
+
+/* Divider before buttons */
+.report-divider {
+    margin: 24px 0 20px 0;
+    border: none;
+    border-top: 2px solid #e2e8f0;
+}
+
+/* BUTTONS: modern styles for report actions */
+.report-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 0;
+}
+.report-actions .btn { font-weight: 600; border-radius: 10px; padding: 12px 20px; font-size: 1rem; box-shadow: 0 6px 14px rgba(2,6,23,0.06); transition: transform 180ms ease, box-shadow 180ms ease; min-width: 140px; }
+.report-actions .btn:hover { transform: translateY(-2px); }
+.report-actions .btn.btn-success { background: linear-gradient(90deg,#059669,#10b981); border: none; color: #fff; }
+.report-actions .btn.btn-success i { margin-right: 8px; }
+.report-actions .btn.btn-secondary { background: #f8fafc; border: 1px solid #e6eef2; color: #0f172a; }
+.report-actions .btn.btn-light { background: #fff; border: 1px solid #e6eef2; color: #0f172a; }
+
+/* Grid wrapper for fields: ensures consistent columns and equal cell sizes */
+.fields-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+}
+.fields-grid .radio-target { width: 100% !important; flex: none !important; min-width: unset !important; }
+
+@media (max-width: 1200px) {
+    .fields-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+    .fields-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Select2 styling for unit selects */
+.unit-dynamic-grid select { min-width: 180px; }
+.unit-dynamic-grid .select2-container--default .select2-selection--single { border-radius: 6px; border: 1px solid #cbd5e1; }
+.unit-dynamic-grid .select2-container--default .select2-selection--single .select2-selection__rendered { padding: 8px 12px; }
+.unit-dynamic-grid .select2-container--default.select2-container--open .select2-selection--single { border-color: #0ea5a4; }
+
