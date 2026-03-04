@@ -39,6 +39,8 @@ const documentsApp = createApp({
             // Ordenamiento
             sortField: null,
             sortAsc: true
+            ,
+            editingId: null
         };
     },
     mounted() {
@@ -434,7 +436,20 @@ const documentsApp = createApp({
                     const senderInput = document.getElementById('modal_sender_name');
                     if (senderInput && currentUser) senderInput.value = currentUser;
                     
-                    const qty = document.getElementById('modal_quantity'); if (qty) qty.value = 1;
+                    const qtyGroup = document.getElementById('modal_quantity_group');
+                    if (qtyGroup) {
+                        const qty = qtyGroup.querySelector('#modal_quantity');
+                        if (qty) qty.value = 1;
+                        qtyGroup.style.display = '';
+                    }
+                    // Reset editing state
+                    this.editingId = null;
+                        const filePreview = document.getElementById('modal_file_preview'); if (filePreview) filePreview.innerHTML = '';
+                        // restaurar grid a dos columnas (cantidad + asunto)
+                        const grid = document.getElementById('grid-cantidad-asunto'); if (grid) grid.style.gridTemplateColumns = '1fr 3fr';
+                        // mostrar cantidad (el grupo ya fue referenciado arriba)
+                        if (qtyGroup) qtyGroup.style.display = '';
+                        const deleteBtn = document.getElementById('modal_delete_file_btn'); if (deleteBtn) deleteBtn.style.display = 'none';
                     const title = document.getElementById('modalTitle'); if (title) title.innerText = `NUEVO ${this.selectedTypeName.toUpperCase()}`;
 
                     // Mostrar modal: usar Bootstrap si está disponible, si no usar fallback
@@ -454,19 +469,80 @@ const documentsApp = createApp({
             }
         },
 
+        async editDocument(id) {
+            // Abrir modal en modo edición: ocultar cantidad y precargar campos
+            try {
+                const res = await fetch(`/documents/detail/${id}/`);
+                const data = await res.json();
+                if (!data.success) {
+                    Swal.fire('Error', data.message || 'No se pudo obtener el documento', 'error');
+                    return;
+                }
+                const doc = data.data;
+                const form = document.getElementById('documentForm');
+                if (!form) return;
+                form.reset();
+                // ocultar el grupo completo de cantidad (input + label)
+                const qtyGroup = document.getElementById('modal_quantity_group'); if (qtyGroup) qtyGroup.style.display = 'none';
+                // ajustar grid para que Asunto ocupe toda la fila
+                const grid = document.getElementById('grid-cantidad-asunto'); if (grid) grid.style.gridTemplateColumns = '1fr';
+                // rellenar campos ocultos y visibles
+                document.getElementById('modal_filing_code').value = doc.filing_code || '';
+                document.getElementById('modal_category').value = doc.category || '';
+                const nameInput = document.getElementById('modal_category_name'); if (nameInput) nameInput.value = doc.category_name || this.selectedTypeName || '';
+                const senderInput = document.getElementById('modal_sender_name'); if (senderInput) senderInput.value = doc.sender_name || '';
+                const subj = form.querySelector('input[name="subject"]'); if (subj) subj.value = doc.subject || '';
+                const recip = form.querySelector('input[name="recipient_name"]'); if (recip) recip.value = doc.recipient_name || '';
+                const obs = form.querySelector('textarea[name="observation"]'); if (obs) obs.value = doc.observation || '';
+                // no mostrar link de archivo actual según spec; sólo mostrar botón eliminar si existe
+                const filePreview = document.getElementById('modal_file_preview'); if (filePreview) filePreview.innerHTML = '';
+
+                // marcar estado de edición
+                this.editingId = id;
+                // Mostrar/ocultar botón Eliminar PDF según exista archivo
+                const deleteBtn = document.getElementById('modal_delete_file_btn');
+                if (deleteBtn) {
+                    if (doc.file_url) {
+                        deleteBtn.style.display = '';
+                        deleteBtn.onclick = (ev) => { ev && ev.preventDefault(); window.deleteDocumentFile(id); };
+                    } else {
+                        deleteBtn.style.display = 'none';
+                        deleteBtn.onclick = null;
+                    }
+                }
+                const title = document.getElementById('modalTitle'); if (title) title.innerText = `EDITAR ${this.selectedTypeName ? this.selectedTypeName.toUpperCase() : ''}`;
+
+                // mostrar modal
+                const modalEl = document.getElementById('documentModal-overlay');
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                } else {
+                    modalEl.classList.remove('hidden');
+                    document.body.classList.add('no-scroll');
+                }
+            } catch (e) {
+                console.error('Error cargando documento:', e);
+                Swal.fire('Error', 'No se pudo cargar el documento', 'error');
+            }
+        },
+
         async saveDocument() {
             const form = document.getElementById('documentForm');
             if (!form) return;
             const formData = new FormData(form);
             this.loading = true;
             try {
-                // Enviamos siempre a create-multiple que maneja quantity y secuencia
-                const createUrl = window.location.pathname.replace(/list\/?$/, 'create-multiple/');
-                const response = await fetch(createUrl, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-CSRFToken': getCookie('csrftoken')}
-                });
+                let response;
+                if (this.editingId) {
+                    // Update single document
+                    const url = `/documents/update/${this.editingId}/`;
+                    response = await fetch(url, { method: 'POST', body: formData, headers: {'X-CSRFToken': getCookie('csrftoken')} });
+                } else {
+                    // Create multiple (existing flow)
+                    const createUrl = window.location.pathname.replace(/list\/?$/, 'create-multiple/');
+                    response = await fetch(createUrl, { method: 'POST', body: formData, headers: {'X-CSRFToken': getCookie('csrftoken')} });
+                }
                 const data = await response.json();
                 if (data.success || data.status === 'success') {
                     // Cerrar modal
@@ -490,6 +566,8 @@ const documentsApp = createApp({
                     // Refrescar tabla después de corto delay
                     await new Promise(r => setTimeout(r, 500));
                     this.fetchTable();
+                    // Reset editingId
+                    this.editingId = null;
                 } else {
                     Swal.fire('Error', data.message || 'Error al guardar', 'error');
                 }
@@ -501,10 +579,7 @@ const documentsApp = createApp({
             }
         },
 
-        editDocument(id) {
-            // Placeholder: abrir modal de edición vía fetch si existe endpoint
-            console.log('Editar documento', id);
-        }
+        
     }
 });
 
@@ -535,9 +610,81 @@ window.saveDocument = function(...args) {
     console.warn('documentsInstance not ready: saveDocument');
 };
 
+// Subir/actualizar archivo PDF para un documento específico
+window.uploadDocumentFile = function(id) {
+    if (!id) return console.warn('uploadDocumentFile requires id');
+    // Crear input temporal
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) { document.body.removeChild(input); return; }
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const res = await fetch(`/documents/upload-file/${id}/`, { method: 'POST', body: fd, headers: {'X-CSRFToken': getCookie('csrftoken')} });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: data.message, toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                // refrescar tabla
+                if (window.documentsInstance && typeof window.documentsInstance.fetchTable === 'function') window.documentsInstance.fetchTable(window.documentsInstance.isAdvancedSearch, window.documentsInstance.currentPage);
+            } else {
+                Swal.fire('Error', data.message || 'Error subiendo archivo', 'error');
+            }
+        } catch (e) {
+            console.error('Error uploadDocumentFile:', e);
+            Swal.fire('Error', 'Fallo en la subida del archivo', 'error');
+        } finally {
+            document.body.removeChild(input);
+        }
+    });
+    input.click();
+};
+
 window.changeDocumentPage = function(page) {
     if (window.documentsInstance && typeof window.documentsInstance.fetchTable === 'function') {
         return window.documentsInstance.fetchTable(window.documentsInstance.isAdvancedSearch, page);
     }
     console.warn('documentsInstance not ready: changeDocumentPage', page);
+};
+
+// Eliminar archivo PDF asociado a un documento
+window.deleteDocumentFile = async function(id) {
+    if (!id) return console.warn('deleteDocumentFile requires id');
+    if (typeof Swal === 'undefined') {
+        const ok = confirm('¿Eliminar el archivo PDF actual? Esta acción no se puede deshacer.');
+        if (!ok) return;
+    } else {
+        const result = await Swal.fire({
+            title: '¿Eliminar el archivo PDF actual?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!result || !result.isConfirmed) return;
+    }
+    try {
+        const res = await fetch(`/documents/delete-file/${id}/`, { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} });
+        const data = await res.json();
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: data.message, toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            // actualizar vista del modal
+            const filePreview = document.getElementById('modal_file_preview'); if (filePreview) filePreview.innerHTML = '';
+            const deleteBtn = document.getElementById('modal_delete_file_btn'); if (deleteBtn) deleteBtn.style.display = 'none';
+            // refrescar tabla
+            if (window.documentsInstance && typeof window.documentsInstance.fetchTable === 'function') window.documentsInstance.fetchTable(window.documentsInstance.isAdvancedSearch, window.documentsInstance.currentPage);
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo eliminar', 'error');
+        }
+    } catch (e) {
+        console.error('Error deleteDocumentFile:', e);
+        Swal.fire('Error', 'Fallo al eliminar archivo', 'error');
+    }
 };

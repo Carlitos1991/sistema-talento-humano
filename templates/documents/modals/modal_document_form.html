@@ -12,7 +12,8 @@
         </div>
 
         <!-- FORM WRAPPER (includes body + footer) -->
-        <form id="documentForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; height: 100%;">
+        <form id="documentForm" enctype="multipart/form-data"
+              style="display: flex; flex-direction: column; height: 100%;">
             {% csrf_token %}
 
             <!-- BODY -->
@@ -24,12 +25,14 @@
                 <input type="hidden" id="modal_sender_name" name="sender_name">
 
                 <!-- Cantidad y Asunto en la misma fila: Cantidad pequeño, Asunto grande -->
-                <div class="grid-cantidad-asunto" style="display: grid !important; grid-template-columns: 1fr 3fr !important; gap: 1rem !important; align-items: flex-start !important;">
-                    <div class="form-group" style="margin-bottom: 0 !important;">
+                <div id="grid-cantidad-asunto" class="grid-cantidad-asunto"
+                     style="display: grid !important; grid-template-columns: 1fr 3fr !important; gap: 1rem !important; align-items: flex-start !important;">
+                    <div id="modal_quantity_group" class="form-group" style="margin-bottom: 0 !important;">
                         <label class="form-label">
                             <i class="fa-solid fa-file"></i> Cantidad (*)
                         </label>
-                        <input type="text" id="modal_quantity" name="quantity" class="form-control input-field" value="1"
+                        <input type="text" id="modal_quantity" name="quantity" class="form-control input-field"
+                               value="1"
                                inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" required>
                     </div>
 
@@ -59,12 +62,22 @@
                     <textarea name="observation" class="form-control input-field" rows="4"
                               placeholder="Palabras clave, referencias o notas adicionales..."></textarea>
                 </div>
+
+                <!-- Contenedor para acciones de archivo (Eliminar solo si existe) -->
+                <div class="form-group" id="modal_file_actions" style="display:flex; gap:0.5rem; align-items:center;">
+                    <div style="margin-top:0.5rem;">
+                        <button type="button" id="modal_delete_file_btn" title="Eliminar PDF"
+                                class="btn btn-delete-action"
+                                style="display:none;"><i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- FOOTER -->
             <div class="modal-footer modal-footer-spaced">
                 <button type="button" class="btn-cancel" id="modal-cancel-btn">
-                    Cancelar
+                    Cerrar
                 </button>
                 <button type="submit" class="btn-save">
                     <i class="fas fa-save"></i> Guardar

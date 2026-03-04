@@ -52,12 +52,26 @@
             </li>
         {% endif %}
         {% if perms.person.view_person %}
-            <li>
-                <a href="{% url 'person:person_list' %}"
-                   class="{% if request.resolver_match.app_name == 'person' %}active{% endif %}">
+            <li class="has-submenu">
+                <a href="#" class="{% if request.resolver_match.app_name == 'person' %}active{% endif %}">
                     <i class="fa-solid fa-users"></i>
                     <span class="menu-text">Empleados</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
                 </a>
+                <ul class="submenu">
+                    <li>
+                        <a href="{% url 'person:person_list' %}" class="{% if request.resolver_match.url_name == 'person_list' %}active{% endif %}">
+                            <i class="fa-solid fa-list-check"></i>
+                            Empleados
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'person:employee_report' %}" class="{% if request.resolver_match.url_name == 'employee_report' %}active{% endif %}">
+                            <i class="fa-solid fa-file-excel"></i>
+                            Reporte
+                        </a>
+                    </li>
+                </ul>
             </li>
         {% endif %}
         {% if perms.personnel_actions.view_personnelaction %}

@@ -300,6 +300,26 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Delete PDF button specific styling inside document modal */
+#documentModal #modal_delete_file_btn,
+#documentModal .btn-outline-danger {
+    background: transparent !important;
+    color: #b91c1c !important; /* red-700 */
+    border: 2px solid rgba(185,28,28,0.12) !important;
+    box-shadow: none !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+}
+
+#documentModal #modal_delete_file_btn:hover,
+#documentModal .btn-outline-danger:hover {
+    background: #b91c1c !important;
+    color: #ffffff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(185,28,28,0.25) !important;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     #documentModal .modal-dialog {

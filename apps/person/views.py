@@ -1,13 +1,13 @@
 # apps/person/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, TemplateView
 from django.db.models import Q, Value, CharField
 from django.db.models.functions import Concat
 
@@ -17,6 +17,234 @@ from employee.models import Employee, InstitutionalData
 from institution.models import AdministrativeUnit
 from .models import Person
 from .forms import PersonForm
+
+
+class EmployeeReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    template_name = 'person/employee_report.html'
+    permission_required = 'person.view_person'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from django.urls import reverse
+        context['units_api_url'] = reverse('institution:api_unit_children')
+        context['export_url'] = reverse('person:employee_report_export')
+        # Campos disponibles para el reporte (clave,label)
+        # Agrupar campos en institucionales y personales para la UI
+        context['available_fields'] = {
+            'institutional': [
+                ('area', 'Dependencia'),
+                ('cargo', 'Cargo'),
+                ('remuneration', 'Remuneración'),
+            ],
+            'personal': [
+                ('blood_type', 'Tipo de Sangre'),
+                ('marital_status', 'Estado Civil'),
+                ('gender', 'Género'),
+                ('birth_date', 'Fecha Nac.'),
+                ('email', 'Correo Pers.'),
+                ('address_reference', 'Dirección'),
+                ('phone_number', 'Teléfono'),
+                ('emergency_contact_name', 'Contacto Emerg.'),
+                ('emergency_contact_phone', 'Celular Emerg.'),
+            ]
+        }
+        return context
+
+
+class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.view_person'
+
+    def get_descendants_with_depth(self, unit, depth=0):
+        result = [(unit, depth)]
+        children = AdministrativeUnit.objects.filter(parent=unit, is_active=True).order_by('name')
+        for child in children:
+            result.extend(self.get_descendants_with_depth(child, depth + 1))
+        return result
+
+    def get(self, request, *args, **kwargs):
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+
+        unit_id = request.GET.get('unit_id') or request.GET.get('pk')
+        if not unit_id:
+            return JsonResponse({'success': False, 'message': 'Unidad no especificada.'}, status=400)
+
+        unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+        # fields como lista separada por comas
+        fields_param = request.GET.get('fields', '')
+        selected_fields = [f for f in (fields_param.split(',') if fields_param else []) if f]
+
+        # Definir mapeo clave -> (label, getter lambda)
+        def get_val(emp, key):
+            if key == 'blood_type':
+                return getattr(emp.person.blood_type, 'name', '') if emp.person and emp.person.blood_type else ''
+            if key == 'marital_status':
+                return getattr(emp.person.marital_status, 'name', '') if emp.person and emp.person.marital_status else ''
+            if key == 'gender':
+                return getattr(emp.person.gender, 'name', '') if emp.person and emp.person.gender else ''
+            if key == 'birth_date':
+                return emp.person.birth_date.strftime('%Y-%m-%d') if emp.person and emp.person.birth_date else ''
+            if key == 'email':
+                return emp.person.email or ''
+            if key == 'address_reference':
+                return emp.person.address_reference or ''
+            if key == 'phone_number':
+                return emp.person.phone_number or ''
+            if key == 'area':
+                return emp.area.name if emp.area else ''
+            if key == 'cargo':
+                bl = emp.current_budget_line.first()
+                return bl.position_item.name if bl and getattr(bl, 'position_item', None) else ''
+            if key == 'remuneration':
+                bl = emp.current_budget_line.first()
+                if bl and getattr(bl, 'remuneration', None):
+                    try:
+                        return f"${float(bl.remuneration):,.2f}"
+                    except Exception:
+                        return str(getattr(bl, 'remuneration', ''))
+                return ''
+            if key == 'emergency_contact_name':
+                return emp.person.emergency_contact_name or ''
+            if key == 'emergency_contact_phone':
+                return emp.person.emergency_contact_phone or ''
+            return ''
+
+        # Obtener unidades con profundidad
+        units_with_depth = self.get_descendants_with_depth(unit, depth=0)
+
+        # Preparar workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Reporte Empleados'
+
+        # Columnas: siempre N°, Apellidos, Nombres, Documento
+        institutional_keys = ['area', 'cargo', 'remuneration']
+        personal_keys = ['blood_type', 'marital_status', 'gender', 'birth_date', 'email', 'address_reference', 'phone_number', 'emergency_contact_name', 'emergency_contact_phone']
+
+        selected_institutional = [k for k in institutional_keys if k in selected_fields]
+        selected_personal = [k for k in personal_keys if k in selected_fields]
+
+        # Mapear key a etiqueta
+        label_map = {
+            'area': 'Dependencia',
+            'cargo': 'Cargo',
+            'remuneration': 'Remuneración',
+            'blood_type': 'Tipo de Sangre',
+            'marital_status': 'Estado Civil',
+            'gender': 'Género',
+            'birth_date': 'Fecha Nac.',
+            'email': 'Correo Pers.',
+            'address_reference': 'Dirección',
+            'phone_number': 'Teléfono',
+            'emergency_contact_name': 'Contacto Emerg.',
+            'emergency_contact_phone': 'Celular Emerg.'
+        }
+
+        extra_labels = [label_map[k] for k in selected_institutional + selected_personal]
+        headers = ['N°', 'Apellidos', 'Nombres', 'Cédula/Documento'] + extra_labels
+
+        # Estilos para filas de unidad por profundidad (colores solicitados)
+        depth_fills = [
+            PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid'),  # azul padre
+            PatternFill(start_color='198754', end_color='198754', fill_type='solid'),  # verde
+            PatternFill(start_color='FFD700', end_color='FFD700', fill_type='solid'),  # amarillo
+            PatternFill(start_color='ADD8E6', end_color='ADD8E6', fill_type='solid'),  # celeste
+            PatternFill(start_color='FFD8A8', end_color='FFD8A8', fill_type='solid'),  # naranja claro
+        ]
+
+        # Contador de filas y índice global
+        row_idx = 1
+
+        # Añadimos encabezado general
+        title_cell = ws.cell(row=row_idx, column=1, value=f"REPORTE: {unit.name}")
+        title_cell.font = Font(bold=True, size=14)
+        row_idx += 1
+
+        # Escribir datos por unidad (cabecera por unidad con color y luego empleados)
+        counter = 1
+        for u, depth in units_with_depth:
+            # Cabecera unidad
+            col_count = len(headers)
+            cell = ws.cell(row=row_idx, column=1, value=u.name)
+            cell.font = Font(bold=True)
+            fill = depth_fills[min(depth, len(depth_fills)-1)]
+            for c in range(1, col_count + 1):
+                ws.cell(row=row_idx, column=c).fill = fill
+            row_idx += 1
+
+            # Obtener empleados de la unidad (solo activos)
+            employees = Employee.objects.filter(
+                area_id=u.id,
+                is_active=True
+            ).exclude(
+                Q(employment_status__name__icontains='EX EMPLEADO') |
+                Q(employment_status__name__icontains='EX TRABAJADOR')
+            ).select_related('person', 'area').order_by('person__last_name')
+
+            # Si hay empleados, escribir cabecera de columnas antes del primer empleado
+            if employees.exists():
+                # First, write group header row (Institutional / Personal) if both present
+                group_col_start = 5
+                # institutional group length
+                inst_len = len(selected_institutional)
+                pers_len = len(selected_personal)
+
+                if inst_len or pers_len:
+                    # write empty cells for base columns
+                    for bc in range(1, 5):
+                        ws.cell(row=row_idx, column=bc, value='')
+                    # merge and label institutional
+                    col = group_col_start
+                    if inst_len:
+                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx, end_column=col+inst_len-1)
+                        cell = ws.cell(row=row_idx, column=col, value='Datos Institucionales')
+                        cell.alignment = Alignment(horizontal='center')
+                        cell.font = Font(bold=True)
+                    col += inst_len
+                    if pers_len:
+                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx, end_column=col+pers_len-1)
+                        cell = ws.cell(row=row_idx, column=col, value='Datos Personales')
+                        cell.alignment = Alignment(horizontal='center')
+                        cell.font = Font(bold=True)
+                    row_idx += 1
+
+                # Header row with column titles
+                for col, h in enumerate(headers, start=1):
+                    cell = ws.cell(row=row_idx, column=col, value=h)
+                    cell.font = Font(bold=True)
+                    cell.alignment = Alignment(horizontal='center')
+                    # add border
+                    from openpyxl.styles import Border, Side
+                    side = Side(border_style='thin', color='000000')
+                    cell.border = Border(left=side, right=side, top=side, bottom=side)
+                row_idx += 1
+
+                for emp in employees:
+                    last, first = emp.person.last_name if emp.person else '-', emp.person.first_name if emp.person else '-'
+                    doc = emp.person.document_number if emp.person and emp.person.document_number else ''
+                    values = [counter, last, first, doc]
+                    for key in selected_institutional + selected_personal:
+                        values.append(get_val(emp, key))
+                    for col, val in enumerate(values, start=1):
+                        cell = ws.cell(row=row_idx, column=col, value=val)
+                        # add thin border to every cell
+                        from openpyxl.styles import Border, Side
+                        side = Side(border_style='thin', color='000000')
+                        cell.border = Border(left=side, right=side, top=side, bottom=side)
+                    row_idx += 1
+                    counter += 1
+
+        # Ajustar anchos
+        for i in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(i)].width = 18 if i > 1 else 6
+
+        # Preparar respuesta
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"Reporte_Empleados_{unit.name.replace(' ', '_')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
 
 
 class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reporte Empleados | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1>Reportes</h1>
+            <p>Reporte por Unidad Administrativa</p>
+        </div>
+    </div>
+
+    <div class="content-table" style="padding:20px;">
+        <div class="form-section-card">
+            <div class="section-title"><i class="fa-solid fa-sitemap"></i> Ubicación Organizacional</div>
+            <div id="unit-selects" class="unit-dynamic-grid" style="display:flex;gap:12px;flex-wrap:wrap;padding:12px;">
+                <!-- selects se generarán aquí -->
+            </div>
+        </div>
+
+        <div class="form-section-card mt-3">
+            <div class="section-title"><i class="fa-solid fa-list"></i> Campos</div>
+            <div style="padding:12px;">
+                <form id="reportForm">
+                    <div style="display:flex;flex-direction:column;gap:20px;">
+                        <div style="width:100%;">
+                            <div style="font-weight:600;margin-bottom:8px;">Datos Institucionales</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                                {% for key,label in available_fields.institutional %}
+                                    <label style="width:220px;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" name="fields" value="{{ key }}"> {{ label }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div style="width:100%;">
+                            <div style="font-weight:600;margin-bottom:8px;">Datos Personales</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                                {% for key,label in available_fields.personal %}
+                                    <label style="width:220px;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" name="fields" value="{{ key }}"> {{ label }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <button type="button" id="exportBtn" class="btn btn-success"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+                        <button type="button" id="clearBtn" class="btn btn-secondary">Limpiar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay de progreso -->
+    <div id="exportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:20px;border-radius:6px;width:520px;max-width:90%;text-align:left;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div id="spinner" style="width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#0ea5a4;border-radius:50%;animation:spin 1s linear infinite"></div>
+                <div>
+                    <div style="font-weight:600">Generando reporte...</div>
+                    <div id="progressText" style="font-size:0.9rem;color:#475569;margin-top:6px">Preparando solicitud</div>
+                </div>
+            </div>
+            <div style="margin-top:14px;">
+                <div style="background:#f1f5f9;border-radius:6px;overflow:hidden;height:14px;">
+                    <div id="progressBar" style="width:0%;height:14px;background:#10b981;transition:width 200ms"></div>
+                </div>
+                <div id="progressPercent" style="text-align:right;font-size:0.85rem;color:#334155;margin-top:6px">0%</div>
+            </div>
+            <div style="margin-top:12px;text-align:right;">
+                <button id="cancelExport" class="btn btn-light">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        (function(){
+            const unitsApi = '{{ units_api_url }}';
+            const exportUrl = '{{ export_url }}';
+            const selectsContainer = document.getElementById('unit-selects');
+            let selectedUnitId = null;
+
+            function createSelect(level){
+                const sel = document.createElement('select');
+                sel.className = 'form-control';
+                sel.dataset.level = level;
+                const opt = document.createElement('option'); opt.value=''; opt.text='Seleccione una opción...'; sel.appendChild(opt);
+                sel.addEventListener('change', onSelectChange);
+                return sel;
+            }
+
+            function onSelectChange(e){
+                const sel = e.target;
+                const parentId = sel.value;
+                // Remove selects that are deeper than current level
+                const level = parseInt(sel.dataset.level,10);
+                const toRemove = Array.from(selectsContainer.querySelectorAll('select')).filter(s=>parseInt(s.dataset.level,10)>level);
+                toRemove.forEach(n=>n.remove());
+
+                if(parentId){
+                    selectedUnitId = parentId;
+                    fetch(unitsApi + '?parent_id=' + parentId)
+                        .then(r=>r.json())
+                        .then(data=>{
+                            if(data.success && data.units && data.units.length){
+                                const next = createSelect(level+1);
+                                data.units.forEach(u=>{
+                                    const o = document.createElement('option'); o.value = u.id; o.text = u.name; next.appendChild(o);
+                                });
+                                selectsContainer.appendChild(next);
+                            }
+                        });
+                } else {
+                    // if cleared selection, reset selectedUnitId to parent of this select if any
+                    const prev = Array.from(selectsContainer.querySelectorAll('select')).filter(s=>parseInt(s.dataset.level,10)<level).pop();
+                    selectedUnitId = prev ? prev.value : null;
+                }
+            }
+
+            // cargar selects iniciales (raíz)
+            function loadRoot(){
+                selectsContainer.innerHTML = '';
+                fetch(unitsApi)
+                    .then(r=>r.json())
+                    .then(data=>{
+                        const first = createSelect(0);
+                        if(data.success && data.units){
+                            data.units.forEach(u=>{
+                                const o = document.createElement('option'); o.value = u.id; o.text = u.name; first.appendChild(o);
+                            });
+                        }
+                        selectsContainer.appendChild(first);
+                    });
+            }
+
+            const overlay = document.getElementById('exportOverlay');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            const cancelBtn = document.getElementById('cancelExport');
+            let abortController = null;
+
+            document.getElementById('exportBtn').addEventListener('click', async function(){
+                if(!selectedUnitId){ alert('Seleccione una unidad administrativa'); return; }
+                const checked = Array.from(document.querySelectorAll('input[name=fields]:checked')).map(i=>i.value);
+                const params = new URLSearchParams();
+                params.set('unit_id', selectedUnitId);
+                if(checked.length) params.set('fields', checked.join(','));
+
+                const url = exportUrl + '?' + params.toString();
+
+                // Mostrar overlay
+                overlay.style.display = 'flex';
+                progressBar.style.width = '0%';
+                progressPercent.textContent = '0%';
+                progressText.textContent = 'Enviando solicitud...';
+
+                abortController = new AbortController();
+                try{
+                    const resp = await fetch(url, { signal: abortController.signal });
+                    if(!resp.ok){
+                        throw new Error('Error en el servidor al generar el reporte');
+                    }
+
+                    // Intentar obtener content-length
+                    const contentLength = resp.headers.get('content-length');
+                    const total = contentLength ? parseInt(contentLength, 10) : null;
+
+                    if(!resp.body){
+                        // navegador no soporta streaming, simplemente descargar
+                        const blob = await resp.blob();
+                        const filename = (resp.headers.get('content-disposition') || '').match(/filename="?([^\"]+)"?/)?.[1] || 'reporte.xlsx';
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        overlay.style.display = 'none';
+                        return;
+                    }
+
+                    const reader = resp.body.getReader();
+                    const chunks = [];
+                    let received = 0;
+                    progressText.textContent = 'Descargando archivo...';
+
+                    // Fake progress (funciona como piso) — aplica tanto si hay Content-Length como si no
+                    let fakeProgress = 1; // iniciar en 1% para evitar ver 0% estancado
+                    let fastInterval = null;
+                    let slowInterval = null;
+
+                    function updateUI(realPct){
+                        const displayPct = Math.max(typeof realPct === 'number' ? realPct : 0, fakeProgress);
+                        progressBar.style.width = displayPct + '%';
+                        progressPercent.textContent = displayPct + '%';
+                    }
+
+                    // Iniciar fake progress: +1%/s hasta 95%, luego +1% cada 30s hasta 99%
+                    updateUI(0);
+                    fastInterval = setInterval(()=>{
+                        if(fakeProgress < 95){
+                            fakeProgress = Math.min(95, fakeProgress + 1);
+                            updateUI();
+                        }
+                        if(fakeProgress >= 95){
+                            if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
+                            if(!slowInterval){
+                                slowInterval = setInterval(()=>{
+                                    if(fakeProgress < 99){
+                                        fakeProgress = Math.min(99, fakeProgress + 1);
+                                        updateUI();
+                                    }
+                                    if(fakeProgress >= 99){
+                                        clearInterval(slowInterval); slowInterval = null;
+                                    }
+                                }, 30000);
+                            }
+                        }
+                    }, 1000);
+
+                    while(true){
+                        const { done, value } = await reader.read();
+                        if(done) break;
+                        chunks.push(value);
+                        received += value.length;
+                        // Al recibir el primer chunk, acelerar visibilidad: al menos 5%
+                        if(chunks.length === 1){
+                            if(fakeProgress < 5){ fakeProgress = 5; updateUI(); }
+                        }
+                        if(total){
+                            const pct = Math.round((received / total) * 100);
+                            updateUI(pct);
+                        } else {
+                            // No hay total: mostrará el fake (updateUI sin realPct)
+                            updateUI();
+                        }
+                    }
+
+                    // Lectura completada: limpiar timers y forzar 100%
+                    if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
+                    if(slowInterval){ clearInterval(slowInterval); slowInterval = null; }
+                    fakeProgress = 100;
+                    updateUI(100);
+                    progressText.textContent = 'Generado, preparando descarga...';
+
+                    // Combinar chunks
+                    const blob = new Blob(chunks, { type: resp.headers.get('content-type') || 'application/octet-stream' });
+                    const filename = (resp.headers.get('content-disposition') || '').match(/filename="?([^\"]+)"?/)?.[1] || 'reporte.xlsx';
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    progressText.textContent = 'Descarga completa';
+                    setTimeout(()=> overlay.style.display = 'none', 700);
+
+                } catch(err){
+                    if(err.name === 'AbortError'){
+                        progressText.textContent = 'Descarga cancelada';
+                    } else {
+                        console.error(err);
+                        progressText.textContent = 'Error: ' + (err.message || 'Falló la descarga');
+                    }
+                    setTimeout(()=> overlay.style.display = 'none', 1200);
+                } finally {
+                    abortController = null;
+                }
+            });
+
+            cancelBtn.addEventListener('click', function(){
+                if(abortController){ abortController.abort(); }
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', function(){
+                loadRoot();
+                Array.from(document.querySelectorAll('input[name=fields]')).forEach(i=>i.checked=false);
+            });
+
+            loadRoot();
+        })();
+    </script>
+{% endblock %}

@@ -9,11 +9,16 @@ from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView
 from django.utils import timezone
 import re
+import os
 
 from .forms import DocumentForm
 from .forms import DocumentTypeForm
 from .models import Document
 from .models import DocumentType
+from django.views.generic import UpdateView
+from django.http import HttpResponseBadRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -196,6 +201,74 @@ class DocumentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Update
             'success': False,
             'errors': form.errors
         }, status=400)
+
+
+class DocumentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Document
+    form_class = DocumentForm
+    permission_required = 'documents.change_document'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'success': True, 'message': 'Documento actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+def document_detail(request, pk):
+    try:
+        doc = Document.objects.get(pk=pk)
+        data = {
+            'id': doc.id,
+            'filing_code': doc.filing_code,
+            'category': doc.category.id if doc.category else None,
+            'category_name': doc.category.name if doc.category else None,
+            'subject': doc.subject,
+            'recipient_name': doc.recipient_name,
+            'sender_name': doc.sender_name,
+            'observation': doc.observation,
+            'file_url': doc.file_attachment.url if doc.file_attachment else None,
+        }
+        return JsonResponse({'success': True, 'data': data})
+    except Document.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Documento no encontrado'}, status=404)
+
+
+@require_POST
+def upload_document_file(request, pk):
+    try:
+        doc = Document.objects.get(pk=pk)
+    except Document.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Documento no encontrado'}, status=404)
+
+    file = request.FILES.get('file') or request.FILES.get('file_attachment')
+    if not file:
+        return JsonResponse({'success': False, 'message': 'No se recibió archivo'}, status=400)
+
+    # Reemplazar o asignar archivo
+    doc.file_attachment = file
+    doc.save()
+    return JsonResponse({'success': True, 'message': 'Archivo guardado correctamente.', 'file_url': doc.file_attachment.url})
+
+
+@require_POST
+def delete_document_file(request, pk):
+    try:
+        doc = Document.objects.get(pk=pk)
+    except Document.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Documento no encontrado'}, status=404)
+
+    # Borrar fichero físico si existe
+    if doc.file_attachment:
+        try:
+            if os.path.isfile(doc.file_attachment.path):
+                os.remove(doc.file_attachment.path)
+        except Exception:
+            pass
+    doc.file_attachment = None
+    doc.save()
+    return JsonResponse({'success': True, 'message': 'Archivo eliminado.'})
 
 
 def document_type_detail(request, pk):

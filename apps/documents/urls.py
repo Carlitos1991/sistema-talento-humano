@@ -8,7 +8,10 @@ urlpatterns = [
     path('create/', views.DocumentCreateView.as_view(), name='document_create'),
     path('create-multiple/', views.create_multiple_documents, name='document_create_multiple'),
     path('next-code/<int:category_id>/', views.next_filing_code, name='next_filing_code'),
-    # path('update/<int:pk>/', ...),
+    path('detail/<int:pk>/', views.document_detail, name='document_detail'),
+    path('update/<int:pk>/', views.DocumentUpdateView.as_view(), name='document_update'),
+    path('upload-file/<int:pk>/', views.upload_document_file, name='document_upload_file'),
+    path('delete-file/<int:pk>/', views.delete_document_file, name='document_delete_file'),
     # path('delete/<int:pk>/', ...),
     # --- RUTAS PARA TIPOS DE DOCUMENTO ---
     path('types/', views.DocumentTypeListView.as_view(), name='type_list'),

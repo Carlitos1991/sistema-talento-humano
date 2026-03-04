@@ -35,8 +35,13 @@
                     {% endif %}
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-icon btn-outline-primary" onclick="editDocument({{ doc.id }})">
+                    <button type="button" class="btn-icon btn-views-action" data-action="edit" data-id="{{ doc.id }}"
+                            onclick="editDocument({{ doc.id }})">
                         <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button type="button" class="btn-icon btn-list-action" data-action="upload" data-id="{{ doc.id }}"
+                            onclick="uploadDocumentFile({{ doc.id }})" title="Subir archivo PDF">
+                        <i class="fa-solid fa-file-arrow-up"></i>
                     </button>
                 </td>
             </tr>
