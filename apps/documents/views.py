@@ -31,11 +31,11 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(filing_code__icontains=q) | Q(subject__icontains=q)
             )
 
-        # Filtrado por tipo de documento (regime_code viene del frontend)
-        regime_code = self.request.GET.get('regime_code')
-        if regime_code:
+        # Filtrado por tipo de documento (parametro 'documents' desde frontend)
+        documents_param = self.request.GET.get('documents')
+        if documents_param:
             try:
-                rc = int(regime_code)
+                rc = int(documents_param)
                 queryset = queryset.filter(category_id=rc)
             except (ValueError, TypeError):
                 # Si no es convertible, ignoramos el filtro

@@ -28,12 +28,13 @@ const documentsApp = createApp({
             currentPage: 1,
             pageSize: 10,
             totalRows: 0,
+            totalPages: 1,
             searchTerm: '',
             allDOMRows: [],
             // Estadísticas y filtros
             stats: { total: 0, regimes: [] },
             isAdvancedSearch: false,
-            advancedFilters: { regime_code: '', q: '' }
+                advancedFilters: { documents: '', q: '' }
             ,
             // Ordenamiento
             sortField: null,
@@ -48,7 +49,7 @@ const documentsApp = createApp({
     },
     methods: {
         initDelegatedListeners() {
-            const searchInput = document.getElementById('table-search-budget');
+            const searchInput = document.getElementById('table-search-document');
             if (searchInput) {
                 // Debounce búsqueda para evitar peticiones en cada tecla
                 let to = null;
@@ -73,9 +74,9 @@ const documentsApp = createApp({
                     const id = btn.dataset.id;
                     if (action === 'edit') this.editDocument(id);
                     if (action === 'advanced-search-empty') this.openSearchModal && this.openSearchModal();
-                    // Paginación básica: botones con id
-                    if (btn.id === 'btn-prev') return this.prevPage();
-                    if (btn.id === 'btn-next') return this.nextPage();
+                    // Nota: no manejar aquí los botones con id btn-prev/btn-next para
+                    // evitar dobles invocaciones (hay listeners específicos añadidos
+                    // directamente a esos botones más abajo).
                     // Si el click proviene de una tarjeta stat que tiene data-regime-code
                     const statEl = e.target.closest('.stat-card');
                     if (statEl && statEl.dataset && statEl.dataset.code) {
@@ -112,7 +113,7 @@ const documentsApp = createApp({
 
         // Habilita / deshabilita visualmente el botón 'Nuevo Documento'
         setAddButtonEnabled(enabled) {
-            const btn = document.getElementById('btn-add-budget');
+            const btn = document.getElementById('btn-add-document');
             if (!btn) return;
             btn.disabled = !enabled;
             if (!enabled) {
@@ -132,11 +133,15 @@ const documentsApp = createApp({
             this.loading = true;
             this.isAdvancedSearch = advanced;
 
+            // Asegurar que la página solicitada esté dentro de los límites conocidos
+            let requestedPage = Math.max(1, Number(page) || 1);
+            if (this.totalPages && requestedPage > this.totalPages) requestedPage = this.totalPages;
+
             const paramsObj = {
                 advanced: advanced ? 1 : 0,
                 q: this.advancedFilters.q || '',
-                regime_code: this.advancedFilters.regime_code || '',
-                page: page
+                documents: this.advancedFilters.documents || '',
+                page: requestedPage
             };
             // Añadir orden si está definido
             if (this.sortField) {
@@ -150,6 +155,27 @@ const documentsApp = createApp({
                 const response = await fetch(url, {
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
+
+                if (!response.ok) {
+                    const txt = await response.text();
+                    console.warn('Página inválida (status):', response.status, url);
+                    // Mostrar mensaje amable al usuario
+                    try {
+                        Swal.fire('Página inválida', `Página inválida (${requestedPage}): Esa página no contiene resultados`, 'warning');
+                    } catch (e) {
+                        console.warn('Swal no disponible para mostrar aviso de página inválida');
+                    }
+                    // Recuperar a la última página conocida válida
+                    const fallback = (this.totalPages && this.totalPages >= 1) ? this.totalPages : 1;
+                    if (fallback !== this.currentPage) {
+                        this.currentPage = fallback;
+                        // Reintentar cargar la página válida
+                        await this.fetchTable(this.isAdvancedSearch, this.currentPage);
+                    }
+                    this.loading = false;
+                    return;
+                }
+
                 const data = await response.json();
 
                 const container = document.getElementById('table-content-wrapper');
@@ -164,9 +190,28 @@ const documentsApp = createApp({
                         console.warn('No se pudo inicializar TableManager en documents:', e);
                     }
                     // Exponer orden actual globalmente para compatibilidad con otros módulos
-                    window._personExport = window._personExport || {};
-                    if (this.sortField) window._personExport.sort = {field: this.sortField, asc: this.sortAsc};
-
+                    window._documentExport = window._documentExport || {};
+                    if (this.sortField) window._documentExport.sort = {field: this.sortField, asc: this.sortAsc};
+                    // Marcar visualmente la columna ordenada si aplica
+                    try {
+                        const ths = newTable.querySelectorAll('thead th');
+                        ths.forEach((th) => {
+                            const fld = th.dataset.sortable || th.dataset.field || null;
+                            if (!fld) return;
+                            th.classList.add('sortable-header');
+                            if (!th.querySelector('.sort-arrow')) {
+                                const span = document.createElement('span');
+                                span.className = 'sort-arrow';
+                                span.textContent = '⇅';
+                                th.appendChild(span);
+                            }
+                            if (this.sortField && fld === this.sortField) {
+                                th.classList.remove('sorted-asc', 'sorted-desc');
+                                th.classList.add(this.sortAsc ? 'sorted-asc' : 'sorted-desc');
+                                const arrow = th.querySelector('.sort-arrow'); if (arrow) arrow.innerText = this.sortAsc ? '↑' : '↓';
+                            }
+                        });
+                    } catch (e) { /* silent */ }
                     }
 
                 if (data.stats) {
@@ -179,27 +224,39 @@ const documentsApp = createApp({
                 }
 
                 // Si el servidor devuelve info de paginación, sincronizar estado
+                let serverTotalPages = null;
                 if (data.pagination) {
                     this.totalRows = data.pagination.total_items || 0;
-                    this.currentPage = data.pagination.current_page || page;
+                    this.currentPage = data.pagination.current_page || requestedPage;
+                    serverTotalPages = data.pagination.total_pages || null;
+                    // Sincronizar totalPages conocido
+                    if (serverTotalPages) this.totalPages = serverTotalPages;
+                    console.debug('documents pagination from server:', data.pagination);
                 }
 
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this.indexRows();
-                        // Si la búsqueda/paginación es manejada por el servidor, no aplicar
-                        // filtrado frontend sino mostrar filas tal cual
-                        if (this.isAdvancedSearch || this.advancedFilters.q) {
-                            // Mostrar/ocultar mensaje "no results" si totalRows == 0
+                        // Detectar si la tabla inyectada es manejada por el servidor
+                        const injectedTable = container ? container.querySelector('.managed-table') : null;
+                        const serverDriven = injectedTable && (injectedTable.dataset.externalPagination === 'true' || injectedTable.dataset.externalSearch === 'true');
+
+                        if (serverDriven) {
+                            // Mostrar/ocultar mensaje "no results" según conteo devuelto por servidor
                             const emptyRow = document.getElementById('frontend-no-results');
                             if (emptyRow) {
-                                const showMsg = (this.totalRows === 0 && (this.advancedFilters.q || this.isAdvancedSearch));
+                                const showMsg = (this.totalRows === 0);
                                 showMsg ? emptyRow.classList.remove('hidden') : emptyRow.classList.add('hidden');
                             }
+                            // Asegurar que las filas del servidor sean visibles (por si otro código las ocultó)
+                            this.allDOMRows.forEach(r => r.style.display = '');
                         } else {
+                            // Lógica frontend (filtrado + paginado) cuando no es manejado por servidor
                             this.applyFrontendLogic();
                         }
-                        this.updatePaginationUI(Math.ceil((this.totalRows || 0) / this.pageSize) || 1);
+                        // Preferir totalPages proporcionado por el servidor si existe
+                        const totalPagesToUse = serverTotalPages || Math.ceil((this.totalRows || 0) / this.pageSize) || 1;
+                        this.updatePaginationUI(totalPagesToUse);
                     }, 50);
                 });
             } catch (e) {
@@ -240,6 +297,47 @@ const documentsApp = createApp({
         },
 
         updatePaginationUI(totalPages) {
+            // Buscar paginador dentro de #table-app (estilo TableManager/person)
+            const pagContainer = document.querySelector('#table-app .pagination-container') || document.querySelector('.pagination-container#js-pagination') || null;
+            if (pagContainer) {
+                const info = pagContainer.querySelector('.pagination-info');
+                const btnPrev = pagContainer.querySelector('.page-btn[title="Anterior"]') || pagContainer.querySelector('.btn-prev');
+                const btnNext = pagContainer.querySelector('.page-btn[title="Siguiente"]') || pagContainer.querySelector('.btn-next');
+                const input = pagContainer.querySelector('.page-input');
+
+                if (info) {
+                    if (this.totalRows > 0) {
+                        const start = (this.currentPage - 1) * this.pageSize + 1;
+                        const end = Math.min(this.currentPage * this.pageSize, this.totalRows);
+                        info.textContent = `Mostrando ${start}-${end} de ${this.totalRows} registros`;
+                    } else {
+                        info.textContent = 'Sin registros para mostrar';
+                    }
+                }
+                if (input) {
+                    input.value = this.currentPage;
+                    input.max = totalPages;
+                }
+                // Actualizar badge "de N"
+                const totalBadge = pagContainer.querySelector('.total-pages-badge');
+                if (totalBadge) totalBadge.textContent = `de ${totalPages}`;
+                if (btnPrev) {
+                    btnPrev.disabled = (this.currentPage === 1);
+                    btnPrev.onclick = (ev) => { ev && ev.preventDefault(); changeDocumentPage(Math.max(1, this.currentPage - 1)); };
+                }
+                if (btnNext) {
+                    btnNext.disabled = (this.currentPage >= totalPages || this.totalRows === 0);
+                    btnNext.onclick = (ev) => { ev && ev.preventDefault(); changeDocumentPage(Math.min(totalPages, this.currentPage + 1)); };
+                }
+                // Actualizar botones Primera / Última si existen
+                const btnFirst = pagContainer.querySelector('.page-btn[title="Primera"]');
+                const btnLast = pagContainer.querySelector('.page-btn[title="Última"]');
+                if (btnFirst) btnFirst.onclick = (ev) => { ev && ev.preventDefault(); changeDocumentPage(1); };
+                if (btnLast) btnLast.onclick = (ev) => { ev && ev.preventDefault(); changeDocumentPage(totalPages); };
+                return;
+            }
+
+            // Fallback: ids antiguos
             const pageInfo = document.getElementById('page-info');
             const pageDisplay = document.getElementById('current-page-display');
             const btnPrev = document.getElementById('btn-prev');
@@ -260,7 +358,7 @@ const documentsApp = createApp({
         },
 
         nextPage() {
-            const last = Math.ceil((this.totalRows || 0) / this.pageSize) || 1;
+            const last = this.totalPages || Math.ceil((this.totalRows || 0) / this.pageSize) || 1;
             if (this.currentPage < last) {
                 this.currentPage++;
                 // Solicitar siguiente página al servidor
@@ -277,12 +375,12 @@ const documentsApp = createApp({
         filterByRegime(regimeCode) {
             // Force string comparison to avoid type mismatch between template and JS
             const codeStr = String(regimeCode);
-            if (String(this.advancedFilters.regime_code) === codeStr) {
-                this.advancedFilters.regime_code = '';
+            if (String(this.advancedFilters.documents) === codeStr) {
+                this.advancedFilters.documents = '';
                 this.isAdvancedSearch = false;
                 this.fetchTable(false);
             } else {
-                this.advancedFilters.regime_code = codeStr;
+                this.advancedFilters.documents = codeStr;
                 this.isAdvancedSearch = true;
                 this.fetchTable(true);
                 // asignar selectedTypeId/name si existe en stats
@@ -294,15 +392,15 @@ const documentsApp = createApp({
                     this.selectedTypeId = '';
                     this.selectedTypeName = '';
                 }
-                const btn = document.getElementById('btn-add-budget'); if (btn) this.setAddButtonEnabled(this.selectedTypeId !== '');
+                const btn = document.getElementById('btn-add-document'); if (btn) this.setAddButtonEnabled(this.selectedTypeId !== '');
             }
         },
 
         clearSearch() {
-            this.advancedFilters = {regime_code: '', q: ''};
+            this.advancedFilters = {documents: '', q: ''};
             this.isAdvancedSearch = false;
             this.searchTerm = '';
-            const input = document.getElementById('table-search-budget');
+            const input = document.getElementById('table-search-document');
             if (input) input.value = '';
             this.currentPage = 1;
             this.fetchTable(false);
@@ -435,4 +533,11 @@ window.saveDocument = function(...args) {
         return window.documentsInstance.saveDocument(...args);
     }
     console.warn('documentsInstance not ready: saveDocument');
+};
+
+window.changeDocumentPage = function(page) {
+    if (window.documentsInstance && typeof window.documentsInstance.fetchTable === 'function') {
+        return window.documentsInstance.fetchTable(window.documentsInstance.isAdvancedSearch, page);
+    }
+    console.warn('documentsInstance not ready: changeDocumentPage', page);
 };
