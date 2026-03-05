@@ -176,6 +176,37 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                 while curr:
                     nodes_path.insert(0, curr.id)
                     curr = curr.parent
+                # Intento de detectar y anexar el nodo GENERIC_DENOMINATION (hijo del RESULT)
+                try:
+                    generic_nodes = ValuationNode.objects.filter(
+                        parent=leaf_node,
+                        node_type='GENERIC_DENOMINATION',
+                        is_active=True
+                    ).order_by('-minimum_value')
+                    selected_generic = None
+                    if generic_nodes.exists():
+                        # Priorizar coincidencia por specific_job_title
+                        for gn in generic_nodes:
+                            if (gn.name_extra and gn.name_extra == profile.specific_job_title) or \
+                               (gn.catalog_item and gn.catalog_item.name == profile.specific_job_title):
+                                selected_generic = gn
+                                break
+
+                        # Si no hay coincidencia por título, usar puntos totales
+                        if not selected_generic:
+                            total_points = profile.total_activity_points
+                            for gn in generic_nodes:
+                                if gn.minimum_value is None:
+                                    selected_generic = gn
+                                    break
+                                elif total_points is not None and gn.minimum_value <= total_points:
+                                    selected_generic = gn
+                                    break
+
+                    if selected_generic:
+                        nodes_path.append(selected_generic.id)
+                except Exception as e:
+                    print(f">>> ERROR buscando GENERIC_DENOMINATION para preselección: {e}")
         else:
             # Si no tiene clasificación, reconstruir desde los campos individuales
             # Buscar cada nodo basándose en los catalog_items guardados
@@ -819,6 +850,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             
             # Obtener el nodo RESULT
             result_node = ValuationNode.objects.get(pk=result_node_id)
+            print(f">>> result_node.tipo={result_node.node_type}, parent_id={result_node.parent_id}, occupational_classification_id={result_node.occupational_classification_id}, name_extra={result_node.name_extra}")
             print(f">>> result_node encontrado: {result_node.id} - {result_node.catalog_item.name if result_node.catalog_item else 'sin catálogo'}")
             print(f">>> result_node.occupational_classification_id={result_node.occupational_classification_id}")
             
@@ -835,6 +867,10 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 node_type='GENERIC_DENOMINATION',
                 is_active=True
             ).order_by('-minimum_value')
+            print(f">>> Consulta generic_nodes SQL equiv. parent_id={result_node.id} node_type=GENERIC_DENOMINATION")
+            print(f">>> generic_nodes count = {generic_nodes.count()}")
+            for gn in generic_nodes:
+                print(f">>>   child id={gn.id}, parent_id={gn.parent_id}, name_extra={gn.name_extra}, minimum_value={gn.minimum_value}")
             
             print(f">>> generic_nodes encontrados: {generic_nodes.count()}")
             for gn in generic_nodes:
@@ -845,7 +881,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 print(f">>> No hay generic_nodes, guardando solo occupational_classification")
                 profile.save(update_fields=['occupational_classification'])
                 print(f">>> Guardado. Verificando: occupational_classification_id={profile.occupational_classification_id}")
-                return
+                return None
             
             total_points = profile.total_activity_points
             selected_node = None
@@ -872,6 +908,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             
             # Si encontramos un nodo válido, actualizar specific_job_title
             if selected_node:
+                print(f">>> SELECTED generic node id={selected_node.id}, parent_id={selected_node.parent_id}, name_extra={selected_node.name_extra}")
                 profile.specific_job_title = selected_node.name_extra or (
                     selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
                 )
@@ -886,7 +923,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             # Verificar post-save
             print(f">>> POST-SAVE: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
             print(f">>> _set_generic_denomination_and_title COMPLETADO\n")
-            
+            return selected_node.id if selected_node else None
         except ValuationNode.DoesNotExist:
             print(f">>> ERROR: result_node con ID {result_node_id} no existe")
         except Exception as e:
@@ -932,7 +969,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             
             if not generic_nodes.exists():
                 print(f">>> No hay GENERIC_DENOMINATION para esta matriz. Solo se guardó occupational_classification")
-                return
+                return None
             
             total_points = profile.total_activity_points
             selected_node = None
@@ -970,6 +1007,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 print(f">>> No se encontró generic_node que cumpla los criterios. specific_job_title no se modifica.")
             
             print(f">>> _set_generic_denomination_and_title_from_matrix COMPLETADO\n")
+            return selected_node.id if selected_node else None
             
         except Exception as e:
             import traceback
@@ -980,6 +1018,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
+            print(f"\n>>> JobProfileSaveApi POST recibido. payload keys={list(data.keys())}")
+            print(f">>> payload result_node_id={data.get('result_node_id')}, complexity_node_id={data.get('complexity_node_id')}")
             with transaction.atomic():
                 profile_id = data.get('id')
                 if profile_id:
@@ -1051,6 +1091,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                                 occupational_classification__isnull=False,
                                 is_active=True
                             ).first()
+                            print(f">>> Buscando child RESULT para complexity_node {complexity_node_id}, found={result_child}")
                             if result_child and result_child.occupational_classification:
                                 profile.occupational_classification = result_child.occupational_classification
                                 print(f">>> Asignado occupational_classification desde child RESULT (complexity): {result_child.id} -> {result_child.occupational_classification.id}")
@@ -1099,6 +1140,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             points=act.get('points', 0)
                         ))
 
+                selected_generic_node_id = None
+
                 if activities_to_create:
                     # PRIMERO guardar el profile para que exista en BD
                     profile.save()
@@ -1116,11 +1159,37 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     print(f"profile.specific_job_title={profile.specific_job_title}")
                     
                     # Lógica automática: Seleccionar Denominación Genérica y actualizar specific_job_title
-                    # Nota: El RESULT no es un nodo de valoración seleccionable, es la clasificación de matriz
-                    # Buscamos los nodos GENERIC_DENOMINATION que sean hijos de ocupational_classification
-                    if profile.occupational_classification:
-                        print(f"\n=== Buscando para occupational_classification_id={profile.occupational_classification_id} ===")
-                        self._set_generic_denomination_and_title_from_matrix(profile)
+                    # Prioridad: si el frontend envió un result_node_id (el nodo grupo ocupacional),
+                    # usamos ese nodo como punto de partida para buscar su(s) hijo(s) GENERIC_DENOMINATION.
+                    if result_node_id:
+                        print(f"\n=== Selección por result_node_id={result_node_id} ===")
+                        selected_generic_node_id = self._set_generic_denomination_and_title(profile, result_node_id)
+                    elif profile.occupational_classification:
+                        print(f"\n=== Selección por occupational_classification_id={profile.occupational_classification_id} ===")
+                        selected_generic_node_id = self._set_generic_denomination_and_title_from_matrix(profile)
+
+                    # Si el frontend envió explícitamente un generic node (nieto) preferirlo
+                    incoming_generic = data.get('selected_generic_node_id') or data.get('generic_node_id')
+                    if not incoming_generic:
+                        sel_nodes = data.get('selectedNodes') or data.get('selected_nodes') or data.get('selected')
+                        try:
+                            if sel_nodes and isinstance(sel_nodes, (list, tuple)) and len(sel_nodes) > 7:
+                                incoming_generic = sel_nodes[7]
+                        except Exception:
+                            incoming_generic = None
+
+                    if incoming_generic:
+                        try:
+                            incoming_generic_id = int(incoming_generic)
+                            # Override computed selection
+                            selected_generic_node_id = incoming_generic_id
+                            gn = ValuationNode.objects.filter(pk=incoming_generic_id).first()
+                            if gn:
+                                profile.specific_job_title = gn.name_extra or (gn.catalog_item.name if gn.catalog_item else profile.specific_job_title)
+                                profile.save(update_fields=['specific_job_title'])
+                                print(f">>> specific_job_title guardado desde incoming generic node: {incoming_generic_id} -> {profile.specific_job_title}")
+                        except Exception as e:
+                            print(f">>> ERROR procesando incoming_generic {incoming_generic}: {e}")
                 else:
                     raise ValueError("El perfil debe tener al menos una actividad esencial.")
 
@@ -1138,11 +1207,14 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 if comps_to_create:
                     ProfileCompetency.objects.bulk_create(comps_to_create)
 
-                return JsonResponse({
+                resp = {
                     'success': True,
                     'message': 'Perfil de Puesto guardado correctamente.',
                     'redirect': reverse_lazy('function_manual:profile_list')
-                })
+                }
+                if selected_generic_node_id:
+                    resp['selected_generic_node_id'] = selected_generic_node_id
+                return JsonResponse(resp)
 
         except Exception as e:
             import traceback

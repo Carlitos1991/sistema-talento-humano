@@ -495,17 +495,57 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             console.log(`📦 Nodos RESULT hijos encontrados: ${resultNodes.length}`);
                             resultNodes.forEach(n => {
-                                console.log(`   - ${n.id}: ${n.name_extra} (type: ${n.node_type})`);
+                                const nt = n.node_type || n.type || 'undefined';
+                                const name = n.name_extra || n.name || 'undefined';
+                                console.log(`   - ${n.id}: ${name} (type: ${nt})`);
                             });
-                            
-                            // Filtrar solo RESULT nodes
-                            const results = resultNodes.filter(n => n.node_type === 'RESULT');
+
+                            // Filtrar solo RESULT nodes (soportando 'node_type' o 'type')
+                            const results = resultNodes.filter(n => (n.node_type === 'RESULT' || n.type === 'RESULT'));
                             console.log(`✅ RESULT nodes: ${results.length}`);
                             
                             if (results.length === 1) {
-                                // Si hay solo 1, asignarlo automáticamente
-                                this.selectedNodes[6] = results[0].id;
-                                console.log(`✨ RESULT asignado automáticamente: ${results[0].id}`);
+                                // Si hay solo 1 RESULT, intentar obtener sus hijos (nietos)
+                                const resultNode = results[0];
+                                console.log(`✨ RESULT asignado automáticamente: ${resultNode.id}. Buscando hijos (nietos) ...`);
+                                this.selectedNodes[6] = resultNode.id;
+
+                                // Solicitar hijos del RESULT para encontrar GENERIC_DENOMINATION
+                                try {
+                                    const grandchildrenRes = await fetch(`${this.urls.valuationNodes}?parent=${resultNode.id}`);
+                                    const grandchildren = await grandchildrenRes.json();
+                                    console.log(`📦 Nodos hijos del RESULT (nietos) encontrados: ${grandchildren.length}`);
+                                    grandchildren.forEach(g => {
+                                        const gtype = g.node_type || g.type || 'undefined';
+                                        const gname = g.name_extra || g.name || 'undefined';
+                                        console.log(`   - ${g.id}: ${gname} (type: ${gtype}, parent_id: ${g.parent_id || 'unknown'})`);
+                                    });
+
+                                    // Filtrar GENERIC_DENOMINATION entre los nietos (soporta 'node_type' o 'type')
+                                    const genericNodes = grandchildren.filter(n => (n.node_type === 'GENERIC_DENOMINATION' || n.type === 'GENERIC_DENOMINATION'));
+                                    console.log(`🔍 GENERIC_DENOMINATION encontrados (nietos): ${genericNodes.length}`);
+
+                                    if (genericNodes.length === 1) {
+                                        // Asignar directamente el nodo GENERIC_DENOMINATION (índice 7)
+                                        this.selectedNodes[7] = genericNodes[0].id;
+                                        console.log(`✅ GENERIC_DENOMINATION asignado automáticamente: ${genericNodes[0].id}`);
+                                    } else if (genericNodes.length > 1) {
+                                        // Elegir el que cumpla por minimum_value o el primero
+                                        let sel = null;
+                                        const totalPoints = this.formData.total_points || this.activities.reduce((s,a)=>s+(a.points||0),0);
+                                        for (const gn of genericNodes) {
+                                            if (!gn.minimum_value) { sel = gn; break; }
+                                            if (totalPoints !== undefined && gn.minimum_value <= totalPoints) { sel = gn; break; }
+                                        }
+                                        if (!sel) sel = genericNodes[0];
+                                        this.selectedNodes[7] = sel.id;
+                                        console.log(`✅ GENERIC_DENOMINATION seleccionado (heurística): ${sel.id}`);
+                                    } else {
+                                        console.warn('❌ No hay GENERIC_DENOMINATION entre los nietos.');
+                                    }
+                                } catch (e) {
+                                    console.error('Error fetching grandchildren nodes:', e);
+                                }
                             } else if (results.length > 1) {
                                 console.log(`⚠️ Múltiples RESULT nodes. Usuario debe seleccionar.`);
                                 // Aquí podrías mostrar un diálogo o cargar un dropdown
@@ -1166,6 +1206,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const payload = {
                             ...this.formData,
                             ...valuationNodeIds,
+                            selectedNodes: this.selectedNodes,
+                            selected_generic_node_id: this.selectedNodes[7] || null,
                             final_complexity_level_id: valuationNodeIds.complexity_node_id,  // Por compatibilidad
                             activities: this.activities,
                             competencies: competencies
