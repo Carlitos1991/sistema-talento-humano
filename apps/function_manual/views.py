@@ -830,6 +830,139 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
     LOGICA ACTUALIZADA: Obtiene los datos de requisitos desde los Nodos de Valoración.
     """
 
+    def _select_result_and_denomination(self, profile, complexity_node_id):
+        """
+        Selecciona el RESULT correcto desde COMPLEXITY basándose en total_activity_points.
+        Luego busca su hijo GENERIC_DENOMINATION y asigna specific_job_title.
+        
+        Algoritmo:
+        1. Obtener todos los hijos RESULT de COMPLEXITY
+        2. Ordenar por minimum_value DESC
+        3. Encontrar el primero donde minimum_value <= total_activity_points
+        4. Asignar occupational_classification del RESULT seleccionado
+        5. Buscar hijo GENERIC_DENOMINATION de ese RESULT
+        6. Asignar name_extra del GENERIC_DENOMINATION a specific_job_title
+        
+        Returns: ID del nodo GENERIC_DENOMINATION seleccionado (o None)
+        """
+        try:
+            print(f"\n>>> _select_result_and_denomination INICIO")
+            print(f">>> complexity_node_id={complexity_node_id}")
+            print(f">>> profile.total_activity_points={profile.total_activity_points}")
+            
+            # 1. Obtener nodo COMPLEXITY
+            complexity_node = ValuationNode.objects.get(pk=complexity_node_id)
+            print(f">>> Nodo COMPLEXITY encontrado: {complexity_node.id}")
+            
+            # 2. Buscar todos los hijos RESULT
+            result_nodes = ValuationNode.objects.filter(
+                parent=complexity_node,
+                node_type='RESULT',
+                is_active=True
+            ).order_by('-minimum_value')  # Ordenar descendente por minimum_value
+            
+            print(f">>> Nodos RESULT encontrados: {result_nodes.count()}")
+            for rn in result_nodes:
+                print(f">>>   - {rn.id}: minimum_value={rn.minimum_value}, occupational_classification={rn.occupational_classification_id}")
+            
+            if not result_nodes.exists():
+                print(f">>> ERROR: No hay nodos RESULT hijos de COMPLEXITY {complexity_node_id}")
+                return None
+            
+            # 3. Encontrar el RESULT correcto según total_activity_points
+            total_points = profile.total_activity_points
+            selected_result = None
+            
+            print(f">>> Buscando RESULT con minimum_value <= {total_points}")
+            for result_node in result_nodes:
+                print(f">>>   Evaluando RESULT {result_node.id}: minimum_value={result_node.minimum_value}")
+                if result_node.minimum_value is None:
+                    selected_result = result_node
+                    print(f">>>   -> SELECCIONADO (sin minimum_value)")
+                    break
+                elif result_node.minimum_value <= total_points:
+                    selected_result = result_node
+                    print(f">>>   -> SELECCIONADO ({result_node.minimum_value} <= {total_points})")
+                    break
+            
+            if not selected_result:
+                # Si ninguno cumple, tomar el de menor minimum_value
+                selected_result = result_nodes.last()
+                print(f">>> Ninguno cumplió condición, tomando el último: {selected_result.id}")
+            
+            # 4. Asignar occupational_classification del RESULT seleccionado
+            if selected_result.occupational_classification:
+                profile.occupational_classification = selected_result.occupational_classification
+                print(f">>> occupational_classification asignado: {selected_result.occupational_classification.id} - {selected_result.occupational_classification}")
+            else:
+                print(f">>> WARNING: RESULT {selected_result.id} no tiene occupational_classification")
+            
+            # 5. Buscar hijo GENERIC_DENOMINATION del RESULT seleccionado
+            generic_nodes = ValuationNode.objects.filter(
+                parent=selected_result,
+                node_type='GENERIC_DENOMINATION',
+                is_active=True
+            )
+            
+            print(f">>> Nodos GENERIC_DENOMINATION encontrados: {generic_nodes.count()}")
+            
+            if not generic_nodes.exists():
+                print(f">>> WARNING: No hay GENERIC_DENOMINATION para RESULT {selected_result.id}")
+                # Guardar solo occupational_classification
+                profile.save(update_fields=['occupational_classification'])
+                return None
+            
+            # 6. Si hay múltiples GENERIC_DENOMINATION, aplicar lógica similar
+            selected_generic = None
+            if generic_nodes.count() == 1:
+                selected_generic = generic_nodes.first()
+                print(f">>> Solo 1 GENERIC_DENOMINATION, seleccionado: {selected_generic.id}")
+            else:
+                # Si hay múltiples, ordenar por minimum_value DESC y buscar el que cumple
+                generic_nodes_ordered = generic_nodes.order_by('-minimum_value')
+                print(f">>> Múltiples GENERIC_DENOMINATION, buscando el correcto")
+                for gn in generic_nodes_ordered:
+                    print(f">>>   Evaluando GENERIC {gn.id}: minimum_value={gn.minimum_value}")
+                    if gn.minimum_value is None:
+                        selected_generic = gn
+                        print(f">>>   -> SELECCIONADO (sin minimum_value)")
+                        break
+                    elif gn.minimum_value <= total_points:
+                        selected_generic = gn
+                        print(f">>>   -> SELECCIONADO ({gn.minimum_value} <= {total_points})")
+                        break
+                
+                if not selected_generic:
+                    selected_generic = generic_nodes_ordered.last()
+                    print(f">>> Ninguno cumplió condición, tomando el último: {selected_generic.id}")
+            
+            # 7. Asignar specific_job_title
+            if selected_generic:
+                profile.specific_job_title = selected_generic.name_extra or (
+                    selected_generic.catalog_item.name if selected_generic.catalog_item else 'Sin nombre'
+                )
+                print(f">>> specific_job_title asignado: {profile.specific_job_title}")
+                
+                # Guardar ambos campos
+                profile.save(update_fields=['occupational_classification', 'specific_job_title'])
+                print(f">>> Profile guardado correctamente")
+                
+                return selected_generic.id
+            else:
+                # Solo guardar occupational_classification
+                profile.save(update_fields=['occupational_classification'])
+                print(f">>> Solo se guardó occupational_classification")
+                return None
+            
+        except ValuationNode.DoesNotExist:
+            print(f">>> ERROR: Nodo COMPLEXITY {complexity_node_id} no existe")
+            return None
+        except Exception as e:
+            import traceback
+            print(f">>> ERROR en _select_result_and_denomination: {e}")
+            traceback.print_exc()
+            return None
+
     def _set_generic_denomination_and_title(self, profile, result_node_id):
         """
         Busca la Denominación Genérica correcta basada en total_activity_points
@@ -1158,10 +1291,14 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
                     print(f"profile.specific_job_title={profile.specific_job_title}")
                     
-                    # Lógica automática: Seleccionar Denominación Genérica y actualizar specific_job_title
-                    # Prioridad: si el frontend envió un result_node_id (el nodo grupo ocupacional),
-                    # usamos ese nodo como punto de partida para buscar su(s) hijo(s) GENERIC_DENOMINATION.
-                    if result_node_id:
+                    # Lógica automática: Seleccionar el RESULT correcto según total_activity_points
+                    # y luego su Denominación Genérica
+                    complexity_node_id = data.get('complexity_node_id')
+                    if complexity_node_id:
+                        print(f"\n=== Seleccionando RESULT correcto desde COMPLEXITY {complexity_node_id} ===")
+                        selected_generic_node_id = self._select_result_and_denomination(profile, complexity_node_id)
+                    elif result_node_id:
+                        # Fallback: si viene result_node_id explícito
                         print(f"\n=== Selección por result_node_id={result_node_id} ===")
                         selected_generic_node_id = self._set_generic_denomination_and_title(profile, result_node_id)
                     elif profile.occupational_classification:
