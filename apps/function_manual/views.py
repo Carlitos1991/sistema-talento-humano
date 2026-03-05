@@ -1042,6 +1042,21 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     if node and node.catalog_item:
                         profile.final_complexity_level = node.catalog_item
 
+                        # Intento adicional: si el nodo de COMPLEXIDAD tiene un hijo RESULT
+                        # que contiene la occupational_classification, asignarlo automáticamente
+                        try:
+                            result_child = ValuationNode.objects.filter(
+                                parent=node,
+                                node_type='RESULT',
+                                occupational_classification__isnull=False,
+                                is_active=True
+                            ).first()
+                            if result_child and result_child.occupational_classification:
+                                profile.occupational_classification = result_child.occupational_classification
+                                print(f">>> Asignado occupational_classification desde child RESULT (complexity): {result_child.id} -> {result_child.occupational_classification.id}")
+                        except Exception as e:
+                            print(f">>> ERROR buscando child RESULT desde complexity_node {complexity_node_id}: {e}")
+
                 # 7. RESULTADO (Matriz Ocupacional)
                 result_node_id = data.get('result_node_id')
                 print(f"\n>>> result_node_id recibido del frontend: {result_node_id}")

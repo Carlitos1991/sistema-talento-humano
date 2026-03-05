@@ -474,24 +474,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 watch: {
                     selectedNodes: {
                         handler(newVal) {
-                            // Cuando se seleccionan todos los 6 nodos de valoración, buscar en matriz
-                            const validNodes = newVal.slice(0, 6).filter(n => n !== '');
-                            if (validNodes.length === 6 && newVal[5]) {
-                                // Obtener el node de complejidad para extraer su catalog_item_id
+                            // Cuando se selecciona COMPLEXITY (índice 5), buscar sus nodos RESULT hijos
+                            if (newVal[5]) {
+                                // El nodo COMPLEXITY está seleccionado
                                 const complexityNodeId = newVal[5];
-                                if (complexityNodeId && this.valuationLevels[5]) {
-                                    const complexityNode = this.valuationLevels[5].options.find(n => n.id == complexityNodeId);
-                                    if (complexityNode && complexityNode.catalog_item_id) {
-                                        console.log(`Auto-filtrando matriz con complexity_id=${complexityNode.catalog_item_id}`);
-                                        this.filterMatrixByComplexity(complexityNode.catalog_item_id);
-                                    }
-                                }
+                                console.log(`🔗 COMPLEXITY seleccionado: ${complexityNodeId}, buscando nodos RESULT hijos...`);
+                                
+                                // Hacer fetch para obtener los nodos RESULT hijos de COMPLEXITY
+                                this.fetchResultNodes(complexityNodeId);
                             }
-                        },
-                        deep: true
+                        }
                     }
                 },
                 methods: {
+                    async fetchResultNodes(complexityNodeId) {
+                        try {
+                            const url = `${this.urls.valuationNodes}?parent=${complexityNodeId}`;
+                            const res = await fetch(url);
+                            const resultNodes = await res.json();
+                            
+                            console.log(`📦 Nodos RESULT hijos encontrados: ${resultNodes.length}`);
+                            resultNodes.forEach(n => {
+                                console.log(`   - ${n.id}: ${n.name_extra} (type: ${n.node_type})`);
+                            });
+                            
+                            // Filtrar solo RESULT nodes
+                            const results = resultNodes.filter(n => n.node_type === 'RESULT');
+                            console.log(`✅ RESULT nodes: ${results.length}`);
+                            
+                            if (results.length === 1) {
+                                // Si hay solo 1, asignarlo automáticamente
+                                this.selectedNodes[6] = results[0].id;
+                                console.log(`✨ RESULT asignado automáticamente: ${results[0].id}`);
+                            } else if (results.length > 1) {
+                                console.log(`⚠️ Múltiples RESULT nodes. Usuario debe seleccionar.`);
+                                // Aquí podrías mostrar un diálogo o cargar un dropdown
+                                this.selectedNodes[6] = results[0].id;  // Por ahora, tomar el primero
+                            } else {
+                                console.warn(`❌ No hay RESULT nodes para COMPLEXITY ${complexityNodeId}`);
+                            }
+                        } catch (e) {
+                            console.error('Error fetching RESULT nodes:', e);
+                        }
+                    },
                     initSelect2Activities() {
                         this.$nextTick(() => {
                             const self = this;
@@ -847,6 +872,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
+                        console.log(`🔍 Iniciando filterMatrixByComplexity con complexity_id=${complexityCatalogItemId}`);
+                        console.log(`📊 Total de registros en matriz: ${this.catalogs.matrix.length}`);
+                        if (this.catalogs.matrix.length > 0) {
+                            console.log(`📋 Primer registro de matriz:`, this.catalogs.matrix[0]);
+                        }
+
                         // Obtener los catalog_item_id de todos los niveles seleccionados
                         const nodes = this.selectedNodes.map((nodeId, idx) => {
                             if (!nodeId || !this.valuationLevels[idx]) return null;
@@ -875,7 +906,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
-                        
+                        console.log(`🔎 Criterios de búsqueda:`);
+                        console.log(`   roleId=${roleId}`);
+                        console.log(`   instructionId=${instructionId}`);
+                        console.log(`   experienceMonths=${experienceMonths}`);
+                        console.log(`   decisionId=${decisionId}`);
+                        console.log(`   impactId=${impactId}`);
+                        console.log(`   complexityId=${complexityId}`);
 
                         // Filtrar la matriz - TODOS los campos deben coincidir exactamente (comparación numérica)
                         this.filteredMatrix = this.catalogs.matrix.filter(m => {
@@ -896,10 +933,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             return passAll;
                         });
 
-                        
+                        console.log(`✅ Resultados encontrados: ${this.filteredMatrix.length}`);
 
                         if (this.filteredMatrix.length === 0) {
-                            console.warn('No se encontraron registros que coincidan con todos los criterios');
+                            console.warn('⚠️ No se encontraron registros que coincidan con todos los criterios');
                             this.matchResult = null;
                         } else if (this.filteredMatrix.length === 1) {
                             // Si hay exactamente 1 resultado, asignarlo automáticamente
@@ -909,10 +946,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 group: matrix.occupational_group,
                                 grade: matrix.grade
                             };
-                            console.log(`Match encontrado automáticamente: ${matrix.occupational_group} - G${matrix.grade}`);
+                            console.log(`✨ Match encontrado automáticamente: ${matrix.occupational_group} - G${matrix.grade}`);
                         } else {
                             // Si hay múltiples, el usuario debe seleccionar
-                            console.log(`Se encontraron ${this.filteredMatrix.length} matrices. Usuario debe seleccionar.`);
+                            console.log(`⚠️ Se encontraron ${this.filteredMatrix.length} matrices. Usuario debe seleccionar.`);
                         }
                     },
                     // --- OTROS MÉTODOS ---
