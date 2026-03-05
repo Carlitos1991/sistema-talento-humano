@@ -169,7 +169,7 @@
             </li>
         {% endif %}
         {# Mostrar menú solo si el usuario tiene algún permiso relevante del módulo function_manual #}
-        {% if perms.function_manual.view_profile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
+        {% if perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
         <!-- Manual de Funciones -->
         <li class="has-submenu">
             <a href="#" class="submenu-toggle">
@@ -178,7 +178,7 @@
                 <i class="fa-solid fa-chevron-right chevron-icon"></i>
             </a>
             <ul class="submenu">
-                {% if perms.function_manual.view_profile %}
+                {% if perms.function_manual.view_jobprofile %}
                 <li>
                     <a href="{% url 'function_manual:profile_list' %}">
                         <i class="fa-solid fa-id-badge"></i>
@@ -188,7 +188,7 @@
                 {% endif %}
 
                 <!-- Sub-sección Administración -->
-                {% if perms.function_manual.can_admin %}
+                {% if perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
                     <li class="has-inner-submenu" id="adminSubmenu">
                         <a href="javascript:void(0)" class="inner-toggle">
                             <i class="fa-solid fa-gears"></i>
@@ -439,6 +439,7 @@
             </li>
         {% endif %}
         <!--  Biométricos -->
+        {% if perms.biometric.view_biometric or perms.biometric.view_biometricdevicelog %}
         <li class="has-submenu">
             <a href="#" class="nav-link">
                 <i class="fa-solid fa-fingerprint"></i>
@@ -459,6 +460,7 @@
                 </li>
             </ul>
         </li>
+        {% endif %}
         <!--  Ajustes -->
         {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location %}
             <li class="has-submenu">

@@ -136,6 +136,11 @@ class JobProfileCreateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
     fields = ['position_code', 'specific_job_title', 'administrative_unit', 'referential_employee']
     success_url = reverse_lazy('function_manual:profile_list')
 
+    def form_valid(self, form):
+        # Asignar automáticamente el usuario actual al campo created_by
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
 
 class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfileMixin, UpdateView):
     model = JobProfile
@@ -294,6 +299,11 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
 
         context['initial_data'] = json.dumps(initial_data, cls=DjangoJSONEncoder)
         return context
+
+    def form_valid(self, form):
+        # Asignar automáticamente el usuario actual al campo updated_by
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
 
 
 class JobProfileAssignReferentialView(LoginRequiredMixin, View):
@@ -769,6 +779,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     profile = JobProfile.objects.get(pk=profile_id)
                 else:
                     profile = JobProfile()
+                    # Asignar el usuario actual como creador del perfil
+                    profile.created_by = request.user
 
                 profile.position_code = data.get('position_code')
                 profile.specific_job_title = data.get('specific_job_title')
@@ -837,6 +849,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.training_topic = data.get('training_topic')
                 profile.interface_relations = data.get('interface_relations')
                 profile.is_active = True
+                # Asignar el usuario actual como quien actualiza el perfil
+                profile.updated_by = request.user
                 profile.save()
 
                 # 2. Gestionar Actividades
