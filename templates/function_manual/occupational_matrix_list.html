@@ -48,16 +48,18 @@
                             <td class="text-center">
                                 <div class="actions-wrapper">
                                     <!-- BOTÓN EDITAR -->
-                                    <button class="btn-views-action" title="Editar"
-                                            @click="editEntry('{{ entry.id }}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <!-- BOTÓN ACCIÓN VARIABLE -->
-                                    <button class="{% if entry.is_active %}btn-delete-action{% else %}btn-success-action{% endif %}"
-                                            title="{% if entry.is_active %}Inactivar{% else %}Activar{% endif %}"
-                                            @click="toggleEntry('{{ entry.id }}', '{{ entry.occupational_group }}', {{ entry.is_active|yesno:'true,false' }})">
-                                        <i class="fas {% if entry.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
-                                    </button>
+                                    {% if perms.function_manual.change_occupationalmatrix %}
+                                        <button class="btn-views-action" title="Editar"
+                                                @click="editEntry('{{ entry.id }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <!-- BOTÓN ACCIÓN VARIABLE -->
+                                        <button class="{% if entry.is_active %}btn-delete-action{% else %}btn-success-action{% endif %}"
+                                                title="{% if entry.is_active %}Inactivar{% else %}Activar{% endif %}"
+                                                @click="toggleEntry('{{ entry.id }}', '{{ entry.occupational_group }}', {{ entry.is_active|yesno:'true,false' }})">
+                                            <i class="fas {% if entry.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

@@ -105,7 +105,7 @@
                                 <i class="fa-solid fa-file-signature"></i>
                             </button>
                         {% endif %}
-                        {% if not profile.occupational_classification %}
+                        {% if not profile.occupational_classification and perms.function_manual.change_jobprofile %}
                             <a href="{% url 'function_manual:profile_update' profile.id %}"
                                class="btn-views-action" title="Editar Perfil">
                                 <i class="fa-solid fa-pen-to-square"></i>

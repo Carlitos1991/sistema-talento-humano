@@ -423,6 +423,11 @@ class OccupationalMatrixListView(LoginRequiredMixin, PermissionRequiredMixin, Jo
     def get_queryset(self):
         return OccupationalMatrix.objects.all().order_by('grade')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_change_occupationalmatrix'] = self.request.user.has_perm('function_manual.change_occupationalmatrix')
+        return context
+
 
 class OccupationalMatrixSaveApi(LoginRequiredMixin, View):
     """API para crear o editar un grado salarial (Simplificado)"""
@@ -582,6 +587,7 @@ class CompetencyListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         complexity_items = ManualCatalogItem.objects.filter(catalog__code='COMPLEXITY_LEVELS', is_active=True)
         context['complexity_levels'] = json.dumps(
             [{'id': item.id, 'name': item.name, 'code': item.code} for item in complexity_items])
+        context['can_change_competency'] = self.request.user.has_perm('function_manual.change_competency')
         qs = Competency.objects.filter(is_active=True)
         context.update({'stats_total': qs.count(), 'stats_behavioral': qs.filter(type='BEHAVIORAL').count(),
                         'stats_technical': qs.filter(type='TECHNICAL').count(),
@@ -706,6 +712,9 @@ class ValuationNodeListView(LoginRequiredMixin, PermissionRequiredMixin, JobProf
         context = super().get_context_data(**kwargs)
         parent_id = self.request.GET.get('parent')
 
+        # Pasar permisos al template
+        context['can_change_valuationnode'] = self.request.user.has_perm('function_manual.change_valuationnode')
+
         # Valores iniciales (Raíz)
         context['parent_name'] = "Estructura Raíz"
         context['next_level_name'] = "Rol de Puesto"
@@ -761,6 +770,15 @@ def occupational_matrix_toggle_status(request, pk):
     entry.is_active = not entry.is_active
     entry.save()
     return JsonResponse({'success': True, 'is_active': entry.is_active})
+
+
+@login_required
+def valuation_node_toggle_status(request, pk):
+    """Desactiva o activa un nodo de valoración"""
+    node = get_object_or_404(ValuationNode, pk=pk)
+    node.is_active = not node.is_active
+    node.save()
+    return JsonResponse({'success': True, 'is_active': node.is_active})
 
 
 class JobProfileSaveApi(LoginRequiredMixin, View):

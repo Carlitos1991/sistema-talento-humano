@@ -62,11 +62,14 @@
                             <td class="text-center">
                                 <div class="actions-wrapper">
                                     <!-- BOTÓN EDITAR -->
-                                    <button class="btn-views-action" title="Editar" @click="editNode({{ node.id }})">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn-delete-action" title="Eliminar"><i class="fa-solid fa-trash"></i>
-                                    </button>
+                                    {% if can_change_valuationnode %}
+                                        <button class="btn-views-action" title="Editar" @click="editNode({{ node.id }})">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button class="btn-delete-action" title="Desactivar" @click="deleteNode({{ node.id }})">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

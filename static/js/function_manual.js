@@ -219,6 +219,42 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.loading = false;
                         }
                     },
+                    async deleteNode(id) {
+                        if (!id) {
+                            window.Toast.fire({icon: 'error', title: 'ID de registro no válido'});
+                            return;
+                        }
+                        
+                        const result = await Swal.fire({
+                            title: '¿Desactivar este nodo?',
+                            text: 'El nodo no aparecerá en la valoración, pero se puede reactivar después.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, desactivar',
+                            cancelButtonText: 'Cancelar',
+                            customClass: {
+                                confirmButton: 'btn-swal-danger'
+                            }
+                        });
+
+                        if (result.isConfirmed) {
+                            this.loading = true;
+                            try {
+                                const res = await fetch(`/function_manual/api/valuation-nodes/toggle/${id}/`, {
+                                    method: 'POST',
+                                    headers: {'X-CSRFToken': getCsrfToken()}
+                                });
+                                if (res.ok) {
+                                    window.Toast.fire({icon: 'success', title: 'Nodo desactivado'});
+                                    location.reload();
+                                } else {
+                                    window.Toast.fire({icon: 'error', title: 'Error al desactivar el nodo'});
+                                }
+                            } finally {
+                                this.loading = false;
+                            }
+                        }
+                    },
                     closeModal() {
                         this.showModal = false;
                         document.body.classList.remove('no-scroll');

@@ -325,6 +325,75 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 3px solid #10b981;
 }
 
+/* Submenu interno (Administración en Manual de Funciones) */
+.has-inner-submenu {
+    position: relative;
+}
+
+.has-inner-submenu > a {
+    cursor: pointer;
+}
+
+.inner-submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    display: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    border-left: 2px solid rgba(40, 175, 35, 0.3);
+    margin-left: 15px;
+}
+
+.has-inner-submenu.is-open .inner-submenu {
+    display: block;
+    max-height: 500px;
+    overflow: visible;
+}
+
+.inner-submenu li {
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+.inner-submenu li a {
+    padding-left: 48px;
+    font-size: 0.85em;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+.inner-submenu li a:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(40, 175, 35, 0.5);
+}
+
+.inner-submenu li a.active-child {
+    color: #fff;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: #10b981;
+}
+
+.inner-chevron {
+    transition: transform 0.3s ease;
+    margin-left: auto;
+    font-size: 0.75em;
+}
+
+.has-inner-submenu.is-open .inner-chevron {
+    transform: rotate(180deg);
+}
+
 /* Sidebar colapsado */
 .sidebar.collapsed,
 .layout-wrapper.is-collapsed .sidebar {

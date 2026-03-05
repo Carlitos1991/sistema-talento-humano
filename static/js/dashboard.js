@@ -123,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    const innerToggle = document.querySelector('.inner-toggle');
-    if (innerToggle) {
+    const innerToggles = document.querySelectorAll('.inner-toggle');
+    innerToggles.forEach(innerToggle => {
         innerToggle.addEventListener('click', (e) => {
             e.preventDefault();
             const parent = innerToggle.closest('.has-inner-submenu');
@@ -133,10 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Guardar estado en localStorage
             localStorage.setItem('admin_menu_open', parent.classList.contains('is-open'));
         });
+    });
 
-        // Restaurar estado
-        if (localStorage.getItem('admin_menu_open') === 'true') {
-            document.querySelector('.has-inner-submenu').classList.add('is-open');
+    // Restaurar estado
+    if (localStorage.getItem('admin_menu_open') === 'true') {
+        const adminSubmenu = document.querySelector('.has-inner-submenu');
+        if (adminSubmenu) {
+            adminSubmenu.classList.add('is-open');
         }
     }
 });

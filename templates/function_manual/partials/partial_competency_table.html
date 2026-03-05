@@ -24,23 +24,27 @@
                 </td>
                 <td>{{ competency.suggested_level.name|default:"---" }}</td>
                 <td>
-                    <label class="switch">
-                        <input type="checkbox" {% if competency.is_active %}checked{% endif %}
-                               @change="toggleStatus({{ competency.id }})">
-                        <span class="slider"></span>
-                    </label>
+                    {% if perms.function_manual.change_competency %}
+                        <label class="switch">
+                            <input type="checkbox" {% if competency.is_active %}checked{% endif %}
+                                   @change="toggleStatus({{ competency.id }})">
+                            <span class="slider"></span>
+                        </label>
+                    {% endif %}
                 </td>
                 <td class="text-center">
-                    <button class="btn-icon" title="Editar"
-                            @click="openModal('edit', {
-                                id: {{ competency.id }}, 
-                                name: '{{ competency.name|escapejs }}', 
-                                type: '{{ competency.type }}', 
-                                definition: '{{ competency.definition|escapejs }}', 
-                                suggested_level: {% if competency.suggested_level %}{{ competency.suggested_level.id }}{% else %}''{% endif %}
-                            })">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
+                    {% if perms.function_manual.change_competency %}
+                        <button class="btn-icon" title="Editar"
+                                @click="openModal('edit', {
+                                    id: {{ competency.id }}, 
+                                    name: '{{ competency.name|escapejs }}', 
+                                    type: '{{ competency.type }}', 
+                                    definition: '{{ competency.definition|escapejs }}', 
+                                    suggested_level: {% if competency.suggested_level %}{{ competency.suggested_level.id }}{% else %}''{% endif %}
+                                })">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    {% endif %}
                 </td>
             </tr>
         {% empty %}
