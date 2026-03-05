@@ -18,7 +18,7 @@
             <div>
                 <h1>Configuración de Valoración</h1>
                 <nav class="breadcrumb-premium">
-                    <a href="{% url 'function_manual:matrix_list' %}">Estructura</a>
+                    <a href="{% url 'function_manual:valuation_list' %}">Estructura</a>
                     {% for bc in breadcrumbs %}
                         <span class="sep">/</span>
                         <a href="?parent={{ bc.id }}">{{ bc.catalog_item.name|default:bc.name_extra }}</a>
@@ -35,9 +35,10 @@
                 <table class="data-table">
                     <thead>
                     <tr>
-                        <th width="15%">Código</th>
-                        <th width="55%">Nombre / Valor</th>
-                        <th width="20%">Tipo</th>
+                        <th width="12%">Código</th>
+                        <th width="48%">Nombre / Valor</th>
+                        <th width="12%">Valor Mín.</th>
+                        <th width="18%">Tipo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                     </thead>
@@ -46,16 +47,33 @@
                         <tr>
                             <td><strong>{{ node.catalog_item.code|default:"---" }}</strong></td>
                             <td>
-                                {% if node.node_type != 'RESULT' %}
+                                {% if node.node_type != 'RESULT' and node.node_type != 'GENERIC_DENOMINATION' %}
                                     <a href="?parent={{ node.id }}" class="link-drilldown">
-                                        {{ node.catalog_item.name|default:node.name_extra }}
+                                        <div>{{ node.catalog_item.name|default:node.name_extra }}</div>
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </a>
+                                {% elif node.node_type == 'RESULT' %}
+                                    <a href="?parent={{ node.id }}" class="link-drilldown">
+                                        <div>
+                                            <strong>{{ node.occupational_classification.occupational_group }}</strong>
+                                            <small>RMU: ${{ node.occupational_classification.remuneration }}</small>
+                                        </div>
                                         <i class="fa-solid fa-chevron-right"></i>
                                     </a>
                                 {% else %}
-                                    <div class="result-box">
-                                        <strong>{{ node.occupational_classification.occupational_group }}</strong>
-                                        <small>RMU: ${{ node.occupational_classification.remuneration }}</small>
+                                    <div class="link-drilldown no-click">
+                                        <div>
+                                            <strong>{{ node.catalog_item.name|default:node.name_extra }}</strong>
+                                        </div>
                                     </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if node.node_type == 'RESULT' %}
+                                    <span class="badge-value">{% if node.minimum_value %}
+                                        {{ node.minimum_value }}{% else %}---{% endif %}</span>
+                                {% else %}
+                                    <span class="text-muted">---</span>
                                 {% endif %}
                             </td>
                             <td><span class="status-badge neutral">{{ node.get_node_type_display }}</span></td>
@@ -63,10 +81,12 @@
                                 <div class="actions-wrapper">
                                     <!-- BOTÓN EDITAR -->
                                     {% if can_change_valuationnode %}
-                                        <button class="btn-views-action" title="Editar" @click="editNode({{ node.id }})">
+                                        <button class="btn-views-action" title="Editar"
+                                                @click="editNode({{ node.id }})">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
-                                        <button class="btn-delete-action" title="Desactivar" @click="deleteNode({{ node.id }})">
+                                        <button class="btn-delete-action" title="Desactivar"
+                                                @click="deleteNode({{ node.id }})">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     {% endif %}

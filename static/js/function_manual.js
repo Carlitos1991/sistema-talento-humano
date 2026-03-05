@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         workingType: '',
                         showModal: false, isEdit: false, loading: false,
                         catalogs: {instruction: [], decisions: [], impact: [], roles: [], matrix: [], complexity: []},
-                        formData: {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: ''}
+                        formData: {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null}
                     }
                 },
                 computed: {
@@ -155,7 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             'DECISION': 'Decisión',
                             'IMPACT': 'Impacto',
                             'COMPLEXITY': 'Complejidad',
-                            'RESULT': 'Resultado'
+                            'RESULT': 'Resultado',
+                            'GENERIC_DENOMINATION': 'Denominación Genérica'
                         };
                         return names[this.workingType] || 'Nivel';
                     },
@@ -206,7 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 id: data.id,
                                 catalog_item_id: data.catalog_item_id || '',
                                 name_extra: data.name_extra || '',
-                                occupational_classification_id: data.occupational_classification_id || ''
+                                occupational_classification_id: data.occupational_classification_id || '',
+                                minimum_value: data.minimum_value || null
                             };
                             this.workingType = data.node_type;
                             this.isEdit = true;
@@ -278,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     resetForm() {
-                        this.formData = {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: ''};
+                        this.formData = {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null};
                     }
                 }
             }).mount('#valuationApp');
@@ -450,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return this.selectedUnits && this.selectedUnits.length > 0 && !!this.selectedUnits[0];
                     },
                     hasBasicData() {
-                        return this.firstUnitSelected && this.formData.specific_job_title;
+                        return this.firstUnitSelected;
                     },
                     isNextDisabled() {
                         if (this.currentStep === 1) return !this.hasBasicData;
@@ -467,6 +469,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
                         }
                         return false;
+                    }
+                },
+                watch: {
+                    selectedNodes: {
+                        handler(newVal) {
+                            // Cuando se seleccionan todos los 6 nodos de valoración, buscar en matriz
+                            const validNodes = newVal.slice(0, 6).filter(n => n !== '');
+                            if (validNodes.length === 6 && newVal[5]) {
+                                // Obtener el node de complejidad para extraer su catalog_item_id
+                                const complexityNodeId = newVal[5];
+                                if (complexityNodeId && this.valuationLevels[5]) {
+                                    const complexityNode = this.valuationLevels[5].options.find(n => n.id == complexityNodeId);
+                                    if (complexityNode && complexityNode.catalog_item_id) {
+                                        console.log(`Auto-filtrando matriz con complexity_id=${complexityNode.catalog_item_id}`);
+                                        this.filterMatrixByComplexity(complexityNode.catalog_item_id);
+                                    }
+                                }
+                            }
+                        },
+                        deep: true
                     }
                 },
                 methods: {
@@ -667,8 +689,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     validateCurrentStep() {
                         if (this.currentStep === 1) {
-                            if (!this.formData.administrative_unit || !this.formData.specific_job_title) {
-                                window.Toast.fire({icon: 'warning', title: 'Complete la unidad y el cargo.'});
+                            if (!this.formData.administrative_unit) {
+                                window.Toast.fire({icon: 'warning', title: 'Seleccione la unidad organizacional.'});
                                 return false;
                             }
                         }
@@ -808,6 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (sel && sel.type === 'RESULT') {
                                 this.matchResult = sel.classification;
                                 this.formData.occupational_classification = sel.classification_id;
+                                // IMPORTANTE: Guardar el node_id del RESULT para enviarlo al backend
+                                this.selectedNodes[index] = id;
+                                console.log(`RESULT node guardado: selectedNodes[${index}] = ${id}`);
                             } else {
                                 await this.fetchValuationLevel(id);
                             }
@@ -875,6 +900,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (this.filteredMatrix.length === 0) {
                             console.warn('No se encontraron registros que coincidan con todos los criterios');
+                            this.matchResult = null;
+                        } else if (this.filteredMatrix.length === 1) {
+                            // Si hay exactamente 1 resultado, asignarlo automáticamente
+                            const matrix = this.filteredMatrix[0];
+                            this.formData.occupational_classification = matrix.id;
+                            this.matchResult = {
+                                group: matrix.occupational_group,
+                                grade: matrix.grade
+                            };
+                            console.log(`Match encontrado automáticamente: ${matrix.occupational_group} - G${matrix.grade}`);
+                        } else {
+                            // Si hay múltiples, el usuario debe seleccionar
+                            console.log(`Se encontraron ${this.filteredMatrix.length} matrices. Usuario debe seleccionar.`);
                         }
                     },
                     // --- OTROS MÉTODOS ---
@@ -886,7 +924,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             'DECISION': '4. Decisiones',
                             'IMPACT': '5. Impacto',
                             'COMPLEXITY': '6. Complejidad',
-                            'RESULT': '7. Resultado'
+                            'RESULT': '7. Resultado',
+                            'GENERIC_DENOMINATION': '8. Denominación Genérica'
                         };
                         return labels[type] || 'Nivel';
                     },

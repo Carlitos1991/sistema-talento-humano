@@ -95,7 +95,7 @@ class OccupationalMatrix(BaseModel):
 class JobProfile(BaseModel):
     objects = None
     position_code = models.CharField(max_length=50, blank=True, null=True, unique=True)
-    specific_job_title = models.CharField(max_length=255, verbose_name="Cargo Específico")
+    specific_job_title = models.CharField(max_length=255, verbose_name="Cargo Específico", blank=True, null=True)
     administrative_unit = models.ForeignKey(AdministrativeUnit, on_delete=models.PROTECT, related_name='job_profiles')
     referential_employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -140,6 +140,12 @@ class JobProfile(BaseModel):
         verbose_name="Clasificación Matriz"
     )
 
+    # Total de puntos de las primeras 6 actividades
+    total_activity_points = models.PositiveIntegerField(
+        default=0, verbose_name="Total Puntos Actividades",
+        help_text="Suma de puntos de las primeras 6 actividades"
+    )
+
     competencies = models.ManyToManyField('Competency', through='ProfileCompetency')
 
     prepared_by = models.ForeignKey(Authority, related_name='prepared_profiles', on_delete=models.PROTECT, null=True)
@@ -151,6 +157,16 @@ class JobProfile(BaseModel):
     @property
     def is_legalized(self):
         return bool(self.prepared_by and self.reviewed_by and self.approved_by)
+
+    def calculate_activity_points(self):
+        """Calcula la suma de puntos de las primeras 6 actividades"""
+        activities = self.activities.all()[:6]
+        return sum(activity.points for activity in activities)
+
+    def update_total_activity_points(self):
+        """Actualiza el campo total_activity_points"""
+        self.total_activity_points = self.calculate_activity_points()
+        self.save(update_fields=['total_activity_points'])
 
     class Meta:
         verbose_name = "Perfil de Puesto"
@@ -269,7 +285,7 @@ class ValuationNode(BaseModel):
     """
     Representa un nodo en la estructura jerárquica de valoración.
     Niveles: 1.Rol -> 2.Instrucción -> 3.Experiencia -> 4.Decisiones
-            -> 5.Impacto -> 6.Complejidad -> 7.Resultado (Clasificación)
+            -> 5.Impacto -> 6.Complejidad -> 7.Resultado (Clasificación) -> 8.Denominación Genérica
     """
 
     objects = None
@@ -282,6 +298,7 @@ class ValuationNode(BaseModel):
         IMPACT = 'IMPACT', 'Nivel de Impacto'
         COMPLEXITY = 'COMPLEXITY', 'Nivel de Complejidad'
         RESULT = 'RESULT', 'Grupo Ocupacional (Resultado)'
+        GENERIC_DENOMINATION = 'GENERIC_DENOMINATION', 'Denominación Genérica'
 
     parent = models.ForeignKey(
         'self', on_delete=models.CASCADE,
@@ -309,6 +326,13 @@ class ValuationNode(BaseModel):
     occupational_classification = models.ForeignKey(
         OccupationalMatrix, on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name="Clasificación Salarial"
+    )
+
+    # Campo para Denominación Genérica: valor mínimo (entero sin decimales)
+    minimum_value = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Valor Mínimo",
+        help_text="Valor mínimo para este nivel (sin decimales)"
     )
 
     class Meta:

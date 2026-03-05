@@ -168,7 +168,6 @@
                 </ul>
             </li>
         {% endif %}
-        {# Mostrar menú solo si el usuario tiene algún permiso relevante del módulo function_manual #}
         {% if perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
         <!-- Manual de Funciones -->
         <li class="has-submenu">

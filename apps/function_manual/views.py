@@ -670,8 +670,19 @@ class ValuationNodeSaveApi(LoginRequiredMixin, View):
         node_id = data.get('id')
         node = get_object_or_404(ValuationNode, pk=node_id) if node_id else ValuationNode(
             parent_id=data.get('parent_id'), node_type=data.get('node_type'))
-        node.catalog_item_id, node.name_extra, node.occupational_classification_id = data.get(
-            'catalog_item_id') or None, data.get('name_extra'), data.get('occupational_classification_id') or None
+        node.catalog_item_id = data.get('catalog_item_id') or None
+        node.name_extra = data.get('name_extra')
+        node.occupational_classification_id = data.get('occupational_classification_id') or None
+        
+        # Capturar minimum_value si se proporciona
+        minimum_value = data.get('minimum_value')
+        if minimum_value is not None:
+            try:
+                node.minimum_value = int(minimum_value)
+            except (ValueError, TypeError):
+                node.minimum_value = None
+        
+        node.updated_by = request.user
         node.save()
         return JsonResponse({'success': True})
 
@@ -741,9 +752,10 @@ class ValuationNodeListView(LoginRequiredMixin, PermissionRequiredMixin, JobProf
                 'EXPERIENCE': ('DECISION', 'Nivel de Decisiones'),
                 'DECISION': ('IMPACT', 'Nivel de Impacto'),
                 'IMPACT': ('COMPLEXITY', 'Nivel de Complejidad'),
-                'COMPLEXITY': ('RESULT', 'Resultado Final')
+                'COMPLEXITY': ('RESULT', 'Resultado Final'),
+                'RESULT': ('GENERIC_DENOMINATION', 'Denominación Genérica')
             }
-            res = mapping.get(parent.node_type, ('RESULT', 'Resultado'))
+            res = mapping.get(parent.node_type, ('GENERIC_DENOMINATION', 'Denominación Genérica'))
             context['next_node_type'] = res[0]
             context['next_level_name'] = res[1]
 
@@ -786,6 +798,183 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
     Procesa el guardado masivo del Perfil.
     LOGICA ACTUALIZADA: Obtiene los datos de requisitos desde los Nodos de Valoración.
     """
+
+    def _set_generic_denomination_and_title(self, profile, result_node_id):
+        """
+        Busca la Denominación Genérica correcta basada en total_activity_points
+        y actualiza specific_job_title del profile.
+        
+        También asigna occupational_classification del RESULT si solo hay 1 dependiente RESULT.
+        
+        Lógica:
+        - Si hay 1 solo dependiente RESULT: usar ese
+        - Si hay múltiples: ordenar por minimum_value DESC y seleccionar el primero
+          donde minimum_value <= total_activity_points
+        """
+        try:
+            print(f"\n>>> _set_generic_denomination_and_title INICIO")
+            print(f">>> result_node_id={result_node_id}")
+            print(f">>> profile.id={profile.id}, total_activity_points={profile.total_activity_points}")
+            print(f">>> ANTES: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+            
+            # Obtener el nodo RESULT
+            result_node = ValuationNode.objects.get(pk=result_node_id)
+            print(f">>> result_node encontrado: {result_node.id} - {result_node.catalog_item.name if result_node.catalog_item else 'sin catálogo'}")
+            print(f">>> result_node.occupational_classification_id={result_node.occupational_classification_id}")
+            
+            # Asignar occupational_classification del RESULT
+            if result_node.occupational_classification:
+                profile.occupational_classification = result_node.occupational_classification
+                print(f">>> Asignado occupational_classification: {result_node.occupational_classification.id} - {result_node.occupational_classification.name}")
+            else:
+                print(f">>> WARNING: result_node NO tiene occupational_classification")
+            
+            # Buscar todos los nodos GENERIC_DENOMINATION que sean hijos de este RESULT
+            generic_nodes = ValuationNode.objects.filter(
+                parent=result_node,
+                node_type='GENERIC_DENOMINATION',
+                is_active=True
+            ).order_by('-minimum_value')
+            
+            print(f">>> generic_nodes encontrados: {generic_nodes.count()}")
+            for gn in generic_nodes:
+                print(f">>>   - {gn.id}: {gn.name_extra} (minimum_value={gn.minimum_value})")
+            
+            if not generic_nodes.exists():
+                # Si no hay denominaciones genéricas, solo guardar occupational_classification
+                print(f">>> No hay generic_nodes, guardando solo occupational_classification")
+                profile.save(update_fields=['occupational_classification'])
+                print(f">>> Guardado. Verificando: occupational_classification_id={profile.occupational_classification_id}")
+                return
+            
+            total_points = profile.total_activity_points
+            selected_node = None
+            
+            if generic_nodes.count() == 1:
+                # Si hay solo 1, seleccionarlo directamente
+                selected_node = generic_nodes.first()
+                print(f">>> Solo 1 generic_node, seleccionado: {selected_node.name_extra}")
+            else:
+                # Si hay múltiples, buscar el que tenga el mayor minimum_value
+                # que sea menor o igual a total_points
+                print(f">>> Múltiples generic_nodes, buscando con total_points={total_points}")
+                for node in generic_nodes:
+                    print(f">>>   Evaluando: {node.name_extra} (minimum_value={node.minimum_value})")
+                    if node.minimum_value is None:
+                        # Si no tiene minimum_value, considerarlo como válido por defecto
+                        selected_node = node
+                        print(f">>>   -> SELECCIONADO (sin minimum_value)")
+                        break
+                    elif node.minimum_value <= total_points:
+                        selected_node = node
+                        print(f">>>   -> SELECCIONADO ({node.minimum_value} <= {total_points})")
+                        break
+            
+            # Si encontramos un nodo válido, actualizar specific_job_title
+            if selected_node:
+                profile.specific_job_title = selected_node.name_extra or (
+                    selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
+                )
+                print(f">>> specific_job_title = {profile.specific_job_title}")
+            else:
+                print(f">>> No se encontró generic_node apropiado")
+            
+            # Guardar el profile con los cambios
+            print(f">>> GUARDANDO: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+            profile.save(update_fields=['specific_job_title', 'occupational_classification'])
+            
+            # Verificar post-save
+            print(f">>> POST-SAVE: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+            print(f">>> _set_generic_denomination_and_title COMPLETADO\n")
+            
+        except ValuationNode.DoesNotExist:
+            print(f">>> ERROR: result_node con ID {result_node_id} no existe")
+        except Exception as e:
+            import traceback
+            print(f">>> ERROR en _set_generic_denomination_and_title: {e}")
+            traceback.print_exc()
+
+    def _set_generic_denomination_and_title_from_matrix(self, profile):
+        """
+        Selecciona la Denominación Genérica correcta basada en total_activity_points
+        usando la OccupationalMatrix (occupational_classification) como punto de partida.
+        
+        Nota: El RESULT en este sistema es la OccupationalMatrix, no un ValuationNode.
+        Buscamos nodos GENERIC_DENOMINATION que sean hijos del occupational_classification.
+        
+        Lógica de selección:
+        - Buscamos GENERIC_DENOMINATION que estén vinculados a la matrix seleccionada
+        - Seleccionamos el de mayor minimum_value <= total_activity_points
+        """
+        try:
+            print(f"\n>>> _set_generic_denomination_and_title_from_matrix INICIO")
+            print(f">>> profile.id={profile.id}")
+            print(f">>> profile.occupational_classification_id={profile.occupational_classification_id}")
+            print(f">>> profile.total_activity_points={profile.total_activity_points}")
+            
+            if not profile.occupational_classification:
+                print(f">>> ERROR: profile no tiene occupational_classification asignado")
+                return
+            
+            matrix = profile.occupational_classification
+            print(f">>> Matrix: {matrix.occupational_group} - G{matrix.grade}")
+            
+            # Buscar nodos GENERIC_DENOMINATION que tengan esta OccupationalMatrix como occupational_classification
+            generic_nodes = ValuationNode.objects.filter(
+                occupational_classification=matrix,
+                node_type='GENERIC_DENOMINATION',
+                is_active=True
+            ).order_by('-minimum_value')
+            
+            print(f">>> generic_nodes encontrados: {generic_nodes.count()}")
+            for gn in generic_nodes:
+                print(f">>>   - {gn.id}: {gn.name_extra} (minimum_value={gn.minimum_value})")
+            
+            if not generic_nodes.exists():
+                print(f">>> No hay GENERIC_DENOMINATION para esta matriz. Solo se guardó occupational_classification")
+                return
+            
+            total_points = profile.total_activity_points
+            selected_node = None
+            
+            if generic_nodes.count() == 1:
+                # Si hay solo 1, seleccionarlo directamente
+                selected_node = generic_nodes.first()
+                print(f">>> Solo 1 generic_node, seleccionado: {selected_node.name_extra}")
+            else:
+                # Si hay múltiples, buscar el que tenga el mayor minimum_value
+                # que sea menor o igual a total_points
+                print(f">>> Múltiples generic_nodes, buscando con total_points={total_points}")
+                for node in generic_nodes:
+                    print(f">>>   Evaluando: {node.name_extra} (minimum_value={node.minimum_value})")
+                    if node.minimum_value is None:
+                        # Si no tiene minimum_value, considerarlo como válido por defecto
+                        selected_node = node
+                        print(f">>>   -> SELECCIONADO (sin minimum_value)")
+                        break
+                    elif node.minimum_value <= total_points:
+                        selected_node = node
+                        print(f">>>   -> SELECCIONADO ({node.minimum_value} <= {total_points})")
+                        break
+            
+            # Si encontramos un nodo válido, actualizar specific_job_title
+            if selected_node:
+                profile.specific_job_title = selected_node.name_extra or (
+                    selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
+                )
+                print(f">>> specific_job_title asignado: {profile.specific_job_title}")
+                # Guardar solo specific_job_title (occupational_classification ya fue guardado)
+                profile.save(update_fields=['specific_job_title'])
+                print(f">>> Profile guardado")
+            else:
+                print(f">>> No se encontró generic_node que cumpla los criterios. specific_job_title no se modifica.")
+            
+            print(f">>> _set_generic_denomination_and_title_from_matrix COMPLETADO\n")
+            
+        except Exception as e:
+            import traceback
+            print(f">>> ERROR en _set_generic_denomination_and_title_from_matrix: {e}")
+            traceback.print_exc()
 
     @method_decorator(csrf_protect)
     def post(self, request, *args, **kwargs):
@@ -855,10 +1044,13 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
 
                 # 7. RESULTADO (Matriz Ocupacional)
                 result_node_id = data.get('result_node_id')
+                print(f"\n>>> result_node_id recibido del frontend: {result_node_id}")
                 if result_node_id:
                     node = ValuationNode.objects.filter(pk=result_node_id).first()
+                    print(f">>> Node encontrado: {node}")
                     if node and node.occupational_classification:
                         profile.occupational_classification = node.occupational_classification
+                        print(f">>> occupational_classification asignado desde RESULT: {profile.occupational_classification}")
 
                 # Campos de texto libre
                 profile.mission = data.get('mission')
@@ -869,9 +1061,11 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.is_active = True
                 # Asignar el usuario actual como quien actualiza el perfil
                 profile.updated_by = request.user
+                # GUARDAR el profile para que tenga pk
                 profile.save()
 
                 # 2. Gestionar Actividades
+                # Ahora que el profile tiene pk, podemos acceder a sus relaciones
                 profile.activities.all().delete()
                 activities_data = data.get('activities', [])
 
@@ -891,7 +1085,27 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         ))
 
                 if activities_to_create:
+                    # PRIMERO guardar el profile para que exista en BD
+                    profile.save()
+                    print(f"\n=== PASO 1: Profile guardado ===")
+                    print(f"profile.id={profile.id}")
+                    print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
+                    print(f"profile.specific_job_title={profile.specific_job_title}")
+                    
                     JobActivity.objects.bulk_create(activities_to_create)
+                    # Recalcular el total de puntos de actividades después de crear
+                    profile.update_total_activity_points()
+                    print(f"\n=== PASO 2: Después de update_total_activity_points ===")
+                    print(f"profile.total_activity_points={profile.total_activity_points}")
+                    print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
+                    print(f"profile.specific_job_title={profile.specific_job_title}")
+                    
+                    # Lógica automática: Seleccionar Denominación Genérica y actualizar specific_job_title
+                    # Nota: El RESULT no es un nodo de valoración seleccionable, es la clasificación de matriz
+                    # Buscamos los nodos GENERIC_DENOMINATION que sean hijos de ocupational_classification
+                    if profile.occupational_classification:
+                        print(f"\n=== Buscando para occupational_classification_id={profile.occupational_classification_id} ===")
+                        self._set_generic_denomination_and_title_from_matrix(profile)
                 else:
                     raise ValueError("El perfil debe tener al menos una actividad esencial.")
 

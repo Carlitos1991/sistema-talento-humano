@@ -52,6 +52,25 @@
                         </option>
                     </select>
                 </div>
+
+                <!-- Input de Valor Mínimo (Resultado Final) -->
+                <div class="form-group" v-if="workingType === 'RESULT'">
+                    <label class="form-label">
+                        <i class="fa-solid fa-arrow-down-short-wide"></i> Valor Mínimo
+                    </label>
+                    <input type="number" v-model.number="formData.minimum_value" class="input-field"
+                           placeholder="Ej: 1500" min="0" step="1">
+                    <small style="color: #666; margin-top: 5px; display: block;">Opcional - Solo números enteros sin decimales</small>
+                </div>
+
+                <!-- Input de Texto (Denominación Genérica) -->
+                <div class="form-group" v-if="workingType === 'GENERIC_DENOMINATION'">
+                    <label class="form-label">
+                        <i class="fa-solid fa-bookmark"></i> Denominación Genérica (*)
+                    </label>
+                    <input type="text" v-model="formData.name_extra" class="input-field"
+                           placeholder="Ej: Técnico Especializado" required>
+                </div>
             </div>
 
             <div class="modal-footer modal-footer-spaced">
