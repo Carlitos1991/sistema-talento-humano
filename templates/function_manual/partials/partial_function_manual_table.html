@@ -4,8 +4,10 @@
         <th width="10%">Código</th>
         <th width="30%">Denominación del Puesto</th>
         <th width="25%">Unidad Administrativa</th>
-        <th width="15%">Clasificación</th>
-        <th width="10%">RMU</th>
+        {% if perms.function_manual.change_jobprofile %}
+            <th width="15%">Clasificación</th>
+            <th width="10%">RMU</th>
+        {% endif %}
         <th width="10%" class="text-center">Acciones</th>
     </tr>
     </thead>
@@ -34,20 +36,23 @@
                 </div>
             </td>
             <td>{{ profile.administrative_unit.name }}</td>
-            <td>
-                {% if profile.occupational_classification %}
-                    <span class="status-badge neutral">
+
+            {% if perms.function_manual.change_jobprofile %}
+                <td>
+                    {% if profile.occupational_classification %}
+                        <span class="status-badge neutral">
                         {{ profile.occupational_classification.occupational_group }}
                     </span>
-                {% else %}
-                    <span class="status-badge inactive">Pendiente</span>
-                {% endif %}
-            </td>
-            <td>
-                <span class="text-primary-bold">
-                    ${{ profile.occupational_classification.remuneration|default:"0.00" }}
-                </span>
-            </td>
+                    {% else %}
+                        <span class="status-badge inactive">Pendiente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="text-primary-bold">
+                        ${{ profile.occupational_classification.remuneration|default:"0.00" }}
+                    </span>
+                </td>
+            {% endif %}
             <td class="text-center">
                 <div class="actions-wrapper">
                     {% if profile.is_legalized %}
@@ -72,15 +77,15 @@
                         {% endif %}
                     {% else %}
                         <!-- VISTA: PERFIL EN EDICIÓN -->
-                        {% if perms.function_manual.can_admin %}
-                            {% if not profile.occupational_classification %}
-                                <button class="btn-icon"
-                                        style="background-color: #f59e0b; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
-                                        onclick="openAssignGroupModal({{ profile.id }})"
-                                        title="Asignar Grupo Ocupacional">
-                                    <i class="fa-solid fa-scale-balanced"></i>
-                                </button>
-                            {% endif %}
+
+                        <!-- Botón Editar (siempre visible si el perfil NO está legalizado) -->
+                        {% if perms.function_manual.change_jobprofile %}
+                            <a href="{% url 'function_manual:profile_update' profile.id %}"
+                               class="btn-icon"
+                               style="background-color: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                               title="Editar Perfil">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
                         {% endif %}
 
                         <!-- Botón Asignar Referencial -->
@@ -90,11 +95,16 @@
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
-                        <a class="btn-icon"
-                           style="background-color: #065923; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
-                           href="{% url 'function_manual:report_activities_excel' profile.id %}">
-                            <i class="fas fa-file-excel text-success me-2"></i>
-                        </a>
+
+                        <!-- Exportar a Excel (solo si tiene permiso de ver) -->
+                        {% if perms.function_manual.change_jobprofile %}
+                            <a class="btn-icon"
+                               style="background-color: #065923; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                               href="{% url 'function_manual:report_activities_excel' profile.id %}"
+                               title="Exportar a Excel">
+                                <i class="fas fa-file-excel"></i>
+                            </a>
+                        {% endif %}
 
                         {% if profile.occupational_classification and perms.function_manual.can_admin %}
                             <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->
@@ -104,12 +114,6 @@
                                     title="Legalizar Perfil">
                                 <i class="fa-solid fa-file-signature"></i>
                             </button>
-                        {% endif %}
-                        {% if not profile.occupational_classification and perms.function_manual.change_jobprofile %}
-                            <a href="{% url 'function_manual:profile_update' profile.id %}"
-                               class="btn-views-action" title="Editar Perfil">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </a>
                         {% endif %}
                     {% endif %}
                 </div>
