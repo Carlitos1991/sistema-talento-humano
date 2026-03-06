@@ -41,39 +41,6 @@
             <p>Análisis de personal del Municipio de Loja</p>
         </div>
     </div>
-
-    <!-- Estadísticas de Perfiles -->
-    <div class="stats-grid" style="margin-top: 18px;">
-        <div class="stat-card total">
-            <div class="stat-content">
-                <div class="stat-label">TOTAL PERFILES</div>
-                <div class="stat-number">{{ profiles_total }}</div>
-            </div>
-            <div class="stat-icon blue">
-                <i class="fas fa-id-badge"></i>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-content">
-                <div class="stat-label">LEGALIZADOS</div>
-                <div class="stat-number">{{ profiles_legalized }}</div>
-            </div>
-            <div class="stat-icon green">
-                <i class="fas fa-file-signature"></i>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-content">
-                <div class="stat-label">PENDIENTES</div>
-                <div class="stat-number">{{ profiles_pending }}</div>
-            </div>
-            <div class="stat-icon orange">
-                <i class="fas fa-hourglass-half"></i>
-            </div>
-        </div>
-    </div>
     {# Mostrar el dashboard completo solo si el usuario tiene el permiso `auth.dashboard_talento_humano` #}
     {% if perms.auth.dashboard_talento_humano %}
 
