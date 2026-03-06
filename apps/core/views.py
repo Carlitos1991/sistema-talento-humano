@@ -37,6 +37,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from employee.models import Employee
         from budget.models import BudgetLine
         from person.models import Person
+        from function_manual.models import JobProfile
         from core.models import CatalogItem
         from django.db.models import Count, Q, Avg, Sum
         from datetime import date, timedelta
@@ -174,6 +175,25 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'labels': ['Masculino', 'Femenino'],
             'values': [context['empleados_masculino'], context['empleados_femenino']]
         }
+
+        # === ESTADÍSTICAS DE PERFILES (JobProfile) ===
+        try:
+            qs_profiles = JobProfile.objects.all()
+            context['profiles_total'] = qs_profiles.count()
+
+            # Contar solo aquellos que realmente están legalizados.
+            # Requerimos que los tres authority fields existan y además que exista el documento legalizado.
+            profiles_legalized = 0
+            for p in qs_profiles.only('prepared_by_id', 'reviewed_by_id', 'approved_by_id', 'legalized_document'):
+                if p.prepared_by_id and p.reviewed_by_id and p.approved_by_id and p.legalized_document:
+                    profiles_legalized += 1
+
+            context['profiles_legalized'] = profiles_legalized
+            context['profiles_pending'] = context['profiles_total'] - context['profiles_legalized']
+        except Exception:
+            context['profiles_total'] = 0
+            context['profiles_legalized'] = 0
+            context['profiles_pending'] = 0
         
         return context
 

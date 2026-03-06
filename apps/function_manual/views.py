@@ -124,8 +124,18 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if not self.request.GET.get('partial'):
             qs = self.get_queryset()
             context['stats_total'] = qs.count()
+            # Contamos legalizados usando las firmas + documento legalizado
+            stats_legalized = qs.filter(
+                prepared_by__isnull=False,
+                reviewed_by__isnull=False,
+                approved_by__isnull=False,
+                legalized_document__isnull=False
+            ).count()
+            context['stats_legalized'] = stats_legalized
+            # Mantener el conteo de perfiles con clasificación ocupacional por compatibilidad
             context['stats_classified'] = qs.filter(occupational_classification__isnull=False).count()
-            context['stats_pending'] = qs.filter(occupational_classification__isnull=True).count()
+            # Pendientes: aquellos que no están legalizados (según la definición requerida)
+            context['stats_pending'] = context['stats_total'] - stats_legalized
             context['stats_active'] = qs.filter(is_active=True).count()
 
             matrix_data = OccupationalMatrix.objects.values(

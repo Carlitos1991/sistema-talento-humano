@@ -168,7 +168,7 @@ class JobProfile(BaseModel):
 
     @property
     def is_legalized(self):
-        return bool(self.prepared_by and self.reviewed_by and self.approved_by)
+        return bool(self.prepared_by and self.reviewed_by and self.approved_by and self.legalized_document)
 
     def calculate_activity_points(self):
         """Calcula la suma de puntos de las primeras 6 actividades"""
