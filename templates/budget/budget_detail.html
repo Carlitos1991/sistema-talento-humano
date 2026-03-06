@@ -34,7 +34,7 @@
         <div class="stat-card color-one readonly">
             <div class="stat-left">
                 <h3>Cargo</h3>
-                <div class="budget-code-badge-small">{{ line.position_item|lower }}</div>
+                <div class="budget-code-badge-small">{{ line.position_item }}</div>
             </div>
             <i class="fa-solid fa-briefcase stat-icon"></i>
         </div>
@@ -101,8 +101,8 @@
                             {{ line.current_employee.person.first_name|first }}
                         </div>
                     {% endif %}
-                    <h4 class="value-bold mb-1">{{ line.current_employee.full_name }}</h4>
                     <span class="status-badge active">{{ line.current_employee.person.document_number }}</span>
+                    <h4 class="value-bold mb-1">{{ line.current_employee.person.name_and_last_name }}</h4>
                 {% else %}
                     <div class="text-center">
                         <i class="fas fa-user-clock fa-2x text-muted opacity-20 mb-2"></i>

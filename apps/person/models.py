@@ -104,6 +104,11 @@ class Person(models.Model):
         return f"{self.first_name} {self.last_name}"
 
     @property
+    def name_and_last_name(self):
+        """Retorna el nombre en formato: APELLIDO Nombre"""
+        return f"{self.last_name} {self.first_name}"
+
+    @property
     def location_text(self):
         """Retorna la ubicación más específica disponible string"""
         locs = [self.parish, self.canton, self.province, self.country]
