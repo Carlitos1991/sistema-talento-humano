@@ -1637,13 +1637,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         location.reload();
                     });
                 } else {
-                    Swal.fire('Error', data.message, 'error');
+                    // Mostrar mensaje de error del servidor
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Validación',
+                        text: data.message || 'No se pudo actualizar la denominación',
+                        confirmButtonColor: '#dc2626'
+                    });
                     btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
                     btn.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
-                Swal.fire('Error', 'Fallo de conexión', 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'Fallo al conectar con el servidor',
+                    confirmButtonColor: '#dc2626'
+                });
                 btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
                 btn.disabled = false;
             }

@@ -372,6 +372,7 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
     """
     Endpoint API para actualizar la denominación específica del cargo.
     Concatena el denominación genérica actual + el complemento del usuario.
+    Valida que no exista otra denominación igual en la misma unidad administrativa.
     """
     
     def post(self, request, *args, **kwargs):
@@ -399,6 +400,17 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
             new_title = f"{current_title} {complement}".strip()
         else:
             new_title = current_title
+        
+        # VALIDACIÓN: Verificar si ya existe una denominación igual en CUALQUIER unidad administrativa
+        existing_profile = JobProfile.objects.filter(
+            specific_job_title=new_title
+        ).exclude(pk=profile_id).first()
+        
+        if existing_profile:
+            return JsonResponse({
+                'success': False, 
+                'message': f'No se puede guardar esta denominación porque ya está registrada en la unidad administrativa de {existing_profile.administrative_unit.name}'
+            }, status=400)
         
         # Guardar y marcar como completada
         try:
@@ -1449,6 +1461,15 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
             profile.prepared_by_id = request.POST.get('prepared_by') or None
             profile.reviewed_by_id = request.POST.get('reviewed_by') or None
             profile.approved_by_id = request.POST.get('approved_by') or None
+            
+            # Si tiene nivel, agregar el nivel a la denominación
+            if profile.level and profile.level > 0:
+                # Verificar si el nivel ya está en la denominación
+                current_title = profile.specific_job_title or ''
+                # Si no termina con el nivel, agregarlo
+                if not current_title.endswith(f" {profile.level}"):
+                    profile.specific_job_title = f"{current_title} {profile.level}".strip()
+            
             profile.save()
 
             return JsonResponse({'success': True, 'message': 'Firmas de legalización actualizadas correctamente.'})
