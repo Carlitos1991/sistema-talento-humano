@@ -3,10 +3,11 @@
     <tr>
         <th width="10%">Código</th>
         <th width="30%">Denominación del Puesto</th>
-        <th width="25%">Unidad Administrativa</th>
+        <th width="20%">Unidad Administrativa</th>
         {% if perms.function_manual.change_jobprofile %}
-            <th width="15%">Clasificación</th>
-            <th width="10%">RMU</th>
+            <th width="12%">Clasificación</th>
+            <th width="8%">RMU</th>
+            <th width="8%">Nivel</th>
         {% endif %}
         <th width="10%" class="text-center">Acciones</th>
     </tr>
@@ -52,6 +53,11 @@
                         ${{ profile.occupational_classification.remuneration|default:"0.00" }}
                     </span>
                 </td>
+                <td>
+                    <span class="badge" style="background-color: #6366f1; color: white; padding: 4px 8px; border-radius: 4px;">
+                        {{ profile.level|default:"---" }}
+                    </span>
+                </td>
             {% endif %}
             <td class="text-center">
                 <div class="actions-wrapper">
@@ -95,6 +101,16 @@
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
+
+                        <!-- Botón Completar Denominación (visible solo si no fue completada y usuario tiene view_jobprofile) -->
+                        {% if perms.function_manual.view_jobprofile and not profile.denomination_completed %}
+                            <button class="btn-icon"
+                                    style="background-color: #7c3aed; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                                    onclick="openCompleteDenominationModal({{ profile.id }})"
+                                    title="Completar Denominación del Cargo">
+                                <i class="fa-solid fa-pen-fancy"></i>
+                            </button>
+                        {% endif %}
 
                         <!-- Exportar a Excel (solo si tiene permiso de ver) -->
                         {% if perms.function_manual.change_jobprofile %}

@@ -37,8 +37,9 @@
                     <tr>
                         <th width="12%">Código</th>
                         <th width="48%">Nombre / Valor</th>
-                        <th width="12%">Valor Mín.</th>
-                        <th width="18%">Tipo</th>
+                        <th width="10%">Valor Mín.</th>
+                        <th width="10%">Nivel</th>
+                        <th width="16%">Tipo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                     </thead>
@@ -72,6 +73,14 @@
                                 {% if node.node_type == 'RESULT' %}
                                     <span class="badge-value">{% if node.minimum_value %}
                                         {{ node.minimum_value }}{% else %}---{% endif %}</span>
+                                {% else %}
+                                    <span class="text-muted">---</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if node.node_type == 'RESULT' %}
+                                    <span class="badge-value" style="background-color: #6366f1; color: white;">{% if node.level %}
+                                        {{ node.level }}{% else %}---{% endif %}</span>
                                 {% else %}
                                     <span class="text-muted">---</span>
                                 {% endif %}

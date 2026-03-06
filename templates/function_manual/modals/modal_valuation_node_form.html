@@ -63,6 +63,16 @@
                     <small style="color: #666; margin-top: 5px; display: block;">Opcional - Solo números enteros sin decimales</small>
                 </div>
 
+                <!-- Input de Nivel (Resultado Final) -->
+                <div class="form-group" v-if="workingType === 'RESULT'">
+                    <label class="form-label">
+                        <i class="fa-solid fa-ranking-star"></i> Nivel
+                    </label>
+                    <input type="number" v-model.number="formData.level" class="input-field"
+                           placeholder="Ej: 5" min="0" step="1">
+                    <small style="color: #666; margin-top: 5px; display: block;">Opcional - Solo números enteros sin decimales</small>
+                </div>
+
                 <!-- Input de Texto (Denominación Genérica) -->
                 <div class="form-group" v-if="workingType === 'GENERIC_DENOMINATION'">
                     <label class="form-label">

@@ -358,6 +358,64 @@ class JobProfileAssignReferentialView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
+class JobProfileCompleteDenominationView(LoginRequiredMixin, View):
+    """
+    Vista AJAX para completar/editar la denominación del cargo.
+    """
+
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile, pk=pk)
+        return render(request, 'function_manual/modals/modal_complete_denomination.html', {'profile': profile})
+
+
+class CompleteJobTitleApiView(LoginRequiredMixin, View):
+    """
+    Endpoint API para actualizar la denominación específica del cargo.
+    Concatena el denominación genérica actual + el complemento del usuario.
+    """
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+        
+        profile_id = data.get('profile_id')
+        complement = data.get('complement', '').strip()
+        
+        if not profile_id:
+            return JsonResponse({'success': False, 'message': 'profile_id es requerido'}, status=400)
+        
+        try:
+            profile = JobProfile.objects.get(pk=profile_id)
+        except JobProfile.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Perfil no encontrado'}, status=404)
+        
+        # Obtener denominación actual
+        current_title = profile.specific_job_title or 'Cargo sin Denominación'
+        
+        # Concatenar con el complemento
+        if complement:
+            new_title = f"{current_title} {complement}".strip()
+        else:
+            new_title = current_title
+        
+        # Guardar y marcar como completada
+        try:
+            profile.specific_job_title = new_title
+            profile.denomination_completed = True
+            profile.save(update_fields=['specific_job_title', 'denomination_completed'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Denominación actualizada con éxito.',
+                'new_title': new_title
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+
 @login_required
 def api_get_available_roles(request):
     """Obtener todos los nodos de tipo ROLE activos con sus nombres legibles"""
@@ -692,7 +750,7 @@ class ValuationNodeDetailApi(View):
         n = get_object_or_404(ValuationNode, pk=pk)
         return JsonResponse(
             {'id': n.id, 'node_type': n.node_type, 'catalog_item_id': n.catalog_item_id, 'name_extra': n.name_extra,
-             'occupational_classification_id': n.occupational_classification_id})
+             'occupational_classification_id': n.occupational_classification_id, 'minimum_value': n.minimum_value, 'level': n.level})
 
 
 class ValuationNodeSaveApi(LoginRequiredMixin, View):
@@ -712,6 +770,14 @@ class ValuationNodeSaveApi(LoginRequiredMixin, View):
                 node.minimum_value = int(minimum_value)
             except (ValueError, TypeError):
                 node.minimum_value = None
+        
+        # Capturar level si se proporciona
+        level = data.get('level')
+        if level is not None:
+            try:
+                node.level = int(level)
+            except (ValueError, TypeError):
+                node.level = None
         
         node.updated_by = request.user
         node.save()
@@ -897,6 +963,13 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             else:
                 print(f">>> WARNING: RESULT {selected_result.id} no tiene occupational_classification")
             
+            # 4b. Asignar level del RESULT seleccionado
+            if selected_result.level:
+                profile.level = selected_result.level
+                print(f">>> level asignado: {selected_result.level}")
+            else:
+                print(f">>> WARNING: RESULT {selected_result.id} no tiene level")
+            
             # 5. Buscar hijo GENERIC_DENOMINATION del RESULT seleccionado
             generic_nodes = ValuationNode.objects.filter(
                 parent=selected_result,
@@ -908,8 +981,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             
             if not generic_nodes.exists():
                 print(f">>> WARNING: No hay GENERIC_DENOMINATION para RESULT {selected_result.id}")
-                # Guardar solo occupational_classification
-                profile.save(update_fields=['occupational_classification'])
+                # Guardar solo occupational_classification y level
+                profile.save(update_fields=['occupational_classification', 'level'])
                 return None
             
             # 6. Si hay múltiples GENERIC_DENOMINATION, aplicar lógica similar
@@ -943,15 +1016,15 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 )
                 print(f">>> specific_job_title asignado: {profile.specific_job_title}")
                 
-                # Guardar ambos campos
-                profile.save(update_fields=['occupational_classification', 'specific_job_title'])
+                # Guardar todos los campos (occupational_classification, specific_job_title, level)
+                profile.save(update_fields=['occupational_classification', 'specific_job_title', 'level'])
                 print(f">>> Profile guardado correctamente")
                 
                 return selected_generic.id
             else:
-                # Solo guardar occupational_classification
-                profile.save(update_fields=['occupational_classification'])
-                print(f">>> Solo se guardó occupational_classification")
+                # Solo guardar occupational_classification y level
+                profile.save(update_fields=['occupational_classification', 'level'])
+                print(f">>> Solo se guardó occupational_classification y level")
                 return None
             
         except ValuationNode.DoesNotExist:

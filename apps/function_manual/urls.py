@@ -11,6 +11,8 @@ urlpatterns = [
     path('profiles/update/<int:pk>/', views.JobProfileUpdateView.as_view(), name='profile_update'),
     path('profiles/assign-referential/<int:pk>/', views.JobProfileAssignReferentialView.as_view(),
          name='profile_assign_referential'),
+    path('profiles/complete-denomination/<int:pk>/', views.JobProfileCompleteDenominationView.as_view(),
+         name='profile_complete_denomination'),
     path('profiles/legalize/<int:pk>/', views.JobProfileLegalizeView.as_view(), name='profile_legalize'),
     path('profiles/upload-legalized/<int:pk>/', views.JobProfileUploadLegalizedView.as_view(),
          name='profile_upload_legalized'),
@@ -28,6 +30,7 @@ urlpatterns = [
     path('api/profile/<int:profile_id>/valuation-chain/', views.api_get_profile_valuation_chain,
          name='api_profile_valuation_chain'),
     path('api/profile/assign-group/', views.AssignGroupApiView.as_view(), name='api_profile_assign_group'),
+    path('api/profile/complete-denomination/', views.CompleteJobTitleApiView.as_view(), name='api_profile_complete_job_title'),
 
     # --- ADMINISTRACIÓN / CATÁLOGOS ---
     # Útil para la tabla

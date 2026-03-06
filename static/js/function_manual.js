@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         workingType: '',
                         showModal: false, isEdit: false, loading: false,
                         catalogs: {instruction: [], decisions: [], impact: [], roles: [], matrix: [], complexity: []},
-                        formData: {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null}
+                        formData: {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null, level: null}
                     }
                 },
                 computed: {
@@ -208,7 +208,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 catalog_item_id: data.catalog_item_id || '',
                                 name_extra: data.name_extra || '',
                                 occupational_classification_id: data.occupational_classification_id || '',
-                                minimum_value: data.minimum_value || null
+                                minimum_value: data.minimum_value || null,
+                                level: data.level || null
                             };
                             this.workingType = data.node_type;
                             this.isEdit = true;
@@ -280,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     resetForm() {
-                        this.formData = {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null};
+                        this.formData = {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null, level: null};
                     }
                 }
             }).mount('#valuationApp');
@@ -1548,6 +1549,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 Swal.fire('Error', 'Fallo de conexión', 'error');
                 btn.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Asignación';
+                btn.disabled = false;
+            }
+        };
+
+        // =========================================================================
+        // COMPLETAR DENOMINACIÓN DEL CARGO
+        // =========================================================================
+
+        window.openCompleteDenominationModal = (pk) => {
+            fetch(`/function_manual/profiles/complete-denomination/${pk}/`)
+                .then(res => res.text())
+                .then(html => {
+                    const container = document.getElementById('modal-inject-container');
+                    if (container) {
+                        container.innerHTML = html;
+                        const overlay = container.querySelector('.modal-overlay');
+                        if (overlay) overlay.style.display = 'flex';
+                        document.body.classList.add('no-scroll');
+                    }
+                });
+        };
+
+        window.submitCompleteDenomination = async (e, pk) => {
+            e.preventDefault();
+            
+            const currentDenom = document.getElementById('current-denomination').value;
+            const complement = document.getElementById('denomination-complement').value.trim();
+            const finalDenom = complement ? `${currentDenom} ${complement}` : currentDenom;
+            
+            // Mostrar confirmación con SweetAlert2
+            const result = await Swal.fire({
+                title: '¿Confirmación?',
+                html: `
+                    <div style="text-align: left; background: #f8fafc; padding: 20px; border-radius: 8px;">
+                        <p style="margin: 0 0 15px 0; color: #475569;">
+                            <strong>¿Está seguro de actualizar la denominación del cargo por:</strong>
+                        </p>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #7c3aed; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #7c3aed; margin-bottom: 15px;">
+                            ${finalDenom}
+                        </div>
+                        <p style="margin: 0; color: #dc2626; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Este cambio no se puede modificar.
+                        </p>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#7c3aed',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-check me-2"></i> Sí, actualizar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) return;
+
+            // Proceder con la actualización
+            const btn = document.getElementById('btn-submit-complete-denom');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/function_manual/api/profile/complete-denomination/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        profile_id: pk,
+                        complement: complement
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Actualizado!',
+                        text: 'Denominación del cargo actualizada con éxito.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        closeManualModal();
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'Fallo de conexión', 'error');
+                btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
                 btn.disabled = false;
             }
         };

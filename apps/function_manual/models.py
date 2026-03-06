@@ -146,6 +146,18 @@ class JobProfile(BaseModel):
         help_text="Suma de puntos de las primeras 6 actividades"
     )
 
+    # Nivel del cargo (obtenido del nodo RESULT seleccionado)
+    level = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Nivel del Cargo",
+        help_text="Nivel asociado al grupo ocupacional resultante"
+    )
+
+    # Control: si la denominación del cargo ya fue completada/editada
+    denomination_completed = models.BooleanField(
+        default=False, verbose_name="Denominación Completada",
+        help_text="Indica si la denominación del cargo fue editada por el usuario"
+    )
+
     competencies = models.ManyToManyField('Competency', through='ProfileCompetency')
 
     prepared_by = models.ForeignKey(Authority, related_name='prepared_profiles', on_delete=models.PROTECT, null=True)
@@ -333,6 +345,13 @@ class ValuationNode(BaseModel):
         null=True, blank=True,
         verbose_name="Valor Mínimo",
         help_text="Valor mínimo para este nivel (sin decimales)"
+    )
+
+    # Nivel del nodo (solo para RESULT nodes - Resultado Final)
+    level = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Nivel",
+        help_text="Nivel asociado al grupo ocupacional (solo para Resultado Final)"
     )
 
     class Meta:
