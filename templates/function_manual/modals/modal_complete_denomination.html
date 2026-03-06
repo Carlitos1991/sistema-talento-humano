@@ -9,19 +9,16 @@
             <button type="button" class="btn-close-modal text-white-opacity" onclick="closeManualModal()">&times;
             </button>
         </div>
-        <form id="completeDenominationForm" method="POST" onsubmit="submitCompleteDenomination(event, {{ profile.pk }})">
+        <form id="completeDenominationForm" method="POST"
+              onsubmit="submitCompleteDenomination(event, {{ profile.pk }})">
             {% csrf_token %}
             <div class="modal-body-content modal-body-custom">
                 <!-- Info de Perfil -->
                 <div class="form-section-card" style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <div class="grid-2-cols">
+                    <div>
                         <div class="info-group">
                             <label class="info-label text-muted">Unidad Administrativa</label>
                             <div class="info-value">{{ profile.administrative_unit.name }}</div>
-                        </div>
-                        <div class="info-group">
-                            <label class="info-label text-muted">Total Puntos Actividades</label>
-                            <div class="info-value font-weight-700">{{ profile.total_activity_points }}</div>
                         </div>
                     </div>
                 </div>
@@ -30,12 +27,15 @@
                 <div class="form-group mt-4">
                     <label class="form-label font-weight-700 mb-3">
                         <i class="fas fa-layer-group me-2 text-purple-600"></i> Armado de Denominación
-                    </label>
 
-                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: flex-end;">
+                    </label>
+                    <br>
+                    <div class="form-row"
+                         style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: flex-end;">
                         <!-- Input readonly con denominación actual -->
                         <div class="form-group">
-                            <label class="form-label small" style="font-weight: 600; color: #64748b;">Denominación Actual (Genérica)</label>
+                            <label class="form-label small" style="font-weight: 600; color: #64748b;">Denominación
+                                Actual (Genérica)</label>
                             <input type="text"
                                    id="current-denomination"
                                    readonly
@@ -46,7 +46,8 @@
 
                         <!-- Input para agregar complemento -->
                         <div class="form-group">
-                            <label class="form-label small" style="font-weight: 600; color: #64748b;">Complemento a Agregar</label>
+                            <label class="form-label small" style="font-weight: 600; color: #64748b;">Complemento a
+                                Agregar</label>
                             <input type="text"
                                    id="denomination-complement"
                                    class="form-control"
@@ -57,7 +58,8 @@
 
                     <!-- Preview de la denominación final -->
                     <div style="margin-top: 20px; padding: 15px; background: #f0f4f8; border-radius: 8px; border-left: 4px solid #7c3aed;">
-                        <label class="form-label small" style="font-weight: 600; color: #64748b; margin-bottom: 8px; display: block;">
+                        <label class="form-label small"
+                               style="font-weight: 600; color: #64748b; margin-bottom: 8px; display: block;">
                             <i class="fas fa-eye me-2"></i> Vista Previa de la Denominación Final
                         </label>
                         <div style="font-size: 1.1rem; font-weight: 700; color: #7c3aed;">
@@ -66,9 +68,17 @@
                     </div>
 
                     <div class="alert-info mt-3" style="font-size: 0.85rem;">
-                        <i class="fas fa-exclamation-circle me-1"></i> <strong>Importante:</strong> Este cambio es permanente y
-                        no podrá ser modificado nuevamente.
+                        <i class="fas fa-exclamation-circle me-1"></i> <strong>Importante:</strong> Este cambio es
+                        permanente y no podrá ser modificado nuevamente.
                     </div>
+                    <div class="alert-info mt-3" style="font-size: 0.85rem;">
+                        <i class="fas fa-exclamation-circle me-1"></i> <strong>Importante:</strong> En algunos casos la
+                        denominación se clasifica
+                        considerando la valoración del perfil, en estos casos se clasificara por niveles 1, 2, 3. La
+                        UATH institucional actualizara dichas denominaciones sin cambiar la denominación principal del
+                        perfil
+                    </div>
+
                 </div>
             </div>
 
@@ -84,18 +94,23 @@
 </div>
 
 <script>
-    // Actualizar preview en tiempo real
-    document.addEventListener('DOMContentLoaded', function() {
-        const current = document.getElementById('current-denomination').value;
+    // Actualizar preview en tiempo real - Se ejecuta inmediatamente al cargar el modal
+    (function() {
+        const current = document.getElementById('current-denomination');
         const complement = document.getElementById('denomination-complement');
         const preview = document.getElementById('preview-denomination');
-
-        complement.addEventListener('input', function() {
-            if (this.value.trim()) {
-                preview.textContent = current + ' ' + this.value.trim();
-            } else {
-                preview.textContent = current;
-            }
-        });
-    });
+        
+        if (current && complement && preview) {
+            const currentValue = current.value;
+            
+            // Actualizar preview cuando el usuario escribe
+            complement.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    preview.textContent = currentValue + ' ' + this.value.trim();
+                } else {
+                    preview.textContent = currentValue;
+                }
+            });
+        }
+    })();
 </script>

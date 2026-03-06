@@ -1564,6 +1564,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.getElementById('modal-inject-container');
                     if (container) {
                         container.innerHTML = html;
+                        
+                        // Ejecutar scripts dentro del HTML inyectado
+                        const scripts = container.querySelectorAll('script');
+                        scripts.forEach(script => {
+                            const newScript = document.createElement('script');
+                            newScript.textContent = script.textContent;
+                            container.appendChild(newScript);
+                        });
+                        
                         const overlay = container.querySelector('.modal-overlay');
                         if (overlay) overlay.style.display = 'flex';
                         document.body.classList.add('no-scroll');

@@ -401,12 +401,18 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
         else:
             new_title = current_title
         
-        # VALIDACIÓN: Verificar si ya existe una denominación igual en CUALQUIER unidad administrativa
-        existing_profile = JobProfile.objects.filter(
-            specific_job_title=new_title
-        ).exclude(pk=profile_id).first()
+        # VALIDACIÓN: Verificar si ya existe la combinación (denominación + nivel) igual en CUALQUIER unidad administrativa
+        # Solo rechaza si AMBOS son iguales: specific_job_title y level
+        # Si la denominación es igual pero el nivel es diferente, SÍ permite crear
+        query = JobProfile.objects.filter(
+            specific_job_title=new_title,
+            level=profile.level
+        ).exclude(pk=profile_id)
+        
+        existing_profile = query.first()
         
         if existing_profile:
+            level_info = f" (Nivel: {existing_profile.level})" if existing_profile.level else ""
             return JsonResponse({
                 'success': False, 
                 'message': f'No se puede guardar esta denominación porque ya está registrada en la unidad administrativa de {existing_profile.administrative_unit.name}'
