@@ -72,6 +72,16 @@
                             <i class="fas fa-eye"></i>
                         </button>
 
+                        <!-- Exportar a PDF con Autorización - Solo si tiene permiso -->
+                        {% if perms.function_manual.view_jobprofile %}
+                            <button class="btn-icon"
+                                   style="background-color: #dc2626; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                                   onclick="openReportPdfModal({{ profile.id }})"
+                                   title="Exportar a PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                        {% endif %}
+
                         <!-- Subir Documento Legalizado -->
                         {% if perms.function_manual.can_admin %}
                             <button class="btn-icon"

@@ -73,4 +73,8 @@ urlpatterns = [
     path('api/matrix/toggle/<int:pk>/', views.occupational_matrix_toggle_status, name='api_matrix_toggle'),
     path('profiles/report_activities_excel/<int:pk>/', views.JobActivityReportExcelView.as_view(),
          name='report_activities_excel'),
+    path('profiles/report_pdf_modal/<int:pk>/', views.GetReportPdfModalView.as_view(),
+         name='report_pdf_modal'),
+    path('api/report_activities_pdf/', views.JobActivityReportPdfView.as_view(),
+         name='api_report_activities_pdf'),
 ]

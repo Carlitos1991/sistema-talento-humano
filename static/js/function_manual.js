@@ -1182,6 +1182,61 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     },
 
+                    async handleFinalizeClick() {
+                        // Mostrar SweetAlert con checkbox de aceptación
+                        return new Promise((resolve) => {
+                            let isCheckboxChecked = false;
+                            
+                            const swalHtml = `
+                                <div style="text-align: left;">
+                                    <div style="margin-bottom: 20px;">
+                                        <label style="display: flex; align-items: center; cursor: pointer; font-size: 14px;">
+                                            <input type="checkbox" id="acceptance-checkbox" style="cursor: pointer; margin-right: 10px; width: 18px; height: 18px;">
+                                            <span>Acepta que toda la información es veraz de conformidad a las necesidades de la unidad administrativa</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            Swal.fire({
+                                title: 'Confirmación de Información',
+                                html: swalHtml,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: '<i class="fas fa-check me-2"></i> Guardar',
+                                cancelButtonText: 'Cancelar',
+                                confirmButtonColor: '#0d6efd',
+                                cancelButtonColor: '#6c757d',
+                                didOpen: () => {
+                                    const checkbox = document.getElementById('acceptance-checkbox');
+                                    const confirmBtn = document.querySelector('.swal2-confirm');
+                                    
+                                    // Deshabilitar el botón al inicio
+                                    confirmBtn.disabled = true;
+                                    confirmBtn.style.opacity = '0.5';
+                                    confirmBtn.style.cursor = 'not-allowed';
+                                    
+                                    // Evento del checkbox
+                                    checkbox.addEventListener('change', function() {
+                                        isCheckboxChecked = this.checked;
+                                        if (isCheckboxChecked) {
+                                            confirmBtn.disabled = false;
+                                            confirmBtn.style.opacity = '1';
+                                            confirmBtn.style.cursor = 'pointer';
+                                        } else {
+                                            confirmBtn.disabled = true;
+                                            confirmBtn.style.opacity = '0.5';
+                                            confirmBtn.style.cursor = 'not-allowed';
+                                        }
+                                    });
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed && isCheckboxChecked) {
+                                    this.submitForm();
+                                }
+                            });
+                        });
+                    },
                     async submitForm() {
                         if (!this.validateCurrentStep()) return;
 
@@ -1830,6 +1885,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
         };
+
+        window.openReportPdfModal = (pk) => {
+            fetch(`/function_manual/profiles/report_pdf_modal/${pk}/`)
+                .then(res => res.text())
+                .then(html => {
+                    const container = document.getElementById('modal-inject-container');
+                    if (container) {
+                        container.innerHTML = html;
+                        
+                        // Ejecutar scripts dentro del HTML inyectado
+                        const scripts = container.querySelectorAll('script');
+                        scripts.forEach(script => {
+                            const newScript = document.createElement('script');
+                            newScript.textContent = script.textContent;
+                            container.appendChild(newScript);
+                        });
+                        
+                        const overlay = container.querySelector('.modal-overlay');
+                        if (overlay) overlay.style.display = 'flex';
+                        document.body.classList.add('no-scroll');
+                    }
+                });
+        };
     }
-)
-;
+);

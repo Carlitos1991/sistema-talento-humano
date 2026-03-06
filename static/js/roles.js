@@ -63,7 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     errors.value = {};
                     const form = document.getElementById(formElementId);
                     if (form) form.reset();
-                    uncheckAll();
+                        uncheckAll();
+                        // Reset dashboard selection radios
+                        document.querySelectorAll('input[name="dashboard_type"]').forEach(r => r.checked = false);
                     isVisible.value = true;
                     document.body.classList.add('no-scroll');
                 };
@@ -92,6 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (chk) chk.checked = true;
                                 });
                             }
+                                // Si el endpoint devuelve el tipo de dashboard, marcar la opción
+                                if (res.data.dashboard_type) {
+                                    const dash = document.querySelector(`input[name="dashboard_type"][value="${res.data.dashboard_type}"]`);
+                                    if (dash) dash.checked = true;
+                                }
                             isVisible.value = true;
                             document.body.classList.add('no-scroll');
                         }

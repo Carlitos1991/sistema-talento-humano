@@ -121,7 +121,7 @@
                                 <th>Descripción de la Actividad</th>
                                 <th style="width: 150px;">Valoración (C/AG/F)</th>
                                 <th style="width: 160px;">Conocimientos</th>
-                                <th style="width: 60px; text-align: center;">Pts</th>
+                                <th style="width: 60px; text-align: center; display: none;">Pts</th>
                                 <th style="width: 40px;"></th>
                             </tr>
                             </thead>
@@ -181,7 +181,7 @@
                                     <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
                                               placeholder="Conocimientos..."></textarea>
                                 </td>
-                                <td style="text-align: center; vertical-align: middle;">
+                                <td style="text-align: center; vertical-align: middle; display: none;">
                                     <span class="badge-points">[[ act.points || 0 ]]</span>
                                 </td>
                                 <td class="cell-top">
@@ -306,8 +306,8 @@
                     Siguiente <i class="fas fa-chevron-right"></i>
                 </button>
 
-                <button v-if="currentStep === 4" type="submit" class="btn-wizard-nav btn-wizard-save"
-                        :disabled="loading">
+                <button v-if="currentStep === 4" type="button" class="btn-wizard-nav btn-wizard-save"
+                        :disabled="loading" @click="handleFinalizeClick">
                     <i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar
                 </button>
             </div>

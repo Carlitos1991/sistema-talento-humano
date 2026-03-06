@@ -25,6 +25,8 @@
             <p>Análisis de personal del Municipio de Loja</p>
         </div>
     </div>
+    {# Mostrar el dashboard completo solo si el usuario tiene el permiso `dashboard.talento_humano` #}
+    {% if perms.dashboard.talento_humano %}
 
     <!-- Estadísticas de Empleados ACTIVOS -->
     <div class="stats-grid">
@@ -291,6 +293,26 @@
             </div>
         </div>
     </div>
+
+    {% elif perms.dashboard.jefe %}
+
+    <div style="margin-top: 20px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <h1>Este dashboard es para jefe</h1>
+    </div>
+
+    {% elif perms.dashboard.empleado %}
+
+    <div style="margin-top: 20px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <h1>Este dashboard es para empleado</h1>
+    </div>
+
+    {% else %}
+
+    <div style="margin-top: 20px;">
+        <p>No tiene permisos para ver el dashboard completo.</p>
+    </div>
+
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}

@@ -12,6 +12,14 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import permission_required, login_required
 import json
+from io import BytesIO
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch, cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib import colors
+from datetime import datetime
 
 from openpyxl.styles import Border, PatternFill, Font, Alignment, Side
 
@@ -1703,6 +1711,198 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         # Guardar
         wb.save(response)
         return response
+
+
+class GetReportPdfModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Retorna el HTML del modal para seleccionar la autoridad que autoriza el PDF
+    Solo accesible si el perfil está legalizado
+    """
+    permission_required = "function_manual.view_jobprofile"
+
+    def get(self, request, pk):
+        profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
+        
+        # Verificar que el perfil esté legalizado
+        if not profile.is_legalized:
+            return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
+        
+        authorities = Authority.objects.filter(is_active=True).order_by('name')
+        
+        return render(request, 'function_manual/modals/modal_report_pdf.html', {
+            'profile': profile,
+            'authorities': authorities
+        })
+
+
+class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Genera un PDF con el reporte de actividades y firmas de legalización
+    Solo accesible si el perfil está legalizado
+    """
+    permission_required = "function_manual.view_jobprofile"
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            profile_id = data.get('profile_id')
+            authority_id = data.get('authority_id')
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+
+        if not profile_id or not authority_id:
+            return JsonResponse({'success': False, 'message': 'profile_id y authority_id son requeridos'}, status=400)
+
+        try:
+            profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit', 'occupational_classification'), pk=profile_id)
+            authority = get_object_or_404(Authority, pk=authority_id)
+        except:
+            return JsonResponse({'success': False, 'message': 'Perfil o Autoridad no encontrados'}, status=404)
+
+        # Verificar que el perfil esté legalizado
+        if not profile.is_legalized:
+            return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
+
+        activities = profile.activities.all().select_related('action_verb', 'deliverable', 'complexity', 'contribution', 'frequency')
+
+        # Crear PDF en memoria
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=1.4*inch, 
+                                leftMargin=0.75*inch, rightMargin=0.75*inch)
+
+        # Contenido del PDF
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=12,
+            textColor=colors.HexColor('#1e40af'),
+            alignment=TA_CENTER,
+            spaceAfter=6,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=10,
+            textColor=colors.HexColor('#1e40af'),
+            alignment=TA_LEFT,
+            spaceAfter=4,
+            fontName='Helvetica-Bold'
+        )
+
+        # Encabezado
+        story.append(Paragraph("Municipio de Loja", title_style))
+        story.append(Paragraph("LEVANTAMIENTO DE ACTIVIDADES", title_style))
+        story.append(Spacer(1, 0.15*inch))
+
+        # Información del perfil
+        info_data = [
+            ['Denominación del Puesto:', f"{profile.specific_job_title or 'N/A'} ({profile.position_code or 'N/A'})"],
+            ['Unidad Administrativa:', profile.administrative_unit.name],
+            ['Grupo Ocupacional:', profile.occupational_classification.occupational_group if profile.occupational_classification else 'N/A'],
+            ['Nivel:', str(profile.level) if profile.level else 'N/A']
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e0e7ff')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        story.append(info_table)
+        story.append(Spacer(1, 0.2*inch))
+
+        # Tabla de actividades
+        story.append(Paragraph("Actividades Esenciales", heading_style))
+        story.append(Spacer(1, 0.1*inch))
+
+        # Datos de la tabla
+        table_data = [['#', 'Actividad', 'Complejidad', 'Aporte', 'Frecuencia']]
+        
+        for idx, activity in enumerate(activities[:15], start=1):  # Limitar a 15 para que quepa en una página
+            activity_text = f"{activity.action_verb.name if activity.action_verb else ''} - {activity.description[:40]}"
+            complexity = activity.complexity.name if activity.complexity else 'N/A'
+            contribution = activity.contribution.name if activity.contribution else 'N/A'
+            frequency = activity.frequency.name if activity.frequency else 'N/A'
+            
+            table_data.append([str(idx), activity_text, complexity, contribution, frequency])
+
+        activities_table = Table(table_data, colWidths=[0.4*inch, 2.3*inch, 1.1*inch, 1.1*inch, 1.1*inch])
+        activities_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f9ff')])
+        ]))
+        story.append(activities_table)
+
+        # Build PDF con footer personalizado
+        doc.build(story, onFirstPage=lambda canvas, doc: self._add_footer(canvas, doc, authority, profile, request.user), 
+                  onLaterPages=lambda canvas, doc: self._add_footer(canvas, doc, authority, profile, request.user))
+
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        filename = f"Actividades_{profile.position_code}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+
+    def _add_footer(self, canvas, doc, authority, profile, user):
+        """Agregar footer con firmas de legalización"""
+        canvas.saveState()
+        width, height = letter
+        
+        # Posición Y para el footer
+        y_pos = 0.6 * inch
+        
+        # Obtener datos del usuario actual
+        user_name = user.get_full_name() or user.username
+        user_document = ""
+        if hasattr(user, 'person') and user.person and user.person.document_number:
+            user_document = user.person.document_number
+        user_date = datetime.now().strftime('%d/%m/%Y')
+        
+        # Textos y líneas para firmas
+        canvas.setFont("Helvetica", 9)
+        canvas.setLineWidth(0.5)
+        
+        # ELABORADO POR (izquierda)
+        canvas.drawString(0.75 * inch, y_pos + 0.35 * inch, "Elaborado por:")
+        canvas.line(0.75 * inch, y_pos + 0.15 * inch, 2.8 * inch, y_pos + 0.15 * inch)
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(0.75 * inch, y_pos - 0.05 * inch, user_name)
+        if user_document:
+            canvas.drawString(0.75 * inch, y_pos - 0.15 * inch, f"Cédula: {user_document}")
+            canvas.drawString(0.75 * inch, y_pos - 0.25 * inch, f"Fecha: {user_date}")
+        else:
+            canvas.drawString(0.75 * inch, y_pos - 0.15 * inch, f"Fecha: {user_date}")
+        
+        # AUTORIZADO POR (derecha)
+        canvas.setFont("Helvetica", 9)
+        canvas.drawString(3.5 * inch, y_pos + 0.35 * inch, "Autorizado por:")
+        canvas.drawString(3.5 * inch, y_pos + 0.20 * inch, authority.position)
+        canvas.line(3.5 * inch, y_pos + 0.05 * inch, 5.5 * inch, y_pos + 0.05 * inch)
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(3.5 * inch, y_pos - 0.10 * inch, authority.name)
+        canvas.drawString(3.5 * inch, y_pos - 0.20 * inch, "Fecha: ______________")
+        
+        canvas.restoreState()
+
 
 
 def api_get_profile_valuation_chain(request, profile_id):

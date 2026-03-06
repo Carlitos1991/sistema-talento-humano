@@ -121,6 +121,11 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
                 perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
                 role.permissions.set([int(pid) for pid in perm_ids_with_admin])
 
+            # Guardar tipo de dashboard como permiso especializado
+            dashboard_type = request.POST.get('dashboard_type')
+            if dashboard_type:
+                self._set_dashboard_permission(role, dashboard_type)
+
             return JsonResponse({'success': True, 'message': 'Rol creado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     
@@ -165,6 +170,41 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         
         return perm_ids
 
+    def _set_dashboard_permission(self, role, dashboard_type):
+        """Asigna un permiso especial al Group que indica el tipo de dashboard.
+        Se crean los permisos si no existen y se garantiza que solo uno esté presente.
+        """
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Group)
+        mapping = {
+            'talento_humano': 'dashboard_talento_humano',
+            'jefe': 'dashboard_jefe',
+            'empleado': 'dashboard_empleado'
+        }
+
+        # Validar tipo
+        if dashboard_type not in mapping:
+            return
+
+        # Crear permisos si no existen
+        for key, codename in mapping.items():
+            Permission.objects.get_or_create(
+                codename=codename,
+                content_type=ct,
+                defaults={'name': f'Acceso dashboard {key}'}
+            )
+
+        # Eliminar permisos de dashboard previos
+        perms_to_remove = Permission.objects.filter(content_type=ct, codename__in=list(mapping.values()))
+        role.permissions.remove(*perms_to_remove)
+
+        # Añadir el permiso seleccionado
+        sel_codename = mapping[dashboard_type]
+        sel_perm = Permission.objects.get(content_type=ct, codename=sel_codename)
+        role.permissions.add(sel_perm)
+
 
 class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Group
@@ -179,7 +219,8 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             data = {
                 'id': self.object.id,
                 'name': self.object.name,
-                'permissions': list(self.object.permissions.values_list('id', flat=True))
+                'permissions': list(self.object.permissions.values_list('id', flat=True)),
+                'dashboard_type': self._get_dashboard_type(self.object)
             }
             return JsonResponse({'success': True, 'data': data})
         return super().get(request, *args, **kwargs)
@@ -193,6 +234,11 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             # Agregar permisos can_admin automáticamente
             perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
             role.permissions.set([int(pid) for pid in perm_ids_with_admin])
+
+            # Guardar tipo de dashboard como permiso especializado
+            dashboard_type = request.POST.get('dashboard_type')
+            if dashboard_type:
+                self._set_dashboard_permission(role, dashboard_type)
 
             return JsonResponse({'success': True, 'message': 'Rol actualizado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
@@ -237,6 +283,51 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
                     perm_ids.append(can_admin_perm.id)
         
         return perm_ids
+
+    def _set_dashboard_permission(self, role, dashboard_type):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Group)
+        mapping = {
+            'talento_humano': 'dashboard_talento_humano',
+            'jefe': 'dashboard_jefe',
+            'empleado': 'dashboard_empleado'
+        }
+
+        if dashboard_type not in mapping:
+            return
+
+        for key, codename in mapping.items():
+            Permission.objects.get_or_create(
+                codename=codename,
+                content_type=ct,
+                defaults={'name': f'Acceso dashboard {key}'}
+            )
+
+        perms_to_remove = Permission.objects.filter(content_type=ct, codename__in=list(mapping.values()))
+        role.permissions.remove(*perms_to_remove)
+
+        sel_codename = mapping[dashboard_type]
+        sel_perm = Permission.objects.get(content_type=ct, codename=sel_codename)
+        role.permissions.add(sel_perm)
+
+    def _get_dashboard_type(self, role):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Group)
+        mapping = {
+            'talento_humano': 'dashboard_talento_humano',
+            'jefe': 'dashboard_jefe',
+            'empleado': 'dashboard_empleado'
+        }
+
+        perms = role.permissions.filter(content_type=ct).values_list('codename', flat=True)
+        for key, codename in mapping.items():
+            if codename in perms:
+                return key
+        return None
 
 
 # --- 3. GESTIÓN DE CREDENCIALES ---
