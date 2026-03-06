@@ -166,9 +166,10 @@ class JobProfile(BaseModel):
 
     legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True)
 
-    @property
-    def is_legalized(self):
-        return bool(self.prepared_by and self.reviewed_by and self.approved_by and self.legalized_document)
+    is_legalized = models.BooleanField(
+        default=False, verbose_name="Legalizado",
+        help_text="Indica si el perfil de puesto fue legalizado"
+    )
 
     def calculate_activity_points(self):
         """Calcula la suma de puntos de las primeras 6 actividades"""

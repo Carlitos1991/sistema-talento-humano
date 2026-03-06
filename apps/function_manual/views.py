@@ -17,7 +17,7 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from reportlab.lib import colors
 from datetime import datetime
 
@@ -124,19 +124,10 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if not self.request.GET.get('partial'):
             qs = self.get_queryset()
             context['stats_total'] = qs.count()
-            # Contamos legalizados usando las firmas + documento legalizado
-            stats_legalized = qs.filter(
-                prepared_by__isnull=False,
-                reviewed_by__isnull=False,
-                approved_by__isnull=False,
-                legalized_document__isnull=False
-            ).count()
-            context['stats_legalized'] = stats_legalized
-            # Mantener el conteo de perfiles con clasificación ocupacional por compatibilidad
-            context['stats_classified'] = qs.filter(occupational_classification__isnull=False).count()
-            # Pendientes: aquellos que no están legalizados (según la definición requerida)
-            context['stats_pending'] = context['stats_total'] - stats_legalized
-            context['stats_active'] = qs.filter(is_active=True).count()
+            # Contamos legalizados usando el campo is_legalized
+            context['stats_legalized'] = qs.filter(is_legalized=True).count()
+            # Pendientes: aquellos que no están legalizados
+            context['stats_pending'] = qs.filter(is_legalized=False).count()
 
             matrix_data = OccupationalMatrix.objects.values(
                 'id', 'occupational_group', 'grade', 'remuneration'
@@ -1494,6 +1485,10 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
                 if not current_title.endswith(f" {profile.level}"):
                     profile.specific_job_title = f"{current_title} {profile.level}".strip()
             
+            # Marcar como legalizado si tiene todas las firmas
+            if profile.prepared_by_id and profile.reviewed_by_id and profile.approved_by_id:
+                profile.is_legalized = True
+            
             profile.save()
 
             return JsonResponse({'success': True, 'message': 'Firmas de legalización actualizadas correctamente.'})
@@ -1723,18 +1718,21 @@ class JobProfileValuationExcelView(LoginRequiredMixin, View):
         return response
 
 
-class GetReportPdfModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class GetReportPdfModalView(LoginRequiredMixin, View):
     """
     Retorna el HTML del modal para seleccionar la autoridad que autoriza el PDF
     Solo accesible si el perfil está legalizado
     """
-    permission_required = "function_manual.view_jobprofile"
-
     def get(self, request, pk):
+        # Permisos: permitir a quien tenga view OR change OR can_admin
+        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+            return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+
         profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
         
-        # Verificar que el perfil esté legalizado
-        if not profile.is_legalized:
+        # Si solo tiene view (sin change/can_admin), validar que perfil esté legalizado
+        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')
+        if not has_change_or_admin and not profile.is_legalized:
             return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
         
         authorities = Authority.objects.filter(is_active=True).order_by('name')
@@ -1745,14 +1743,16 @@ class GetReportPdfModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
         })
 
 
-class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class JobActivityReportPdfView(LoginRequiredMixin, View):
     """
     Genera un PDF con el reporte de actividades y firmas de legalización
     Solo accesible si el perfil está legalizado
     """
-    permission_required = "function_manual.view_jobprofile"
-
     def post(self, request):
+        # Permisos: permitir a quien tenga view OR change OR can_admin
+        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+            return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+
         try:
             data = json.loads(request.body)
             profile_id = data.get('profile_id')
@@ -1769,16 +1769,17 @@ class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View
         except:
             return JsonResponse({'success': False, 'message': 'Perfil o Autoridad no encontrados'}, status=404)
 
-        # Verificar que el perfil esté legalizado
-        if not profile.is_legalized:
+        # Si solo tiene view (sin change/can_admin), validar que perfil esté legalizado
+        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')
+        if not has_change_or_admin and not profile.is_legalized:
             return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
 
         activities = profile.activities.all().select_related('action_verb', 'deliverable', 'complexity', 'contribution', 'frequency')
 
-        # Crear PDF en memoria
+        # Crear PDF en memoria - ORIENTACIÓN HORIZONTAL (LANDSCAPE)
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=1.4*inch, 
-                                leftMargin=0.75*inch, rightMargin=0.75*inch)
+        doc = SimpleDocTemplate(buffer, pagesize=A4[::-1], topMargin=0.5*inch, bottomMargin=1.8*inch, 
+                                leftMargin=0.4*inch, rightMargin=0.4*inch)
 
         # Contenido del PDF
         story = []
@@ -1788,76 +1789,118 @@ class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=12,
+            fontSize=11,
             textColor=colors.HexColor('#1e40af'),
             alignment=TA_CENTER,
-            spaceAfter=6,
-            fontName='Helvetica-Bold'
-        )
-        
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=10,
-            textColor=colors.HexColor('#1e40af'),
-            alignment=TA_LEFT,
             spaceAfter=4,
             fontName='Helvetica-Bold'
         )
 
+        # Estilo justificado para textos largos en ENTREGABLES y ACTIVIDADES
+        justified_style = ParagraphStyle(
+            'Justified',
+            parent=styles['Normal'],
+            fontSize=6.5,
+            alignment=TA_JUSTIFY,
+            spaceBefore=0,
+            spaceAfter=0,
+            leading=7
+        )
+
         # Encabezado
         story.append(Paragraph("Municipio de Loja", title_style))
-        story.append(Paragraph("LEVANTAMIENTO DE ACTIVIDADES", title_style))
-        story.append(Spacer(1, 0.15*inch))
+        story.append(Paragraph("FORMATO LEVANTAMIENTO DE ACTIVIDADES", title_style))
+        story.append(Spacer(1, 0.08*inch))
 
         # Información del perfil
         info_data = [
-            ['Denominación del Puesto:', f"{profile.specific_job_title or 'N/A'} ({profile.position_code or 'N/A'})"],
-            ['Unidad Administrativa:', profile.administrative_unit.name],
-            ['Grupo Ocupacional:', profile.occupational_classification.occupational_group if profile.occupational_classification else 'N/A'],
-            ['Nivel:', str(profile.level) if profile.level else 'N/A']
+            ['DENOMINACIÓN DE PUESTO:', f"{profile.specific_job_title or 'N/A'} ({profile.position_code or 'N/A'})"],
+            ['UNIDAD ADMINISTRATIVA:', profile.administrative_unit.name],
+            ['GRUPO OCUPACIONAL:', profile.occupational_classification.occupational_group if profile.occupational_classification else 'N/A']
         ]
         
-        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table = Table(info_data, colWidths=[1.8*inch, 8*inch])
         info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e0e7ff')),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#dbeafe')),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
-        ]))
-        story.append(info_table)
-        story.append(Spacer(1, 0.2*inch))
-
-        # Tabla de actividades
-        story.append(Paragraph("Actividades Esenciales", heading_style))
-        story.append(Spacer(1, 0.1*inch))
-
-        # Datos de la tabla
-        table_data = [['#', 'Actividad', 'Complejidad', 'Aporte', 'Frecuencia']]
-        
-        for idx, activity in enumerate(activities[:15], start=1):  # Limitar a 15 para que quepa en una página
-            activity_text = f"{activity.action_verb.name if activity.action_verb else ''} - {activity.description[:40]}"
-            complexity = activity.complexity.name if activity.complexity else 'N/A'
-            contribution = activity.contribution.name if activity.contribution else 'N/A'
-            frequency = activity.frequency.name if activity.frequency else 'N/A'
-            
-            table_data.append([str(idx), activity_text, complexity, contribution, frequency])
-
-        activities_table = Table(table_data, colWidths=[0.4*inch, 2.3*inch, 1.1*inch, 1.1*inch, 1.1*inch])
-        activities_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f9ff')])
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        story.append(info_table)
+        story.append(Spacer(1, 0.12*inch))
+
+        # Funciones para calcular valores (idénticas al Excel)
+        def get_val_ag_c(name):
+            n = name.upper() if name else ""
+            if "ALTO" in n: return 3
+            if "MEDIO" in n: return 2
+            if "BAJO" in n: return 1
+            return 0
+
+        def get_val_f(name):
+            n = name.upper() if name else ""
+            if "DIARIO" in n: return 5
+            if "SEMANAL" in n: return 4
+            if "MENSUAL" in n: return 3
+            if "TRIMESTRAL" in n or "SEMESTRAL" in n: return 2
+            if "ANUAL" in n: return 1
+            return 0
+
+        # Tabla de actividades con TODAS las columnas y datos calculados
+        table_data = [['NRO.', 'ENTREGABLES\n(PRODUCTOS/SERVICIOS)', 'ACTIVIDADES', 'APORTE A LA\nGESTION (AG)', 'FRECUENCIA (F)', 'COMPLEJIDAD (C)', 'AG', 'F', 'C', 'TOTAL\nAG*(F+C)', 'SELECCIONADAS']]
+
+        for idx, activity in enumerate(activities, start=1):
+            # Obtener datos igual que el Excel
+            deliverable_name = activity.deliverable.name if activity.deliverable else "N/A"
+            activity_text = f"{activity.action_verb.name if activity.action_verb else ''} {(activity.description or '')}".strip()
+            
+            ag_name = activity.contribution.name if activity.contribution else "Bajo"
+            f_name = activity.frequency.name if activity.frequency else "Anual"
+            c_name = activity.complexity.name if activity.complexity else "Bajo"
+
+            # Calcular valores numéricos igual que el Excel
+            v_ag = get_val_ag_c(ag_name)
+            v_f = get_val_f(f_name)
+            v_c = get_val_ag_c(c_name)
+            total = v_ag * (v_f + v_c)
+
+            table_data.append([
+                str(idx),
+                Paragraph(deliverable_name, justified_style),
+                Paragraph(activity_text, justified_style),
+                ag_name,
+                f_name,
+                c_name,
+                str(v_ag),
+                str(v_f),
+                str(v_c),
+                str(total),
+                "SELECCIONADA"
+            ])
+
+        # Crear tabla con columnas y alineación adecuada
+        activities_table = Table(table_data, colWidths=[0.4*inch, 1.4*inch, 2.0*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.35*inch, 0.35*inch, 0.35*inch, 0.6*inch, 0.8*inch])
+        activities_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (1, 1), (2, -1), 'LEFT'),  # Entregables y Actividades alineados a izquierda (Paragraph maneja wrap)
+            ('ALIGN', (3, 1), (10, -1), 'CENTER'),  # Resto centrado
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 6.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 1),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 1),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alineación vertical al tope para que el texto empiece desde arriba
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')])
         ]))
         story.append(activities_table)
 
@@ -1873,12 +1916,14 @@ class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View
         return response
 
     def _add_footer(self, canvas, doc, authority, profile, user):
-        """Agregar footer con firmas de legalización"""
+        """Agregar footer con firmas de legalización - EXPAND PARA LANDSCAPE"""
         canvas.saveState()
         width, height = letter
+        # En landscape, width es mayor
+        page_width, page_height = A4[::-1]
         
-        # Posición Y para el footer
-        y_pos = 0.6 * inch
+        # Posición Y para el footer (más bajo para más espacio en la firma)
+        y_pos = 0.8 * inch
         
         # Obtener datos del usuario actual
         user_name = user.get_full_name() or user.username
@@ -1887,29 +1932,31 @@ class JobActivityReportPdfView(LoginRequiredMixin, PermissionRequiredMixin, View
             user_document = user.person.document_number
         user_date = datetime.now().strftime('%d/%m/%Y')
         
-        # Textos y líneas para firmas
+        # Textos y líneas para firmas con más espacio
         canvas.setFont("Helvetica", 9)
         canvas.setLineWidth(0.5)
         
         # ELABORADO POR (izquierda)
-        canvas.drawString(0.75 * inch, y_pos + 0.35 * inch, "Elaborado por:")
-        canvas.line(0.75 * inch, y_pos + 0.15 * inch, 2.8 * inch, y_pos + 0.15 * inch)
+        canvas.drawString(0.5 * inch, y_pos + 0.6 * inch, "Elaborado por:")
+        canvas.line(0.5 * inch, y_pos + 0.35 * inch, 2.5 * inch, y_pos + 0.35 * inch)
         canvas.setFont("Helvetica", 8)
-        canvas.drawString(0.75 * inch, y_pos - 0.05 * inch, user_name)
+        canvas.drawString(0.5 * inch, y_pos + 0.15 * inch, user_name)
         if user_document:
-            canvas.drawString(0.75 * inch, y_pos - 0.15 * inch, f"Cédula: {user_document}")
-            canvas.drawString(0.75 * inch, y_pos - 0.25 * inch, f"Fecha: {user_date}")
+            canvas.drawString(0.5 * inch, y_pos, f"Cédula: {user_document}")
+            canvas.drawString(0.5 * inch, y_pos - 0.15 * inch, f"Fecha: {user_date}")
         else:
-            canvas.drawString(0.75 * inch, y_pos - 0.15 * inch, f"Fecha: {user_date}")
+            canvas.drawString(0.5 * inch, y_pos, f"Fecha: {user_date}")
         
-        # AUTORIZADO POR (derecha)
+        # AUTORIZADO POR (derecha - CON MÁS ESPACIO)
         canvas.setFont("Helvetica", 9)
-        canvas.drawString(3.5 * inch, y_pos + 0.35 * inch, "Autorizado por:")
-        canvas.drawString(3.5 * inch, y_pos + 0.20 * inch, authority.position)
-        canvas.line(3.5 * inch, y_pos + 0.05 * inch, 5.5 * inch, y_pos + 0.05 * inch)
+        auth_x = 4.5 * inch
+        canvas.drawString(auth_x, y_pos + 0.6 * inch, "Autorizado por:")
+        canvas.drawString(auth_x, y_pos + 0.45 * inch, authority.position)
+        # Línea más larga para firma
+        canvas.line(auth_x, y_pos + 0.25 * inch, auth_x + 3.0 * inch, y_pos + 0.25 * inch)
         canvas.setFont("Helvetica", 8)
-        canvas.drawString(3.5 * inch, y_pos - 0.10 * inch, authority.name)
-        canvas.drawString(3.5 * inch, y_pos - 0.20 * inch, "Fecha: ______________")
+        canvas.drawString(auth_x, y_pos + 0.05 * inch, authority.name)
+        canvas.drawString(auth_x, y_pos - 0.10 * inch, "Fecha: ______________")
         
         canvas.restoreState()
 
