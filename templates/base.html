@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
     <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
+    <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
     {% block extra_css %}{% endblock %}
     <style>[v-cloak] {
         display: none !important;
@@ -51,9 +52,15 @@
 
 </div>
 {% block modals %}{% endblock %}
+
+<!-- Modal: Cambiar Contraseña (Global) -->
+{% include 'modals/modal_change_password.html' %}
+
 <!-- Scripts Base -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'js/core/modal-change-password.js' %}"></script>
+{% block extra_js %}{% endblock %}
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -70,7 +77,5 @@
 
 <!-- Lógica Dashboard Limpia -->
 <script src="{% static 'js/dashboard.js' %}"></script>
-
-{% block extra_js %}{% endblock %}
 </body>
 </html>

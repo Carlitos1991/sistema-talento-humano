@@ -16,6 +16,8 @@ urlpatterns = [
 
     # Perfil de Usuario (NUEVO)
     path('profile/', views.ProfileView.as_view(), name='profile'),
+    path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
+
     # --- Catalogs ---
     path('settings/catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
     path('settings/catalogs/create/', views.CatalogCreateView.as_view(), name='catalog_create'),

@@ -740,13 +740,93 @@ def custom_page_not_found(request, exception=None):
     return render(request, '404.html', status=404)
 
 
+# --- CAMBIO DE CONTRASEÑA ---
+class ChangePasswordView(LoginRequiredMixin, View):
+    """Vista para cambiar la contraseña del usuario"""
+    
+    def post(self, request):
+        """Procesa el cambio de contraseña"""
+        if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Petición inválida'}, status=400)
+        
+        new_password = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        
+        # Validaciones
+        if not new_password or not confirm_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'Los campos de contraseña no pueden estar vacíos.'
+            })
+        
+        if new_password != confirm_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'Las contraseñas no coinciden.'
+            })
+        
+        if len(new_password) < 8:
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe tener al menos 8 caracteres.'
+            })
+        
+        # Verificar requisitos de contraseña
+        import re
+        if not re.search(r'[A-Z]', new_password):
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe contener al menos una mayúscula.'
+            })
+        
+        if not re.search(r'[a-z]', new_password):
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe contener al menos una minúscula.'
+            })
+        
+        if not re.search(r'[0-9]', new_password):
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe contener al menos un número.'
+            })
+        
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};:\'\"\\|,.<>\/?]', new_password):
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe contener al menos un símbolo especial.'
+            })
+        
+        # Actualizar contraseña
+        try:
+            user = request.user
+            user.set_password(new_password)
+            user.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Tu contraseña ha sido cambiada exitosamente.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Ocurrió un error: {str(e)}'
+            })
+
+
+def custom_page_not_found(request, exception=None):
+    """Manejador personalizado para error 404"""
+    from django.shortcuts import render
+    return render(request, '404.html', status=404)
+
+
 def custom_permission_denied(request, exception=None):
     """Manejador personalizado para error 403"""
     from django.shortcuts import render
     return render(request, '403.html', status=403)
 
 
-def custom_server_error(request):
+def custom_server_error(request, exception=None):
     """Manejador personalizado para error 500"""
     from django.shortcuts import render
     return render(request, '500.html', status=500)
