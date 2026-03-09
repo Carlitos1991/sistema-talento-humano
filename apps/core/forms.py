@@ -25,10 +25,39 @@ class BaseFormMixin:
 
 
 class UserProfileForm(BaseFormMixin, forms.ModelForm):
+    photo = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}))
+    document_number = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email']
         # Definimos etiquetas en español si el modelo no las tiene (el tuyo ya las tiene)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si el usuario tiene una Person vinculada, cargar sus datos iniciales
+        if self.instance and hasattr(self.instance, 'person') and self.instance.person:
+            self.fields['document_number'].initial = self.instance.person.document_number
+            self.fields['photo'].initial = self.instance.person.photo
+
+    def save(self, *args, **kwargs):
+        # Guardamos el usuario primero
+        user = super().save(*args, **kwargs)
+        
+        # Ahora manejamos la foto y el document_number de Person si fueron proporcionados
+        if self.cleaned_data.get('photo') or self.cleaned_data.get('document_number'):
+            from person.models import Person
+            person, created = Person.objects.get_or_create(user=user)
+            
+            if self.cleaned_data.get('photo'):
+                person.photo = self.cleaned_data['photo']
+            
+            if self.cleaned_data.get('document_number'):
+                person.document_number = self.cleaned_data['document_number']
+            
+            person.save()
+        
+        return user
 
 
 class CatalogForm(forms.ModelForm):

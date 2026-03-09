@@ -87,12 +87,12 @@
                     {{ form.last_name }}
                 </div>
 
-                <!-- Cédula -->
+                <!-- Cédula / DNI -->
                 <div class="form-group">
                     <label class="form-label">Cédula / DNI</label>
-                    {{ form.cedula }}
-                    {% if form.cedula.errors %}
-                        <small style="color:red;">{{ form.cedula.errors.0 }}</small>
+                    {{ form.document_number }}
+                    {% if form.document_number.errors %}
+                        <small style="color:red;">{{ form.document_number.errors.0 }}</small>
                     {% endif %}
                 </div>
 

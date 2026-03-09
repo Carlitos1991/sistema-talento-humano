@@ -211,14 +211,6 @@ class ProfileView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        
-        # Manejar la foto de Person
-        if 'photo' in self.request.FILES:
-            from person.models import Person
-            person, created = Person.objects.get_or_create(user=self.request.user)
-            person.photo = self.request.FILES['photo']
-            person.save()
-        
         messages.success(self.request, "¡Tu perfil ha sido actualizado correctamente!")
         return response
 

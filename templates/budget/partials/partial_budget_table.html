@@ -9,6 +9,10 @@
         <thead>
         <tr>
             <th onclick="sortBudgetTable('number_individual')" class="sortable-header">
+                <i class="fa-solid fa-hashtag"></i> Ind.
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('code')" class="sortable-header">
                 <i class="fa-solid fa-hashtag"></i> Partida
                 <span class="sort-arrow">⇅</span>
             </th>
@@ -41,6 +45,10 @@
                 <!-- Columna 1: Partida Individual -->
                 <td>
                     <span class="fw-bold text-primary">{{ line.number_individual|default:"S/N" }}</span>
+                </td>
+                <!-- Columna 1.2: Partida Completa -->
+                <td>
+                    <span class="fw-bold text-primary">{{ line.code|default:"S/N" }}</span>
                 </td>
 
                 <!-- Columna 2: Estructura -->
@@ -148,7 +156,8 @@
         <span class="pagination-info">
             Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
         </span>
-        <div class="pagination-controls" style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+        <div class="pagination-controls"
+             style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
             <button class="page-btn" title="Primera"
                     {% if not page_obj.has_previous %}disabled{% endif %}
                     onclick="changeBudgetPage(1)">
