@@ -210,12 +210,28 @@ class ProfileView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        
+        # Manejar la foto de Person
+        if 'photo' in self.request.FILES:
+            from person.models import Person
+            person, created = Person.objects.get_or_create(user=self.request.user)
+            person.photo = self.request.FILES['photo']
+            person.save()
+        
         messages.success(self.request, "¡Tu perfil ha sido actualizado correctamente!")
-        return super().form_valid(form)
+        return response
 
     def form_invalid(self, form):
         messages.error(self.request, "Error al actualizar. Revisa los campos.")
         return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pasamos la Person si existe
+        if hasattr(self.request.user, 'person'):
+            context['person'] = self.request.user.person
+        return context
 
 
 # --- 4. CATÁLOGOS ---

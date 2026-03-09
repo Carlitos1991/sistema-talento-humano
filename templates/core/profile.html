@@ -16,32 +16,46 @@
         <!-- COLUMNA IZQUIERDA: Avatar -->
         <div class="card profile-card-main">
             <div class="profile-avatar-wrapper">
-                <!-- Lógica visual del avatar -->
-                {% if user.avatar %}
-                    <img src="{{ user.avatar.url }}" alt="Avatar" id="avatarPreview">
+                <!-- Lógica visual del avatar - Mostrar foto de Person -->
+                {% if user.person.photo %}
+                    <img src="{{ user.person.photo.url }}" alt="Foto de Perfil" id="avatarPreview">
                     <div id="avatarPlaceholder" class="avatar-placeholder hidden">
-                        {{ user.username|make_list|first|upper }}
+                        {% if user.person.first_name %}
+                            {{ user.person.first_name|make_list|first|upper }}
+                        {% else %}
+                            {{ user.username|make_list|first|upper }}
+                        {% endif %}
                     </div>
                 {% else %}
                     <img src="" alt="Preview" id="avatarPreview" class="hidden"
                          style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
                     <div class="avatar-placeholder" id="avatarPlaceholder">
-                        {{ user.username|make_list|first|upper }}
+                        {% if user.person.first_name %}
+                            {{ user.person.first_name|make_list|first|upper }}
+                        {% else %}
+                            {{ user.username|make_list|first|upper }}
+                        {% endif %}
                     </div>
                 {% endif %}
 
                 <!-- Botón Cámara -->
-                <label for="id_avatar" class="btn-icon-edit" title="Cambiar Foto" style="cursor: pointer;">
+                <label for="id_photo" class="btn-icon-edit" title="Cambiar Foto" style="cursor: pointer;">
                     <i class="fa-solid fa-camera"></i>
                 </label>
             </div>
 
             <!-- Input Real Oculto -->
             <div class="hidden">
-                {{ form.avatar }}
+                {% if form.photo %} {{ form.photo }} {% endif %}
             </div>
 
-            <h3 class="profile-name">{{ user.get_full_name|default:user.username }}</h3>
+            <h3 class="profile-name">
+                {% if user.person %}
+                    {{ user.person.first_name }} {{ user.person.last_name }}
+                {% else %}
+                    {{ user.get_full_name|default:user.username }}
+                {% endif %}
+            </h3>
             <p class="profile-role">
                 {% if user.is_superuser %}Administrador{% else %}Colaborador{% endif %}
             </p>
@@ -102,7 +116,7 @@
     <script>
         // FIX DE SEGURIDAD: Esperar a que el DOM cargue y verificar existencia
         document.addEventListener('DOMContentLoaded', function () {
-            const fileInput = document.getElementById('id_avatar');
+            const fileInput = document.getElementById('id_photo');
 
             if (fileInput) {
                 fileInput.addEventListener('change', function (e) {
