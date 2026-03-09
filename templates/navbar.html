@@ -19,13 +19,27 @@
             <!-- JS Vanilla detecta el click en la clase 'user-trigger' -->
             <div class="user-trigger">
                 <div class="text-right hidden-mobile">
-                    <span class="user-name">{{ request.user.get_full_name|default:request.user.first_name }}</span>
+                    <span class="user-name">
+                        {% if request.user.person %}
+                            {{ request.user.person.first_name }} {{ request.user.person.last_name }}
+                        {% else %}
+                            {{ request.user.get_full_name|default:request.user.first_name }}
+                        {% endif %}
+                    </span>
                 </div>
 
-                {% if request.user.avatar %}
+                {% if request.user.person.photo %}
+                    <img src="{{ request.user.person.photo.url }}" class="user-avatar">
+                {% elif request.user.avatar %}
                     <img src="{{ request.user.avatar.url }}" class="user-avatar">
                 {% else %}
-                    <div class="user-avatar">{{ request.user.username|make_list|first|upper }}</div>
+                    <div class="user-avatar">
+                        {% if request.user.person %}
+                            {{ request.user.person.first_name|make_list|first|upper }}
+                        {% else %}
+                            {{ request.user.username|make_list|first|upper }}
+                        {% endif %}
+                    </div>
                 {% endif %}
                 <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8;"></i>
             </div>
