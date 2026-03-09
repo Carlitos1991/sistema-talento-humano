@@ -37,7 +37,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 2. GESTIÓN DE TABLA Y FILTROS ---
 
-let currentFilters = {q: '', status: 'all', page: 1};
+let currentFilters = {q: '', status: 'all', page: 1, sort: ''};
+
+window.changeBudgetPage = function(page) {
+    if (page && page > 0) {
+        window.fetchBudgets({page: page});
+    }
+};
+
+window.sortBudgetTable = function(field) {
+    // Si ya estamos ordenando por este campo, invertir dirección
+    const currentSort = currentFilters.sort || '';
+    if (currentSort === field) {
+        // Cambiar a descendente
+        currentFilters.sort = '-' + field;
+    } else if (currentSort === '-' + field) {
+        // Remover sort
+        currentFilters.sort = '';
+    } else {
+        // Nuevo sort ascendente
+        currentFilters.sort = field;
+    }
+    // Volver a página 1 al cambiar sort
+    window.fetchBudgets({sort: currentFilters.sort, page: 1});
+};
 
 window.fetchBudgets = function (params = {}) {
     Object.assign(currentFilters, params);
@@ -47,6 +70,7 @@ window.fetchBudgets = function (params = {}) {
     if (currentFilters.q) url.searchParams.set('q', currentFilters.q);
     if (currentFilters.status) url.searchParams.set('status', currentFilters.status);
     if (currentFilters.page) url.searchParams.set('page', currentFilters.page);
+    if (currentFilters.sort) url.searchParams.set('sort', currentFilters.sort);
 
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(res => res.text())
@@ -54,12 +78,39 @@ window.fetchBudgets = function (params = {}) {
             const wrapper = document.getElementById('table-content-wrapper');
             if (wrapper) {
                 wrapper.innerHTML = html;
+                // Actualizar estilos de sort en headers
+                updateSortHeaders();
                 // Actualizar UI de paginación después de cargar
                 if (typeof updatePaginationUI === 'function') {
                     updatePaginationUI();
                 }
             }
         });
+};
+
+function updateSortHeaders() {
+    // Remover todas las clases de sort
+    document.querySelectorAll('th.sorted-asc, th.sorted-desc').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    
+    // Si hay un sort activo, aplicar la clase correspondiente
+    if (currentFilters.sort) {
+        const field = currentFilters.sort.replace('-', '');
+        const isDesc = currentFilters.sort.startsWith('-');
+        
+        // Buscar el header correspondiente
+        const headers = document.querySelectorAll('thead th.sortable-header');
+        headers.forEach(th => {
+            if (th.onclick && th.onclick.toString().includes(`'${field}'`)) {
+                if (isDesc) {
+                    th.classList.add('sorted-desc');
+                } else {
+                    th.classList.add('sorted-asc');
+                }
+            }
+        });
+    }
 };
 
 function updatePaginationUI() {

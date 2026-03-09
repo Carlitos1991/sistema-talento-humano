@@ -70,6 +70,17 @@
         <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
             <div class="content-table">
+                <!-- Script: Función temporal para sort mientras person.js carga -->
+                <script>
+                    if (typeof sortPersonTable === 'undefined') {
+                        window.sortPersonTable = (thElement) => {
+                            // Función stub que espera a que person.js cargue
+                            if (window.vueApp && typeof window.vueApp.fetchPeople === 'function') {
+                                window.vueApp.fetchPeople(1);
+                            }
+                        };
+                    }
+                </script>
                 <div class="table-controls">
                     <button type="button" class="btn btn-search" onclick="toggleSearchModal(true)">
                         <i class="fas fa-search"></i> Búsqueda Avanzada

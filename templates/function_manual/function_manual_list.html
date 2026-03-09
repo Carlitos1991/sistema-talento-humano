@@ -7,8 +7,7 @@
 {% endblock %}
 
 {% block content %}
-    <div id="profileApp" v-cloak
-         data-url-table="{% url 'function_manual:profile_list' %}">
+    <div id="profileApp" data-url-table="{% url 'function_manual:profile_list' %}">
 
         <!-- 1. Header estilo SIGETH -->
         <div class="header-card">
@@ -68,35 +67,13 @@
             <div class="table-controls">
                 <div class="search-box">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" v-model="searchQuery" @input="debounceSearch"
-                           class="input-field" placeholder="Buscar por cargo o unidad...">
+                    <input type="text" id="table-search-profiles" class="input-field"
+                           placeholder="Buscar por cargo o unidad...">
                 </div>
             </div>
 
             <div class="table-container" id="tablePartialContainer">
                 {% include 'function_manual/partials/partial_function_manual_table.html' %}
-            </div>
-
-            <!-- Controles de Paginación -->
-            <div class="pagination-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-top: 1px solid #e5e7eb; margin-top: 16px;">
-                <div class="pagination-info" style="color: #6b7280; font-size: 0.875rem;">
-                    Mostrando página <strong>[[ currentPage ]]</strong> de <strong>[[ totalPages ]]</strong>
-                    (<strong>[[ totalRows ]]</strong> registros)
-                </div>
-                <div class="pagination-buttons" style="display: flex; gap: 8px;">
-                    <button @click="prevPage" :disabled="currentPage <= 1"
-                            class="btn-pagination"
-                            style="padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; transition: all 0.2s;"
-                            :style="currentPage <= 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </button>
-                    <button @click="nextPage" :disabled="currentPage >= totalPages"
-                            class="btn-pagination"
-                            style="padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; transition: all 0.2s;"
-                            :style="currentPage >= totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                        Siguiente <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -109,4 +86,44 @@
 
 {% block extra_js %}
     <script src="{% static 'js/function_manual.js' %}"></script>
+    <script>
+        // ─── GESTIÓN DE PAGINACIÓN PARA PERFILES ───
+        let currentProfileFilters = {q: '', page: 1};
+
+        window.changeProfilePage = function(page) {
+            if (page && page > 0) {
+                fetchFunctionManualProfiles({page: page});
+            }
+        };
+
+        function fetchFunctionManualProfiles(params = {}) {
+            Object.assign(currentProfileFilters, params);
+            const url = new URL(window.location.href);
+            
+            if (currentProfileFilters.q) url.searchParams.set('q', currentProfileFilters.q);
+            if (currentProfileFilters.page) url.searchParams.set('page', currentProfileFilters.page);
+            url.searchParams.set('partial', 'true');
+
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(res => res.text())
+                .then(html => {
+                    const wrapper = document.getElementById('tablePartialContainer');
+                    if (wrapper) {
+                        wrapper.innerHTML = html;
+                    }
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Manejador de búsqueda
+            const searchInput = document.getElementById('table-search-profiles');
+            if (searchInput) {
+                let timeout;
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => fetchFunctionManualProfiles({q: e.target.value, page: 1}), 500);
+                });
+            }
+        });
+    </script>
 {% endblock %}

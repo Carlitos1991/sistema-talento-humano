@@ -85,7 +85,7 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'current_employee__person__first_name',
             'current_employee__person__last_name', 
             'status_item__name', 'status_item__code'
-        ).order_by('number_individual')
+        )
         
         # Búsqueda rápida
         q = self.request.GET.get('q')
@@ -104,6 +104,13 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if status and status != 'all':
             qs = qs.filter(status_item__code=status)
         
+        # Ordenamiento (sort)
+        sort_param = self.request.GET.get('sort', 'number_individual')
+        if sort_param:
+            qs = qs.order_by(sort_param)
+        else:
+            qs = qs.order_by('number_individual')
+        
         return qs
 
     def get_context_data(self, **kwargs):
@@ -119,20 +126,30 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             queryset = self.get_queryset()
-            paginator = self.get_paginator(queryset, self.paginate_by)
-            page_number = request.GET.get(self.page_kwarg, 1)
             
-            try:
-                page_obj = paginator.get_page(page_number)
-            except:
-                page_obj = paginator.get_page(1)
-            
-            context = {
-                self.context_object_name: page_obj.object_list,
-                'page_obj': page_obj,
-                'paginator': paginator,
-                'is_paginated': page_obj.has_other_pages(),
-            }
+            # Si se solicita exportación, devolver TODOS los datos sin paginación
+            if request.GET.get('export') == 'true':
+                context = {
+                    self.context_object_name: queryset,
+                    'page_obj': None,
+                    'paginator': None,
+                    'is_paginated': False,
+                }
+            else:
+                paginator = self.get_paginator(queryset, self.paginate_by)
+                page_number = request.GET.get(self.page_kwarg, 1)
+                
+                try:
+                    page_obj = paginator.get_page(page_number)
+                except:
+                    page_obj = paginator.get_page(1)
+                
+                context = {
+                    self.context_object_name: page_obj.object_list,
+                    'page_obj': page_obj,
+                    'paginator': paginator,
+                    'is_paginated': page_obj.has_other_pages(),
+                }
             return render(request, 'budget/partials/partial_budget_table.html', context)
         return super().get(request, *args, **kwargs)
 

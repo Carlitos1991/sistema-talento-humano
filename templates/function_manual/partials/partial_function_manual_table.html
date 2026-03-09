@@ -1,4 +1,10 @@
-<table class="data-table" id="profileTable">
+<table class="data-table exportable-table" 
+       id="profileTable"
+       data-title="Reporte Perfiles de Puesto"
+       data-filename="Reporte_perfiles_puesto"
+       data-external-pagination="true"
+       data-external-search="true"
+       data-list-url="{% url 'function_manual:profile_list' %}">
     <thead>
     <tr>
         <th width="10%">Código</th>
@@ -171,3 +177,50 @@
     {% endfor %}
     </tbody>
 </table>
+
+<!-- PAGINACIÓN — server-side, navegación via fetchFunctionManualProfiles() -->
+<div class="pagination-container">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
+    </span>
+    <div class="pagination-controls" style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+        <button class="page-btn" title="Primera"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                onclick="changeProfilePage(1)">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button class="page-btn" title="Anterior"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                onclick="changeProfilePage(
+                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+            <i class="fas fa-angle-left"></i>
+        </button>
+        <div class="page-input-wrapper">
+            <input type="number" class="page-input"
+                   value="{{ page_obj.number }}"
+                   min="1" max="{{ page_obj.paginator.num_pages }}"
+                   onchange="changeProfilePage(parseInt(this.value)||1)"
+                   onkeypress="if(event.key==='Enter') changeProfilePage(parseInt(this.value)||1)">
+            <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
+        </div>
+        <button class="page-btn" title="Siguiente"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                onclick="changeProfilePage(
+                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %})">
+            <i class="fas fa-angle-right"></i>
+        </button>
+        <button class="page-btn" title="Última"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                onclick="changeProfilePage({{ page_obj.paginator.num_pages }})">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div class="no-results-overlay {% if profiles %}hidden{% endif %}">
+    <div class="no-results-content">
+        <i class="fas fa-search no-results-icon"></i>
+        <p class="no-results-text">No se encontraron perfiles de puestos.</p>
+    </div>
+</div>

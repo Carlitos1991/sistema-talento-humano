@@ -4,15 +4,34 @@
            data-title="Reporte Partidas"
            data-filename="Reporte_partidas"
            data-external-pagination="true"
-           data-external-search="true">
+           data-external-search="true"
+           data-list-url="{% url 'budget:budget_list' %}">
         <thead>
         <tr>
-            <th><i class="fa-solid fa-hashtag"></i> Partida</th>
-            <th><i class="fa-solid fa-sitemap"></i> Areá / Programa</th>
-            <th><i class="fa-solid fa-briefcase"></i> Cargo:</th>
-            <th><i class="fa-solid fa-money-bill-wave"></i> Remuneración</th>
-            <th><i class="fa-solid fa-user"></i> Empleado</th>
-            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
+            <th onclick="sortBudgetTable('number_individual')" class="sortable-header">
+                <i class="fa-solid fa-hashtag"></i> Partida
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('activity')" class="sortable-header">
+                <i class="fa-solid fa-sitemap"></i> Areá / Programa
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('position_item')" class="sortable-header">
+                <i class="fa-solid fa-briefcase"></i> Cargo:
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('remuneration')" class="sortable-header">
+                <i class="fa-solid fa-money-bill-wave"></i> Remuneración
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('current_employee')" class="sortable-header">
+                <i class="fa-solid fa-user"></i> Empleado
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th onclick="sortBudgetTable('status_item')" class="sortable-header">
+                <i class="fa-solid fa-toggle-on"></i> Estado
+                <span class="sort-arrow">⇅</span>
+            </th>
             <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
         </tr>
         </thead>
@@ -124,14 +143,43 @@
         </tbody>
     </table>
 
-    <!-- Metadatos Paginación -->
-    <div id="pagination-metadata" class="hidden"
-         data-total="{{ page_obj.paginator.count }}"
-         data-page="{{ page_obj.number }}"
-         data-start="{{ page_obj.start_index }}"
-         data-end="{{ page_obj.end_index }}"
-         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
-         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+    <!-- PAGINACIÓN — server-side, navegación via fetchBudgets() -->
+    <div class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls" style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+            <button class="page-btn" title="Primera"
+                    {% if not page_obj.has_previous %}disabled{% endif %}
+                    onclick="changeBudgetPage(1)">
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button class="page-btn" title="Anterior"
+                    {% if not page_obj.has_previous %}disabled{% endif %}
+                    onclick="changeBudgetPage(
+                            {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input"
+                       value="{{ page_obj.number }}"
+                       min="1" max="{{ page_obj.paginator.num_pages }}"
+                       onchange="changeBudgetPage(parseInt(this.value)||1)"
+                       onkeypress="if(event.key==='Enter') changeBudgetPage(parseInt(this.value)||1)">
+                <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
+            </div>
+            <button class="page-btn" title="Siguiente"
+                    {% if not page_obj.has_next %}disabled{% endif %}
+                    onclick="changeBudgetPage(
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %})">
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button class="page-btn" title="Última"
+                    {% if not page_obj.has_next %}disabled{% endif %}
+                    onclick="changeBudgetPage({{ page_obj.paginator.num_pages }})">
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Empty State -->

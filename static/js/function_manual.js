@@ -1,5 +1,8 @@
 /* static/js/function_manual.js */
 
+// ─── VARIABLE GLOBAL PARA FILTROS DE PAGINACIÓN ───
+let currentProfileFilters = {q: '', page: 1};
+
 const {createApp} = Vue;
 
 const getCsrfToken = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';

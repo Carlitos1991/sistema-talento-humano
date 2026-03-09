@@ -73,7 +73,83 @@ function getTableData(table) {
 
 // ─── FETCH DE TODOS LOS DATOS (paginación backend) ───────────────────────────
 async function getAllRowsFromServer(table) {
-    // Solo si la tabla usa paginación externa (backend/Vue)
+    // Si la tabla tiene data-list-url, usar esa para exportación
+    const listUrl = table.getAttribute('data-list-url');
+    if (listUrl) {
+        const params = new URLSearchParams();
+        
+        // Pasar filtros actuales (presupuesto) - AMBOS: q y status
+        if (typeof currentFilters !== 'undefined') {
+            if (currentFilters.q) {
+                params.set('q', currentFilters.q);
+            }
+            if (currentFilters.status && currentFilters.status !== 'all') {
+                params.set('status', currentFilters.status);
+            }
+        }
+        
+        // Pasar filtros de perfiles (function_manual)
+        if (typeof currentProfileFilters !== 'undefined' && currentProfileFilters.q) {
+            params.set('q', currentProfileFilters.q);
+        }
+        
+        // Para otros: si existe window._personExport con getFilters
+        if (!params.has('q') && window._personExport && typeof window._personExport.getFilters === 'function') {
+            const filters = window._personExport.getFilters();
+            Object.entries(filters).forEach(([key, val]) => {
+                if (val) params.set(key, val);
+            });
+        }
+        
+        // Si aun no hay búsqueda, intentar obtener del DOM
+        if (!params.has('q')) {
+            const searchInputsSelectors = [
+                '#table-search-budget',  // budget
+                '#table-search-profiles',  // function_manual
+                'input.input-field[type="text"]',
+            ];
+            
+            for (const selector of searchInputsSelectors) {
+                const input = document.querySelector(selector);
+                if (input && input.value.trim()) {
+                    params.set('q', input.value.trim());
+                    break;
+                }
+            }
+        }
+        
+        params.set('partial', 'true');
+        params.set('export', 'true');
+        
+        try {
+            const resp = await fetch(listUrl + '?' + params.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const html = await resp.text();
+            
+            // Parsear el HTML recibido y extraer filas
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const rows = Array.from(doc.querySelectorAll('tbody tr')).filter(tr =>
+                !tr.innerText.includes('No se encontraron') && tr.querySelectorAll('td').length > 1
+            );
+
+            // Extraer headers del DOM actual
+            const ths = Array.from(table.querySelectorAll('thead th'));
+            const headers = [ths.slice(0, -1).map(th => getCleanText(th))];
+
+            const body = rows.map(tr =>
+                Array.from(tr.querySelectorAll('td')).slice(0, -1).map(td => getCleanText(td))
+            );
+
+            return {headers, body};
+        } catch (e) {
+            console.error('Error al obtener todos los datos del servidor:', e);
+            return null;
+        }
+    }
+
+    // Fallback antigua lógica para compatibilidad
     if (table.dataset.externalPagination !== 'true') return null;
     if (!window._personExport || !window._personExport.listUrl) {
         console.warn("Exportación completa abortada: Falta listUrl en window._personExport");

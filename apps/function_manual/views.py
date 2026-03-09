@@ -89,6 +89,7 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = JobProfile
     permission_required = "function_manual.view_jobprofile"
     context_object_name = "profiles"
+    paginate_by = 10
 
     def get_template_names(self):
         if self.request.GET.get('partial'):
@@ -136,6 +137,38 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             context['occupational_matrix_json'] = json.dumps(list(matrix_data), cls=DjangoJSONEncoder)
 
         return context
+
+    def get(self, request, *args, **kwargs):
+        # Soportar AJAX con exportación
+        if request.GET.get('partial'):
+            queryset = self.get_queryset()
+            
+            # Si se solicita exportación, devolver TODOS los datos sin paginación
+            if request.GET.get('export') == 'true':
+                context = {
+                    self.context_object_name: queryset,
+                    'page_obj': None,
+                    'paginator': None,
+                    'is_paginated': False,
+                }
+            else:
+                # Paginación normal
+                paginator = self.get_paginator(queryset, self.paginate_by)
+                page_number = request.GET.get(self.page_kwarg, 1)
+                
+                try:
+                    page_obj = paginator.get_page(page_number)
+                except:
+                    page_obj = paginator.get_page(1)
+                
+                context = {
+                    self.context_object_name: page_obj.object_list,
+                    'page_obj': page_obj,
+                    'paginator': paginator,
+                    'is_paginated': page_obj.has_other_pages(),
+                }
+            return render(request, self.get_template_names()[0], context)
+        return super().get(request, *args, **kwargs)
 
 
 class JobProfileCreateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfileMixin, CreateView):

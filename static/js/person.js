@@ -89,6 +89,42 @@ window.quickFilterStatus = (statusId) => {
     if (vueApp) vueApp.applyQuickFilter(statusId);
 };
 
+window.sortPersonTable = (thElement) => {
+    // Inicializar si no existe
+    if (!window._personExport) window._personExport = {};
+    
+    // Obtener el campo del header
+    const field = thElement.getAttribute('data-field');
+    if (!field) return;
+    
+    // Obtener todos los headers (th)
+    const allHeaders = document.querySelectorAll('thead tr th');
+    let colIndex = -1;
+    
+    // Buscar el índice del header clickeado
+    for (let i = 0; i < allHeaders.length; i++) {
+        if (allHeaders[i] === thElement) {
+            colIndex = i;
+            break;
+        }
+    }
+    
+    if (colIndex === -1) return;
+    
+    const currentSort = window._personExport.sort;
+    const isAscending = currentSort && currentSort.col === colIndex && currentSort.asc;
+    
+    // Actualizar estado del sort
+    window._personExport.sort = {
+        col: colIndex,
+        field: field,
+        asc: !isAscending
+    };
+    
+    // Recargar tabla (página 1)
+    if (vueApp) vueApp.fetchPeople(1);
+};
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const appElement = document.getElementById('personApp');
