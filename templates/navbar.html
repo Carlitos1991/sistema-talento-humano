@@ -19,8 +19,7 @@
             <!-- JS Vanilla detecta el click en la clase 'user-trigger' -->
             <div class="user-trigger">
                 <div class="text-right hidden-mobile">
-                    <small style="display:block; line-height:1; font-size: 0.75rem; color:#64748b;">Bienvenido,</small>
-                    <span class="user-name">{{ request.user.username }}</span>
+                    <span class="user-name">{{ request.user.get_full_name|default:request.user.first_name }}</span>
                 </div>
 
                 {% if request.user.avatar %}

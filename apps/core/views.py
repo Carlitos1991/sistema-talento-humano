@@ -791,12 +791,6 @@ class ChangePasswordView(LoginRequiredMixin, View):
                 'message': 'La contraseña debe contener al menos un número.'
             })
         
-        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};:\'\"\\|,.<>\/?]', new_password):
-            return JsonResponse({
-                'success': False,
-                'message': 'La contraseña debe contener al menos un símbolo especial.'
-            })
-        
         # Actualizar contraseña
         try:
             user = request.user
