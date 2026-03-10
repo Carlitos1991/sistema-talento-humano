@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <h2>Asientos</h2>
+  <table class="table mt-3">
+    <thead><tr><th>ID</th><th>Fecha</th><th>Descripción</th><th></th></tr></thead>
+    <tbody>
+      {% for j in journals %}
+      <tr>
+        <td>{{ j.id }}</td>
+        <td>{{ j.date }}</td>
+        <td>{{ j.description }}</td>
+        <td>
+          <a class="btn btn-sm btn-primary" href="{% url 'accounting:journal_detail' j.pk %}">Ver</a>
+          <a class="btn btn-sm btn-secondary" href="{% url 'accounting:journal_export' j.pk %}">Exportar CSV</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">No hay asientos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

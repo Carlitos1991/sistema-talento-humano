@@ -1,0 +1,1 @@
+templates for accounting app created under templates/accounting

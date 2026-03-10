@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <h2>Asiento {{ journal.id }}</h2>
+  <p>Fecha: {{ journal.date }} - {{ journal.description }}</p>
+  <a class="btn btn-sm btn-secondary" href="{% url 'accounting:journal_export' journal.pk %}">Exportar CSV</a>
+  <table class="table mt-3">
+    <thead><tr><th>Cuenta</th><th>Débito</th><th>Crédito</th><th>Partida</th><th>Ref</th></tr></thead>
+    <tbody>
+      {% for it in journal.items.all %}
+      <tr>
+        <td>{{ it.account.code }} - {{ it.account.name }}</td>
+        <td>{{ it.debit }}</td>
+        <td>{{ it.credit }}</td>
+        <td>{{ it.budget_line.number_individual if it.budget_line else '' }}</td>
+        <td>{{ it.reference }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No hay líneas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

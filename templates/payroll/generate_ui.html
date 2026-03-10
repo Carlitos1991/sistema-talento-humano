@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Generar Rol - Interfaz</h2>
+<form method="get" action="">
+  <label for="period_id">Periodo:</label>
+  <select name="period_id" id="period_id">
+    <option value="">-- Seleccionar --</option>
+    {% for p in periods %}
+      <option value="{{ p.id }}" {% if current_period and current_period.id==p.id %}selected{% endif %}>{{ p }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Cargar Empleados</button>
+</form>
+
+{% if rows %}
+  <form method="post" action="{% url 'payroll:generate_selected' %}">
+    {% csrf_token %}
+    <input type="hidden" name="period_id" value="{{ current_period.id }}" />
+    <table class="table">
+      <thead>
+        <tr><th></th><th>Empleado</th><th>Unidad</th><th>Días a Pagar</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td><input type="checkbox" name="employee" value="{{ r.employee.id }}" checked /></td>
+            <td>{{ r.employee.person.full_name }}</td>
+            <td>{{ r.employee.area }}</td>
+            <td>
+              <input type="number" name="worked_{{ r.employee.id }}" value="{{ r.worked_days }}" min="0" max="{{ current_period.working_days }}" />
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Generar Rol para seleccionados</button>
+  </form>
+{% endif %}
+
+{% endblock %}

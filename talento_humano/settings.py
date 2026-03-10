@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'biometric',
     'personnel_actions',
     'payroll',
+    'accounting',
     'permitrequest',
     'vacation',
     'sanctions',

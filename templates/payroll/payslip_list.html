@@ -73,11 +73,11 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2">
-                                        {{ p.employee.person.name|slice:":1" }}{{ p.employee.person.lastname|slice:":1" }}
+                                        {{ p.employee.person.first_name|slice:":1" }}{{ p.employee.person.last_name|slice:":1" }}
                                     </div>
                                     <div>
-                                        <div class="fw-bold">{{ p.employee.person.lastname }} {{ p.employee.person.name }}</div>
-                                        <small class="text-muted">{{ p.employee.person.identification }}</small>
+                                        <div class="fw-bold">{{ p.employee.person.last_name }} {{ p.employee.person.first_name }}</div>
+                                        <small class="text-muted">{{ p.employee.person.document_number }}</small>
                                     </div>
                                 </div>
                             </td>

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <h2>Editar Rubro de Ingreso</h2>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Guardar</button>
+    <a class="btn btn-secondary" href="{% url 'payroll:income_list' %}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

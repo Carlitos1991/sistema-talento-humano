@@ -25,6 +25,12 @@ class Income(models.Model):
     description = models.TextField(verbose_name=_("Descripción"))
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
 
+    # --- AJUSTE CONTABLE ---
+    debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='income_debits', verbose_name=_('Cuenta DEBE (Gasto)'))
+    credit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='income_credits', verbose_name=_('Cuenta HABER (Pasivo/Pago)'))
+
     def __str__(self):
         return self.name
 
@@ -37,6 +43,13 @@ class Deduction(models.Model):
     description = models.TextField(verbose_name=_("Descripción"))
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
     type = models.CharField(max_length=100, choices=TYPE_CHOICES)
+
+    # --- AJUSTE CONTABLE ---
+    debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='deduction_debits', verbose_name=_('Cuenta DEBE (Reducción Pasivo)'))
+    credit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='deduction_credits',
+                                       verbose_name=_('Cuenta HABER (Retención a Pagar)'))
 
     def __str__(self):
         return self.name
@@ -123,6 +136,35 @@ class PayslipItem(models.Model):
 
     item_type = models.CharField(max_length=10, choices=ITEM_TYPE)
     value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # Partida presupuestaria asociada a este ítem (si aplica)
+    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True, related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
 
     class Meta:
         indexes = [models.Index(fields=['payslip', 'item_type'])]
+
+
+class RubroBudgetMapping(models.Model):
+    """Mapa explícito entre un rubro (ingreso/desc.) y una partida presupuestaria.
+
+    Permite mapeos generales o específicos por unidad administrativa.
+    """
+    RUBRO_TYPE = (('INCOME', 'Ingreso'), ('DEDUCTION', 'Descuento'))
+
+    rubro_type = models.CharField(max_length=10, choices=RUBRO_TYPE)
+    rubro_code = models.CharField(max_length=50, verbose_name=_('Código Rubro'))
+    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.PROTECT, related_name='rubro_mappings')
+    administrative_unit = models.ForeignKey(
+        'institution.AdministrativeUnit', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='rubro_mappings',
+        verbose_name=_('Unidad Administrativa (opcional)')
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('rubro_type', 'rubro_code', 'administrative_unit')
+        verbose_name = _('Mapa Rubro-Partida')
+        verbose_name_plural = _('Mapas Rubro-Partida')
+
+    def __str__(self):
+        unit = f" / {self.administrative_unit}" if self.administrative_unit else ''
+        return f"{self.get_rubro_type_display()} {self.rubro_code} -> {self.budget_line}{unit}"

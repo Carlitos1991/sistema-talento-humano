@@ -434,6 +434,30 @@
                             </a>
                         </li>
                     {% endif %}
+                    {% if perms.accounting.view_account %}
+                        <li>
+                            <a href="{% url 'accounting:account_list' %}" class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
+                                <i class="fa-solid fa-book-open"></i>
+                                <span class="menu-text">Cuentas contables</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.payroll.view_income %}
+                        <li>
+                            <a href="{% url 'payroll:income_list' %}" class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-coins"></i>
+                                <span class="menu-text">Mapeo Rubros - Ingresos</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.payroll.view_deduction %}
+                        <li>
+                            <a href="{% url 'payroll:deduction_list' %}" class="{% if request.resolver_match.url_name == 'deduction_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                <span class="menu-text">Mapeo Rubros - Descuentos</span>
+                            </a>
+                        </li>
+                    {% endif %}
                 </ul>
             </li>
         {% endif %}
