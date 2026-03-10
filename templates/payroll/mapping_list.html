@@ -1,0 +1,52 @@
+{% extends 'base.html' %} {% block content %}
+<div class="container mt-4">
+    <h2>Mapeo de Rubros a Partidas Presupuestarias</h2>
+    <a href="{% url 'payroll:mapping_create' %}" class="btn btn-primary mb-3">Nueva Regla de Mapeo</a>
+    
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Código Rubro</th>
+                <th>Unidad (Opcional)</th>
+                <th>Partida Fija</th>
+                <th>Sufijo Dinámico</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in mappings %}
+            <tr>
+                <td>{{ m.get_rubro_type_display }}</td>
+                <td><strong>{{ m.rubro_code }}</strong></td>
+                <td>{{ m.administrative_unit|default:"Todas" }}</td>
+                <td>
+                    {% if m.is_fixed %}
+                        <span class="badge bg-success">FIJA: {{ m.budget_line.code }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">NO</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not m.is_fixed and m.dynamic_suffix %}
+                        <span class="badge bg-info text-dark">Dinamico: {{ m.dynamic_suffix }}</span>
+                    {% elif not m.is_fixed %}
+                        <em>Usa partida original</em>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{% if m.is_active %}Activo{% else %}Inactivo{% endif %}</td>
+                <td>
+                    <a href="{% url 'payroll:mapping_edit' m.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                    <a href="{% url 'payroll:mapping_delete' m.pk %}" class="btn btn-sm btn-danger">Borrar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center">No hay mapeos configurados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

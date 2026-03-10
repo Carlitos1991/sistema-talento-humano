@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container">
-  <h2>Rubros de Ingreso</h2>
+  <div style="display:flex; align-items:center; justify-content:space-between;">
+    <h2>Rubros de Ingreso</h2>
+    {% if perms.payroll.add_income %}
+      <a href="{% url 'payroll:income_create' %}" class="btn btn-create"> <i class="fas fa-plus"></i> Nuevo Ingreso</a>
+    {% endif %}
+  </div>
   <table class="table mt-3">
     <thead><tr><th>Nombre</th><th>Código</th><th>Cuenta</th><th>Activo</th><th></th></tr></thead>
     <tbody>

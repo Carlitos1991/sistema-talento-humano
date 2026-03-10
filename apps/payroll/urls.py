@@ -4,7 +4,8 @@ from .views import (
     GeneratePayrollUIView, GeneratePayrollSelectedView,
     ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
     PayrollListView, PayslipListView, PayslipDetailView,
-    IncomeListView, IncomeUpdateView, DeductionListView, DeductionUpdateView, InstitutionalReportView
+    IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView, InstitutionalReportView, MappingListView,
+    MappingCreateView, MappingUpdateView, MappingDeleteView
 )
 
 app_name = 'payroll'
@@ -27,8 +28,16 @@ urlpatterns = [
     path('payslips/detail/<int:pk>/', PayslipDetailView.as_view(), name='payslip_detail'),
     # Mapeos contables para rubros
     path('incomes/', IncomeListView.as_view(), name='income_list'),
+    path('incomes/create/', IncomeCreateView.as_view(), name='income_create'),
     path('incomes/<int:pk>/edit/', IncomeUpdateView.as_view(), name='income_edit'),
     path('deductions/', DeductionListView.as_view(), name='deduction_list'),
+    path('deductions/create/', DeductionCreateView.as_view(), name='deduction_create'),
     path('deductions/<int:pk>/edit/', DeductionUpdateView.as_view(), name='deduction_edit'),
     path('reports/institutional/<int:period_id>/', InstitutionalReportView.as_view(), name='report_institutional'),
+
+    # Rutas para el Mapeo Presupuestario
+    path('mappings/', MappingListView.as_view(), name='mapping_list'),
+    path('mappings/create/', MappingCreateView.as_view(), name='mapping_create'),
+    path('mappings/<int:pk>/edit/', MappingUpdateView.as_view(), name='mapping_edit'),
+    path('mappings/<int:pk>/delete/', MappingDeleteView.as_view(), name='mapping_delete'),
 ]

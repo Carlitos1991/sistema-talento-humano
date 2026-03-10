@@ -137,7 +137,11 @@ class PayslipItem(models.Model):
     item_type = models.CharField(max_length=10, choices=ITEM_TYPE)
     value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     # Partida presupuestaria asociada a este ítem (si aplica)
-    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True, related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
+    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
+    budget_line_code = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="Código de Partida Aplicada (Histórico)")
 
     class Meta:
         indexes = [models.Index(fields=['payslip', 'item_type'])]
@@ -152,19 +156,19 @@ class RubroBudgetMapping(models.Model):
 
     rubro_type = models.CharField(max_length=10, choices=RUBRO_TYPE)
     rubro_code = models.CharField(max_length=50, verbose_name=_('Código Rubro'))
-    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.PROTECT, related_name='rubro_mappings')
-    administrative_unit = models.ForeignKey(
-        'institution.AdministrativeUnit', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='rubro_mappings',
-        verbose_name=_('Unidad Administrativa (opcional)')
-    )
     is_active = models.BooleanField(default=True)
+    is_fixed = models.BooleanField(
+        default=False,
+        verbose_name=_('¿Es Partida Fija?'),
+        help_text=_(
+            'Activar para partidas únicas (ej. Subrogación). Desactivar para solo reemplazar el ítem de gasto al final (ej. Fondos de Reserva).')
+    )
+    dynamic_suffix = models.CharField(
+        max_length=50, blank=True, null=True,
+        verbose_name=_('Sufijo Dinámico (Ítem de Gasto)'),
+        help_text=_('Ej: "5.1.06.02" o "06.02". Reemplazará la parte final de la partida del empleado.')
+    )
 
     class Meta:
-        unique_together = ('rubro_type', 'rubro_code', 'administrative_unit')
-        verbose_name = _('Mapa Rubro-Partida')
-        verbose_name_plural = _('Mapas Rubro-Partida')
-
-    def __str__(self):
-        unit = f" / {self.administrative_unit}" if self.administrative_unit else ''
-        return f"{self.get_rubro_type_display()} {self.rubro_code} -> {self.budget_line}{unit}"
+        unique_together = ('rubro_type', 'rubro_code')
+        verbose_name = 'Mapa Rubro-Partida'

@@ -60,13 +60,15 @@
                 </a>
                 <ul class="submenu">
                     <li>
-                        <a href="{% url 'person:person_list' %}" class="{% if request.resolver_match.url_name == 'person_list' %}active{% endif %}">
+                        <a href="{% url 'person:person_list' %}"
+                           class="{% if request.resolver_match.url_name == 'person_list' %}active{% endif %}">
                             <i class="fa-solid fa-list-check"></i>
                             Empleados
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'person:employee_report' %}" class="{% if request.resolver_match.url_name == 'employee_report' %}active{% endif %}">
+                        <a href="{% url 'person:employee_report' %}"
+                           class="{% if request.resolver_match.url_name == 'employee_report' %}active{% endif %}">
                             <i class="fa-solid fa-file-excel"></i>
                             Reporte
                         </a>
@@ -169,69 +171,69 @@
             </li>
         {% endif %}
         {% if perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
-        <!-- Manual de Funciones -->
-        <li class="has-submenu">
-            <a href="#" class="submenu-toggle">
-                <i class="fa-solid fa-book"></i>
-                <span class="menu-text">Manual de Funcs.</span>
-                <i class="fa-solid fa-chevron-right chevron-icon"></i>
-            </a>
-            <ul class="submenu">
-                {% if perms.function_manual.view_jobprofile %}
-                <li>
-                    <a href="{% url 'function_manual:profile_list' %}">
-                        <i class="fa-solid fa-id-badge"></i>
-                        <span class="menu-text">Perfiles de Puestos</span>
-                    </a>
-                </li>
-                {% endif %}
+            <!-- Manual de Funciones -->
+            <li class="has-submenu">
+                <a href="#" class="submenu-toggle">
+                    <i class="fa-solid fa-book"></i>
+                    <span class="menu-text">Manual de Funcs.</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    {% if perms.function_manual.view_jobprofile %}
+                        <li>
+                            <a href="{% url 'function_manual:profile_list' %}">
+                                <i class="fa-solid fa-id-badge"></i>
+                                <span class="menu-text">Perfiles de Puestos</span>
+                            </a>
+                        </li>
+                    {% endif %}
 
-                <!-- Sub-sección Administración -->
-                {% if perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
-                    <li class="has-inner-submenu" id="adminSubmenu">
-                        <a href="javascript:void(0)" class="inner-toggle">
-                            <i class="fa-solid fa-gears"></i>
-                            <span class="menu-text">Administración</span>
-                            <i class="fa-solid fa-chevron-right inner-chevron"></i>
-                        </a>
-                        <ul class="inner-submenu">
-                            {% if perms.function_manual.view_manualcatalog or perms.function_manual.can_admin %}
-                                <li>
-                                    <a href="{% url 'function_manual:catalog_list' %}">
-                                        <i class="fa-solid fa-list-ul"></i>
-                                        <span class="menu-text">Catálogo</span>
-                                    </a>
-                                </li>
-                            {% endif %}
-                            {% if perms.function_manual.view_occupationalmatrix or perms.function_manual.can_admin %}
-                                <li>
-                                    <a href="{% url 'function_manual:matrix_list' %}">
-                                        <i class="fa-solid fa-table-list"></i>
-                                        <span class="menu-text">Matriz Ocupacional</span>
-                                    </a>
-                                </li>
-                            {% endif %}
-                            {% if perms.function_manual.view_valuationnode or perms.function_manual.can_admin %}
-                                <li>
-                                    <a href="{% url 'function_manual:valuation_list' %}">
-                                        <i class="fa-solid fa-chart-line"></i>
-                                        <span class="menu-text">Valoración</span>
-                                    </a>
-                                </li>
-                            {% endif %}
-                            {% if perms.function_manual.view_competency or perms.function_manual.can_admin %}
-                                <li>
-                                    <a href="{% url 'function_manual:competency_list' %}">
-                                        <i class="fa-solid fa-brain"></i>
-                                        <span class="menu-text">Competencias</span>
-                                    </a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </li>
-                {% endif %}
-            </ul>
-        </li>
+                    <!-- Sub-sección Administración -->
+                    {% if perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
+                        <li class="has-inner-submenu" id="adminSubmenu">
+                            <a href="javascript:void(0)" class="inner-toggle">
+                                <i class="fa-solid fa-gears"></i>
+                                <span class="menu-text">Administración</span>
+                                <i class="fa-solid fa-chevron-right inner-chevron"></i>
+                            </a>
+                            <ul class="inner-submenu">
+                                {% if perms.function_manual.view_manualcatalog or perms.function_manual.can_admin %}
+                                    <li>
+                                        <a href="{% url 'function_manual:catalog_list' %}">
+                                            <i class="fa-solid fa-list-ul"></i>
+                                            <span class="menu-text">Catálogo</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if perms.function_manual.view_occupationalmatrix or perms.function_manual.can_admin %}
+                                    <li>
+                                        <a href="{% url 'function_manual:matrix_list' %}">
+                                            <i class="fa-solid fa-table-list"></i>
+                                            <span class="menu-text">Matriz Ocupacional</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if perms.function_manual.view_valuationnode or perms.function_manual.can_admin %}
+                                    <li>
+                                        <a href="{% url 'function_manual:valuation_list' %}">
+                                            <i class="fa-solid fa-chart-line"></i>
+                                            <span class="menu-text">Valoración</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if perms.function_manual.view_competency or perms.function_manual.can_admin %}
+                                    <li>
+                                        <a href="{% url 'function_manual:competency_list' %}">
+                                            <i class="fa-solid fa-brain"></i>
+                                            <span class="menu-text">Competencias</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                    {% endif %}
+                </ul>
+            </li>
         {% endif %}
         <!-- MÓDULO DE PERMISOS -->
         {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype %}
@@ -436,25 +438,35 @@
                     {% endif %}
                     {% if perms.accounting.view_account %}
                         <li>
-                            <a href="{% url 'accounting:account_list' %}" class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
+                            <a href="{% url 'accounting:account_list' %}"
+                               class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
                                 <i class="fa-solid fa-book-open"></i>
                                 <span class="menu-text">Cuentas contables</span>
                             </a>
                         </li>
                     {% endif %}
+                    <li>
+                        <a href="{% url 'payroll:mapping_list' %}"
+                           class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
+                            <i class="fa-solid fa-money-check-dollar"></i>
+                            <span class="menu-text">Mapeo presupuesto</span>
+                        </a>
+                    </li>
                     {% if perms.payroll.view_income %}
                         <li>
-                            <a href="{% url 'payroll:income_list' %}" class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
+                            <a href="{% url 'payroll:income_list' %}"
+                               class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-coins"></i>
-                                <span class="menu-text">Mapeo Rubros - Ingresos</span>
+                                <span class="menu-text">Ingresos</span>
                             </a>
                         </li>
                     {% endif %}
                     {% if perms.payroll.view_deduction %}
                         <li>
-                            <a href="{% url 'payroll:deduction_list' %}" class="{% if request.resolver_match.url_name == 'deduction_list' %}active-child{% endif %}">
+                            <a href="{% url 'payroll:deduction_list' %}"
+                               class="{% if request.resolver_match.url_name == 'deduction_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-file-invoice-dollar"></i>
-                                <span class="menu-text">Mapeo Rubros - Descuentos</span>
+                                <span class="menu-text">Descuentos</span>
                             </a>
                         </li>
                     {% endif %}
@@ -463,26 +475,26 @@
         {% endif %}
         <!--  Biométricos -->
         {% if perms.biometric.view_biometricdevice or perms.biometric.view_biometricload %}
-        <li class="has-submenu">
-            <a href="#" class="nav-link">
-                <i class="fa-solid fa-fingerprint"></i>
-                <span class="menu-text">Biométricos</span>
-                <i class="fa-solid fa-chevron-right chevron-icon"></i>
-            </a>
-            <ul class="submenu">
-                <li>
-                    <a href="{% url 'biometric:biometric_list' %}">
-                        <i class="fa-solid fa-list-check"></i> Dispositivos
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'biometric:employee_report_list' %}"
-                       class="{% if 'reportes' in request.path %}active-child{% endif %}">
-                        <i class="fa-regular fa-file-lines"></i> Reportes
-                    </a>
-                </li>
-            </ul>
-        </li>
+            <li class="has-submenu">
+                <a href="#" class="nav-link">
+                    <i class="fa-solid fa-fingerprint"></i>
+                    <span class="menu-text">Biométricos</span>
+                    <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li>
+                        <a href="{% url 'biometric:biometric_list' %}">
+                            <i class="fa-solid fa-list-check"></i> Dispositivos
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'biometric:employee_report_list' %}"
+                           class="{% if 'reportes' in request.path %}active-child{% endif %}">
+                            <i class="fa-regular fa-file-lines"></i> Reportes
+                        </a>
+                    </li>
+                </ul>
+            </li>
         {% endif %}
         <!--  Ajustes -->
         {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location %}

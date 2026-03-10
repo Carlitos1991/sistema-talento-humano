@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container">
-  <h2>Rubros de Descuento</h2>
+  <div style="display:flex; align-items:center; justify-content:space-between;">
+    <h2>Rubros de Descuento</h2>
+    {% if perms.payroll.add_deduction %}
+      <a href="{% url 'payroll:deduction_create' %}" class="btn btn-create"> <i class="fas fa-plus"></i> Nuevo Egreso</a>
+    {% endif %}
+  </div>
   <table class="table mt-3">
     <thead><tr><th>Nombre</th><th>Código</th><th>Tipo</th><th>Cuenta</th><th></th></tr></thead>
     <tbody>

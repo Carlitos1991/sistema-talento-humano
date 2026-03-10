@@ -1,11 +1,12 @@
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 
-from .forms import PayrollPeriodForm, PayrollConstantForm
-from .models import PayrollPeriod, Payslip, PayrollConstant
+from accounting.models import Journal, JournalItem
+from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm
+from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem
 from .services import PayrollCalculatorService
 from employee.models import Employee
 from .models import Income, Deduction
@@ -302,6 +303,19 @@ class IncomeUpdateView(UpdateView):
     success_url = reverse_lazy('payroll:income_list')
 
 
+class IncomeCreateView(CreateView):
+    model = Income
+    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+    template_name = 'payroll/income_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Rubro creado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
 class DeductionListView(ListView):
     model = Deduction
     template_name = 'payroll/deduction_list.html'
@@ -315,6 +329,19 @@ class DeductionUpdateView(UpdateView):
     success_url = reverse_lazy('payroll:deduction_list')
 
 
+class DeductionCreateView(CreateView):
+    model = Deduction
+    fields = ['name', 'code', 'description', 'is_active', 'type', 'debit_account', 'credit_account']
+    template_name = 'payroll/deduction_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Rubro de egreso creado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
 class InstitutionalReportView(TemplateView):
     template_name = 'payroll/reports/institutional_report.html'
 
@@ -326,15 +353,14 @@ class InstitutionalReportView(TemplateView):
         # ==========================================
         # 1. JORNALIZACIÓN (Desde la Contabilidad)
         # ==========================================
-        # Buscamos el asiento de este periodo generado por tu services.py
-        journal = Journal.objects.filter(reference=str(period)).last()
+        jornalizacion_items = JournalItem.objects.filter(reference=str(period))
 
         jornalizacion = []
         total_debe = 0
         total_haber = 0
 
-        if journal:
-            jornalizacion = JournalItem.objects.filter(journal=journal).values(
+        if jornalizacion_items.exists():
+            jornalizacion = jornalizacion_items.values(
                 'account__code', 'account__name'
             ).annotate(
                 total_debe=Sum('debit'),
@@ -344,48 +370,56 @@ class InstitutionalReportView(TemplateView):
             total_debe = sum(item['total_debe'] for item in jornalizacion)
             total_haber = sum(item['total_haber'] for item in jornalizacion)
 
-        # ==========================================
-        # 2. DETALLE PRESUPUESTACIÓN (Desde la Nómina)
-        # ==========================================
-        presupuesto_list = []
+            # ==========================================
+            # 2. DETALLE PRESUPUESTACIÓN (Desde la Nómina)
+            # ==========================================
+            presupuesto_list = []
 
-        # Agrupamos los INGRESOS por Partida Presupuestaria
-        ingresos = PayslipItem.objects.filter(
-            payslip__period=period,
-            budget_line__isnull=False,
-            item_type='INCOME'
-        ).values(
-            'budget_line__code', 'income_ref__name'
-        ).annotate(total=Sum('value'))
+            # 1. Buscamos qué códigos están explícitamente configurados en la tabla de Mapeo
+            mapped_incomes = list(
+                RubroBudgetMapping.objects.filter(rubro_type='INCOME', is_active=True).values_list('rubro_code',
+                                                                                                   flat=True))
+            mapped_deductions = list(
+                RubroBudgetMapping.objects.filter(rubro_type='DEDUCTION', is_active=True).values_list('rubro_code',
+                                                                                                      flat=True))
 
-        # Agrupamos los EGRESOS (Ej: Aporte Patronal) por Partida Presupuestaria
-        egresos = PayslipItem.objects.filter(
-            payslip__period=period,
-            budget_line__isnull=False,
-            item_type='DEDUCTION'
-        ).values(
-            'budget_line__code', 'deduction_ref__name'
-        ).annotate(total=Sum('value'))
+            # 2. Agrupamos los INGRESOS (Solo los que están mapeados)
+            ingresos = PayslipItem.objects.filter(
+                payslip__period=period,
+                budget_line_code__isnull=False,
+                item_type='INCOME',
+                income_ref__code__in=mapped_incomes  # <-- El filtro mágico
+            ).values(
+                'budget_line_code', 'income_ref__name'
+            ).annotate(total=Sum('value'))
 
-        # Unificamos ambas listas
-        for item in ingresos:
-            presupuesto_list.append({
-                'partida': item['budget_line__code'],
-                'concepto': item['income_ref__name'],
-                'monto': item['total']
-            })
+            # 3. Agrupamos los EGRESOS (Solo los que están mapeados, esto elimina al IESS Personal)
+            egresos = PayslipItem.objects.filter(
+                payslip__period=period,
+                budget_line_code__isnull=False,
+                item_type='DEDUCTION',
+                deduction_ref__code__in=mapped_deductions  # <-- El filtro mágico
+            ).values(
+                'budget_line_code', 'deduction_ref__name'
+            ).annotate(total=Sum('value'))
 
-        for item in egresos:
-            # Filtramos para que solo salgan los gastos de la institución (no los descuentos al empleado como Préstamos)
-            # Asumimos que los aportes patronales u obligaciones tienen partida asignada
-            presupuesto_list.append({
-                'partida': item['budget_line__code'],
-                'concepto': item['deduction_ref__name'],
-                'monto': item['total']
-            })
+            # Unificamos ambas listas
+            for item in ingresos:
+                presupuesto_list.append({
+                    'partida': item['budget_line_code'],
+                    'concepto': item['income_ref__name'],
+                    'monto': item['total']
+                })
 
-        # Ordenamos por código de partida
-        presupuesto_list = sorted(presupuesto_list, key=lambda x: x['partida'])
+            for item in egresos:
+                presupuesto_list.append({
+                    'partida': item['budget_line_code'],
+                    'concepto': item['deduction_ref__name'],
+                    'monto': item['total']
+                })
+
+            # Ordenamos por código de partida
+            presupuesto_list = sorted(presupuesto_list, key=lambda x: x['partida'])
 
         context.update({
             'period': period,
@@ -395,3 +429,30 @@ class InstitutionalReportView(TemplateView):
             'presupuestacion': presupuesto_list,
         })
         return context
+
+
+class MappingListView(ListView):
+    model = RubroBudgetMapping
+    template_name = 'payroll/mapping_list.html'
+    context_object_name = 'mappings'
+    ordering = ['rubro_type', 'rubro_code']
+
+
+class MappingCreateView(CreateView):
+    model = RubroBudgetMapping
+    form_class = RubroBudgetMappingForm
+    template_name = 'payroll/mapping_form.html'
+    success_url = reverse_lazy('payroll:mapping_list')
+
+
+class MappingUpdateView(UpdateView):
+    model = RubroBudgetMapping
+    form_class = RubroBudgetMappingForm
+    template_name = 'payroll/mapping_form.html'
+    success_url = reverse_lazy('payroll:mapping_list')
+
+
+class MappingDeleteView(DeleteView):
+    model = RubroBudgetMapping
+    template_name = 'payroll/mapping_confirm_delete.html'
+    success_url = reverse_lazy('payroll:mapping_list')

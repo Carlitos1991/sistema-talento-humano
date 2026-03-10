@@ -46,19 +46,7 @@
             <div id="table-content-wrapper">
                 {% include 'institution/levels/partials/partial_level_table.html' %}
             </div>
-            <!-- Paginación Simple JS -->
-            <div class="pagination-container">
-                <span class="pagination-info" id="page-info">Cargando...</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    </li>
-                    <li><span id="current-page-display" style="padding:0 10px; font-weight:bold;">1</span></li>
-                    <li>
-                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                    </li>
-                </ul>
-            </div>
+            <!-- Paginación: se usa el control del partial (el paginador principal) -->
         </div>
     </div>
 {% endblock %}
