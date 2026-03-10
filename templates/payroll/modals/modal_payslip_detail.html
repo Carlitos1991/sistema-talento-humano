@@ -1,80 +1,234 @@
-<!-- Usando estructura Bootstrap estándar para facilitar visualización -->
-<div class="modal fade show" id="detailModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Detalle de Rol: {{ payslip.employee.person.lastname }} {{ payslip.employee.person.name }}</h5>
-                <button type="button" class="btn-close btn-close-white" onclick="closeDetailModal()"></button>
+<style>
+    /* Estilos encapsulados para el modal del rol */
+    .payslip-summary-banner {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 12px;
+        padding: 1.25rem 2rem;
+        margin-bottom: 1.5rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .payslip-banner-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .payslip-banner-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .payslip-banner-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .payslip-banner-divider {
+        width: 1px;
+        height: 35px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .payslip-net-box {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        text-align: right;
+    }
+
+    .payslip-net-box .payslip-banner-value {
+        color: #34d399; /* Verde esmeralda brillante */
+        font-size: 1.4rem;
+        font-weight: 800;
+    }
+
+    /* Listas (Igual que antes) */
+    .payslip-list-wrapper {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .payslip-list-header {
+        padding: 14px 16px;
+        font-weight: 800;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: 0.02em;
+    }
+
+    .payslip-list-header.incomes {
+        background: #ecfdf5;
+        color: #059669;
+        border-bottom: 2px solid #a7f3d0;
+    }
+
+    .payslip-list-header.deductions {
+        background: #fef2f2;
+        color: #dc2626;
+        border-bottom: 2px solid #fecaca;
+    }
+
+    .payslip-items-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        flex: 1;
+    }
+
+    .payslip-items-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.9rem;
+    }
+
+    .payslip-items-list li:last-child {
+        border-bottom: none;
+    }
+
+    .payslip-items-list li .desc {
+        color: #475569;
+        font-weight: 500;
+    }
+
+    .payslip-items-list li .val {
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .payslip-list-footer {
+        display: flex;
+        justify-content: space-between;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        font-weight: 800;
+        font-size: 1.05rem;
+    }
+
+    .payslip-list-footer.incomes-total {
+        color: #059669;
+    }
+
+    .payslip-list-footer.deductions-total {
+        color: #dc2626;
+    }
+</style>
+
+<div id="payslipBackdrop" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-container-medium custom-payslip-modal" role="document"
+         style="max-width: 850px; padding:0 !important;">
+
+        <div class="modal-header-refined">
+            <h5 class="header-title-main mb-0 d-flex align-items-center" style="gap: 10px;">
+                <i class="fas fa-file-invoice-dollar"></i>
+                Detalle de Rol: {{ payslip.employee.person.last_name }} {{ payslip.employee.person.first_name }}
+            </h5>
+            <button type="button" class="btn-close-modal-refined" aria-label="Cerrar" data-action="close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-custom" style="padding: 2rem;">
+
+            <div class="payslip-summary-banner">
+                <div class="payslip-banner-item">
+                    <span class="payslip-banner-label">Cédula</span>
+                    <span class="payslip-banner-value">{{ payslip.employee.person.identification|default:payslip.employee.person.document_number }}</span>
+                </div>
+                <div class="payslip-banner-divider"></div>
+                <div class="payslip-banner-item">
+                    <span class="payslip-banner-label">Periodo</span>
+                    <span class="payslip-banner-value">{{ payslip.period.month }} {{ payslip.period.year }}</span>
+                </div>
+                <div class="payslip-banner-divider"></div>
+                <div class="payslip-banner-item">
+                    <span class="payslip-banner-label">Días Laborados</span>
+                    <span class="payslip-banner-value">{{ payslip.worked_days }}</span>
+                </div>
+
+                <div class="payslip-net-box">
+                    <span class="payslip-banner-label" style="color: white; margin-bottom:2px; display:block;">Líquido a Pagar</span>
+                    <span class="payslip-banner-value">$ {{ payslip.net_pay }}</span>
+                </div>
             </div>
-            <div class="modal-body">
-                <!-- Cabecera Informativa -->
-                <div class="row mb-4 p-3 bg-light rounded mx-1">
-                    <div class="col-md-3">
-                        <small class="text-muted d-block">Cédula</small>
-                        <strong>{{ payslip.employee.person.identification }}</strong>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted d-block">Periodo</small>
-                        <strong>{{ payslip.period.month }} {{ payslip.period.year }}</strong>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted d-block">Días Trabajados</small>
-                        <strong>{{ payslip.worked_days }}</strong>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted d-block">Total A Pagar</small>
-                        <strong class="text-success fs-5">$ {{ payslip.net_pay }}</strong>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="payslip-list-wrapper">
+                        <div class="payslip-list-header incomes">
+                            <i class="fas fa-arrow-down"></i> INGRESOS
+                        </div>
+                        <ul class="payslip-items-list">
+                            {% for item in incomes %}
+                                <li>
+                                    <span class="desc">{{ item.income_ref.name }}</span>
+                                    <span class="val">$ {{ item.value }}</span>
+                                </li>
+                            {% empty %}
+                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay ingresos
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="payslip-list-footer incomes-total">
+                            <span>Total Ingresos</span>
+                            <span>$ {{ payslip.total_income }}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <!-- Columna INGRESOS -->
-                    <div class="col-md-6 border-end">
-                        <h6 class="text-success border-bottom pb-2"><i class="fas fa-plus-circle"></i> INGRESOS</h6>
-                        <table class="table table-sm table-borderless">
-                            <tbody>
-                                {% for item in incomes %}
-                                <tr>
-                                    <td>{{ item.income_ref.name }}</td>
-                                    <td class="text-end">$ {{ item.value }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="border-top">
-                                <tr>
-                                    <th>Total Ingresos</th>
-                                    <th class="text-end text-success">$ {{ payslip.total_income }}</th>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- Columna EGRESOS -->
-                    <div class="col-md-6">
-                        <h6 class="text-danger border-bottom pb-2"><i class="fas fa-minus-circle"></i> EGRESOS</h6>
-                        <table class="table table-sm table-borderless">
-                            <tbody>
-                                {% for item in deductions %}
-                                <tr>
-                                    <td>{{ item.deduction_ref.name }}</td>
-                                    <td class="text-end">$ {{ item.value }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="border-top">
-                                <tr>
-                                    <th>Total Egresos</th>
-                                    <th class="text-end text-danger">$ {{ payslip.total_deduction }}</th>
-                                </tr>
-                            </tfoot>
-                        </table>
+                <div class="col-md-6">
+                    <div class="payslip-list-wrapper">
+                        <div class="payslip-list-header deductions">
+                            <i class="fas fa-arrow-up"></i> EGRESOS (Personales)
+                        </div>
+                        <ul class="payslip-items-list">
+                            {% for item in deductions %}
+                                <li>
+                                    <span class="desc">{{ item.deduction_ref.name }}</span>
+                                    <span class="val">$ {{ item.value }}</span>
+                                </li>
+                            {% empty %}
+                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay
+                                    descuentos
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="payslip-list-footer deductions-total">
+                            <span>Total Descuentos</span>
+                            <span>$ {{ payslip.total_deduction }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
-                <button type="button" class="btn btn-primary"><i class="fas fa-print"></i> Imprimir Rol</button>
-            </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 1.25rem 2rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn-cancel" data-action="close">
+                <i class="fas fa-times me-1"></i> Cerrar
+            </button>
+            <button type="button" class="btn-save" data-action="print">
+                <i class="fas fa-print me-1"></i> Imprimir Comprobante
+            </button>
         </div>
     </div>
 </div>

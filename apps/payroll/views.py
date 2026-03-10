@@ -3,10 +3,11 @@ from django.views.generic import ListView, TemplateView, View, DeleteView, Updat
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
-
+import openpyxl
+import json
 from accounting.models import Journal, JournalItem
 from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm
-from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem
+from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty
 from .services import PayrollCalculatorService
 from employee.models import Employee
 from .models import Income, Deduction
@@ -284,9 +285,16 @@ class PayslipDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Separamos ingresos y egresos para mostrarlos ordenados como en el antiguo modal
+        # Separamos ingresos y egresos para mostrarlos ordenados
         context['incomes'] = self.object.items.filter(item_type='INCOME')
-        context['deductions'] = self.object.items.filter(item_type='DEDUCTION')
+
+        # Filtro Mágico: Trae los descuentos, PERO excluye los que digan "PATRONAL"
+        context['deductions'] = self.object.items.filter(
+            item_type='DEDUCTION'
+        ).exclude(
+            deduction_ref__code__icontains='PATRONAL'
+        )
+
         return context
 
 
@@ -324,14 +332,14 @@ class DeductionListView(ListView):
 
 class DeductionUpdateView(UpdateView):
     model = Deduction
-    fields = ['name', 'code', 'description', 'is_active', 'type', 'debit_account', 'credit_account']
+    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
     template_name = 'payroll/deduction_form.html'
     success_url = reverse_lazy('payroll:deduction_list')
 
 
 class DeductionCreateView(CreateView):
     model = Deduction
-    fields = ['name', 'code', 'description', 'is_active', 'type', 'debit_account', 'credit_account']
+    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
     template_name = 'payroll/deduction_form.html'
 
     def form_valid(self, form):
@@ -456,3 +464,150 @@ class MappingDeleteView(DeleteView):
     model = RubroBudgetMapping
     template_name = 'payroll/mapping_confirm_delete.html'
     success_url = reverse_lazy('payroll:mapping_list')
+
+
+class NoveltyMassLoadView(TemplateView):
+    """Vista principal para la pantalla de carga de novedades"""
+    template_name = 'payroll/novelty_mass_load.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['periods'] = PayrollPeriod.objects.filter(is_closed=False)
+        context['incomes'] = Income.objects.filter(is_active=True)
+        context['deductions'] = Deduction.objects.filter(is_active=True)
+
+        # Capturamos el periodo de la URL (si existe) y lo pasamos al HTML
+        context['selected_period_id'] = self.request.GET.get('period_id', '')
+
+        return context
+
+
+class ParseNoveltyExcelView(View):
+    """Lee el Excel temporalmente y lo devuelve como JSON para la tabla editable"""
+
+    def post(self, request):
+        excel_file = request.FILES.get('file')
+        if not excel_file:
+            return JsonResponse({'status': 'error', 'message': 'No se subió ningún archivo'})
+
+        try:
+            # data_only=True asegura que si hay fórmulas, lea el resultado
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
+            sheet = wb.active
+
+            data = []
+            not_found = []
+
+            # Empezamos desde la FILA 1 (así no importa si el usuario olvidó poner encabezados)
+            for row in sheet.iter_rows(min_row=1, values_only=True):
+                if not row[0]: continue  # Si la celda está vacía, saltar
+
+                raw_cedula = str(row[0]).strip()
+
+                # 1. Si la celda tiene letras (ej: dice "CEDULA" o "Identificación"), es un encabezado, lo saltamos
+                if not raw_cedula.replace('.', '').isdigit():
+                    continue
+
+                # 2. Limpiar si Excel lo transformó a float (ej: "1104898679.0" -> "1104898679")
+                if raw_cedula.endswith('.0'):
+                    raw_cedula = raw_cedula[:-2]
+
+                # 3. Las cédulas ecuatorianas son de 10 dígitos. Si Excel borró el 0 inicial, lo reponemos
+                cedula = raw_cedula.zfill(10)
+
+                # Si la segunda columna está vacía, asumimos 0.00
+                valor_bruto = row[1] if len(row) > 1 and row[1] is not None else 0.00
+
+                try:
+                    valor = float(valor_bruto)
+                except (ValueError, TypeError):
+                    valor = 0.00
+
+                # Buscamos al empleado por la cédula (usamos document_number que es como lo tienes en DB)
+                emp = Employee.objects.filter(person__document_number=cedula, is_active=True).first()
+                if emp:
+                    data.append({
+                        'emp_id': emp.id,
+                        'cedula': cedula,
+                        'nombres': f"{emp.person.last_name} {emp.person.first_name}",
+                        'valor': round(valor, 2)
+                    })
+                else:
+                    not_found.append(cedula)
+
+            return JsonResponse({'status': 'success', 'data': data, 'not_found': not_found})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+class GetNoveltiesView(View):
+    """Obtiene las novedades ya guardadas en base de datos para mostrarlas en la tabla"""
+    def get(self, request):
+        period_id = request.GET.get('period_id')
+        rubro_type = request.GET.get('rubro_type')
+        rubro_id = request.GET.get('rubro_id')
+
+        if not all([period_id, rubro_type, rubro_id]):
+            return JsonResponse({'status': 'error', 'message': 'Faltan parámetros'})
+
+        try:
+            if rubro_type == 'INCOME':
+                novelties = PayrollNovelty.objects.filter(period_id=period_id, income_ref_id=rubro_id, value__gt=0).select_related('employee__person')
+            else:
+                novelties = PayrollNovelty.objects.filter(period_id=period_id, deduction_ref_id=rubro_id, value__gt=0).select_related('employee__person')
+
+            data = []
+            for nov in novelties:
+                data.append({
+                    'emp_id': nov.employee.id,
+                    'cedula': nov.employee.person.document_number,
+                    'nombres': f"{nov.employee.person.last_name} {nov.employee.person.first_name}",
+                    'valor': float(nov.value)
+                })
+
+            # Ordenar alfabéticamente
+            data = sorted(data, key=lambda x: x['nombres'])
+            return JsonResponse({'status': 'success', 'data': data})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+class SaveNoveltiesView(View):
+    """Recibe la tabla editada y guarda (o elimina) en la base de datos"""
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+            period_id = payload.get('period_id')
+            rubro_type = payload.get('rubro_type')
+            rubro_id = payload.get('rubro_id')
+            items = payload.get('items', [])
+
+            period = PayrollPeriod.objects.get(pk=period_id)
+
+            for item in items:
+                val = float(item.get('valor', 0))
+                emp_id = item.get('emp_id')
+
+                # Buscamos si ya existía una novedad previa para actualizarla
+                if rubro_type == 'INCOME':
+                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id, income_ref_id=rubro_id).first()
+                else:
+                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id, deduction_ref_id=rubro_id).first()
+
+                if val <= 0:
+                    # MAGIA: Si en la tabla le pusieron 0.00, borramos la novedad de la base de datos
+                    if novelty:
+                        novelty.delete()
+                else:
+                    if novelty:
+                        novelty.value = val
+                        novelty.save()
+                    else:
+                        # Si no existía, la creamos
+                        if rubro_type == 'INCOME':
+                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, income_ref_id=rubro_id, value=val)
+                        else:
+                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, deduction_ref_id=rubro_id, value=val)
+
+            return JsonResponse({'status': 'success', 'message': 'Novedades guardadas exitosamente'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})

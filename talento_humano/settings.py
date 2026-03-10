@@ -123,7 +123,8 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 # Configuración de Archivos Estáticos
-STATIC_URL = 'static/'
+# Usar ruta absoluta para evitar URLs relativas que causen 404 en subpaths
+STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),

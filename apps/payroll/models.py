@@ -37,12 +37,10 @@ class Income(models.Model):
 
 class Deduction(models.Model):
     """Rubros de Egresos (IESS, Préstamos, etc.)"""
-    TYPE_CHOICES = (('Mensual', 'Monthly'), ('Quincenal', 'Bi-weekly'))
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Nombre"))
     code = models.CharField(max_length=30, unique=True)
     description = models.TextField(verbose_name=_("Descripción"))
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
-    type = models.CharField(max_length=100, choices=TYPE_CHOICES)
 
     # --- AJUSTE CONTABLE ---
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
@@ -172,3 +170,36 @@ class RubroBudgetMapping(models.Model):
     class Meta:
         unique_together = ('rubro_type', 'rubro_code')
         verbose_name = 'Mapa Rubro-Partida'
+
+
+class PayrollNovelty(models.Model):
+    """
+    Almacena las variaciones mensuales (novedades) de cada empleado,
+    como préstamos, multas, horas extras, anticipos, etc.
+    """
+    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name='novelties',
+                               verbose_name='Periodo')
+    employee = models.ForeignKey('employee.Employee', on_delete=models.CASCADE, related_name='novelties',
+                                 verbose_name='Empleado')
+
+    # Puede ser un Ingreso (Ej: Horas extras) o un Egreso (Ej: Multa/Anticipo)
+    income_ref = models.ForeignKey(Income, on_delete=models.CASCADE, null=True, blank=True,
+                                   verbose_name='Rubro de Ingreso')
+    deduction_ref = models.ForeignKey(Deduction, on_delete=models.CASCADE, null=True, blank=True,
+                                      verbose_name='Rubro de Egreso')
+
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name='Valor ($)')
+
+    class Meta:
+        verbose_name = 'Novedad de Nómina'
+        verbose_name_plural = 'Novedades de Nómina'
+        # Evita que se cargue dos veces el mismo rubro al mismo empleado en el mismo mes
+        unique_together = [
+            ('period', 'employee', 'income_ref'),
+            ('period', 'employee', 'deduction_ref'),
+        ]
+
+    def __str__(self):
+        rubro = self.income_ref.name if self.income_ref else (
+            self.deduction_ref.name if self.deduction_ref else 'Sin rubro')
+        return f"{self.employee} - {rubro}: ${self.value}"

@@ -14,7 +14,7 @@ class IncomeAdmin(admin.ModelAdmin):
 
 @admin.register(Deduction)
 class DeductionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'type', 'is_active')
+    list_display = ('name', 'code', 'is_active')
     search_fields = ('name', 'code')
 
 @admin.register(PayrollPeriod)

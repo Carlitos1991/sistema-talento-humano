@@ -4,8 +4,10 @@ from .views import (
     GeneratePayrollUIView, GeneratePayrollSelectedView,
     ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
     PayrollListView, PayslipListView, PayslipDetailView,
-    IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView, InstitutionalReportView, MappingListView,
-    MappingCreateView, MappingUpdateView, MappingDeleteView
+    IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
+    InstitutionalReportView, MappingListView,
+    MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
+    SaveNoveltiesView, GetNoveltiesView
 )
 
 app_name = 'payroll'
@@ -40,4 +42,9 @@ urlpatterns = [
     path('mappings/create/', MappingCreateView.as_view(), name='mapping_create'),
     path('mappings/<int:pk>/edit/', MappingUpdateView.as_view(), name='mapping_edit'),
     path('mappings/<int:pk>/delete/', MappingDeleteView.as_view(), name='mapping_delete'),
+    # --- NOVEDADES DE NÓMINA ---
+    path('novelties/mass-load/', NoveltyMassLoadView.as_view(), name='novelty_mass_load'),
+    path('novelties/parse-excel/', ParseNoveltyExcelView.as_view(), name='parse_novelty_excel'),
+    path('novelties/save/', SaveNoveltiesView.as_view(), name='save_novelties'),
+    path('novelties/get-existing/', GetNoveltiesView.as_view(), name='get_novelties'),
 ]

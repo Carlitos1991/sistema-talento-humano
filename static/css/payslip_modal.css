@@ -1,0 +1,77 @@
+/* Estilos para el modal de detalle de rol (payslip) */
+.payslip-backdrop {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.payslip-backdrop.show {
+    opacity: 1;
+    display: flex;
+}
+
+.payslip-modal {
+    width: 100%;
+    max-width: 1100px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.payslip-modal .modal-body {
+    max-height: 65vh;
+    overflow: auto;
+    padding: 1rem 1.25rem;
+}
+
+.payslip-modal .modal-header,
+.payslip-modal .modal-footer {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eef2f5;
+}
+
+.payslip-modal .modal-header {
+    background: #fff;
+}
+
+.payslip-modal .modal-footer {
+    border-top: 1px solid #eef2f5;
+}
+
+/* Evitar que tablas se desborden fuera del modal */
+.payslip-modal table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.payslip-modal td, .payslip-modal th {
+    word-wrap: break-word;
+}
+
+/* Botón de cierre pequeño */
+.payslip-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .payslip-modal {
+        max-width: 95%;
+    }
+
+    .payslip-modal .modal-body {
+        max-height: 70vh;
+        padding: 0.75rem;
+    }
+}

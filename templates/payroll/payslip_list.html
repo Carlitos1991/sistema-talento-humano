@@ -3,10 +3,6 @@
 
 {% block title %}Detalle de Roles | SIGETH{% endblock %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/apps/payroll.css' %}">
-{% endblock %}
-
 {% block content %}
     <div id="payslipApp" class="container-fluid">
 
@@ -140,60 +136,7 @@
 
     <!-- Contenedor Modal -->
     <div id="modal-container"></div>
-
-{% endblock %}
-
-{% block extra_js %}
-    <script>
-        // Reutilizamos la lógica de modal que ya creamos en payroll_constants.js
-        // Si no está importado ese JS aquí, puedes copiar la función 'openPayrollModal'
-        // y renombrarla o usarla directamente.
-
-        function openPayslipDetail(url) {
-            const modalContainer = document.getElementById('modal-container');
-
-            // SweetAlert Loading
-            Swal.fire({
-                title: 'Cargando detalle...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            fetch(url, {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
-                .then(response => response.text())
-                .then(html => {
-                    Swal.close();
-                    modalContainer.innerHTML = html;
-                    // IMPORTANTE: Como es un modal custom (sin Bootstrap JS), necesitamos
-                    // asegurarnos de que el HTML incluya la lógica de visualización (v-if) 
-                    // o simplemente usar Bootstrap Modal si decides volver a él.
-
-                    // Para mantener la coherencia con tu modal NATIVO anterior,
-                    // el HTML que devuelve la vista DetailView debe ser compatible.
-                    // O, para simplificar visualización de detalles, podemos usar Bootstrap Modal estándar
-                    // solo para visualización si está disponible, o inyectarlo.
-
-                    // Opción Rápida con Bootstrap (si está cargado en base):
-                    const modalEl = document.getElementById('detailModal');
-                    if (window.bootstrap) {
-                        const bsModal = new bootstrap.Modal(modalEl);
-                        bsModal.show();
-                    } else {
-                        // Fallback si no hay bootstrap JS: mostrarlo manualmente
-                        modalEl.style.display = 'block';
-                        modalEl.classList.add('show');
-                        modalEl.style.backgroundColor = 'rgba(0,0,0,0.5)';
-                    }
-                });
-        }
-
-        // Cerrar modal manual
-        function closeDetailModal() {
-            const modalEl = document.getElementById('detailModal');
-            modalEl.style.display = 'none';
-            modalEl.classList.remove('show');
-        }
-    </script>
+    {% block extra_js %}
+        <script src="{% static 'js/payslip_modal.js' %}"></script>
+    {% endblock %}
 {% endblock %}

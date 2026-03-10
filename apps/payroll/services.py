@@ -79,6 +79,18 @@ class PayrollCalculatorService:
                 if mp.employee_id not in mp_map:
                     mp_map[mp.employee_id] = mp
 
+            from .models import PayrollNovelty  # Asegúrate de que esté importado arriba
+            novelties_qs = PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(
+                'income_ref', 'deduction_ref')
+            novelties_map = {}
+            for nov in novelties_qs:
+                if nov.employee_id not in novelties_map:
+                    novelties_map[nov.employee_id] = {'incomes': [], 'deductions': []}
+                if nov.income_ref:
+                    novelties_map[nov.employee_id]['incomes'].append(nov)
+                if nov.deduction_ref:
+                    novelties_map[nov.employee_id]['deductions'].append(nov)
+
             # 3. Calcular valores
             for slip in created_payslips:
                 salary = salary_map.get(slip.employee_id, Decimal(0))
@@ -86,7 +98,6 @@ class PayrollCalculatorService:
                 total_desc = Decimal(0)
                 taxable_base = Decimal(0)
 
-                # --- 3. Leer las preferencias del modelo PayrollInfo ---
                 mensualiza_decimos = False
                 mensualiza_fr = False
 
@@ -102,7 +113,6 @@ class PayrollCalculatorService:
                 except Exception:
                     pass
 
-                # --- 4. Calcular Antigüedad basada en el ManagementPeriod ---
                 mp = mp_map.get(slip.employee_id)
                 anios_servicio = 0
 
@@ -110,19 +120,22 @@ class PayrollCalculatorService:
                     dias_servicio = (self.period.end_date - mp.start_date).days
                     anios_servicio = dias_servicio / 365.25
 
-                # --- 5. Lógica de Ingresos ---
+                # ====================================================
+                # 1. BUCLE DE INGRESOS (Inicia aquí)
+                # ====================================================
                 for inc in active_incomes:
                     val = Decimal(0)
+                    code_clean = inc.code.strip().upper() if inc.code else ''
 
-                    if inc.code == 'REMUNERACION':
+                    if code_clean == 'REMUNERACION':
                         val = (salary / 30) * slip.worked_days
 
-                    elif inc.code == 'DECIMO_TERCERO':
+                    elif code_clean == 'DECIMO_TERCERO':
                         if mensualiza_decimos and self.period.working_days:
                             val = (salary / Decimal(12)) * (
                                     Decimal(slip.worked_days) / Decimal(self.period.working_days))
 
-                    elif inc.code == 'DECIMO_CUARTO':
+                    elif code_clean == 'DECIMO_CUARTO':
                         if mensualiza_decimos and self.period.working_days:
                             try:
                                 sbu = Decimal(self.config.get('SBU', 460.00))
@@ -130,7 +143,7 @@ class PayrollCalculatorService:
                                 sbu = Decimal(0)
                             val = (sbu / Decimal(12)) * (Decimal(slip.worked_days) / Decimal(self.period.working_days))
 
-                    elif inc.code == 'FONDOS_RESERVA':
+                    elif code_clean == 'FONDOS_RESERVA':
                         if anios_servicio > 1 and mensualiza_fr:
                             try:
                                 pct_fr = Decimal(self.config.get('FONDOS_RESERVA', '8.33'))
@@ -143,55 +156,80 @@ class PayrollCalculatorService:
                     if val > 0:
                         items_buffer.append(PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val))
                         total_ing += val
-                        if inc.code == 'REMUNERACION':
+                        if code_clean == 'REMUNERACION':
                             taxable_base += val
+                # ====================================================
+                # FIN DEL BUCLE DE INGRESOS
+                # ====================================================
 
-                            # --- Lógica de Descuentos ---
-                            regime_code = mp.contract_type.labor_regime.code if (
-                                    mp and mp.contract_type and mp.contract_type.labor_regime) else None
+                # ====================================================
+                # 2. LÓGICA DE DESCUENTOS (Totalmente FUERA del for)
+                # ====================================================
+                regime_code = mp.contract_type.labor_regime.code if (
+                        mp and mp.contract_type and mp.contract_type.labor_regime) else None
 
-                            # 1. Determinar códigos exactos según el régimen
-                            if regime_code == 'LOSEP':
-                                target_iess_code = 'IESS_PER_EMP'
-                                target_patronal_code = 'APORTE_PATRONAL_EMP'
-                            elif regime_code == 'CT':
-                                target_iess_code = 'IESS_PER_TRA'
-                                target_patronal_code = 'APORTE_PATRONAL_TRA'
-                            else:
-                                target_iess_code = 'IESS_PER'
-                                target_patronal_code = 'APORTE_PATRONAL'
+                # Determinar códigos exactos según el régimen
+                if regime_code == 'LOSEP':
+                    target_iess_code = 'IESS_PER_EMP'
+                    target_patronal_code = 'APORTE_PATRONAL_EMP'
+                elif regime_code == 'CT':
+                    target_iess_code = 'IESS_PER_TRA'
+                    target_patronal_code = 'APORTE_PATRONAL_TRA'
+                else:
+                    target_iess_code = 'IESS_PER'
+                    target_patronal_code = 'APORTE_PATRONAL'
 
-                            # 2. Aporte Personal IESS
-                            iess_ded = ded_map.get(target_iess_code) or ded_map.get('IESS_PER')
-                            if iess_ded:
-                                iess_pct = self.config.get(target_iess_code,
-                                                           self.config.get('IESS_PER', Decimal('9.45')))
-                                val = taxable_base * (Decimal(iess_pct) / Decimal(100))
-                                if val > 0:
-                                    items_buffer.append(
-                                        PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION',
-                                                    value=val))
-                                    total_desc += val
+                # Aporte Personal IESS
+                iess_ded = ded_map.get(target_iess_code) or ded_map.get('IESS_PER')
+                if iess_ded:
+                    iess_pct = self.config.get(target_iess_code, self.config.get('IESS_PER', Decimal('9.45')))
+                    val = taxable_base * (Decimal(iess_pct) / Decimal(100))
+                    if val > 0:
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION', value=val))
+                        total_desc += val
 
-                            # 3. Aporte Patronal
-                            patronal_ded = ded_map.get(target_patronal_code) or ded_map.get('APORTE_PATRONAL')
-                            if patronal_ded:
-                                try:
-                                    patronal_pct = Decimal(self.config.get(target_patronal_code,
-                                                                           self.config.get('APORTE_PATRONAL', '11.15')))
-                                except Exception:
-                                    patronal_pct = Decimal('11.15')
+                # Aporte Patronal
+                patronal_ded = ded_map.get(target_patronal_code) or ded_map.get('APORTE_PATRONAL')
+                if patronal_ded:
+                    try:
+                        patronal_pct = Decimal(
+                            self.config.get(target_patronal_code, self.config.get('APORTE_PATRONAL', '11.15')))
+                    except Exception:
+                        patronal_pct = Decimal('11.15')
 
-                                val_patronal = taxable_base * (patronal_pct / Decimal(100))
-                                if val_patronal > 0:
-                                    items_buffer.append(
-                                        PayslipItem(payslip=slip, deduction_ref=patronal_ded, item_type='DEDUCTION',
-                                                    value=val_patronal))
+                    val_patronal = taxable_base * (patronal_pct / Decimal(100))
+                    if val_patronal > 0:
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=patronal_ded, item_type='DEDUCTION',
+                                        value=val_patronal))
 
-                            slip.total_income = total_ing
-                            slip.total_deduction = total_desc
-                            slip.net_pay = total_ing - total_desc
-                            payslips_to_update.append(slip)
+                        # ====================================================
+                        # 3. PROCESAR NOVEDADES (Anticipos, Horas Extras, etc)
+                        # ====================================================
+                        emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
+
+                        # A. Sumar Novedades de Ingresos
+                        for nov in emp_novelties['incomes']:
+                            if nov.value > 0:
+                                items_buffer.append(
+                                    PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
+                                                value=nov.value))
+                                total_ing += nov.value
+
+                        # B. Sumar Novedades de Egresos
+                        for nov in emp_novelties['deductions']:
+                            if nov.value > 0:
+                                items_buffer.append(
+                                    PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref, item_type='DEDUCTION',
+                                                value=nov.value))
+                                total_desc += nov.value
+
+                # Asignación final al rol
+                slip.total_income = total_ing
+                slip.total_deduction = total_desc
+                slip.net_pay = total_ing - total_desc
+                payslips_to_update.append(slip)
 
             # 7. Guardado Masivo
             PayslipItem.objects.bulk_create(items_buffer)
@@ -285,15 +323,31 @@ class PayrollCalculatorService:
                         aggregation.setdefault(key_credit, Decimal(0))
                         aggregation[key_credit] += Decimal(it.value)
 
+
                 elif it.item_type == 'DEDUCTION' and it.deduction_ref:
                     if it.deduction_ref.debit_account:
                         key_debit = (it.deduction_ref.debit_account.id, None, 'debit')
                         aggregation.setdefault(key_debit, Decimal(0))
                         aggregation[key_debit] += Decimal(it.value)
+
                     if it.deduction_ref.credit_account:
                         key_credit = (it.deduction_ref.credit_account.id, None, 'credit')
                         aggregation.setdefault(key_credit, Decimal(0))
                         aggregation[key_credit] += Decimal(it.value)
+
+                    if 'PATRONAL' in it.deduction_ref.code.upper():
+                        try:
+                            cta_gastos_personal = Account.objects.get(code='2.1.3.51')
+                            # 1. Sumar al DEBE de la cuenta puente
+                            key_debit_puente = (cta_gastos_personal.id, None, 'debit')
+                            aggregation.setdefault(key_debit_puente, Decimal(0))
+                            aggregation[key_debit_puente] += Decimal(it.value)
+                            # 2. Sumar al HABER de la cuenta puente
+                            key_credit_puente = (cta_gastos_personal.id, None, 'credit')
+                            aggregation.setdefault(key_credit_puente, Decimal(0))
+                            aggregation[key_credit_puente] += Decimal(it.value)
+                        except Account.DoesNotExist:
+                            pass
 
             if aggregation:
                 journal = Journal.objects.create(date=self.period.end_date, description=f"Asiento Nómina {self.period}")
@@ -403,6 +457,21 @@ class PayrollCalculatorService:
                 if mp.employee_id not in mp_map:
                     mp_map[mp.employee_id] = mp
 
+                    # --- NUEVO: Pre-cargar Novedades (Cargas masivas/manuales del mes) ---
+                    from .models import PayrollNovelty  # Asegúrate de que esté importado arriba
+                    novelties_qs = PayrollNovelty.objects.filter(period=self.period,
+                                                                 employee_id__in=emp_ids).select_related('income_ref',
+                                                                                                         'deduction_ref')
+                    novelties_map = {}
+                    for nov in novelties_qs:
+                        if nov.employee_id not in novelties_map:
+                            novelties_map[nov.employee_id] = {'incomes': [], 'deductions': []}
+                        if nov.income_ref:
+                            novelties_map[nov.employee_id]['incomes'].append(nov)
+                        if nov.deduction_ref:
+                            novelties_map[nov.employee_id]['deductions'].append(nov)
+                    # ----------------------------------------------------------------------
+
             for slip in created_payslips:
                 salary = salary_map.get(slip.employee_id, Decimal(0))
                 total_ing = Decimal(0)
@@ -431,10 +500,11 @@ class PayrollCalculatorService:
                     dias_servicio = (self.period.end_date - mp.start_date).days
                     anios_servicio = dias_servicio / 365.25
 
-                # --- Lógica de Ingresos ---
+                # ====================================================
+                # 1. BUCLE DE INGRESOS (Inicia aquí)
+                # ====================================================
                 for inc in active_incomes:
                     val = Decimal(0)
-                    # BLINDAJE: Limpiar espacios del código del rubro
                     code_clean = inc.code.strip().upper() if inc.code else ''
 
                     if code_clean == 'REMUNERACION':
@@ -468,53 +538,78 @@ class PayrollCalculatorService:
                         total_ing += val
                         if code_clean == 'REMUNERACION':
                             taxable_base += val
+                # ====================================================
+                # FIN DEL BUCLE DE INGRESOS
+                # ====================================================
 
-                            # --- Lógica de Descuentos ---
-                            regime_code = mp.contract_type.labor_regime.code if (
-                                    mp and mp.contract_type and mp.contract_type.labor_regime) else None
+                # ====================================================
+                # 2. LÓGICA DE DESCUENTOS (Totalmente FUERA del for)
+                # ====================================================
+                regime_code = mp.contract_type.labor_regime.code if (
+                        mp and mp.contract_type and mp.contract_type.labor_regime) else None
 
-                            # 1. Determinar códigos exactos según el régimen (Personales y Patronales)
-                            if regime_code == 'LOSEP':
-                                target_iess_code = 'IESS_PER_EMP'
-                                target_patronal_code = 'APORTE_PATRONAL_EMP'
-                            elif regime_code == 'CT':
-                                target_iess_code = 'IESS_PER_TRA'
-                                target_patronal_code = 'APORTE_PATRONAL_TRA'
-                            else:
-                                target_iess_code = 'IESS_PER'
-                                target_patronal_code = 'APORTE_PATRONAL'
+                # Determinar códigos exactos según el régimen
+                if regime_code == 'LOSEP':
+                    target_iess_code = 'IESS_PER_EMP'
+                    target_patronal_code = 'APORTE_PATRONAL_EMP'
+                elif regime_code == 'CT':
+                    target_iess_code = 'IESS_PER_TRA'
+                    target_patronal_code = 'APORTE_PATRONAL_TRA'
+                else:
+                    target_iess_code = 'IESS_PER'
+                    target_patronal_code = 'APORTE_PATRONAL'
 
-                            # 2. Aporte Personal IESS
-                            iess_ded = ded_map.get(target_iess_code) or ded_map.get('IESS_PER')
-                            if iess_ded:
-                                iess_pct = self.config.get(target_iess_code,
-                                                           self.config.get('IESS_PER', Decimal('9.45')))
-                                val = taxable_base * (Decimal(iess_pct) / Decimal(100))
-                                if val > 0:
-                                    items_buffer.append(
-                                        PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION',
-                                                    value=val))
-                                    total_desc += val
+                # Aporte Personal IESS
+                iess_ded = ded_map.get(target_iess_code) or ded_map.get('IESS_PER')
+                if iess_ded:
+                    iess_pct = self.config.get(target_iess_code, self.config.get('IESS_PER', Decimal('9.45')))
+                    val = taxable_base * (Decimal(iess_pct) / Decimal(100))
+                    if val > 0:
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION', value=val))
+                        total_desc += val
 
-                            # 3. Aporte Patronal (Ahora sí usa el código dinámico _EMP o _TRA)
-                            patronal_ded = ded_map.get(target_patronal_code) or ded_map.get('APORTE_PATRONAL')
-                            if patronal_ded:
-                                try:
-                                    patronal_pct = Decimal(self.config.get(target_patronal_code,
-                                                                           self.config.get('APORTE_PATRONAL', '11.15')))
-                                except Exception:
-                                    patronal_pct = Decimal('11.15')
+                # Aporte Patronal
+                patronal_ded = ded_map.get(target_patronal_code) or ded_map.get('APORTE_PATRONAL')
+                if patronal_ded:
+                    try:
+                        patronal_pct = Decimal(
+                            self.config.get(target_patronal_code, self.config.get('APORTE_PATRONAL', '11.15')))
+                    except Exception:
+                        patronal_pct = Decimal('11.15')
 
-                                val_patronal = taxable_base * (patronal_pct / Decimal(100))
-                                if val_patronal > 0:
-                                    items_buffer.append(
-                                        PayslipItem(payslip=slip, deduction_ref=patronal_ded, item_type='DEDUCTION',
-                                                    value=val_patronal))
+                    val_patronal = taxable_base * (patronal_pct / Decimal(100))
+                    if val_patronal > 0:
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=patronal_ded, item_type='DEDUCTION',
+                                        value=val_patronal))
 
-                            slip.total_income = total_ing
-                            slip.total_deduction = total_desc
-                            slip.net_pay = total_ing - total_desc
-                            payslips_to_update.append(slip)
+                        # ====================================================
+                        # 3. PROCESAR NOVEDADES (Anticipos, Horas Extras, etc)
+                        # ====================================================
+                        emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
+
+                        # A. Sumar Novedades de Ingresos
+                        for nov in emp_novelties['incomes']:
+                            if nov.value > 0:
+                                items_buffer.append(
+                                    PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
+                                                value=nov.value))
+                                total_ing += nov.value
+
+                        # B. Sumar Novedades de Egresos
+                        for nov in emp_novelties['deductions']:
+                            if nov.value > 0:
+                                items_buffer.append(
+                                    PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref, item_type='DEDUCTION',
+                                                value=nov.value))
+                                total_desc += nov.value
+
+                # Asignación final al rol
+                slip.total_income = total_ing
+                slip.total_deduction = total_desc
+                slip.net_pay = total_ing - total_desc
+                payslips_to_update.append(slip)
 
             # 7. Guardado Masivo
             PayslipItem.objects.bulk_create(items_buffer)
@@ -599,15 +694,32 @@ class PayrollCalculatorService:
                         aggregation.setdefault(key_credit, Decimal(0))
                         aggregation[key_credit] += Decimal(it.value)
 
+
                 elif it.item_type == 'DEDUCTION' and it.deduction_ref:
                     if it.deduction_ref.debit_account:
                         key_debit = (it.deduction_ref.debit_account.id, None, 'debit')
                         aggregation.setdefault(key_debit, Decimal(0))
                         aggregation[key_debit] += Decimal(it.value)
+
                     if it.deduction_ref.credit_account:
                         key_credit = (it.deduction_ref.credit_account.id, None, 'credit')
                         aggregation.setdefault(key_credit, Decimal(0))
                         aggregation[key_credit] += Decimal(it.value)
+
+                    if 'PATRONAL' in it.deduction_ref.code.upper():
+                        try:
+                            cta_gastos_personal = Account.objects.get(code='2.1.3.51')
+                            # 1. Sumar al DEBE de la cuenta puente
+                            key_debit_puente = (cta_gastos_personal.id, None, 'debit')
+                            aggregation.setdefault(key_debit_puente, Decimal(0))
+                            aggregation[key_debit_puente] += Decimal(it.value)
+
+                            # 2. Sumar al HABER de la cuenta puente
+                            key_credit_puente = (cta_gastos_personal.id, None, 'credit')
+                            aggregation.setdefault(key_credit_puente, Decimal(0))
+                            aggregation[key_credit_puente] += Decimal(it.value)
+                        except Account.DoesNotExist:
+                            pass
 
             if aggregation:
                 journal = Journal.objects.create(date=self.period.end_date, description=f"Asiento Nómina {self.period}")

@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Carga de Novedades | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="header-card mb-4">
+            <div>
+                <h1>Gestión de Novedades</h1>
+                <p>Selecciona un rubro para ver los datos cargados. Sube un Excel para agregar o modificar valores.</p>
+            </div>
+            <a href="{% url 'payroll:period_list' %}" class="btn btn-back">
+                <i class="fas fa-arrow-left"></i> Volver a Periodos
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card form-section-card h-100">
+                    <h5 class="section-title mt-2"><i class="fas fa-cog"></i> Configuración de Novedad</h5>
+
+                    <div class="form-group">
+                        <label class="form-label">Periodo de Nómina</label>
+                        <select id="period_id" class="input-field {% if selected_period_id %}bg-readonly{% endif %}"
+                                onchange="checkAndLoad()" {% if selected_period_id %}disabled{% endif %}>
+                            <option value="">Seleccione el periodo...</option>
+                            {% for p in periods %}
+                                <option value="{{ p.id }}"
+                                        {% if selected_period_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.month }} {{ p.year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Novedad</label>
+                        <select id="rubro_type" class="input-field" onchange="toggleRubroSelects()">
+                            <option value="">Seleccione...</option>
+                            <option value="INCOME">Ingreso (Horas extras, etc)</option>
+                            <option value="DEDUCTION">Descuento (Préstamos, Multas)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="group_income">
+                        <label class="form-label">Seleccione el Ingreso</label>
+                        <select id="income_id" class="input-field" onchange="checkAndLoad()">
+                            <option value="">Seleccione...</option>
+                            {% for inc in incomes %}
+                                <option value="{{ inc.id }}">{{ inc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="group_deduction">
+                        <label class="form-label">Seleccione el Descuento</label>
+                        <select id="deduction_id" class="input-field" onchange="checkAndLoad()">
+                            <option value="">Seleccione...</option>
+                            {% for ded in deductions %}
+                                <option value="{{ ded.id }}">{{ ded.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label class="form-label">Subir o Actualizar con Excel (.xlsx)</label>
+                        <input type="file" id="excel_file" class="form-control" accept=".xlsx, .xls">
+                    </div>
+
+                    <button type="button" class="btn-create w-100 mt-3" onclick="uploadExcel()">
+                        <i class="fas fa-file-excel"></i> Fusionar Excel con Tabla
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th style="width: 20%">Cédula</th>
+                            <th style="width: 50%">Empleado</th>
+                            <th style="width: 30%" class="text-end">Monto a Aplicar ($)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="novelty_tbody">
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-muted">
+                                <i class="fas fa-table fa-3x mb-3 opacity-50"></i><br>
+                                Selecciona el Periodo y el Rubro para ver los datos.<br>
+                                <small>Pon "0" en una celda para eliminar ese descuento.</small>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="border-top" style="background: #f8fafc;">
+                        <tr>
+                            <th colspan="2" class="text-end py-3 fs-6">TOTAL EN TABLA:</th>
+                            <th class="text-end py-3 fs-5 text-primary-bold" id="total_sum">$ 0.00</th>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="button" class="btn-save hidden" id="btn_save_novelties" onclick="saveNovelties()">
+                        <i class="fas fa-save"></i> Guardar Todo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parsedData = [];
+
+        // Llamamos a la función por si el periodo ya venía pre-seleccionado desde la otra pantalla
+        window.onload = function () {
+            if (document.getElementById('period_id').value) {
+                checkAndLoad();
+            }
+        };
+
+        function toggleRubroSelects() {
+            const type = document.getElementById('rubro_type').value;
+            document.getElementById('group_income').classList.add('hidden');
+            document.getElementById('group_deduction').classList.add('hidden');
+
+            // Reset valores
+            document.getElementById('income_id').value = '';
+            document.getElementById('deduction_id').value = '';
+
+            if (type === 'INCOME') document.getElementById('group_income').classList.remove('hidden');
+            if (type === 'DEDUCTION') document.getElementById('group_deduction').classList.remove('hidden');
+
+            checkAndLoad();
+        }
+
+        function checkAndLoad() {
+            const period_id = document.getElementById('period_id').value;
+            const rubro_type = document.getElementById('rubro_type').value;
+            let rubro_id = null;
+            if (rubro_type === 'INCOME') rubro_id = document.getElementById('income_id').value;
+            if (rubro_type === 'DEDUCTION') rubro_id = document.getElementById('deduction_id').value;
+
+            if (period_id && rubro_type && rubro_id) {
+                // Mostrar spinner
+                document.getElementById('novelty_tbody').innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Cargando datos guardados...</td></tr>';
+
+                fetch(`{% url "payroll:get_novelties" %}?period_id=${period_id}&rubro_type=${rubro_type}&rubro_id=${rubro_id}`)
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.status === 'success') {
+                            parsedData = res.data;
+                            renderTable();
+                        }
+                    });
+            } else {
+                parsedData = [];
+                renderTable(true);
+            }
+        }
+
+        function uploadExcel() {
+            const period_id = document.getElementById('period_id').value;
+            const rubro_type = document.getElementById('rubro_type').value;
+            const fileInput = document.getElementById('excel_file');
+
+            if (!period_id || !rubro_type || (!document.getElementById('income_id').value && !document.getElementById('deduction_id').value)) {
+                Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro en la configuración.', 'warning');
+                return;
+            }
+
+            if (fileInput.files.length === 0) {
+                Swal.fire('Error', 'Selecciona un archivo Excel', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch('{% url "payroll:parse_novelty_excel" %}', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        // MAGIA DE FUSIÓN: Mezclamos el Excel con lo que ya está en la tabla
+                        res.data.forEach(newRow => {
+                            const existingIndex = parsedData.findIndex(r => r.emp_id === newRow.emp_id);
+                            if (existingIndex >= 0) {
+                                parsedData[existingIndex].valor = newRow.valor; // Actualiza
+                            } else {
+                                parsedData.push(newRow); // Agrega nuevo
+                            }
+                        });
+
+                        renderTable();
+
+                        if (res.not_found.length > 0) {
+                            Swal.fire('Advertencia', `No se encontraron ${res.not_found.length} cédulas del Excel en la base de datos.`, 'info');
+                        } else {
+                            Swal.fire({
+                                toast: true, position: 'top-end', icon: 'success',
+                                title: 'Excel fusionado con éxito', showConfirmButton: false, timer: 2000
+                            });
+                        }
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                    // Limpiar input de archivo
+                    fileInput.value = '';
+                });
+        }
+
+        function renderTable(isEmpty = false) {
+            const tbody = document.getElementById('novelty_tbody');
+            tbody.innerHTML = '';
+
+            if (isEmpty || parsedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">No hay datos para este rubro. Puedes subir un Excel para agregar.</td></tr>';
+                document.getElementById('btn_save_novelties').classList.add('hidden');
+                updateTotal();
+                return;
+            }
+
+            parsedData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                // Resaltar en rojo si se puso a cero (para eliminar)
+                if (row.valor === 0) tr.style.backgroundColor = '#fef2f2';
+
+                tr.innerHTML = `
+                <td><span class="badge-code">${row.cedula}</span></td>
+                <td class="fw-bold text-secondary">${row.nombres}</td>
+                <td class="text-end">
+                    <input type="number" step="0.01" class="input-field text-end fw-bold" 
+                           style="width: 120px; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #046f9f;'}"
+                           value="${row.valor}" 
+                           onchange="updateValue(${index}, this.value)"
+                           onkeyup="updateValue(${index}, this.value)">
+                </td>
+            `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('btn_save_novelties').classList.remove('hidden');
+            updateTotal();
+        }
+
+        function updateValue(index, newValue) {
+            let val = parseFloat(newValue);
+            parsedData[index].valor = isNaN(val) || val < 0 ? 0 : val;
+            renderTable(); // Re-render para mostrar el color rojo si se puso en 0
+        }
+
+        function updateTotal() {
+            const total = parsedData.reduce((sum, row) => sum + row.valor, 0);
+            document.getElementById('total_sum').innerText = `$ ${total.toFixed(2)}`;
+        }
+
+        function saveNovelties() {
+            const period_id = document.getElementById('period_id').value;
+            const rubro_type = document.getElementById('rubro_type').value;
+            let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+
+            const payload = {
+                period_id: period_id,
+                rubro_type: rubro_type,
+                rubro_id: rubro_id,
+                items: parsedData
+            };
+
+            fetch('{% url "payroll:save_novelties" %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        Swal.fire('¡Guardado!', 'Los datos se aplicarán la próxima vez que generes el Rol de este periodo.', 'success')
+                            .then(() => checkAndLoad()); // Recargamos de la base de datos para limpiar los ceros
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                });
+        }
+    </script>
+{% endblock %}
