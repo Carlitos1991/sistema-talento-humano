@@ -167,3 +167,87 @@
 .card-budget-integration {
     border-left: 4px solid #3b82f6 !important;
 }
+
+/* =====================================================================
+   SWITCH PERSONALIZADO TIPO BOTÓN (Exacto a las referencias)
+   ===================================================================== */
+
+/* Ocultamos el checkbox real */
+.modern-toggle-input {
+    display: none !important;
+}
+
+/* El label actúa como el botón contenedor (Inactivo por defecto) */
+.modern-toggle-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 18px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    user-select: none;
+}
+
+/* El círculo indicador (Inactivo: Borde gris, fondo vacío) */
+.modern-toggle-wrapper .modern-toggle-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+/* Texto del botón (Inactivo: Color oscuro) */
+.modern-toggle-wrapper .modern-toggle-text {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+/* ==========================================================
+   ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
+   ========================================================== */
+.modern-toggle-input:checked + .modern-toggle-wrapper {
+    background-color: #f87171; /* Rojo claro moderno */
+    border-color: #f87171;
+    box-shadow: 0 4px 10px rgba(248, 113, 113, 0.3);
+}
+
+/* Círculo (Activo: Se rellena de blanco brillante) */
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
+    border-color: #ffffff;
+    background-color: #ffffff;
+}
+
+/* Texto (Activo: Pasa a color blanco) */
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
+    color: #ffffff;
+}
+/* =====================================================================
+   CONTROLES DE TABLA (GRID LAYOUT)
+   ===================================================================== */
+.table-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    gap: 1rem;
+}
+
+.table-controls-center {
+    display: flex;
+    justify-content: center;
+}
+
+.table-controls-right {
+    margin-left: auto;
+    justify-self: flex-end;
+    width: 100%;
+    max-width: 350px;
+}

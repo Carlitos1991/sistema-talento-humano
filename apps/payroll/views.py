@@ -644,6 +644,24 @@ class ContributionListView(ListView):
     template_name = 'payroll/contribution_list.html'
     context_object_name = 'contributions'
 
+    def get_queryset(self):
+        qs = InstitutionalContribution.objects.all().order_by('code')
+        # Filtramos si no nos piden explícitamente ver los inactivos
+        if self.request.GET.get('show_inactive') != 'true':
+            qs = qs.filter(is_active=True)
+        return qs
+
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+
+        # MAGIA AJAX: Si la petición viene por JS, devolvemos solo el fragmento de la tabla
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return render(request, 'payroll/partials/partial_contribution_table.html', context)
+
+        # Si es una carga normal del navegador, devolvemos la página completa
+        return super().get(request, *args, **kwargs)
+
 
 class ContributionCreateView(CreateView):
     model = InstitutionalContribution
