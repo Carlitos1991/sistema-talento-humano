@@ -310,7 +310,6 @@ def get_level_stats():
         return cached
     levels = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')[:5]
     stats = []
-    cache.set('level_stats', stats, timeout=300)  # 5 minutos
     total_count = AdministrativeUnit.objects.filter(is_active=True).count()
     stats.append({
         'id': 'total',
@@ -335,7 +334,9 @@ def get_level_stats():
             'icon': icons[i] if i < len(icons) else 'fa-sitemap'
         })
 
-    return {'level_stats': stats}
+    result = {'level_stats': stats}
+    cache.set('level_stats', result, timeout=300)  # 5 minutos
+    return result
 
 
 # ============================================================

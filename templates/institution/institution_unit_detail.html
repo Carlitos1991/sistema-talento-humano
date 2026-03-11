@@ -27,6 +27,16 @@
                             <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
                             <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
                         </div>
+                        {% if perms.institution.change_administrativeunit %}
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                <button type="button" 
+                                        class="btn btn-sm btn-primary"
+                                        onclick="openEditUnit({{ unit.id }})"
+                                        title="Editar Unidad">
+                                    <i class="fas fa-pencil"></i> Editar
+                                </button>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="header-right">

@@ -181,12 +181,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errors = ref({});
                 const currentId = ref(null);
                 const modalTitle = ref('Nueva Unidad');
+                const isActive = ref(true);  // Nueva variable para manejar el estado
                 const formEl = 'unitForm';
 
                 const openCreate = async (parentId = null) => {
                     isEditing.value = false;
                     currentId.value = null;
                     errors.value = {};
+                    isActive.value = true;  // Por defecto las nuevas unidades están activas
                     const f = document.getElementById(formEl);
                     if (f) f.reset();
                     isVisible.value = true;
@@ -251,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 document.getElementById('id_phone').value = d.phone || '';
                                 document.getElementById('id_mission').value = d.mission || '';
                                 document.getElementById('id_level').value = d.level;
+                                isActive.value = d.is_active;  // Usar la variable Vue
                                 await loadParents(d.level, d.parent);
                             }, 50);
                         }
@@ -330,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.openEditUnit = openEdit;
                 window.openCreateDependency = (pid) => openCreate(pid);
 
-                return {isVisible, isEditing, errors, modalTitle, closeModal, submitForm};
+                return {isVisible, isEditing, errors, modalTitle, isActive, closeModal, submitForm};
             }
         });
         unitModalEl.__vue_app__ = app.mount('#unit-modal-app');

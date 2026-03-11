@@ -45,7 +45,16 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['boss'].required = False
         self.fields['parent'].required = False
-        self.fields['level'].required = True
+        self.fields['level'].required = False  # Cambiar a False para permitir actualización parcial
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Si se proporciona un 'level', validar que sea válido
+        level = cleaned_data.get('level')
+        if level is None and self.instance.pk:
+            # En edición, si no se proporciona level, usar el existente
+            cleaned_data['level'] = self.instance.level
+        return cleaned_data
 
 
 class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):

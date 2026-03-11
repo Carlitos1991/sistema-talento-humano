@@ -78,6 +78,17 @@ class TableManager {
         this.render();
     }
 
+    /**
+     * Filtra las filas por una columna específica y valor.
+     * @param {string} columnName - Nombre de la columna a filtrar (se busca en data-{columnName})
+     * @param {string} value - Valor a filtrar: 'all' para mostrar todas, o un valor específico
+     */
+    filterByColumnData(columnName, value) {
+        this.filterState.column = columnName;
+        this.filterState.value = value;
+        this.applyGlobalFilters();
+    }
+
     // ─── SORT ─────────────────────────────────────────────────────────────────
 
     initSortHeaders() {
