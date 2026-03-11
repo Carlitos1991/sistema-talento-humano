@@ -2109,7 +2109,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         showConfirmButton: false
                     }).then(() => {
                         closeManualModal();
-                        location.reload();
+                        // Recargar tabla en lugar de recargar página completa
+                        if (typeof window.fetchFunctionManualProfiles === 'function') {
+                            window.fetchFunctionManualProfiles();
+                        } else {
+                            location.reload();
+                        }
                     });
                 } else {
                     // Mostrar mensaje de error del servidor

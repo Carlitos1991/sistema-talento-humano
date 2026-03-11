@@ -115,7 +115,8 @@
                             </button>
                         {% endif %}
 
-                        {% if profile.is_legalized or perms.function_manual.change_jobprofile %}
+                        <!-- Exportar a PDF: aparece cuando la denominación está completada (independiente de legalización) -->
+                        {% if profile.denomination_completed %}
                             <button class="btn-icon btn-pdf"
                                     onclick="openReportPdfModal({{ profile.id }})"
                                     title="Exportar a PDF">
