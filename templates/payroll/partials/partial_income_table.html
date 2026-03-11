@@ -1,0 +1,21 @@
+{% for r in incomes %}
+    <tr>
+        <td><strong>{{ r.name }}</strong></td>
+        <td><span class="badge-code">{{ r.code }}</span></td>
+        <td class="text-center">
+            {% if r.is_active %}
+                <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+            {% else %}
+                <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
+            {% endif %}
+        </td>
+        <td class="actions">
+            <div class="actions-wrapper">
+                <button type="button" class="btn-icon btn-views-action" title="Editar"
+                        onclick="openIncomeModal('{% url 'payroll:income_edit' r.pk %}')">
+                    <i class="fas fa-pen"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+{% endfor %}

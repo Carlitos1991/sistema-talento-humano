@@ -304,15 +304,31 @@ class IncomeListView(ListView):
     template_name = 'payroll/income_list.html'
     context_object_name = 'incomes'
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        show_inactive = self.request.GET.get('show_inactive')
+        if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
+            return qs.all()
+        return qs.filter(is_active=True)
+
+    def get(self, request, *args, **kwargs):
+        # Si es petición AJAX devolvemos solo las filas (partial)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            incomes = self.get_queryset()
+            html = render_to_string('payroll/partials/partial_income_table.html', {'incomes': incomes})
+            from django.http import HttpResponse
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
+
 
 class IncomeCreateView(CreateView):
     model = Income
     form_class = IncomeForm
-    template_name = 'payroll/income_form.html'
+    template_name = 'payroll/modals/modal_income_form.html'
 
     def form_valid(self, form):
         self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Rubro creado y mapeado correctamente.'})
+        return JsonResponse({'status': 'success', 'message': 'Ingreso creado correctamente.'})
 
     def form_invalid(self, form):
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
@@ -321,8 +337,15 @@ class IncomeCreateView(CreateView):
 class IncomeUpdateView(UpdateView):
     model = Income
     form_class = IncomeForm
-    template_name = 'payroll/income_form.html'
+    template_name = 'payroll/modals/modal_income_form.html'
     success_url = reverse_lazy('payroll:income_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Ingreso actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 class DeductionListView(ListView):
@@ -330,19 +353,47 @@ class DeductionListView(ListView):
     template_name = 'payroll/deduction_list.html'
     context_object_name = 'deductions'
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        show_inactive = self.request.GET.get('show_inactive')
+        if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
+            return qs.all()
+        return qs.filter(is_active=True)
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            deductions = self.get_queryset()
+            html = render_to_string('payroll/partials/partial_deduction_table.html', {'deductions': deductions})
+            from django.http import HttpResponse
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
+
 
 class DeductionCreateView(CreateView):
     model = Deduction
     form_class = DeductionForm
-    template_name = 'payroll/deduction_form.html'
-    # ... form_valid y form_invalid ...
+    template_name = 'payroll/modals/modal_deduction_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Descuento creado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 class DeductionUpdateView(UpdateView):
     model = Deduction
     form_class = DeductionForm
-    template_name = 'payroll/deduction_form.html'
+    template_name = 'payroll/modals/modal_deduction_form.html'
     success_url = reverse_lazy('payroll:deduction_list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Descuento actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 class InstitutionalReportView(TemplateView):

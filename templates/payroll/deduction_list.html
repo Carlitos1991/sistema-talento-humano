@@ -1,32 +1,82 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="container">
-  <div style="display:flex; align-items:center; justify-content:space-between;">
-    <h2>Rubros de Descuento</h2>
-    {% if perms.payroll.add_deduction %}
-      <a href="{% url 'payroll:deduction_create' %}" class="btn btn-create"> <i class="fas fa-plus"></i> Nuevo Egreso</a>
-    {% endif %}
-  </div>
-  <table class="table mt-3">
-    <thead><tr><th>Nombre</th><th>Código</th><th>Tipo</th><th>Cuenta</th><th></th></tr></thead>
-    <tbody>
-      {% for r in deductions %}
-      <tr>
-        <td>{{ r.name }}</td>
-        <td>{{ r.code }}</td>
-        <td>
-          {% if r.account %}
-            {{ r.account.code }} - {{ r.account.name }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-        <td><a class="btn btn-sm btn-primary" href="{% url 'payroll:deduction_edit' r.pk %}">Editar</a></td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5">No hay rubros.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% load static %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
 {% endblock %}
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1>Descuentos</h1>
+            <p>Gestión de conceptos de descuentos para nómina</p>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="btn btn-create"
+                    onclick="openDeductionModal('{% url 'payroll:deduction_create' %}')">
+                <i class="fas fa-plus"></i> Nuevo Descuento
+            </button>
+        </div>
+    </div>
+
+    <div class="content-table mt-4">
+
+        <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
+
+            <div style="display: flex; justify-content: center;">
+                <input class="modern-toggle-input" type="checkbox" id="toggleInactiveDeduction"
+                       onchange="toggleInactiveDeductions(this.checked)">
+
+                <label class="modern-toggle-wrapper mb-0" for="toggleInactiveDeduction">
+                    <div class="modern-toggle-circle"></div>
+                    <span class="modern-toggle-text">Mostrar Descuentos Inactivos</span>
+                </label>
+            </div>
+
+            <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="table-search-input" placeholder="Buscar descuento por nombre o código...">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table managed-table exportable-table" data-page-size="10" data-title="Reporte de Descuentos">
+                <thead>
+                <tr>
+                    <th>Nombre del Descuento</th>
+                    <th>Código</th>
+                    <th class="text-center">Estado</th>
+                    <th class="actions no-sort">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in deductions %}
+                    <tr>
+                        <td><strong>{{ r.name }}</strong></td>
+                        <td><span class="badge-code">{{ r.code }}</span></td>
+                        <td class="text-center">
+                            {% if r.is_active %}
+                                <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+                            {% else %}
+                                <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <div class="actions-wrapper">
+                                <button type="button" class="btn-icon btn-views-action" title="Editar"
+                                        onclick="openDeductionModal('{% url 'payroll:deduction_edit' r.pk %}')">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-root"></div>
+{% endblock content %}
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+{% endblock %}
+

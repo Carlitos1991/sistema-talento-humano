@@ -103,3 +103,123 @@ function toggleInactiveContributions(showInactive) {
         })
         .catch(error => console.error('Error cargando la tabla:', error));
 }
+
+// ---------- INCOME: modal + submit + toggle ----------
+function openIncomeModal(url) {
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('modal-root').innerHTML = html;
+            document.body.classList.add('modal-open');
+
+            // Inicializar select2 si hay selects
+            $('#incomeForm select').select2({width: '100%', dropdownParent: $('#incomeModalOverlay')});
+            $('#incomeForm input[type="text"]').addClass('input-field');
+            
+                    // Lógica de acordeón para mapeo presupuestario
+                    const $incMappingCheckbox = $('#incomeForm input[name="has_mapping"]');
+                    const $incBudgetBox = $('#budgetMappingFields');
+                    $incMappingCheckbox.on('change', function () {
+                        if ($(this).is(':checked')) {
+                            $incBudgetBox.slideDown(300);
+                        } else {
+                            $incBudgetBox.slideUp(300);
+                        }
+                    });
+        })
+        .catch(error => console.error('Error cargando el modal de ingreso:', error));
+}
+
+function submitIncomeForm(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    fetch(form.action, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                closeContributionModal();
+                Swal.fire({icon: 'success', title: '¡Excelente!', text: data.message, timer: 1500, showConfirmButton: false})
+                    .then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Por favor, revisa los datos ingresados.', 'error');
+            }
+        })
+        .catch(error => {console.error(error); Swal.fire('Error', 'Ocurrió un problema con el servidor.', 'error');});
+}
+
+function toggleInactiveIncomes(showInactive) {
+    fetch(`?show_inactive=${showInactive}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            const tbody = document.querySelector('.managed-table tbody');
+            tbody.innerHTML = html;
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+            }
+        })
+        .catch(error => console.error('Error cargando la tabla de ingresos:', error));
+}
+
+// ---------- DEDUCTION: modal + submit + toggle ----------
+function openDeductionModal(url) {
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('modal-root').innerHTML = html;
+            document.body.classList.add('modal-open');
+                    $('#deductionForm select').select2({width: '100%', dropdownParent: $('#deductionModalOverlay')});
+                    $('#deductionForm input[type="text"]').addClass('input-field');
+
+                    // Lógica de acordeón para mapeo presupuestario
+                    const $dedMappingCheckbox = $('#deductionForm input[name="has_mapping"]');
+                    const $dedBudgetBox = $('#budgetMappingFields');
+                    $dedMappingCheckbox.on('change', function () {
+                        if ($(this).is(':checked')) {
+                            $dedBudgetBox.slideDown(300);
+                        } else {
+                            $dedBudgetBox.slideUp(300);
+                        }
+                    });
+        })
+        .catch(error => console.error('Error cargando el modal de descuento:', error));
+}
+
+function submitDeductionForm(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    fetch(form.action, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                closeContributionModal();
+                Swal.fire({icon: 'success', title: '¡Excelente!', text: data.message, timer: 1500, showConfirmButton: false})
+                    .then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Por favor, revisa los datos ingresados.', 'error');
+            }
+        })
+        .catch(error => {console.error(error); Swal.fire('Error', 'Ocurrió un problema con el servidor.', 'error');});
+}
+
+function toggleInactiveDeductions(showInactive) {
+    fetch(`?show_inactive=${showInactive}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            const tbody = document.querySelector('.managed-table tbody');
+            tbody.innerHTML = html;
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+            }
+        })
+        .catch(error => console.error('Error cargando la tabla de descuentos:', error));
+}

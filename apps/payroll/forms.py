@@ -88,12 +88,24 @@ class IncomeForm(BaseRubroForm):
     class Meta:
         model = Income
         fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+        widgets = {
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'debit_account': forms.Select(attrs={'class': 'form-select'}),
+            'credit_account': forms.Select(attrs={'class': 'form-select'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
+        }
 
 
 class DeductionForm(BaseRubroForm):
     class Meta:
         model = Deduction
         fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+        widgets = {
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'debit_account': forms.Select(attrs={'class': 'form-select'}),
+            'credit_account': forms.Select(attrs={'class': 'form-select'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
+        }
 
 
 class InstitutionalContributionForm(BaseRubroForm):
