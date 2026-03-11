@@ -28,13 +28,22 @@
                             <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
                         </div>
                         {% if perms.institution.change_administrativeunit %}
-                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
-                                <button type="button" 
+                            <div style=" border-top: 1px solid rgba(0,0,0,0.1);">
+                                <button type="button"
                                         class="btn btn-sm btn-primary"
                                         onclick="openEditUnit({{ unit.id }})"
                                         title="Editar Unidad">
                                     <i class="fas fa-pencil"></i> Editar
                                 </button>
+                                {% if unit.level.level_order > 1 %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-primary"
+                                            onclick="openRelocateUnit({{ unit.id }})"
+                                            title="Cambiar Unidad Padre"
+                                            style="background-color: #17a2b8; border-color: #17a2b8;">
+                                        <i class="fas fa-arrows-alt-v"></i> Reubicar
+                                    </button>
+                                {% endif %}
                             </div>
                         {% endif %}
                     </div>
@@ -92,7 +101,8 @@
             <!-- Botones de Estadísticas de Personal -->
             <div class="stats-buttons-container">
                 {% if unit_stats.total > 0 %}
-                    <button class="stat-btn stat-btn-total" onclick="exportUnitEmployees('{{ unit.id }}', 'total')" title="Total de empleados (incluye subdependencias) - Clic para exportar a Excel">
+                    <button class="stat-btn stat-btn-total" onclick="exportUnitEmployees('{{ unit.id }}', 'total')"
+                            title="Total de empleados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-users"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Total</span>
@@ -100,9 +110,11 @@
                         </div>
                     </button>
                 {% endif %}
-                
+
                 {% if unit_stats.empleado > 0 %}
-                    <button class="stat-btn stat-btn-employee" onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')" title="Empleados (incluye subdependencias) - Clic para exportar a Excel">
+                    <button class="stat-btn stat-btn-employee"
+                            onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')"
+                            title="Empleados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-user-tie"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Empleados</span>
@@ -110,9 +122,11 @@
                         </div>
                     </button>
                 {% endif %}
-                
+
                 {% if unit_stats.trabajador > 0 %}
-                    <button class="stat-btn stat-btn-worker" onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')" title="Trabajadores (incluye subdependencias) - Clic para exportar a Excel">
+                    <button class="stat-btn stat-btn-worker"
+                            onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')"
+                            title="Trabajadores (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-hard-hat"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Trabajadores</span>
@@ -120,9 +134,11 @@
                         </div>
                     </button>
                 {% endif %}
-                
+
                 {% if unit_stats.contratado > 0 %}
-                    <button class="stat-btn stat-btn-contractor" onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')" title="Contratados (incluye subdependencias) - Clic para exportar a Excel">
+                    <button class="stat-btn stat-btn-contractor"
+                            onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')"
+                            title="Contratados (incluye subdependencias) - Clic para exportar a Excel">
                         <i class="fas fa-user-clock"></i>
                         <div class="stat-btn-content">
                             <span class="stat-btn-label">Contratados</span>
@@ -291,6 +307,9 @@
 
         </div>
     </div>
+
+    <!-- MODAL PARA REUBICAR UNIDAD -->
+    {% include 'institution/modals/modal_relocate_unit.html' %}
     {% include 'person/modals/modal_relocate_employee.html' %}
     {% include 'institution/modals/modal_unit_form.html' %}
 {% endblock %}

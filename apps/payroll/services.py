@@ -3,9 +3,9 @@ from django.db import transaction
 from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, RubroBudgetMapping, \
     InstitutionalContribution
 from accounting.models import Journal, JournalItem, Account
-from budget.models import BudgetLine
+from budget.models import BudgetLine, BudgetAssignmentHistory
 from contract.models import ManagementPeriod
-
+from django.db.models import Q
 
 class PayrollCalculatorService:
     def __init__(self, period, employees):
@@ -62,15 +62,19 @@ class PayrollCalculatorService:
             ded_map = {d.code: d for d in active_deductions}
 
             # 1. Pre-cargar Sueldos
-            emp_ids = [emp.id for emp in eligible_employees]
-            salary_map = {}
-            bl_qs = BudgetLine.objects.filter(current_employee_id__in=emp_ids).values('current_employee_id',
-                                                                                      'remuneration')
-            for b in bl_qs:
-                try:
-                    salary_map[b['current_employee_id']] = Decimal(b['remuneration'])
-                except (ValueError, TypeError, KeyError):
-                    salary_map[b['current_employee_id']] = Decimal(0)
+            emp_ids = [p.employee.id for p in created_payslips]  # Funciona para bulk y selected
+
+            # Buscamos TODAS las asignaciones que cruzaron por este mes
+            assignments_qs = BudgetAssignmentHistory.objects.filter(
+                employee_id__in=emp_ids,
+                start_date__lte=self.period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
+            ).select_related('budget_line', 'budget_line__activity__project__subprogram__program')
+
+            assignment_map = {}
+            for a in assignments_qs:
+                assignment_map.setdefault(a.employee_id, []).append(a)
 
             # 2. Pre-cargar el último ManagementPeriod (Contrato) para calcular antigüedad y régimen
             mp_qs = ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
@@ -94,7 +98,39 @@ class PayrollCalculatorService:
 
             # 3. Calcular valores
             for slip in created_payslips:
-                salary = salary_map.get(slip.employee_id, Decimal(0))
+                emp_assignments = assignment_map.get(slip.employee_id, [])
+
+                # Armar los tramos de tiempo para este mes
+                tramos = []
+                for asi in emp_assignments:
+                    s_date = max(asi.start_date, self.period.start_date)
+                    e_date = min(asi.end_date, self.period.end_date) if asi.end_date else self.period.end_date
+
+                    if s_date <= e_date:
+                        dias_reales = (e_date - s_date).days + 1
+
+                        # Ajuste Comercial Ecuador (Meses de 30 días)
+                        if dias_reales == 31: dias_reales = 30
+                        if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                            dias_reales += (30 - self.period.end_date.day)
+
+                        tramos.append({
+                            'assignment': asi,
+                            'dias': dias_reales,
+                            'sueldo_base': asi.budget_line.remuneration,
+                            'partida': asi.budget_line
+                        })
+
+                if not tramos:
+                    continue  # Sin asignación activa en el mes, saltamos
+
+                # Partida Principal (La última que ocupó en el mes para rubros generales como IESS)
+                tramos.sort(key=lambda x: x['assignment'].start_date)
+                partida_principal = tramos[-1]['partida']
+
+                # Sueldo Equivalente: La suma exacta de lo que ganó en cada tramo
+                salary = sum((t['sueldo_base'] / Decimal(30)) * Decimal(t['dias']) for t in tramos)
+
                 total_ing = Decimal(0)
                 total_desc = Decimal(0)
                 taxable_base = Decimal(0)
@@ -133,7 +169,24 @@ class PayrollCalculatorService:
                     code_clean = inc.code.strip().upper() if inc.code else ''
 
                     if code_clean == 'REMUNERACION':
-                        val = (salary / 30) * slip.worked_days
+                        # PRORRATEO MÚLTIPLE DE REMUNERACIÓN
+                        for tramo in tramos:
+                            # Calculamos el valor de este tramo específico
+                            val_tramo = (tramo['sueldo_base'] / Decimal(30)) * Decimal(tramo['dias'])
+
+                            # Si hubo faltas, reducimos proporcionalmente
+                            factor_asistencia = Decimal(slip.worked_days) / Decimal(30)
+                            val_tramo = val_tramo * factor_asistencia
+
+                            if val_tramo > 0:
+                                it = PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val_tramo)
+                                # ¡TRUCO NINJA! Guardamos la partida histórica en memoria para el presupuesto
+                                it._historical_bl = tramo['partida']
+                                items_buffer.append(it)
+
+                                total_ing += val_tramo
+                                taxable_base += val_tramo
+                        continue
 
                     elif code_clean == 'DECIMO_TERCERO':
                         if mensualiza_decimos and self.period.working_days:
@@ -289,7 +342,17 @@ class PayrollCalculatorService:
                     pass
 
                 # Buscamos la partida base del empleado
-                base_bl = BudgetLine.objects.filter(current_employee_id=it.payslip.employee_id).first()
+                if hasattr(it, '_historical_bl'):
+                    # 1. Si es un rubro fraccionado (Remuneración), usa su partida exacta de ese tramo
+                    base_bl = it._historical_bl
+                else:
+                    # 2. Si es un rubro general (IESS, Patronal), usa la partida principal del mes
+                    emp_assignments = assignment_map.get(it.payslip.employee_id, [])
+                    if emp_assignments:
+                        emp_assignments.sort(key=lambda x: x.start_date)
+                        base_bl = emp_assignments[-1].budget_line
+                    else:
+                        base_bl = None
 
                 # Si el rubro tiene mapeo y el empleado tiene partida base
                 if mapping and getattr(mapping, 'dynamic_suffix', None) and base_bl:
@@ -486,16 +549,19 @@ class PayrollCalculatorService:
             # BLINDAJE: Limpiamos los espacios en blanco y forzamos mayúsculas
             ded_map = {d.code.strip().upper(): d for d in active_deductions if d.code}
 
-            emp_ids = [p.employee.id for p in created_payslips]
+            emp_ids = [p.employee.id for p in created_payslips]  # Funciona para bulk y selected
 
-            salary_map = {}
-            bl_qs = BudgetLine.objects.filter(current_employee_id__in=emp_ids).values('current_employee_id',
-                                                                                      'remuneration')
-            for b in bl_qs:
-                try:
-                    salary_map[b['current_employee_id']] = Decimal(b['remuneration'])
-                except (ValueError, TypeError, KeyError):
-                    salary_map[b['current_employee_id']] = Decimal(0)
+            # Buscamos TODAS las asignaciones que cruzaron por este mes
+            assignments_qs = BudgetAssignmentHistory.objects.filter(
+                employee_id__in=emp_ids,
+                start_date__lte=self.period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
+            ).select_related('budget_line', 'budget_line__activity__project__subprogram__program')
+
+            assignment_map = {}
+            for a in assignments_qs:
+                assignment_map.setdefault(a.employee_id, []).append(a)
 
             mp_qs = ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
                 'contract_type__labor_regime').order_by('employee_id', '-start_date')
@@ -520,7 +586,39 @@ class PayrollCalculatorService:
                     # ----------------------------------------------------------------------
 
             for slip in created_payslips:
-                salary = salary_map.get(slip.employee_id, Decimal(0))
+                emp_assignments = assignment_map.get(slip.employee_id, [])
+
+                # Armar los tramos de tiempo para este mes
+                tramos = []
+                for asi in emp_assignments:
+                    s_date = max(asi.start_date, self.period.start_date)
+                    e_date = min(asi.end_date, self.period.end_date) if asi.end_date else self.period.end_date
+
+                    if s_date <= e_date:
+                        dias_reales = (e_date - s_date).days + 1
+
+                        # Ajuste Comercial Ecuador (Meses de 30 días)
+                        if dias_reales == 31: dias_reales = 30
+                        if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                            dias_reales += (30 - self.period.end_date.day)
+
+                        tramos.append({
+                            'assignment': asi,
+                            'dias': dias_reales,
+                            'sueldo_base': asi.budget_line.remuneration,
+                            'partida': asi.budget_line
+                        })
+
+                if not tramos:
+                    continue  # Sin asignación activa en el mes, saltamos
+
+                # Partida Principal (La última que ocupó en el mes para rubros generales como IESS)
+                tramos.sort(key=lambda x: x['assignment'].start_date)
+                partida_principal = tramos[-1]['partida']
+
+                # Sueldo Equivalente: La suma exacta de lo que ganó en cada tramo
+                salary = sum((t['sueldo_base'] / Decimal(30)) * Decimal(t['dias']) for t in tramos)
+
                 total_ing = Decimal(0)
                 total_desc = Decimal(0)
                 taxable_base = Decimal(0)
@@ -558,7 +656,23 @@ class PayrollCalculatorService:
                     code_clean = inc.code.strip().upper() if inc.code else ''
 
                     if code_clean == 'REMUNERACION':
-                        val = (salary / 30) * slip.worked_days
+                        # PRORRATEO MÚLTIPLE DE REMUNERACIÓN
+                        for tramo in tramos:
+                            # Calculamos el valor de este tramo específico
+                            val_tramo = (tramo['sueldo_base'] / Decimal(30)) * Decimal(tramo['dias'])
+
+                            # Si hubo faltas, reducimos proporcionalmente
+                            factor_asistencia = Decimal(slip.worked_days) / Decimal(30)
+                            val_tramo = val_tramo * factor_asistencia
+
+                            if val_tramo > 0:
+                                it = PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val_tramo)
+                                it._historical_bl = tramo['partida']
+                                items_buffer.append(it)
+
+                                total_ing += val_tramo
+                                taxable_base += val_tramo
+                        continue
 
                     elif code_clean == 'DECIMO_TERCERO':
                         if mensualiza_decimos and self.period.working_days:
@@ -714,7 +828,17 @@ class PayrollCalculatorService:
                     pass
 
                 # Buscamos la partida base del empleado
-                base_bl = BudgetLine.objects.filter(current_employee_id=it.payslip.employee_id).first()
+                if hasattr(it, '_historical_bl'):
+                    # 1. Si es un rubro fraccionado (Remuneración), usa su partida exacta de ese tramo
+                    base_bl = it._historical_bl
+                else:
+                    # 2. Si es un rubro general (IESS, Patronal), usa la partida principal del mes
+                    emp_assignments = assignment_map.get(it.payslip.employee_id, [])
+                    if emp_assignments:
+                        emp_assignments.sort(key=lambda x: x.start_date)
+                        base_bl = emp_assignments[-1].budget_line
+                    else:
+                        base_bl = None
 
                 # Si el rubro tiene mapeo y el empleado tiene partida base
                 if mapping and getattr(mapping, 'dynamic_suffix', None) and base_bl:

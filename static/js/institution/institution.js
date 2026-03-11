@@ -135,40 +135,71 @@ document.addEventListener('DOMContentLoaded', () => {
     let shouldLoadParentsOnLevelChange = true;
 
     async function loadParents(levelId, preselectedParentId = null) {
-        const parentSelect = $('#id_parent');
-        if (parentSelect.data('select2')) parentSelect.select2('destroy');
-        parentSelect.empty();
+        const parentSelectEl = document.getElementById('id_parent');
+        if (!parentSelectEl) {
+            console.error('[loadParents] No se encontró elemento id_parent');
+            return;
+        }
 
+        // Limpiar opciones anteriores
+        parentSelectEl.innerHTML = '';
+        
         let isDisabled = true;
         let placeholderText = '--- Seleccione Nivel Primero ---';
+
+        console.log(`[loadParents] Cargando padres para nivel ${levelId}, preseleccionado: ${preselectedParentId}`);
 
         if (levelId) {
             try {
                 const res = await fetch(`/institution/api/parents/?level_id=${levelId}`);
                 const data = await res.json();
+                console.log(`[loadParents] Response API:`, data);
+                
                 if (data.results && data.results.length > 0) {
                     isDisabled = false;
                     placeholderText = '--- Seleccione Unidad Padre ---';
-                    parentSelect.append(new Option(placeholderText, '', true, !preselectedParentId));
+                    
+                    // Opción vacía/placeholder
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = placeholderText;
+                    parentSelectEl.appendChild(emptyOption);
+                    
+                    // Agregar opciones de padres disponibles
                     data.results.forEach(item => {
-                        const isSelected = String(item.id) === String(preselectedParentId);
-                        parentSelect.append(new Option(item.text, item.id, isSelected, isSelected));
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.text;
+                        if (String(item.id) === String(preselectedParentId)) {
+                            option.selected = true;
+                            console.log(`[loadParents] Opción ${item.id} marcada como seleccionada`);
+                        }
+                        parentSelectEl.appendChild(option);
                     });
                 } else {
                     placeholderText = '--- Unidad Raíz (No requiere padre) ---';
-                    parentSelect.append(new Option(placeholderText, '', true, true));
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = placeholderText;
+                    emptyOption.selected = true;
+                    parentSelectEl.appendChild(emptyOption);
+                    console.log(`[loadParents] Sin padres disponibles, unidad raíz`);
                 }
             } catch (e) {
-                console.error(e);
+                console.error('[loadParents] Error cargando padres:', e);
             }
+        } else {
+            // Si no hay levelId, mostrar solo opción de raíz
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = '--- Seleccione Nivel Primero ---';
+            emptyOption.selected = true;
+            parentSelectEl.appendChild(emptyOption);
         }
-        parentSelect.prop('disabled', isDisabled);
-        parentSelect.select2({
-            dropdownParent: $('#unit-modal-app'),
-            width: '100%',
-            placeholder: placeholderText,
-            allowClear: !isDisabled
-        });
+        
+        // Habilitar o deshabilitar el select según corresponda
+        parentSelectEl.disabled = isDisabled;
+        console.log(`[loadParents] Select disabled: ${isDisabled}, opciones totales: ${parentSelectEl.options.length}`);
     }
 
     const unitModalEl = document.getElementById('unit-modal-app');
@@ -195,12 +226,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.classList.add('no-scroll');
 
                     const levelSelect = document.getElementById('id_level');
-                    const parentSelect = $('#id_parent');
+                    const parentSelectEl = document.getElementById('id_parent');
                     const codeInput = document.getElementById('id_code');
 
                     // Resetear estados de bloqueo
-                    $(levelSelect).attr('readonly', false).css('pointer-events', 'auto').css('background', '');
-                    parentSelect.attr('disabled', false);
+                    if (levelSelect) levelSelect.disabled = false;
+                    if (parentSelectEl) parentSelectEl.disabled = false;
 
                     const url = parentId ? `/institution/api/next-code/?parent_id=${parentId}` : `/institution/api/next-code/?parent_id=null`;
 
@@ -214,9 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (parentId) {
                                 modalTitle.value = 'Nueva Unidad Dependiente';
                                 await loadParents(data.suggested_level, parentId);
-                                parentSelect.val(parentId).trigger('change');
-                                parentSelect.attr('disabled', true); // Bloquear padre
-                                $(levelSelect).attr('readonly', true).css('pointer-events', 'none').css('background', '#f8f9fa'); // Bloquear nivel
+                                if (parentSelectEl) {
+                                    parentSelectEl.value = parentId;
+                                    parentSelectEl.disabled = true;
+                                }
+                                if (levelSelect) levelSelect.disabled = true;
                             } else {
                                 modalTitle.value = 'Nueva Unidad Administrativa';
                                 await loadParents(data.suggested_level);
@@ -246,16 +279,31 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.success) {
                             isVisible.value = true;
                             const d = data.data;
-                            setTimeout(async () => {
-                                document.getElementById('id_name').value = d.name;
-                                document.getElementById('id_code').value = d.code;
-                                document.getElementById('id_address').value = d.address || '';
-                                document.getElementById('id_phone').value = d.phone || '';
-                                document.getElementById('id_mission').value = d.mission || '';
-                                document.getElementById('id_level').value = d.level;
-                                isActive.value = d.is_active;  // Usar la variable Vue
-                                await loadParents(d.level, d.parent);
-                            }, 50);
+                            
+                            // Esperar a que el DOM esté listo
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            
+                            // Llenar los campos de texto
+                            document.getElementById('id_name').value = d.name;
+                            document.getElementById('id_code').value = d.code;
+                            document.getElementById('id_address').value = d.address || '';
+                            document.getElementById('id_phone').value = d.phone || '';
+                            document.getElementById('id_mission').value = d.mission || '';
+                            document.getElementById('id_level').value = d.level;
+                            isActive.value = d.is_active;
+                            
+                            // Cargar padres y esperar a que se complete
+                            await loadParents(d.level, d.parent);
+                            
+                            // EXPLICITAR: Establecer el valor parent después de que loadParents() haya completado
+                            const parentSelectEl = document.getElementById('id_parent');
+                            if (parentSelectEl && d.parent) {
+                                parentSelectEl.value = String(d.parent);
+                                console.log(`[DEBUG] Parent establecido a: ${d.parent}`);
+                            } else if (parentSelectEl) {
+                                parentSelectEl.value = '';
+                                console.log(`[DEBUG] Parent está vacío (unidad raíz)`);
+                            }
                         }
                     } catch (e) {
                         console.error(e);
@@ -264,18 +312,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const submitForm = async () => {
                     const form = document.getElementById(formEl);
-
-                    $('#id_parent').attr('disabled', false);
-                    const levelEl = document.getElementById('id_level');
-                    if (levelEl) {
-                        levelEl.readOnly = false;
-                        levelEl.style.pointerEvents = 'auto';
+                    
+                    // DEBUG PASO 1: Ver el estado actual de los elementos
+                    const parentSelectEl = document.getElementById('id_parent');
+                    const levelSelectEl = document.getElementById('id_level');
+                    
+                    console.log('===== DEBUG SUBMIT =====');
+                    console.log('1. Estado de elementos SELECT:');
+                    console.log('   - id_parent (SELECT):', parentSelectEl?.tagName, 'value=', parentSelectEl?.value);
+                    console.log('   - id_level (SELECT):', levelSelectEl?.tagName, 'value=', levelSelectEl?.value);
+                    
+                    // DEBUG PASO 2: Mostrar todas las opciones disponibles en parent
+                    if (parentSelectEl) {
+                        console.log('2. Opciones disponibles en id_parent:');
+                        Array.from(parentSelectEl.options).forEach((opt, idx) => {
+                            console.log(`   [${idx}] value="${opt.value}" text="${opt.text}" selected=${opt.selected}`);
+                        });
                     }
-
+                    
+                    // DEBUG PASO 3: Crear FormData y mostrar qué contiene
                     const formData = new FormData(form);
+                    console.log('3. Contenido de FormData ANTES de enviar:');
+                    for (let [key, value] of formData.entries()) {
+                        if (key === 'parent' || key === 'level') {
+                            console.log(`   ${key} = "${value}"`);
+                        }
+                    }
+                    
                     const url = isEditing.value
                         ? `/institution/units/update/${currentId.value}/`
                         : '/institution/units/create/';
+
+                    console.log('4. URL de destino:', url);
+                    console.log('5. isEditing:', isEditing.value);
+                    console.log('===== FIN DEBUG =====');
 
                     try {
                         const res = await fetch(url, {

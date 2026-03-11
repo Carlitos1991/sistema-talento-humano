@@ -7,6 +7,7 @@ urlpatterns = [
     path('units/', views.UnitListView.as_view(), name='unit_list'),
     path('units/create/', views.UnitCreateView.as_view(), name='unit_create'),
     path('units/update/<int:pk>/', views.UnitUpdateView.as_view(), name='unit_update'),
+    path('units/change-parent/<int:pk>/', views.UnitChangeParentView.as_view(), name='unit_change_parent'),
     path('units/detail/<int:pk>/', views.UnitDetailView.as_view(), name='unit_detail'),
     path('units/toggle/<int:pk>/', views.UnitToggleStatusView.as_view(), name='unit_toggle'),
      path('units/partial_table/', views.unit_partial_table, name='unit_partial_table'),

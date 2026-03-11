@@ -16,8 +16,8 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'toggle-slider', 'role': 'switch'}),
 
             # CAMPOS OCULTOS
-            'level': forms.HiddenInput(),
-            'parent': forms.HiddenInput(),
+            'level': forms.Select(attrs={'class': 'input-field', 'style': 'display:none;'}),
+            'parent': forms.Select(attrs={'class': 'input-field', 'style': 'display:none;'}),
             'boss': forms.HiddenInput(),
         }
         labels = {
@@ -45,7 +45,11 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['boss'].required = False
         self.fields['parent'].required = False
-        self.fields['level'].required = False  # Cambiar a False para permitir actualización parcial
+        self.fields['level'].required = False
+        
+        # Asegurarse de que los selects tengan todas las opciones disponibles
+        self.fields['level'].queryset = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')
+        self.fields['parent'].queryset = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
 
     def clean(self):
         cleaned_data = super().clean()

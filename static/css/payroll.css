@@ -144,3 +144,26 @@
         opacity: 1;
     }
 }
+
+/* =====================================================================
+   FORMULARIOS DE NÓMINA Y MAPEO PRESUPUESTARIO
+   ===================================================================== */
+
+/* Caja dinámica de mapeo presupuestario */
+.budget-mapping-box {
+    background-color: var(--bg-light, #f1f5f9);
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius, 8px);
+    padding: 1.25rem;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Ocultamiento de la caja usando la utilidad global que ya tienes en style.css */
+.budget-mapping-box.hidden-mapping {
+    display: none !important;
+}
+
+/* Borde azul característico para la tarjeta de mapeo */
+.card-budget-integration {
+    border-left: 4px solid #3b82f6 !important;
+}

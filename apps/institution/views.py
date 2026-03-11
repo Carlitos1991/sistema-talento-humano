@@ -23,6 +23,7 @@ from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, Instit
 class ParentOptionsJsonView(LoginRequiredMixin, View):
     def get(self, request):
         level_id = request.GET.get('level_id')
+        direct_parent_only = request.GET.get('direct_parent_only', 'false').lower() == 'true'
 
         if not level_id or not str(level_id).isdigit():
             return JsonResponse({'results': []})
@@ -33,10 +34,19 @@ class ParentOptionsJsonView(LoginRequiredMixin, View):
             if current_level.level_order <= 1:
                 return JsonResponse({'results': []})
 
-            parents = AdministrativeUnit.objects.filter(
-                level__level_order__lt=current_level.level_order,
-                is_active=True
-            ).select_related('level').order_by('level__level_order', 'name')
+            # Si direct_parent_only=true, solo traer del nivel inmediatamente anterior
+            if direct_parent_only:
+                parent_level_order = current_level.level_order - 1
+                parents = AdministrativeUnit.objects.filter(
+                    level__level_order=parent_level_order,
+                    is_active=True
+                ).select_related('level').order_by('name')
+            else:
+                # Traer de todos los niveles anteriores (para casos de edición)
+                parents = AdministrativeUnit.objects.filter(
+                    level__level_order__lt=current_level.level_order,
+                    is_active=True
+                ).select_related('level').order_by('level__level_order', 'name')
 
             results = [{'id': p.id, 'text': f"{p.name} ➝ {p.level.name}"} for p in parents]
             return JsonResponse({'results': results})
@@ -241,6 +251,8 @@ class UnitDetailJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
             'name': unit.name,
             'level': unit.level_id,
             'parent': unit.parent_id,
+            'parent_name': unit.parent.name if unit.parent else None,
+            'parent_level': unit.parent.level_id if unit.parent else None,
             'boss': unit.boss_id,
             'boss_data': boss_data,
             'code': unit.code,
@@ -261,11 +273,89 @@ class UnitUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # DEBUG: Log de datos recibidos
+        print(f"\n[DEBUG UnitUpdateView] POST data recibido:")
+        print(f"  - parent: {request.POST.get('parent', 'VACÍO')}")
+        print(f"  - level: {request.POST.get('level', 'VACÍO')}")
+        print(f"  - name: {request.POST.get('name', 'VACÍO')}")
+        print(f"  - Unidad a actualizar: {self.object.id} ({self.object.name})")
+        print(f"  - Parent actual en DB: {self.object.parent_id}")
+        
         form = self.get_form()
         if form.is_valid():
+            print(f"  - Form válido")
+            print(f"  - Cleaned data parent: {form.cleaned_data.get('parent')}")
+            print(f"  - Cleaned data level: {form.cleaned_data.get('level')}")
             form.save()
+            print(f"  - Parent en DB después de guardar: {self.object.parent_id}")
             return JsonResponse({'success': True, 'message': 'Unidad actualizada correctamente.'})
+        else:
+            print(f"  - Form INVÁLIDO")
+            print(f"  - Errores: {form.errors}")
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+# --- CAMBIAR PADRE (REUBICAR) ---
+class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'institution.change_administrativeunit'
+
+    def post(self, request, pk):
+        unit = get_object_or_404(AdministrativeUnit, pk=pk)
+        new_parent_id = request.POST.get('parent')
+        
+        print(f"\n[DEBUG UnitChangeParentView] POST data recibido:")
+        print(f"  - Unidad a reubicar: {unit.id} ({unit.name})")
+        print(f"  - Padre actual: {unit.parent_id}")
+        print(f"  - Nuevo padre en request: {new_parent_id}")
+        
+        try:
+            # Validar que el nuevo padre sea válido (si no es vacío)
+            if new_parent_id and str(new_parent_id).isdigit():
+                new_parent = AdministrativeUnit.objects.get(pk=int(new_parent_id), is_active=True)
+                
+                # Validación: El nuevo padre no puede ser la misma unidad
+                if int(new_parent_id) == unit.id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No puedes asignar la unidad como su propio padre.',
+                        'errors': {'parent': ['La unidad no puede ser su propio padre.']}
+                    }, status=400)
+                
+                # Validación: El nuevo padre debe tener un nivel menor (order menor)
+                if new_parent.level.level_order >= unit.level.level_order:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El padre debe tener un nivel jerárquico superior.',
+                        'errors': {'parent': ['El padre debe tener un nivel jerárquico superior.']}
+                    }, status=400)
+                
+                unit.parent = new_parent
+            else:
+                # Si no hay parent_id o es vacío, establecer como raíz
+                unit.parent = None
+            
+            unit.save()
+            print(f"  - Nuevo padre guardado: {unit.parent_id}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Unidad "{unit.name}" reubicada correctamente.'
+            })
+        
+        except AdministrativeUnit.DoesNotExist:
+            print(f"  - ERROR: Padre no encontrado o no activo")
+            return JsonResponse({
+                'success': False,
+                'message': 'La unidad padre seleccionada no existe o no está activa.',
+                'errors': {'parent': ['Padre no válido.']}
+            }, status=400)
+        except Exception as e:
+            print(f"  - ERROR: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al reubicar la unidad: {str(e)}',
+                'errors': {'__all__': [str(e)]}
+            }, status=400)
 
 
 # --- TOGGLE STATUS ---

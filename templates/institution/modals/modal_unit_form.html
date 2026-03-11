@@ -5,6 +5,7 @@
         <div class="modal-container-medium animate-scale-in" style="max-width: 600px;">
             <form @submit.prevent="submitForm" id="unitForm">
                 {% csrf_token %}
+                <!-- Selects Django ocultos pero presentes para sincronización de datos -->
                 <div style="display:none !important; position:absolute; visibility:hidden;">
                     {{ form.level }}
                     {{ form.parent }}
