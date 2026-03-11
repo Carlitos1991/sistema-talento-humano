@@ -12,10 +12,7 @@
             </div>
 
             <div class="modal-body-content modal-body-custom">
-                <div class="alert alert-info mb-3">
-                    <i class="fa-solid fa-info-circle me-2"></i>
-                    Selecciona una nueva unidad padre para reubicar <strong id="unitNameDisplay"></strong>
-                </div>
+                <!-- Info removed as requested: previously showed 'Selecciona una nueva unidad padre...' -->
 
                 <div class="form-section-card">
                     <!-- NOMBRE DE LA UNIDAD (Read-only) -->
@@ -68,11 +65,11 @@ let relocateState = {
 
 async function openRelocateUnit(unitId) {
     relocateState.unitId = unitId;
-    
+
     try {
         const res = await fetch(`/institution/units/detail/${unitId}/json/`);
         const data = await res.json();
-        
+
         if (data.success) {
             const d = data.data;
             relocateState.unitName = d.name;
@@ -81,8 +78,9 @@ async function openRelocateUnit(unitId) {
             relocateState.sourceLevel = d.level;
 
             // Actualizar UI
-            document.getElementById('unitNameDisplay').textContent = d.name;
-            document.getElementById('unitNameField').value = d.name;
+            const unitNameFieldEl = document.getElementById('unitNameField');
+            if (unitNameFieldEl) unitNameFieldEl.value = d.name;
+            // Nota: `unitNameDisplay` fue removido del template, evitar referenciarlo.
             document.getElementById('currentParentField').value = relocateState.currentParentName;
 
             // Cargar padres disponibles
@@ -118,9 +116,9 @@ async function loadAvailableParents(levelId) {
         // direct_parent_only=true para traer solo del nivel inmediatamente anterior
         const res = await fetch(`/institution/api/parents/?level_id=${levelId}&direct_parent_only=true`);
         const data = await res.json();
-        
+
         selectEl.innerHTML = '<option value="">--- Seleccione Unidad Padre ---</option>';
-        
+
         if (data.results && data.results.length > 0) {
             data.results.forEach(item => {
                 const option = document.createElement('option');
@@ -128,7 +126,7 @@ async function loadAvailableParents(levelId) {
                 option.textContent = item.text;
                 selectEl.appendChild(option);
             });
-            
+
             // Re-inicializar Select2 después de agregar opciones
             if ($(selectEl).hasClass('select2-hidden-accessible')) {
                 $(selectEl).select2('destroy');
@@ -166,7 +164,7 @@ window.closeRelocateModal = function closeRelocateModal() {
     } catch (err) {
         console.warn('Error removing modal-open class:', err);
     }
-    
+
     // Destruir Select2 si existe
     const selectEl = document.getElementById('id_new_parent');
     try {
@@ -176,14 +174,14 @@ window.closeRelocateModal = function closeRelocateModal() {
     } catch (err) {
         console.warn('Error destruyendo Select2:', err);
     }
-    
+
     // Limpiar errores
     const errorParent = document.getElementById('errorParent');
     if (errorParent) errorParent.textContent = '';
-    
+
     const errorContainer = document.getElementById('errorContainer');
     if (errorContainer) errorContainer.style.display = 'none';
-    
+
     // Además ocultar cualquier overlay genérico del sistema por seguridad
     try {
         document.querySelectorAll('.modal-overlay, .custom-modal-overlay, .modal-backdrop').forEach(el => {
@@ -210,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await submitRelocate();
         });
     }
-    
+
     // Cerrar modal al hacer clic en el overlay
     const modalContainer = document.getElementById('relocate-modal-container');
     if (modalContainer) {
@@ -220,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Añadir listeners explícitos a botones de cierre (más fiables que onclick inline)
     const closeBtn = document.getElementById('closeModalBtn');
     if (closeBtn) {
@@ -350,7 +348,7 @@ async function submitRelocate() {
                 document.getElementById('errorContainer').style.display = 'block';
                 document.getElementById('errorContainer').innerHTML = data.errors.__all__.join('<br>');
             }
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error',

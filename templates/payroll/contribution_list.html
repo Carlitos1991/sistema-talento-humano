@@ -1,61 +1,80 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
-    <div class="container">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-            <h2>Rubros de Aporte Institucional</h2>
+    <div class="header-card">
+        <div>
+            <h1>Aportes Institucionales</h1>
+            <p>Gestión de obligaciones patronales (Aporte Patronal, IECE, SECAP, etc.)</p>
+        </div>
+        <div class="header-actions">
             <a href="{% url 'payroll:contribution_create' %}" class="btn btn-create">
                 <i class="fas fa-plus"></i> Nuevo Aporte
             </a>
         </div>
-        <table class="table mt-3">
-            <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Código</th>
-                <th>Cuenta DEBE</th>
-                <th>Cuenta HABER</th>
-                <th>Activo</th>
-                <th>Acciones</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for r in contributions %}
+    </div>
+
+    <div class="content-table mt-4">
+
+        <div class="table-controls">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="table-search-input"
+                       placeholder="Buscar aporte por nombre, código o cuenta...">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table managed-table exportable-table" data-page-size="10"
+                   data-title="Reporte de Aportes Institucionales">
+                <thead>
                 <tr>
-                    <td>{{ r.name }}</td>
-                    <td><span class="badge-code">{{ r.code }}</span></td>
-                    <td>
-                        {% if r.debit_account %}
-                            {{ r.debit_account.code }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.credit_account %}
-                            {{ r.credit_account.code }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.is_active %}
-                            <i class="fas fa-check text-success"></i>
-                        {% else %}
-                            <i class="fas fa-times text-danger"></i>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a class="btn btn-sm btn-primary" href="{% url 'payroll:contribution_update' r.pk %}">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-                    </td>
+                    <th>Nombre del Aporte</th>
+                    <th>Código Algoritmo</th>
+                    <th>Cuenta Gasto (DEBE)</th>
+                    <th>Cuenta Pasivo (HABER)</th>
+                    <th class="text-center">Estado</th>
+                    <th class="actions no-sort">Acciones</th>
                 </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center py-4">No hay aportes institucionales registrados.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                {% for r in contributions %}
+                    <tr>
+                        <td><strong>{{ r.name }}</strong></td>
+                        <td><span class="badge-code">{{ r.code }}</span></td>
+                        <td>
+                            {% if r.debit_account %}
+                                {{ r.debit_account.code }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.credit_account %}
+                                {{ r.credit_account.code }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if r.is_active %}
+                                <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+                            {% else %}
+                                <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <div class="actions-wrapper">
+                                <a href="{% url 'payroll:contribution_update' r.pk %}" class="btn-icon btn-views-action"
+                                   title="Editar Aporte">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 {% endblock %}

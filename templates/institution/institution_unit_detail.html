@@ -20,32 +20,35 @@
                 </div>
                 <div class="header-center">
                     <span class="title title-wide">{{ unit.name }}</span>
-                    <div class="info-card-single info-card-compact header-data-card">
+                    <div class="info-card-single info-card-compact header-data-card"
+                         style="position: relative; margin-top: 8px; padding-top: 14px;">
                         <div class="info-green-grid">
                             <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
                             <div><b>Nivel:</b> <span>{{ unit.level.name|default:'-' }}</span></div>
                             <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
                             <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
-                        </div>
-                        {% if perms.institution.change_administrativeunit %}
-                            <div style=" border-top: 1px solid rgba(0,0,0,0.1);">
-                                <button type="button"
-                                        class="btn btn-sm btn-primary"
-                                        onclick="openEditUnit({{ unit.id }})"
-                                        title="Editar Unidad">
-                                    <i class="fas fa-pencil"></i> Editar
-                                </button>
-                                {% if unit.level.level_order > 1 %}
+                            {% if perms.institution.change_administrativeunit %}
+                                <div>
                                     <button type="button"
-                                            class="btn btn-sm btn-primary"
-                                            onclick="openRelocateUnit({{ unit.id }})"
-                                            title="Cambiar Unidad Padre"
-                                            style="background-color: #17a2b8; border-color: #17a2b8;">
-                                        <i class="fas fa-arrows-alt-v"></i> Reubicar
+                                            class="btn-primary"
+                                            onclick="openEditUnit({{ unit.id }})"
+                                            title="Editar Unidad">
+                                        <i class="fas fa-pencil"></i> Editar
                                     </button>
-                                {% endif %}
-                            </div>
-                        {% endif %}
+                                </div>
+                                <div>
+                                    {% if unit.level.level_order > 1 %}
+                                        <button type="button"
+                                                class="btn-primary"
+                                                onclick="openRelocateUnit({{ unit.id }})"
+                                                title="Cambiar Unidad Padre"
+                                                style="background-color: #17a2b8; border-color: #17a2b8;">
+                                            <i class="fas fa-arrows-alt-v"></i> Reubicar
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="header-right">
