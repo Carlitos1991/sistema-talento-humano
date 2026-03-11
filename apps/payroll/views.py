@@ -648,12 +648,25 @@ class ContributionListView(ListView):
 class ContributionCreateView(CreateView):
     model = InstitutionalContribution
     form_class = InstitutionalContributionForm
-    template_name = 'payroll/contribution_form.html'
-    success_url = reverse_lazy('payroll:contribution_list')
+    template_name = 'payroll/modals/modal_contribution_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        # Respondemos con JSON para que el modal sepa que debe cerrarse
+        return JsonResponse({'status': 'success', 'message': 'Aporte creado exitosamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 class ContributionUpdateView(UpdateView):
     model = InstitutionalContribution
     form_class = InstitutionalContributionForm
-    template_name = 'payroll/contribution_form.html'
-    success_url = reverse_lazy('payroll:contribution_list')
+    template_name = 'payroll/modals/modal_contribution_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Aporte actualizado exitosamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
