@@ -17,9 +17,10 @@
             </div>
             {% if perms.function_manual.add_jobprofile %}
                 {% if perms.function_manual.can_admin %}
-                <a href="{% url 'function_manual:report_valuation_excel' %}" class="btn btn-create" style="background: #107c41; margin-right: 10px;">
-                    <i class="fas fa-file-excel"></i> Imprimir Valoraciones
-                </a>
+                    <a href="{% url 'function_manual:report_valuation_excel' %}" class="btn btn-create"
+                       style="background: #107c41; margin-right: 10px;">
+                        <i class="fas fa-file-excel"></i> Imprimir Valoraciones
+                    </a>
                 {% endif %}
                 <a href="{% url 'function_manual:profile_create' %}" class="btn btn-create">
                     <i class="fas fa-plus"></i> Nuevo Perfil
@@ -63,21 +64,23 @@
         </div>
 
         <!-- 3. Contenedor de Tabla con Buscador -->
-        <div class="card">
-            <div class="table-controls">
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search-profiles" class="input-field"
-                           placeholder="Buscar por cargo o unidad...">
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="table-search-input input-field"
+                               placeholder="Buscar por cargo o unidad...">
+                    </div>
                 </div>
-            </div>
 
-            <div class="table-container" id="tablePartialContainer">
-                {% include 'function_manual/partials/partial_function_manual_table.html' %}
+                <div id="tableContainer" class="table-container">
+                    {% include 'function_manual/partials/partial_function_manual_table.html' %}
+                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- CONTENEDOR PARA MODALES -->
     <div id="modal-inject-container"></div>
 
@@ -87,41 +90,98 @@
 {% block extra_js %}
     <script src="{% static 'js/function_manual.js' %}"></script>
     <script>
-        // ─── GESTIÓN DE PAGINACIÓN PARA PERFILES ───
-        let currentProfileFilters = {q: '', page: 1};
+        // ─── GESTIÓN CENTRALIZADA DE BÚSQUEDA / PAGINACIÓN / SORT ───
+        // Evitar duplicación: verificar si ya existe
+        if (typeof window.currentProfileFilters === 'undefined') {
+            window.currentProfileFilters = {q: '', page: 1, sort_field: '', sort_dir: 'asc'};
+        }
 
+        // Función stub para cambiar página (llamada desde botones de paginación en el partial)
         window.changeProfilePage = function(page) {
             if (page && page > 0) {
-                fetchFunctionManualProfiles({page: page});
+                window.currentProfileFilters.page = page;
+                window.fetchFunctionManualProfiles();
             }
         };
 
-        function fetchFunctionManualProfiles(params = {}) {
-            Object.assign(currentProfileFilters, params);
+        // Función para ordenar (llamada desde onclick en encabezados de tabla)
+        window.sortProfileTable = function(th) {
+            const field = th?.dataset?.field;
+            if (!field) return;
+
+            // Toggle dirección si mismo campo, si no → asc
+            if (window.currentProfileFilters.sort_field === field) {
+                window.currentProfileFilters.sort_dir = window.currentProfileFilters.sort_dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                window.currentProfileFilters.sort_field = field;
+                window.currentProfileFilters.sort_dir = 'asc';
+            }
+
+            // Resetear a página 1 cuando se cambia ordenamiento
+            window.currentProfileFilters.page = 1;
+            window.fetchFunctionManualProfiles();
+        };
+
+        // Fetch centralizado
+        window.fetchFunctionManualProfiles = function() {
             const url = new URL(window.location.href);
-            
-            if (currentProfileFilters.q) url.searchParams.set('q', currentProfileFilters.q);
-            if (currentProfileFilters.page) url.searchParams.set('page', currentProfileFilters.page);
+
+            if (window.currentProfileFilters.q) url.searchParams.set('q', window.currentProfileFilters.q);
+            if (window.currentProfileFilters.page) url.searchParams.set('page', window.currentProfileFilters.page);
+            if (window.currentProfileFilters.sort_field) url.searchParams.set('sort_field', window.currentProfileFilters.sort_field);
+            if (window.currentProfileFilters.sort_dir) url.searchParams.set('sort_dir', window.currentProfileFilters.sort_dir);
             url.searchParams.set('partial', 'true');
 
             fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(res => res.text())
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.text();
+                })
                 .then(html => {
-                    const wrapper = document.getElementById('tablePartialContainer');
-                    if (wrapper) {
-                        wrapper.innerHTML = html;
+                    // Parsear HTML en un contenedor temporal
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+
+                    const newTable = temp.querySelector('table');
+                    const newPagination = temp.querySelector('.pagination-container');
+
+                    // Inyectar tabla en tableContainer
+                    const tableContainer = document.getElementById('tableContainer');
+                    if (tableContainer) {
+                        tableContainer.innerHTML = '';
+                        if (newTable) {
+                            tableContainer.appendChild(newTable);
+                        }
                     }
-                });
+
+                    // Inyectar paginación FUERA del tableContainer (como hermana en content-table)
+                    const contentTable = document.querySelector('.content-table');
+                    if (contentTable && newPagination) {
+                        // Buscar si ya existe pagination-container
+                        let existingPag = contentTable.querySelector('.pagination-container');
+                        if (existingPag) {
+                            existingPag.innerHTML = newPagination.innerHTML;
+                        } else {
+                            // Crear nuevo si no existe
+                            const paginationClone = newPagination.cloneNode(true);
+                            contentTable.appendChild(paginationClone);
+                        }
+                    }
+                })
+                .catch(err => console.error('fetchFunctionManualProfiles error:', err));
         }
 
+        // Inicializar en DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            // Manejador de búsqueda
-            const searchInput = document.getElementById('table-search-profiles');
+            // Búsqueda con debounce
+            const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 let timeout;
-                searchInput.addEventListener('input', (e) => {
+                searchInput.addEventListener('input', e => {
                     clearTimeout(timeout);
-                    timeout = setTimeout(() => fetchFunctionManualProfiles({q: e.target.value, page: 1}), 500);
+                    window.currentProfileFilters.q = e.target.value;
+                    window.currentProfileFilters.page = 1;
+                    timeout = setTimeout(() => window.fetchFunctionManualProfiles(), 400);
                 });
             }
         });

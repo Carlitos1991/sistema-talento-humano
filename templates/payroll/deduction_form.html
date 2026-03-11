@@ -1,11 +1,64 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container">
-  <h2>Editar Rubro de Descuento</h2>
-  <form method="post">{% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Guardar</button>
-    <a class="btn btn-secondary" href="{% url 'payroll:deduction_list' %}">Cancelar</a>
-  </form>
-</div>
+    <div class="container">
+        <h2>Editar Rubro de Descuento</h2>
+        <form method="post">{% csrf_token %}
+            {{ form.as_p }}
+            <div class="form-section-card mt-4" style="border-left: 4px solid #3b82f6;">
+                <h6 class="section-title"><i class="fas fa-file-invoice-dollar"></i> Integración Presupuestaria</h6>
+
+                <div class="form-group mt-3">
+                    <label class="form-label d-flex align-items-center gap-2 cursor-pointer">
+                        {{ form.has_mapping }}
+                        <span>¿Este rubro afecta al Presupuesto Institucional?</span>
+                    </label>
+                    <span class="form-hint text-muted">{{ form.has_mapping.help_text }}</span>
+                </div>
+
+                <div id="budgetMappingFields" class="row mt-3"
+                     style="display: none; background: #f8fafc; padding: 1rem; border-radius: 8px;">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label class="form-label">Sufijo Presupuestario (Ej: 5.1.01.05)</label>
+                            {{ form.dynamic_suffix }}
+                            <span class="form-hint">Para "Remuneración", pon el sufijo. El sistema armará: Prog.Sufijo (Ej: 01.01.5.1.01.05)</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label d-flex align-items-center gap-2 cursor-pointer mt-4">
+                                {{ form.is_fixed }}
+                                <span>¿Es Partida Fija?</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Mostrar/Ocultar campos dinámicamente
+                document.addEventListener("DOMContentLoaded", function () {
+                    const checkbox = document.querySelector('input[name="has_mapping"]');
+                    const fieldsBox = document.getElementById('budgetMappingFields');
+
+                    function toggleFields() {
+                        if (checkbox.checked) {
+                            fieldsBox.style.display = 'flex';
+                        } else {
+                            fieldsBox.style.display = 'none';
+                        }
+                    }
+
+                    // Ejecutar al cargar (por si estamos editando)
+                    if (checkbox) {
+                        toggleFields();
+                        // Ejecutar al cambiar
+                        checkbox.addEventListener('change', toggleFields);
+                    }
+                });
+            </script>
+            <button class="btn btn-primary" type="submit">Guardar</button>
+            <a class="btn btn-secondary" href="{% url 'payroll:deduction_list' %}">Cancelar</a>
+        </form>
+    </div>
 {% endblock %}

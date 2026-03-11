@@ -1,4 +1,4 @@
-<table class="data-table exportable-table" 
+<table class="managed-table exportable-table"
        id="profileTable"
        data-title="Reporte Perfiles de Puesto"
        data-filename="Reporte_perfiles_puesto"
@@ -7,13 +7,19 @@
        data-list-url="{% url 'function_manual:profile_list' %}">
     <thead>
     <tr>
-        <th width="10%">Código</th>
-        <th width="30%">Denominación del Puesto</th>
-        <th width="20%">Unidad Administrativa</th>
+        <th width="10%" data-field="position_code">Código <span class="sort-arrow">⇅</span></th>
+        <th width="30%" data-field="specific_job_title" onclick="sortProfileTable(this)" style="cursor:pointer;">
+            Denominación del Puesto <span class="sort-arrow">⇅</span></th>
+        <th width="20%" data-field="administrative_unit__name" onclick="sortProfileTable(this)" style="cursor:pointer;">
+            Unidad Administrativa <span class="sort-arrow">⇅</span></th>
         {% if perms.function_manual.change_jobprofile %}
-            <th width="12%">Clasificación</th>
-            <th width="8%">RMU</th>
-            <th width="8%">Nivel</th>
+            <th width="12%" data-field="occupational_classification__occupational_group"
+                onclick="sortProfileTable(this)" style="cursor:pointer;">Clasificación <span class="sort-arrow">⇅</span>
+            </th>
+            <th width="8%" data-field="occupational_classification__remuneration" onclick="sortProfileTable(this)"
+                style="cursor:pointer;">RMU <span class="sort-arrow">⇅</span></th>
+            <th width="8%" data-field="level" onclick="sortProfileTable(this)" style="cursor:pointer;">Nivel <span
+                    class="sort-arrow">⇅</span></th>
         {% endif %}
         <th width="10%" class="text-center">Acciones</th>
     </tr>
@@ -23,23 +29,21 @@
         <tr>
             <td><strong>{{ profile.position_code|default:"---" }}</strong></td>
             <td>
-                <div class="d-flex align-items-center">
-                    <div>
-                        <span class="font-weight-700">{{ profile.specific_job_title }}</span><br>
-                        {% if profile.referential_employee %}
-                            <small class="text-muted"
-                                   style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                                <i class="fas fa-user-check text-success"></i>
-                                {{ profile.referential_employee.person.full_name }}
-                            </small>
-                        {% else %}
-                            <small class="text-muted"
-                                   style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.7;">
-                                <i class="fas fa-user-slash"></i>
-                                Sin empleado referencial
-                            </small>
-                        {% endif %}
-                    </div>
+                <div>
+                    <span class="font-weight-700">{{ profile.specific_job_title }}</span><br>
+                    {% if profile.referential_employee %}
+                        <small class="text-muted"
+                               style="font-size:0.8rem;display:flex;align-items:center;gap:4px;margin-top:4px;">
+                            <i class="fas fa-user-check text-success"></i>
+                            {{ profile.referential_employee.person.full_name }}
+                        </small>
+                    {% else %}
+                        <small class="text-muted"
+                               style="font-size:0.8rem;display:flex;align-items:center;gap:4px;margin-top:4px;opacity:0.7;">
+                            <i class="fas fa-user-slash"></i>
+                            Sin empleado referencial
+                        </small>
+                    {% endif %}
                 </div>
             </td>
             <td>{{ profile.administrative_unit.name }}</td>
@@ -47,105 +51,80 @@
             {% if perms.function_manual.change_jobprofile %}
                 <td>
                     {% if profile.occupational_classification %}
-                        <span class="status-badge neutral">
-                        {{ profile.occupational_classification.occupational_group }}
-                    </span>
+                        <span class="status-badge neutral">{{ profile.occupational_classification.occupational_group }}</span>
                     {% else %}
                         <span class="status-badge inactive">Pendiente</span>
                     {% endif %}
                 </td>
                 <td>
-                    <span class="text-primary-bold">
-                        ${{ profile.occupational_classification.remuneration|default:"0.00" }}
-                    </span>
+                    <span class="text-primary-bold">${{ profile.occupational_classification.remuneration|default:"0.00" }}</span>
                 </td>
                 <td>
-                    <span class="badge"
-                          style="background-color: #6366f1; color: white; padding: 4px 8px; border-radius: 4px;">
-                        {{ profile.level|default:"---" }}
-                    </span>
+                    <span class="badge-level">{{ profile.level|default:"---" }}</span>
                 </td>
             {% endif %}
+
             <td class="text-center">
                 <div class="actions-wrapper">
                     {% if profile.is_legalized %}
-                        <!-- Ver Detalle (incluye Print) -->
-                        {% if  perms.function_manual.change_jobprofile %}
-                            <button class="btn-icon"
-                                    style="background-color: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                        {% if perms.function_manual.change_jobprofile %}
+                            <button class="btn-icon btn-view"
                                     onclick="openProfileDetailModal({{ profile.id }})"
                                     title="Ver Detalle y Opciones">
                                 <i class="fas fa-eye"></i>
                             </button>
                         {% endif %}
-
-                        <button class="btn-icon"
-                                style="background-color: #0d9488; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                        <button class="btn-icon btn-assign"
                                 onclick="openAssignReferentialModal({{ profile.id }})"
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
-                        <button class="btn-icon"
-                                style="background-color: #dc2626; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                        <button class="btn-icon btn-pdf"
                                 onclick="openReportPdfModal({{ profile.id }})"
                                 title="Exportar a PDF">
                             <i class="fas fa-file-pdf"></i>
                         </button>
-                        <!-- Subir Documento Legalizado -->
                         {% if perms.function_manual.can_admin %}
-                            <button class="btn-icon"
-                                    style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                            <button class="btn-icon btn-upload"
                                     onclick="openUploadLegalizedModal({{ profile.id }})"
                                     title="Subir PDF Legalizado">
                                 <i class="fas fa-file-upload"></i>
                             </button>
                         {% endif %}
-                    {% else %}
-                        <!-- VISTA: PERFIL EN EDICIÓN -->
 
-                        <!-- Botón Editar (siempre visible si el perfil NO está legalizado) -->
+                    {% else %}
                         {% if perms.function_manual.change_jobprofile %}
                             <a href="{% url 'function_manual:profile_update' profile.id %}"
-                               class="btn-icon"
-                               style="background-color: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;"
+                               class="btn-icon btn-edit"
                                title="Editar Perfil">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </a>
                         {% endif %}
 
-                        <!-- Botón Asignar Referencial -->
-                        <button class="btn-icon"
-                                style="background-color: #0d9488; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                        <button class="btn-icon btn-assign"
                                 onclick="openAssignReferentialModal({{ profile.id }})"
                                 title="Asignar Empleado Referencial">
                             <i class="fa-solid fa-user-tag"></i>
                         </button>
 
-                        <!-- Botón Completar Denominación (visible solo si no fue completada y usuario tiene view_jobprofile) -->
                         {% if perms.function_manual.view_jobprofile and not profile.denomination_completed %}
-                            <button class="btn-icon"
-                                    style="background-color: #7c3aed; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                            <button class="btn-icon btn-denominate"
                                     onclick="openCompleteDenominationModal({{ profile.id }})"
                                     title="Completar Denominación del Cargo">
                                 <i class="fa-solid fa-pen-fancy"></i>
                             </button>
                         {% endif %}
 
-                        <!-- Exportar a PDF (solo si está legalizado o tiene permiso de edición) -->
                         {% if profile.is_legalized or perms.function_manual.change_jobprofile %}
-                            <button class="btn-icon"
-                                    style="background-color: #dc2626; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                            <button class="btn-icon btn-pdf"
                                     onclick="openReportPdfModal({{ profile.id }})"
                                     title="Exportar a PDF">
                                 <i class="fas fa-file-pdf"></i>
                             </button>
                         {% endif %}
 
-                        <!-- Exportar a Excel (solo si tiene permiso de ver) -->
                         {% if perms.function_manual.change_jobprofile %}
-
-                            <a class="btn-icon"
-                               style="background-color: #065923; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                            <a class="btn-icon btn-excel"
                                href="{% url 'function_manual:report_activities_excel' profile.id %}"
                                title="Exportar a Excel">
                                 <i class="fas fa-file-excel"></i>
@@ -153,9 +132,7 @@
                         {% endif %}
 
                         {% if profile.occupational_classification and perms.function_manual.can_admin %}
-                            <!-- Botón Legalizar (Firmas) - Solo visible si ya tiene Grupo Ocupacional -->
-                            <button class="btn-icon"
-                                    style="background-color: #475569; color: white; width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; margin-left: 4px;"
+                            <button class="btn-icon btn-legalize"
                                     onclick="openLegalizeModal({{ profile.id }})"
                                     title="Legalizar Perfil">
                                 <i class="fa-solid fa-file-signature"></i>
@@ -167,7 +144,7 @@
         </tr>
     {% empty %}
         <tr>
-            <td colspan="6">
+            <td colspan="7">
                 <div class="no-results-content">
                     <i class="fa-solid fa-folder-open no-results-icon"></i>
                     <p class="no-results-text">No se encontraron perfiles de puestos.</p>
@@ -178,12 +155,12 @@
     </tbody>
 </table>
 
-<!-- PAGINACIÓN — server-side, navegación via fetchFunctionManualProfiles() -->
+<!-- PAGINACIÓN — JS la mueve a #paginationWrapper (fuera del overflow container) -->
 <div class="pagination-container">
     <span class="pagination-info">
-        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
+        Mostrando {{ page_obj.start_index|default:"0" }}–{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
     </span>
-    <div class="pagination-controls" style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+    <div class="pagination-controls"{% if page_obj.paginator.num_pages <= 1 %} style="visibility:hidden"{% endif %}>
         <button class="page-btn" title="Primera"
                 {% if not page_obj.has_previous %}disabled{% endif %}
                 onclick="changeProfilePage(1)">

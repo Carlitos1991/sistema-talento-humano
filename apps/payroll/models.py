@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from accounting.models import Account
 from employee.models import Employee
 
 
@@ -121,55 +123,57 @@ class Payslip(models.Model):
         return f"Rol: {self.employee} - {self.period}"
 
 
-class PayslipItem(models.Model):
-    """Detalle del Rol (Ingresos y Egresos individuales)"""
-    ITEM_TYPE = (('INCOME', 'Ingreso'), ('DEDUCTION', 'Descuento'))
+class InstitutionalContribution(models.Model):
+    """
+    Obligaciones patronales e institucionales (Ej: Aporte Patronal, Secap, IECE).
+    No afectan el líquido a pagar del empleado, pero generan asientos contables y presupuestarios.
+    """
+    name = models.CharField(max_length=100, verbose_name="Nombre del Aporte")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Código del Algoritmo")
 
-    # Aquí usamos 'Payslip' como string para evitar errores de referencia circular,
-    # aunque estando abajo de la clase Payslip ya no debería fallar.
-    payslip = models.ForeignKey(Payslip, on_delete=models.CASCADE, related_name='items')
+    # Enlaces contables directos
+    debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='contrib_debits', verbose_name="Cuenta DEBE (Gasto)")
+    credit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='contrib_credits', verbose_name="Cuenta HABER (Pasivo)")
 
-    income_ref = models.ForeignKey(Income, on_delete=models.PROTECT, null=True, blank=True)
-    deduction_ref = models.ForeignKey(Deduction, on_delete=models.PROTECT, null=True, blank=True)
-
-    item_type = models.CharField(max_length=10, choices=ITEM_TYPE)
-    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # Partida presupuestaria asociada a este ítem (si aplica)
-    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True,
-                                    related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
-    budget_line_code = models.CharField(
-        max_length=100, blank=True, null=True,
-        verbose_name="Código de Partida Aplicada (Histórico)")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
-        indexes = [models.Index(fields=['payslip', 'item_type'])]
+        verbose_name = "Aporte Institucional"
+        verbose_name_plural = "Aportes Institucionales"
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
 
 
 class RubroBudgetMapping(models.Model):
-    """Mapa explícito entre un rubro (ingreso/desc.) y una partida presupuestaria.
-
-    Permite mapeos generales o específicos por unidad administrativa.
     """
-    RUBRO_TYPE = (('INCOME', 'Ingreso'), ('DEDUCTION', 'Descuento'))
+    Mapeo presupuestario usando Claves Foráneas para Integridad Referencial absoluta.
+    Solo UNA de las tres FK debe tener datos por cada registro.
+    """
+    income = models.OneToOneField('Income', on_delete=models.CASCADE, null=True, blank=True,
+                                  related_name='budget_mapping', verbose_name="Ingreso")
+    deduction = models.OneToOneField('Deduction', on_delete=models.CASCADE, null=True, blank=True,
+                                     related_name='budget_mapping', verbose_name="Descuento")
+    contribution = models.OneToOneField(InstitutionalContribution, on_delete=models.CASCADE, null=True, blank=True,
+                                        related_name='budget_mapping', verbose_name="Aporte Institucional")
 
-    rubro_type = models.CharField(max_length=10, choices=RUBRO_TYPE)
-    rubro_code = models.CharField(max_length=50, verbose_name=_('Código Rubro'))
-    is_active = models.BooleanField(default=True)
-    is_fixed = models.BooleanField(
-        default=False,
-        verbose_name=_('¿Es Partida Fija?'),
-        help_text=_(
-            'Activar para partidas únicas (ej. Subrogación). Desactivar para solo reemplazar el ítem de gasto al final (ej. Fondos de Reserva).')
-    )
-    dynamic_suffix = models.CharField(
-        max_length=50, blank=True, null=True,
-        verbose_name=_('Sufijo Dinámico (Ítem de Gasto)'),
-        help_text=_('Ej: "5.1.06.02" o "06.02". Reemplazará la parte final de la partida del empleado.')
-    )
+    dynamic_suffix = models.CharField(max_length=50, help_text="Ej: 5.1.01.05", verbose_name="Sufijo Presupuestario")
+    is_fixed = models.BooleanField(default=False, verbose_name="¿Es partida fija?")
 
     class Meta:
-        unique_together = ('rubro_type', 'rubro_code')
-        verbose_name = 'Mapa Rubro-Partida'
+        verbose_name = "Mapeo Presupuestario"
+        verbose_name_plural = "Mapeos Presupuestarios"
+
+    def __str__(self):
+        if self.income:
+            return f"Ingreso: {self.income.name} -> {self.dynamic_suffix}"
+        if self.deduction:
+            return f"Descuento: {self.deduction.name} -> {self.dynamic_suffix}"
+        if self.contribution:
+            return f"Aporte: {self.contribution.name} -> {self.dynamic_suffix}"
+        return f"Mapeo sin asignar -> {self.dynamic_suffix}"
 
 
 class PayrollNovelty(models.Model):
@@ -203,3 +207,25 @@ class PayrollNovelty(models.Model):
         rubro = self.income_ref.name if self.income_ref else (
             self.deduction_ref.name if self.deduction_ref else 'Sin rubro')
         return f"{self.employee} - {rubro}: ${self.value}"
+
+
+class PayslipItem(models.Model):
+    """Detalle del Rol (Ingresos y Egresos individuales)"""
+    ITEM_TYPE = (('INCOME', 'Ingreso'), ('DEDUCTION', 'Descuento'), ('CONTRIBUTION', 'Contribución'))
+
+    payslip = models.ForeignKey(Payslip, on_delete=models.CASCADE, related_name='items')
+
+    income_ref = models.ForeignKey(Income, on_delete=models.PROTECT, null=True, blank=True)
+    deduction_ref = models.ForeignKey(Deduction, on_delete=models.PROTECT, null=True, blank=True)
+    contribution_ref = models.ForeignKey(InstitutionalContribution, on_delete=models.CASCADE, null=True, blank=True)
+    item_type = models.CharField(max_length=12, choices=ITEM_TYPE)
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # Partida presupuestaria asociada a este ítem (si aplica)
+    budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
+    budget_line_code = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="Código de Partida Aplicada (Histórico)")
+
+    class Meta:
+        indexes = [models.Index(fields=['payslip', 'item_type'])]

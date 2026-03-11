@@ -445,13 +445,6 @@
                             </a>
                         </li>
                     {% endif %}
-                    <li>
-                        <a href="{% url 'payroll:mapping_list' %}"
-                           class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
-                            <i class="fa-solid fa-money-check-dollar"></i>
-                            <span class="menu-text">Mapeo presupuesto</span>
-                        </a>
-                    </li>
                     {% if perms.payroll.view_income %}
                         <li>
                             <a href="{% url 'payroll:income_list' %}"
@@ -470,6 +463,14 @@
                             </a>
                         </li>
                     {% endif %}
+                    {% if perms.payroll.view_institutionalcontribution %}
+                        <li>
+                            <a href="{% url 'payroll:contribution_list' %}">
+                                <i class="fas fa-building"></i> <span class="menu-text">Aportes Inst.</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
                 </ul>
             </li>
         {% endif %}

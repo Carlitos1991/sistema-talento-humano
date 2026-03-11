@@ -7,7 +7,7 @@ from .views import (
     IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
     InstitutionalReportView, MappingListView,
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
-    SaveNoveltiesView, GetNoveltiesView
+    SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView
 )
 
 app_name = 'payroll'
@@ -47,4 +47,8 @@ urlpatterns = [
     path('novelties/parse-excel/', ParseNoveltyExcelView.as_view(), name='parse_novelty_excel'),
     path('novelties/save/', SaveNoveltiesView.as_view(), name='save_novelties'),
     path('novelties/get-existing/', GetNoveltiesView.as_view(), name='get_novelties'),
+
+    path('contributions/', ContributionListView.as_view(), name='contribution_list'),
+    path('contributions/create/', ContributionCreateView.as_view(), name='contribution_create'),
+    path('contributions/<int:pk>/update/', ContributionUpdateView.as_view(), name='contribution_update'),
 ]

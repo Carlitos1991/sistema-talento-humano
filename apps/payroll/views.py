@@ -6,8 +6,9 @@ from django.shortcuts import get_object_or_404
 import openpyxl
 import json
 from accounting.models import Journal, JournalItem
-from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm
-from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty
+from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
+    InstitutionalContributionForm
+from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, InstitutionalContribution
 from .services import PayrollCalculatorService
 from employee.models import Employee
 from .models import Income, Deduction
@@ -304,24 +305,24 @@ class IncomeListView(ListView):
     context_object_name = 'incomes'
 
 
-class IncomeUpdateView(UpdateView):
-    model = Income
-    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
-    template_name = 'payroll/income_form.html'
-    success_url = reverse_lazy('payroll:income_list')
-
-
 class IncomeCreateView(CreateView):
     model = Income
-    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+    form_class = IncomeForm
     template_name = 'payroll/income_form.html'
 
     def form_valid(self, form):
         self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Rubro creado correctamente.'})
+        return JsonResponse({'status': 'success', 'message': 'Rubro creado y mapeado correctamente.'})
 
     def form_invalid(self, form):
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
+class IncomeUpdateView(UpdateView):
+    model = Income
+    form_class = IncomeForm
+    template_name = 'payroll/income_form.html'
+    success_url = reverse_lazy('payroll:income_list')
 
 
 class DeductionListView(ListView):
@@ -330,24 +331,18 @@ class DeductionListView(ListView):
     context_object_name = 'deductions'
 
 
-class DeductionUpdateView(UpdateView):
-    model = Deduction
-    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
-    template_name = 'payroll/deduction_form.html'
-    success_url = reverse_lazy('payroll:deduction_list')
-
-
 class DeductionCreateView(CreateView):
     model = Deduction
-    fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+    form_class = DeductionForm
     template_name = 'payroll/deduction_form.html'
+    # ... form_valid y form_invalid ...
 
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Rubro de egreso creado correctamente.'})
 
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+class DeductionUpdateView(UpdateView):
+    model = Deduction
+    form_class = DeductionForm
+    template_name = 'payroll/deduction_form.html'
+    success_url = reverse_lazy('payroll:deduction_list')
 
 
 class InstitutionalReportView(TemplateView):
@@ -383,35 +378,50 @@ class InstitutionalReportView(TemplateView):
             # ==========================================
             presupuesto_list = []
 
-            # 1. Buscamos qué códigos están explícitamente configurados en la tabla de Mapeo
-            mapped_incomes = list(
-                RubroBudgetMapping.objects.filter(rubro_type='INCOME', is_active=True).values_list('rubro_code',
-                                                                                                   flat=True))
-            mapped_deductions = list(
-                RubroBudgetMapping.objects.filter(rubro_type='DEDUCTION', is_active=True).values_list('rubro_code',
-                                                                                                      flat=True))
+            # 1. Buscamos qué IDs están explícitamente configurados en la tabla de Mapeo usando las Claves Foráneas
+            mapped_income_ids = list(
+                RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True))
+            mapped_deduction_ids = list(
+                RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id', flat=True))
+            mapped_contribution_ids = list(
+                RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list('contribution_id', flat=True))
 
-            # 2. Agrupamos los INGRESOS (Solo los que están mapeados)
+            # Aseguramos que la "Remuneración Base" pase al reporte aunque no tenga mapeo explícito
+            remun = Income.objects.filter(code__iexact='REMUNERACION').first()
+            if remun and remun.id not in mapped_income_ids:
+                mapped_income_ids.append(remun.id)
+
+            # 2. Agrupamos los INGRESOS
             ingresos = PayslipItem.objects.filter(
                 payslip__period=period,
                 budget_line_code__isnull=False,
                 item_type='INCOME',
-                income_ref__code__in=mapped_incomes  # <-- El filtro mágico
+                income_ref_id__in=mapped_income_ids
             ).values(
                 'budget_line_code', 'income_ref__name'
             ).annotate(total=Sum('value'))
 
-            # 3. Agrupamos los EGRESOS (Solo los que están mapeados, esto elimina al IESS Personal)
+            # 3. Agrupamos los EGRESOS (Esto oculta al IESS Personal del presupuesto porque no está mapeado)
             egresos = PayslipItem.objects.filter(
                 payslip__period=period,
                 budget_line_code__isnull=False,
                 item_type='DEDUCTION',
-                deduction_ref__code__in=mapped_deductions  # <-- El filtro mágico
+                deduction_ref_id__in=mapped_deduction_ids
             ).values(
                 'budget_line_code', 'deduction_ref__name'
             ).annotate(total=Sum('value'))
 
-            # Unificamos ambas listas
+            # 4. Agrupamos los APORTES INSTITUCIONALES (El nuevo Patronal)
+            aportes = PayslipItem.objects.filter(
+                payslip__period=period,
+                budget_line_code__isnull=False,
+                item_type='CONTRIBUTION',
+                contribution_ref_id__in=mapped_contribution_ids
+            ).values(
+                'budget_line_code', 'contribution_ref__name'
+            ).annotate(total=Sum('value'))
+
+            # Unificamos las tres listas en el reporte final
             for item in ingresos:
                 presupuesto_list.append({
                     'partida': item['budget_line_code'],
@@ -423,6 +433,13 @@ class InstitutionalReportView(TemplateView):
                 presupuesto_list.append({
                     'partida': item['budget_line_code'],
                     'concepto': item['deduction_ref__name'],
+                    'monto': item['total']
+                })
+
+            for item in aportes:
+                presupuesto_list.append({
+                    'partida': item['budget_line_code'],
+                    'concepto': item['contribution_ref__name'],
                     'monto': item['total']
                 })
 
@@ -542,6 +559,7 @@ class ParseNoveltyExcelView(View):
 
 class GetNoveltiesView(View):
     """Obtiene las novedades ya guardadas en base de datos para mostrarlas en la tabla"""
+
     def get(self, request):
         period_id = request.GET.get('period_id')
         rubro_type = request.GET.get('rubro_type')
@@ -552,9 +570,11 @@ class GetNoveltiesView(View):
 
         try:
             if rubro_type == 'INCOME':
-                novelties = PayrollNovelty.objects.filter(period_id=period_id, income_ref_id=rubro_id, value__gt=0).select_related('employee__person')
+                novelties = PayrollNovelty.objects.filter(period_id=period_id, income_ref_id=rubro_id,
+                                                          value__gt=0).select_related('employee__person')
             else:
-                novelties = PayrollNovelty.objects.filter(period_id=period_id, deduction_ref_id=rubro_id, value__gt=0).select_related('employee__person')
+                novelties = PayrollNovelty.objects.filter(period_id=period_id, deduction_ref_id=rubro_id,
+                                                          value__gt=0).select_related('employee__person')
 
             data = []
             for nov in novelties:
@@ -571,8 +591,10 @@ class GetNoveltiesView(View):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
+
 class SaveNoveltiesView(View):
     """Recibe la tabla editada y guarda (o elimina) en la base de datos"""
+
     def post(self, request):
         try:
             payload = json.loads(request.body)
@@ -589,9 +611,11 @@ class SaveNoveltiesView(View):
 
                 # Buscamos si ya existía una novedad previa para actualizarla
                 if rubro_type == 'INCOME':
-                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id, income_ref_id=rubro_id).first()
+                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id,
+                                                            income_ref_id=rubro_id).first()
                 else:
-                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id, deduction_ref_id=rubro_id).first()
+                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id,
+                                                            deduction_ref_id=rubro_id).first()
 
                 if val <= 0:
                     # MAGIA: Si en la tabla le pusieron 0.00, borramos la novedad de la base de datos
@@ -604,10 +628,32 @@ class SaveNoveltiesView(View):
                     else:
                         # Si no existía, la creamos
                         if rubro_type == 'INCOME':
-                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, income_ref_id=rubro_id, value=val)
+                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, income_ref_id=rubro_id,
+                                                          value=val)
                         else:
-                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, deduction_ref_id=rubro_id, value=val)
+                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, deduction_ref_id=rubro_id,
+                                                          value=val)
 
             return JsonResponse({'status': 'success', 'message': 'Novedades guardadas exitosamente'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+class ContributionListView(ListView):
+    model = InstitutionalContribution
+    template_name = 'payroll/contribution_list.html'
+    context_object_name = 'contributions'
+
+
+class ContributionCreateView(CreateView):
+    model = InstitutionalContribution
+    form_class = InstitutionalContributionForm
+    template_name = 'payroll/contribution_form.html'
+    success_url = reverse_lazy('payroll:contribution_list')
+
+
+class ContributionUpdateView(UpdateView):
+    model = InstitutionalContribution
+    form_class = InstitutionalContributionForm
+    template_name = 'payroll/contribution_form.html'
+    success_url = reverse_lazy('payroll:contribution_list')

@@ -117,8 +117,39 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(
-                models.Q(specific_job_title__icontains=query) | models.Q(administrative_unit__name__icontains=query))
-        return queryset.order_by('-created_at')
+                models.Q(position_code__icontains=query) |
+                models.Q(specific_job_title__icontains=query) | 
+                models.Q(administrative_unit__name__icontains=query))
+        
+        # Manejo de ordenamiento dinámico desde request
+        sort_field = self.request.GET.get('sort_field', '')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        
+        # Campos permitidos para ordenamiento (whitelist para prevenir inyecciones)
+        allowed_fields = {
+            'position_code': 'position_code',
+            'specific_job_title': 'specific_job_title',
+            'administrative_unit__name': 'administrative_unit__name',
+            'occupational_classification__occupational_group': 'occupational_classification__occupational_group',
+            'occupational_classification__remuneration': 'occupational_classification__remuneration',
+            'level': 'level',
+            '-created_at': '-created_at'
+        }
+        
+        # Si el campo de ordenamiento es válido, aplicarlo
+        if sort_field in allowed_fields:
+            order_by_field = allowed_fields[sort_field]
+            # Invertir el prefix si es descendente
+            if sort_dir == 'desc' and not order_by_field.startswith('-'):
+                order_by_field = f'-{order_by_field}'
+            elif sort_dir == 'asc' and order_by_field.startswith('-'):
+                order_by_field = order_by_field[1:]
+            queryset = queryset.order_by(order_by_field)
+        else:
+            # Ordenamiento por defecto
+            queryset = queryset.order_by('-created_at')
+        
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -142,7 +173,7 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         # Soportar AJAX con exportación
         if request.GET.get('partial'):
             queryset = self.get_queryset()
-            
+
             # Si se solicita exportación, devolver TODOS los datos sin paginación
             if request.GET.get('export') == 'true':
                 context = {
@@ -155,12 +186,12 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 # Paginación normal
                 paginator = self.get_paginator(queryset, self.paginate_by)
                 page_number = request.GET.get(self.page_kwarg, 1)
-                
+
                 try:
                     page_obj = paginator.get_page(page_number)
                 except:
                     page_obj = paginator.get_page(1)
-                
+
                 context = {
                     self.context_object_name: page_obj.object_list,
                     'page_obj': page_obj,
@@ -230,7 +261,7 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
                         # Priorizar coincidencia por specific_job_title
                         for gn in generic_nodes:
                             if (gn.name_extra and gn.name_extra == profile.specific_job_title) or \
-                               (gn.catalog_item and gn.catalog_item.name == profile.specific_job_title):
+                                    (gn.catalog_item and gn.catalog_item.name == profile.specific_job_title):
                                 selected_generic = gn
                                 break
 
@@ -416,33 +447,33 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
     Concatena el denominación genérica actual + el complemento del usuario.
     Valida que no exista otra denominación igual en la misma unidad administrativa.
     """
-    
+
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
-        
+
         profile_id = data.get('profile_id')
         complement = data.get('complement', '').strip()
-        
+
         if not profile_id:
             return JsonResponse({'success': False, 'message': 'profile_id es requerido'}, status=400)
-        
+
         try:
             profile = JobProfile.objects.get(pk=profile_id)
         except JobProfile.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Perfil no encontrado'}, status=404)
-        
+
         # Obtener denominación actual
         current_title = profile.specific_job_title or 'Cargo sin Denominación'
-        
+
         # Concatenar con el complemento
         if complement:
             new_title = f"{current_title} {complement}".strip()
         else:
             new_title = current_title
-        
+
         # VALIDACIÓN: Verificar si ya existe la combinación (denominación + nivel) igual en CUALQUIER unidad administrativa
         # Solo rechaza si AMBOS son iguales: specific_job_title y level
         # Si la denominación es igual pero el nivel es diferente, SÍ permite crear
@@ -450,22 +481,22 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
             specific_job_title=new_title,
             level=profile.level
         ).exclude(pk=profile_id)
-        
+
         existing_profile = query.first()
-        
+
         if existing_profile:
             level_info = f" (Nivel: {existing_profile.level})" if existing_profile.level else ""
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'message': f'No se puede guardar esta denominación porque ya está registrada en la unidad administrativa de {existing_profile.administrative_unit.name}'
             }, status=400)
-        
+
         # Guardar y marcar como completada
         try:
             profile.specific_job_title = new_title
             profile.denomination_completed = True
             profile.save(update_fields=['specific_job_title', 'denomination_completed'])
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Denominación actualizada con éxito.',
@@ -473,7 +504,6 @@ class CompleteJobTitleApiView(LoginRequiredMixin, View):
             })
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
-
 
 
 @login_required
@@ -515,7 +545,7 @@ def api_search_employee_simple(request):
                 photo_url = emp.person.photo.url
             except Exception:
                 photo_url = None
-        
+
         # Obtener el cargo de la partida presupuestaria
         from budget.models import BudgetLine
         cargo_partida = 'Sin asignar'
@@ -525,10 +555,10 @@ def api_search_employee_simple(request):
                 current_employee=emp,
                 is_active=True
             ).select_related('position_item').first()
-            
+
             print(f"DEBUG - Buscando partida para empleado ID: {emp.id}")
             print(f"DEBUG - Partida encontrada: {partida}")
-            
+
             if partida:
                 print(f"DEBUG - Position item: {partida.position_item}")
                 if partida.position_item:
@@ -574,7 +604,8 @@ class OccupationalMatrixListView(LoginRequiredMixin, PermissionRequiredMixin, Jo
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['can_change_occupationalmatrix'] = self.request.user.has_perm('function_manual.change_occupationalmatrix')
+        context['can_change_occupationalmatrix'] = self.request.user.has_perm(
+            'function_manual.change_occupationalmatrix')
         return context
 
 
@@ -810,7 +841,8 @@ class ValuationNodeDetailApi(View):
         n = get_object_or_404(ValuationNode, pk=pk)
         return JsonResponse(
             {'id': n.id, 'node_type': n.node_type, 'catalog_item_id': n.catalog_item_id, 'name_extra': n.name_extra,
-             'occupational_classification_id': n.occupational_classification_id, 'minimum_value': n.minimum_value, 'level': n.level})
+             'occupational_classification_id': n.occupational_classification_id, 'minimum_value': n.minimum_value,
+             'level': n.level})
 
 
 class ValuationNodeSaveApi(LoginRequiredMixin, View):
@@ -822,7 +854,7 @@ class ValuationNodeSaveApi(LoginRequiredMixin, View):
         node.catalog_item_id = data.get('catalog_item_id') or None
         node.name_extra = data.get('name_extra')
         node.occupational_classification_id = data.get('occupational_classification_id') or None
-        
+
         # Capturar minimum_value si se proporciona
         minimum_value = data.get('minimum_value')
         if minimum_value is not None:
@@ -830,7 +862,7 @@ class ValuationNodeSaveApi(LoginRequiredMixin, View):
                 node.minimum_value = int(minimum_value)
             except (ValueError, TypeError):
                 node.minimum_value = None
-        
+
         # Capturar level si se proporciona
         level = data.get('level')
         if level is not None:
@@ -838,7 +870,7 @@ class ValuationNodeSaveApi(LoginRequiredMixin, View):
                 node.level = int(level)
             except (ValueError, TypeError):
                 node.level = None
-        
+
         node.updated_by = request.user
         node.save()
         return JsonResponse({'success': True})
@@ -975,30 +1007,31 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             print(f"\n>>> _select_result_and_denomination INICIO")
             print(f">>> complexity_node_id={complexity_node_id}")
             print(f">>> profile.total_activity_points={profile.total_activity_points}")
-            
+
             # 1. Obtener nodo COMPLEXITY
             complexity_node = ValuationNode.objects.get(pk=complexity_node_id)
             print(f">>> Nodo COMPLEXITY encontrado: {complexity_node.id}")
-            
+
             # 2. Buscar todos los hijos RESULT
             result_nodes = ValuationNode.objects.filter(
                 parent=complexity_node,
                 node_type='RESULT',
                 is_active=True
             ).order_by('-minimum_value')  # Ordenar descendente por minimum_value
-            
+
             print(f">>> Nodos RESULT encontrados: {result_nodes.count()}")
             for rn in result_nodes:
-                print(f">>>   - {rn.id}: minimum_value={rn.minimum_value}, occupational_classification={rn.occupational_classification_id}")
-            
+                print(
+                    f">>>   - {rn.id}: minimum_value={rn.minimum_value}, occupational_classification={rn.occupational_classification_id}")
+
             if not result_nodes.exists():
                 print(f">>> ERROR: No hay nodos RESULT hijos de COMPLEXITY {complexity_node_id}")
                 return None
-            
+
             # 3. Encontrar el RESULT correcto según total_activity_points
             total_points = profile.total_activity_points
             selected_result = None
-            
+
             print(f">>> Buscando RESULT con minimum_value <= {total_points}")
             for result_node in result_nodes:
                 print(f">>>   Evaluando RESULT {result_node.id}: minimum_value={result_node.minimum_value}")
@@ -1010,41 +1043,42 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     selected_result = result_node
                     print(f">>>   -> SELECCIONADO ({result_node.minimum_value} <= {total_points})")
                     break
-            
+
             if not selected_result:
                 # Si ninguno cumple, tomar el de menor minimum_value
                 selected_result = result_nodes.last()
                 print(f">>> Ninguno cumplió condición, tomando el último: {selected_result.id}")
-            
+
             # 4. Asignar occupational_classification del RESULT seleccionado
             if selected_result.occupational_classification:
                 profile.occupational_classification = selected_result.occupational_classification
-                print(f">>> occupational_classification asignado: {selected_result.occupational_classification.id} - {selected_result.occupational_classification}")
+                print(
+                    f">>> occupational_classification asignado: {selected_result.occupational_classification.id} - {selected_result.occupational_classification}")
             else:
                 print(f">>> WARNING: RESULT {selected_result.id} no tiene occupational_classification")
-            
+
             # 4b. Asignar level del RESULT seleccionado
             if selected_result.level:
                 profile.level = selected_result.level
                 print(f">>> level asignado: {selected_result.level}")
             else:
                 print(f">>> WARNING: RESULT {selected_result.id} no tiene level")
-            
+
             # 5. Buscar hijo GENERIC_DENOMINATION del RESULT seleccionado
             generic_nodes = ValuationNode.objects.filter(
                 parent=selected_result,
                 node_type='GENERIC_DENOMINATION',
                 is_active=True
             )
-            
+
             print(f">>> Nodos GENERIC_DENOMINATION encontrados: {generic_nodes.count()}")
-            
+
             if not generic_nodes.exists():
                 print(f">>> WARNING: No hay GENERIC_DENOMINATION para RESULT {selected_result.id}")
                 # Guardar solo occupational_classification y level
                 profile.save(update_fields=['occupational_classification', 'level'])
                 return None
-            
+
             # 6. Si hay múltiples GENERIC_DENOMINATION, aplicar lógica similar
             selected_generic = None
             if generic_nodes.count() == 1:
@@ -1064,29 +1098,29 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         selected_generic = gn
                         print(f">>>   -> SELECCIONADO ({gn.minimum_value} <= {total_points})")
                         break
-                
+
                 if not selected_generic:
                     selected_generic = generic_nodes_ordered.last()
                     print(f">>> Ninguno cumplió condición, tomando el último: {selected_generic.id}")
-            
+
             # 7. Asignar specific_job_title
             if selected_generic:
                 profile.specific_job_title = selected_generic.name_extra or (
                     selected_generic.catalog_item.name if selected_generic.catalog_item else 'Sin nombre'
                 )
                 print(f">>> specific_job_title asignado: {profile.specific_job_title}")
-                
+
                 # Guardar todos los campos (occupational_classification, specific_job_title, level)
                 profile.save(update_fields=['occupational_classification', 'specific_job_title', 'level'])
                 print(f">>> Profile guardado correctamente")
-                
+
                 return selected_generic.id
             else:
                 # Solo guardar occupational_classification y level
                 profile.save(update_fields=['occupational_classification', 'level'])
                 print(f">>> Solo se guardó occupational_classification y level")
                 return None
-            
+
         except ValuationNode.DoesNotExist:
             print(f">>> ERROR: Nodo COMPLEXITY {complexity_node_id} no existe")
             return None
@@ -1112,21 +1146,25 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             print(f"\n>>> _set_generic_denomination_and_title INICIO")
             print(f">>> result_node_id={result_node_id}")
             print(f">>> profile.id={profile.id}, total_activity_points={profile.total_activity_points}")
-            print(f">>> ANTES: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
-            
+            print(
+                f">>> ANTES: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+
             # Obtener el nodo RESULT
             result_node = ValuationNode.objects.get(pk=result_node_id)
-            print(f">>> result_node.tipo={result_node.node_type}, parent_id={result_node.parent_id}, occupational_classification_id={result_node.occupational_classification_id}, name_extra={result_node.name_extra}")
-            print(f">>> result_node encontrado: {result_node.id} - {result_node.catalog_item.name if result_node.catalog_item else 'sin catálogo'}")
+            print(
+                f">>> result_node.tipo={result_node.node_type}, parent_id={result_node.parent_id}, occupational_classification_id={result_node.occupational_classification_id}, name_extra={result_node.name_extra}")
+            print(
+                f">>> result_node encontrado: {result_node.id} - {result_node.catalog_item.name if result_node.catalog_item else 'sin catálogo'}")
             print(f">>> result_node.occupational_classification_id={result_node.occupational_classification_id}")
-            
+
             # Asignar occupational_classification del RESULT
             if result_node.occupational_classification:
                 profile.occupational_classification = result_node.occupational_classification
-                print(f">>> Asignado occupational_classification: {result_node.occupational_classification.id} - {result_node.occupational_classification.name}")
+                print(
+                    f">>> Asignado occupational_classification: {result_node.occupational_classification.id} - {result_node.occupational_classification.name}")
             else:
                 print(f">>> WARNING: result_node NO tiene occupational_classification")
-            
+
             # Buscar todos los nodos GENERIC_DENOMINATION que sean hijos de este RESULT
             generic_nodes = ValuationNode.objects.filter(
                 parent=result_node,
@@ -1136,22 +1174,24 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             print(f">>> Consulta generic_nodes SQL equiv. parent_id={result_node.id} node_type=GENERIC_DENOMINATION")
             print(f">>> generic_nodes count = {generic_nodes.count()}")
             for gn in generic_nodes:
-                print(f">>>   child id={gn.id}, parent_id={gn.parent_id}, name_extra={gn.name_extra}, minimum_value={gn.minimum_value}")
-            
+                print(
+                    f">>>   child id={gn.id}, parent_id={gn.parent_id}, name_extra={gn.name_extra}, minimum_value={gn.minimum_value}")
+
             print(f">>> generic_nodes encontrados: {generic_nodes.count()}")
             for gn in generic_nodes:
                 print(f">>>   - {gn.id}: {gn.name_extra} (minimum_value={gn.minimum_value})")
-            
+
             if not generic_nodes.exists():
                 # Si no hay denominaciones genéricas, solo guardar occupational_classification
                 print(f">>> No hay generic_nodes, guardando solo occupational_classification")
                 profile.save(update_fields=['occupational_classification'])
-                print(f">>> Guardado. Verificando: occupational_classification_id={profile.occupational_classification_id}")
+                print(
+                    f">>> Guardado. Verificando: occupational_classification_id={profile.occupational_classification_id}")
                 return None
-            
+
             total_points = profile.total_activity_points
             selected_node = None
-            
+
             if generic_nodes.count() == 1:
                 # Si hay solo 1, seleccionarlo directamente
                 selected_node = generic_nodes.first()
@@ -1171,23 +1211,26 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         selected_node = node
                         print(f">>>   -> SELECCIONADO ({node.minimum_value} <= {total_points})")
                         break
-            
+
             # Si encontramos un nodo válido, actualizar specific_job_title
             if selected_node:
-                print(f">>> SELECTED generic node id={selected_node.id}, parent_id={selected_node.parent_id}, name_extra={selected_node.name_extra}")
+                print(
+                    f">>> SELECTED generic node id={selected_node.id}, parent_id={selected_node.parent_id}, name_extra={selected_node.name_extra}")
                 profile.specific_job_title = selected_node.name_extra or (
                     selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
                 )
                 print(f">>> specific_job_title = {profile.specific_job_title}")
             else:
                 print(f">>> No se encontró generic_node apropiado")
-            
+
             # Guardar el profile con los cambios
-            print(f">>> GUARDANDO: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+            print(
+                f">>> GUARDANDO: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
             profile.save(update_fields=['specific_job_title', 'occupational_classification'])
-            
+
             # Verificar post-save
-            print(f">>> POST-SAVE: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
+            print(
+                f">>> POST-SAVE: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
             print(f">>> _set_generic_denomination_and_title COMPLETADO\n")
             return selected_node.id if selected_node else None
         except ValuationNode.DoesNotExist:
@@ -1214,32 +1257,32 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
             print(f">>> profile.id={profile.id}")
             print(f">>> profile.occupational_classification_id={profile.occupational_classification_id}")
             print(f">>> profile.total_activity_points={profile.total_activity_points}")
-            
+
             if not profile.occupational_classification:
                 print(f">>> ERROR: profile no tiene occupational_classification asignado")
                 return
-            
+
             matrix = profile.occupational_classification
             print(f">>> Matrix: {matrix.occupational_group} - G{matrix.grade}")
-            
+
             # Buscar nodos GENERIC_DENOMINATION que tengan esta OccupationalMatrix como occupational_classification
             generic_nodes = ValuationNode.objects.filter(
                 occupational_classification=matrix,
                 node_type='GENERIC_DENOMINATION',
                 is_active=True
             ).order_by('-minimum_value')
-            
+
             print(f">>> generic_nodes encontrados: {generic_nodes.count()}")
             for gn in generic_nodes:
                 print(f">>>   - {gn.id}: {gn.name_extra} (minimum_value={gn.minimum_value})")
-            
+
             if not generic_nodes.exists():
                 print(f">>> No hay GENERIC_DENOMINATION para esta matriz. Solo se guardó occupational_classification")
                 return None
-            
+
             total_points = profile.total_activity_points
             selected_node = None
-            
+
             if generic_nodes.count() == 1:
                 # Si hay solo 1, seleccionarlo directamente
                 selected_node = generic_nodes.first()
@@ -1259,7 +1302,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         selected_node = node
                         print(f">>>   -> SELECCIONADO ({node.minimum_value} <= {total_points})")
                         break
-            
+
             # Si encontramos un nodo válido, actualizar specific_job_title
             if selected_node:
                 profile.specific_job_title = selected_node.name_extra or (
@@ -1271,10 +1314,10 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 print(f">>> Profile guardado")
             else:
                 print(f">>> No se encontró generic_node que cumpla los criterios. specific_job_title no se modifica.")
-            
+
             print(f">>> _set_generic_denomination_and_title_from_matrix COMPLETADO\n")
             return selected_node.id if selected_node else None
-            
+
         except Exception as e:
             import traceback
             print(f">>> ERROR en _set_generic_denomination_and_title_from_matrix: {e}")
@@ -1285,7 +1328,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
         try:
             data = json.loads(request.body)
             print(f"\n>>> JobProfileSaveApi POST recibido. payload keys={list(data.keys())}")
-            print(f">>> payload result_node_id={data.get('result_node_id')}, complexity_node_id={data.get('complexity_node_id')}")
+            print(
+                f">>> payload result_node_id={data.get('result_node_id')}, complexity_node_id={data.get('complexity_node_id')}")
             with transaction.atomic():
                 profile_id = data.get('id')
                 if profile_id:
@@ -1357,10 +1401,12 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                                 occupational_classification__isnull=False,
                                 is_active=True
                             ).first()
-                            print(f">>> Buscando child RESULT para complexity_node {complexity_node_id}, found={result_child}")
+                            print(
+                                f">>> Buscando child RESULT para complexity_node {complexity_node_id}, found={result_child}")
                             if result_child and result_child.occupational_classification:
                                 profile.occupational_classification = result_child.occupational_classification
-                                print(f">>> Asignado occupational_classification desde child RESULT (complexity): {result_child.id} -> {result_child.occupational_classification.id}")
+                                print(
+                                    f">>> Asignado occupational_classification desde child RESULT (complexity): {result_child.id} -> {result_child.occupational_classification.id}")
                         except Exception as e:
                             print(f">>> ERROR buscando child RESULT desde complexity_node {complexity_node_id}: {e}")
 
@@ -1372,7 +1418,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     print(f">>> Node encontrado: {node}")
                     if node and node.occupational_classification:
                         profile.occupational_classification = node.occupational_classification
-                        print(f">>> occupational_classification asignado desde RESULT: {profile.occupational_classification}")
+                        print(
+                            f">>> occupational_classification asignado desde RESULT: {profile.occupational_classification}")
 
                 # Campos de texto libre
                 profile.mission = data.get('mission')
@@ -1415,7 +1462,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     print(f"profile.id={profile.id}")
                     print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
                     print(f"profile.specific_job_title={profile.specific_job_title}")
-                    
+
                     JobActivity.objects.bulk_create(activities_to_create)
                     # Recalcular el total de puntos de actividades después de crear
                     profile.update_total_activity_points()
@@ -1423,7 +1470,7 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     print(f"profile.total_activity_points={profile.total_activity_points}")
                     print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
                     print(f"profile.specific_job_title={profile.specific_job_title}")
-                    
+
                     # Lógica automática: Seleccionar el RESULT correcto según total_activity_points
                     # y luego su Denominación Genérica
                     complexity_node_id = data.get('complexity_node_id')
@@ -1435,7 +1482,8 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                         print(f"\n=== Selección por result_node_id={result_node_id} ===")
                         selected_generic_node_id = self._set_generic_denomination_and_title(profile, result_node_id)
                     elif profile.occupational_classification:
-                        print(f"\n=== Selección por occupational_classification_id={profile.occupational_classification_id} ===")
+                        print(
+                            f"\n=== Selección por occupational_classification_id={profile.occupational_classification_id} ===")
                         selected_generic_node_id = self._set_generic_denomination_and_title_from_matrix(profile)
 
                     # Si el frontend envió explícitamente un generic node (nieto) preferirlo
@@ -1455,9 +1503,11 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             selected_generic_node_id = incoming_generic_id
                             gn = ValuationNode.objects.filter(pk=incoming_generic_id).first()
                             if gn:
-                                profile.specific_job_title = gn.name_extra or (gn.catalog_item.name if gn.catalog_item else profile.specific_job_title)
+                                profile.specific_job_title = gn.name_extra or (
+                                    gn.catalog_item.name if gn.catalog_item else profile.specific_job_title)
                                 profile.save(update_fields=['specific_job_title'])
-                                print(f">>> specific_job_title guardado desde incoming generic node: {incoming_generic_id} -> {profile.specific_job_title}")
+                                print(
+                                    f">>> specific_job_title guardado desde incoming generic node: {incoming_generic_id} -> {profile.specific_job_title}")
                         except Exception as e:
                             print(f">>> ERROR procesando incoming_generic {incoming_generic}: {e}")
                 else:
@@ -1509,7 +1559,7 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
             profile.prepared_by_id = request.POST.get('prepared_by') or None
             profile.reviewed_by_id = request.POST.get('reviewed_by') or None
             profile.approved_by_id = request.POST.get('approved_by') or None
-            
+
             # Si tiene nivel, agregar el nivel a la denominación
             if profile.level and profile.level > 0:
                 # Verificar si el nivel ya está en la denominación
@@ -1517,11 +1567,11 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
                 # Si no termina con el nivel, agregarlo
                 if not current_title.endswith(f" {profile.level}"):
                     profile.specific_job_title = f"{current_title} {profile.level}".strip()
-            
+
             # Marcar como legalizado si tiene todas las firmas
             if profile.prepared_by_id and profile.reviewed_by_id and profile.approved_by_id:
                 profile.is_legalized = True
-            
+
             profile.save()
 
             return JsonResponse({'success': True, 'message': 'Firmas de legalización actualizadas correctamente.'})
@@ -1756,20 +1806,24 @@ class GetReportPdfModalView(LoginRequiredMixin, View):
     Retorna el HTML del modal para seleccionar la autoridad que autoriza el PDF
     Solo accesible si el perfil está legalizado
     """
+
     def get(self, request, pk):
         # Permisos: permitir a quien tenga view OR change OR can_admin
-        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm(
+                'function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
 
         profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
-        
+
         # Si solo tiene view (sin change/can_admin), validar que perfil esté legalizado
-        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')
+        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm(
+            'function_manual.can_admin')
         if not has_change_or_admin and not profile.is_legalized:
-            return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
-        
+            return JsonResponse(
+                {'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
+
         authorities = Authority.objects.filter(is_active=True).order_by('name')
-        
+
         return render(request, 'function_manual/modals/modal_report_pdf.html', {
             'profile': profile,
             'authorities': authorities
@@ -1781,9 +1835,11 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
     Genera un PDF con el reporte de actividades y firmas de legalización
     Solo accesible si el perfil está legalizado
     """
+
     def post(self, request):
         # Permisos: permitir a quien tenga view OR change OR can_admin
-        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+        if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm(
+                'function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
 
         try:
@@ -1797,27 +1853,31 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'profile_id y authority_id son requeridos'}, status=400)
 
         try:
-            profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit', 'occupational_classification'), pk=profile_id)
+            profile = get_object_or_404(
+                JobProfile.objects.select_related('administrative_unit', 'occupational_classification'), pk=profile_id)
             authority = get_object_or_404(Authority, pk=authority_id)
         except:
             return JsonResponse({'success': False, 'message': 'Perfil o Autoridad no encontrados'}, status=404)
 
         # Si solo tiene view (sin change/can_admin), validar que perfil esté legalizado
-        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')
+        has_change_or_admin = request.user.has_perm('function_manual.change_jobprofile') or request.user.has_perm(
+            'function_manual.can_admin')
         if not has_change_or_admin and not profile.is_legalized:
-            return JsonResponse({'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
+            return JsonResponse(
+                {'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
 
-        activities = profile.activities.all().select_related('action_verb', 'deliverable', 'complexity', 'contribution', 'frequency')
+        activities = profile.activities.all().select_related('action_verb', 'deliverable', 'complexity', 'contribution',
+                                                             'frequency')
 
         # Crear PDF en memoria - ORIENTACIÓN HORIZONTAL (LANDSCAPE)
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4[::-1], topMargin=0.5*inch, bottomMargin=1.8*inch, 
-                                leftMargin=0.4*inch, rightMargin=0.4*inch)
+        doc = SimpleDocTemplate(buffer, pagesize=A4[::-1], topMargin=0.5 * inch, bottomMargin=1.8 * inch,
+                                leftMargin=0.4 * inch, rightMargin=0.4 * inch)
 
         # Contenido del PDF
         story = []
         styles = getSampleStyleSheet()
-        
+
         # Estilos personalizados
         title_style = ParagraphStyle(
             'CustomTitle',
@@ -1843,16 +1903,15 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         # Encabezado
         story.append(Paragraph("Municipio de Loja", title_style))
         story.append(Paragraph("FORMATO LEVANTAMIENTO DE ACTIVIDADES", title_style))
-        story.append(Spacer(1, 0.08*inch))
+        story.append(Spacer(1, 0.08 * inch))
 
         # Información del perfil
         info_data = [
             ['DENOMINACIÓN DE PUESTO:', f"{profile.specific_job_title or 'N/A'} ({profile.position_code or 'N/A'})"],
             ['UNIDAD ADMINISTRATIVA:', profile.administrative_unit.name],
-            ['GRUPO OCUPACIONAL:', profile.occupational_classification.occupational_group if profile.occupational_classification else 'N/A']
         ]
-        
-        info_table = Table(info_data, colWidths=[1.8*inch, 8*inch])
+
+        info_table = Table(info_data, colWidths=[1.8 * inch, 8 * inch])
         info_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#dbeafe')),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
@@ -1865,7 +1924,7 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             ('GRID', (0, 0), (-1, -1), 1, colors.grey)
         ]))
         story.append(info_table)
-        story.append(Spacer(1, 0.12*inch))
+        story.append(Spacer(1, 0.12 * inch))
 
         # Funciones para calcular valores (idénticas al Excel)
         def get_val_ag_c(name):
@@ -1885,13 +1944,15 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             return 0
 
         # Tabla de actividades con TODAS las columnas y datos calculados
-        table_data = [['NRO.', 'ENTREGABLES\n(PRODUCTOS/SERVICIOS)', 'ACTIVIDADES', 'APORTE A LA\nGESTION (AG)', 'FRECUENCIA (F)', 'COMPLEJIDAD (C)', 'AG', 'F', 'C', 'TOTAL\nAG*(F+C)', 'SELECCIONADAS']]
+        table_data = [
+            ['NRO.', 'ENTREGABLES\n(PRODUCTOS/SERVICIOS)', 'ACTIVIDADES', 'APORTE A LA\nGESTION (AG)', 'FRECUENCIA (F)',
+             'COMPLEJIDAD (C)', 'AG', 'F', 'C', 'TOTAL\nAG*(F+C)', 'SELECCIONADAS']]
 
         for idx, activity in enumerate(activities, start=1):
             # Obtener datos igual que el Excel
             deliverable_name = activity.deliverable.name if activity.deliverable else "N/A"
             activity_text = f"{activity.action_verb.name if activity.action_verb else ''} {(activity.description or '')}".strip()
-            
+
             ag_name = activity.contribution.name if activity.contribution else "Bajo"
             f_name = activity.frequency.name if activity.frequency else "Anual"
             c_name = activity.complexity.name if activity.complexity else "Bajo"
@@ -1917,13 +1978,16 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             ])
 
         # Crear tabla con columnas y alineación adecuada
-        activities_table = Table(table_data, colWidths=[0.4*inch, 1.4*inch, 2.0*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.35*inch, 0.35*inch, 0.35*inch, 0.6*inch, 0.8*inch])
+        activities_table = Table(table_data,
+                                 colWidths=[0.4 * inch, 1.4 * inch, 2.0 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch,
+                                            0.35 * inch, 0.35 * inch, 0.35 * inch, 0.6 * inch, 0.8 * inch])
         activities_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
             ('ALIGN', (1, 0), (-1, 0), 'CENTER'),
-            ('ALIGN', (1, 1), (2, -1), 'LEFT'),  # Entregables y Actividades alineados a izquierda (Paragraph maneja wrap)
+            ('ALIGN', (1, 1), (2, -1), 'LEFT'),
+            # Entregables y Actividades alineados a izquierda (Paragraph maneja wrap)
             ('ALIGN', (3, 1), (10, -1), 'CENTER'),  # Resto centrado
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 6.5),
@@ -1938,14 +2002,15 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         story.append(activities_table)
 
         # Build PDF con footer personalizado
-        doc.build(story, onFirstPage=lambda canvas, doc: self._add_footer(canvas, doc, authority, profile, request.user), 
+        doc.build(story,
+                  onFirstPage=lambda canvas, doc: self._add_footer(canvas, doc, authority, profile, request.user),
                   onLaterPages=lambda canvas, doc: self._add_footer(canvas, doc, authority, profile, request.user))
 
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
         filename = f"Actividades_{profile.position_code}_{datetime.now().strftime('%Y%m%d')}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
+
         return response
 
     def _add_footer(self, canvas, doc, authority, profile, user):
@@ -1954,21 +2019,21 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         width, height = letter
         # En landscape, width es mayor
         page_width, page_height = A4[::-1]
-        
+
         # Posición Y para el footer (más bajo para más espacio en la firma)
         y_pos = 0.8 * inch
-        
+
         # Obtener datos del usuario actual
         user_name = user.get_full_name() or user.username
         user_document = ""
         if hasattr(user, 'person') and user.person and user.person.document_number:
             user_document = user.person.document_number
         user_date = datetime.now().strftime('%d/%m/%Y')
-        
+
         # Textos y líneas para firmas con más espacio
         canvas.setFont("Helvetica", 9)
         canvas.setLineWidth(0.5)
-        
+
         # ELABORADO POR (izquierda)
         canvas.drawString(0.5 * inch, y_pos + 0.6 * inch, "Elaborado por:")
         canvas.line(0.5 * inch, y_pos + 0.35 * inch, 2.5 * inch, y_pos + 0.35 * inch)
@@ -1979,7 +2044,7 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             canvas.drawString(0.5 * inch, y_pos - 0.15 * inch, f"Fecha: {user_date}")
         else:
             canvas.drawString(0.5 * inch, y_pos, f"Fecha: {user_date}")
-        
+
         # AUTORIZADO POR (derecha - CON MÁS ESPACIO)
         canvas.setFont("Helvetica", 9)
         auth_x = 4.5 * inch
@@ -1990,9 +2055,8 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         canvas.setFont("Helvetica", 8)
         canvas.drawString(auth_x, y_pos + 0.05 * inch, authority.name)
         canvas.drawString(auth_x, y_pos - 0.10 * inch, "Fecha: ______________")
-        
-        canvas.restoreState()
 
+        canvas.restoreState()
 
 
 def api_get_profile_valuation_chain(request, profile_id):

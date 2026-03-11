@@ -36,7 +36,7 @@
             {% csrf_token %}
 
             <!-- PASO 1: ESTRUCTURA E IDENTIFICACIÓN -->
-            <section v-show="currentStep === 1" class="wizard-step-content">
+            <section v-show="currentStep === 1" class="wizard-step-content step-1">
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-sitemap"></i> Ubicación Organizacional</div>
                     <div class="unit-dynamic-grid">
@@ -184,10 +184,17 @@
                                 <td style="text-align: center; vertical-align: middle; display: none;">
                                     <span class="badge-points">[[ act.points || 0 ]]</span>
                                 </td>
-                                <td class="cell-top">
-                                    <button type="button" class="btn-delete-icon" @click="removeActivity(idx)">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
+                                <td class="cell-actions">
+                                    <div class="actions-col">
+                                        <button type="button" class="btn-clone-icon" title="Clonar actividad"
+                                                @click="cloneActivity(idx)">
+                                            <i class="fa-solid fa-clone"></i>
+                                        </button>
+                                        <button type="button" class="btn-delete-icon" title="Eliminar actividad"
+                                                @click="removeActivity(idx)">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>
@@ -205,29 +212,56 @@
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-feather"></i> Definiciones Finales</div>
                     <div class="form-group">
-                        <label class="form-label">Misión del Puesto</label>
+                        <label class="form-label">Misión del Puesto
+                            <button type="button" class="btn-info-icon" title="Información"
+                                    @click="openInfo('Misión del Puesto', $event)">
+                                <i class="fa-solid fa-circle-info"></i>
+                            </button>
+                        </label>
                         <textarea v-model="formData.mission" class="form-control" rows="3"></textarea>
                         <small class="form-hint">[[ missionPreview ]]</small>
                     </div>
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
-                            <label class="form-label">Área de Conocimiento</label>
+                            <label class="form-label">Área de Conocimiento
+                                <button type="button" class="btn-info-icon" title="Información"
+                                        @click="openInfo('Área de Conocimiento', $event)">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </label>
                             <textarea v-model="formData.knowledge_area" class="form-control" rows="2"></textarea>
+                            <small class="form-hint">[[ suggestionInstruction ]]</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Especificidad de la Experiencia</label>
+                            <label class="form-label">Especificidad de la Experiencia
+                                <button type="button" class="btn-info-icon" title="Información"
+                                        @click="openInfo('Especificidad de la Experiencia', $event)">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </label>
                             <textarea v-model="formData.experience_details" class="form-control" rows="2"></textarea>
+                            <small class="form-hint">[[ suggestionExperience ]]</small>
                         </div>
                     </div>
 
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
-                            <label class="form-label">Relaciones Internas/Externas</label>
+                            <label class="form-label">Relaciones Internas/Externas
+                                <button type="button" class="btn-info-icon" title="Información"
+                                        @click="openInfo('Relaciones Internas/Externas', $event)">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </label>
                             <textarea v-model="formData.interface_relations" class="form-control" rows="2"
                                       placeholder="Describa con quién se relaciona el puesto"></textarea>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Temática de Capacitación</label>
+                            <label class="form-label">Temática de Capacitación
+                                <button type="button" class="btn-info-icon" title="Información"
+                                        @click="openInfo('Temática de Capacitación', $event)">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </label>
                             <textarea v-model="formData.training_topic" class="form-control" rows="2"
                                       placeholder="Describa la temática de capacitación requerida"></textarea>
                         </div>
@@ -290,7 +324,7 @@
             </section>
 
             <!-- NAVEGACIÓN DEL WIZARD -->
-            <div class="form-section-card mt-3 mb-5 d-flex justify-content-center flex-wrap">
+            <div class="wizard-nav-bar">
 
                 <button type="button" class="btn-wizard-nav btn-wizard-cancel" @click="cancelProcess">
                     <i class="fa-solid fa-xmark"></i> Cancelar

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container">
+        <h2>Editar Rubro de Aporte Institucional</h2>
+        <form method="post" id="itemForm">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label class="form-label">Nombre del Aporte</label>
+                    {{ form.name }}
+                </div>
+                <div class="col-md-6 form-group">
+                    <label class="form-label">Código (Ej: APORTE_PATRONAL)</label>
+                    {{ form.code }}
+                </div>
+                <div class="col-md-6 form-group mt-3">
+                    <label class="form-label">Cuenta DEBE (Gasto)</label>
+                    {{ form.debit_account }}
+                </div>
+                <div class="col-md-6 form-group mt-3">
+                    <label class="form-label">Cuenta HABER (Pasivo)</label>
+                    {{ form.credit_account }}
+                </div>
+                <div class="col-md-12 form-group mt-3">
+                    <label class="form-label d-flex align-items-center gap-2 cursor-pointer">
+                        {{ form.is_active }} <span>Activo</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section-card mt-4" style="border-left: 4px solid #3b82f6;">
+                <h6 class="section-title"><i class="fas fa-file-invoice-dollar"></i> Integración Presupuestaria</h6>
+                <div class="form-group mt-3">
+                    <label class="form-label d-flex align-items-center gap-2 cursor-pointer">
+                        {{ form.has_mapping }}
+                        <span>¿Afecta al Presupuesto?</span>
+                    </label>
+                    <span class="form-hint text-muted">{{ form.has_mapping.help_text }}</span>
+                </div>
+                <div id="budgetMappingFields" class="row mt-3"
+                     style="display: none; background: #f8fafc; padding: 1rem; border-radius: 8px;">
+                    <div class="col-md-8 form-group">
+                        <label class="form-label">Sufijo Presupuestario (Ej: 5.1.06.01)</label>
+                        {{ form.dynamic_suffix }}
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label class="form-label d-flex align-items-center gap-2 cursor-pointer mt-4">
+                            {{ form.is_fixed }} <span>¿Es Partida Fija?</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'payroll:contribution_list' %}"
+                   class="btn-cancel text-decoration-none d-flex align-items-center">Cancelar</a>
+                <button type="submit" class="btn-save">Guardar Aporte</button>
+            </div>
+        </form>
+
+        <script>
+            // Mostrar/Ocultar campos dinámicamente
+            document.addEventListener("DOMContentLoaded", function () {
+                const checkbox = document.querySelector('input[name="has_mapping"]');
+                const fieldsBox = document.getElementById('budgetMappingFields');
+
+                function toggleFields() {
+                    if (checkbox) {
+                        fieldsBox.style.display = checkbox.checked ? 'flex' : 'none';
+                    }
+                }
+
+                if (checkbox) {
+                    toggleFields();
+                    checkbox.addEventListener('change', toggleFields);
+                }
+            });
+        </script>
+    </div>
+{% endblock %}

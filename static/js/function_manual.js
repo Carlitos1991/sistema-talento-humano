@@ -146,7 +146,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         workingType: '',
                         showModal: false, isEdit: false, loading: false,
                         catalogs: {instruction: [], decisions: [], impact: [], roles: [], matrix: [], complexity: []},
-                        formData: {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null, level: null}
+                        formData: {
+                            id: null,
+                            catalog_item_id: '',
+                            name_extra: '',
+                            occupational_classification_id: '',
+                            minimum_value: null,
+                            level: null
+                        }
                     }
                 },
                 computed: {
@@ -230,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             window.Toast.fire({icon: 'error', title: 'ID de registro no válido'});
                             return;
                         }
-                        
+
                         const result = await Swal.fire({
                             title: '¿Desactivar este nodo?',
                             text: 'El nodo no aparecerá en la valoración, pero se puede reactivar después.',
@@ -284,7 +291,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     resetForm() {
-                        this.formData = {id: null, catalog_item_id: '', name_extra: '', occupational_classification_id: '', minimum_value: null, level: null};
+                        this.formData = {
+                            id: null,
+                            catalog_item_id: '',
+                            name_extra: '',
+                            occupational_classification_id: '',
+                            minimum_value: null,
+                            level: null
+                        };
                     }
                 }
             }).mount('#valuationApp');
@@ -474,20 +488,54 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         return false;
                     }
+                    ,
+                    // Sugerencia para el campo 'Área de Conocimiento' basada en la selección de Instrucción
+                    suggestionInstruction() {
+                        try {
+                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
+                            if (instrIndex === -1 || !this.selectedNodes[instrIndex]) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
+                            const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
+                            if (!node) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
+                            let instrName = node.name_extra || node.name || '';
+                            if (!instrName && node.catalog_item_id && this.catalogs.instruction) {
+                                const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
+                                if (ci) instrName = ci.name || '';
+                            }
+                            if (!instrName) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
+                            return ` Instrucción seleccionada: ${instrName}`;
+                        } catch (e) {
+                            return '';
+                        }
+                    },
+                    // Sugerencia para el campo 'Especificidad de la Experiencia' basada en la selección de Experiencia
+                    suggestionExperience() {
+                        try {
+                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
+                            if (expIndex === -1 || !this.selectedNodes[expIndex]) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
+                            const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
+                            if (!node) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
+                            const expName = node.name_extra || node.name || '';
+                            if (!expName) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
+                            return `Experiencia seleccionada: ${expName}`;
+                        } catch (e) {
+                            return '';
+                        }
+                    }
                 },
                 watch: {
                     selectedNodes: {
                         handler(newVal) {
                             // Cuando se selecciona COMPLEXITY (índice 5), buscar sus nodos RESULT hijos
                             if (newVal[5]) {
-                                // El nodo COMPLEXITY está seleccionado
                                 const complexityNodeId = newVal[5];
                                 console.log(`🔗 COMPLEXITY seleccionado: ${complexityNodeId}, buscando nodos RESULT hijos...`);
-                                
-                                // Hacer fetch para obtener los nodos RESULT hijos de COMPLEXITY
                                 this.fetchResultNodes(complexityNodeId);
                             }
-                        }
+
+                            // Intentar autocompletar los campos de Paso 4 cada vez que cambian las selecciones
+                            this.autofillStep4();
+                        },
+                        deep: true
                     }
                 },
                 methods: {
@@ -496,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const url = `${this.urls.valuationNodes}?parent=${complexityNodeId}`;
                             const res = await fetch(url);
                             const resultNodes = await res.json();
-                            
+
                             console.log(`📦 Nodos RESULT hijos encontrados: ${resultNodes.length}`);
                             resultNodes.forEach(n => {
                                 const nt = n.node_type || n.type || 'undefined';
@@ -507,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Filtrar solo RESULT nodes (soportando 'node_type' o 'type')
                             const results = resultNodes.filter(n => (n.node_type === 'RESULT' || n.type === 'RESULT'));
                             console.log(`✅ RESULT nodes: ${results.length}`);
-                            
+
                             if (results.length === 1) {
                                 // Si hay solo 1 RESULT, intentar obtener sus hijos (nietos)
                                 const resultNode = results[0];
@@ -536,10 +584,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     } else if (genericNodes.length > 1) {
                                         // Elegir el que cumpla por minimum_value o el primero
                                         let sel = null;
-                                        const totalPoints = this.formData.total_points || this.activities.reduce((s,a)=>s+(a.points||0),0);
+                                        const totalPoints = this.formData.total_points || this.activities.reduce((s, a) => s + (a.points || 0), 0);
                                         for (const gn of genericNodes) {
-                                            if (!gn.minimum_value) { sel = gn; break; }
-                                            if (totalPoints !== undefined && gn.minimum_value <= totalPoints) { sel = gn; break; }
+                                            if (!gn.minimum_value) {
+                                                sel = gn;
+                                                break;
+                                            }
+                                            if (totalPoints !== undefined && gn.minimum_value <= totalPoints) {
+                                                sel = gn;
+                                                break;
+                                            }
                                         }
                                         if (!sel) sel = genericNodes[0];
                                         this.selectedNodes[7] = sel.id;
@@ -576,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                 // Obtener el valor actual del array de actividades
                                 const currentValue = self.activities[idx] ? self.activities[idx][field] : '';
-                                
+
                                 // Establecer el valor en el select antes de inicializar Select2
                                 if (currentValue) {
                                     $el.val(currentValue);
@@ -870,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Ajuste según estructura de tu API (si devuelve .data o el array directo)
                             this.currentUnitDeliverables = result.success ? result.data : result;
 
-                            
+
                         } catch (e) {
                             console.error("Error cargando entregables:", e);
                             this.currentUnitDeliverables = [];
@@ -905,6 +959,49 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 await this.fetchValuationLevel(id);
                             }
+                        }
+                        // ------------------
+                        // Lógica adicional: autocompletar campos de Paso 4
+                        // Si el usuario selecciona Instrucción = 'Bachiller' -> Área de Conocimiento = 'Bachillerato'
+                        // Si el usuario selecciona Experiencia que indica 'No requerida' -> Detalle = 'No requerida'
+                        try {
+                            // Índices de niveles en valuationLevels
+                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
+                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
+
+                            // Instrucción
+                            if (instrIndex !== -1 && this.selectedNodes[instrIndex]) {
+                                const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
+                                if (node) {
+                                    // Intentar obtener el texto legible
+                                    let instrText = node.name_extra || node.name || '';
+                                    if (!instrText && node.catalog_item_id && this.catalogs.instruction) {
+                                        const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
+                                        if (ci) instrText = ci.name || '';
+                                    }
+                                    if (instrText && instrText.toLowerCase().includes('bachiller')) {
+                                        // Solo autocompletar si el campo está vacío
+                                        if (!this.formData.knowledge_area || this.formData.knowledge_area.trim() === '') {
+                                            this.formData.knowledge_area = 'Bachillerato';
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Experiencia
+                            if (expIndex !== -1 && this.selectedNodes[expIndex]) {
+                                const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
+                                if (node) {
+                                    const expText = (node.name_extra || node.name || '').toLowerCase();
+                                    if (expText && expText.includes('no requerida')) {
+                                        if (!this.formData.experience_details || this.formData.experience_details.trim() === '') {
+                                            this.formData.experience_details = 'No requerida';
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error autocompletando campos paso 4:', e);
                         }
                         // Reinicializamos los select2 de los nuevos niveles creados
                         this.$nextTick(() => this.initSelect2Valuation());
@@ -971,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 matchDecision && matchImpact && matchComplexity;
 
                             if (matchComplexity) {
-                                
+
                             }
 
                             return passAll;
@@ -1109,39 +1206,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         setup('.select2-comp-trans', this.selectedTransversal, this.availableTransversal);
                     },
                     addActivity() {
-                        // 1. Obtener la última actividad de la lista
-                        const lastIdx = this.activities.length - 1;
-                        const last = this.activities[lastIdx];
-
-                        // 2. Verificar que todos los campos obligatorios estén llenos
-                        const isComplete = last.action_verb &&
-                            last.description.trim() !== '' &&
-                            last.additional_knowledge.trim() !== '' &&
-                            last.deliverable &&
-                            last.complexity &&
-                            last.contribution &&
-                            last.frequency;
-
-                        if (!isComplete) {
-                            window.Toast.fire({
-                                icon: 'warning',
-                                title: 'Debe completar todos los campos de la actividad actual antes de agregar una nueva.'
-                            });
-                            return; // Detiene la ejecución
-                        }
-
-                        // 3. Si está completa, agregar la nueva fila
-                        this.activities.push({
+                        // Insertar nueva actividad vacía al inicio para que aparezca arriba
+                        this.activities.unshift({
                             action_verb: '',
                             description: '',
                             additional_knowledge: '',
                             deliverable: '',
                             complexity: '',
                             contribution: '',
-                            frequency: ''
+                            frequency: '',
+                            points: 0
                         });
 
-                        // 4. Inicializar Select2 para los nuevos elementos
+                        // Inicializar Select2 para los nuevos elementos (re-mapear índices)
                         this.$nextTick(() => {
                             this.initSelect2Activities();
                         });
@@ -1185,11 +1262,342 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     },
 
+                    // Clonar una actividad: inserta una copia justo debajo de la original
+                    cloneActivity(idx) {
+                        try {
+                            const original = this.activities[idx];
+                            if (!original) return;
+                            // Deep copy de los campos relevantes
+                            const copy = {
+                                action_verb: original.action_verb || '',
+                                description: original.description || '',
+                                additional_knowledge: original.additional_knowledge || '',
+                                deliverable: original.deliverable || '',
+                                complexity: original.complexity || '',
+                                contribution: original.contribution || '',
+                                frequency: original.frequency || '',
+                                points: this.calculateActivityPoints(original)
+                            };
+
+                            // Insertar copia después del índice actual
+                            const newIndex = idx + 1;
+                            this.activities.splice(newIndex, 0, copy);
+
+                            // Re-inicializar select2 y aplicar valores para la nueva fila
+                            this.$nextTick(() => {
+                                this.initSelect2Activities();
+
+                                // Establecer valores en los selects del nuevo índice
+                                $(`select[data-index="${newIndex}"][data-field="action_verb"]`).val(copy.action_verb).trigger('change.select2');
+                                $(`select[data-index="${newIndex}"][data-field="deliverable"]`).val(copy.deliverable).trigger('change.select2');
+                                $(`select[data-index="${newIndex}"][data-field="complexity"]`).val(copy.complexity).trigger('change.select2');
+                                $(`select[data-index="${newIndex}"][data-field="contribution"]`).val(copy.contribution).trigger('change.select2');
+                                $(`select[data-index="${newIndex}"][data-field="frequency"]`).val(copy.frequency).trigger('change.select2');
+
+                                // Calcular puntos si es necesario
+                                this.activities[newIndex].points = this.calculateActivityPoints(this.activities[newIndex]);
+                            });
+
+                        } catch (e) {
+                            console.error('Error al clonar actividad:', e);
+                            window.Toast.fire({icon: 'error', title: 'No se pudo clonar la actividad.'});
+                        }
+                    },
+
+                    // Mostrar popup informativo con pausa/reanudar y auto-cierre
+                    openInfo(labelName, event) {
+                        try {
+                            // Inyectar estilos premium (solo una vez)
+                            const styleId = 'swal-info-style';
+                            if (!document.getElementById(styleId)) {
+                                const s = document.createElement('style');
+                                s.id = styleId;
+                                s.textContent = `
+                                    .swal2-info-popup {
+                                        background: #ffffff !important;
+                                        border-radius: 18px !important;
+                                        padding: 0 !important;
+                                        overflow: hidden !important;
+                                        box-shadow: 0 24px 60px rgba(15,23,42,0.2), 0 8px 24px rgba(15,23,42,0.12) !important;
+                                        max-width: 400px !important;
+                                        width: 400px !important;
+                                    }
+                                    .swal2-info-popup .swal2-html-container {
+                                        padding: 0 !important;
+                                        margin: 0 !important;
+                                        text-align: left !important;
+                                        overflow: visible !important;
+                                    }
+                                    /* Ocultar title y close nativo */
+                                    .swal2-info-popup .swal2-title,
+                                    .swal2-info-popup .swal2-header,
+                                    .swal2-info-popup .swal2-close {
+                                        display: none !important;
+                                    }
+                                    /* Cabecera custom */
+                                    .info-popup-header {
+                                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                                        padding: 0.85rem 1.1rem;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: space-between;
+                                        gap: 10px;
+                                    }
+                                    .info-popup-title {
+                                        font-size: 0.88rem;
+                                        font-weight: 700;
+                                        color: #ffffff;
+                                        letter-spacing: 0.02em;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 8px;
+                                        flex: 1;
+                                        margin: 0;
+                                    }
+                                    .info-popup-title-dot {
+                                        width: 7px;
+                                        height: 7px;
+                                        border-radius: 50%;
+                                        background: #10b981;
+                                        flex-shrink: 0;
+                                        box-shadow: 0 0 6px rgba(16,185,129,0.6);
+                                    }
+                                    .info-popup-actions {
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 5px;
+                                        flex-shrink: 0;
+                                    }
+                                    .info-popup-btn {
+                                        width: 28px;
+                                        height: 28px;
+                                        border-radius: 7px;
+                                        border: none;
+                                        cursor: pointer;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-size: 0.78rem;
+                                        background: rgba(255,255,255,0.1);
+                                        color: rgba(255,255,255,0.7);
+                                        transition: all 0.15s ease;
+                                        flex-shrink: 0;
+                                        padding: 0;
+                                        line-height: 1;
+                                    }
+                                    .info-popup-btn:hover {
+                                        background: rgba(255,255,255,0.22);
+                                        color: #fff;
+                                        transform: scale(1.1);
+                                    }
+                                    .info-popup-btn.btn-close-info:hover {
+                                        background: #e11d48;
+                                        color: #fff;
+                                        transform: scale(1.1);
+                                    }
+                                    .info-popup-btn.is-paused {
+                                        background: rgba(16,185,129,0.22);
+                                        color: #10b981;
+                                    }
+                                    /* Cuerpo */
+                                    .info-popup-body {
+                                        padding: 1.1rem 1.25rem 0.8rem;
+                                        background: #f8fafc;
+                                    }
+                                    .info-popup-text {
+                                        font-size: 0.875rem;
+                                        line-height: 1.7;
+                                        color: #334155;
+                                        text-align: justify;
+                                        hyphens: auto;
+                                        margin: 0;
+                                    }
+                                    /* Barra de progreso */
+                                    .info-popup-footer {
+                                        padding: 0.55rem 1.25rem 0.85rem;
+                                        background: #f8fafc;
+                                    }
+                                    .info-popup-track {
+                                        width: 100%;
+                                        height: 3px;
+                                        background: #e2e8f0;
+                                        border-radius: 99px;
+                                        overflow: hidden;
+                                    }
+                                    .info-popup-fill {
+                                        height: 100%;
+                                        width: 100%;
+                                        background: linear-gradient(90deg, #10b981, #059669);
+                                        border-radius: 99px;
+                                    }
+                                `;
+                                document.head.appendChild(s);
+                            }
+
+                            const messages = {
+                                'Misión del Puesto': 'La misión se define de las actividades asignadas al puesto, en función del portafolio de productos y/o servicios de las unidades y los procesos.',
+                                'Área de Conocimiento': 'Conjunto de conocimientos requeridos para el desempeño del puesto, adquiridos a través de estudios formales; competencia necesaria para que el servidor se desempeñe eficientemente en el puesto. Por ejemplo: "Ingeniería en Administración de Empresas, Derecho o Carreras afines".',
+                                'Especificidad de la Experiencia': 'Se refiere al nivel de experticia necesaria para el desarrollo eficiente de las actividades asignadas al puesto, para el logro de los productos y/o servicios en los que interviene el mismo.',
+                                'Relaciones Internas/Externas': 'Relación que tiene el cargo con las unidades administrativas internas o externas de la institución, así como con entidades u organismos del sector público o privado.',
+                                'Temática de Capacitación': 'Temáticas de capacitaciones inherentes al cargo o unidad administrativa, orientadas al fortalecimiento de las competencias requeridas para el desempeño del puesto.'
+                            };
+
+                            let infoText = null;
+                            try {
+                                if (event?.currentTarget?.dataset?.info) {
+                                    infoText = event.currentTarget.dataset.info;
+                                }
+                            } catch (e) { /* ignore */
+                            }
+
+                            const message = infoText || messages[labelName] || `Información sobre ${labelName}`;
+
+                            Swal.fire({
+                                html: `
+                                    <div class="info-popup-header">
+                                        <div class="info-popup-title">
+                                            <span class="info-popup-title-dot"></span>
+                                            ${labelName}
+                                        </div>
+                                        <div class="info-popup-actions">
+                                            <button id="swal-pause-btn" class="info-popup-btn" title="Pausar">
+                                                <i class="fa-solid fa-pause"></i>
+                                            </button>
+                                            <button id="swal-close-btn" class="info-popup-btn btn-close-info" title="Cerrar">
+                                                <i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-popup-body">
+                                        <p class="info-popup-text">${message}</p>
+                                    </div>
+                                    <div class="info-popup-footer">
+                                        <div class="info-popup-track">
+                                            <div id="swal-timer-bar" class="info-popup-fill"></div>
+                                        </div>
+                                    </div>
+                                `,
+                                showCloseButton: false,
+                                showConfirmButton: false,
+                                showTitle: false,
+                                timer: 6000,
+                                customClass: {popup: 'swal2-info-popup'},
+                                didOpen: (popup) => {
+                                    const swalRef = Swal;
+                                    const pauseBtn = popup.querySelector('#swal-pause-btn');
+                                    const closeBtn = popup.querySelector('#swal-close-btn');
+                                    const timerBar = popup.querySelector('#swal-timer-bar');
+
+                                    let isPaused = false;
+                                    let duration = 6000;
+                                    let start = Date.now();
+                                    let remaining = duration;
+
+                                    const updateBar = () => {
+                                        if (!isPaused && timerBar) {
+                                            const pct = Math.max(0, 1 - (Date.now() - start) / duration);
+                                            timerBar.style.width = `${pct * 100}%`;
+                                        }
+                                    };
+
+                                    const interval = setInterval(updateBar, 50);
+
+                                    pauseBtn?.addEventListener('click', () => {
+                                        if (!isPaused) {
+                                            remaining = Math.max(0, duration - (Date.now() - start));
+                                            isPaused = true;
+                                            pauseBtn.classList.add('is-paused');
+                                            pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                                            pauseBtn.title = 'Reanudar';
+                                            swalRef.stopTimer();
+                                        } else {
+                                            isPaused = false;
+                                            start = Date.now();
+                                            duration = remaining;
+                                            pauseBtn.classList.remove('is-paused');
+                                            pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                                            pauseBtn.title = 'Pausar';
+                                            swalRef.resumeTimer();
+                                        }
+                                    });
+
+                                    closeBtn?.addEventListener('click', () => {
+                                        clearInterval(interval);
+                                        swalRef.close();
+                                    });
+
+                                    popup.addEventListener('mouseenter', () => {
+                                        if (!isPaused) {
+                                            remaining = Math.max(0, duration - (Date.now() - start));
+                                            swalRef.stopTimer();
+                                        }
+                                    });
+                                    popup.addEventListener('mouseleave', () => {
+                                        if (!isPaused) {
+                                            start = Date.now();
+                                            duration = remaining;
+                                            swalRef.resumeTimer();
+                                        }
+                                    });
+
+                                    const closeObserver = new MutationObserver((mutations) => {
+                                        mutations.forEach(m => {
+                                            if (m.removedNodes?.length) clearInterval(interval);
+                                        });
+                                    });
+                                    closeObserver.observe(popup.parentNode, {childList: true});
+                                }
+                            });
+                        } catch (e) {
+                            console.error('openInfo error:', e);
+                        }
+                    },
+
+                    // Intenta autocompletar los campos del Paso 4 según selectedNodes
+                    autofillStep4() {
+                        try {
+                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
+                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
+
+                            // Instrucción -> Área de Conocimiento
+                            if (instrIndex !== -1 && this.selectedNodes[instrIndex]) {
+                                const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
+                                if (node) {
+                                    let instrText = node.name_extra || node.name || '';
+                                    if (!instrText && node.catalog_item_id && this.catalogs.instruction) {
+                                        const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
+                                        if (ci) instrText = ci.name || '';
+                                    }
+                                    if (instrText && instrText.toLowerCase().includes('bachiller')) {
+                                        if (!this.formData.knowledge_area || this.formData.knowledge_area.trim() === '') {
+                                            this.formData.knowledge_area = 'Bachillerato';
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Experiencia -> Especificidad de la Experiencia
+                            if (expIndex !== -1 && this.selectedNodes[expIndex]) {
+                                const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
+                                if (node) {
+                                    const expText = (node.name_extra || node.name || '').toLowerCase();
+                                    if (expText && expText.includes('no requerida')) {
+                                        if (!this.formData.experience_details || this.formData.experience_details.trim() === '') {
+                                            this.formData.experience_details = 'No requerida';
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('autofillStep4 error:', e);
+                        }
+                    },
+
                     async handleFinalizeClick() {
                         // Mostrar SweetAlert con checkbox de aceptación
                         return new Promise((resolve) => {
                             let isCheckboxChecked = false;
-                            
+
                             const swalHtml = `
                                 <div style="text-align: left;">
                                     <div style="margin-bottom: 20px;">
@@ -1200,7 +1608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
                             `;
-                            
+
                             Swal.fire({
                                 title: 'Confirmación de Información',
                                 html: swalHtml,
@@ -1213,14 +1621,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 didOpen: () => {
                                     const checkbox = document.getElementById('acceptance-checkbox');
                                     const confirmBtn = document.querySelector('.swal2-confirm');
-                                    
+
                                     // Deshabilitar el botón al inicio
                                     confirmBtn.disabled = true;
                                     confirmBtn.style.opacity = '0.5';
                                     confirmBtn.style.cursor = 'not-allowed';
-                                    
+
                                     // Evento del checkbox
-                                    checkbox.addEventListener('change', function() {
+                                    checkbox.addEventListener('change', function () {
                                         isCheckboxChecked = this.checked;
                                         if (isCheckboxChecked) {
                                             confirmBtn.disabled = false;
@@ -1622,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.getElementById('modal-inject-container');
                     if (container) {
                         container.innerHTML = html;
-                        
+
                         // Ejecutar scripts dentro del HTML inyectado
                         const scripts = container.querySelectorAll('script');
                         scripts.forEach(script => {
@@ -1630,7 +2038,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             newScript.textContent = script.textContent;
                             container.appendChild(newScript);
                         });
-                        
+
                         const overlay = container.querySelector('.modal-overlay');
                         if (overlay) overlay.style.display = 'flex';
                         document.body.classList.add('no-scroll');
@@ -1640,11 +2048,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.submitCompleteDenomination = async (e, pk) => {
             e.preventDefault();
-            
+
             const currentDenom = document.getElementById('current-denomination').value;
             const complement = document.getElementById('denomination-complement').value.trim();
             const finalDenom = complement ? `${currentDenom} ${complement}` : currentDenom;
-            
+
             // Mostrar confirmación con SweetAlert2
             const result = await Swal.fire({
                 title: '¿Confirmación?',
@@ -1896,7 +2304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.getElementById('modal-inject-container');
                     if (container) {
                         container.innerHTML = html;
-                        
+
                         // Ejecutar scripts dentro del HTML inyectado
                         const scripts = container.querySelectorAll('script');
                         scripts.forEach(script => {
@@ -1904,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             newScript.textContent = script.textContent;
                             container.appendChild(newScript);
                         });
-                        
+
                         const overlay = container.querySelector('.modal-overlay');
                         if (overlay) overlay.style.display = 'flex';
                         document.body.classList.add('no-scroll');
