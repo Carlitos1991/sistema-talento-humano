@@ -75,7 +75,12 @@
                 </div>
 
                 <div id="tableContainer" class="table-container">
-                    {% include 'function_manual/partials/partial_function_manual_table.html' %}
+                    <!-- Contenido inicial del partial será inyectado aquí -->
+                </div>
+                
+                <!-- Paginación FUERA del tableContainer -->
+                <div class="pagination-container" id="paginationContainer">
+                    <!-- Será rellenada por fetch -->
                 </div>
             </div>
         </div>
@@ -144,6 +149,7 @@
 
                     const newTable = temp.querySelector('table');
                     const newPagination = temp.querySelector('.pagination-container');
+                    const newNoResults = temp.querySelector('.no-results-overlay');
 
                     // Inyectar tabla en tableContainer
                     const tableContainer = document.getElementById('tableContainer');
@@ -152,20 +158,15 @@
                         if (newTable) {
                             tableContainer.appendChild(newTable);
                         }
+                        if (newNoResults) {
+                            tableContainer.appendChild(newNoResults);
+                        }
                     }
 
-                    // Inyectar paginación FUERA del tableContainer (como hermana en content-table)
-                    const contentTable = document.querySelector('.content-table');
-                    if (contentTable && newPagination) {
-                        // Buscar si ya existe pagination-container
-                        let existingPag = contentTable.querySelector('.pagination-container');
-                        if (existingPag) {
-                            existingPag.innerHTML = newPagination.innerHTML;
-                        } else {
-                            // Crear nuevo si no existe
-                            const paginationClone = newPagination.cloneNode(true);
-                            contentTable.appendChild(paginationClone);
-                        }
+                    // Inyectar paginación en paginationContainer (fuera de la tabla)
+                    const paginationContainer = document.getElementById('paginationContainer');
+                    if (paginationContainer && newPagination) {
+                        paginationContainer.innerHTML = newPagination.innerHTML;
                     }
                 })
                 .catch(err => console.error('fetchFunctionManualProfiles error:', err));
@@ -173,6 +174,9 @@
 
         // Inicializar en DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
+            // Carga inicial: obtener tabla y paginación
+            window.fetchFunctionManualProfiles();
+            
             // Búsqueda con debounce
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
