@@ -1,7 +1,13 @@
 {% for r in contributions %}
     <tr>
         <td><strong>{{ r.name }}</strong></td>
-        <td><span class="badge-code">{{ r.code }}</span></td>
+        <td>
+            {% if r.budget_mapping %}
+                {{ r.budget_mapping.dynamic_suffix }}
+            {% else %}
+                <span class="text-muted">Sin afectación</span>
+            {% endif %}
+        </td>
         <td>
             {% if r.debit_account %}
                 {{ r.debit_account.code }}

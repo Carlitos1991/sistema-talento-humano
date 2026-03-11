@@ -42,7 +42,9 @@
                 <thead>
                 <tr>
                     <th>Nombre del Descuento</th>
-                    <th>Código</th>
+                    <th>Sufijo Presupuestario</th>
+                    <th>Cuenta Gasto (DEBE)</th>
+                    <th>Cuenta Pasivo (HABER)</th>
                     <th class="text-center">Estado</th>
                     <th class="actions no-sort">Acciones</th>
                 </tr>
@@ -51,7 +53,37 @@
                 {% for r in deductions %}
                     <tr>
                         <td><strong>{{ r.name }}</strong></td>
-                        <td><span class="badge-code">{{ r.code }}</span></td>
+                        <td>
+                            {% if r.budget_mapping %}
+                                {{ r.budget_mapping.dynamic_suffix }}
+                            {% else %}
+                                <span class="text-muted">Sin afectación</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.debit_account %}
+                                <div>
+                                    <strong>{{ r.debit_account.name }}</strong>
+                                    <div class="text-muted" style="font-size:0.85rem; font-style:italic; margin-top:2px;">
+                                        <i class="fas fa-hashtag" style="margin-right:6px;"></i>{{ r.debit_account.code }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.credit_account %}
+                                <div>
+                                    <strong>{{ r.credit_account.name }}</strong>
+                                    <div class="text-muted" style="font-size:0.85rem; font-style:italic; margin-top:2px;">
+                                        <i class="fas fa-hashtag" style="margin-right:6px;"></i>{{ r.credit_account.code }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td class="text-center">
                             {% if r.is_active %}
                                 <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
