@@ -27,7 +27,8 @@ class JournalExportView(View):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename=journal_{pk}.csv'
         writer = csv.writer(response)
-        writer.writerow(['account_code', 'account_name', 'debit', 'credit', 'budget_line_code', 'budget_line_number', 'reference'])
+        writer.writerow(
+            ['account_code', 'account_name', 'debit', 'credit', 'budget_line_code', 'budget_line_number', 'reference'])
         for it in journal.items.all():
             writer.writerow([
                 it.account.code,
@@ -49,14 +50,14 @@ class AccountListView(ListView):
 
 class AccountCreateView(CreateView):
     model = Account
-    fields = ['code', 'name', 'type', 'is_active']
+    fields = ['code', 'name', 'is_active']
     template_name = 'accounting/account_form.html'
     success_url = reverse_lazy('accounting:account_list')
 
 
 class AccountUpdateView(UpdateView):
     model = Account
-    fields = ['code', 'name', 'type', 'is_active']
+    fields = ['code', 'name', 'is_active']
     template_name = 'accounting/account_form.html'
     success_url = reverse_lazy('accounting:account_list')
 

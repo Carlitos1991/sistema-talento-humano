@@ -96,6 +96,8 @@ const app = createApp({
                         if (selector.includes('Experience')) expForm.value[name] = val;
                         if (selector.includes('Training')) trainForm.value[name] = val;
                         if (selector.includes('Person')) editForm.value[name] = val;
+                        if (selector.toLowerCase().includes('bank')) bankForm.value[name] = val;
+                        if (selector.toLowerCase().includes('payroll')) payrollForm.value[name] = val;
                     });
                 }
             }, 300);
@@ -844,10 +846,37 @@ const app = createApp({
         const saveBankAccount = async (personId) => {
              try {
                 const pid = personId || appElement.dataset.personId;
+                // Build form payload, prefer reactive state but fallback to DOM values
                 const formData = new FormData();
-                Object.keys(bankForm.value).forEach(key => {
-                    formData.append(key, bankForm.value[key] || '');
+                const payloadDebug = {};
+                const keys = ['bank', 'account_type', 'account_number', 'holder_name'];
+                keys.forEach(key => {
+                    let val = bankForm.value ? bankForm.value[key] : '';
+                    // If reactive state is empty, try jQuery (.val()) first because select2 plays with DOM
+                    if ((val === undefined || val === null || val === '') ) {
+                        try {
+                            if (window.jQuery && window.jQuery(`[name="${key}"]`).length) {
+                                val = window.jQuery(`[name="${key}"]`).val();
+                            } else if (document.querySelector(`[name="${key}"]`)) {
+                                val = document.querySelector(`[name="${key}"]`).value;
+                            }
+                        } catch (e) {
+                            val = '';
+                        }
+                    }
+                    if (val === undefined || val === null) val = '';
+                    formData.append(key, val);
+                    payloadDebug[key] = val;
                 });
+                // More debug: if selects are blank, show underlying select element and jQuery state
+                try {
+                    const bankEl = document.querySelector('[name="bank"]');
+                    console.debug('bank select element', bankEl, window.jQuery ? window.jQuery('[name="bank"]').val() : null);
+                    const typeEl = document.querySelector('[name="account_type"]');
+                    console.debug('account_type select element', typeEl, window.jQuery ? window.jQuery('[name="account_type"]').val() : null);
+                } catch (e) {}
+                // Debug log: muestra en consola los valores que se enviarán
+                console.debug('saveBankAccount payload', payloadDebug);
 
                 const response = await fetch(`/employee/person/${pid}/add-bank-account/`, {
                     method: 'POST',
@@ -872,6 +901,7 @@ const app = createApp({
                 }
             } catch (error) {
                 console.error(error);
+                console.debug('bankForm current state', bankForm.value);
                 if (window.Swal) Swal.fire({position: 'top-end', icon: 'error', title: 'Error al guardar'});
                 else alert("Error al guardar cuenta bancaria");
             }

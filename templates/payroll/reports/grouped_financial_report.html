@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="header-card no-print" style="background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);">
+        <div>
+            <h1><i class="fas fa-print me-2"></i> Reporte Financiero Agrupado</h1>
+            <p>Periodo: <strong>{{ period.month }} {{ period.year }}</strong> | Generación Oficial de Nómina</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'payroll:period_list' %}" class="btn-cancel text-white bg-white bg-opacity-25 border-0">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <button onclick="window.print()" class="btn-save bg-white text-indigo-900 border-0 ms-2">
+                <i class="fas fa-file-pdf"></i> Imprimir / Exportar a PDF
+            </button>
+        </div>
+    </div>
+
+    <div id="printable-area" class="mt-4">
+
+        {% for code, data in grouped_reports.items %}
+            <div class="report-group-container">
+
+                <div class="report-header">
+                    <h2 style="text-align: center; font-size: 1.2rem; margin-bottom: 5px; text-transform: uppercase;">
+                        Gobierno Autónomo Descentralizado Municipal de Loja</h2>
+                    <h3 style="text-align: center; font-size: 1rem; margin-bottom: 5px; color: #475569;">RESUMEN DE
+                        NÓMINA POR PARTIDA PRESUPUESTARIA</h3>
+                    <h4 style="text-align: center; font-size: 0.9rem; margin-bottom: 20px; color: #1e293b;">
+                        Agrupación: <strong>{{ code }}</strong> - {{ data.group_name }}<br>
+                        Periodo: {{ period.month }} {{ period.year }}
+                    </h4>
+                </div>
+
+                <h5 class="report-section-title">1. Sábana de Rol de Pagos</h5>
+                <table class="report-table">
+                    <thead>
+                    <tr class="bg-gray">
+                        <th style="width: 5%; text-align: center;">N°</th>
+                        <th style="width: 15%;">Cédula</th>
+                        <th style="width: 35%;">Nombres Completos</th>
+                        <th class="text-right" style="width: 15%;">Total Ingresos</th>
+                        <th class="text-right" style="width: 15%;">Total Descuentos</th>
+                        <th class="text-right" style="width: 15%;">Líquido a Pagar</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for emp_id, emp in data.empleados.items %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>{{ emp.persona.document_number }}</td>
+                            <td>{{ emp.persona.full_name }}</td>
+                            <td class="text-right text-success">$ {{ emp.ingresos|floatformat:2 }}</td>
+                            <td class="text-right text-danger">$ {{ emp.descuentos|floatformat:2 }}</td>
+                            <td class="text-right font-weight-bold">$ {{ emp.liquido|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No hay empleados procesados en este grupo.</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <h5 class="report-section-title mt-4">2. Jornalización Contable</h5>
+                <table class="report-table">
+                    <thead>
+                    <tr class="bg-gray">
+                        <th style="width: 60%;">Cuenta Contable</th>
+                        <th class="text-right" style="width: 20%;">Debe</th>
+                        <th class="text-right" style="width: 20%;">Haber</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for cta, vals in data.contabilidad.items %}
+                        <tr>
+                            <td><small>{{ cta }} - {{ vals.nombre }}</small></td>
+                            <td class="text-right text-success">{% if vals.debe > 0 %}$
+                                {{ vals.debe|floatformat:2 }}{% endif %}</td>
+                            <td class="text-right text-danger">{% if vals.haber > 0 %}$
+                                {{ vals.haber|floatformat:2 }}{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">Sin afectación contable.</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <h5 class="report-section-title mt-4">3. Afectación Presupuestaria</h5>
+                <table class="report-table">
+                    <thead>
+                    <tr class="bg-gray">
+                        <th style="width: 70%;">Partida / Concepto</th>
+                        <th class="text-right" style="width: 30%;">Compromiso / Pago</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for key, monto in data.presupuesto.items %}
+                        <tr>
+                            <td><small>{{ key }}</small></td>
+                            <td class="text-right font-weight-bold">$ {{ monto|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center">Sin afectación presupuestaria.</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <div style="page-break-inside: avoid;">
+                    <h5 class="report-section-title mt-4">4. Archivo de Transferencias Bancarias</h5>
+                    <table class="report-table">
+                        <thead>
+                        <tr class="bg-gray">
+                            <th style="width: 5%; text-align: center;">N°</th>
+                            <th style="width: 15%;">Cédula</th>
+                            <th style="width: 35%;">Nombres Completos</th>
+                            <th style="width: 30%;">Institución / Cuenta Bancaria</th>
+                            <th class="text-right" style="width: 15%;">Valor a Transferir</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for emp_id, emp in data.empleados.items %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>{{ emp.persona.document_number }}</td>
+                                <td>{{ emp.persona.full_name }}</td>
+                                <td>
+                                    <small>
+                                        {% if emp.numero_cuenta %}
+                                            <strong>{{ emp.banco }}</strong> <br>
+                                            {{ emp.tipo_cuenta }} - Cta: {{ emp.numero_cuenta }}
+                                        {% else %}
+                                            <span style="color: #ef4444; font-style: italic; font-weight: 600;">
+                                            <i class="fas fa-exclamation-triangle"></i> Sin cuenta registrada
+                                        </span>
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td class="text-right font-weight-bold text-primary-bold">
+                                    $ {{ emp.liquido|floatformat:2 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay transferencias pendientes.</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="signatures-container" style="page-break-inside: avoid;">
+                    <div class="signature-line">
+                        <div class="line"></div>
+                        <p>Elaborado por<br><strong>Analista de Talento Humano</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <div class="line"></div>
+                        <p>Revisado por<br><strong>Jefe de Talento Humano</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <div class="line"></div>
+                        <p>Aprobado por<br><strong>Director Financiero</strong></p>
+                    </div>
+                </div>
+
+            </div>
+        {% endfor %}
+
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <style>
+        .report-group-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .report-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f4c81;
+            margin-top: 30px; /* Separación más amplia entre bloques */
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+
+        .report-table th, .report-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 10px;
+        }
+
+        .bg-gray {
+            background-color: #f8fafc !important;
+        }
+
+        /* Contenedor de Firmas modificado para que no se corte */
+        .signatures-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 80px;
+        }
+
+        .signature-line {
+            text-align: center;
+            width: 25%;
+        }
+
+        .signature-line .line {
+            border-top: 1px solid #000;
+            margin-bottom: 5px;
+        }
+
+        .signature-line p {
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+
+        /* ESTILOS DE IMPRESIÓN */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .report-group-container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                margin-bottom: 0;
+                page-break-after: always;
+                break-after: page;
+            }
+
+            .report-group-container:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+        }
+    </style>
+{% endblock %}

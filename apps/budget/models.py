@@ -75,6 +75,24 @@ class Activity(BaseModel):
         return f"{self.project.subprogram.program.code}.{self.project.subprogram.code}.{self.project.code}.{self.code}"
 
 
+class BudgetGroup(BaseModel):
+    """
+    Agrupaciones de partidas para generación de roles de pago por bloques.
+    Ejemplo Short Code: 45111CE
+    """
+    base_code = models.CharField(verbose_name="Código Base (Sin secuencial)", max_length=50, unique=True)
+    short_code = models.CharField(verbose_name="Código Corto (TH)", max_length=15, unique=True)
+    name = models.CharField(verbose_name="Nombre de la Agrupación", max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['short_code']
+        verbose_name = 'Agrupación de Rol'
+        verbose_name_plural = 'Agrupaciones de Roles'
+
+    def __str__(self):
+        return f"{self.short_code} - {self.name or 'Agrupación Automática'}"
+
+
 # ==========================================
 # 2. PARTIDA PRESUPUESTARIA
 # ==========================================
@@ -93,6 +111,13 @@ class BudgetLine(BaseModel):
     current_employee = models.ForeignKey(
         Employee, on_delete=models.SET_NULL, verbose_name='Custodio/Ocupante',
         blank=True, null=True, related_name='current_budget_line'
+    )
+    budget_group = models.ForeignKey(
+        BudgetGroup,
+        on_delete=models.SET_NULL,
+        blank=True, null=True,
+        verbose_name='Agrupación de Rol',
+        related_name='budget_lines'
     )
 
     # Cada ForeignKey a CatalogItem debe tener un 'related_name' único
@@ -196,6 +221,77 @@ class BudgetLine(BaseModel):
                     )
 
         super().save(*args, **kwargs)
+        if self.code:
+            parts = self.code.split('.')
+            # Verificamos que tenga la estructura completa Ej: 4.05.01.001.001.5.1.01.05
+            if len(parts) >= 9:
+                try:
+                    # 1. Extraemos los primeros 5 combos sin ceros
+                    p1 = str(int(parts[0]))
+                    p2 = str(int(parts[1]))
+                    p3 = str(int(parts[2]))
+                    p4 = str(int(parts[3]))
+                    p5 = str(int(parts[4]))
+                    numeric_base = f"{p1}{p2}{p3}{p4}{p5}"
+
+                    # 2. Letra del Gasto (5to combo)
+                    gasto = f"{parts[5]}.{parts[6]}"
+                    if gasto == '5.1':
+                        letter1 = 'C'
+                    elif gasto == '6.1':
+                        letter1 = 'P'
+                    elif gasto == '7.1':
+                        letter1 = 'I'
+                    else:
+                        letter1 = 'X'  # Desconocido
+
+                    # 3. Letra del Ítem (6to combo)
+                    item = f"{parts[7]}.{parts[8]}"
+                    if item == '01.05':
+                        letter2 = 'E'
+                    elif item == '01.06':
+                        letter2 = 'T'
+                    elif item == '05.10':
+                        letter2 = 'C'
+                    else:
+                        letter2 = 'X'  # Desconocido
+
+                    # 4. Armamos los códigos finales
+                    short_code = f"{numeric_base}{letter1}{letter2}"
+                    base_code = ".".join(parts[:9])  # Código sin el secuencial del empleado
+                    try:
+                        prog_name = self.activity.project.subprogram.program.name if self.activity else "S/P"
+                        spend_name = self.spending_type_item.name if self.spending_type_item else "S/G"
+                        regime_name = self.regime_item.name if self.regime_item else "S/R"
+
+                        # Construimos el texto (Ej: Agrupación Patronato - Inversion - Codigo de Trabajo)
+                        # Le ponemos [:255] por seguridad para que no exceda el límite de la base de datos
+                        descriptive_name = f" {prog_name} - {spend_name} - {regime_name}"[:255]
+                    except Exception:
+                        descriptive_name = f" {short_code}"
+                    # 5. Buscamos o creamos el grupo automáticamente
+                    from .models import BudgetGroup
+                    group, created = BudgetGroup.objects.get_or_create(
+                        base_code=base_code,
+                        defaults={
+                            'short_code': short_code,
+                            'name': descriptive_name
+                        }
+                    )
+
+                    # Si el código corto cambió (por alguna actualización manual), lo forzamos
+                    if not created and group.short_code != short_code:
+                        group.short_code = short_code
+                        group.save()
+
+                    # 6. Enlazamos la partida a este grupo si no lo estaba
+                    if self.budget_group_id != group.id:
+                        self.budget_group = group
+                        # Usamos update para no disparar un bucle infinito de save()
+                        BudgetLine.objects.filter(pk=self.pk).update(budget_group=group)
+
+                except Exception as e:
+                    print(f"Error al generar agrupación automática: {e}")
 
 
 # ==========================================

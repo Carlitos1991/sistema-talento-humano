@@ -28,5 +28,7 @@ urlpatterns = [
     path('detail/<int:pk>/', views.BudgetDetailView.as_view(), name='budget_detail'),
     path('history/changes/<int:pk>/', views.BudgetChangesHistoryView.as_view(), name='history_changes'),
     path('history/occupants/<int:pk>/', views.BudgetOccupantsHistoryView.as_view(), name='history_occupants'),
-
+    path('groups/', views.BudgetGroupListView.as_view(), name='budget_group_list'),
+    path('groups/<int:pk>/update/', views.BudgetGroupUpdateView.as_view(), name='budget_group_update'),
+    path('groups/<int:pk>/lines/', views.BudgetGroupLinesView.as_view(), name='budget_group_lines'),
 ]

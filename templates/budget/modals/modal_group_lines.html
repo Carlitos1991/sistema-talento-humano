@@ -1,0 +1,68 @@
+<div class="modal-overlay" id="groupLinesModalOverlay">
+    <div class="modal-container" style="max-width: 900px;">
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle" style="background-color: #e0f2fe; color: #0284c7;">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div>
+                    <h3 class="header-title-main">Partidas de la Agrupación</h3>
+                    <p style="margin: 0; font-size: 0.85rem; color: #64748b;">{{ group.short_code }}
+                        - {{ group.name }}</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close-modal-refined" onclick="closePayrollModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-custom" style="max-height: 60vh; overflow-y: auto; padding: 0;">
+            <table class="table" style="margin: 0;">
+                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                <tr>
+                    <th>P. I.</th>
+                    <th>Denominación del Puesto</th>
+                    <th>Ocupante Actual</th>
+                    <th class="text-center">Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for line in lines %}
+                    <tr>
+                        <td style="font-family: monospace; font-size: 0.9rem;">{{ line.number_individual|default:"Sin PI" }}</td>
+                        <td>{{ line.position_item.name|default:"Sin denominación" }}</td>
+                        <td>
+                            {% if line.current_employee %}
+                                <span style="font-weight: 600; color: #0f172a;">
+                                    {{ line.current_employee.person.full_name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted" style="font-style: italic;">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if line.current_employee %}
+                                <span class="badge-code"
+                                      style="background-color: #dcfce7; color: #166534; border-color: #bbf7d0;">Ocupada</span>
+                            {% else %}
+                                <span class="badge-code"
+                                      style="background-color: #fef9c3; color: #854d0e; border-color: #fef08a;">Libre</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No hay partidas activas asignadas a este
+                            grupo.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel" onclick="closePayrollModal()">Cerrar</button>
+        </div>
+    </div>
+</div>

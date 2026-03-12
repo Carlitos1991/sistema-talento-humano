@@ -3,7 +3,7 @@
 from django import forms
 from core.forms import BaseFormMixin
 from core.models import CatalogItem
-from .models import BudgetLine, Program, Subprogram, Project, Activity
+from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetGroup
 
 
 class UppercaseFormMixin:
@@ -191,3 +191,12 @@ class BudgetChangeStatusForm(forms.Form):
         label="Observaciones", required=False,
         widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 3, 'placeholder': 'Motivo del cambio...'})
     )
+
+
+class BudgetGroupForm(BaseFormMixin, forms.ModelForm):
+    class Meta:
+        model = BudgetGroup
+        fields = ['name']  # Solo dejamos editar el nombre, los códigos son intocables
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Nombre de la agrupación'})
+        }

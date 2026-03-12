@@ -4,16 +4,15 @@ from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count
 from datetime import date
 from core.models import CatalogItem
 from employee.models import Employee
 from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetModificationHistory, \
-    BudgetAssignmentHistory
+    BudgetAssignmentHistory, BudgetGroup
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
-    AssignIndividualNumberForm, BudgetChangeStatusForm
+    AssignIndividualNumberForm, BudgetChangeStatusForm, BudgetGroupForm
 from django.utils import timezone
-
 
 
 # --- 1. ENDPOINT PARA CASCADA (JSON) ---
@@ -49,7 +48,7 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
 # --- 2. ESTADÍSTICAS (Python Calculation) ---
 def get_budget_stats():
     from django.db.models import Count, Q, Case, When, IntegerField
-    
+
     # Una sola consulta con agregaciones condicionales (más eficiente)
     result = BudgetLine.objects.aggregate(
         total=Count('id'),
@@ -83,10 +82,10 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'activity__project__subprogram__program__name',
             'position_item__name',
             'current_employee__person__first_name',
-            'current_employee__person__last_name', 
+            'current_employee__person__last_name',
             'status_item__name', 'status_item__code'
         )
-        
+
         # Búsqueda rápida
         q = self.request.GET.get('q')
         if q:
@@ -98,35 +97,35 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(current_employee__person__last_name__icontains=q) |
                 Q(current_employee__person__document_number__icontains=q)
             )
-        
+
         # Filtro rápido por estado
         status = self.request.GET.get('status')
         if status and status != 'all':
             qs = qs.filter(status_item__code=status)
-        
+
         # Ordenamiento (sort)
         sort_param = self.request.GET.get('sort', 'number_individual')
         if sort_param:
             qs = qs.order_by(sort_param)
         else:
             qs = qs.order_by('number_individual')
-        
+
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = BudgetLineForm()
-        
+
         # Solo actualizar estadísticas si NO es petición AJAX (paginación)
         if not self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             context.update(get_budget_stats())
-        
+
         return context
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             queryset = self.get_queryset()
-            
+
             # Si se solicita exportación, devolver TODOS los datos sin paginación
             if request.GET.get('export') == 'true':
                 context = {
@@ -138,12 +137,12 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             else:
                 paginator = self.get_paginator(queryset, self.paginate_by)
                 page_number = request.GET.get(self.page_kwarg, 1)
-                
+
                 try:
                     page_obj = paginator.get_page(page_number)
                 except:
                     page_obj = paginator.get_page(1)
-                
+
                 context = {
                     self.context_object_name: page_obj.object_list,
                     'page_obj': page_obj,
@@ -625,4 +624,48 @@ class BudgetOccupantsHistoryView(LoginRequiredMixin, View):
             'line': line,
             'history': history,
             'total_assignments': total_assignments
+        })
+
+
+class BudgetGroupListView(LoginRequiredMixin, ListView):
+    model = BudgetGroup
+    template_name = 'budget/budget_group_list.html'
+    context_object_name = 'groups'
+
+    def get_queryset(self):
+        qs = BudgetGroup.objects.annotate(total_lines=Count('budget_lines')).order_by('short_code')
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(short_code__icontains=q) | Q(name__icontains=q) | Q(base_code__icontains=q))
+        return qs
+
+
+class BudgetGroupUpdateView(LoginRequiredMixin, UpdateView):
+    model = BudgetGroup
+    form_class = BudgetGroupForm
+    template_name = 'budget/modals/modal_budget_group_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Agrupación actualizada exitosamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
+class BudgetGroupLinesView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        from .models import BudgetGroup
+        group = get_object_or_404(BudgetGroup, pk=pk)
+
+        # Traemos solo partidas activas (ocupadas, libres, concurso), ignorando inactivas
+        # Usamos select_related para que sea ultrarrápido y traiga datos del empleado y cargo
+        lines = group.budget_lines.filter(is_active=True).select_related(
+            'position_item',
+            'current_employee__person'
+        ).order_by('code')
+
+        return render(request, 'budget/modals/modal_group_lines.html', {
+            'group': group,
+            'lines': lines
         })

@@ -406,7 +406,16 @@ def add_bank_account(request, person_id):
             bank_acc.save()
             return JsonResponse({'success': True, 'message': 'Cuenta bancaria registrada con éxito.'})
 
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        # Debug: log errors and return posted data to help trace client-side issues
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            posted = dict(request.POST)
+        except Exception:
+            posted = {}
+        logger.debug('add_bank_account invalid form errors: %s', form.errors)
+        logger.debug('add_bank_account POST data: %s', posted)
+        return JsonResponse({'success': False, 'errors': form.errors, 'posted': posted}, status=400)
     return None
 
 
@@ -514,7 +523,16 @@ def add_bank_account(request, person_id):
             bank_acc.save()
             return JsonResponse({'success': True, 'message': 'Cuenta bancaria registrada con éxito.'})
 
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        # Debug: log errors and return posted data to help trace client-side issues
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            posted = dict(request.POST)
+        except Exception:
+            posted = {}
+        logger.debug('add_bank_account invalid form errors: %s', form.errors)
+        logger.debug('add_bank_account POST data: %s', posted)
+        return JsonResponse({'success': False, 'errors': form.errors, 'posted': posted}, status=400)
     return None
 
 

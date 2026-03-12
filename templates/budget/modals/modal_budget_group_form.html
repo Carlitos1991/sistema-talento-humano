@@ -1,0 +1,47 @@
+<div class="modal-overlay" id="groupModalOverlay">
+    <div class="modal-container">
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-pen"></i></div>
+                <h3 class="header-title-main">Editar Nombre de Agrupación</h3>
+            </div>
+            <button type="button" class="btn-close-modal-refined" onclick="closePayrollModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="post" action="{{ request.path }}" onsubmit="submitPayrollForm(event)">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="alert-info mb-3" style="padding: 0.75rem;">
+                    <i class="fas fa-info-circle" style="font-size: 1.2rem;"></i>
+                    <span style="font-size: 0.85rem;">Los códigos son inmutables por integridad. Puedes personalizar el nombre para que salga más estético en los reportes de Recursos Humanos.</span>
+                </div>
+
+                <div class="form-section-card">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Código Corto</label>
+                            <input type="text" class="input-field readonly-styled"
+                                   value="{{ form.instance.short_code }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Código Base</label>
+                            <input type="text" class="input-field readonly-styled" value="{{ form.instance.base_code }}"
+                                   readonly>
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <label class="form-label">Nombre a mostrar en reportes</label>
+                            {{ form.name }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-cancel" onclick="closePayrollModal()">Cancelar</button>
+                <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>

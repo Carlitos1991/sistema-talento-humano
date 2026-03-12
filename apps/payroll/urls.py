@@ -7,7 +7,8 @@ from .views import (
     IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
     InstitutionalReportView, MappingListView,
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
-    SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView
+    SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
+    GroupedPayrollReportView
 )
 
 app_name = 'payroll'
@@ -36,7 +37,7 @@ urlpatterns = [
     path('deductions/create/', DeductionCreateView.as_view(), name='deduction_create'),
     path('deductions/<int:pk>/edit/', DeductionUpdateView.as_view(), name='deduction_edit'),
     path('reports/institutional/<int:period_id>/', InstitutionalReportView.as_view(), name='report_institutional'),
-
+    path('reports/grouped/<int:pk>/', GroupedPayrollReportView.as_view(), name='grouped_report'),
     # Rutas para el Mapeo Presupuestario
     path('mappings/', MappingListView.as_view(), name='mapping_list'),
     path('mappings/create/', MappingCreateView.as_view(), name='mapping_create'),

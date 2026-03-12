@@ -59,6 +59,10 @@
                                         {% if p.is_closed %}disabled style="opacity:0.5"{% endif %}>
                                     <i class="fas fa-cogs"></i>
                                 </button>
+                                <a href="{% url 'payroll:grouped_report' p.pk %}"
+                                   class="btn-icon btn-info-action" title="Reporte Institucional y Contable">
+                                    <i class="fas fa-university"></i>
+                                </a>
 
                                 <!-- Botón Ver Roles (Enlace normal a otra vista Django) -->
                                 <!-- Ajusta la URL 'payroll:payslip_list' según tus urls.py si ya tienes la lista de roles -->

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="header-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #10b981 100%);">
+        <div>
+            <h1><i class="fas fa-layer-group me-2"></i> Agrupaciones de Roles (Automáticas)</h1>
+            <p>Clasificador interno para generación de roles de pago por bloques presupuestarios.</p>
+        </div>
+    </div>
+
+    <div class="content-table mt-4">
+        <div class="table-controls table-controls-grid">
+            <div></div>
+
+            <div class="search-box table-controls-right">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="table-search-input" placeholder="Buscar por código o nombre...">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table managed-table exportable-table" data-page-size="15"
+                   data-title="Agrupaciones Presupuestarias">
+                <thead>
+                <tr>
+                    <th style="width: 15%">Código Corto</th>
+                    <th style="width: 25%">Código Base</th>
+                    <th style="width: 45%">Nombre de Agrupación</th>
+                    <th style="width: 10%" class="text-center">Cant. Partidas</th>
+                    <th class="actions no-sort text-center">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for g in groups %}
+                    <tr>
+                        <td><span class="badge-code" style="font-size: 0.9rem;">{{ g.short_code }}</span></td>
+                        <td style="font-family: monospace; color: #475569;">{{ g.base_code }}</td>
+                        <td><strong>{{ g.name }}</strong></td>
+                        <td class="text-center">
+                            <span class="status-badge active">{{ g.total_lines }}</span>
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <button type="button" class="btn-icon btn-info-action" title="Ver Partidas"
+                                        onclick="openPayrollModal('{% url 'budget:budget_group_lines' g.pk %}')">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                                <button type="button" class="btn-icon btn-views-action" title="Editar Nombre"
+                                        onclick="openPayrollModal('{% url 'budget:budget_group_update' g.pk %}')">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+{% endblock %}
