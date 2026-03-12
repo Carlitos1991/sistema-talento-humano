@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q, Sum
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
@@ -774,18 +776,23 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         ).prefetch_related(
             'payslip__employee__person__economic_data__bank_account__bank',
             'payslip__employee__person__economic_data__bank_account__account_type'
-        ).distinct()  # <-- Garantiza matemáticamente que no haya rubros duplicados
+        ).distinct()
 
         report_data = {}
 
         for it in items:
+            # ==============================================================
+            # BLINDAJE DE TIPOS: Forzamos a Decimal exacto para evitar el error Float
+            # ==============================================================
+            val = Decimal(str(it.value))
+
             grupo_obj = it.budget_line.budget_group if it.budget_line else None
             grupo_key = grupo_obj.short_code if grupo_obj else 'SIN_AGRUPAR'
 
             if grupo_key not in report_data:
                 report_data[grupo_key] = {
                     'group_obj': grupo_obj,
-                    'group_name': grupo_obj.name if grupo_obj else 'Registros sin agrupación presupuestaria',
+                    'group_name': grupo_obj.name if grupo_obj else 'Registros sin agrupación',
                     'empleados': {},
                     'contabilidad': {},
                     'presupuesto': {}
@@ -796,11 +803,9 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             # A. Llenado de Data para Reporte 1 (Sábana)
             emp_id = it.payslip.employee.id
             if emp_id not in grupo_data['empleados']:
-
                 banco_nombre = "NO REGISTRADO"
                 cuenta_tipo = ""
                 cuenta_numero = ""
-
                 try:
                     bank_acc = it.payslip.employee.person.economic_data.bank_account
                     banco_nombre = bank_acc.bank.name if bank_acc.bank else "Banco Desconocido"
@@ -815,40 +820,82 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                     'banco': banco_nombre,
                     'tipo_cuenta': cuenta_tipo,
                     'numero_cuenta': cuenta_numero,
-                    'ingresos': 0,
-                    'descuentos': 0,
-                    'liquido': 0,
-                    'rubros_detalle': []
+
+                    'ingresos': Decimal(0),
+                    'descuentos': Decimal(0),
+                    'liquido': Decimal(0),
+
+                    'rmu': Decimal(0),
+                    'fondos_reserva': Decimal(0),
+                    'decimo_tercero': Decimal(0),
+                    'decimo_cuarto': Decimal(0),
+                    'iess_personal': Decimal(0),
+                    'iess_patronal': Decimal(0),
+                    'retenciones': Decimal(0),
+                    'prestamos_q': Decimal(0),
+                    'anticipos': Decimal(0),
+                    'otros_descuentos': Decimal(0),
                 }
 
+            emp_dict = grupo_data['empleados'][emp_id]
+
             if it.item_type == 'INCOME':
-                grupo_data['empleados'][emp_id]['ingresos'] += it.value
-                grupo_data['empleados'][emp_id]['liquido'] += it.value
+                emp_dict['ingresos'] += val
+                emp_dict['liquido'] += val
+
+                code_up = (it.income_ref.code or '').upper()
+                if 'REMUNERACION' in code_up:
+                    emp_dict['rmu'] += val
+                elif 'FONDOS_RESERVA' in code_up:
+                    emp_dict['fondos_reserva'] += val
+                elif 'DECIMO_TERCERO' in code_up:
+                    emp_dict['decimo_tercero'] += val
+                elif 'DECIMO_CUARTO' in code_up:
+                    emp_dict['decimo_cuarto'] += val
+
             elif it.item_type == 'DEDUCTION':
-                grupo_data['empleados'][emp_id]['descuentos'] += it.value
-                grupo_data['empleados'][emp_id]['liquido'] -= it.value
+                emp_dict['descuentos'] += val
+                emp_dict['liquido'] -= val
 
-            # B. Llenado de Data para Reporte 3 (Presupuesto)
-            b_code = it.budget_line_code
+                code_up = (it.deduction_ref.code or '').upper()
+                if 'IESS_PER' in code_up:
+                    emp_dict['iess_personal'] += val
+                elif 'RETENCION' in code_up or 'JUDICIAL' in code_up:
+                    emp_dict['retenciones'] += val
+                elif 'PRESTAMO' in code_up or 'QUIROGRAFARIO' in code_up:
+                    emp_dict['prestamos_q'] += val
+                elif 'ANTICIPO' in code_up:
+                    emp_dict['anticipos'] += val
+                else:
+                    emp_dict['otros_descuentos'] += val
 
-            if b_code:
-                afecta_presupuesto = False
-                nombre_rubro = ""
+            elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
+                code_up = (it.contribution_ref.code or '').upper()
+                if 'PATRONAL' in code_up: emp_dict['iess_patronal'] += val
 
-                if it.item_type == 'INCOME' and it.income_ref_id in mapped_income_ids:
-                    afecta_presupuesto = True
-                    nombre_rubro = it.income_ref.name
-                elif it.item_type == 'DEDUCTION' and it.deduction_ref_id in mapped_deduction_ids:
-                    afecta_presupuesto = True
-                    nombre_rubro = it.deduction_ref.name
-                elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id in mapped_contribution_ids:
-                    afecta_presupuesto = True
-                    nombre_rubro = it.contribution_ref.name
+                # B. Llenado de Data para Reporte 3 (Presupuesto)
+                # ==========================================
+                # B. Llenado de Data para Reporte 3 (Presupuesto)
+                # ==========================================
+                b_code = getattr(it, 'budget_line_code', None)
+                if b_code:
+                    afecta_presupuesto = False
+                    nombre_rubro = ""
 
-                if afecta_presupuesto:
-                    key_presupuesto = f"{b_code} - {nombre_rubro}"
-                    grupo_data['presupuesto'].setdefault(key_presupuesto, 0)
-                    grupo_data['presupuesto'][key_presupuesto] += it.value
+                    if it.item_type == 'INCOME' and it.income_ref_id in mapped_income_ids:
+                        afecta_presupuesto = True
+                        nombre_rubro = it.income_ref.name
+                    elif it.item_type == 'DEDUCTION' and it.deduction_ref_id in mapped_deduction_ids:
+                        afecta_presupuesto = True
+                        nombre_rubro = it.deduction_ref.name
+                    elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id in mapped_contribution_ids:
+                        afecta_presupuesto = True
+                        nombre_rubro = it.contribution_ref.name
+
+                    if afecta_presupuesto:
+                        if b_code not in grupo_data['presupuesto']:
+                            grupo_data['presupuesto'][b_code] = {'concepto': nombre_rubro, 'monto': Decimal(0)}
+                        grupo_data['presupuesto'][b_code]['monto'] += val
 
             # C. Llenado de Data para Reporte 2 (Contabilidad)
             obj_ref = None
@@ -863,26 +910,26 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 cuenta_debe = getattr(obj_ref, 'debit_account', None)
                 if cuenta_debe:
                     cta_debe = cuenta_debe.code
-                    grupo_data['contabilidad'].setdefault(cta_debe, {'debe': 0, 'haber': 0, 'nombre': cuenta_debe.name})
-                    grupo_data['contabilidad'][cta_debe]['debe'] += it.value
+                    grupo_data['contabilidad'].setdefault(cta_debe, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                     'nombre': cuenta_debe.name})
+                    grupo_data['contabilidad'][cta_debe]['debe'] += val
 
                 cuenta_haber = getattr(obj_ref, 'credit_account', None)
                 if cuenta_haber:
                     cta_haber = cuenta_haber.code
-                    grupo_data['contabilidad'].setdefault(cta_haber,
-                                                          {'debe': 0, 'haber': 0, 'nombre': cuenta_haber.name})
-                    grupo_data['contabilidad'][cta_haber]['haber'] += it.value
+                    grupo_data['contabilidad'].setdefault(cta_haber, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                      'nombre': cuenta_haber.name})
+                    grupo_data['contabilidad'][cta_haber]['haber'] += val
 
-            # C.1. ASIENTO PUENTE: Aporte Patronal
             if it.item_type == 'CONTRIBUTION' and obj_ref and 'PATRONAL' in getattr(obj_ref, 'code', '').upper():
-                grupo_data['contabilidad'].setdefault('2.1.3.51',
-                                                      {'debe': 0, 'haber': 0, 'nombre': 'GASTOS DE PERSONAL'})
-                grupo_data['contabilidad']['2.1.3.51']['debe'] += it.value
-                grupo_data['contabilidad']['2.1.3.51']['haber'] += it.value
+                grupo_data['contabilidad'].setdefault('2.1.3.51', {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                   'nombre': 'GASTOS DE PERSONAL'})
+                grupo_data['contabilidad']['2.1.3.51']['debe'] += val
+                grupo_data['contabilidad']['2.1.3.51']['haber'] += val
 
-        # ==============================================================
-        # POST-PROCESO: Asientos de Banco, Gastos de Personal y Totales
-        # ==============================================================
+            # ==============================================================
+            # POST-PROCESO: Totales, Columnas Dinámicas y Ordenamiento Contable
+            # ==============================================================
         from accounting.models import Account
         cta_gp = Account.objects.filter(code='2.1.3.51').first()
         nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
@@ -891,20 +938,71 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         nombre_banco = cta_banco.name if cta_banco else 'Banco Central'
 
         for g_key, g_data in report_data.items():
-            total_net_pay = sum(emp['liquido'] for emp in g_data['empleados'].values())
+            total_net_pay = sum((emp['liquido'] for emp in g_data['empleados'].values()), Decimal(0))
 
             if total_net_pay > 0:
-                g_data['contabilidad'].setdefault('2.1.3.51', {'debe': 0, 'haber': 0, 'nombre': nombre_gp})
+                g_data['contabilidad'].setdefault('2.1.3.51',
+                                                  {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_gp})
                 g_data['contabilidad']['2.1.3.51']['debe'] += total_net_pay
 
-                g_data['contabilidad'].setdefault('1.1.1.03.01', {'debe': 0, 'haber': 0, 'nombre': nombre_banco})
+                g_data['contabilidad'].setdefault('1.1.1.03.01',
+                                                  {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco})
                 g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
 
-            g_data['total_contabilidad_debe'] = sum(c['debe'] for c in g_data['contabilidad'].values())
-            g_data['total_contabilidad_haber'] = sum(c['haber'] for c in g_data['contabilidad'].values())
-            g_data['total_presupuesto'] = sum(g_data['presupuesto'].values())
+            # MATRIZ DE TOTALES (Con Decimal(0) como base segura)
+            ts = {
+                'rmu': sum((e['rmu'] for e in g_data['empleados'].values()), Decimal(0)),
+                'fondos_reserva': sum((e['fondos_reserva'] for e in g_data['empleados'].values()), Decimal(0)),
+                'decimo_tercero': sum((e['decimo_tercero'] for e in g_data['empleados'].values()), Decimal(0)),
+                'decimo_cuarto': sum((e['decimo_cuarto'] for e in g_data['empleados'].values()), Decimal(0)),
+                'total_ingresos': sum((e['ingresos'] for e in g_data['empleados'].values()), Decimal(0)),
 
-            g_data['contabilidad'] = dict(sorted(g_data['contabilidad'].items()))
+                'iess_personal': sum((e['iess_personal'] for e in g_data['empleados'].values()), Decimal(0)),
+                'iess_patronal': sum((e['iess_patronal'] for e in g_data['empleados'].values()), Decimal(0)),
+
+                'retenciones': sum((e['retenciones'] for e in g_data['empleados'].values()), Decimal(0)),
+                'prestamos_q': sum((e['prestamos_q'] for e in g_data['empleados'].values()), Decimal(0)),
+                'anticipos': sum((e['anticipos'] for e in g_data['empleados'].values()), Decimal(0)),
+                'otros_descuentos': sum((e['otros_descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
+                'total_descuentos': sum((e['descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
+
+                'liquido': sum((e['liquido'] for e in g_data['empleados'].values()), Decimal(0)),
+            }
+            g_data['totales_sabana'] = ts
+
+            # CÁLCULO DE COLUMNAS DINÁMICAS (Para ocultarlas si son 0)
+            # CÁLCULO DE COLUMNAS DINÁMICAS
+            g_data['colspans'] = {
+                'aportes': (1 if ts['iess_personal'] > 0 else 0) + (1 if ts['iess_patronal'] > 0 else 0),
+                'descuentos': (1 if ts['retenciones'] > 0 else 0) + (1 if ts['prestamos_q'] > 0 else 0) +
+                              (1 if ts['anticipos'] > 0 else 0) + (1 if ts['otros_descuentos'] > 0 else 0)
+            }
+
+            # ==============================================================
+            # ORDENAMIENTO CONTABLE GUBERNAMENTAL (Una sola fila por cuenta)
+            # ==============================================================
+            cuentas_debe = []
+            cuentas_solo_haber = []
+
+            for cta, c_data in g_data['contabilidad'].items():
+                if c_data['debe'] > 0:
+                    # Si tiene Debe (aunque también tenga Haber), va al bloque superior
+                    cuentas_debe.append(
+                        {'codigo': cta, 'nombre': c_data['nombre'], 'debe': c_data['debe'], 'haber': c_data['haber']})
+                elif c_data['haber'] > 0:
+                    # Si SOLO tiene Haber (ej. Bancos, IESS Personal), va al bloque inferior
+                    cuentas_solo_haber.append(
+                        {'codigo': cta, 'nombre': c_data['nombre'], 'debe': Decimal(0), 'haber': c_data['haber']})
+
+            # Orden de Contraloría: Debe de Mayor a Menor (6, 2, 1) y Haber de Menor a Mayor (1, 2)
+            cuentas_debe.sort(key=lambda x: x['codigo'], reverse=True)
+            cuentas_solo_haber.sort(key=lambda x: x['codigo'])
+
+            g_data['contabilidad_ordenada'] = cuentas_debe + cuentas_solo_haber
+
+            g_data['total_contabilidad_debe'] = sum((c['debe'] for c in g_data['contabilidad_ordenada']), Decimal(0))
+            g_data['total_contabilidad_haber'] = sum((c['haber'] for c in g_data['contabilidad_ordenada']), Decimal(0))
+            g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
 
         sorted_reports = dict(sorted(report_data.items()))
 
