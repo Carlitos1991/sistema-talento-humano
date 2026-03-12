@@ -8,10 +8,10 @@
             <p>Periodo: <strong>{{ period.month }} {{ period.year }}</strong> | Generación Oficial de Nómina</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'payroll:period_list' %}" class="btn-cancel text-white bg-white bg-opacity-25 border-0">
+            <a href="{% url 'payroll:period_list' %}" class="btn-cancel text-white bg-white">
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
-            <button onclick="window.print()" class="btn-save bg-white text-indigo-900 border-0 ms-2">
+            <button onclick="window.print()" class="btn-save bg-white">
                 <i class="fas fa-file-pdf"></i> Imprimir / Exportar a PDF
             </button>
         </div>
@@ -87,6 +87,16 @@
                         </tr>
                     {% endfor %}
                     </tbody>
+                    <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+                    <tr>
+                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">TOTALES:
+                        </td>
+                        <td class="text-right font-weight-800 text-success" style="font-size: 1.1rem;">
+                            $ {{ data.total_contabilidad_debe|floatformat:2 }}</td>
+                        <td class="text-right font-weight-800 text-danger" style="font-size: 1.1rem;">
+                            $ {{ data.total_contabilidad_haber|floatformat:2 }}</td>
+                    </tr>
+                    </tfoot>
                 </table>
 
                 <h5 class="report-section-title mt-4">3. Afectación Presupuestaria</h5>
@@ -109,6 +119,15 @@
                         </tr>
                     {% endfor %}
                     </tbody>
+                    <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+                    <tr>
+                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">TOTAL
+                            PRESUPUESTO EJECUTADO:
+                        </td>
+                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">
+                            $ {{ data.total_presupuesto|floatformat:2 }}</td>
+                    </tr>
+                    </tfoot>
                 </table>
 
                 <div style="page-break-inside: avoid;">

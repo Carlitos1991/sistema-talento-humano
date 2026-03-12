@@ -748,58 +748,65 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
     """
 
     def get(self, request, pk):
-        # 1. Obtenemos el periodo de nómina cerrado/procesado
         period = get_object_or_404(PayrollPeriod, pk=pk)
 
-        # 2. Traemos TODOS los items generados en este mes (Ingresos, Egresos, Aportes)
-        # Optimizamos con select_related para no saturar la BD
+        # 1. Mapeos Presupuestarios
+        mapped_income_ids = list(
+            RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True))
+        mapped_deduction_ids = list(
+            RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id', flat=True))
+        mapped_contribution_ids = list(
+            RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list('contribution_id', flat=True))
+
+        remun = Income.objects.filter(code__iexact='REMUNERACION').first()
+        if remun and remun.id not in mapped_income_ids:
+            mapped_income_ids.append(remun.id)
+
+        # ==============================================================
+        # 2. ESCUDO ANTI-MULTIPLICACIÓN (prefetch_related + distinct)
+        # ==============================================================
         items = PayslipItem.objects.filter(payslip__period=period).select_related(
             'payslip__employee__person',
             'budget_line__budget_group',
-            'income_ref', 'deduction_ref', 'contribution_ref'
-        )
+            'income_ref__debit_account', 'income_ref__credit_account',
+            'deduction_ref__debit_account', 'deduction_ref__credit_account',
+            'contribution_ref__debit_account', 'contribution_ref__credit_account'
+        ).prefetch_related(
+            'payslip__employee__person__economic_data__bank_account__bank',
+            'payslip__employee__person__economic_data__bank_account__account_type'
+        ).distinct()  # <-- Garantiza matemáticamente que no haya rubros duplicados
 
-        # 3. Diccionario Maestro donde construiremos la estructura de datos
-        # Estructura: { '45111CE': { 'group': obj, 'rol': {}, 'contabilidad': {}, 'presupuesto': {} } }
         report_data = {}
 
         for it in items:
-            # Identificamos a qué grupo pertenece este rubro
-            # Si el empleado no tiene grupo (ej. un error de data), lo mandamos a "Sin Agrupar"
             grupo_obj = it.budget_line.budget_group if it.budget_line else None
             grupo_key = grupo_obj.short_code if grupo_obj else 'SIN_AGRUPAR'
 
-            # Si es la primera vez que vemos este grupo, inicializamos sus 3 reportes
             if grupo_key not in report_data:
                 report_data[grupo_key] = {
                     'group_obj': grupo_obj,
                     'group_name': grupo_obj.name if grupo_obj else 'Registros sin agrupación presupuestaria',
-                    'empleados': {},  # Para el Reporte 1 (Rol de Pagos y Transferencias)
-                    'contabilidad': {},  # Para el Reporte 2 (DEBE y HABER)
-                    'presupuesto': {}  # Para el Reporte 2 (Compromiso y Pago)
+                    'empleados': {},
+                    'contabilidad': {},
+                    'presupuesto': {}
                 }
 
             grupo_data = report_data[grupo_key]
 
-            # ==========================================
             # A. Llenado de Data para Reporte 1 (Sábana)
-            # ==========================================
             emp_id = it.payslip.employee.id
             if emp_id not in grupo_data['empleados']:
 
-                # EXTRACCIÓN SEGURA DE DATOS BANCARIOS
                 banco_nombre = "NO REGISTRADO"
                 cuenta_tipo = ""
                 cuenta_numero = ""
 
                 try:
-                    # Navegamos por las relaciones de tu modelo
                     bank_acc = it.payslip.employee.person.economic_data.bank_account
                     banco_nombre = bank_acc.bank.name if bank_acc.bank else "Banco Desconocido"
                     cuenta_tipo = bank_acc.account_type.name if bank_acc.account_type else ""
                     cuenta_numero = bank_acc.account_number
                 except Exception:
-                    # Si no tiene EconomicData o BankAccount, Django cae aquí suavemente
                     pass
 
                 grupo_data['empleados'][emp_id] = {
@@ -814,7 +821,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                     'rubros_detalle': []
                 }
 
-            # Sumarizamos matemáticamente (ignoramos aportes institucionales para el líquido del empleado)
             if it.item_type == 'INCOME':
                 grupo_data['empleados'][emp_id]['ingresos'] += it.value
                 grupo_data['empleados'][emp_id]['liquido'] += it.value
@@ -822,48 +828,84 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 grupo_data['empleados'][emp_id]['descuentos'] += it.value
                 grupo_data['empleados'][emp_id]['liquido'] -= it.value
 
-                # ==========================================
-                # B. Llenado de Data para Reporte 3 (Presupuesto)
-                # ==========================================
-                b_code = getattr(it, 'budget_line_code', None)
+            # B. Llenado de Data para Reporte 3 (Presupuesto)
+            b_code = it.budget_line_code
 
-                # SOLUCIÓN: Solo los INGRESOS y APORTES ejecutan presupuesto (Gasto).
-                # Los DESCUENTOS son pasivos retenidos, por ende se ignoran aquí.
-                if b_code and it.item_type in ['INCOME', 'CONTRIBUTION']:
-                    # Obtenemos el nombre exacto del rubro
-                    if it.item_type == 'INCOME' and it.income_ref:
-                        nombre_rubro = it.income_ref.name
-                    elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
-                        nombre_rubro = it.contribution_ref.name
-                    else:
-                        nombre_rubro = 'Rubro General'
+            if b_code:
+                afecta_presupuesto = False
+                nombre_rubro = ""
 
+                if it.item_type == 'INCOME' and it.income_ref_id in mapped_income_ids:
+                    afecta_presupuesto = True
+                    nombre_rubro = it.income_ref.name
+                elif it.item_type == 'DEDUCTION' and it.deduction_ref_id in mapped_deduction_ids:
+                    afecta_presupuesto = True
+                    nombre_rubro = it.deduction_ref.name
+                elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id in mapped_contribution_ids:
+                    afecta_presupuesto = True
+                    nombre_rubro = it.contribution_ref.name
+
+                if afecta_presupuesto:
                     key_presupuesto = f"{b_code} - {nombre_rubro}"
-
                     grupo_data['presupuesto'].setdefault(key_presupuesto, 0)
                     grupo_data['presupuesto'][key_presupuesto] += it.value
 
-            # ==========================================
             # C. Llenado de Data para Reporte 2 (Contabilidad)
-            # ==========================================
-            # Extraemos las cuentas del rubro
-            obj_ref = it.income_ref if it.item_type == 'INCOME' else (
-                it.deduction_ref if it.item_type == 'DEDUCTION' else it.contribution_ref)
+            obj_ref = None
+            if it.item_type == 'INCOME':
+                obj_ref = it.income_ref
+            elif it.item_type == 'DEDUCTION':
+                obj_ref = it.deduction_ref
+            elif it.item_type == 'CONTRIBUTION':
+                obj_ref = it.contribution_ref
 
             if obj_ref:
-                if obj_ref.debit_account:
-                    cta_debe = obj_ref.debit_account.code
-                    grupo_data['contabilidad'].setdefault(cta_debe,
-                                                          {'debe': 0, 'haber': 0, 'nombre': obj_ref.debit_account.name})
+                cuenta_debe = getattr(obj_ref, 'debit_account', None)
+                if cuenta_debe:
+                    cta_debe = cuenta_debe.code
+                    grupo_data['contabilidad'].setdefault(cta_debe, {'debe': 0, 'haber': 0, 'nombre': cuenta_debe.name})
                     grupo_data['contabilidad'][cta_debe]['debe'] += it.value
 
-                if obj_ref.credit_account:
-                    cta_haber = obj_ref.credit_account.code
-                    grupo_data['contabilidad'].setdefault(cta_haber, {'debe': 0, 'haber': 0,
-                                                                      'nombre': obj_ref.credit_account.name})
+                cuenta_haber = getattr(obj_ref, 'credit_account', None)
+                if cuenta_haber:
+                    cta_haber = cuenta_haber.code
+                    grupo_data['contabilidad'].setdefault(cta_haber,
+                                                          {'debe': 0, 'haber': 0, 'nombre': cuenta_haber.name})
                     grupo_data['contabilidad'][cta_haber]['haber'] += it.value
 
-        # 4. Ordenamos las agrupaciones alfabéticamente para enviarlas al template
+            # C.1. ASIENTO PUENTE: Aporte Patronal
+            if it.item_type == 'CONTRIBUTION' and obj_ref and 'PATRONAL' in getattr(obj_ref, 'code', '').upper():
+                grupo_data['contabilidad'].setdefault('2.1.3.51',
+                                                      {'debe': 0, 'haber': 0, 'nombre': 'GASTOS DE PERSONAL'})
+                grupo_data['contabilidad']['2.1.3.51']['debe'] += it.value
+                grupo_data['contabilidad']['2.1.3.51']['haber'] += it.value
+
+        # ==============================================================
+        # POST-PROCESO: Asientos de Banco, Gastos de Personal y Totales
+        # ==============================================================
+        from accounting.models import Account
+        cta_gp = Account.objects.filter(code='2.1.3.51').first()
+        nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
+
+        cta_banco = Account.objects.filter(code='1.1.1.03.01').first()
+        nombre_banco = cta_banco.name if cta_banco else 'Banco Central'
+
+        for g_key, g_data in report_data.items():
+            total_net_pay = sum(emp['liquido'] for emp in g_data['empleados'].values())
+
+            if total_net_pay > 0:
+                g_data['contabilidad'].setdefault('2.1.3.51', {'debe': 0, 'haber': 0, 'nombre': nombre_gp})
+                g_data['contabilidad']['2.1.3.51']['debe'] += total_net_pay
+
+                g_data['contabilidad'].setdefault('1.1.1.03.01', {'debe': 0, 'haber': 0, 'nombre': nombre_banco})
+                g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
+
+            g_data['total_contabilidad_debe'] = sum(c['debe'] for c in g_data['contabilidad'].values())
+            g_data['total_contabilidad_haber'] = sum(c['haber'] for c in g_data['contabilidad'].values())
+            g_data['total_presupuesto'] = sum(g_data['presupuesto'].values())
+
+            g_data['contabilidad'] = dict(sorted(g_data['contabilidad'].items()))
+
         sorted_reports = dict(sorted(report_data.items()))
 
         return render(request, 'payroll/reports/grouped_financial_report.html', {
