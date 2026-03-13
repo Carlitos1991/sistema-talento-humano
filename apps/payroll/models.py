@@ -1,7 +1,9 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 
 from accounting.models import Account
+from core.models import BaseModel
 from employee.models import Employee
 
 
@@ -35,6 +37,13 @@ class Income(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        # Generar código automáticamente a partir del nombre: mayúsculas y guiones bajos
+        if self.name:
+            generated = slugify(self.name).replace('-', '_').upper()
+            self.code = generated
+        super().save(*args, **kwargs)
 
 
 class Deduction(models.Model):
@@ -43,6 +52,11 @@ class Deduction(models.Model):
     code = models.CharField(max_length=30, unique=True)
     description = models.TextField(verbose_name=_("Descripción"))
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
+    priority = models.IntegerField(
+        default=100,
+        verbose_name='Prioridad de Cobro',
+        help_text='Menor número = Se cobra primero. Ej: 1=IESS, 2=Retención Judicial, 10=Cooperativa'
+    )
 
     # --- AJUSTE CONTABLE ---
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
@@ -53,6 +67,12 @@ class Deduction(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if self.name:
+            generated = slugify(self.name).replace('-', '_').upper()
+            self.code = generated
+        super().save(*args, **kwargs)
 
 
 class PayrollPeriod(models.Model):
@@ -90,7 +110,12 @@ class Payslip(models.Model):
 
     # Datos Base
     worked_days = models.IntegerField(default=30, verbose_name=_("Días Trabajados"))
-
+    effective_worked_days = models.IntegerField(default=0, verbose_name='Días Efectivos Laborados')
+    is_withheld = models.BooleanField(
+        default=False,
+        verbose_name='Pago Retenido',
+        help_text='Si es True, este rol no saldrá en los reportes de transferencia bancaria'
+    )
     # --- CAMPOS LEGADOS (Horas Extras y Recargos) ---
     extra_hours = models.DecimalField(
         default=0.00, max_digits=5, decimal_places=2,
@@ -145,6 +170,12 @@ class InstitutionalContribution(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    def save(self, *args, **kwargs):
+        if self.name:
+            generated = slugify(self.name).replace('-', '_').upper()
+            self.code = generated
+        super().save(*args, **kwargs)
 
 
 class RubroBudgetMapping(models.Model):
@@ -229,3 +260,26 @@ class PayslipItem(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['payslip', 'item_type'])]
+
+
+class PendingDebt(BaseModel):
+    """
+    Tabla de Cuentas por Cobrar: Registra los saldos negativos cuando el sueldo no alcanza.
+    """
+    employee = models.ForeignKey('employee.Employee', on_delete=models.CASCADE, related_name='pending_debts',
+                                 verbose_name='Empleado')
+    period = models.ForeignKey('PayrollPeriod', on_delete=models.CASCADE, related_name='pending_debts',
+                               verbose_name='Periodo')
+    deduction_ref = models.ForeignKey('Deduction', on_delete=models.CASCADE, verbose_name='Descuento')
+
+    original_value = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Original')
+    collected_value = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Cobrado')
+    pending_balance = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Saldo Pendiente')
+
+    class Meta:
+        db_table = 'payroll_pending_debt'
+        verbose_name = 'Cuenta por Cobrar'
+        verbose_name_plural = 'Cuentas por Cobrar'
+
+    def __str__(self):
+        return f"{self.employee} - Deuda: ${self.pending_balance}"

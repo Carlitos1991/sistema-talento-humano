@@ -2,7 +2,11 @@
 {% load static %}
 
 {% block title %}Detalle de Roles | SIGETH{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}?v=1.1">
 
+    <link rel="stylesheet" href="{% static 'css/payslip_modal.css' %}?v=1.1">
+{% endblock %}
 {% block content %}
     <div id="payslipApp" class="container-fluid">
 
@@ -60,6 +64,7 @@
                         <th class="text-end">Ingresos</th>
                         <th class="text-end">Egresos</th>
                         <th class="text-end">A Pagar</th>
+                        <th class="text-center">Retener</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                     </thead>
@@ -88,6 +93,17 @@
                             </td>
                             <td class="text-end">
                                 <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
+                            </td>
+                            <td class="text-center">
+                                <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;"
+                                       title="Retener el pago de este empleado">
+                                    <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
+                                           data-id="{{ p.id }}"
+                                           {% if p.is_withheld %}checked{% endif %}>
+                                    <span class="modern-toggle-circle"></span>
+                                    <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}
+                                        Normal{% endif %}</span>
+                                </label>
                             </td>
                             <td class="text-center">
                                 <button class="btn-icon btn-edit"

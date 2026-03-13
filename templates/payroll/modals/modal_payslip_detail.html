@@ -1,139 +1,3 @@
-<style>
-    /* Estilos encapsulados para el modal del rol */
-    .payslip-summary-banner {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-        border-radius: 12px;
-        padding: 1.25rem 2rem;
-        margin-bottom: 1.5rem;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .payslip-banner-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .payslip-banner-label {
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .payslip-banner-value {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: white;
-    }
-
-    .payslip-banner-divider {
-        width: 1px;
-        height: 35px;
-        background: rgba(255, 255, 255, 0.15);
-    }
-
-    .payslip-net-box {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 0.6rem 1.2rem;
-        border-radius: 8px;
-        text-align: right;
-    }
-
-    .payslip-net-box .payslip-banner-value {
-        color: #34d399; /* Verde esmeralda brillante */
-        font-size: 1.4rem;
-        font-weight: 800;
-    }
-
-    /* Listas (Igual que antes) */
-    .payslip-list-wrapper {
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        overflow: hidden;
-        background: white;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .payslip-list-header {
-        padding: 14px 16px;
-        font-weight: 800;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        letter-spacing: 0.02em;
-    }
-
-    .payslip-list-header.incomes {
-        background: #ecfdf5;
-        color: #059669;
-        border-bottom: 2px solid #a7f3d0;
-    }
-
-    .payslip-list-header.deductions {
-        background: #fef2f2;
-        color: #dc2626;
-        border-bottom: 2px solid #fecaca;
-    }
-
-    .payslip-items-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        flex: 1;
-    }
-
-    .payslip-items-list li {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.9rem;
-    }
-
-    .payslip-items-list li:last-child {
-        border-bottom: none;
-    }
-
-    .payslip-items-list li .desc {
-        color: #475569;
-        font-weight: 500;
-    }
-
-    .payslip-items-list li .val {
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    .payslip-list-footer {
-        display: flex;
-        justify-content: space-between;
-        padding: 14px 16px;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        font-weight: 800;
-        font-size: 1.05rem;
-    }
-
-    .payslip-list-footer.incomes-total {
-        color: #059669;
-    }
-
-    .payslip-list-footer.deductions-total {
-        color: #dc2626;
-    }
-</style>
-
 <div id="payslipBackdrop" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-medium custom-payslip-modal" role="document"
          style="max-width: 850px; padding:0 !important;">
@@ -168,7 +32,7 @@
 
                 <div class="payslip-net-box">
                     <span class="payslip-banner-label" style="color: white; margin-bottom:2px; display:block;">Líquido a Pagar</span>
-                    <span class="payslip-banner-value">$ {{ payslip.net_pay }}</span>
+                    <span class="payslip-banner-value" id="liquido-pagar">$ {{ payslip.net_pay }}</span>
                 </div>
             </div>
 
@@ -182,7 +46,17 @@
                             {% for item in incomes %}
                                 <li>
                                     <span class="desc">{{ item.income_ref.name }}</span>
-                                    <span class="val">$ {{ item.value }}</span>
+                                    <div class="val-container">
+                                        <span class="val"
+                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                        <button type="button" class="btn-edit-inline edit-item-btn"
+                                                data-id="{{ item.id }}"
+                                                data-val="{{ item.value|stringformat:'f' }}"
+                                                data-name="{{ item.income_ref.name }}"
+                                                title="Modificar valor">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                    </div>
                                 </li>
                             {% empty %}
                                 <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay ingresos
@@ -191,7 +65,7 @@
                         </ul>
                         <div class="payslip-list-footer incomes-total">
                             <span>Total Ingresos</span>
-                            <span>$ {{ payslip.total_income }}</span>
+                            <span id="total-ingresos">$ {{ payslip.total_income }}</span>
                         </div>
                     </div>
                 </div>
@@ -205,17 +79,26 @@
                             {% for item in deductions %}
                                 <li>
                                     <span class="desc">{{ item.deduction_ref.name }}</span>
-                                    <span class="val">$ {{ item.value }}</span>
+                                    <div class="val-container">
+                                        <span class="val"
+                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                        <button type="button" class="btn-edit-inline edit-item-btn"
+                                                data-id="{{ item.id }}"
+                                                data-val="{{ item.value|stringformat:'f' }}"
+                                                data-name="{{ item.deduction_ref.name }}"
+                                                title="Modificar valor">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                    </div>
                                 </li>
                             {% empty %}
-                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay
-                                    descuentos
+                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay egresos
                                 </li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer deductions-total">
-                            <span>Total Descuentos</span>
-                            <span>$ {{ payslip.total_deduction }}</span>
+                        <div class="payslip-list-footer incomes-total">
+                            <span>Total Egresos</span>
+                            <span id="total-egresos">$ {{ payslip.total_income }}</span>
                         </div>
                     </div>
                 </div>

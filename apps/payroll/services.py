@@ -1,13 +1,14 @@
-import sys
 import traceback
 from decimal import Decimal
+
 from django.db import transaction
-from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, RubroBudgetMapping, \
-    InstitutionalContribution
-from accounting.models import Journal, JournalItem, Account
-from budget.models import BudgetLine, BudgetAssignmentHistory
-from contract.models import ManagementPeriod
 from django.db.models import Q
+
+from accounting.models import Journal, JournalItem, Account
+from budget.models import BudgetAssignmentHistory
+from contract.models import ManagementPeriod
+from schedule.models import ScheduleObservation
+from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt
 
 
 class PayrollCalculatorService:
@@ -40,6 +41,20 @@ class PayrollCalculatorService:
                 Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
             ).values_list('employee_id', flat=True)
         )
+        holidays_qs = ScheduleObservation.objects.filter(
+            is_holiday=True,
+            is_active=True,
+            start_date__lte=self.period.end_date,
+            end_date__gte=self.period.start_date
+        )
+        holiday_dates = set()
+        for h in holidays_qs:
+            # Aseguramos que el feriado no se salga de los límites del mes actual
+            curr = max(h.start_date, self.period.start_date)
+            end_limit = min(h.end_date, self.period.end_date)
+            while curr <= end_limit:
+                holiday_dates.add(curr)
+                curr += timedelta(days=1)
 
         for emp in self.employees:
             if emp.id not in valid_history_emp_ids:
@@ -53,7 +68,8 @@ class PayrollCalculatorService:
             ))
 
         with transaction.atomic():
-            # Limpieza previa del periodo
+            # 1. Limpieza previa del periodo (Roles y Deudas Pendientes)
+            PendingDebt.objects.filter(period=self.period).delete()
             Payslip.objects.filter(period=self.period).delete()
 
             # BULK INSERT
@@ -61,6 +77,7 @@ class PayrollCalculatorService:
 
             items_buffer = []
             payslips_to_update = []
+            pending_debts_buffer = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
             active_deductions = list(Deduction.objects.filter(is_active=True))
@@ -106,13 +123,13 @@ class PayrollCalculatorService:
                     emp_assignments = assignment_map.get(slip.employee_id, [])
 
                     tramos = []
+                    # 1. Modifica la creación del tramo para guardar las fechas reales
                     for asi in emp_assignments:
                         s_date = max(asi.start_date, self.period.start_date)
                         e_date = min(asi.end_date, self.period.end_date) if asi.end_date else self.period.end_date
 
                         if s_date <= e_date:
                             dias_reales = (e_date - s_date).days + 1
-
                             if dias_reales == 31: dias_reales = 30
                             if self.period.end_date.month == 2 and e_date == self.period.end_date:
                                 dias_reales += (30 - self.period.end_date.day)
@@ -121,11 +138,33 @@ class PayrollCalculatorService:
                                 'assignment': asi,
                                 'dias': dias_reales,
                                 'sueldo_base': Decimal(str(asi.budget_line.remuneration or 0)),
-                                'partida': asi.budget_line
+                                'partida': asi.budget_line,
+                                'real_start': s_date,  # <-- NUEVO: Inicio exacto del contrato en el mes
+                                'real_end': e_date  # <-- NUEVO: Fin exacto del contrato en el mes
                             })
 
                     if not tramos:
                         continue
+                    # =================================================================
+                    # CALCULATE EFFECTIVE WORKED DAYS (Filtro de Feriados y Fin de Semana)
+                    # =================================================================
+                    effective_days = 0
+                    for tramo in tramos:
+                        curr_date = tramo['real_start']
+                        while curr_date <= tramo['real_end']:
+                            # Lunes=0, Martes=1 ... Viernes=4. Ignoramos 5(Sábado) y 6(Domingo)
+                            if curr_date.weekday() < 5:
+                                # Verificamos si ese día NO es un feriado institucional
+                                if curr_date not in holiday_dates:
+                                    # TODO: Aquí inyectaremos el módulo de Vacaciones en el futuro
+                                    # if curr_date not in employee_vacations:
+
+                                    effective_days += 1
+
+                            curr_date += timedelta(days=1)
+
+                    # Guardamos el valor matemáticamente perfecto en el rol temporal
+                    slip.effective_worked_days = effective_days
 
                     tramos.sort(key=lambda x: x['assignment'].start_date)
                     partida_principal = tramos[-1]['partida']
@@ -198,10 +237,13 @@ class PayrollCalculatorService:
                                 val = val_total * (
                                         Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
 
+
                         elif code_clean == 'ALIMENTACION':
                             if regime_code == 'CT':
-                                const_alim = Decimal(str(self.config.get('ALIMENTACION', '0.00')))
-                                val = (const_alim / Decimal('30.0')) * Decimal(str(slip.worked_days))
+                                # Configuramos la constante ALIMENTACION_DIARIA a 4.00 en la Base de Datos
+                                daily_food_allowance = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00')))
+                                # MULTIPLICACIÓN EXACTA: $4.00 x Días Reales (Ej: 4.00 * 20 días = 80.00)
+                                val = daily_food_allowance * Decimal(str(slip.effective_worked_days))
 
                         if val > 0:
                             items_buffer.append(
@@ -253,13 +295,51 @@ class PayrollCalculatorService:
                                                             value=val_nov))
                                             total_ing += val_nov
 
-                                    for nov in emp_novelties['deductions']:
-                                        if nov.value > 0:
-                                            val_nov = Decimal(str(nov.value))
-                                            items_buffer.append(
-                                                PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref,
-                                                            item_type='DEDUCTION', value=val_nov))
-                                            total_desc += val_nov
+                                            # ====================================================
+                                            # B. POCKET LOGIC (Prelación de Descuentos)
+                                            # ====================================================
+                                            # 1. Calculamos la plata real que le queda en el bolsillo después del IESS
+                                            available_balance = total_ing - total_desc
+
+                                            # 2. Ordenamos los descuentos por prioridad (1 primero, 100 después)
+                                            deduction_novelties = emp_novelties['deductions']
+                                            deduction_novelties.sort(
+                                                key=lambda x: getattr(x.deduction_ref, 'priority', 100))
+
+                                            for nov in deduction_novelties:
+                                                if nov.value > 0:
+                                                    val_original = Decimal(str(nov.value))
+
+                                                    # Si el bolsillo ya está en $0.00, el descuento a cobrar es 0
+                                                    if available_balance <= Decimal('0.0'):
+                                                        real_discount = Decimal('0.0')
+                                                    else:
+                                                        # Se cobra máximo hasta vaciar el bolsillo
+                                                        real_discount = min(val_original, available_balance)
+
+                                                    # Lo que no se pudo cobrar es la deuda
+                                                    debt = val_original - real_discount
+
+                                                    if real_discount > 0:
+                                                        items_buffer.append(PayslipItem(
+                                                            payslip=slip,
+                                                            deduction_ref=nov.deduction_ref,
+                                                            item_type='DEDUCTION',
+                                                            value=real_discount
+                                                        ))
+                                                        total_desc += real_discount
+                                                        available_balance -= real_discount  # El bolsillo se vacía
+
+                                                    # Si quedó debiendo, lo mandamos a la tabla de Cuentas por Cobrar
+                                                    if debt > 0:
+                                                        pending_debts_buffer.append(PendingDebt(
+                                                            employee=slip.employee,
+                                                            period=self.period,
+                                                            deduction_ref=nov.deduction_ref,
+                                                            original_value=val_original,
+                                                            collected_value=real_discount,
+                                                            pending_balance=debt
+                                                        ))
 
                     slip.total_income = total_ing
                     slip.total_deduction = total_desc
@@ -277,7 +357,9 @@ class PayrollCalculatorService:
 
             # 7. Guardado Masivo
             PayslipItem.objects.bulk_create(items_buffer)
-            Payslip.objects.bulk_update(payslips_to_update, ['total_income', 'total_deduction', 'net_pay'])
+            Payslip.objects.bulk_update(payslips_to_update,
+                                        ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
+            PendingDebt.objects.bulk_create(pending_debts_buffer)
 
             try:
                 created_items = PayslipItem.objects.filter(payslip__in=created_payslips).select_related(
@@ -473,6 +555,20 @@ class PayrollCalculatorService:
                 Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
             ).values_list('employee_id', flat=True)
         )
+        holidays_qs = ScheduleObservation.objects.filter(
+            is_holiday=True,
+            is_active=True,
+            start_date__lte=self.period.end_date,
+            end_date__gte=self.period.start_date
+        )
+        holiday_dates = set()
+        for h in holidays_qs:
+            # Aseguramos que el feriado no se salga de los límites del mes actual
+            curr = max(h.start_date, self.period.start_date)
+            end_limit = min(h.end_date, self.period.end_date)
+            while curr <= end_limit:
+                holiday_dates.add(curr)
+                curr += timedelta(days=1)
 
         for emp, days in employees_with_days:
             # Si no tiene historial en este mes, se ignora
@@ -484,12 +580,14 @@ class PayrollCalculatorService:
 
         with transaction.atomic():
             selected_emp_ids = [emp.id for emp, _ in eligible_pairs]
+            PendingDebt.objects.filter(period=self.period, employee_id__in=selected_emp_ids).delete()
             Payslip.objects.filter(period=self.period, employee_id__in=selected_emp_ids).delete()
 
             created_payslips = Payslip.objects.bulk_create(payslip_buffer)
 
             items_buffer = []
             payslips_to_update = []
+            pending_debts_buffer = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
             active_deductions = list(Deduction.objects.filter(is_active=True))
@@ -539,7 +637,6 @@ class PayrollCalculatorService:
 
                         if s_date <= e_date:
                             dias_reales = (e_date - s_date).days + 1
-
                             if dias_reales == 31: dias_reales = 30
                             if self.period.end_date.month == 2 and e_date == self.period.end_date:
                                 dias_reales += (30 - self.period.end_date.day)
@@ -548,11 +645,27 @@ class PayrollCalculatorService:
                                 'assignment': asi,
                                 'dias': dias_reales,
                                 'sueldo_base': Decimal(str(asi.budget_line.remuneration or 0)),
-                                'partida': asi.budget_line
+                                'partida': asi.budget_line,
+                                'real_start': s_date,  # <-- NUEVO: Inicio exacto del contrato en el mes
+                                'real_end': e_date  # <-- NUEVO: Fin exacto del contrato en el mes
                             })
 
                     if not tramos:
                         continue
+                    # =================================================================
+                    # Filtro de Feriados y Fin de Semana
+                    # =================================================================
+                    effective_days = 0
+                    for tramo in tramos:
+                        curr_date = tramo['real_start']
+                        while curr_date <= tramo['real_end']:
+                            if curr_date.weekday() < 5:
+                                if curr_date not in holiday_dates:
+                                    effective_days += 1
+                            curr_date += timedelta(days=1)
+
+                    # Guardamos el valor matemáticamente perfecto en el rol temporal
+                    slip.effective_worked_days = effective_days
 
                     tramos.sort(key=lambda x: x['assignment'].start_date)
                     partida_principal = tramos[-1]['partida']
@@ -626,8 +739,8 @@ class PayrollCalculatorService:
 
                         elif code_clean == 'ALIMENTACION':
                             if regime_code == 'CT':
-                                const_alim = Decimal(str(self.config.get('ALIMENTACION', '0.00')))
-                                val = (const_alim / Decimal('30.0')) * Decimal(str(slip.worked_days))
+                                daily_food_allowance = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00')))
+                                val = daily_food_allowance * Decimal(str(slip.effective_worked_days))
 
                         if val > 0:
                             items_buffer.append(
@@ -679,13 +792,51 @@ class PayrollCalculatorService:
                                                             value=val_nov))
                                             total_ing += val_nov
 
-                                    for nov in emp_novelties['deductions']:
-                                        if nov.value > 0:
-                                            val_nov = Decimal(str(nov.value))
-                                            items_buffer.append(
-                                                PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref,
-                                                            item_type='DEDUCTION', value=val_nov))
-                                            total_desc += val_nov
+                                            # ====================================================
+                                            # B. POCKET LOGIC (Prelación de Descuentos)
+                                            # ====================================================
+                                            # 1. Calculamos la plata real que le queda en el bolsillo después del IESS
+                                            available_balance = total_ing - total_desc
+
+                                            # 2. Ordenamos los descuentos por prioridad (1 primero, 100 después)
+                                            deduction_novelties = emp_novelties['deductions']
+                                            deduction_novelties.sort(
+                                                key=lambda x: getattr(x.deduction_ref, 'priority', 100))
+
+                                            for nov in deduction_novelties:
+                                                if nov.value > 0:
+                                                    val_original = Decimal(str(nov.value))
+
+                                                    # Si el bolsillo ya está en $0.00, el descuento a cobrar es 0
+                                                    if available_balance <= Decimal('0.0'):
+                                                        real_discount = Decimal('0.0')
+                                                    else:
+                                                        # Se cobra máximo hasta vaciar el bolsillo
+                                                        real_discount = min(val_original, available_balance)
+
+                                                    # Lo que no se pudo cobrar es la deuda
+                                                    debt = val_original - real_discount
+
+                                                    if real_discount > 0:
+                                                        items_buffer.append(PayslipItem(
+                                                            payslip=slip,
+                                                            deduction_ref=nov.deduction_ref,
+                                                            item_type='DEDUCTION',
+                                                            value=real_discount
+                                                        ))
+                                                        total_desc += real_discount
+                                                        available_balance -= real_discount  # El bolsillo se vacía
+
+                                                    # Si quedó debiendo, lo mandamos a la tabla de Cuentas por Cobrar
+                                                    if debt > 0:
+                                                        pending_debts_buffer.append(PendingDebt(
+                                                            employee=slip.employee,
+                                                            period=self.period,
+                                                            deduction_ref=nov.deduction_ref,
+                                                            original_value=val_original,
+                                                            collected_value=real_discount,
+                                                            pending_balance=debt
+                                                        ))
 
                     slip.total_income = total_ing
                     slip.total_deduction = total_desc
@@ -702,7 +853,8 @@ class PayrollCalculatorService:
                     raise e
 
             PayslipItem.objects.bulk_create(items_buffer)
-            Payslip.objects.bulk_update(payslips_to_update, ['total_income', 'total_deduction', 'net_pay'])
+            Payslip.objects.bulk_update(payslips_to_update,
+                                        ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
 
             try:
                 created_items = PayslipItem.objects.filter(payslip__in=created_payslips).select_related(
@@ -880,3 +1032,167 @@ class PayrollCalculatorService:
                                                        debit=abs(diff), credit=Decimal('0.0'))
 
             return {"success": True, "warnings": warnings}
+
+
+from datetime import timedelta
+
+
+def calculate_effective_days(employee, start_date, end_date):
+    """
+    Calcula los días reales trabajados excluyendo fines de semana,
+    feriados, vacaciones y licencias sin sueldo/por enfermedad.
+    """
+    effective_days = 0
+    current_date = start_date
+
+    # Recorremos el mes día por día
+    while current_date <= end_date:
+        # 1. Excluir Sábados (5) y Domingos (6)
+        if current_date.weekday() >= 5:
+            current_date += timedelta(days=1)
+            continue
+
+        # 2. Excluir Feriados (Aquí consultas a tu modelo de Feriados/Horarios)
+        # if Feriado.objects.filter(fecha=current_date).exists():
+        #     current_date += timedelta(days=1)
+        #     continue
+
+        # 3. Excluir Vacaciones y Licencias (Aquí consultas tus Acciones de Personal)
+        # ausente = AccionPersonal.objects.filter(
+        #     employee=employee,
+        #     start_date__lte=current_date,
+        #     end_date__gte=current_date,
+        #     tipo__descuenta_alimentacion=True # Ej: Enfermedad, Vacación
+        # ).exists()
+
+        # if ausente:
+        #     current_date += timedelta(days=1)
+        #     continue
+
+        # Si superó todos los filtros, es un día que efectivamente fue a trabajar
+        effective_days += 1
+        current_date += timedelta(days=1)
+
+    return effective_days
+
+
+def rebuild_accounting_for_period(period_id):
+    """
+    Reconstruye el Asiento Contable de un periodo sumando todos sus roles actuales.
+    Se llama automáticamente cuando se edita un rol manualmente.
+    """
+    from decimal import Decimal
+    from accounting.models import Journal, JournalItem, Account
+    from .models import Payslip, PayslipItem, PayrollPeriod
+
+    period = PayrollPeriod.objects.get(id=period_id)
+    payslips = Payslip.objects.filter(period=period)
+
+    if not payslips.exists():
+        return False
+
+    with transaction.atomic():
+        # 1. Borramos el asiento contable anterior
+        desc_asiento = f"Nómina {period.month} {period.year}"
+        Journal.objects.filter(description=desc_asiento).delete()
+
+        created_items = PayslipItem.objects.filter(payslip__period=period).select_related(
+            'payslip__employee', 'income_ref', 'deduction_ref', 'contribution_ref'
+        )
+
+        aggregation = {}
+        total_net_pay = sum(Decimal(str(slip.net_pay)) for slip in payslips)
+
+        # 2. Reagrupamos todos los rubros en cuentas contables
+        for it in created_items:
+            val = Decimal(str(it.value))
+            budget_code = getattr(it, 'budget_line_code', None)
+
+            if it.item_type == 'INCOME' and it.income_ref:
+                if it.income_ref.debit_account:
+                    key_debit = (it.income_ref.debit_account.id, budget_code, 'debit')
+                    aggregation.setdefault(key_debit, Decimal('0.0'))
+                    aggregation[key_debit] += val
+                if it.income_ref.credit_account:
+                    key_credit = (it.income_ref.credit_account.id, budget_code, 'credit')
+                    aggregation.setdefault(key_credit, Decimal('0.0'))
+                    aggregation[key_credit] += val
+
+            elif it.item_type == 'DEDUCTION' and it.deduction_ref:
+                if it.deduction_ref.debit_account:
+                    key_debit = (it.deduction_ref.debit_account.id, None, 'debit')
+                    aggregation.setdefault(key_debit, Decimal('0.0'))
+                    aggregation[key_debit] += val
+                if it.deduction_ref.credit_account:
+                    key_credit = (it.deduction_ref.credit_account.id, None, 'credit')
+                    aggregation.setdefault(key_credit, Decimal('0.0'))
+                    aggregation[key_credit] += val
+
+            elif it.item_type == 'CONTRIBUTION' and getattr(it, 'contribution_ref', None):
+                if it.contribution_ref.debit_account:
+                    key_debit = (it.contribution_ref.debit_account.id, None, 'debit')
+                    aggregation.setdefault(key_debit, Decimal('0.0'))
+                    aggregation[key_debit] += val
+                if it.contribution_ref.credit_account:
+                    key_credit = (it.contribution_ref.credit_account.id, None, 'credit')
+                    aggregation.setdefault(key_credit, Decimal('0.0'))
+                    aggregation[key_credit] += val
+
+                if 'PATRONAL' in getattr(it.contribution_ref.code, '').upper():
+                    try:
+                        cta_gastos_personal = Account.objects.get(code='2.1.3.51')
+                        key_debit_puente = (cta_gastos_personal.id, None, 'debit')
+                        aggregation.setdefault(key_debit_puente, Decimal('0.0'))
+                        aggregation[key_debit_puente] += val
+                        key_credit_puente = (cta_gastos_personal.id, None, 'credit')
+                        aggregation.setdefault(key_credit_puente, Decimal('0.0'))
+                        aggregation[key_credit_puente] += val
+                    except Exception:
+                        pass
+
+        # 3. Creamos el nuevo asiento cuadradito
+        if aggregation or total_net_pay > 0:
+            journal = Journal.objects.create(date=period.end_date, description=desc_asiento)
+            total_debits = Decimal('0.0')
+            total_credits = Decimal('0.0')
+
+            for key, val in aggregation.items():
+                if val <= 0: continue
+                acc_id, b_code, mov_type = key
+                try:
+                    acc = Account.objects.get(id=acc_id)
+                    if mov_type == 'debit':
+                        JournalItem.objects.create(journal=journal, account=acc, debit=val, credit=Decimal('0.0'))
+                        total_debits += val
+                    else:
+                        JournalItem.objects.create(journal=journal, account=acc, debit=Decimal('0.0'), credit=val)
+                        total_credits += val
+                except Account.DoesNotExist:
+                    pass
+
+            if total_net_pay > 0:
+                try:
+                    cta_gastos_personal = Account.objects.get(code='2.1.3.51')
+                    cta_banco = Account.objects.get(code='1.1.1.03.01')
+                    JournalItem.objects.create(journal=journal, account=cta_gastos_personal, debit=total_net_pay,
+                                               credit=Decimal('0.0'))
+                    total_debits += total_net_pay
+                    JournalItem.objects.create(journal=journal, account=cta_banco, debit=Decimal('0.0'),
+                                               credit=total_net_pay)
+                    total_credits += total_net_pay
+                except Account.DoesNotExist:
+                    pass
+
+            # Cuadre por centavos
+            if total_debits != total_credits:
+                diff = (total_debits - total_credits)
+                balancing_account = Account.objects.filter(code__icontains='PAYROLL').first()
+                if balancing_account:
+                    if diff > 0:
+                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=Decimal('0.0'),
+                                                   credit=diff)
+                    else:
+                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=abs(diff),
+                                                   credit=Decimal('0.0'))
+
+    return True

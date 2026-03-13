@@ -15,6 +15,7 @@
 
         <form method="post" id="incomeForm" action="{{ request.path }}" onsubmit="submitIncomeForm(event)">
             {% csrf_token %}
+            {{ form.code }}
             <div class="modal-body-custom">
 
                 <div class="form-section-card">
@@ -23,10 +24,7 @@
                             <label class="form-label">Nombre</label>
                             {{ form.name }}
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Código</label>
-                            {{ form.code }}
-                        </div>
+                        
 
                         <div class="col-md-12 form-group mt-3">
                             <label class="form-label">Descripción</label>

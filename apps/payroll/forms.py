@@ -87,8 +87,10 @@ class BaseRubroForm(forms.ModelForm):
 class IncomeForm(BaseRubroForm):
     class Meta:
         model = Income
+        # 'code' se incluye pero como campo oculto (HiddenInput)
         fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
         widgets = {
+            'code': forms.HiddenInput(),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'debit_account': forms.Select(attrs={'class': 'form-select'}),
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
@@ -99,16 +101,26 @@ class IncomeForm(BaseRubroForm):
 class DeductionForm(BaseRubroForm):
     class Meta:
         model = Deduction
-        fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
+        # Incluimos 'priority' para que el campo esté disponible en el formulario/modal
+        fields = ['name', 'code', 'priority', 'description', 'is_active', 'debit_account', 'credit_account']
         widgets = {
+            'code': forms.HiddenInput(),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'debit_account': forms.Select(attrs={'class': 'form-select'}),
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'}),
+            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 0})
         }
 
 
 class InstitutionalContributionForm(BaseRubroForm):
     class Meta:
         model = InstitutionalContribution
+        # 'code' oculto: generado automáticamente desde el nombre
         fields = ['name', 'code', 'is_active', 'debit_account', 'credit_account']
+        widgets = {
+            'code': forms.HiddenInput(),
+            'debit_account': forms.Select(attrs={'class': 'form-select'}),
+            'credit_account': forms.Select(attrs={'class': 'form-select'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
+        }

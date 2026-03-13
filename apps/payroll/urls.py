@@ -8,7 +8,7 @@ from .views import (
     InstitutionalReportView, MappingListView,
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
-    GroupedPayrollReportView
+    GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView
 )
 
 app_name = 'payroll'
@@ -52,4 +52,10 @@ urlpatterns = [
     path('contributions/', ContributionListView.as_view(), name='contribution_list'),
     path('contributions/create/', ContributionCreateView.as_view(), name='contribution_create'),
     path('contributions/<int:pk>/update/', ContributionUpdateView.as_view(), name='contribution_update'),
+    # API para Retener/Liberar el pago
+    path('payslip/<int:pk>/toggle-withhold/', PayslipToggleWithholdView.as_view(),
+         name='payslip_toggle_withhold'),
+
+    # API para Modificar un rubro individual manualmente
+    path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
 ]

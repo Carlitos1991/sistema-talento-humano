@@ -15,6 +15,7 @@
 
         <form method="post" id="contributionForm" action="{{ request.path }}" onsubmit="submitContributionForm(event)">
             {% csrf_token %}
+            {{ form.code }}
             <div class="modal-body-custom">
 
                 <div class="form-section-card">
@@ -23,10 +24,7 @@
                             <label class="form-label">Nombre del Aporte</label>
                             {{ form.name }}
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Código (Ej: APORTE_PATRONAL)</label>
-                            {{ form.code }}
-                        </div>
+                        
                         <div class="col-md-6 form-group mt-3">
                             <label class="form-label">Cuenta Gasto (DEBE)</label>
                             {{ form.debit_account }}

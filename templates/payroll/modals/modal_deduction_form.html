@@ -15,6 +15,7 @@
 
         <form method="post" id="deductionForm" action="{{ request.path }}" onsubmit="submitDeductionForm(event)">
             {% csrf_token %}
+            {{ form.code }}
             <div class="modal-body-custom">
 
                 <div class="form-section-card">
@@ -23,9 +24,12 @@
                             <label class="form-label">Nombre</label>
                             {{ form.name }}
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Código</label>
-                            {{ form.code }}
+                        
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Prioridad de Cobro</label>
+                            {{ form.priority }}
+                            <span class="form-hint text-muted mt-1">Menor número = se cobra primero</span>
                         </div>
 
                         <div class="col-md-12 form-group mt-3">

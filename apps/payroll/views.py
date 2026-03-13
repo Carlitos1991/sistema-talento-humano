@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
 from django.http import JsonResponse
@@ -8,6 +9,7 @@ from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 import openpyxl
 import json
+from .services import PayrollCalculatorService, rebuild_accounting_for_period
 from accounting.models import Journal, JournalItem
 from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
     InstitutionalContributionForm
@@ -647,7 +649,7 @@ class GetNoveltiesView(View):
 
 
 class SaveNoveltiesView(View):
-    """Recibe la tabla editada y guarda (o elimina) en la base de datos"""
+    """Recibe la tabla editada y guarda (sobrescribe) en la base de datos"""
 
     def post(self, request):
         try:
@@ -659,36 +661,37 @@ class SaveNoveltiesView(View):
 
             period = PayrollPeriod.objects.get(pk=period_id)
 
-            for item in items:
-                val = float(item.get('valor', 0))
-                emp_id = item.get('emp_id')
-
-                # Buscamos si ya existía una novedad previa para actualizarla
+            with transaction.atomic():
+                # ==============================================================
+                # 1. TIERRA ARRASADA: Borramos todo lo anterior de ESTE rubro y periodo
+                # ==============================================================
                 if rubro_type == 'INCOME':
-                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id,
-                                                            income_ref_id=rubro_id).first()
+                    PayrollNovelty.objects.filter(period=period, income_ref_id=rubro_id).delete()
                 else:
-                    novelty = PayrollNovelty.objects.filter(period=period, employee_id=emp_id,
-                                                            deduction_ref_id=rubro_id).first()
+                    PayrollNovelty.objects.filter(period=period, deduction_ref_id=rubro_id).delete()
 
-                if val <= 0:
-                    # MAGIA: Si en la tabla le pusieron 0.00, borramos la novedad de la base de datos
-                    if novelty:
-                        novelty.delete()
-                else:
-                    if novelty:
-                        novelty.value = val
-                        novelty.save()
-                    else:
-                        # Si no existía, la creamos
+                # ==============================================================
+                # 2. INSERTAR LO NUEVO (Evitando crear registros en 0.00)
+                # ==============================================================
+                novelties_to_create = []
+                for item in items:
+                    val = Decimal(str(item.get('valor', 0)))
+                    emp_id = item.get('emp_id')
+
+                    if val > Decimal('0.00'):
                         if rubro_type == 'INCOME':
-                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, income_ref_id=rubro_id,
-                                                          value=val)
+                            novelties_to_create.append(PayrollNovelty(
+                                period=period, employee_id=emp_id, income_ref_id=rubro_id, value=val
+                            ))
                         else:
-                            PayrollNovelty.objects.create(period=period, employee_id=emp_id, deduction_ref_id=rubro_id,
-                                                          value=val)
+                            novelties_to_create.append(PayrollNovelty(
+                                period=period, employee_id=emp_id, deduction_ref_id=rubro_id, value=val
+                            ))
 
-            return JsonResponse({'status': 'success', 'message': 'Novedades guardadas exitosamente'})
+                # Guardado masivo ultra-rápido
+                PayrollNovelty.objects.bulk_create(novelties_to_create)
+
+            return JsonResponse({'status': 'success', 'message': 'Novedades sobrescritas y guardadas exitosamente'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -1015,3 +1018,68 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             'period': period,
             'grouped_reports': sorted_reports
         })
+
+
+class PayslipToggleWithholdView(LoginRequiredMixin, View):
+    """
+    API para encender/apagar la retención de pago de un rol específico.
+    """
+
+    def post(self, request, pk):
+        payslip = get_object_or_404(Payslip, pk=pk)
+
+        # Invertimos el estado actual
+        payslip.is_withheld = not payslip.is_withheld
+        payslip.save(update_fields=['is_withheld'])
+
+        estado = "RETENIDO" if payslip.is_withheld else "LIBERADO"
+        return JsonResponse({
+            'success': True,
+            'message': f'El pago de este empleado ha sido {estado}.',
+            'is_withheld': payslip.is_withheld
+        })
+
+
+class PayslipItemUpdateAPIView(LoginRequiredMixin, View):
+    """
+    API para modificar un rubro manual (ej. subirle $10 a un descuento).
+    Recalcula el total del empleado y RECONSTRUYE la contabilidad automáticamente.
+    """
+
+    def post(self, request, item_id):
+        nuevo_valor = Decimal(request.POST.get('new_value', '0.00'))
+
+        try:
+            with transaction.atomic():
+                item = get_object_or_404(PayslipItem, pk=item_id)
+                item.value = nuevo_valor
+                item.save(update_fields=['value'])
+
+                # 1. RECALCULAR EL BOLSILLO DEL EMPLEADO
+                payslip = item.payslip
+                totales = PayslipItem.objects.filter(payslip=payslip).aggregate(
+                    total_ing=Sum('value', filter=Q(item_type='INCOME')),
+                    total_desc=Sum('value', filter=Q(item_type='DEDUCTION'))
+                )
+
+                t_ing = totales['total_ing'] or Decimal('0.00')
+                t_desc = totales['total_desc'] or Decimal('0.00')
+
+                payslip.total_income = t_ing
+                payslip.total_deduction = t_desc
+                payslip.net_pay = t_ing - t_desc
+                payslip.save(update_fields=['total_income', 'total_deduction', 'net_pay'])
+
+                # 2. RECONSTRUCCIÓN CONTABLE AUTOMÁTICA
+                rebuild_accounting_for_period(payslip.period.id)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Valor actualizado. Contabilidad reconstruida con éxito.',
+                'new_total_income': str(payslip.total_income),
+                'new_total_deduction': str(payslip.total_deduction),
+                'new_net_pay': str(payslip.net_pay)
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error en actualización: {str(e)}'})
