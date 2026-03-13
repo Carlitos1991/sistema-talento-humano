@@ -297,3 +297,78 @@ function toggleInactiveDeductions(showInactive) {
         })
         .catch(error => console.error('Error cargando la tabla de descuentos:', error));
 }
+
+// ---------- ACCOUNT: modal + submit ----------
+function openAccountModal(url) {
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('modal-root').innerHTML = html;
+            document.body.classList.add('modal-open');
+
+            // Inicializar select2 si existen selects dentro del modal
+            $('#accountForm select').select2({width: '100%', dropdownParent: $('#accountModalOverlay')});
+            $('#accountForm input[type="text"]').addClass('input-field');
+        })
+        .catch(error => console.error('Error cargando el modal de cuenta:', error));
+}
+
+function submitAccountForm(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    fetch(form.action, {method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                closeContributionModal();
+                Swal.fire({icon: 'success', title: '¡Excelente!', text: data.message, timer: 1500, showConfirmButton: false})
+                    .then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Por favor, revisa los datos ingresados.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error(error);
+            Swal.fire('Error', 'Ocurrió un problema con el servidor.', 'error');
+        });
+}
+
+function toggleInactiveAccounts(showInactive) {
+    fetch(`?show_inactive=${showInactive}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            const tbody = document.querySelector('.managed-table tbody');
+            tbody.innerHTML = html;
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+            }
+        })
+        .catch(error => console.error('Error cargando la tabla de cuentas:', error));
+}
+
+// Añadimos placeholders dinámicamente cuando se abre el modal de cuentas
+const _origOpenAccountModal = window.openAccountModal;
+function openAccountModal(url) {
+    // reutiliza la función genérica si existe
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('modal-root').innerHTML = html;
+            document.body.classList.add('modal-open');
+            // Set placeholders
+            const $code = $('#accountForm input[name="code"]');
+            const $name = $('#accountForm input[name="name"]');
+            const $desc = $('#accountForm textarea[name="description"]');
+            if ($code.length) $code.attr('placeholder', 'Ej: 1000');
+            if ($name.length) $name.attr('placeholder', 'Ej: Caja');
+            if ($desc.length) $desc.attr('placeholder', 'Descripción de la cuenta (opcional)');
+            $('#accountForm select').select2({width: '100%', dropdownParent: $('#accountModalOverlay')});
+            $('#accountForm input[type="text"]').addClass('input-field');
+        })
+        .catch(error => console.error('Error cargando el modal de cuenta:', error));
+}

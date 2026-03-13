@@ -155,6 +155,7 @@ class InstitutionalContribution(models.Model):
     """
     name = models.CharField(max_length=100, verbose_name="Nombre del Aporte")
     code = models.CharField(max_length=50, unique=True, verbose_name="Código del Algoritmo")
+    description = models.TextField(blank=True, verbose_name=_("Descripción"))
 
     # Enlaces contables directos
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,

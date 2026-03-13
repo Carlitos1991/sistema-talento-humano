@@ -42,7 +42,8 @@ class BaseRubroForm(forms.ModelForm):
     """Formulario maestro que inyecta la lógica de mapeo presupuestario"""
     has_mapping = forms.BooleanField(label='¿Afecta al Presupuesto Institucional?', required=False,
                                      help_text="Marque esta casilla si este rubro debe generar una afectación presupuestaria.")
-    dynamic_suffix = forms.CharField(label='Sufijo Presupuestario (Ej: 5.1.01.05)', required=False, max_length=50)
+    dynamic_suffix = forms.CharField(label='Sufijo Presupuestario (Ej: 5.1.01.05)', required=False, max_length=50,
+                                     widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 5.1.01.05'}))
     is_fixed = forms.BooleanField(label='¿Es Partida Fija?', required=False,
                                   help_text="Si es fija, no tomará el programa del empleado, usará el texto exacto.")
 
@@ -90,8 +91,9 @@ class IncomeForm(BaseRubroForm):
         # 'code' se incluye pero como campo oculto (HiddenInput)
         fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
         widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Sueldo Básico'}),
             'code': forms.HiddenInput(),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del ingreso (opcional)'}),
             'debit_account': forms.Select(attrs={'class': 'form-select'}),
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
@@ -104,12 +106,13 @@ class DeductionForm(BaseRubroForm):
         # Incluimos 'priority' para que el campo esté disponible en el formulario/modal
         fields = ['name', 'code', 'priority', 'description', 'is_active', 'debit_account', 'credit_account']
         widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: IESS'}),
             'code': forms.HiddenInput(),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del descuento (opcional)'}),
             'debit_account': forms.Select(attrs={'class': 'form-select'}),
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'}),
-            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 0})
+            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 1'})
         }
 
 
@@ -117,9 +120,11 @@ class InstitutionalContributionForm(BaseRubroForm):
     class Meta:
         model = InstitutionalContribution
         # 'code' oculto: generado automáticamente desde el nombre
-        fields = ['name', 'code', 'is_active', 'debit_account', 'credit_account']
+        fields = ['name', 'code', 'description', 'is_active', 'debit_account', 'credit_account']
         widgets = {
             'code': forms.HiddenInput(),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Aporte Patronal'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del aporte (opcional)'}),
             'debit_account': forms.Select(attrs={'class': 'form-select'}),
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
