@@ -149,13 +149,13 @@ function toggleInactiveContributions(showInactive) {
             // Reiniciamos el paginador y buscador (table-manager.js)
             // para que cuente las nuevas filas renderizadas
             const table = document.querySelector('.managed-table');
-            if (table && table._tableManager) {
-                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
-                table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') {
-                    table._tableManager.renderTable();
+                if (table && table._tableManager) {
+                    table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                    table._tableManager.currentRows = [...table._tableManager.originalRows];
+                    if (typeof table._tableManager.render === 'function') {
+                        table._tableManager.render();
+                    }
                 }
-            }
         })
         .catch(error => console.error('Error cargando la tabla:', error));
 }
@@ -224,7 +224,7 @@ function toggleInactiveIncomes(showInactive) {
             if (table && table._tableManager) {
                 table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                 table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+                if (typeof table._tableManager.render === 'function') table._tableManager.render();
             }
         })
         .catch(error => console.error('Error cargando la tabla de ingresos:', error));
@@ -292,7 +292,7 @@ function toggleInactiveDeductions(showInactive) {
             if (table && table._tableManager) {
                 table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                 table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+                if (typeof table._tableManager.render === 'function') table._tableManager.render();
             }
         })
         .catch(error => console.error('Error cargando la tabla de descuentos:', error));
@@ -345,7 +345,7 @@ function toggleInactiveAccounts(showInactive) {
             if (table && table._tableManager) {
                 table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                 table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+                if (typeof table._tableManager.render === 'function') table._tableManager.render();
             }
         })
         .catch(error => console.error('Error cargando la tabla de cuentas:', error));
@@ -375,16 +375,46 @@ function openAccountModal(url) {
 
 // Toggle: mostrar/ocultar periodos cerrados (AJAX)
 function toggleInactivePeriods(showClosed) {
-    fetch(`?show_closed=${showClosed}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-        .then(response => response.text())
-        .then(html => {
+    fetch(`?show_closed=${showClosed}&json=1`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.json())
+        .then(data => {
             const tbody = document.querySelector('.managed-table tbody');
-            if (tbody) tbody.innerHTML = html;
+            if (!tbody) return;
+
+            // Reconstruimos filas desde JSON (evitamos inyectar HTML pre-renderizado del servidor)
+            const rows = (data.periods || []).map(p => {
+                const periodo = `${p.month} ${p.year}`;
+                const dataSort = `${p.year}${String(p.month_num).padStart(2, '0')}`;
+
+                let actions = '';
+                if (!p.is_closed) {
+                    actions += `<button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular" onclick="openGenerateModal(${p.id}, '${periodo.replace("'","\\'")}')"><i class="fas fa-cogs"></i></button>`;
+                    if (p.novelty_url) {
+                        actions += `<a href="${p.novelty_url}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo"><i class="fas fa-file-excel"></i></a>`;
+                    }
+                }
+                if (p.payslip_url) {
+                    actions += `<a href="${p.payslip_url}" class="btn-icon btn-search ms-2" title="Ver Roles Generados"><i class="fas fa-list"></i></a>`;
+                }
+                actions += `<button type="button" class="btn-icon btn-info-action ms-2" title="Generar Reportes" onclick="openReportModal(${p.id}, '${periodo.replace("'","\\'")}')"><i class="fas fa-university"></i></button>`;
+
+                return `<tr>
+                    <td class="fw-bold" data-sort="${dataSort}">${periodo}</td>
+                    <td>${p.start_date} - ${p.end_date}</td>
+                    <td class="text-center">${p.working_days}</td>
+                    <td class="text-center">${p.is_closed ? '<span class="status-badge inactive"><i class="fas fa-times-circle"></i> Cerrado</span>' : '<span class="status-badge active"><i class="fas fa-check-circle"></i> Abierto</span>'}</td>
+                    <td class="text-center actions"><div class="actions-wrapper">${actions}</div></td>
+                </tr>`;
+            }).join('');
+
+            tbody.innerHTML = rows || `<tr><td colspan="5" class="text-center py-5 text-muted"><i class="fas fa-calendar-times fa-3x mb-3"></i><br>No hay periodos registrados.</td></tr>`;
+
+            // Re-inicializar table-manager con las nuevas filas
             const table = document.querySelector('.managed-table');
             if (table && table._tableManager) {
                 table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                 table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+                if (typeof table._tableManager.render === 'function') table._tableManager.render();
             }
         })
         .catch(error => console.error('Error cargando periodos:', error));

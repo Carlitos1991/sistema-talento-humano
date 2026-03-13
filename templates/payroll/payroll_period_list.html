@@ -4,464 +4,50 @@
 {% block title %}Periodos de Nómina | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <!-- Estilos específicos del módulo de nómina (modales, etiquetas, etc.) -->
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}?v=1.4">
 {% endblock %}
 
 {% block content %}
-    <!-- ID donde se montará esta instancia específica de Vue -->
-    <div id="period-app" class="container-fluid">
-
-        <!-- Encabezado -->
+    <div>
         <div class="header-card">
             <div>
                 <h1>Periodos de Nómina</h1>
                 <p>Gestión de aperturas, cierres y cálculo de roles.</p>
             </div>
             {% if perms.payroll.add_payrollperiod %}
-                <button class="btn btn-create" @click="openCreateModal">
+                <button class="btn btn-create" onclick="openCreateModal()">
                     <i class="fas fa-plus"></i> Nuevo Periodo
                 </button>
             {% endif %}
         </div>
 
-        <!-- Tabla de Periodos (estilo managed-table) -->
-        <div class="content-table mt-4">
-            <div class="table-controls"
-                 style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
-
-                <div style="display: flex; justify-content: center;">
-                    <input class="modern-toggle-input" type="checkbox" id="toggleInactivePeriods"
-                           onchange="toggleInactivePeriods(this.checked)">
-
-                    <label class="modern-toggle-wrapper mb-0" for="toggleInactivePeriods">
-                        <div class="modern-toggle-circle"></div>
-                        <span class="modern-toggle-text">Mostrar Periodos Cerrados</span>
-                    </label>
-                </div>
-
-                <div class="search-box"
-                     style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="searchPeriodInput" class="table-search-input"
-                           placeholder="Buscar periodo por mes o año...">
-                </div>
+        <div class="content-table" style="margin-top: 20px;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <label class="modern-toggle-wrapper" style="cursor: pointer;">
+                    <input type="checkbox" id="toggleClosedPeriods" class="modern-toggle-input">
+                    <span class="modern-toggle-circle"></span>
+                    <span class="modern-toggle-text" style="margin-left: 10px; font-weight: bold; color: #334155;">Mostrar Periodos Cerrados</span>
+                </label>
             </div>
 
-            <div class="table-container">
-                <table class="table managed-table exportable-table table-hover" data-page-size="10"
-                       data-title="Reporte de Periodos">
-                    <thead>
-                    <tr>
-                        <th>Periodo</th>
-                        <th>Fechas</th>
-                        <th class="text-center">Días Lab.</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for p in periods %}
-                        <tr>
-                            <td class="fw-bold" data-sort="
-                                    {{ p.year }}{{ p.month_number|stringformat:"02d" }}">{{ p.month }} {{ p.year }}</td>
-                            <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
-                            <td class="text-center">{{ p.working_days }}</td>
-                            <td class="text-center">
-                                {% if p.is_closed %}
-                                    <span class="status-badge inactive"><i
-                                            class="fas fa-times-circle"></i> Cerrado</span>
-                                {% else %}
-                                    <span class="status-badge active"><i class="fas fa-check-circle"></i> Abierto</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center actions">
-                                <div class="actions-wrapper">
-                                    <button type="button" class="btn-icon btn-views-action"
-                                            title="Procesar / Recalcular"
-                                            onclick="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')"
-                                            {% if p.is_closed %}disabled style="opacity:0.5"{% endif %}>
-                                        <i class="fas fa-cogs"></i>
-                                    </button>
-                                    <button class="btn-icon btn-info-action"
-                                            @click="openReportModal({{ p.id }}, '{{ p.month }} {{ p.year }}', {{ p.is_closed|yesno:'true,false' }})"
-                                            title="Generar Reportes y Alcances">
-                                        <i class="fas fa-university"></i>
-                                    </button>
-                                    <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}"
-                                       class="btn-icon btn-search ms-2" title="Ver Roles Generados">
-                                        <i class="fas fa-list"></i>
-                                    </a>
-                                    {% if not p.is_closed %}
-                                        <button class="btn-icon btn-warning-action"
-                                                @click="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')"
-                                                title="Procesar Nómina">
-                                            <i class="fas fa-cogs"></i>
-                                        </button>
-                                        <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}"
-                                           class="btn-icon btn-success-action" title="Cargar Novedades al Periodo">
-                                            <i class="fas fa-file-excel"></i>
-                                        </a>
-                                    {% endif %}
-
-                                    <button class="btn-icon btn-info-action"
-                                            @click="openReportModal({{ p.id }}, '{{ p.month }} {{ p.year }}', {{ p.is_closed|yesno:'true,false' }})"
-                                            title="Generar Reportes y Alcances">
-                                        <i class="fas fa-university"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <div id="period-table-container">
+                {% include 'payroll/partials/partial_period_table.html' %}
             </div>
         </div>
-
-        <!-- COMPONENTES VUE (Modales) -->
-        <modal-create-period ref="createModal"></modal-create-period>
-        <modal-generate-payroll ref="generateModal"></modal-generate-payroll>
-        <modal-report-options ref="reportModal"></modal-report-options>
-
     </div>
+
+    {#    {% include 'payroll/modals/modal_generate_payroll.html.html' %}#}
+    {% include 'payroll/modals/modal_generate_payroll.html' %}
+    {% include 'payroll/modals/modal_report_options.html' %}
+
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        /**
-         * Lógica Vue específica para Periodos.
-         * Ya no importamos Vue ni SweetAlert porque base.html ya los tiene.
-         */
-        const {createApp} = Vue;
-
-        const app = createApp({
-            methods: {
-                openCreateModal() {
-                    this.$refs.createModal.open();
-                },
-                openGenerateModal(id, name) {
-                    this.$refs.generateModal.open(id, name);
-                },
-
-                openReportModal(id, name) {
-                    this.$refs.reportModal.open(id, name);
-                }
-            }
-        });
-
-        // --- Componente: Crear Periodo ---
-        app.component('modal-create-period', {
-            template: `
-        <div v-if="isVisible" class="custom-modal-overlay" @click.self="close">
-            <div class="custom-modal">
-                <div class="custom-modal-header">
-                    <h5>Nuevo Periodo</h5>
-                    <button type="button" class="btn-close-modal" @click="close">&times;</button>
-                </div>
-                <form @submit.prevent="submitForm">
-                    <div class="custom-modal-body">
-                        <div class="row g-2">
-                             <div class="col-md-6 mb-2">
-                                <label class="fw-bold small">Mes</label>
-                                {{ form.month }}
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label class="fw-bold small">Año</label>
-                                {{ form.year }}
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label class="fw-bold small">Inicio</label>
-                                {{ form.start_date }}
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label class="fw-bold small">Fin</label>
-                                {{ form.end_date }}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="fw-bold small">Días Laborables</label>
-                                {{ form.working_days }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="custom-modal-footer">
-                        <button type="button" class="btn-secondary" @click="close">Cancelar</button>
-                        <button type="submit" class="btn-create">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        `,
-            data() {
-                return {isVisible: false};
-            },
-            methods: {
-                open() {
-                    this.isVisible = true;
-                },
-                close() {
-                    this.isVisible = false;
-                },
-                submitForm(e) {
-                    const formData = new FormData(e.target);
-                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                    // Usamos fetch nativo
-                    fetch('{% url "payroll:period_create" %}', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                this.close();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Guardado',
-                                    text: data.message,
-                                    confirmButtonColor: '#2e7d32'
-                                }).then(() => location.reload());
-                            } else {
-                                // Manejo básico de errores
-                                let errorMsg = 'Revise los datos del formulario';
-                                if (data.errors) errorMsg = JSON.stringify(data.errors);
-
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: errorMsg,
-                                    confirmButtonColor: '#d32f2f'
-                                });
-                            }
-                        })
-                        .catch(err => console.error(err));
-                }
-            }
-        });
-
-        // --- Componente: Generar Roles ---
-        // --- Componente: Generar Roles (Mejorado con Sincronización) ---
-        app.component('modal-generate-payroll', {
-            template: `
-        <div v-if="isVisible" class="custom-modal-overlay" @click.self="close">
-            <div class="custom-modal" style="max-width: 550px;">
-                <div class="custom-modal-header" style="background-color: #f8fafc;">
-                    <h5 style="color: #0f172a;"><i class="fas fa-cogs me-2"></i> Procesar Nómina: {{ periodName }}</h5>
-                    <button type="button" class="btn-close-modal" @click="close">&times;</button>
-                </div>
-                <div class="custom-modal-body">
-                    <div v-if="loading" style="text-align:center; padding: 40px;">
-                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-                        <p class="mt-3 fw-bold text-muted">Procesando la nómina, por favor espere...</p>
-                    </div>
-                    <div v-else>
-                        <p class="mb-3 text-muted">Seleccione la acción que desea realizar con este periodo:</p>
-
-                        <div class="d-grid gap-3">
-                            <button @click="process('missing')" class="btn btn-outline-success text-start p-3 d-flex align-items-center" style="border: 2px solid #10b981; border-radius: 10px; background: transparent; color: #047857; transition: all 0.2s;">
-                                <i class="fas fa-user-plus fa-2x me-3"></i>
-                                <div>
-                                    <strong class="d-block" style="font-size: 1.1rem;">Sincronizar Faltantes</strong>
-                                    <small>Solo agrega al rol a los empleados nuevos que ingresaron recientemente. No borra modificaciones manuales.</small>
-                                </div>
-                            </button>
-
-                            <button @click="process('all')" class="btn btn-outline-danger text-start p-3 d-flex align-items-center" style="border: 2px solid #ef4444; border-radius: 10px; background: transparent; color: #b91c1c; transition: all 0.2s;">
-                                <i class="fas fa-sync-alt fa-2x me-3"></i>
-                                <div>
-                                    <strong class="d-block" style="font-size: 1.1rem;">Recalcular Todo</strong>
-                                    <small>Borra la nómina actual por completo y vuelve a generarla de cero. <br><b>Peligro:</b> Se perderán las ediciones manuales.</small>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="custom-modal-footer">
-                    <button type="button" class="btn-secondary" @click="close" :disabled="loading">Cancelar</button>
-                </div>
-            </div>
-        </div>
-        `,
-            data() {
-                return {
-                    isVisible: false, periodId: null, periodName: '', loading: false
-                }
-            },
-            methods: {
-                open(id, name) {
-                    this.periodId = id;
-                    this.periodName = name;
-                    this.isVisible = true;
-                },
-                close() {
-                    if (!this.loading) this.isVisible = false;
-                },
-                process(type) {
-                    // Si elige recalcular todo, lanzamos una alerta extra de confirmación
-                    if (type === 'all' && !confirm("⚠️ ADVERTENCIA: Esta acción borrará todos los ajustes manuales y generará el rol desde cero. ¿Desea continuar?")) {
-                        return;
-                    }
-
-                    this.loading = true;
-                    const formData = new FormData();
-                    formData.append('period_id', this.periodId);
-                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                    // Seleccionamos la URL dependiendo del botón que presionó
-                    const url = type === 'missing' ? '{% url "payroll:generate_missing" %}' : '{% url "payroll:generate" %}';
-
-                    fetch(url, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            this.loading = false;
-                            this.close();
-
-                            if (data.status === 'success') {
-                                Swal.fire({icon: 'success', title: 'Proceso Exitoso', text: data.message});
-                            } else if (data.status === 'info') {
-                                Swal.fire({icon: 'info', title: 'Al día', text: data.message});
-                            } else {
-                                Swal.fire({icon: 'error', title: 'Error', text: data.message});
-                            }
-                        })
-                        .catch(err => {
-                            this.loading = false;
-                            this.close();
-                            console.error(err);
-                            Swal.fire('Error', 'Ocurrió un error de conexión.', 'error');
-                        });
-                }
-            }
-        });
-        // --- Componente: Opciones de Reporte / Alcances ---
-        app.component('modal-report-options', {
-            template: `
-        <div v-if="isVisible" class="custom-modal-overlay" @click.self="close">
-            <div class="custom-modal">
-                <div class="custom-modal-header" style="background-color: #f8fafc;">
-                    <h5 style="color: #0f172a;"><i class="fas fa-print me-2"></i> Reportes: {{ periodName }}</h5>
-                    <button type="button" class="btn-close-modal" @click="close">&times;</button>
-                </div>
-                <div class="custom-modal-body">
-                    <p class="mb-3 text-muted">Seleccione el tipo de emisión que desea generar:</p>
-
-                    <div class="list-group mb-4">
-                        <label class="list-group-item d-flex gap-2">
-                            <input class="form-check-input flex-shrink-0" type="radio" v-model="filtro" value="NORMAL">
-                            <span>
-                                <strong>Nómina Principal (Mensual)</strong>
-                                <small class="d-block text-muted">Excluye a los empleados con "Pago Retenido".</small>
-                            </span>
-                        </label>
-                        <label class="list-group-item d-flex gap-2">
-                            <input class="form-check-input flex-shrink-0" type="radio" v-model="filtro" value="REZAGADOS">
-                            <span>
-                                <strong>Alcance / Rezagados</strong>
-                                <small class="d-block text-warning">Solo incluye a quienes acaban de entregar informes y no han cobrado.</small>
-                            </span>
-                        </label>
-                        <label class="list-group-item d-flex gap-2">
-                            <input class="form-check-input flex-shrink-0" type="radio" v-model="filtro" value="TODOS">
-                            <span>
-                                <strong>Auditoría General (Todos)</strong>
-                                <small class="d-block text-muted">Muestra toda la nómina ignorando retenciones.</small>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div v-if="!isClosed">
-                        <button @click="marcarComoPagados" class="btn btn-outline-success w-100 py-2 fw-bold" style="border: 2px solid #198754; color: #198754; background: transparent; border-radius: 8px;">
-                            <i class="fas fa-check-double me-1"></i> Sellar estos roles como PAGADOS
-                        </button>
-                        <small class="text-muted text-center d-block mt-2">Usa esto solo después de subir el archivo al Banco Central.</small>
-                    </div>
-                </div>
-                <div class="custom-modal-footer">
-                    <button type="button" class="btn-secondary" @click="close">Cancelar</button>
-                    <button type="button" class="btn-primary" @click="descargarPDF">
-                        <i class="fas fa-file-pdf"></i> Generar Documento
-                    </button>
-                </div>
-            </div>
-        </div>
-        `,
-            data() {
-                return {isVisible: false, periodId: null, periodName: '', filtro: 'NORMAL', isClosed: false}
-            },
-            methods: {
-                open(id, name, isClosed) {
-                    this.periodId = id;
-                    this.periodName = name;
-                    this.isClosed = isClosed; // Guardamos si está cerrado
-                    this.filtro = 'NORMAL';
-                    this.isVisible = true;
-                },
-                close() {
-                    this.isVisible = false;
-                },
-                descargarPDF() {
-                    // Abre el reporte en una pestaña nueva pasándole el filtro por URL
-                    window.open(`/payroll/reports/grouped/${this.periodId}/?filtro=${this.filtro}`, '_blank');
-                    this.close();
-                },
-                marcarComoPagados() {
-                    if (!confirm("¿Está completamente seguro? Esto sellará a los empleados para que no vuelvan a salir en un archivo del banco.")) {
-                        return;
-                    }
-                    let formData = new FormData();
-                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                    fetch(`/payroll/period/${this.periodId}/mark-paid/`, {
-                        method: 'POST', body: formData
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Mostramos el mensaje (normal o de cierre de periodo)
-                                Swal.fire('¡Proceso Completado!', data.message, 'success').then(() => {
-                                    // Recargamos la página para que se actualicen las etiquetas de estado
-                                    location.reload();
-                                });
-                                this.close();
-                            }
-                        });
-                }
-            }
-        });
-        const periodApp = app.mount('#period-app');
-        // Exponer la instancia montada y funciones globales para llamadas desde botones generados por Django
-        window.periodApp = periodApp;
-        window.openGenerateModal = function (id, name) {
-            if (window.periodApp && typeof window.periodApp.openGenerateModal === 'function') {
-                window.periodApp.openGenerateModal(id, name);
-            } else if (window.periodApp && window.periodApp.$refs && window.periodApp.$refs.generateModal) {
-                window.periodApp.$refs.generateModal.open(id, name);
-            } else {
-                console.warn('openGenerateModal: Vue instance not ready');
-            }
-        };
-        window.openReportModal = function (id, name) {
-            if (window.periodApp && typeof window.periodApp.openReportModal === 'function') {
-                window.periodApp.openReportModal(id, name);
-            } else if (window.periodApp && window.periodApp.$refs && window.periodApp.$refs.reportModal) {
-                window.periodApp.$refs.reportModal.open(id, name);
-            } else {
-                console.warn('openReportModal: Vue instance not ready');
-            }
-        };
-        window.openCreateModal = function () {
-            if (window.periodApp && typeof window.periodApp.openCreateModal === 'function') {
-                window.periodApp.openCreateModal();
-            } else if (window.periodApp && window.periodApp.$refs && window.periodApp.$refs.createModal) {
-                window.periodApp.$refs.createModal.open();
-            } else {
-                console.warn('openCreateModal: Vue instance not ready');
-            }
+        // Inyección de URLs de Django al frontend
+        window.URLS = {
+            baseList: "{% url 'payroll:period_list' %}"
         };
     </script>
-    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+    <script src="{% static 'js/payroll/payroll_period_list.js' %}"></script>
 {% endblock %}

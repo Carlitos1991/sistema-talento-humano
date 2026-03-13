@@ -12,20 +12,24 @@
         </td>
         <td class="text-center actions">
             <div class="actions-wrapper">
-                <button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular"
-                        onclick="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')">
-                    <i class="fas fa-cogs"></i>
-                </button>
-                <button type="button" class="btn-icon btn-info-action" title="Generar Reportes"
-                        onclick="openReportModal({{ p.id }}, '{{ p.month }} {{ p.year }}')">
-                    <i class="fas fa-university"></i>
-                </button>
+                {% if not p.is_closed %}
+                    <button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular"
+                            onclick="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')">
+                        <i class="fas fa-cogs"></i>
+                    </button>
+                    <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
+                {% endif %}
+
                 <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}" class="btn-icon btn-search ms-2" title="Ver Roles Generados">
                     <i class="fas fa-list"></i>
                 </a>
-                <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo">
-                    <i class="fas fa-file-excel"></i>
-                </a>
+
+                <button type="button" class="btn-icon btn-info-action ms-2" title="Generar Reportes"
+                        onclick="openReportModal({{ p.id }}, '{{ p.month }} {{ p.year }}')">
+                    <i class="fas fa-university"></i>
+                </button>
             </div>
         </td>
     </tr>

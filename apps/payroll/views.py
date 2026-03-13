@@ -17,14 +17,14 @@ from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, Payrol
 from .services import PayrollCalculatorService
 from employee.models import Employee
 from .models import Income, Deduction
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django import forms
 from django.contrib import messages
 from payroll.models import RubroBudgetMapping
-from budget.models import BudgetLine
+from budget.models import BudgetLine, BudgetAssignmentHistory
 from contract.models import ManagementPeriod
 from datetime import date
 from django.db.models.functions import Cast
@@ -90,12 +90,36 @@ class PeriodListView(ListView):
         return ordered.filter(is_closed=False)
 
     def get(self, request, *args, **kwargs):
-        # Si es petición AJAX devolvemos sólo las filas (partial)
+        # Si es petición AJAX devolvemos el partial completo (HTML) empaquetado en JSON
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            periods = self.get_queryset()
-            html = render_to_string('payroll/partials/partial_period_rows.html', {'periods': periods})
-            from django.http import HttpResponse
-            return HttpResponse(html)
+            # configurar object_list y contexto para que la paginación de ListView funcione
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+
+            # Si el cliente solicita JSON de datos (modo JS-render), devolvemos estructuras JSON
+            if request.GET.get('json') == '1':
+                periods = context.get('periods') or self.object_list
+                data = []
+                for p in periods:
+                    month_num = getattr(p, 'month_num', None) or getattr(p, 'month_number', 0)
+                    data.append({
+                        'id': p.id,
+                        'month': p.month,
+                        'year': p.year,
+                        'month_num': int(month_num),
+                        'start_date': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
+                        'end_date': p.end_date.strftime('%d/%m/%Y') if p.end_date else '',
+                        'working_days': p.working_days,
+                        'is_closed': bool(p.is_closed),
+                        'display': f"{p.month} {p.year}",
+                        'payslip_url': reverse('payroll:payslip_list') + f"?period_id={p.id}",
+                        'novelty_url': reverse('payroll:novelty_mass_load') + f"?period_id={p.id}"
+                    })
+                return JsonResponse({'periods': data})
+
+            # Renderizamos el partial completo con contexto (incluye paginador)
+            html = render_to_string('payroll/partials/partial_period_table.html', context, request=request)
+            return JsonResponse({'html': html})
         return super().get(request, *args, **kwargs)
 
 
@@ -1236,3 +1260,39 @@ class GenerateMissingPayrollView(LoginRequiredMixin, View):
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+class BankTransferReportView(LoginRequiredMixin, View):
+    """
+    Vista EXCLUSIVA para el Archivo de Transferencias Bancarias (Reporte 4 / SPI-SP).
+    Respeta los filtros de Retención y Alcances.
+    """
+
+    def get(self, request, pk):
+        period = get_object_or_404(PayrollPeriod, pk=pk)
+        tipo_filtro = request.GET.get('filtro', 'NORMAL')
+
+        # Payslip model no tiene FK `budget_line`; evitar select_related inválido.
+        payslips_qs = Payslip.objects.filter(period=period).select_related(
+            'employee__person'
+        ).order_by('employee__person__last_name')
+
+        # Si en plantillas necesitamos la partida de cada item, prefetchearla desde PayslipItem
+        payslips_qs = payslips_qs.prefetch_related('items__budget_line')
+
+        # Aplicamos el mismo escudo de filtros inteligente
+        if tipo_filtro == 'NORMAL':
+            payslips_qs = payslips_qs.filter(is_withheld=False)
+        elif tipo_filtro == 'REZAGADOS':
+            payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+
+        # Calculamos el total a transferir para el pie de página
+        total_transferir = sum(Decimal(str(p.net_pay)) for p in payslips_qs)
+
+        context = {
+            'period': period,
+            'payslips': payslips_qs,
+            'total_transferir': total_transferir,
+            'filtro': tipo_filtro
+        }
+        return render(request, 'payroll/reports/bank_transfer_report.html', context)

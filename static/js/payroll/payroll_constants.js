@@ -118,8 +118,8 @@ function submitPayrollForm(event) {
                     if (table && table._tableManager) {
                         table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                         table._tableManager.currentRows = [...table._tableManager.originalRows];
-                        if (typeof table._tableManager.renderTable === 'function') {
-                            table._tableManager.renderTable();
+                        if (typeof table._tableManager.render === 'function') {
+                            table._tableManager.render();
                         }
                     }
                 })
@@ -194,7 +194,7 @@ function toggleInactiveConstants(showInactive) {
             if (table && table._tableManager) {
                 table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
                 table._tableManager.currentRows = [...table._tableManager.originalRows];
-                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+                if (typeof table._tableManager.render === 'function') table._tableManager.render();
             }
         })
         .catch(err => console.error('Error cargando constantes inactivas:', err));

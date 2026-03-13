@@ -1,0 +1,76 @@
+<table class="table-custom" style="width: 100%; border-collapse: collapse;">
+    <thead>
+    <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+        <th style="padding: 12px;">Periodo</th>
+        <th style="padding: 12px;">Fechas</th>
+        <th style="padding: 12px; text-align: center;">Días Lab.</th>
+        <th style="padding: 12px; text-align: center;">Estado</th>
+        <th style="padding: 12px; text-align: center;">Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for p in periods %}
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 12px;"><strong>{{ p.get_month_display }} {{ p.year }}</strong></td>
+            <td style="padding: 12px; color: #64748b;">{{ p.start_date|date:"d M Y" }}
+                - {{ p.end_date|date:"d M Y" }}</td>
+            <td style="padding: 12px; text-align: center;">{{ p.working_days }}</td>
+            <td style="padding: 12px; text-align: center;">
+                {% if p.is_closed %}
+                    <span class="payroll-value-badge" style="background-color: #94a3b8; color: white; border: none;">Cerrado</span>
+                {% else %}
+                    <span class="payroll-value-badge" style="background-color: #10b981; color: white; border: none;">Abierto</span>
+                {% endif %}
+            </td>
+            <td style="padding: 12px; text-align: center;">
+                {% if not p.is_closed %}
+                    <button class="btn-icon btn-warning-action"
+                            onclick="openGenerateModal({{ p.id }}, '{{ p.get_month_display }} {{ p.year }}')"
+                            title="Procesar Nómina">
+                        <i class="fas fa-cogs"></i>
+                    </button>
+                    <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}"
+                       class="btn-icon btn-success-action" title="Cargar Novedades">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
+                {% endif %}
+
+                <button class="btn-icon btn-info-action"
+                        onclick="openReportModal({{ p.id }}, '{{ p.get_month_display }} {{ p.year }}', {{ p.is_closed|yesno:'true,false' }})"
+                        title="Generar Reportes">
+                    <i class="fas fa-university"></i>
+                </button>
+
+                <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}" class="btn-icon btn-primary-action"
+                   title="Ver Roles">
+                    <i class="fas fa-eye"></i>
+                </a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 30px; color: #94a3b8;">No hay periodos registrados con
+                los filtros actuales.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% if is_paginated %}
+    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px;">
+        {% if page_obj.has_previous %}
+            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.previous_page_number }})">
+                <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+        {% endif %}
+
+        <span style="font-weight: 500; color: #475569;">Pág {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.next_page_number }})">
+                Siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+        {% endif %}
+    </div>
+{% endif %}

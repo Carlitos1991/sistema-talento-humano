@@ -9,7 +9,7 @@ from .views import (
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
     GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
-    GenerateMissingPayrollView
+    GenerateMissingPayrollView, BankTransferReportView
 )
 
 app_name = 'payroll'
@@ -61,4 +61,6 @@ urlpatterns = [
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
     path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
     path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
+    # Reporte exclusivo para el Banco (Reporte 4)
+    path('reports/bank/<int:pk>/', BankTransferReportView.as_view(), name='report_bank_transfer'),
 ]

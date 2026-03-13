@@ -290,6 +290,7 @@
 
 {% block extra_js %}
     <style>
+
         .report-group-container {
             background: #fff;
             padding: 40px;
@@ -350,12 +351,64 @@
         /* ESTILOS DE IMPRESIÓN */
         @media print {
             @page {
-                size: landscape;
-                margin: 10mm;
+                margin: 0.5cm 0.5cm; /* Márgenes súper finos */
+                size: landscape; /* O portrait si prefieres vertical */
             }
 
-            body * {
-                visibility: hidden;
+            body {
+                font-family: 'Arial', sans-serif;
+                font-size: 7.5pt; /* Letra pequeña pero legible */
+                line-height: 1.1;
+                color: #000;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 10px;
+            }
+
+            th, td {
+                border: 1px solid #999;
+                padding: 2px 4px !important; /* Mínimo relleno posible */
+                vertical-align: middle;
+                white-space: nowrap; /* Evita que el texto salte de línea si hay espacio */
+            }
+
+            /* 4. Encabezados más delgados */
+            th {
+                background-color: #f0f0f0 !important;
+                -webkit-print-color-adjust: exact;
+                font-size: 7pt;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+
+            /* 5. Ajustar anchos de columnas (Opcional, adapta a tus necesidades) */
+            .col-cedula {
+                width: 8%;
+            }
+
+            .col-nombre {
+                width: 25%;
+                white-space: normal;
+            }
+
+            /* Solo el nombre puede usar 2 líneas */
+            .col-valor {
+                width: 6%;
+                text-align: right;
+            }
+
+            /* 6. Quitar espacios muertos innecesarios */
+            h1, h2, h3, h4, h5, p {
+                margin: 0 0 4px 0;
+                padding: 0;
+            }
+
+            /* 7. Forzar salto de página entre los Reportes 1, 2 y 3 */
+            .page-break {
+                page-break-before: always;
             }
 
             .no-print {
