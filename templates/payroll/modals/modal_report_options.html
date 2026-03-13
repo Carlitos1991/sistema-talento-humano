@@ -1,49 +1,38 @@
-<script type="text/x-template" id="modal-report-template">
-    <div v-if="isVisible" class="custom-modal-overlay" @click.self="close">
-        <div class="custom-modal" style="max-width: 500px;">
-            <div class="custom-modal-header" style="background-color: #f8fafc;">
-                <h5 style="color: #0f172a;"><i class="fas fa-print me-2"></i> Reportes: [[ periodName ]]</h5>
-                <button type="button" class="btn-close-modal" @click="close">&times;</button>
+<div id="modalReportOptions" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal" style="max-width: 500px;">
+        <div class="custom-modal-header">
+            <h5><i class="fas fa-print me-2"></i> Reportes: <span id="rep-period-name"></span></h5>
+            <button type="button" class="btn-close-modal" onclick="closeReportModal()">&times;</button>
+        </div>
+        <div class="custom-modal-body">
+            <div class="list-group mb-4">
+                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2" style="cursor: pointer;">
+                    <input type="radio" name="reportFiltro" value="NORMAL" checked>
+                    <span><strong>Nómina Mensual</strong><br><small class="text-muted">Excluye retenidos.</small></span>
+                </label>
+                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2" style="cursor: pointer;">
+                    <input type="radio" name="reportFiltro" value="REZAGADOS">
+                    <span><strong>Alcance / Rezagados</strong><br><small
+                            class="text-warning">Solo pendientes de cobro.</small></span>
+                </label>
             </div>
-
-            <div class="custom-modal-body">
-                <p class="mb-3 text-muted">Seleccione el tipo de emisión que desea generar:</p>
-
-                <div class="list-group mb-4">
-                    <label class="list-group-item d-flex gap-2 align-items-center p-3 border rounded mb-2" style="cursor: pointer;">
-                        <input class="form-check-input flex-shrink-0" type="radio" v-model="filtro" value="NORMAL">
-                        <span>
-                            <strong class="d-block">Nómina Principal (Mensual)</strong>
-                            <small class="text-muted">Excluye a los empleados con "Pago Retenido".</small>
-                        </span>
-                    </label>
-                    <label class="list-group-item d-flex gap-2 align-items-center p-3 border rounded mb-2" style="cursor: pointer;">
-                        <input class="form-check-input flex-shrink-0" type="radio" v-model="filtro" value="REZAGADOS">
-                        <span>
-                            <strong class="d-block">Alcance / Rezagados</strong>
-                            <small class="text-warning">Solo a quienes acaban de entregar informes y no han cobrado.</small>
-                        </span>
-                    </label>
-                </div>
-
-                <div v-if="!isClosed">
-                    <button @click="marcarComoPagados" class="btn btn-outline-success w-100 py-2 fw-bold" style="border: 2px solid #198754; color: #198754; background: transparent; border-radius: 8px;">
-                        <i class="fas fa-check-double me-1"></i> Sellar estos roles como PAGADOS
-                    </button>
-                </div>
+            <div id="sellar-container" style="display: none;">
+                <button onclick="sellarComoPagados()" class="btn btn-outline-success w-100 py-2 fw-bold"
+                        style="border: 2px solid #198754; color: #198754; background: transparent;">
+                    <i class="fas fa-check-double"></i> Sellar como PAGADOS
+                </button>
             </div>
-
-            <div class="custom-modal-footer" style="justify-content: space-between;">
-                <button type="button" class="btn-secondary" @click="close">Cancelar</button>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="btn btn-success" @click="descargarBanco" style="background-color: #10b981; border: none; color: white; padding: 6px 12px; border-radius:6px;">
-                        <i class="fas fa-money-check-alt"></i> Archivo Banco
-                    </button>
-                    <button type="button" class="btn btn-primary" @click="descargarPDF" style="background-color: #0f172a; border: none; color: white; padding: 6px 12px; border-radius:6px;">
-                        <i class="fas fa-file-pdf"></i> Nómina General
-                    </button>
-                </div>
+        </div>
+        <div class="custom-modal-footer" style="justify-content: space-between;">
+            <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancelar</button>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="downloadReport('banco')" class="btn btn-success"
+                        style="background-color:#10b981; color:white;">Banco
+                </button>
+                <button onclick="downloadReport('nomina')" class="btn btn-primary"
+                        style="background-color:#0f172a; color:white;">Nómina
+                </button>
             </div>
         </div>
     </div>
-</script>
+</div>

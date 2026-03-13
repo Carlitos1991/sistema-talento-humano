@@ -388,7 +388,7 @@ function toggleInactivePeriods(showClosed) {
 
                 let actions = '';
                 if (!p.is_closed) {
-                    actions += `<button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular" onclick="openGenerateModal(${p.id}, '${periodo.replace("'","\\'")}')"><i class="fas fa-cogs"></i></button>`;
+                    actions += `<button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular" data-generate-id="${p.id}" data-generate-name="${periodo.replace(/'/g, "\\'")}"><i class="fas fa-cogs"></i></button>`;
                     if (p.novelty_url) {
                         actions += `<a href="${p.novelty_url}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo"><i class="fas fa-file-excel"></i></a>`;
                     }
@@ -396,7 +396,7 @@ function toggleInactivePeriods(showClosed) {
                 if (p.payslip_url) {
                     actions += `<a href="${p.payslip_url}" class="btn-icon btn-search ms-2" title="Ver Roles Generados"><i class="fas fa-list"></i></a>`;
                 }
-                actions += `<button type="button" class="btn-icon btn-info-action ms-2" title="Generar Reportes" onclick="openReportModal(${p.id}, '${periodo.replace("'","\\'")}')"><i class="fas fa-university"></i></button>`;
+                actions += `<button type="button" class="btn-icon btn-info-action ms-2" title="Generar Reportes" data-report-id="${p.id}" data-report-name="${periodo.replace(/'/g, "\\'")}" data-report-closed="${p.is_closed}"><i class="fas fa-university"></i></button>`;
 
                 return `<tr>
                     <td class="fw-bold" data-sort="${dataSort}">${periodo}</td>
@@ -418,4 +418,159 @@ function toggleInactivePeriods(showClosed) {
             }
         })
         .catch(error => console.error('Error cargando periodos:', error));
+}
+
+// Fallback: asegurar que exista la función openGenerateModal
+if (typeof window.openGenerateModal !== 'function') {
+    window.openGenerateModal = function (id, name) {
+        try {
+            console.log('fallback openGenerateModal invoked', id, name);
+            window.currentGenPeriodId = id;
+            const modal = document.getElementById('modalGeneratePayroll');
+            if (modal) {
+                const nameEl = document.getElementById('gen-period-name');
+                if (nameEl) nameEl.innerText = name;
+                modal.style.display = 'flex';
+                document.body.classList.add('modal-open');
+            } else {
+                console.warn('modalGeneratePayroll no encontrado en el DOM');
+            }
+        } catch (e) {
+            console.error('Error fallback openGenerateModal:', e);
+        }
+    };
+}
+
+// Fallback para openReportModal
+if (typeof window.openReportModal !== 'function') {
+    window.openReportModal = function (id, name, isClosed) {
+        try {
+            console.log('fallback openReportModal invoked', id, name, isClosed);
+            window.currentGenPeriodId = id;
+            const modal = document.getElementById('modalReportOptions');
+            if (modal) {
+                const nameEl = document.getElementById('rep-period-name');
+                if (nameEl) nameEl.innerText = name;
+                const sellarBtn = document.getElementById('sellar-container');
+                if (sellarBtn) sellarBtn.style.display = isClosed ? 'none' : 'block';
+                modal.style.display = 'flex';
+                document.body.classList.add('modal-open');
+            } else {
+                console.warn('modalReportOptions no encontrado en el DOM');
+            }
+        } catch (e) {
+            console.error('Error fallback openReportModal:', e);
+        }
+    };
+}
+
+// Delegated event listener para botones generados dinámicamente
+document.addEventListener('click', function (e) {
+    try {
+        console.debug('delegated click target:', e.target && e.target.tagName, e.target);
+    } catch (ex) {
+        // ignore
+    }
+
+    // compatibilidad: si closest no existe, hacer traversal manual
+    function findAttr(node, attr) {
+        let cur = node;
+        while (cur && cur !== document) {
+            if (cur.getAttribute && cur.getAttribute(attr) !== null) return cur;
+            cur = cur.parentNode;
+        }
+        return null;
+    }
+
+    const genBtn = (e.target.closest && e.target.closest('[data-generate-id]')) || findAttr(e.target, 'data-generate-id');
+    if (genBtn) {
+        const id = genBtn.getAttribute('data-generate-id');
+        const name = genBtn.getAttribute('data-generate-name') || '';
+        console.log('delegated: generate click', id, name);
+        try {
+            if (typeof window.openGenerateModal === 'function') {
+                window.openGenerateModal(id, name);
+            } else {
+                console.warn('openGenerateModal no definido');
+            }
+        } catch (err) {
+            console.error('Error invoking openGenerateModal via delegation', err);
+        }
+        e.preventDefault();
+        return;
+    }
+
+    const repBtn = (e.target.closest && e.target.closest('[data-report-id]')) || findAttr(e.target, 'data-report-id');
+    if (repBtn) {
+        const id = repBtn.getAttribute('data-report-id');
+        const name = repBtn.getAttribute('data-report-name') || '';
+        const isClosed = repBtn.getAttribute('data-report-closed') === 'true';
+        console.log('delegated: report click', id, name, isClosed);
+        try {
+            if (typeof window.openReportModal === 'function') {
+                window.openReportModal(id, name, isClosed);
+            } else {
+                console.warn('openReportModal no definido');
+            }
+        } catch (err) {
+            console.error('Error invoking openReportModal via delegation', err);
+        }
+        e.preventDefault();
+        return;
+    }
+});
+
+// Actions relacionadas con los modales: generar, descargar reportes y sellar
+function getCSRF() {
+    return window.CSRF_TOKEN || (document.querySelector('input[name=csrfmiddlewaretoken]') && document.querySelector('input[name=csrfmiddlewaretoken]').value);
+}
+
+function _resolveCurrentPeriodId() {
+    // La variable puede estar en window (fallback) o en el scope de modal_generate_payroll.js
+    if (typeof window !== 'undefined' && typeof window.currentGenPeriodId !== 'undefined' && window.currentGenPeriodId) return window.currentGenPeriodId;
+    if (typeof currentGenPeriodId !== 'undefined' && currentGenPeriodId) return currentGenPeriodId;
+    return null;
+}
+
+function submitGenerate(mode) {
+    const id = _resolveCurrentPeriodId();
+    if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
+    const url = (mode === 'missing') ? window.URLS.generateMissing : window.URLS.generateAll;
+    Swal.fire({title: 'Procesando...', didOpen: () => {Swal.showLoading();}});
+    fetch(url, {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()},
+        body: new URLSearchParams({'period_id': id})
+    }).then(r => r.json()).then(data => {
+        Swal.close();
+        if (data.status === 'success' || data.success || data.message) {
+            Swal.fire('Éxito', data.message || 'Operación completada', 'success').then(()=> location.reload());
+        } else if (data.status === 'info') {
+            Swal.fire('Info', data.message, 'info');
+        } else {
+            Swal.fire('Error', data.message || 'Error al generar', 'error');
+        }
+    }).catch(err=>{Swal.close(); console.error(err); Swal.fire('Error', 'Fallo de comunicación', 'error');});
+}
+
+function downloadReport(kind) {
+    const id = _resolveCurrentPeriodId();
+    if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
+    let url = (kind === 'banco') ? window.URLS.reporteBanco : window.URLS.reporteNomina;
+    url = url.replace('999999', id);
+    window.open(url, '_blank');
+}
+
+function sellarComoPagados() {
+    const id = _resolveCurrentPeriodId();
+    if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
+    const url = (window.URLS.periodMarkPaid || '').replace('999999', id);
+    fetch(url, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()}})
+        .then(r => r.json()).then(data => {
+            if (data.success) {
+                Swal.fire('Hecho', data.message, 'success').then(()=> location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo sellar', 'error');
+            }
+        }).catch(err=>{console.error(err); Swal.fire('Error', 'Fallo de comunicación', 'error');});
 }

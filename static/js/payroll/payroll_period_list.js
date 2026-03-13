@@ -9,25 +9,40 @@ document.addEventListener("DOMContentLoaded", function () {
     function loadPeriods(page = 1) {
         if (!toggleClosedBtn || !tableContainer) return;
 
+        // CAPTURAMOS EL ESTADO DEL CHECKBOX
         const showClosed = toggleClosedBtn.checked;
+
+        // ARMAMOS LA URL CON EL FILTRO show_closed
         const url = `${window.URLS.baseList}?show_closed=${showClosed}&page=${page}`;
 
-        // Añadimos opacidad para indicar que está cargando
         tableContainer.style.opacity = '0.5';
 
         fetch(url, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(response => {
                 if (!response.ok) throw new Error("Error en la petición al servidor");
                 return response.json();
             })
             .then(data => {
-                // Incrustamos el HTML puro
                 tableContainer.innerHTML = data.html;
                 tableContainer.style.opacity = '1';
+
+                // Re-inicializamos el TableManager para que el buscador y el orden sigan funcionando
+                try {
+                    const newTable = tableContainer.querySelector('.managed-table');
+                    if (newTable) {
+                        if (newTable._tableManager) {
+                            newTable._tableManager.originalRows = Array.from(newTable.querySelectorAll('tbody tr'));
+                            newTable._tableManager.currentRows = [...newTable._tableManager.originalRows];
+                            if (typeof newTable._tableManager.render === 'function') newTable._tableManager.render();
+                        } else {
+                            new TableManager(newTable);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error inicializando TableManager tras inyección:', e);
+                }
             })
             .catch(error => {
                 console.error('Error cargando la tabla:', error);

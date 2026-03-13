@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q, Sum, Case, When, IntegerField, Value
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 import openpyxl
@@ -124,6 +124,14 @@ class PeriodListView(ListView):
 
 
 class PeriodCreateView(View):
+    def get(self, request):
+        # Si la petición viene por AJAX devolvemos solo el modal HTML
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            form = PayrollPeriodForm()
+            html = render_to_string('payroll/modals/modal_period_form.html', {'form': form, 'request': request})
+            return HttpResponse(html)
+        return HttpResponse(status=405)
+
     def post(self, request):
         form = PayrollPeriodForm(request.POST)
         if form.is_valid():
@@ -326,42 +334,52 @@ class ConstantDeleteView(DeleteView):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
-class PayslipListView(ListView):
+class PayslipListView(LoginRequiredMixin, ListView):
     model = Payslip
     template_name = 'payroll/payslip_list.html'
     context_object_name = 'payslips'
-    paginate_by = 50  # Clave para la velocidad: solo muestra 50 a la vez
+    paginate_by = 15
 
     def get_queryset(self):
-        # Optimización SQL: select_related evita el problema N+1 queries
-        qs = Payslip.objects.select_related(
-            'employee',
-            'employee__person',  # Asumiendo que Employee tiene relación con Person
-            'period'
-        ).all()
+        queryset = super().get_queryset().select_related(
+            'employee__person', 'period'
+        ).order_by('employee__person__last_name')
 
-        # Filtro por Periodo (Obligatorio)
+        # Filtro por periodo
         period_id = self.request.GET.get('period_id')
         if period_id:
-            qs = qs.filter(period_id=period_id)
+            queryset = queryset.filter(period_id=period_id)
 
-        # Filtro por Búsqueda (Cédula o Nombre)
-        search = self.request.GET.get('q')
-        if search:
-            qs = qs.filter(
-                Q(employee__person__document_number__icontains=search) |
-                Q(employee__person__last_name__icontains=search) |
-                Q(employee__person__first_name__icontains=search)
+        # NUEVO: Búsqueda global desde el servidor
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__identification__icontains=search_query)
             )
 
-        return qs
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         period_id = self.request.GET.get('period_id')
         if period_id:
-            context['current_period'] = PayrollPeriod.objects.filter(pk=period_id).first()
+            context['current_period'] = get_object_or_404(PayrollPeriod, id=period_id)
+        # Mantenemos la palabra buscada en la caja de texto
+        context['search_query'] = self.request.GET.get('q', '')
         return context
+
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+
+        # Si es una petición AJAX (Buscador o Paginación), devuelve solo la tabla
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string('payroll/partials/partial_payslip_table.html', context, request=request)
+            return JsonResponse({'html': html})
+
+        return self.render_to_response(context)
 
 
 class PayslipDetailView(DetailView):

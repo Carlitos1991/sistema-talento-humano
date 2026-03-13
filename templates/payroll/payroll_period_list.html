@@ -8,26 +8,36 @@
 {% endblock %}
 
 {% block content %}
-    <div>
+    <div class="container-fluid">
         <div class="header-card">
             <div>
                 <h1>Periodos de Nómina</h1>
-                <p>Gestión de aperturas, cierres y cálculo de roles.</p>
+                <p>Gestión de aperturas y cálculo de roles.</p>
             </div>
             {% if perms.payroll.add_payrollperiod %}
-                <button class="btn btn-create" onclick="openCreateModal()">
+                <button type="button" class="btn btn-create"
+                        onclick="openPayrollModal('{% url 'payroll:period_create' %}')">
                     <i class="fas fa-plus"></i> Nuevo Periodo
                 </button>
             {% endif %}
         </div>
 
-        <div class="content-table" style="margin-top: 20px;">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-                <label class="modern-toggle-wrapper" style="cursor: pointer;">
-                    <input type="checkbox" id="toggleClosedPeriods" class="modern-toggle-input">
-                    <span class="modern-toggle-circle"></span>
-                    <span class="modern-toggle-text" style="margin-left: 10px; font-weight: bold; color: #334155;">Mostrar Periodos Cerrados</span>
-                </label>
+        <div class="content-table mt-4">
+            <div class="table-controls"
+                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center;">
+                    <input class="modern-toggle-input" type="checkbox" id="toggleClosedPeriods"
+                           onchange="toggleClosedPeriods(this.checked)">
+                    <label class="modern-toggle-wrapper mb-0" for="toggleClosedPeriods">
+                        <div class="modern-toggle-circle"></div>
+                        <span class="modern-toggle-text">Mostrar Periodos Cerrados</span>
+                    </label>
+                </div>
+
+                <div class="search-box" style="max-width: 350px; width: 100%;">
+                    <i class="fas fa-search"></i>
+                    <input id="searchPeriodInput" class="table-search-input" placeholder="Buscar periodo...">
+                </div>
             </div>
 
             <div id="period-table-container">
@@ -36,7 +46,8 @@
         </div>
     </div>
 
-    {#    {% include 'payroll/modals/modal_generate_payroll.html.html' %}#}
+    <div id="modal-root"></div>
+
     {% include 'payroll/modals/modal_generate_payroll.html' %}
     {% include 'payroll/modals/modal_report_options.html' %}
 
@@ -44,10 +55,17 @@
 
 {% block extra_js %}
     <script>
-        // Inyección de URLs de Django al frontend
+        window.CSRF_TOKEN = "{{ csrf_token }}";
         window.URLS = {
-            baseList: "{% url 'payroll:period_list' %}"
+            baseList: "{% url 'payroll:period_list' %}",
+            generateAll: "{% url 'payroll:generate' %}",
+            generateMissing: "{% url 'payroll:generate_missing' %}",
+            reporteNomina: "{% url 'payroll:grouped_report' pk=999999 %}",
+            reporteBanco: "{% url 'payroll:report_bank_transfer' pk=999999 %}",
+            periodMarkPaid: "{% url 'payroll:period_mark_paid' period_id=999999 %}"
         };
     </script>
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script src="{% static 'js/payroll/payroll_period_list.js' %}"></script>
+    <script src="{% static 'js/payroll/modal_generate_payroll.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,51 @@
+<div class="modal-overlay" id="periodModalOverlay">
+    <div class="modal-container-medium">
+
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-calendar-alt"></i></div>
+                <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Periodo</h3>
+            </div>
+            <button type="button" class="btn-close-modal-refined" onclick="closePayrollModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="post" id="periodForm" action="{% url 'payroll:period_create' %}" onsubmit="submitPayrollForm(event)">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <div class="row g-3">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Mes</label>
+                            {{ form.month }}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Año</label>
+                            {{ form.year }}
+                        </div>
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            {{ form.start_date }}
+                        </div>
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Fecha Fin</label>
+                            {{ form.end_date }}
+                        </div>
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Días Laborables</label>
+                            {{ form.working_days }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-cancel" onclick="closePayrollModal()">Cancelar</button>
+                <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>

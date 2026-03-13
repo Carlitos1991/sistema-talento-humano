@@ -251,3 +251,61 @@
     width: 100%;
     max-width: 350px;
 }
+
+/* ===== Estilos de botones y buscador para la lista de períodos ===== */
+.btn-export {
+    border: 1px solid #e6edf3;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(2,6,23,0.04);
+}
+.btn-export.btn-excel { border-color: #e6f4ea; color: #116530 }
+.btn-export.btn-pdf { border-color: #fdecea; color: #b91c1c }
+
+.table-search-input {
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    padding: 6px 14px 6px 36px;
+    width: 260px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(2,6,23,0.03);
+}
+
+/* Center the toggle visually when placed in the top controls */
+.modern-toggle-wrapper {
+    margin: 0 auto;
+}
+
+/* Icon circular buttons used in actions column */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+    margin-left: 6px;
+}
+.btn-icon i { font-size: 14px; }
+.btn-views-action { background: linear-gradient(180deg,#f59e0b,#f97316); }
+.btn-success-action { background: linear-gradient(180deg,#10b981,#059669); }
+.btn-search { background: linear-gradient(180deg,#06b6d4,#0ea5a4); }
+.btn-info-action { background: linear-gradient(180deg,#7c3aed,#6d28d9); }
+.btn-primary-action { background: linear-gradient(180deg,#0369a1,#075985); }
+
+.actions-wrapper { display:flex; justify-content:flex-end; align-items:center; }
+
+/* Small responsive tweaks */
+@media (max-width: 900px) {
+    .table-search-input { width: 160px; }
+    .btn-icon { width:34px; height:34px }
+}
