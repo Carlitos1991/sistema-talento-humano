@@ -13,6 +13,7 @@ class PayrollConstant(models.Model):
     code = models.CharField(max_length=30, unique=True, verbose_name=_("Código"))
     value = models.DecimalField(max_digits=10, decimal_places=4, verbose_name=_("Valor"))
     description = models.TextField(blank=True, verbose_name=_("Descripción"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
 
     def __str__(self):
         return f"{self.name} ({self.value})"
@@ -37,7 +38,7 @@ class Income(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         # Generar código automáticamente a partir del nombre: mayúsculas y guiones bajos
         if self.name:
@@ -102,6 +103,15 @@ class PayrollPeriod(models.Model):
     def __str__(self):
         return f"{self.month} {self.year}"
 
+    @property
+    def month_number(self):
+        mapping = {
+            'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+            'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+            'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
+        }
+        return mapping.get(self.month.upper(), 0)
+
 
 class Payslip(models.Model):
     """Cabecera del Rol de Pagos (Empleado + Periodo + Totales)"""
@@ -111,6 +121,11 @@ class Payslip(models.Model):
     # Datos Base
     worked_days = models.IntegerField(default=30, verbose_name=_("Días Trabajados"))
     effective_worked_days = models.IntegerField(default=0, verbose_name='Días Efectivos Laborados')
+    is_paid = models.BooleanField(
+        default=False,
+        verbose_name='Pagado / Enviado al Banco',
+        help_text='Si es True, este rol ya se envió en un archivo SPI-SP y no debe volver a salir en los alcances.'
+    )
     is_withheld = models.BooleanField(
         default=False,
         verbose_name='Pago Retenido',

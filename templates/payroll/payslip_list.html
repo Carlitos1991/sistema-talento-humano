@@ -64,8 +64,13 @@
                         <th class="text-end">Ingresos</th>
                         <th class="text-end">Egresos</th>
                         <th class="text-end">A Pagar</th>
-                        <th class="text-center">Retener</th>
-                        <th class="text-center">Acciones</th>
+
+                        {% if not current_period.is_closed %}
+                            <th class="text-center">Retener</th>
+                            <th class="text-center">Acciones</th>
+                        {% else %}
+                            <th class="text-center">Ver</th>
+                        {% endif %}
                     </tr>
                     </thead>
                     <tbody>
@@ -94,17 +99,34 @@
                             <td class="text-end">
                                 <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
                             </td>
-                            <td class="text-center">
-                                <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;"
-                                       title="Retener el pago de este empleado">
-                                    <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
-                                           data-id="{{ p.id }}"
-                                           {% if p.is_withheld %}checked{% endif %}>
-                                    <span class="modern-toggle-circle"></span>
-                                    <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}
-                                        Normal{% endif %}</span>
-                                </label>
-                            </td>
+                            {% if not current_period.is_closed %}
+                                <td class="text-center">
+                                    <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;"
+                                           title="Retener el pago de este empleado">
+                                        <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
+                                               data-id="{{ p.id }}"
+                                               {% if p.is_withheld %}checked{% endif %}>
+                                        <span class="modern-toggle-circle"></span>
+                                        <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}
+                                            Normal{% endif %}</span>
+                                    </label>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-icon btn-primary-action"
+                                            onclick="openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                            title="Ver / Editar Detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            {% else %}
+                                <td class="text-center">
+                                    <button class="btn-icon btn-primary-action"
+                                            onclick="openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                            title="Consultar Rol Histórico">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            {% endif %}
                             <td class="text-center">
                                 <button class="btn-icon btn-edit"
                                         onclick="openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"

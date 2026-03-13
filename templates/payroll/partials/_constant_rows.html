@@ -1,0 +1,37 @@
+{% for c in constants %}
+    <tr>
+        <td>
+            <div class="fw-bold">{{ c.name }}</div>
+        </td>
+        <td class="text-center">
+            <span class="payroll-code">{{ c.code }}</span>
+        </td>
+        <td class="text-end">
+            <span class="payroll-value-badge">{{ c.value }}</span>
+        </td>
+        <td class="text-muted small">
+            {{ c.description|default:"-"|truncatechars:60 }}
+        </td>
+        <td class="text-center">
+            {% if c.is_active %}
+                <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+            {% else %}
+                <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
+            {% endif %}
+        </td>
+        <td class="text-center actions">
+            <div class="actions-wrapper">
+                <button type="button" class="btn-icon btn-views-action" title="Editar" onclick="openPayrollModal('{% url 'payroll:constant_update' c.id %}')">
+                    <i class="fas fa-pen"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+{% empty %}
+    <tr>
+        <td colspan="6" class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i><br>
+            No hay constantes configuradas.
+        </td>
+    </tr>
+{% endfor %}

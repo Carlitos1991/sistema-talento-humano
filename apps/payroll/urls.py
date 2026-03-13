@@ -8,7 +8,8 @@ from .views import (
     InstitutionalReportView, MappingListView,
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
-    GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView
+    GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
+    GenerateMissingPayrollView
 )
 
 app_name = 'payroll'
@@ -58,4 +59,6 @@ urlpatterns = [
 
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
+    path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
+    path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
 ]

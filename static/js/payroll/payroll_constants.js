@@ -16,32 +16,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Función para abrir el modal (AJAX)
 function openPayrollModal(url) {
-    const modalContainer = document.getElementById('modal-container');
+    let modalContainer = document.getElementById('modal-root');
+    // Si no existe el contenedor de modales en el DOM, lo creamos dinámicamente
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-root';
+        document.body.appendChild(modalContainer);
+    }
 
-    // SweetAlert Loading
-    Swal.fire({
-        title: 'Cargando...',
-        text: 'Por favor espere',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    fetch(url, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(response => response.text())
     .then(html => {
-        Swal.close();
-        modalContainer.innerHTML = html;
+        // inyectamos el HTML recibido sin mostrar mensajes previos
+        if (modalContainer) modalContainer.innerHTML = html;
         const modalElement = document.getElementById('payrollModal');
-        const bsModal = new bootstrap.Modal(modalElement);
-        bsModal.show();
+        // Si Bootstrap está disponible, usar su modal; si no, mostrar con estilos propios
+        if (modalElement) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const bsModal = new bootstrap.Modal(modalElement);
+                bsModal.show();
+            } else {
+                // Fallback: activar el modal por CSS/ARIA y bloquear scroll
+                modalElement.classList.add('show');
+                modalElement.style.display = 'block';
+                modalElement.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('modal-open');
+
+                // Conectar botones con atributo data-bs-dismiss al cierre personalizado
+                modalElement.querySelectorAll('[data-bs-dismiss]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // limpiar contenido del modal-root y quitar clase
+                        if (modalContainer) modalContainer.innerHTML = '';
+                        document.body.classList.remove('modal-open');
+                    });
+                });
+            }
+        } else {
+            console.warn('openPayrollModal: modal element #payrollModal no encontrado en el HTML inyectado');
+        }
     })
     .catch(error => {
-        Swal.close();
         console.error('Error:', error);
-        Swal.fire('Error', 'No se pudo cargar el formulario.', 'error');
+        // Mostrar error simple sin modal de carga previo
+        try { Swal.fire('Error', 'No se pudo cargar el formulario.', 'error'); } catch(e) { alert('No se pudo cargar el formulario.'); }
     });
+}
+
+// Cerrar modal inyectado (parcialmente compatible con otros modales)
+function closePayrollModal() {
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) modalRoot.innerHTML = '';
+    document.body.classList.remove('modal-open');
 }
 
 // Enviar formulario (AJAX)
@@ -62,8 +87,15 @@ function submitPayrollForm(event) {
     .then(data => {
         if (data.status === 'success') {
             const modalElement = document.getElementById('payrollModal');
-            const bsModal = bootstrap.Modal.getInstance(modalElement);
-            bsModal.hide();
+            // Usar bootstrap si está cargado; si no, aplicar fallback seguro
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal && modalElement) {
+                const bsModal = bootstrap.Modal.getInstance(modalElement);
+                if (bsModal && typeof bsModal.hide === 'function') bsModal.hide();
+            } else {
+                const modalRoot = document.getElementById('modal-root');
+                if (modalRoot) modalRoot.innerHTML = '';
+                document.body.classList.remove('modal-open');
+            }
 
             Swal.fire({
                 icon: 'success',
@@ -72,7 +104,30 @@ function submitPayrollForm(event) {
                 timer: 1500,
                 showConfirmButton: false
             }).then(() => {
-                location.reload();
+                // Refresh only the table body via AJAX (no full reload)
+                fetch(window.location.pathname + window.location.search, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(resp => resp.text())
+                .then(html => {
+                    const tbody = document.querySelector('.managed-table tbody');
+                    if (tbody) tbody.innerHTML = html;
+
+                    // Re-initialize table-manager if present
+                    const table = document.querySelector('.managed-table');
+                    if (table && table._tableManager) {
+                        table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                        table._tableManager.currentRows = [...table._tableManager.originalRows];
+                        if (typeof table._tableManager.renderTable === 'function') {
+                            table._tableManager.renderTable();
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Error refrescando la tabla:', err);
+                    // Fallback: recargar la página si algo falla
+                    location.reload();
+                });
             });
         } else {
             // Manejo de errores de validación
@@ -124,4 +179,23 @@ function deleteConstant(url, name) {
             });
         }
     })
+}
+
+// Toggle: mostrar/ocultar inactivos en la lista de constantes (AJAX)
+function toggleInactiveConstants(showInactive) {
+    fetch(`?show_inactive=${showInactive}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.text())
+        .then(html => {
+            const tbody = document.querySelector('.managed-table tbody');
+            if (tbody) tbody.innerHTML = html;
+
+            // Re-inicializar table-manager si existe
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+            }
+        })
+        .catch(err => console.error('Error cargando constantes inactivas:', err));
 }

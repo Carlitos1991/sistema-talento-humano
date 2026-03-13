@@ -278,8 +278,11 @@ class TableManager {
     sortData() {
         if (this.sortCol === null) return;
         this.currentRows.sort((rowA, rowB) => {
-            const cellA = rowA.children[this.sortCol]?.innerText.trim() || '';
-            const cellB = rowB.children[this.sortCol]?.innerText.trim() || '';
+            const cellElA = rowA.children[this.sortCol];
+            const cellElB = rowB.children[this.sortCol];
+            // Prefer data-sort attribute when present (allows normalized sort keys)
+            const cellA = (cellElA && cellElA.dataset && cellElA.dataset.sort) ? String(cellElA.dataset.sort).trim() : (cellElA?.innerText.trim() || '');
+            const cellB = (cellElB && cellElB.dataset && cellElB.dataset.sort) ? String(cellElB.dataset.sort).trim() : (cellElB?.innerText.trim() || '');
             const cmp = this.compareValues(cellA, cellB);
             return this.sortAsc ? cmp : -cmp;
         });

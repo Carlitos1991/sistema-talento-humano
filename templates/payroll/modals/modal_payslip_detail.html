@@ -49,13 +49,15 @@
                                     <div class="val-container">
                                         <span class="val"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        <button type="button" class="btn-edit-inline edit-item-btn"
-                                                data-id="{{ item.id }}"
-                                                data-val="{{ item.value|stringformat:'f' }}"
-                                                data-name="{{ item.income_ref.name }}"
-                                                title="Modificar valor">
-                                            <i class="fas fa-pencil-alt"></i>
-                                        </button>
+                                        {% if not payslip.period.is_closed %}
+                                            <button type="button" class="btn-edit-inline edit-item-btn"
+                                                    data-id="{{ item.id }}"
+                                                    data-val="{{ item.value|stringformat:'f' }}"
+                                                    data-name="{{ item.income_ref.name }}"
+                                                    title="Modificar valor">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                        {% endif %}
                                     </div>
                                 </li>
                             {% empty %}
@@ -82,13 +84,15 @@
                                     <div class="val-container">
                                         <span class="val"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        <button type="button" class="btn-edit-inline edit-item-btn"
-                                                data-id="{{ item.id }}"
-                                                data-val="{{ item.value|stringformat:'f' }}"
-                                                data-name="{{ item.deduction_ref.name }}"
-                                                title="Modificar valor">
-                                            <i class="fas fa-pencil-alt"></i>
-                                        </button>
+                                        {% if not payslip.period.is_closed %}
+                                            <button type="button" class="btn-edit-inline edit-item-btn"
+                                                    data-id="{{ item.id }}"
+                                                    data-val="{{ item.value|stringformat:'f' }}"
+                                                    data-name="{{ item.deduction_ref.name }}"
+                                                    title="Modificar valor">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                        {% endif %}
                                     </div>
                                 </li>
                             {% empty %}
@@ -96,9 +100,9 @@
                                 </li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer incomes-total">
+                        <div class="payslip-list-footer deductions-total">
                             <span>Total Egresos</span>
-                            <span id="total-egresos">$ {{ payslip.total_income }}</span>
+                            <span id="total-egresos">$ {{ payslip.total_deduction }}</span>
                         </div>
                     </div>
                 </div>

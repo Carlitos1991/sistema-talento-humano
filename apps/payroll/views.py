@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Case, When, IntegerField, Value
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -27,6 +27,7 @@ from payroll.models import RubroBudgetMapping
 from budget.models import BudgetLine
 from contract.models import ManagementPeriod
 from datetime import date
+from django.db.models.functions import Cast
 
 
 class PayrollListView(ListView):
@@ -67,6 +68,35 @@ class PeriodListView(ListView):
         context = super().get_context_data(**kwargs)
         context['form'] = PayrollPeriodForm()  # Formulario vacío para el modal
         return context
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Anotamos un número de mes para orden cronológica correcta (YYYYMM)
+        month_case = Case(
+            When(month='ENERO', then=Value(1)), When(month='FEBRERO', then=Value(2)),
+            When(month='MARZO', then=Value(3)), When(month='ABRIL', then=Value(4)),
+            When(month='MAYO', then=Value(5)), When(month='JUNIO', then=Value(6)),
+            When(month='JULIO', then=Value(7)), When(month='AGOSTO', then=Value(8)),
+            When(month='SEPTIEMBRE', then=Value(9)), When(month='OCTUBRE', then=Value(10)),
+            When(month='NOVIEMBRE', then=Value(11)), When(month='DICIEMBRE', then=Value(12)),
+            output_field=IntegerField()
+        )
+        qs = qs.annotate(month_num=month_case, year_int=Cast('year', IntegerField()))
+
+        show_closed = self.request.GET.get('show_closed')
+        ordered = qs.order_by('-year_int', '-month_num')
+        if show_closed and str(show_closed).lower() in ['true', '1', 'on']:
+            return ordered
+        return ordered.filter(is_closed=False)
+
+    def get(self, request, *args, **kwargs):
+        # Si es petición AJAX devolvemos sólo las filas (partial)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            periods = self.get_queryset()
+            html = render_to_string('payroll/partials/partial_period_rows.html', {'periods': periods})
+            from django.http import HttpResponse
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
 
 
 class PeriodCreateView(View):
@@ -205,6 +235,33 @@ class ConstantListView(ListView):
     model = PayrollConstant
     template_name = 'payroll/constant_list.html'
     context_object_name = 'constants'
+
+    def get_queryset(self):
+        qs = super().get_queryset().order_by('name')
+        show_inactive = self.request.GET.get('show_inactive')
+        # Si la migración que añade `is_active` no se aplicó aún, evitar que toda la
+        # página explote: intentamos filtrar por `is_active`, y si la columna no
+        # existe devolvemos el queryset sin filtrar (fallback seguro).
+        try:
+            if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
+                return qs.all()
+            return qs.filter(is_active=True)
+        except Exception as e:
+            # Fall back a todas las constantes si hay error en la consulta (p.ej. columna faltante)
+            # Registro de consola para ayudar en debugging en desarrollo
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning('Error al filtrar PayrollConstant.is_active, retornando queryset sin filtro: %s', e)
+            return qs
+
+    def get(self, request, *args, **kwargs):
+        # Si es petición AJAX devolvemos sólo las filas (partial)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            constants = self.get_queryset()
+            html = render_to_string('payroll/partials/_constant_rows.html', {'constants': constants})
+            from django.http import HttpResponse
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
 
 
 class ConstantCreateView(CreateView):
@@ -756,8 +813,25 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         period = get_object_or_404(PayrollPeriod, pk=pk)
 
         # ==============================================================
+        # 0. LECTURA DE FILTROS (Nómina Normal vs Alcances/Rezagados)
+        # ==============================================================
+        tipo_filtro = request.GET.get('filtro', 'NORMAL')
+
+        payslips_qs = Payslip.objects.filter(period=period)
+
+        if tipo_filtro == 'NORMAL':
+            # Nómina Principal: Pasan todos los que NO estén castigados (retenidos)
+            payslips_qs = payslips_qs.filter(is_withheld=False)
+
+        elif tipo_filtro == 'REZAGADOS':
+            # Alcance: Pasan los que NO están castigados AHORA, pero que el banco aún NO les paga
+            payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+
+        # Extraemos solo los IDs de los roles que pasaron el filtro
+        valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
+
+        # ==============================================================
         # 1. BLINDAJE DE MAPEOS (Conversión estricta a enteros y Sets)
-        # Evita el "falso negativo" al comparar IDs de la base de datos
         # ==============================================================
         mapped_incomes = set(
             int(x) for x in RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True)
@@ -769,8 +843,10 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                                    RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list(
                                        'contribution_id', flat=True) if x)
 
-        # 2. ESCUDO ANTI-MULTIPLICACIÓN (prefetch_related + distinct)
-        items = PayslipItem.objects.filter(payslip__period=period).select_related(
+        # 2. ESCUDO ANTI-MULTIPLICACIÓN Y APLICACIÓN DEL FILTRO
+        items = PayslipItem.objects.filter(
+            payslip_id__in=valid_payslip_ids  # <--- MAGIA: Solo procesa los rubros de la gente filtrada
+        ).select_related(
             'payslip__employee__person',
             'budget_line__budget_group',
             'income_ref__debit_account', 'income_ref__credit_account',
@@ -1083,3 +1159,80 @@ class PayslipItemUpdateAPIView(LoginRequiredMixin, View):
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error en actualización: {str(e)}'})
+
+
+class MarkPeriodAsPaidAPIView(LoginRequiredMixin, View):
+    """
+    Sella los roles actuales como PAGADOS para que no vuelvan a salir en futuros alcances.
+    Si detecta que ya no queda nadie por cobrar, cierra el periodo automáticamente.
+    """
+
+    def post(self, request, period_id):
+        # 1. Marcamos como pagados SOLO a los que no están retenidos y que aún no cobraban
+        roles_actualizados = Payslip.objects.filter(
+            period_id=period_id,
+            is_withheld=False,
+            is_paid=False
+        ).update(is_paid=True)
+
+        # 2. Verificamos si en este periodo todavía queda alguien sin cobrar
+        faltan_por_pagar = Payslip.objects.filter(period_id=period_id, is_paid=False).exists()
+
+        mensaje = f'Se han sellado {roles_actualizados} roles como PAGADOS en el SPI-SP.'
+
+        if not faltan_por_pagar:
+            # 3. ¡Magia! Si ya no hay nadie pendiente, cerramos el periodo para siempre
+            PayrollPeriod.objects.filter(id=period_id).update(is_closed=True)
+            mensaje += ' Como ya no quedan pagos pendientes, el Periodo se ha CERRADO automáticamente.'
+
+        return JsonResponse({
+            'success': True,
+            'message': mensaje,
+            'is_closed': not faltan_por_pagar
+        })
+
+
+class GenerateMissingPayrollView(LoginRequiredMixin, View):
+    """
+    Busca empleados que tengan un contrato activo en el mes pero que AÚN NO
+    tengan un rol de pagos generado, y los agrega sin borrar al resto.
+    """
+
+    def post(self, request):
+        try:
+            period_id = request.POST.get('period_id')
+            period = get_object_or_404(PayrollPeriod, pk=period_id)
+
+            # 1. ¿Quiénes DEBERÍAN estar en este mes? (Máquina del tiempo)
+            valid_history_emp_ids = set(BudgetAssignmentHistory.objects.filter(
+                start_date__lte=period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=period.start_date)
+            ).values_list('employee_id', flat=True))
+
+            # 2. ¿Quiénes YA ESTÁN en el rol actual?
+            existing_emp_ids = set(Payslip.objects.filter(period=period).values_list('employee_id', flat=True))
+
+            # 3. Matemática de conjuntos: Los que deberían estar MENOS los que ya están = Los Nuevos
+            missing_ids = valid_history_emp_ids - existing_emp_ids
+
+            if not missing_ids:
+                return JsonResponse(
+                    {'status': 'info', 'message': 'Todos los empleados activos ya están en el rol. No hay faltantes.'})
+
+            # 4. Traemos a los empleados y los mandamos al motor
+            missing_employees = Employee.objects.filter(id__in=missing_ids, is_active=True, person__is_active=True)
+            employees_with_days = [(emp, period.working_days) for emp in missing_employees]
+
+            service = PayrollCalculatorService(period, missing_employees)
+            # Usamos la función que calcula solo a los seleccionados
+            resultado = service.generate_for_selected(employees_with_days)
+
+            if resultado.get("success"):
+                return JsonResponse({'status': 'success',
+                                     'message': f'Se agregaron {len(missing_employees)} nuevos empleados al rol exitosamente.'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Hubo advertencias al calcular.'})
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})

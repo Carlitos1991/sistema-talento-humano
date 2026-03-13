@@ -47,23 +47,34 @@
         <div id="table-app">
             <div class="content-table">
                 <!-- Controles de Tabla (Buscador) -->
-                <div class="table-controls">
-                    <div class="search-box" style="width: 100%;">
+                <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
+
+                    <div style="display: flex; justify-content: center;">
+                        <input class="modern-toggle-input" type="checkbox" id="toggleInactiveConstants"
+                               onchange="toggleInactiveConstants(this.checked)">
+
+                        <label class="modern-toggle-wrapper mb-0" for="toggleInactiveConstants">
+                            <div class="modern-toggle-circle"></div>
+                            <span class="modern-toggle-text">Mostrar Constantes Inactivas</span>
+                        </label>
+                    </div>
+
+                    <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="searchInput" class="input-field"
-                               placeholder="Buscar constante por nombre o código...">
+                        <input type="text" id="searchInput" class="table-search-input" placeholder="Buscar constante por nombre o código...">
                     </div>
                 </div>
 
                 <!-- Tabla -->
-                <div class="table-responsive mt-3">
-                    <table class="table table-hover">
+                <div class="table-container">
+                    <table class="table managed-table exportable-table table-hover" data-page-size="10" data-title="Reporte de Constantes">
                         <thead>
                         <tr>
                             <th>Nombre</th>
                             <th class="text-center">Código</th>
                             <th class="text-end">Valor</th>
                             <th>Descripción</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                         </thead>
@@ -83,16 +94,19 @@
                                     {{ c.description|default:"-"|truncatechars:60 }}
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn-icon btn-edit"
-                                            onclick="openPayrollModal('{% url 'payroll:constant_update' c.id %}')"
-                                            title="Editar">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-                                    <button class="btn-icon btn-delete"
-                                            onclick="deleteConstant('{% url 'payroll:constant_delete' c.id %}', '{{ c.name }}')"
-                                            title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    {% if c.is_active %}
+                                        <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+                                    {% else %}
+                                        <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center actions">
+                                    <div class="actions-wrapper">
+                                        <button type="button" class="btn-icon btn-views-action" title="Editar"
+                                                onclick="openPayrollModal('{% url 'payroll:constant_update' c.id %}')">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         {% empty %}
@@ -111,7 +125,7 @@
     </div>
 
     <!-- Contenedor para Modales Dinámicos -->
-    <div id="modal-container"></div>
+    <div id="modal-root"></div>
 
     <!-- Token CSRF oculto para JS -->
     {% csrf_token %}

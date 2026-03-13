@@ -372,3 +372,20 @@ function openAccountModal(url) {
         })
         .catch(error => console.error('Error cargando el modal de cuenta:', error));
 }
+
+// Toggle: mostrar/ocultar periodos cerrados (AJAX)
+function toggleInactivePeriods(showClosed) {
+    fetch(`?show_closed=${showClosed}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            const tbody = document.querySelector('.managed-table tbody');
+            if (tbody) tbody.innerHTML = html;
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.renderTable === 'function') table._tableManager.renderTable();
+            }
+        })
+        .catch(error => console.error('Error cargando periodos:', error));
+}
