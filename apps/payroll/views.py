@@ -752,21 +752,21 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
 
-        # 1. Mapeos Presupuestarios
-        mapped_income_ids = list(
-            RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True))
-        mapped_deduction_ids = list(
-            RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id', flat=True))
-        mapped_contribution_ids = list(
-            RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list('contribution_id', flat=True))
-
-        remun = Income.objects.filter(code__iexact='REMUNERACION').first()
-        if remun and remun.id not in mapped_income_ids:
-            mapped_income_ids.append(remun.id)
-
         # ==============================================================
+        # 1. BLINDAJE DE MAPEOS (Conversión estricta a enteros y Sets)
+        # Evita el "falso negativo" al comparar IDs de la base de datos
+        # ==============================================================
+        mapped_incomes = set(
+            int(x) for x in RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True)
+            if x)
+        mapped_deductions = set(int(x) for x in
+                                RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id',
+                                                                                                       flat=True) if x)
+        mapped_contributions = set(int(x) for x in
+                                   RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list(
+                                       'contribution_id', flat=True) if x)
+
         # 2. ESCUDO ANTI-MULTIPLICACIÓN (prefetch_related + distinct)
-        # ==============================================================
         items = PayslipItem.objects.filter(payslip__period=period).select_related(
             'payslip__employee__person',
             'budget_line__budget_group',
@@ -781,9 +781,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         report_data = {}
 
         for it in items:
-            # ==============================================================
-            # BLINDAJE DE TIPOS: Forzamos a Decimal exacto para evitar el error Float
-            # ==============================================================
             val = Decimal(str(it.value))
 
             grupo_obj = it.budget_line.budget_group if it.budget_line else None
@@ -873,29 +870,43 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 code_up = (it.contribution_ref.code or '').upper()
                 if 'PATRONAL' in code_up: emp_dict['iess_patronal'] += val
 
-                # B. Llenado de Data para Reporte 3 (Presupuesto)
-                # ==========================================
-                # B. Llenado de Data para Reporte 3 (Presupuesto)
-                # ==========================================
-                b_code = getattr(it, 'budget_line_code', None)
-                if b_code:
-                    afecta_presupuesto = False
-                    nombre_rubro = ""
+            # ==========================================
+            # B. Llenado de Data para Reporte 3 (Presupuesto)
+            # ==========================================
+            b_code = getattr(it, 'budget_line_code', None)
+            if b_code and str(b_code).strip():
+                afecta_presupuesto = False
+                nombre_rubro = ""
 
-                    if it.item_type == 'INCOME' and it.income_ref_id in mapped_income_ids:
+                if it.item_type == 'INCOME' and it.income_ref:
+                    inc_id = it.income_ref.id
+                    code_up = (it.income_ref.code or '').upper()
+                    # Comprobación de Tipo Estricto (int contra int)
+                    if (inc_id in mapped_incomes) or ('REMUNERACION' in code_up):
                         afecta_presupuesto = True
                         nombre_rubro = it.income_ref.name
-                    elif it.item_type == 'DEDUCTION' and it.deduction_ref_id in mapped_deduction_ids:
+
+                elif it.item_type == 'DEDUCTION' and it.deduction_ref:
+                    if it.deduction_ref.id in mapped_deductions:
                         afecta_presupuesto = True
                         nombre_rubro = it.deduction_ref.name
-                    elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id in mapped_contribution_ids:
+
+                elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
+                    if it.contribution_ref.id in mapped_contributions:
                         afecta_presupuesto = True
                         nombre_rubro = it.contribution_ref.name
 
-                    if afecta_presupuesto:
-                        if b_code not in grupo_data['presupuesto']:
-                            grupo_data['presupuesto'][b_code] = {'concepto': nombre_rubro, 'monto': Decimal(0)}
-                        grupo_data['presupuesto'][b_code]['monto'] += val
+                if afecta_presupuesto:
+                    nombre_rubro = nombre_rubro or "Rubro Desconocido"
+                    key_presup = f"{b_code}_{nombre_rubro}"
+
+                    if key_presup not in grupo_data['presupuesto']:
+                        grupo_data['presupuesto'][key_presup] = {
+                            'partida': b_code,
+                            'concepto': nombre_rubro,
+                            'monto': Decimal(0)
+                        }
+                    grupo_data['presupuesto'][key_presup]['monto'] += val
 
             # C. Llenado de Data para Reporte 2 (Contabilidad)
             obj_ref = None
@@ -927,9 +938,9 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 grupo_data['contabilidad']['2.1.3.51']['debe'] += val
                 grupo_data['contabilidad']['2.1.3.51']['haber'] += val
 
-            # ==============================================================
-            # POST-PROCESO: Totales, Columnas Dinámicas y Ordenamiento Contable
-            # ==============================================================
+        # ==============================================================
+        # POST-PROCESO: Totales, Columnas Dinámicas y Ordenamiento Contable
+        # ==============================================================
         from accounting.models import Account
         cta_gp = Account.objects.filter(code='2.1.3.51').first()
         nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
@@ -949,7 +960,7 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                                                   {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco})
                 g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
 
-            # MATRIZ DE TOTALES (Con Decimal(0) como base segura)
+            # MATRIZ DE TOTALES
             ts = {
                 'rmu': sum((e['rmu'] for e in g_data['empleados'].values()), Decimal(0)),
                 'fondos_reserva': sum((e['fondos_reserva'] for e in g_data['empleados'].values()), Decimal(0)),
@@ -970,7 +981,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             }
             g_data['totales_sabana'] = ts
 
-            # CÁLCULO DE COLUMNAS DINÁMICAS (Para ocultarlas si son 0)
             # CÁLCULO DE COLUMNAS DINÁMICAS
             g_data['colspans'] = {
                 'aportes': (1 if ts['iess_personal'] > 0 else 0) + (1 if ts['iess_patronal'] > 0 else 0),
@@ -978,23 +988,18 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                               (1 if ts['anticipos'] > 0 else 0) + (1 if ts['otros_descuentos'] > 0 else 0)
             }
 
-            # ==============================================================
-            # ORDENAMIENTO CONTABLE GUBERNAMENTAL (Una sola fila por cuenta)
-            # ==============================================================
+            # ORDENAMIENTO CONTABLE
             cuentas_debe = []
             cuentas_solo_haber = []
 
             for cta, c_data in g_data['contabilidad'].items():
                 if c_data['debe'] > 0:
-                    # Si tiene Debe (aunque también tenga Haber), va al bloque superior
                     cuentas_debe.append(
                         {'codigo': cta, 'nombre': c_data['nombre'], 'debe': c_data['debe'], 'haber': c_data['haber']})
                 elif c_data['haber'] > 0:
-                    # Si SOLO tiene Haber (ej. Bancos, IESS Personal), va al bloque inferior
                     cuentas_solo_haber.append(
                         {'codigo': cta, 'nombre': c_data['nombre'], 'debe': Decimal(0), 'haber': c_data['haber']})
 
-            # Orden de Contraloría: Debe de Mayor a Menor (6, 2, 1) y Haber de Menor a Mayor (1, 2)
             cuentas_debe.sort(key=lambda x: x['codigo'], reverse=True)
             cuentas_solo_haber.sort(key=lambda x: x['codigo'])
 

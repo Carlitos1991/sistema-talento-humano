@@ -196,9 +196,9 @@
                     </tr>
                     </thead>
                     <tbody>
-                    {% for p_code, p_data in data.presupuesto.items %}
+                    {% for p_key, p_data in data.presupuesto.items %}
                         <tr>
-                            <td style="font-family: monospace;">{{ p_code }}</td>
+                            <td style="font-family: monospace;">{{ p_data.partida }}</td>
                             <td>{{ p_data.concepto }}</td>
                             <td class="text-right">$ {{ p_data.monto|floatformat:2 }}</td>
                             <td class="text-right">$ {{ p_data.monto|floatformat:2 }}</td>
