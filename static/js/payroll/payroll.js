@@ -97,14 +97,18 @@ function initializePeriodModal() {
                         title: 'Advertencia',
                         text: data.warning,
                         icon: 'warning',
-                        confirmButtonText: 'Entendido'
+                        confirmButtonText: 'Entendido',
+                        showCloseButton: true,
+                        allowOutsideClick: false
                     });
                 } else if (data.info) {
                     Swal.fire({
                         title: 'Información',
                         text: data.info,
                         icon: 'info',
-                        confirmButtonText: 'Entendido'
+                        confirmButtonText: 'Entendido',
+                        showCloseButton: true,
+                        allowOutsideClick: false
                     });
                 }
             } else {
