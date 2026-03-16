@@ -17,8 +17,129 @@ function openPayrollModal(url) {
                 });
                 $(modalOverlay).find('input[type="text"]').addClass('input-field');
             }
+
+            // Inicializar el código del modal de período si existe
+            initializePeriodModal();
         })
         .catch(error => console.error('Error cargando el modal:', error));
+}
+
+function initializePeriodModal() {
+    const monthSelect = document.querySelector('select[name="month"]');
+    const yearInput = document.querySelector('input[name="year"]');
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    const workingDaysInput = document.querySelector('input[name="working_days"]');
+    const submitBtn = document.querySelector('button[type="submit"]');
+
+    if (!monthSelect || !yearInput) {
+        return; // No es un modal de período
+    }
+
+    let isCalculating = false;
+    
+    // Detectar si es modo edición (si hay valores preexistentes de fecha)
+    const isEditMode = startDateInput.value && endDateInput.value;
+
+    // Cargar año actual por defecto si está vacío
+    if (!yearInput.value) {
+        const currentYear = new Date().getFullYear().toString();
+        yearInput.value = currentYear;
+    }
+
+    // Establecer mes actual por defecto si está vacío
+    if (!monthSelect.value) {
+        const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
+                        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const currentMonth = months[new Date().getMonth()];
+        monthSelect.value = currentMonth;
+        
+        // Reinicializar Select2 para que refleje el nuevo valor
+        $(monthSelect).val(currentMonth).trigger('change');
+    }
+
+    // Función para calcular fechas y días laborables
+    async function calculateWorkingDays() {
+        const month = monthSelect.value;
+        const year = yearInput.value;
+
+        if (!month || !year || year.length !== 4) {
+            startDateInput.value = '';
+            endDateInput.value = '';
+            workingDaysInput.value = '';
+            if (submitBtn) submitBtn.disabled = true;
+            return;
+        }
+
+        isCalculating = true;
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+            const calculateUrl = '/payroll/api/calculate-working-days/?month=' + encodeURIComponent(month) + '&year=' + encodeURIComponent(year);
+            const response = await fetch(calculateUrl);
+            
+            if (!response.ok) {
+                throw new Error('API retornó estado: ' + response.status);
+            }
+            
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                startDateInput.value = data.start_date;
+                endDateInput.value = data.end_date;
+                workingDaysInput.value = data.working_days;
+                
+                if (submitBtn) submitBtn.disabled = false;
+                
+                // Mostrar advertencia si hay (DESPUÉS de calcular)
+                if (data.warning) {
+                    Swal.fire({
+                        title: 'Advertencia',
+                        text: data.warning,
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            } else {
+                Swal.fire('Error', 'No se pudieron calcular los días laborables: ' + data.message, 'error');
+                if (submitBtn) submitBtn.disabled = true;
+                // Limpiar campos en caso de error
+                startDateInput.value = '';
+                endDateInput.value = '';
+                workingDaysInput.value = '';
+            }
+        } catch (error) {
+            Swal.fire('Error', 'Error al conectar con el servidor: ' + error.message, 'error');
+            if (submitBtn) submitBtn.disabled = true;
+            // Limpiar campos en caso de error
+            startDateInput.value = '';
+            endDateInput.value = '';
+            workingDaysInput.value = '';
+        } finally {
+            isCalculating = false;
+        }
+    }
+
+    // Escuchar cambios en mes y año
+    // Para Select2, usar el evento 'change.select2' en lugar de 'change'
+    $(monthSelect).on('change.select2', calculateWorkingDays);
+    yearInput.addEventListener('change', calculateWorkingDays);
+    
+    // Validar que el año solo acepte números y máximo 4 caracteres
+    yearInput.addEventListener('input', function(e) {
+        const oldValue = this.value;
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
+        // Solo llamar a calculateWorkingDays si el valor cambió y tenemos 4 dígitos
+        if (oldValue !== this.value && this.value.length === 4) {
+            calculateWorkingDays();
+        }
+    });
+
+    // En modo edición, calcular automáticamente para mostrar cambios por nuevos feriados
+    // En modo creación, también calcular después de establecer valores por defecto
+    setTimeout(() => {
+        calculateWorkingDays();
+    }, 100);
 }
 
 function closePayrollModal() {
@@ -30,10 +151,36 @@ function submitPayrollForm(event) {
     event.preventDefault();
     const form = event.target;
 
+    // Validar que los campos calculados tengan valores
+    const startDate = form.querySelector('input[name="start_date"]')?.value;
+    const endDate = form.querySelector('input[name="end_date"]')?.value;
+    const workingDays = form.querySelector('input[name="working_days"]')?.value;
+    const month = form.querySelector('select[name="month"]')?.value;
+    const year = form.querySelector('input[name="year"]')?.value;
+
+    if (!month || !year) {
+        Swal.fire('Error', 'Debe seleccionar un mes y un año', 'error');
+        return;
+    }
+
+    if (!startDate || !endDate || !workingDays) {
+        Swal.fire('Error', 'Los campos de fecha y días laborables no se calcularon correctamente. Por favor aguarde un momento e intente nuevamente.', 'error');
+        return;
+    }
+
+    const formData = new FormData(form);
+
+    // Obtener CSRF token del formulario
+    const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]')?.value || 
+                      document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+
     fetch(form.action, {
         method: 'POST',
-        body: new FormData(form),
-        headers: {'X-Requested-With': 'XMLHttpRequest'}
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
     })
         .then(res => res.json())
         .then(data => {
@@ -48,10 +195,22 @@ function submitPayrollForm(event) {
                 })
                     .then(() => location.reload());
             } else {
-                Swal.fire('Error', 'Por favor, revisa los datos ingresados.', 'error');
+                let errorMsg = data.message;
+                if (data.errors) {
+                    // Si errors es un objeto, extraer el primer mensaje
+                    if (typeof data.errors === 'object') {
+                        const firstKey = Object.keys(data.errors)[0];
+                        if (Array.isArray(data.errors[firstKey])) {
+                            errorMsg = data.errors[firstKey][0];
+                        }
+                    } else {
+                        errorMsg = data.errors;
+                    }
+                }
+                Swal.fire('Error', errorMsg, 'error');
             }
         })
-        .catch(error => Swal.fire('Error', 'Ocurrió un problema de comunicación.', 'error'));
+        .catch(error => Swal.fire('Error', 'Ocurrió un problema de comunicación: ' + error.message, 'error'));
 }
 
 // 1. Abrir Modal

@@ -29,6 +29,8 @@ class Income(models.Model):
     code = models.CharField(max_length=30, unique=True)
     description = models.TextField(verbose_name=_("Descripción"))
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
+    # Orden de presentación en reportes (menor número = aparece primero)
+    order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
 
     # --- AJUSTE CONTABLE ---
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
@@ -41,9 +43,8 @@ class Income(models.Model):
 
     def save(self, *args, **kwargs):
         # Generar código automáticamente a partir del nombre: mayúsculas y guiones bajos
-        if self.name:
-            generated = slugify(self.name).replace('-', '_').upper()
-            self.code = generated
+        if not self.code and self.name:
+            self.code = slugify(self.name).replace('-', '_').upper()
         super().save(*args, **kwargs)
 
 
@@ -58,6 +59,8 @@ class Deduction(models.Model):
         verbose_name='Prioridad de Cobro',
         help_text='Menor número = Se cobra primero. Ej: 1=IESS, 2=Retención Judicial, 10=Cooperativa'
     )
+    # Orden de presentación en reportes (menor número = aparece primero)
+    order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
 
     # --- AJUSTE CONTABLE ---
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
@@ -70,9 +73,8 @@ class Deduction(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        if self.name:
-            generated = slugify(self.name).replace('-', '_').upper()
-            self.code = generated
+        if not self.code and self.name:
+            self.code = slugify(self.name).replace('-', '_').upper()
         super().save(*args, **kwargs)
 
 
@@ -102,6 +104,45 @@ class PayrollPeriod(models.Model):
 
     def __str__(self):
         return f"{self.month} {self.year}"
+
+    def get_working_days(self):
+        """
+        Calcula dinámicamente los días laborables del período,
+        considerando feriados registrados en ScheduleObservation.
+        Se usa en lugar de confiar solo en el campo guardado.
+        """
+        from datetime import timedelta
+        from schedule.models import ScheduleObservation
+
+        first_day = self.start_date
+        last_day = self.end_date
+
+        # Obtener feriados activos en el rango
+        holidays = ScheduleObservation.objects.filter(
+            is_holiday=True,
+            is_active=True,
+            start_date__lte=last_day,
+            end_date__gte=first_day
+        )
+
+        # Compilar conjunto de fechas de feriados
+        holiday_dates = set()
+        for holiday in holidays:
+            curr = max(holiday.start_date, first_day)
+            end_limit = min(holiday.end_date, last_day)
+            while curr <= end_limit:
+                holiday_dates.add(curr)
+                curr += timedelta(days=1)
+
+        # Contar lunes-viernes sin feriados
+        working_days = 0
+        current = first_day
+        while current <= last_day:
+            if current.weekday() < 5 and current not in holiday_dates:
+                working_days += 1
+            current += timedelta(days=1)
+
+        return working_days
 
     @property
     def month_number(self):
@@ -171,6 +212,8 @@ class InstitutionalContribution(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nombre del Aporte")
     code = models.CharField(max_length=50, unique=True, verbose_name="Código del Algoritmo")
     description = models.TextField(blank=True, verbose_name=_("Descripción"))
+    # Orden de presentación en reportes (menor número = aparece primero)
+    order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
 
     # Enlaces contables directos
     debit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
@@ -188,9 +231,8 @@ class InstitutionalContribution(models.Model):
         return f"{self.name} ({self.code})"
 
     def save(self, *args, **kwargs):
-        if self.name:
-            generated = slugify(self.name).replace('-', '_').upper()
-            self.code = generated
+        if not self.code and self.name:
+            self.code = slugify(self.name).replace('-', '_').upper()
         super().save(*args, **kwargs)
 
 
@@ -273,9 +315,12 @@ class PayslipItem(models.Model):
     budget_line_code = models.CharField(
         max_length=100, blank=True, null=True,
         verbose_name="Código de Partida Aplicada (Histórico)")
+    # Orden de presentación en el rol (menor número = aparece primero)
+    order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
 
     class Meta:
         indexes = [models.Index(fields=['payslip', 'item_type'])]
+        ordering = ['order', 'id']
 
 
 class PendingDebt(BaseModel):

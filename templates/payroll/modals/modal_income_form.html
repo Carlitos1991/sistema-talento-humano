@@ -20,11 +20,22 @@
 
                 <div class="form-section-card">
                     <div class="row g-3">
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Nombre</label>
+                        <div class="col-md-12 form-group">
+                            <label class="form-label">Nombre del Ingreso</label>
                             {{ form.name }}
                         </div>
-                        
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Código del Sistema</label>
+                            {{ form.code }}
+                            <span class="form-hint text-muted mt-1" style="font-size: 0.8rem;">Ej: REMUNERACION (Dejar vacío para autogenerar)</span>
+                        </div>
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Orden de Presentación</label>
+                            {{ form.order }}
+                            <span class="form-hint text-muted mt-1" style="font-size: 0.8rem;">Menor número = aparece primero en reportes</span>
+                        </div>
 
                         <div class="col-md-12 form-group mt-3">
                             <label class="form-label">Descripción</label>
@@ -63,10 +74,12 @@
                             </label>
                             <span class="font-weight-600" style="font-size: 0.95rem; color: #1e293b;">¿Afecta al Presupuesto Institucional?</span>
                         </div>
-                        <span class="form-hint text-muted mt-2" style="margin-left: 56px;">{{ form.has_mapping.help_text }}</span>
+                        <span class="form-hint text-muted mt-2"
+                              style="margin-left: 56px;">{{ form.has_mapping.help_text }}</span>
                     </div>
 
-                    <div id="budgetMappingFields" style="display: {% if form.has_mapping.value %}block{% else %}none{% endif %};">
+                    <div id="budgetMappingFields"
+                         style="display: {% if form.has_mapping.value %}block{% else %}none{% endif %};">
                         <div class="row mt-4 budget-mapping-box" style="margin-left: 42px;">
                             <div class="col-md-8 form-group">
                                 <label class="form-label">Sufijo Presupuestario (Ej: 5.1.06.01)</label>

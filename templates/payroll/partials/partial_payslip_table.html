@@ -1,68 +1,73 @@
 <div class="table-responsive">
     <table class="table-custom" style="width: 100%; border-collapse: collapse;">
         <thead>
-            <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
-                <th style="padding: 12px;">Empleado</th>
-                <th style="padding: 12px;">Cédula</th>
-                <th style="padding: 12px;">Partida P.</th>
-                <th style="padding: 12px; text-align: right;">Ingresos</th>
-                <th style="padding: 12px; text-align: right;">Egresos</th>
-                <th style="padding: 12px; text-align: right;">A Pagar</th>
+        <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+            <th style="padding: 12px;">Empleado</th>
+            <th style="padding: 12px;">Cédula</th>
+            <th style="padding: 12px;">Partida P.</th>
+            <th style="padding: 12px; text-align: right;">Ingresos</th>
+            <th style="padding: 12px; text-align: right;">Egresos</th>
+            <th style="padding: 12px; text-align: right;">A Pagar</th>
 
-                {% if current_period and not current_period.is_closed %}
-                    <th style="padding: 12px; text-align: center;">Retener</th>
-                    <th style="padding: 12px; text-align: center;">Acciones</th>
-                {% else %}
-                    <th style="padding: 12px; text-align: center;">Ver</th>
-                {% endif %}
-            </tr>
+            {% if current_period and not current_period.is_closed %}
+                <th style="padding: 12px; text-align: center;">Retener</th>
+                <th style="padding: 12px; text-align: center;">Acciones</th>
+            {% else %}
+                <th style="padding: 12px; text-align: center;">Ver</th>
+            {% endif %}
+        </tr>
         </thead>
         <tbody>
-            {% for p in payslips %}
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 12px;">
-                        <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.get_full_name }}</div>
-                        <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
-                    </td>
-                    <td style="padding: 12px;">{{ p.employee.person.identification }}</td>
-                    <td style="padding: 12px;">{{ p.budget_line.code }}</td>
-                    <td style="padding: 12px; text-align: right; color: #10b981;">$ {{ p.total_incomes }}</td>
-                    <td style="padding: 12px; text-align: right; color: #ef4444;">$ {{ p.total_deductions }}</td>
-                    <td style="padding: 12px; text-align: right;">
-                        <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
-                    </td>
+        {% for p in payslips %}
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px;">
+                    <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.full_name }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
+                </td>
+                <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
+                <td style="padding: 12px;">{{ p.budget.code }}</td>
+                <td style="padding: 12px; text-align: right; color: #10b981;">$ {{ p.total_income }}</td>
+                <td style="padding: 12px; text-align: right; color: #ef4444;">$ {{ p.total_deduction }}</td>
+                <td style="padding: 12px; text-align: right;">
+                    <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
+                </td>
 
-                    {% if current_period and not current_period.is_closed %}
-                        <td style="padding: 12px; text-align: center;">
-                            <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;" title="Retener el pago">
-                                <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
-                                       data-id="{{ p.id }}"
-                                       {% if p.is_withheld %}checked{% endif %}>
-                                <span class="modern-toggle-circle"></span>
-                                <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}Normal{% endif %}</span>
-                            </label>
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            <button class="btn-icon btn-primary-action" onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')" title="Ver / Editar Detalles">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    {% else %}
-                        <td style="padding: 12px; text-align: center;">
-                            <button class="btn-icon btn-primary-action" onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')" title="Consultar Rol Histórico">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    {% endif %}
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
-                        <i class="fas fa-search fa-2x mb-3 d-block"></i>
-                        No se encontraron roles para esta búsqueda.
+                {% if current_period and not current_period.is_closed %}
+                    <td style="padding: 12px; text-align: center;">
+                        <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;" title="Retener el pago">
+                            <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
+                                   data-id="{{ p.id }}"
+                                   {% if p.is_withheld %}checked{% endif %}>
+                            <span class="modern-toggle-circle"></span>
+                            <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}
+                                Normal{% endif %}</span>
+                        </label>
                     </td>
-                </tr>
-            {% endfor %}
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn-icon btn-primary-action"
+                                onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                title="Ver / Editar Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                {% else %}
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn-icon btn-primary-action"
+                                onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                title="Consultar Rol Histórico">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-search fa-2x mb-3 d-block"></i>
+                    No se encontraron roles para esta búsqueda.
+                </td>
+            </tr>
+        {% endfor %}
         </tbody>
     </table>
 </div>
@@ -70,11 +75,13 @@
 {% if is_paginated %}
     <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px;">
         {% if page_obj.has_previous %}
-            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.previous_page_number }})">Anterior</button>
+            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.previous_page_number }})">Anterior
+            </button>
         {% endif %}
         <span style="font-weight: 500; color: #475569;">Pág {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
-            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.next_page_number }})">Siguiente</button>
+            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.next_page_number }})">Siguiente
+            </button>
         {% endif %}
     </div>
 {% endif %}

@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q, Sum, Case, When, IntegerField, Value
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 import openpyxl
@@ -124,14 +124,6 @@ class PeriodListView(ListView):
 
 
 class PeriodCreateView(View):
-    def get(self, request):
-        # Si la petición viene por AJAX devolvemos solo el modal HTML
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            form = PayrollPeriodForm()
-            html = render_to_string('payroll/modals/modal_period_form.html', {'form': form, 'request': request})
-            return HttpResponse(html)
-        return HttpResponse(status=405)
-
     def post(self, request):
         form = PayrollPeriodForm(request.POST)
         if form.is_valid():
@@ -342,7 +334,7 @@ class PayslipListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
-            'employee__person', 'period'
+            'employee__person', 'period', 'budget_line'
         ).order_by('employee__person__last_name')
 
         # Filtro por periodo

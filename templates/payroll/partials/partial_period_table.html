@@ -25,7 +25,9 @@
                 <td class="text-center actions">
                     <div class="actions-wrapper">
                         {% if not p.is_closed %}
-                            <button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular" data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}"><i class="fas fa-cogs"></i></button>
+                            <button type="button" class="btn-icon btn-primary-action" title="Editar Período y Recalcular Días"
+                                    onclick="openPayrollModal('{% url 'payroll:period_edit' pk=p.id %}')"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn-icon btn-views-action ms-2" title="Procesar / Recalcular" data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}"><i class="fas fa-cogs"></i></button>
                             <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo"><i class="fas fa-file-excel"></i></a>
                         {% endif %}
 

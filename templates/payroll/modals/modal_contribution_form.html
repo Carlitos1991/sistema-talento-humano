@@ -20,11 +20,24 @@
 
                 <div class="form-section-card">
                     <div class="row g-3">
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Nombre del Aporte</label>
+                        <div class="col-md-12 form-group">
+                            <label class="form-label">Nombre del Aporte Patronal</label>
                             {{ form.name }}
                         </div>
-                        
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Código del Sistema</label>
+                            {{ form.code }}
+                            <span class="form-hint text-muted mt-1"
+                                  style="font-size: 0.8rem;">Ej: APORTE_PATRONAL</span>
+                        </div>
+
+                        <div class="col-md-6 form-group mt-3">
+                            <label class="form-label">Orden de Presentación</label>
+                            {{ form.order }}
+                            <span class="form-hint text-muted mt-1" style="font-size: 0.8rem;">Menor número = aparece primero</span>
+                        </div>
+
                         <div class="col-md-12 form-group mt-3">
                             <label class="form-label">Descripción</label>
                             {{ form.description }}

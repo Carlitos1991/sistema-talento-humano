@@ -11,32 +11,45 @@
             </button>
         </div>
 
-        <form method="post" id="periodForm" action="{% url 'payroll:period_create' %}" onsubmit="submitPayrollForm(event)">
+        <form method="post" id="periodForm" action="{% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}" onsubmit="submitPayrollForm(event)">
             {% csrf_token %}
             <div class="modal-body-custom">
                 <div class="form-section-card">
                     <div class="row g-3">
                         <div class="col-md-6 form-group">
-                            <label class="form-label">Mes</label>
+                            <label class="form-label">Mes <span class="text-danger">*</span></label>
                             {{ form.month }}
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="form-label">Año</label>
+                            <label class="form-label">Año <span class="text-danger">*</span></label>
                             {{ form.year }}
+                            {% if form.year.errors %}
+                                <small class="text-danger d-block mt-1">
+                                    {% for error in form.year.errors %}{{ error }}{% endfor %}
+                                </small>
+                            {% endif %}
                         </div>
 
-                        <div class="col-md-6 form-group mt-3">
-                            <label class="form-label">Fecha Inicio</label>
+                        <!-- Campos ocultos que se llenan automáticamente -->
+                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                            <label class="form-label">Fecha Inicio <small class="text-muted">(Auto)</small></label>
                             {{ form.start_date }}
                         </div>
-                        <div class="col-md-6 form-group mt-3">
-                            <label class="form-label">Fecha Fin</label>
+                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                            <label class="form-label">Fecha Fin <small class="text-muted">(Auto)</small></label>
                             {{ form.end_date }}
                         </div>
 
-                        <div class="col-md-6 form-group mt-3">
-                            <label class="form-label">Días Laborables</label>
+                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                            <label class="form-label">Días Laborables <small class="text-muted">(Auto)</small></label>
                             {{ form.working_days }}
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-info-circle"></i>
+                                Los campos de fecha y días laborables se calculan automáticamente considerando feriados.
+                            </small>
                         </div>
                     </div>
                 </div>

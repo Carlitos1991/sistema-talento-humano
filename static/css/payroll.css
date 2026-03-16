@@ -309,3 +309,10 @@
     .table-search-input { width: 160px; }
     .btn-icon { width:34px; height:34px }
 }
+
+/* =====================================================================
+   PERÍODO MODAL - CAMPOS OCULTOS
+   ===================================================================== */
+.period-hidden-field {
+    display: none !important;
+}

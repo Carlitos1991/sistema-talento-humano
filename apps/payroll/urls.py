@@ -1,5 +1,16 @@
 from django.urls import path
-from .views import *
+from .views import (
+    PeriodListView, PeriodCreateView, GeneratePayrollView,
+    GeneratePayrollUIView, GeneratePayrollSelectedView,
+    ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
+    PayrollListView, PayslipListView, PayslipDetailView,
+    IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
+    InstitutionalReportView, MappingListView,
+    MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
+    SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
+    GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
+    GenerateMissingPayrollView, BankTransferReportView
+)
 
 app_name = 'payroll'
 
@@ -10,14 +21,13 @@ urlpatterns = [
     path('generate/', GeneratePayrollView.as_view(), name='generate'),
     path('generate/ui/', GeneratePayrollUIView.as_view(), name='generate_ui'),
     path('generate/selected/', GeneratePayrollSelectedView.as_view(), name='generate_selected'),
-    path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
 
     # Constantes (CRUD)
     path('constants/', ConstantListView.as_view(), name='constant_list'),
     path('constants/create/', ConstantCreateView.as_view(), name='constant_create'),
     path('constants/update/<int:pk>/', ConstantUpdateView.as_view(), name='constant_update'),
     path('constants/delete/<int:pk>/', ConstantDeleteView.as_view(), name='constant_delete'),
-    path('payslips/list/', PayrollListView.as_view(), name='payroll_list_general'),
+    path('payslips/list/', PayrollListView.as_view(), name='payslip_list'),
     path('payslips/', PayslipListView.as_view(), name='payslip_list'),
     path('payslips/detail/<int:pk>/', PayslipDetailView.as_view(), name='payslip_detail'),
     # Mapeos contables para rubros
@@ -50,7 +60,7 @@ urlpatterns = [
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
     path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
-
+    path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
     # Reporte exclusivo para el Banco (Reporte 4)
     path('reports/bank/<int:pk>/', BankTransferReportView.as_view(), name='report_bank_transfer'),
 ]
