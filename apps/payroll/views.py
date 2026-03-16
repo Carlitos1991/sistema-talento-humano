@@ -1,4 +1,4 @@
-from calendar import calendar
+import calendar
 from decimal import Decimal
 from django.template.loader import get_template
 from django.http import HttpResponse
@@ -127,6 +127,14 @@ class PeriodListView(ListView):
 
 
 class PeriodCreateView(View):
+    template_name = 'payroll/modals/modal_period_form.html'
+
+    def get(self, request, *args, **kwargs):
+        """Devuelve el formulario del modal (usado por el fetch GET en JS)."""
+        form = PayrollPeriodForm()
+        html = render_to_string(self.template_name, {'form': form}, request=request)
+        return HttpResponse(html)
+
     def post(self, request):
         form = PayrollPeriodForm(request.POST)
         if form.is_valid():
@@ -1376,15 +1384,43 @@ def api_calculate_working_days(request):
         last_day_num = calendar.monthrange(year_num, month_num)[1]
         last_day = date(year_num, month_num, last_day_num)
 
-        # Usamos un objeto temporal del modelo para aprovechar la lógica de feriados que ya programaste
+        # Usamos un objeto temporal del modelo para aprovechar la lógica de feriados
         temp_period = PayrollPeriod(start_date=first_day, end_date=last_day)
         working_days = temp_period.get_working_days()  # Esta función ya existe en tu models.py
 
-        return JsonResponse({
+        # Además, detectamos si hay feriados activos en el rango y construimos una advertencia
+        from schedule.models import ScheduleObservation
+
+        holidays = ScheduleObservation.objects.filter(
+            is_holiday=True,
+            is_active=True,
+            start_date__lte=last_day,
+            end_date__gte=first_day
+        )
+
+        # Compilar conjunto de fechas de feriados
+        holiday_dates = set()
+        from datetime import timedelta
+        for holiday in holidays:
+            curr = max(holiday.start_date, first_day)
+            end_limit = min(holiday.end_date, last_day)
+            while curr <= end_limit:
+                holiday_dates.add(curr)
+                curr += timedelta(days=1)
+
+        response = {
             'status': 'success',
             'start_date': first_day.strftime('%Y-%m-%d'),
             'end_date': last_day.strftime('%Y-%m-%d'),
             'working_days': working_days
-        })
+        }
+
+        if len(holiday_dates) > 0:
+            # Formatear una advertencia legible
+            sample_dates = ', '.join(sorted([d.strftime('%d/%m/%Y') for d in list(holiday_dates)[:3]]))
+            more = '' if len(holiday_dates) <= 3 else f' y {len(holiday_dates) - 3} más'
+            response['warning'] = f'Se detectaron {len(holiday_dates)} feriado(s) en el periodo ({sample_dates}{more}).'
+
+        return JsonResponse(response)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
