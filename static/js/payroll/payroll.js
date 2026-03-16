@@ -91,12 +91,19 @@ function initializePeriodModal() {
                 
                 if (submitBtn) submitBtn.disabled = false;
                 
-                // Mostrar advertencia si hay (DESPUÉS de calcular)
+                // Mostrar mensaje: advertencia si hay feriados, info si no los hay
                 if (data.warning) {
                     Swal.fire({
                         title: 'Advertencia',
                         text: data.warning,
                         icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else if (data.info) {
+                    Swal.fire({
+                        title: 'Información',
+                        text: data.info,
+                        icon: 'info',
                         confirmButtonText: 'Entendido'
                     });
                 }

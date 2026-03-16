@@ -1420,6 +1420,8 @@ def api_calculate_working_days(request):
             sample_dates = ', '.join(sorted([d.strftime('%d/%m/%Y') for d in list(holiday_dates)[:3]]))
             more = '' if len(holiday_dates) <= 3 else f' y {len(holiday_dates) - 3} más'
             response['warning'] = f'Se detectaron {len(holiday_dates)} feriado(s) en el periodo ({sample_dates}{more}).'
+        else:
+            response['info'] = 'No se detectaron feriados en el periodo seleccionado.'
 
         return JsonResponse(response)
     except Exception as e:
