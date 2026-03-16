@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte PDF</title>
+    <style>
+        @page { size: landscape; margin: 1cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #000; }
+        .no-print { display: none !important; } /* Oculta los botones en el PDF */
+    </style>
+    {% block extra_js %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

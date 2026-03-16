@@ -41,7 +41,7 @@
 
                             <div class="d-flex align-items-center gap-2">
                                 <div class="avatar-placeholder-sm" style="width:24px; height:24px; font-size: 0.6rem;">{{ log.modified_by.first_name|first }}</div>
-                                <span class="small fw-bold">{{ log.modified_by.get_full_name }}</span>
+                                <span class="small fw-bold">{{ log.modified_by.full_name }}</span>
                                 <span class="text-muted small">• {{ log.reason|default:"Sin razón especificada" }}</span>
                             </div>
                         </div>

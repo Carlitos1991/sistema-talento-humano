@@ -1,5 +1,8 @@
+from calendar import calendar
 from decimal import Decimal
-
+from django.template.loader import get_template
+from django.http import HttpResponse
+from xhtml2pdf import pisa
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q, Sum, Case, When, IntegerField, Value
@@ -24,7 +27,7 @@ from django.utils.decorators import method_decorator
 from django import forms
 from django.contrib import messages
 from payroll.models import RubroBudgetMapping
-from budget.models import BudgetLine, BudgetAssignmentHistory
+from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
 from datetime import date
 from django.db.models.functions import Cast
@@ -333,45 +336,49 @@ class PayslipListView(LoginRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related(
-            'employee__person', 'period', 'budget_line'
+        period_id = self.request.GET.get('period_id')
+        if not period_id or period_id == "None":
+            return Payslip.objects.none()
+
+        queryset = Payslip.objects.filter(period_id=period_id).select_related(
+            'employee__person', 'period'
         ).order_by('employee__person__last_name')
 
-        # Filtro por periodo
-        period_id = self.request.GET.get('period_id')
-        if period_id:
-            queryset = queryset.filter(period_id=period_id)
-
-        # NUEVO: Búsqueda global desde el servidor
-        search_query = self.request.GET.get('q', '').strip()
-        if search_query:
+        q = self.request.GET.get('q', '').strip()
+        if q:
             queryset = queryset.filter(
-                Q(employee__person__first_name__icontains=search_query) |
-                Q(employee__person__last_name__icontains=search_query) |
-                Q(employee__person__identification__icontains=search_query)
-            )
+                Q(employee__person__first_name__icontains=q) |
+                Q(employee__person__last_name__icontains=q) |
+                Q(employee__person__document_number__icontains=q) |
+                Q(items__budget_line__budget_group__short_code__icontains=q)
+            ).distinct()
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['budget_groups'] = BudgetGroup.objects.all()
+
         period_id = self.request.GET.get('period_id')
-        if period_id:
-            context['current_period'] = get_object_or_404(PayrollPeriod, id=period_id)
-        # Mantenemos la palabra buscada en la caja de texto
-        context['search_query'] = self.request.GET.get('q', '')
+        if period_id and period_id != "None":
+            context['current_period'] = PayrollPeriod.objects.filter(id=period_id).first()
+            context['period_id'] = period_id
+            # Pasamos la búsqueda para que el input no se borre
+            context['search_query'] = self.request.GET.get('q', '')
+
         return context
 
-    def get(self, request, *args, **kwargs):
-        self.object_list = self.get_queryset()
-        context = self.get_context_data()
-
-        # Si es una petición AJAX (Buscador o Paginación), devuelve solo la tabla
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string('payroll/partials/partial_payslip_table.html', context, request=request)
+    # ---> ESTA ES LA PIEZA MÁGICA QUE FALTABA <---
+    def render_to_response(self, context, **response_kwargs):
+        """Si la petición es AJAX, devuelve solo la tabla en formato JSON"""
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Renderiza solo el HTML del pedacito de la tabla
+            html = render_to_string('payroll/partials/partial_payslip_table.html', context, request=self.request)
+            # Lo empaqueta en JSON para que tu JavaScript no explote
             return JsonResponse({'html': html})
 
-        return self.render_to_response(context)
+        # Si es una carga normal de la página, hace lo de siempre
+        return super().render_to_response(context, **response_kwargs)
 
 
 class PayslipDetailView(DetailView):
@@ -846,22 +853,34 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
 
-        # ==============================================================
-        # 0. LECTURA DE FILTROS (Nómina Normal vs Alcances/Rezagados)
-        # ==============================================================
+        # 1. CAPTURA DE FILTROS DESDE LA URL
+        search_query = request.GET.get('q', '').strip()
+        group_filter = request.GET.get('group', '').strip()
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
 
+        # 2. FILTRADO INICIAL DE ROLES (Payslips)
         payslips_qs = Payslip.objects.filter(period=period)
 
-        if tipo_filtro == 'NORMAL':
-            # Nómina Principal: Pasan todos los que NO estén castigados (retenidos)
-            payslips_qs = payslips_qs.filter(is_withheld=False)
+        if search_query:
+            payslips_qs = payslips_qs.filter(
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__document_number__icontains=search_query) |
+                # ---> FALTABA ESTA LÍNEA PARA QUE ENCUENTRE EL CÓDIGO <---
+                Q(items__budget_line__budget_group__short_code__icontains=search_query)
+            ).distinct()  # Importante el distinct
+        if group_filter:
+            # Filtramos roles que tengan al menos un rubro en esa agrupación
+            payslips_qs = payslips_qs.filter(
+                items__budget_line__budget_group__short_code=group_filter
+            ).distinct()
 
+        # Filtros de estado (Normal vs Rezagados)
+        if tipo_filtro == 'NORMAL':
+            payslips_qs = payslips_qs.filter(is_withheld=False)
         elif tipo_filtro == 'REZAGADOS':
-            # Alcance: Pasan los que NO están castigados AHORA, pero que el banco aún NO les paga
             payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
 
-        # Extraemos solo los IDs de los roles que pasaron el filtro
         valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
 
         # ==============================================================
@@ -1123,11 +1142,13 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
 
         sorted_reports = dict(sorted(report_data.items()))
-
-        return render(request, 'payroll/reports/grouped_financial_report.html', {
+        context = {
             'period': period,
-            'grouped_reports': sorted_reports
-        })
+            'grouped_reports': sorted_reports,
+            # ESTA LÍNEA ES LA MAGIA:
+            'base_template': 'base_pdf.html' if request.GET.get('export') == 'pdf' else 'base.html'
+        }
+        return render(request, 'payroll/reports/grouped_financial_report.html', context)
 
 
 class PayslipToggleWithholdView(LoginRequiredMixin, View):
@@ -1275,34 +1296,95 @@ class GenerateMissingPayrollView(LoginRequiredMixin, View):
 class BankTransferReportView(LoginRequiredMixin, View):
     """
     Vista EXCLUSIVA para el Archivo de Transferencias Bancarias (Reporte 4 / SPI-SP).
-    Respeta los filtros de Retención y Alcances.
     """
 
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
+        search_query = request.GET.get('q', '').strip()
 
-        # Payslip model no tiene FK `budget_line`; evitar select_related inválido.
         payslips_qs = Payslip.objects.filter(period=period).select_related(
             'employee__person'
         ).order_by('employee__person__last_name')
 
-        # Si en plantillas necesitamos la partida de cada item, prefetchearla desde PayslipItem
-        payslips_qs = payslips_qs.prefetch_related('items__budget_line')
+        # 1. APLICAMOS EL MISMO BUSCADOR DE LA PANTALLA PRINCIPAL
+        if search_query:
+            payslips_qs = payslips_qs.filter(
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__document_number__icontains=search_query) |
+                # ---> FALTABA ESTA LÍNEA PARA QUE ENCUENTRE EL CÓDIGO <---
+                Q(items__budget_line__budget_group__short_code__icontains=search_query)
+            ).distinct()  # Importante el distinct
 
-        # Aplicamos el mismo escudo de filtros inteligente
+        # 2. Filtros de Retención (Liberados vs Retenidos)
         if tipo_filtro == 'NORMAL':
             payslips_qs = payslips_qs.filter(is_withheld=False)
         elif tipo_filtro == 'REZAGADOS':
             payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
 
-        # Calculamos el total a transferir para el pie de página
+        # 3. PRE-CARGA CRÍTICA: Traemos los datos bancarios para evitar que el template colapse
+        payslips_qs = payslips_qs.prefetch_related(
+            'employee__person__economic_data__bank_account__bank',
+            'employee__person__economic_data__bank_account__account_type'
+        )
+
         total_transferir = sum(Decimal(str(p.net_pay)) for p in payslips_qs)
 
         context = {
             'period': period,
             'payslips': payslips_qs,
             'total_transferir': total_transferir,
-            'filtro': tipo_filtro
+            'filtro': tipo_filtro,
+            'search_query': search_query
         }
         return render(request, 'payroll/reports/bank_transfer_report.html', context)
+
+
+class PeriodUpdateView(UpdateView):
+    model = PayrollPeriod
+    form_class = PayrollPeriodForm
+    template_name = 'payroll/modals/modal_period_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Periodo actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
+def api_calculate_working_days(request):
+    month_name = request.GET.get('month')
+    year = request.GET.get('year')
+
+    if not month_name or not year:
+        return JsonResponse({'status': 'error', 'message': 'Faltan parámetros'}, status=400)
+
+    try:
+        # Mapeo de meses
+        months_map = {
+            'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+            'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+            'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
+        }
+        month_num = months_map.get(month_name.upper())
+        year_num = int(year)
+
+        # Calcular primer y último día del mes
+        first_day = date(year_num, month_num, 1)
+        last_day_num = calendar.monthrange(year_num, month_num)[1]
+        last_day = date(year_num, month_num, last_day_num)
+
+        # Usamos un objeto temporal del modelo para aprovechar la lógica de feriados que ya programaste
+        temp_period = PayrollPeriod(start_date=first_day, end_date=last_day)
+        working_days = temp_period.get_working_days()  # Esta función ya existe en tu models.py
+
+        return JsonResponse({
+            'status': 'success',
+            'start_date': first_day.strftime('%Y-%m-%d'),
+            'end_date': last_day.strftime('%Y-%m-%d'),
+            'working_days': working_days
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

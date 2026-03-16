@@ -229,6 +229,7 @@
 .modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
     color: #ffffff;
 }
+
 /* =====================================================================
    CONTROLES DE TABLA (GRID LAYOUT)
    ===================================================================== */
@@ -261,10 +262,18 @@
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(2,6,23,0.04);
+    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
 }
-.btn-export.btn-excel { border-color: #e6f4ea; color: #116530 }
-.btn-export.btn-pdf { border-color: #fdecea; color: #b91c1c }
+
+.btn-export.btn-excel {
+    border-color: #e6f4ea;
+    color: #116530
+}
+
+.btn-export.btn-pdf {
+    border-color: #fdecea;
+    color: #b91c1c
+}
 
 .table-search-input {
     height: 36px;
@@ -273,7 +282,7 @@
     padding: 6px 14px 6px 36px;
     width: 260px;
     background: #fff;
-    box-shadow: 0 1px 2px rgba(2,6,23,0.03);
+    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.03);
 }
 
 /* Center the toggle visually when placed in the top controls */
@@ -292,22 +301,50 @@
     color: #fff;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.08);
     margin-left: 6px;
 }
-.btn-icon i { font-size: 14px; }
-.btn-views-action { background: linear-gradient(180deg,#f59e0b,#f97316); }
-.btn-success-action { background: linear-gradient(180deg,#10b981,#059669); }
-.btn-search { background: linear-gradient(180deg,#06b6d4,#0ea5a4); }
-.btn-info-action { background: linear-gradient(180deg,#7c3aed,#6d28d9); }
-.btn-primary-action { background: linear-gradient(180deg,#0369a1,#075985); }
 
-.actions-wrapper { display:flex; justify-content:flex-end; align-items:center; }
+.btn-icon i {
+    font-size: 14px;
+}
+
+.btn-views-action {
+    background: linear-gradient(180deg, #f59e0b, #f97316);
+}
+
+.btn-success-action {
+    background: linear-gradient(180deg, #10b981, #059669);
+}
+
+.btn-search {
+    background: linear-gradient(180deg, #06b6d4, #0ea5a4);
+}
+
+.btn-info-action {
+    background: linear-gradient(180deg, #7c3aed, #6d28d9);
+}
+
+.btn-primary-action {
+    background: linear-gradient(180deg, #0369a1, #075985);
+}
+
+.actions-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
 
 /* Small responsive tweaks */
 @media (max-width: 900px) {
-    .table-search-input { width: 160px; }
-    .btn-icon { width:34px; height:34px }
+    .table-search-input {
+        width: 160px;
+    }
+
+    .btn-icon {
+        width: 34px;
+        height: 34px
+    }
 }
 
 /* =====================================================================
@@ -315,4 +352,97 @@
    ===================================================================== */
 .period-hidden-field {
     display: none !important;
+}
+
+/* Buscador Moderno SIGETH */
+.search-container-modern {
+    flex: 1; /* Esto hace que el buscador crezca */
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0 15px;
+    height: 50px;
+}
+
+.search-container-modern:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.search-container-modern i {
+    color: #94a3b8;
+    margin-right: 12px;
+    font-size: 1.1rem;
+}
+
+/* Agregamos esto para que el input ocupe el espacio */
+.search-input-modern {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    font-size: 1rem;
+    box-shadow: none !important; /* Quita sombra de style.css */
+}
+
+/* Estilo para el Select de Agrupaciones */
+#groupFilter {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 0 15px;
+    font-weight: 500;
+    color: #475569;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#groupFilter:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+/* payroll.css */
+.filters-container-modern {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid #e8edf4;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+    margin-bottom: 20px;
+}
+
+.select-container-modern {
+    min-width: 220px;
+}
+
+.input-field-modern {
+    width: 100%;
+    height: 45px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    padding: 0 10px;
+    font-size: 0.9rem;
+}
+
+.buttons-container-modern {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+#btnSearch {
+    height: 48px;
+    padding: 0 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }

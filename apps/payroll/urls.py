@@ -9,7 +9,7 @@ from .views import (
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
     GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
-    GenerateMissingPayrollView, BankTransferReportView
+    GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days
 )
 
 app_name = 'payroll'
@@ -63,4 +63,6 @@ urlpatterns = [
     path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
     # Reporte exclusivo para el Banco (Reporte 4)
     path('reports/bank/<int:pk>/', BankTransferReportView.as_view(), name='report_bank_transfer'),
+    path('period/edit/<int:pk>/', PeriodUpdateView.as_view(), name='period_edit'),
+    path('api/calculate-working-days/', api_calculate_working_days, name='api_calculate_working_days'),
 ]

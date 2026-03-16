@@ -208,9 +208,6 @@ class PayrollCalculatorService:
                         if code_clean == 'REMUNERACION':
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
-                                factor_asistencia = Decimal(str(slip.worked_days)) / Decimal('30.0')
-                                val_tramo = val_tramo * factor_asistencia
-
                                 if val_tramo > 0:
                                     it = PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val_tramo)
                                     it._historical_bl = tramo['partida']
@@ -708,9 +705,6 @@ class PayrollCalculatorService:
                         if code_clean == 'REMUNERACION':
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
-                                factor_asistencia = Decimal(str(slip.worked_days)) / Decimal('30.0')
-                                val_tramo = val_tramo * factor_asistencia
-
                                 if val_tramo > 0:
                                     it = PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val_tramo)
                                     it._historical_bl = tramo['partida']

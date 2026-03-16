@@ -2,290 +2,268 @@
 {% load static %}
 
 {% block content %}
-    <div class="header-card no-print" style="background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);">
+    <div class="header-card no-print"
+         style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 4px solid #3b82f6;">
         <div>
-            <h1><i class="fas fa-print me-2"></i> Reporte Financiero Agrupado</h1>
-            <p>Periodo: <strong>{{ period.month }} {{ period.year }}</strong> | Generación Oficial de Nómina</p>
+            <h1 style="color: white; margin-bottom: 5px;"><i class="fas fa-print me-2" style="color: #3b82f6;"></i>
+                Reporte Financiero Agrupado</h1>
+            <p style="color: #94a3b8; margin: 0;">Periodo: <strong
+                    style="color: #f8fafc;">{{ period.month }} {{ period.year }}</strong> | Generación Oficial de Nómina
+            </p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'payroll:period_list' %}" class="btn-cancel text-white bg-white">
+            <a href="{% url 'payroll:period_list' %}" class="btn-header-premium"
+               style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
-            <button onclick="window.print()" class="btn-save bg-white">
-                <i class="fas fa-file-pdf"></i> Imprimir / Exportar a PDF
+            <button onclick="window.print()" class="btn-header-premium"
+                    style="background: #ef4444; color: white; border: none; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); cursor: pointer; padding: 10px 18px; border-radius: 8px; font-weight: 600;">
+                <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Exportar a PDF
             </button>
         </div>
     </div>
 
     <div id="printable-area" class="mt-4">
 
-        {% for code, data in grouped_reports.items %}
-            <div class="report-group-container">
+        {% if not grouped_reports %}
+            <div class="report-group-container text-center no-print"
+                 style="padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 20px;">
+                <i class="fas fa-search"
+                   style="font-size: 4rem; color: #cbd5e1; margin-bottom: 20px; display: block;"></i>
+                <h3 style="color: #475569; font-size: 1.5rem; margin-bottom: 10px;">No hay datos para mostrar</h3>
+                <p style="color: #94a3b8; font-size: 1rem;">No se encontraron roles con el filtro o búsqueda
+                    aplicada.</p>
+            </div>
+        {% else %}
 
-                <div class="report-header">
-                    <h2 style="text-align: center; font-size: 1.2rem; margin-bottom: 5px; text-transform: uppercase;">
-                        Gobierno Autónomo Descentralizado Municipal de Loja</h2>
-                    <h3 style="text-align: center; font-size: 1rem; margin-bottom: 5px; color: #475569;">RESUMEN DE
-                        NÓMINA POR PARTIDA PRESUPUESTARIA</h3>
-                    <h4 style="text-align: center; font-size: 0.9rem; margin-bottom: 20px; color: #1e293b;">
-                        Agrupación: <strong>{{ code }}</strong> - {{ data.group_name }}<br>
-                        Periodo: {{ period.month }} {{ period.year }}
-                    </h4>
-                </div>
+            {% for code, data in grouped_reports.items %}
+                <div class="report-group-container">
 
-                <h5 class="report-section-title">1. Rol de Pagos</h5>
-                <table class="report-table sabana-table">
-                    <thead>
-                    <tr>
-                        <th rowspan="2" style="width: 2%;">N°</th>
-                        <th rowspan="2" style="width: 15%;">Nombres Completos</th>
-                        <th colspan="4">Ingresos</th>
-                        <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Ingresos</th>
+                    <div class="report-header">
+                        <h2 style="text-align: center; font-size: 1.2rem; margin-bottom: 5px; text-transform: uppercase;">
+                            Gobierno Autónomo Descentralizado Municipal de Loja</h2>
+                        <h3 style="text-align: center; font-size: 1rem; margin-bottom: 5px; color: #475569;">RESUMEN DE
+                            NÓMINA POR PARTIDA PRESUPUESTARIA</h3>
+                        <h4 style="text-align: center; font-size: 0.9rem; margin-bottom: 20px; color: #1e293b;">
+                            Agrupación: <strong>{{ code }}</strong> - {{ data.group_name }}<br>
+                            Periodo: {{ period.month }} {{ period.year }}
+                        </h4>
+                    </div>
 
-                        {% if data.colspans.aportes > 0 %}
-                            <th colspan="{{ data.colspans.aportes }}">Aportes al IESS</th>{% endif %}
-                        <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Aportes</th>
-
-                        {% if data.colspans.descuentos > 0 %}
-                            <th colspan="{{ data.colspans.descuentos }}">Descuentos</th>{% endif %}
-                        <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Desctos</th>
-
-                        <th rowspan="2" style="width: 7%; background-color: #e2e8f0;">Valor a<br>Recibir</th>
-                    </tr>
-                    <tr>
-                        <th style="width: 5%;">R.M.U</th>
-                        <th style="width: 5%;">Fondos<br>Res.</th>
-                        <th style="width: 4%;">Décimo<br>3ro</th>
-                        <th style="width: 4%;">Décimo<br>4to</th>
-
-                        {% if data.totales_sabana.iess_personal > 0 %}
-                            <th style="width: 5%;">Individual<br>9.45%</th>{% endif %}
-                        {% if data.totales_sabana.iess_patronal > 0 %}
-                            <th style="width: 5%;">Patronal<br>11.15%</th>{% endif %}
-
-                        {% if data.totales_sabana.retenciones > 0 %}
-                            <th style="width: 5%;">Retenciones<br>Judiciales</th>{% endif %}
-                        {% if data.totales_sabana.prestamos_q > 0 %}
-                            <th style="width: 5%;">Prestamos<br>Quirog.</th>{% endif %}
-                        {% if data.totales_sabana.anticipos > 0 %}
-                            <th style="width: 5%;">Anticipos</th>{% endif %}
-                        {% if data.totales_sabana.otros_descuentos > 0 %}
-                            <th style="width: 5%;">Otros</th>{% endif %}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for emp_id, emp in data.empleados.items %}
+                    <h5 class="report-section-title">1. Rol de Pagos</h5>
+                    <table class="report-table sabana-table">
+                        <thead>
                         <tr>
-                            <td class="text-center">{{ forloop.counter }}</td>
-                            <td class="text-left" style="font-weight: 600;">{{ emp.persona.full_name }}</td>
+                            <th rowspan="2" style="width: 2%;">N°</th>
+                            <th rowspan="2" style="width: 15%;">Nombres Completos</th>
+                            <th colspan="4">Ingresos</th>
+                            <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Ingresos</th>
 
-                            <td>{{ emp.rmu|floatformat:2 }}</td>
-                            <td>{% if emp.fondos_reserva > 0 %}{{ emp.fondos_reserva|floatformat:2 }}{% else %}
-                                -{% endif %}</td>
-                            <td>{% if emp.decimo_tercero > 0 %}{{ emp.decimo_tercero|floatformat:2 }}{% else %}
-                                -{% endif %}</td>
-                            <td>{% if emp.decimo_cuarto > 0 %}{{ emp.decimo_cuarto|floatformat:2 }}{% else %}
-                                -{% endif %}</td>
-                            <td class="col-highlight text-success">{{ emp.ingresos|floatformat:2 }}</td>
+                            {% if data.colspans.aportes > 0 %}
+                                <th colspan="{{ data.colspans.aportes }}">Aportes al IESS</th>{% endif %}
+                            <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Aportes</th>
+
+                            {% if data.colspans.descuentos > 0 %}
+                                <th colspan="{{ data.colspans.descuentos }}">Descuentos</th>{% endif %}
+                            <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Desctos</th>
+
+                            <th rowspan="2" style="width: 7%; background-color: #e2e8f0;">Valor a<br>Recibir</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 5%;">R.M.U</th>
+                            <th style="width: 5%;">Fondos<br>Res.</th>
+                            <th style="width: 4%;">Décimo<br>3ro</th>
+                            <th style="width: 4%;">Décimo<br>4to</th>
 
                             {% if data.totales_sabana.iess_personal > 0 %}
-                                <td>{% if emp.iess_personal > 0 %}{{ emp.iess_personal|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
+                                <th style="width: 5%;">Individual<br>9.45%</th>{% endif %}
                             {% if data.totales_sabana.iess_patronal > 0 %}
-                                <td>{% if emp.iess_patronal > 0 %}{{ emp.iess_patronal|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
-                            <td class="col-highlight">{{ emp.iess_personal|add:emp.iess_patronal|floatformat:2 }}</td>
+                                <th style="width: 5%;">Patronal<br>11.15%</th>{% endif %}
 
                             {% if data.totales_sabana.retenciones > 0 %}
-                                <td>{% if emp.retenciones > 0 %}{{ emp.retenciones|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
+                                <th style="width: 5%;">Retenciones<br>Judiciales</th>{% endif %}
                             {% if data.totales_sabana.prestamos_q > 0 %}
-                                <td>{% if emp.prestamos_q > 0 %}{{ emp.prestamos_q|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
+                                <th style="width: 5%;">Prestamos<br>Quirog.</th>{% endif %}
                             {% if data.totales_sabana.anticipos > 0 %}
-                                <td>{% if emp.anticipos > 0 %}{{ emp.anticipos|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
+                                <th style="width: 5%;">Anticipos</th>{% endif %}
                             {% if data.totales_sabana.otros_descuentos > 0 %}
-                                <td>{% if emp.otros_descuentos > 0 %}{{ emp.otros_descuentos|floatformat:2 }}{% else %}
-                                    -{% endif %}</td>{% endif %}
-
-                            <td class="col-highlight text-danger">{{ emp.descuentos|floatformat:2 }}</td>
-                            <td style="font-weight: 800; color: #0f4c81;">$ {{ emp.liquido|floatformat:2 }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="15" class="text-center py-4">No hay empleados procesados.</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                    <tfoot>
-                    <tr style="background-color: #cbd5e1; font-weight: 800; color: #0f172a;">
-                        <td colspan="2" class="text-right">TOTALES:</td>
-                        <td>{{ data.totales_sabana.rmu|floatformat:2 }}</td>
-                        <td>{{ data.totales_sabana.fondos_reserva|floatformat:2 }}</td>
-                        <td>{{ data.totales_sabana.decimo_tercero|floatformat:2 }}</td>
-                        <td>{{ data.totales_sabana.decimo_cuarto|floatformat:2 }}</td>
-                        <td class="text-success">{{ data.totales_sabana.total_ingresos|floatformat:2 }}</td>
-
-                        {% if data.totales_sabana.iess_personal > 0 %}
-                            <td>{{ data.totales_sabana.iess_personal|floatformat:2 }}</td>{% endif %}
-                        {% if data.totales_sabana.iess_patronal > 0 %}
-                            <td>{{ data.totales_sabana.iess_patronal|floatformat:2 }}</td>{% endif %}
-                        <td>{{ data.totales_sabana.iess_personal|add:data.totales_sabana.iess_patronal|floatformat:2 }}</td>
-
-                        {% if data.totales_sabana.retenciones > 0 %}
-                            <td>{{ data.totales_sabana.retenciones|floatformat:2 }}</td>{% endif %}
-                        {% if data.totales_sabana.prestamos_q > 0 %}
-                            <td>{{ data.totales_sabana.prestamos_q|floatformat:2 }}</td>{% endif %}
-                        {% if data.totales_sabana.anticipos > 0 %}
-                            <td>{{ data.totales_sabana.anticipos|floatformat:2 }}</td>{% endif %}
-                        {% if data.totales_sabana.otros_descuentos > 0 %}
-                            <td>{{ data.totales_sabana.otros_descuentos|floatformat:2 }}</td>{% endif %}
-
-                        <td class="text-danger">{{ data.totales_sabana.total_descuentos|floatformat:2 }}</td>
-                        <td style="color: #0f4c81;">$ {{ data.totales_sabana.liquido|floatformat:2 }}</td>
-                    </tr>
-                    </tfoot>
-                </table>
-
-                <h5 class="report-section-title mt-4">2. Jornalización Contable</h5>
-                <table class="report-table">
-                    <thead>
-                    <tr class="bg-gray">
-                        <th style="width: 60%;">Cuenta Contable</th>
-                        <th class="text-right" style="width: 20%;">Debe</th>
-                        <th class="text-right" style="width: 20%;">Haber</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for vals in data.contabilidad_ordenada %}
-                        <tr>
-                            <td><small>{{ vals.codigo }} - {{ vals.nombre }}</small></td>
-                            <td class="text-right text-success">{% if vals.debe > 0 %}$
-                                {{ vals.debe|floatformat:2 }}{% else %}-{% endif %}</td>
-                            <td class="text-right text-danger">{% if vals.haber > 0 %}$
-                                {{ vals.haber|floatformat:2 }}{% else %}-{% endif %}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="3" class="text-center">Sin afectación contable.</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                    <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
-                    <tr>
-                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">TOTALES:
-                        </td>
-                        <td class="text-right font-weight-800 text-success" style="font-size: 1.1rem;">
-                            $ {{ data.total_contabilidad_debe|floatformat:2 }}</td>
-                        <td class="text-right font-weight-800 text-danger" style="font-size: 1.1rem;">
-                            $ {{ data.total_contabilidad_haber|floatformat:2 }}</td>
-                    </tr>
-                    </tfoot>
-                </table>
-
-                <h5 class="report-section-title mt-4">3. Afectación Presupuestaria</h5>
-                <table class="report-table">
-                    <thead>
-                    <tr class="bg-gray">
-                        <th style="width: 25%;">PARTIDA</th>
-                        <th style="width: 45%;">CONCEPTO</th>
-                        <th class="text-right" style="width: 10%;">COMPROMISO</th>
-                        <th class="text-right" style="width: 10%;">OBLIGACIÓN</th>
-                        <th class="text-right" style="width: 10%;">PAGO</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for p_key, p_data in data.presupuesto.items %}
-                        <tr>
-                            <td style="font-family: monospace;">{{ p_data.partida }}</td>
-                            <td>{{ p_data.concepto }}</td>
-                            <td class="text-right">$ {{ p_data.monto|floatformat:2 }}</td>
-                            <td class="text-right">$ {{ p_data.monto|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold">$ {{ p_data.monto|floatformat:2 }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">Sin afectación presupuestaria.</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                    <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
-                    <tr>
-                        <td colspan="2" class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">
-                            TOTAL PRESUPUESTO EJECUTADO:
-                        </td>
-                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">
-                            $ {{ data.total_presupuesto|floatformat:2 }}</td>
-                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">
-                            $ {{ data.total_presupuesto|floatformat:2 }}</td>
-                        <td class="text-right font-weight-800 text-primary-bold" style="font-size: 1.1rem;">
-                            $ {{ data.total_presupuesto|floatformat:2 }}</td>
-                    </tr>
-                    </tfoot>
-                </table>
-
-                <div style="page-break-inside: avoid;">
-                    <h5 class="report-section-title mt-4">4. Archivo de Transferencias Bancarias</h5>
-                    <table class="report-table">
-                        <thead>
-                        <tr class="bg-gray">
-                            <th style="width: 5%; text-align: center;">N°</th>
-                            <th style="width: 15%;">Cédula</th>
-                            <th style="width: 35%;">Nombres Completos</th>
-                            <th style="width: 30%;">Institución / Cuenta Bancaria</th>
-                            <th class="text-right" style="width: 15%;">Valor a Transferir</th>
+                                <th style="width: 5%;">Otros</th>{% endif %}
                         </tr>
                         </thead>
                         <tbody>
                         {% for emp_id, emp in data.empleados.items %}
                             <tr>
                                 <td class="text-center">{{ forloop.counter }}</td>
-                                <td>{{ emp.persona.document_number }}</td>
-                                <td>{{ emp.persona.full_name }}</td>
-                                <td>
-                                    <small>
-                                        {% if emp.numero_cuenta %}
-                                            <strong>{{ emp.banco }}</strong> <br>
-                                            {{ emp.tipo_cuenta }} - Cta: {{ emp.numero_cuenta }}
-                                        {% else %}
-                                            <span style="color: #ef4444; font-style: italic; font-weight: 600;">
-                                            <i class="fas fa-exclamation-triangle"></i> Sin cuenta registrada
-                                        </span>
-                                        {% endif %}
-                                    </small>
-                                </td>
-                                <td class="text-right font-weight-bold text-primary-bold">
-                                    $ {{ emp.liquido|floatformat:2 }}</td>
+                                <td class="text-left" style="font-weight: 600;">{{ emp.persona.full_name }}</td>
+
+                                <td>{{ emp.rmu|floatformat:"2g" }}</td>
+                                <td>{% if emp.fondos_reserva > 0 %}{{ emp.fondos_reserva|floatformat:"2g" }}{% else %}
+                                    -{% endif %}</td>
+                                <td>{% if emp.decimo_tercero > 0 %}{{ emp.decimo_tercero|floatformat:"2g" }}{% else %}
+                                    -{% endif %}</td>
+                                <td>{% if emp.decimo_cuarto > 0 %}{{ emp.decimo_cuarto|floatformat:"2g" }}{% else %}
+                                    -{% endif %}</td>
+                                <td class="col-highlight text-success">{{ emp.ingresos|floatformat:"2g" }}</td>
+
+                                {% if data.totales_sabana.iess_personal > 0 %}
+                                    <td>{% if emp.iess_personal > 0 %}{{ emp.iess_personal|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+                                {% if data.totales_sabana.iess_patronal > 0 %}
+                                    <td>{% if emp.iess_patronal > 0 %}{{ emp.iess_patronal|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+                                <td class="col-highlight">{{ emp.iess_personal|add:emp.iess_patronal|floatformat:"2g" }}</td>
+
+                                {% if data.totales_sabana.retenciones > 0 %}
+                                    <td>{% if emp.retenciones > 0 %}{{ emp.retenciones|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+                                {% if data.totales_sabana.prestamos_q > 0 %}
+                                    <td>{% if emp.prestamos_q > 0 %}{{ emp.prestamos_q|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+                                {% if data.totales_sabana.anticipos > 0 %}
+                                    <td>{% if emp.anticipos > 0 %}{{ emp.anticipos|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+                                {% if data.totales_sabana.otros_descuentos > 0 %}
+                                    <td>{% if emp.otros_descuentos > 0 %}
+                                        {{ emp.otros_descuentos|floatformat:"2g" }}{% else %}
+                                        -{% endif %}</td>{% endif %}
+
+                                <td class="col-highlight text-danger">{{ emp.descuentos|floatformat:"2g" }}</td>
+                                <td style="font-weight: 800; color: #0f4c81;">$ {{ emp.liquido|floatformat:"2g" }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="5" class="text-center">No hay transferencias pendientes.</td>
+                                <td colspan="15" class="text-center py-4">No hay empleados procesados.</td>
                             </tr>
                         {% endfor %}
                         </tbody>
+                        <tfoot>
+                        <tr style="background-color: #cbd5e1; font-weight: 800; color: #0f172a;">
+                            <td colspan="2" class="text-right">TOTALES:</td>
+                            <td>{{ data.totales_sabana.rmu|floatformat:"2g" }}</td>
+                            <td>{{ data.totales_sabana.fondos_reserva|floatformat:"2g" }}</td>
+                            <td>{{ data.totales_sabana.decimo_tercero|floatformat:"2g" }}</td>
+                            <td>{{ data.totales_sabana.decimo_cuarto|floatformat:"2g" }}</td>
+                            <td class="text-success">{{ data.totales_sabana.total_ingresos|floatformat:"2g" }}</td>
+
+                            {% if data.totales_sabana.iess_personal > 0 %}
+                                <td>{{ data.totales_sabana.iess_personal|floatformat:"2g" }}</td>{% endif %}
+                            {% if data.totales_sabana.iess_patronal > 0 %}
+                                <td>{{ data.totales_sabana.iess_patronal|floatformat:"2g" }}</td>{% endif %}
+                            <td>{{ data.totales_sabana.iess_personal|add:data.totales_sabana.iess_patronal|floatformat:"2g" }}</td>
+
+                            {% if data.totales_sabana.retenciones > 0 %}
+                                <td>{{ data.totales_sabana.retenciones|floatformat:"2g" }}</td>{% endif %}
+                            {% if data.totales_sabana.prestamos_q > 0 %}
+                                <td>{{ data.totales_sabana.prestamos_q|floatformat:"2g" }}</td>{% endif %}
+                            {% if data.totales_sabana.anticipos > 0 %}
+                                <td>{{ data.totales_sabana.anticipos|floatformat:"2g" }}</td>{% endif %}
+                            {% if data.totales_sabana.otros_descuentos > 0 %}
+                                <td>{{ data.totales_sabana.otros_descuentos|floatformat:"2g" }}</td>{% endif %}
+
+                            <td class="text-danger">{{ data.totales_sabana.total_descuentos|floatformat:"2g" }}</td>
+                            <td style="color: #0f4c81;">$ {{ data.totales_sabana.liquido|floatformat:"2g" }}</td>
+                        </tr>
+                        </tfoot>
                     </table>
+
+                    <h5 class="report-section-title mt-4">2. Jornalización Contable</h5>
+                    <table class="report-table">
+                        <thead>
+                        <tr class="bg-gray">
+                            <th style="width: 60%;">Cuenta Contable</th>
+                            <th class="text-right" style="width: 20%;">Debe</th>
+                            <th class="text-right" style="width: 20%;">Haber</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for vals in data.contabilidad_ordenada %}
+                            <tr>
+                                <td><small>{{ vals.codigo }} - {{ vals.nombre }}</small></td>
+                                <td class="text-right text-success">{% if vals.debe > 0 %}$
+                                    {{ vals.debe|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                <td class="text-right text-danger">{% if vals.haber > 0 %}$
+                                    {{ vals.haber|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">Sin afectación contable.</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+                        <tr>
+                            <td class="text-right" style="font-weight: bold; font-size: 0.85rem;">TOTALES:
+                            </td>
+                            <td class="text-right text-success" style="font-weight: bold; font-size: 0.85rem;">
+                                $ {{ data.total_contabilidad_debe|floatformat:"2g" }}</td>
+                            <td class="text-right text-danger" style="font-weight: bold; font-size: 0.85rem;">
+                                $ {{ data.total_contabilidad_haber|floatformat:"2g" }}</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+
+                    <div style="page-break-inside: avoid;">
+                        <h5 class="report-section-title mt-4">3. Afectación Presupuestaria</h5>
+                        <table class="report-table">
+                            <thead>
+                            <tr class="bg-gray">
+                                <th style="width: 25%;">PARTIDA</th>
+                                <th style="width: 45%;">CONCEPTO</th>
+                                <th class="text-right" style="width: 10%;">COMPROMISO</th>
+                                <th class="text-right" style="width: 10%;">OBLIGACIÓN</th>
+                                <th class="text-right" style="width: 10%;">PAGO</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for p_key, p_data in data.presupuesto.items %}
+                                <tr>
+                                    <td style="font-family: monospace;">{{ p_data.partida }}</td>
+                                    <td>{{ p_data.concepto }}</td>
+                                    <td class="text-right">$ {{ p_data.monto|floatformat:"2g" }}</td>
+                                    <td class="text-right">$ {{ p_data.monto|floatformat:"2g" }}</td>
+                                    <td class="text-right font-weight-bold">$ {{ p_data.monto|floatformat:"2g" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">Sin afectación presupuestaria.</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                            <tfoot style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+                            <tr>
+                                <td colspan="2" class="text-right" style="font-weight: bold; font-size: 0.85rem;">
+                                    TOTAL PRESUPUESTO EJECUTADO:
+                                </td>
+                                <td class="text-right" style="font-weight: bold; font-size: 0.85rem;">
+                                    $ {{ data.total_presupuesto|floatformat:"2g" }}</td>
+                                <td class="text-right" style="font-weight: bold; font-size: 0.85rem;">
+                                    $ {{ data.total_presupuesto|floatformat:"2g" }}</td>
+                                <td class="text-right" style="font-weight: bold; font-size: 0.85rem;">
+                                    $ {{ data.total_presupuesto|floatformat:"2g" }}</td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="signatures-container" style="page-break-inside: avoid;">
+                        <div class="signature-line">
+                            <div class="line"></div>
+                            <p>Elaborado por<br><strong>Analista de Talento Humano</strong></p>
+                        </div>
+                        <div class="signature-line">
+                            <div class="line"></div>
+                            <p>Revisado por<br><strong>Jefe de Talento Humano</strong></p>
+                        </div>
+                        <div class="signature-line">
+                            <div class="line"></div>
+                            <p>Aprobado por<br><strong>Director Financiero</strong></p>
+                        </div>
+                    </div>
+
                 </div>
+            {% endfor %}
 
-                <div class="signatures-container" style="page-break-inside: avoid;">
-                    <div class="signature-line">
-                        <div class="line"></div>
-                        <p>Elaborado por<br><strong>Analista de Talento Humano</strong></p>
-                    </div>
-                    <div class="signature-line">
-                        <div class="line"></div>
-                        <p>Revisado por<br><strong>Jefe de Talento Humano</strong></p>
-                    </div>
-                    <div class="signature-line">
-                        <div class="line"></div>
-                        <p>Aprobado por<br><strong>Director Financiero</strong></p>
-                    </div>
-                </div>
-
-            </div>
-        {% endfor %}
-
-    </div>
+        {% endif %} </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -304,7 +282,7 @@
             font-size: 1rem;
             font-weight: 700;
             color: #0f4c81;
-            margin-top: 30px; /* Separación más amplia entre bloques */
+            margin-top: 30px;
             margin-bottom: 10px;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 5px;
@@ -326,7 +304,6 @@
             background-color: #f8fafc !important;
         }
 
-        /* Contenedor de Firmas modificado para que no se corte */
         .signatures-container {
             display: flex;
             justify-content: space-around;
@@ -348,94 +325,87 @@
             line-height: 1.2;
         }
 
-        /* ESTILOS DE IMPRESIÓN */
         @media print {
+            /* 1. OPCIÓN NUCLEAR: Hace invisible todo el sistema (menús, fondos, cabeceras) */
+            body * {
+                visibility: hidden !important;
+            }
+
+            /* 2. Hace visible ÚNICAMENTE el reporte y su contenido */
+            #printable-area, #printable-area * {
+                visibility: visible !important;
+            }
+
+            /* 3. Arranca el reporte de su lugar y lo pega en la coordenada 0,0 de la hoja física, ignorando por completo el espacio del menú lateral */
+            #printable-area {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* 4. Colapsa los menús laterales para que no dejen columnas en blanco */
+            aside, .sidebar, #sidebar, header, nav, .navbar, footer, .no-print {
+                display: none !important;
+            }
+
+            /* 5. Configuración de la hoja y la fuente */
             @page {
-                margin: 0.5cm 0.5cm; /* Márgenes súper finos */
-                size: landscape; /* O portrait si prefieres vertical */
+                size: landscape;
+                margin: 0.5cm;
+            }
+
+            body, html {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
             }
 
             body {
                 font-family: 'Arial', sans-serif;
-                font-size: 7.5pt; /* Letra pequeña pero legible */
+                font-size: 7.5pt;
                 line-height: 1.1;
                 color: #000;
             }
 
+            /* 6. Estilos de la tabla para que encaje perfecto en el ancho */
             table {
-                width: 100%;
+                width: 100% !important;
                 border-collapse: collapse;
                 margin-bottom: 10px;
+                table-layout: auto !important;
             }
 
             th, td {
                 border: 1px solid #999;
-                padding: 2px 4px !important; /* Mínimo relleno posible */
+                padding: 3px 4px !important;
                 vertical-align: middle;
-                white-space: nowrap; /* Evita que el texto salte de línea si hay espacio */
+                white-space: nowrap;
             }
 
-            /* 4. Encabezados más delgados */
             th {
                 background-color: #f0f0f0 !important;
                 -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
                 font-size: 7pt;
                 font-weight: bold;
                 text-transform: uppercase;
             }
 
-            /* 5. Ajustar anchos de columnas (Opcional, adapta a tus necesidades) */
-            .col-cedula {
-                width: 8%;
-            }
-
-            .col-nombre {
-                width: 25%;
-                white-space: normal;
-            }
-
-            /* Solo el nombre puede usar 2 líneas */
-            .col-valor {
-                width: 6%;
-                text-align: right;
-            }
-
-            /* 6. Quitar espacios muertos innecesarios */
             h1, h2, h3, h4, h5, p {
                 margin: 0 0 4px 0;
                 padding: 0;
             }
 
-            /* 7. Forzar salto de página entre los Reportes 1, 2 y 3 */
-            .page-break {
-                page-break-before: always;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            #printable-area, #printable-area * {
-                visibility: visible;
-            }
-
-            #printable-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
+            /* 7. Saltos de página exactos entre cada agrupación */
             .report-group-container {
-                box-shadow: none;
-                border: none;
-                padding: 0;
-                margin-bottom: 0;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin-bottom: 0 !important;
                 page-break-after: always;
                 break-after: page;
             }
@@ -446,11 +416,10 @@
             }
         }
 
-        /* Estilos para Sábana Detallada tipo Excel */
         .sabana-table th, .sabana-table td {
             border: 1px solid #cbd5e1;
             padding: 4px 6px;
-            font-size: 0.70rem; /* Letra pequeña para que quepan todas las columnas */
+            font-size: 0.70rem;
             text-align: right;
             vertical-align: middle;
         }

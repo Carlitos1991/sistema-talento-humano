@@ -1,90 +1,74 @@
-// static/js/payslip_list.js
-
+// static/js/payroll/payslip_list.js
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');
-    const tableContainer = document.getElementById('payslip-table-container');
+    const btnSearch = document.getElementById('btnSearch');
+    const groupFilter = document.getElementById('groupFilter');
+    const container = document.getElementById('payslip-table-container');
 
-    // 1. Motor de Búsqueda y Paginación AJAX
-    function loadPayslips(page = 1) {
-        if (!tableContainer) return;
+    function performSearch() {
+        // Magia: Si no lo halla en la variable, lo roba directamente de la URL
+        let periodId = window.CURRENT_PERIOD_ID;
+        if (!periodId || periodId === "" || periodId === "None") {
+            const urlParams = new URLSearchParams(window.location.search);
+            periodId = urlParams.get('period_id');
+        }
 
-        const query = searchInput ? searchInput.value : '';
-        const url = `${window.URLS.baseList}?period_id=${window.CURRENT_PERIOD_ID}&q=${query}&page=${page}`;
+        if (!periodId) {
+            console.error("Error: ID de periodo no válido:", periodId);
+            return;
+        }
 
-        tableContainer.style.opacity = '0.5'; // Efecto de carga
+        const params = new URLSearchParams({
+            period_id: periodId,
+            q: searchInput ? searchInput.value : '',
+            group: groupFilter ? groupFilter.value : ''
+        });
 
-        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        container.style.opacity = '0.5';
+
+        fetch(`${window.URLS.baseList}?${params.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
             .then(res => res.json())
             .then(data => {
-                tableContainer.innerHTML = data.html;
-                tableContainer.style.opacity = '1';
+                container.innerHTML = data.html;
+                container.style.opacity = '1';
             })
             .catch(err => {
-                console.error('Error cargando roles:', err);
-                tableContainer.style.opacity = '1';
+                console.error("Error en la petición:", err);
+                container.style.opacity = '1';
             });
     }
 
-    // 2. Buscador en tiempo real con Debounce (para no disparar 100 queries al escribir rápido)
-    let searchTimeout = null;
+    if (btnSearch) btnSearch.addEventListener('click', performSearch);
+    if (groupFilter) groupFilter.addEventListener('change', performSearch);
+
     if (searchInput) {
-        searchInput.addEventListener('keyup', function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => loadPayslips(1), 300);
+        searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') performSearch();
         });
     }
-
-    // Exponer paginación
-    window.loadTablePage = function (pageNum) {
-        loadPayslips(pageNum);
-    };
-
-    // 3. Switch de Retención (Delegación de eventos: funciona incluso si el HTML se regenera)
-    document.addEventListener('change', function (e) {
-        if (e.target.matches('.toggle-withhold-btn')) {
-            const payslipId = e.target.getAttribute('data-id');
-            const isWithheld = e.target.checked;
-            const toggleText = e.target.closest('.modern-toggle-wrapper').querySelector('.modern-toggle-text');
-
-            let formData = new FormData();
-            formData.append('is_withheld', isWithheld);
-            formData.append('csrfmiddlewaretoken', window.CSRF_TOKEN);
-
-            const toggleUrl = window.URLS.toggleWithhold.replace('999999', payslipId);
-
-            fetch(toggleUrl, {method: 'POST', body: formData})
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        toggleText.textContent = isWithheld ? 'Retenido' : 'Normal';
-                    } else {
-                        e.target.checked = !isWithheld; // Revertir visualmente
-                        Swal.fire('Error', data.message || 'Error al procesar', 'error');
-                    }
-                });
-        }
-    });
 });
 
-// 4. Abrir y Cerrar Modal
-window.openPayslipDetail = function (url) {
-    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-        .then(response => response.text())
-        .then(html => {
-            const container = document.getElementById('modal-container');
-            if (container) {
-                container.innerHTML = html;
-                const modal = document.getElementById('payslipDetailModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    // Si el archivo JS del modal tiene una función de inicio, se llama aquí
-                    if (typeof initPayslipModal === 'function') initPayslipModal();
-                }
-            }
-        });
-};
+function downloadFilteredReport(type) {
+    const searchInput = document.getElementById('searchInput');
+    const groupFilter = document.getElementById('groupFilter');
 
-window.closePayslipDetail = function () {
-    const modal = document.getElementById('payslipDetailModal');
-    if (modal) modal.style.display = 'none';
-};
+    const q = searchInput ? searchInput.value : '';
+    const group = groupFilter ? groupFilter.value : '';
+
+    // Misma magia para la descarga de reportes
+    let periodId = window.CURRENT_PERIOD_ID;
+    if (!periodId || periodId === "" || periodId === "None") {
+        periodId = new URLSearchParams(window.location.search).get('period_id');
+    }
+
+    if (!periodId) {
+        alert("Error: No se pudo identificar el periodo. Regrese a la lista e intente de nuevo.");
+        return;
+    }
+
+    const reportPath = type === 'banco' ? 'bank' : 'grouped';
+    const url = `/payroll/reports/${reportPath}/${periodId}/?q=${encodeURIComponent(q)}&group=${encodeURIComponent(group)}&filtro=NORMAL`;
+    window.open(url, '_blank');
+}

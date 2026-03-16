@@ -1,60 +1,55 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Detalle de Roles | SIGETH{% endblock %}
-
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}?v=1.4">
-    <link rel="stylesheet" href="{% static 'css/payslip_modal.css' %}?v=1.4">
-{% endblock %}
-
 {% block content %}
     <div>
         <div class="header-card" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h1>Detalle de Roles - {{ current_period.get_month_display }} {{ current_period.year }}</h1>
-                <p>
-                    Revisa las liquidaciones individuales.
-                    {% if current_period.is_closed %}
-                        <strong class="text-danger"><i class="fas fa-lock"></i> PERIODO CERRADO</strong>
-                    {% endif %}
-                </p>
+                <h1>Detalle de Roles - {{ current_period.month }} {{ current_period.year }}</h1>
+                <p>Revisa las liquidaciones individuales del periodo.</p>
             </div>
-            <a href="{% url 'payroll:period_list' %}" class="btn btn-secondary">
+            <a href="{% url 'payroll:period_list' %}" class="btn-header-premium btn-header-back">
                 <i class="fas fa-arrow-left"></i> Volver a Periodos
             </a>
         </div>
 
-        <div class="content-table" style="margin-top: 20px;">
-            <div style="margin-bottom: 20px;">
-                <div style="position: relative; max-width: 400px;">
-                    <i class="fas fa-search"
-                       style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar por nombre o cédula..."
-                           style="width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #cbd5e1; border-radius: 8px;"
-                           value="{{ search_query }}">
-                </div>
+        <div class="filters-container-modern">
+            <div class="search-container-modern">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="search-input-modern"
+                       placeholder="Buscar por nombres, cédula o código de grupo..." value="{{ search_query }}">
+                <button id="btnSearch" class="btn-create" style="margin-left: 10px;">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
             </div>
 
+            <div class="buttons-container-modern">
+                <button onclick="downloadFilteredReport('nomina')" class="btn-icon btn-info-action"
+                        title="Reporte Nómina">
+                    <i class="fas fa-file-invoice"></i>
+                </button>
+                <button onclick="downloadFilteredReport('banco')" class="btn-icon btn-primary-action"
+                        title="Archivo Banco">
+                    <i class="fas fa-university"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-table" style="margin-top: 20px;">
             <div id="payslip-table-container">
                 {% include 'payroll/partials/partial_payslip_table.html' %}
             </div>
         </div>
     </div>
-
-    <div id="modal-container"></div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        // Variables seguras inyectadas al front
-        window.CSRF_TOKEN = "{{ csrf_token }}";
-        window.CURRENT_PERIOD_ID = "{{ current_period.id }}";
+        // CRÍTICO: Aseguramos que el ID se renderice como número
+        window.CURRENT_PERIOD_ID = "{{ current_period.id|default:'' }}";
         window.URLS = {
-            baseList: "{% url 'payroll:payslip_list' %}",
-            toggleWithhold: "{% url 'payroll:payslip_toggle_withhold' pk=999999 %}"
+            baseList: "{% url 'payroll:payslip_list' %}"
         };
     </script>
     <script src="{% static 'js/payroll/payslip_list.js' %}"></script>
-    <script src="{% static 'js/payslip_modal.js' %}"></script>
 {% endblock %}

@@ -25,7 +25,13 @@
                     <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
                 </td>
                 <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
-                <td style="padding: 12px;">{{ p.budget.code }}</td>
+                <td style="padding: 12px;">
+                    {% for item in p.items.all %}
+                        {% if item.income_ref.code == 'REMUNERACION' %}
+                            {{ item.budget_line_code|default:"Sin Partida" }}
+                        {% endif %}
+                    {% endfor %}
+                </td>
                 <td style="padding: 12px; text-align: right; color: #10b981;">$ {{ p.total_income }}</td>
                 <td style="padding: 12px; text-align: right; color: #ef4444;">$ {{ p.total_deduction }}</td>
                 <td style="padding: 12px; text-align: right;">
