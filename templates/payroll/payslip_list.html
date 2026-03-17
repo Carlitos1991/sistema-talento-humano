@@ -1,45 +1,81 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+{% endblock %}
 
 {% block content %}
-    <div>
-        <div class="header-card" style="display: flex; justify-content: space-between; align-items: center;">
+    <div id="payrollApp">
+        <div class="header-card">
             <div>
-                <h1>Detalle de Roles - {{ current_period.month }} {{ current_period.year }}</h1>
-                <p>Revisa las liquidaciones individuales del periodo.</p>
+                <h1>Detalle de Roles</h1>
+                <p>Periodo: {% if current_period %}{{ current_period.month }} {{ current_period.year }}{% else %}-{% endif %}</p>
             </div>
             <a href="{% url 'payroll:period_list' %}" class="btn-header-premium btn-header-back">
                 <i class="fas fa-arrow-left"></i> Volver a Periodos
             </a>
         </div>
 
-        <div class="filters-container-modern">
-            <div class="search-container-modern">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" class="search-input-modern"
-                       placeholder="Buscar por nombres, cédula o código de grupo..." value="{{ search_query }}">
-                <button id="btnSearch" class="btn-create" style="margin-left: 10px;">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
+        <div class="stats-row">
+            <div class="stat-card blue-card">
+                <div class="stat-left">
+                    <h3>Total Roles</h3>
+                    <div class="number" id="total-roles">{{ total_roles|default:0 }}</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
             </div>
-
-            <div class="buttons-container-modern">
-                <button onclick="downloadFilteredReport('nomina')" class="btn-icon btn-info-action"
-                        title="Reporte Nómina">
-                    <i class="fas fa-file-invoice"></i>
-                </button>
-                <button onclick="downloadFilteredReport('banco')" class="btn-icon btn-primary-action"
-                        title="Archivo Banco">
-                    <i class="fas fa-university"></i>
-                </button>
+            <div class="stat-card green-card">
+                <div class="stat-left">
+                    <h3>Liquidado Total</h3>
+                    <div class="number" id="total-liquidado">$ {{ total_liquidado|default:0 }}</div>
+                </div>
+                <i class="fas fa-money-bill-wave stat-icon"></i>
             </div>
         </div>
 
-        <div class="content-table" style="margin-top: 20px;">
-            <div id="payslip-table-container">
-                {% include 'payroll/partials/partial_payslip_table.html' %}
+        <div id="table-app">
+            <div class="content-table">
+                <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
+                    <div style="display:flex; align-items:center; gap:12px; justify-self: start;">
+                        <div class="table-export-btns" style="display:flex; align-items:center;">
+                            <button type="button" class="btn-export-excel" title="Reporte Nómina" onclick="downloadFilteredReport('nomina')">
+                                <i class="fas fa-file-excel"></i> Nómina
+                            </button>
+                            <button type="button" class="btn-export-pdf" title="Archivo Banco" onclick="downloadFilteredReport('banco')" style="margin-left:8px;">
+                                <i class="fas fa-file-pdf"></i> Banco
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:center; justify-self: center;">
+                        <input class="modern-toggle-input" type="checkbox" id="toggleWithheld" onchange="performSearchWithOptions()">
+                        <label class="modern-toggle-wrapper mb-0" for="toggleWithheld" style="margin-left:10px;">
+                            <div class="modern-toggle-circle"></div>
+                            <span class="modern-toggle-text">Mostrar Roles Retenidos</span>
+                        </label>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; justify-self: end;">
+                        <div class="search-box" style="width: 100%; max-width: 520px; display:flex; gap:8px; align-items:center;">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchInput" class="table-search-input" placeholder="Buscar por nombre, cédula o partida..." value="{{ search_query }}" style="width:100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div id="payslip-table-container">
+                        {% include 'payroll/partials/partial_payslip_table.html' %}
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Contenedor para Modales Dinámicos -->
+        <div id="modal-root"></div>
+
+        <!-- Token CSRF oculto para JS -->
+        {% csrf_token %}
     </div>
 {% endblock %}
 
@@ -52,4 +88,6 @@
         };
     </script>
     <script src="{% static 'js/payroll/payslip_list.js' %}"></script>
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+    <script src="{% static 'js/payslip_modal.js' %}"></script>
 {% endblock %}

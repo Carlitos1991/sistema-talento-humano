@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table class="table-custom" style="width: 100%; border-collapse: collapse;">
+    <table class="table managed-table table-hover" data-page-size="15" data-title="Reporte de Roles" style="width: 100%; border-collapse: collapse;">
         <thead>
         <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
             <th style="padding: 12px;">Empleado</th>
@@ -40,7 +40,7 @@
 
                 {% if current_period and not current_period.is_closed %}
                     <td style="padding: 12px; text-align: center;">
-                        <label class="modern-toggle-wrapper mb-0" style="padding: 4px 10px;" title="Retener el pago">
+                        <label class="modern-toggle-wrapper mb-0 {% if p.is_withheld %}modern-toggle-yellow{% endif %}" style="padding: 4px 10px;" title="Retener el pago">
                             <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
                                    data-id="{{ p.id }}"
                                    {% if p.is_withheld %}checked{% endif %}>

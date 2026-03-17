@@ -361,6 +361,16 @@ class PayslipListView(LoginRequiredMixin, ListView):
                 Q(items__budget_line__budget_group__short_code__icontains=q)
             ).distinct()
 
+        # Lógica de filtro por retenidos:
+        # - 'only'  => mostrar sólo los retenidos
+        # - 'exclude' o vacío => excluir los retenidos (comportamiento por defecto)
+        show_withheld = (self.request.GET.get('show_withheld') or '').lower()
+        if show_withheld in ['1', 'true', 'on', 'only']:
+            queryset = queryset.filter(is_withheld=True)
+        else:
+            # Por defecto mostramos TODOS excepto los retenidos
+            queryset = queryset.filter(is_withheld=False)
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -374,6 +384,16 @@ class PayslipListView(LoginRequiredMixin, ListView):
             # Pasamos la búsqueda para que el input no se borre
             context['search_query'] = self.request.GET.get('q', '')
 
+        # Agregar totales para mostrar en la cabecera (evita usar filtros inexistentes en la plantilla)
+        try:
+            qs = self.get_queryset()
+            context['total_roles'] = qs.count()
+            total_liquidado = qs.aggregate(total=Sum('net_pay'))['total'] or 0
+            context['total_liquidado'] = total_liquidado
+        except Exception:
+            context['total_roles'] = 0
+            context['total_liquidado'] = 0
+
         return context
 
     # ---> ESTA ES LA PIEZA MÁGICA QUE FALTABA <---
@@ -383,7 +403,11 @@ class PayslipListView(LoginRequiredMixin, ListView):
             # Renderiza solo el HTML del pedacito de la tabla
             html = render_to_string('payroll/partials/partial_payslip_table.html', context, request=self.request)
             # Lo empaqueta en JSON para que tu JavaScript no explote
-            return JsonResponse({'html': html})
+            return JsonResponse({
+                'html': html,
+                'total_roles': context.get('total_roles', 0),
+                'total_liquidado': context.get('total_liquidado', 0)
+            })
 
         # Si es una carga normal de la página, hace lo de siempre
         return super().render_to_response(context, **response_kwargs)

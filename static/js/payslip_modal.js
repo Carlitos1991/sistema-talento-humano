@@ -121,15 +121,10 @@ document.addEventListener('change', function (e) {
     // 2. SWITCH DE RETENCIÓN DE PAGO
     if (e.target.classList.contains('toggle-withhold-btn')) {
         const checkbox = e.target;
-        const payslipId = checkbox.dataset.id;
+        let payslipId = checkbox.dataset.id || '';
+        // Sanear el id por si viene con separadores de miles u otros caracteres
+        payslipId = payslipId.toString().replace(/[^0-9]/g, '');
         const isChecked = checkbox.checked;
-
-        if (isChecked) {
-            if (!confirm("¿Está seguro que desea RETENER el pago de este empleado? El rol no saldrá en el archivo de transferencias del banco.")) {
-                checkbox.checked = false; // Canceló, devolvemos el switch a su lugar
-                return;
-            }
-        }
 
         let csrfToken = getCookie('csrftoken');
 
@@ -140,15 +135,38 @@ document.addEventListener('change', function (e) {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    // Actualizamos el estado del checkbox según respuesta del servidor
+                    checkbox.checked = !!data.is_withheld;
+                    // Ajustamos la apariencia: aplicamos clase amarilla cuando esté retenido
+                    const wrapper = checkbox.closest('.modern-toggle-wrapper') || checkbox.parentElement;
+                    if (wrapper) {
+                        if (data.is_withheld) {
+                            wrapper.classList.add('modern-toggle-yellow');
+                        } else {
+                            wrapper.classList.remove('modern-toggle-yellow');
+                        }
+
+                        // Actualizar el texto dentro del wrapper
+                        const textEl = wrapper.querySelector('.modern-toggle-text');
+                        if (textEl) {
+                            textEl.textContent = data.is_withheld ? 'Retenido' : 'Normal';
+                        }
+                    }
                     if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
-                            icon: 'success', title: data.message
-                        });
+                        Swal.fire({toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: data.message});
                     }
                 } else {
-                    checkbox.checked = !isChecked; // Revertir si hubo error en backend
-                    alert("Error de conexión");
+                    // Revertir el checkbox si hubo error
+                    checkbox.checked = !isChecked;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo actualizar el estado.'});
+                    }
+                }
+            })
+            .catch(() => {
+                checkbox.checked = !isChecked;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon: 'error', title: 'Error', text: 'Error de conexión.'});
                 }
             });
     }

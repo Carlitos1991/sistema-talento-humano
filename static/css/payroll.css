@@ -230,6 +230,20 @@
     color: #ffffff;
 }
 
+/* Estilo amarillo para toggles de retención en filas */
+.modern-toggle-wrapper.modern-toggle-yellow {
+    background-color: #f59e0b !important; /* amarillo anaranjado */
+    border-color: #f59e0b !important;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
+}
+.modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-circle {
+    border-color: #ffffff !important;
+    background-color: #ffffff !important;
+}
+.modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-text {
+    color: #ffffff !important;
+}
+
 /* =====================================================================
    CONTROLES DE TABLA (GRID LAYOUT)
    ===================================================================== */
