@@ -28,13 +28,7 @@
                 {% include 'payroll/partials/partial_reserve_funds_table.html' %}
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                    <button id="reserve-prev-btn" class="btn btn-sm btn-outline-primary">Anterior</button>
-                    <button id="reserve-next-btn" class="btn btn-sm btn-outline-primary ms-2">Siguiente</button>
-                </div>
-                <div id="reserve-page-info" class="text-muted">Página 1</div>
-            </div>
+            <!-- Pagination controls are rendered by TableManager (.pagination-container) -->
         </div>
     </div>
 {% endblock %}

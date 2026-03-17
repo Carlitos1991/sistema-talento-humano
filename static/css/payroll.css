@@ -210,6 +210,41 @@
     transition: color 0.3s ease;
 }
 
+/* Scoped toggle styles inside managed tables to avoid collisions with other libraries */
+.managed-table .modern-toggle-wrapper,
+.managed-table .modern-toggle-wrapper.modern-toggle-green,
+.managed-table .modern-toggle-wrapper.modern-toggle-yellow {
+    box-sizing: border-box;
+    padding: 6px 10px !important;
+    height: 34px !important;
+    align-items: center;
+    display: inline-flex !important;
+    gap: 8px !important;
+}
+.managed-table .modern-toggle-wrapper .modern-toggle-text {
+    display: inline-block;
+    line-height: 1 !important;
+    font-size: 0.85rem !important;
+}
+.managed-table .modern-toggle-wrapper .modern-toggle-circle {
+    width: 14px !important;
+    height: 14px !important;
+}
+/* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
+.managed-table .modern-toggle-wrapper { background-clip: padding-box !important; min-width: 100px !important; }
+
+/* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
+.managed-table .modern-toggle-wrapper {
+    justify-content: center !important;
+}
+.managed-table .modern-toggle-wrapper .modern-toggle-text {
+    width: 88px !important; /* fixed width to accommodate longest label */
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
 /* ==========================================================
    ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
    ========================================================== */
@@ -248,7 +283,8 @@
 .modern-toggle-wrapper.modern-toggle-green {
     background: linear-gradient(180deg, #10b981, #059669) !important;
     border-color: #059669 !important;
-    box-shadow: 0 6px 18px rgba(6, 95, 70, 0.18);
+    /* Keep box-shadow subtle to avoid perceived size change */
+    box-shadow: 0 1px 3px rgba(6,95,70,0.12) !important;
 }
 .modern-toggle-wrapper.modern-toggle-green .modern-toggle-circle {
     border-color: #ffffff !important;
@@ -256,6 +292,15 @@
 }
 .modern-toggle-wrapper.modern-toggle-green .modern-toggle-text {
     color: #ffffff !important;
+}
+
+/* Force consistent min-width so label doesn't grow when active */
+.modern-toggle-wrapper {
+    min-width: 110px;
+}
+.modern-toggle-wrapper .modern-toggle-circle {
+    flex: 0 0 auto;
+    margin-right: 10px;
 }
 
 /* =====================================================================

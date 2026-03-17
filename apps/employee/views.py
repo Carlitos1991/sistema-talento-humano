@@ -433,8 +433,16 @@ def update_payroll_info(request, person_id):
             payroll.economic_data = economic_data
             payroll.save()
             return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
-
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            # Debug: return posted data and form errors to help client-side troubleshooting
+            try:
+                posted = dict(request.POST)
+            except Exception:
+                posted = {}
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug('update_payroll_info invalid form errors: %s', form.errors)
+            logger.debug('update_payroll_info POST data: %s', posted)
+            return JsonResponse({'success': False, 'errors': form.errors, 'posted': posted}, status=400)
     return None
 
 

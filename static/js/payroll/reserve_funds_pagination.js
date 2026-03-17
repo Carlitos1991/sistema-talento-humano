@@ -58,6 +58,18 @@
                     }
                 }
 
+                // Associate the pagination container explicitly to this table so TableManager recognizes it
+                try{
+                    const table = document.querySelector('.managed-table');
+                    if(table && table.dataset.tmId){
+                        pagContainer.dataset.tmFor = table.dataset.tmId;
+                    } else if (table) {
+                        // ensure table has tmId similar to TableManager behavior
+                        table.dataset.tmId = 'tm-' + Math.random().toString(36).slice(2,8);
+                        pagContainer.dataset.tmFor = table.dataset.tmId;
+                    }
+                }catch(e){/* ignore */}
+
                 const prevDisabled = !data.pagination.has_previous;
                 const nextDisabled = !data.pagination.has_next;
                 const showControls = totalPages > 1 && total > 0;
@@ -119,9 +131,9 @@
         }, 350);
     }
 
-    prevBtn.addEventListener('click', function(){ if(currentPage>1) fetchPage(currentPage-1, lastQuery); });
-    nextBtn.addEventListener('click', function(){ fetchPage(currentPage+1, lastQuery); });
-    searchInput.addEventListener('input', onSearch);
+    if(prevBtn) prevBtn.addEventListener('click', function(){ if(currentPage>1) fetchPage(currentPage-1, lastQuery); });
+    if(nextBtn) nextBtn.addEventListener('click', function(){ fetchPage(currentPage+1, lastQuery); });
+    if(searchInput) searchInput.addEventListener('input', onSearch);
 
     const urlParams = new URLSearchParams(window.location.search);
     const initialPage = parseInt(urlParams.get('page')||'1',10);

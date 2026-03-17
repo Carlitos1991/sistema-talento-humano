@@ -36,15 +36,15 @@
                 <td class="text-center">
                     {% if emp.person.economic_data %}
                         {% with pi=emp.person.economic_data.payroll_info %}
-                            <input id="rf_{{ emp.person.id }}_reserve" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id }}" data-field="reserve_funds" {% if pi and pi.reserve_funds %}checked{% endif %}>
-                            <label class="modern-toggle-wrapper {% if pi and pi.reserve_funds %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id }}_reserve">
+                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="reserve_funds" data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}" {% if pi and pi.reserve_funds %}checked{% endif %}>
+                            <label class="modern-toggle-wrapper {% if pi and pi.reserve_funds %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id|stringformat:"d" }}_reserve">
                                 <div class="modern-toggle-circle"></div>
                                 <span class="modern-toggle-text">{% if pi and pi.reserve_funds %}Mensualiza{% else %}Acumula{% endif %}</span>
                             </label>
                         {% endwith %}
-                    {% else %}
-                        <input id="rf_{{ emp.person.id }}_reserve_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
-                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id }}_reserve_disabled">
+                        {% else %}
+                        <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
+                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled">
                             <div class="modern-toggle-circle"></div>
                             <span class="modern-toggle-text">Acumula</span>
                         </label>
@@ -53,15 +53,15 @@
                 <td class="text-center">
                     {% if emp.person.economic_data %}
                         {% with pi=emp.person.economic_data.payroll_info %}
-                            <input id="rf_{{ emp.person.id }}_monthly" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id }}" data-field="monthly_payment" {% if pi and pi.monthly_payment %}checked{% endif %}>
-                            <label class="modern-toggle-wrapper {% if pi and pi.monthly_payment %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id }}_monthly">
+                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="monthly_payment" data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}" {% if pi and pi.monthly_payment %}checked{% endif %}>
+                            <label class="modern-toggle-wrapper {% if pi and pi.monthly_payment %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id|stringformat:"d" }}_monthly">
                                 <div class="modern-toggle-circle"></div>
                                 <span class="modern-toggle-text">{% if pi and pi.monthly_payment %}Mensualiza{% else %}Acumula{% endif %}</span>
                             </label>
                         {% endwith %}
-                    {% else %}
-                        <input id="rf_{{ emp.person.id }}_monthly_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
-                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id }}_monthly_disabled">
+                        {% else %}
+                        <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
+                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled">
                             <div class="modern-toggle-circle"></div>
                             <span class="modern-toggle-text">Acumula</span>
                         </label>
