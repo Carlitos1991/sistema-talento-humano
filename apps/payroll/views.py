@@ -925,11 +925,18 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 items__budget_line__budget_group__short_code=group_filter
             ).distinct()
 
-        # Filtros de estado (Normal vs Rezagados)
-        if tipo_filtro == 'NORMAL':
-            payslips_qs = payslips_qs.filter(is_withheld=False)
-        elif tipo_filtro == 'REZAGADOS':
-            payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+        # Soporte adicional: permitir que el cliente indique explícitamente
+        # si quiere ver solo retenidos (show_withheld=only). Esto lo usamos
+        # para que los botones de reporte respeten el checkbox del frontend.
+        show_withheld = (request.GET.get('show_withheld') or '').lower()
+        if show_withheld in ['only', '1', 'true', 'yes']:
+            payslips_qs = payslips_qs.filter(is_withheld=True)
+        else:
+            # Filtros de estado (Normal vs Rezagados)
+            if tipo_filtro == 'NORMAL':
+                payslips_qs = payslips_qs.filter(is_withheld=False)
+            elif tipo_filtro == 'REZAGADOS':
+                payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
 
         valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
 
@@ -1251,12 +1258,27 @@ class PayslipItemUpdateAPIView(LoginRequiredMixin, View):
                 payslip.net_pay = t_ing - t_desc
                 payslip.save(update_fields=['total_income', 'total_deduction', 'net_pay'])
 
-                # 2. RECONSTRUCCIÓN CONTABLE AUTOMÁTICA
-                rebuild_accounting_for_period(payslip.period.id)
+                # Ejecutar reconstrucción contable fuera de la transacción para evitar rollback
+                def _safe_rebuild(pid):
+                    try:
+                        rebuild_accounting_for_period(pid)
+                    except Exception as _e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.exception('Error al reconstruir contabilidad para periodo %s: %s', pid, _e)
+
+                try:
+                    transaction.on_commit(lambda: _safe_rebuild(payslip.period.id))
+                except Exception:
+                    # Fallback: intentar ejecutar sin on_commit
+                    try:
+                        _safe_rebuild(payslip.period.id)
+                    except Exception:
+                        pass
 
             return JsonResponse({
                 'success': True,
-                'message': 'Valor actualizado. Contabilidad reconstruida con éxito.',
+                'message': 'Valor actualizado. Reconstrucción contable encolada.',
                 'new_total_income': str(payslip.total_income),
                 'new_total_deduction': str(payslip.total_deduction),
                 'new_net_pay': str(payslip.net_pay)
@@ -1368,10 +1390,15 @@ class BankTransferReportView(LoginRequiredMixin, View):
             ).distinct()  # Importante el distinct
 
         # 2. Filtros de Retención (Liberados vs Retenidos)
-        if tipo_filtro == 'NORMAL':
-            payslips_qs = payslips_qs.filter(is_withheld=False)
-        elif tipo_filtro == 'REZAGADOS':
-            payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+        # Soporte para parámetro `show_withheld` enviado por el frontend
+        show_withheld = (request.GET.get('show_withheld') or '').lower()
+        if show_withheld in ['only', '1', 'true', 'yes']:
+            payslips_qs = payslips_qs.filter(is_withheld=True)
+        else:
+            if tipo_filtro == 'NORMAL':
+                payslips_qs = payslips_qs.filter(is_withheld=False)
+            elif tipo_filtro == 'REZAGADOS':
+                payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
 
         # 3. PRE-CARGA CRÍTICA: Traemos los datos bancarios para evitar que el template colapse
         payslips_qs = payslips_qs.prefetch_related(

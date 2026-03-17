@@ -723,6 +723,60 @@
     color: #1e293b;
 }
 
+/* Estado "sellado" (no editable) */
+.val.sealed {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #e6eef6;
+    transition: box-shadow 0.18s ease, transform 0.12s ease;
+    cursor: text;
+}
+
+/* Efecto visual al entrar en modo edición */
+.val-input.editing {
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    border: 1px solid #3b82f6;
+}
+
+/* Pequeña animación de sellado al confirmar */
+.val.seal-animate {
+    animation: sealPulse 420ms ease-out;
+}
+@keyframes sealPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(59,130,246,0); }
+    40% { transform: scale(1.02); box-shadow: 0 6px 18px rgba(59,130,246,0.08); }
+    100% { transform: scale(1); box-shadow: none; }
+}
+
+/* Input inline para edición */
+.val-input { padding: 4px 8px; border-radius: 6px; border: 1px solid #e6eef6; }
+
+/* Nota que se agrega al imprimir */
+.print-note {
+    margin-top: 18px;
+    border: 2px solid #0b3a57;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    text-align: center;
+    background: #eaf6ff;
+    color: #073049;
+    font-size: 0.85rem;
+}
+
+.print-total-words {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: #fff8e6;
+    border: 1px solid #f3d89b;
+    color: #5a3e00;
+    font-weight: 800;
+    text-align: center;
+}
+
 .payslip-items-list li.empty-message {
     justify-content: center;
     color: #94a3b8;
