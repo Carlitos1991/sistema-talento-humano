@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const container = document.getElementById('payslip-table-container');
 
     function performSearch(options) {
+        options = options || {};
         // Magia: Si no lo halla en la variable, lo roba directamente de la URL
         let periodId = window.CURRENT_PERIOD_ID;
         if (!periodId || periodId === "" || periodId === "None") {
@@ -30,6 +31,8 @@ document.addEventListener('DOMContentLoaded', function () {
             : (checkbox && checkbox.checked ? 'only' : 'exclude');
         paramsObj['show_withheld'] = show_withheld_val;
 
+        // Página (para paginador server-side)
+        if (options.page) paramsObj['page'] = options.page;
         const params = new URLSearchParams(paramsObj);
 
         container.style.opacity = '0.5';
@@ -46,13 +49,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     new TableManager(table);
                 }
                 // Actualizar totales en la cabecera si vienen en la respuesta
+                // Funciones de formato (puntos de miles y coma decimal)
+                function formatNumberES(value) {
+                    const parts = parseFloat(value || 0).toFixed(2).split('.');
+                    const intPart = parts[0];
+                    const decPart = parts[1];
+                    return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + decPart;
+                }
+                function formatIntegerES(value) {
+                    const n = parseInt(value || 0, 10) || 0;
+                    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                }
+
                 if (data.total_roles !== undefined) {
                     const el = document.getElementById('total-roles');
-                    if (el) el.innerText = data.total_roles;
+                    if (el) el.innerText = formatIntegerES(data.total_roles);
                 }
                 if (data.total_liquidado !== undefined) {
                     const el2 = document.getElementById('total-liquidado');
-                    if (el2) el2.innerText = `$ ${parseFloat(data.total_liquidado).toFixed(2)}`;
+                    if (el2) el2.innerText = `$ ${formatNumberES(data.total_liquidado)}`;
                 }
                 container.style.opacity = '1';
             })
@@ -67,12 +82,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (searchInput) {
         searchInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') performSearch();
+            if (e.key === 'Enter') performSearch({page: 1});
         });
     }
 
     // Exponer para que otras funciones globales (onchange inline) puedan invocarla
     window.performSearch = performSearch;
+    // Permitir paginación AJAX desde los botones prev/next renderizados en el partial
+    window.loadTablePage = function (page) {
+        performSearch({page: page});
+    };
 });
 
 function downloadFilteredReport(type) {
