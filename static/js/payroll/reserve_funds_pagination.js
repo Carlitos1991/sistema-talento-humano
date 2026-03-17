@@ -36,7 +36,7 @@
         }).then(r=>r.json())
         .then(data=>{
             if(data.html) tableContent.innerHTML = data.html;
-            if(data.pagination){
+                if(data.pagination){
                 currentPage = data.pagination.current_page;
                 const totalPages = data.pagination.total_pages || data.pagination.num_pages || 1;
                 const start = data.pagination.start_index || data.pagination.start || 0;
@@ -56,6 +56,11 @@
                     } else {
                         document.body.appendChild(pagContainer);
                     }
+                    // Persist current state so it survives modal close or navigation
+                    try{
+                        sessionStorage.setItem('reserve_funds_q', lastQuery || '');
+                        sessionStorage.setItem('reserve_funds_page', String(currentPage));
+                    }catch(e){/* ignore */}
                 }
 
                 // Associate the pagination container explicitly to this table so TableManager recognizes it
@@ -135,9 +140,17 @@
     if(nextBtn) nextBtn.addEventListener('click', function(){ fetchPage(currentPage+1, lastQuery); });
     if(searchInput) searchInput.addEventListener('input', onSearch);
 
+    // Restore from sessionStorage first (keeps filter after modal close), fallback to URL params
+    const storedQ = (function(){ try { return sessionStorage.getItem('reserve_funds_q')||'' } catch(e){ return ''; } })();
+    const storedPage = (function(){ try { return parseInt(sessionStorage.getItem('reserve_funds_page')||'1',10) } catch(e){ return 1 } })();
     const urlParams = new URLSearchParams(window.location.search);
-    const initialPage = parseInt(urlParams.get('page')||'1',10);
-    const initialQ = urlParams.get('q')||'';
-    if(initialQ) searchInput.value = initialQ;
+    const urlPage = parseInt(urlParams.get('page')||'1',10);
+    const urlQ = urlParams.get('q')||'';
+
+    const initialQ = storedQ || urlQ || '';
+    const initialPage = storedQ ? (storedPage || 1) : (urlPage || 1);
+
+    if(searchInput && initialQ) searchInput.value = initialQ;
+    lastQuery = initialQ;
     fetchPage(initialPage, initialQ);
 })();

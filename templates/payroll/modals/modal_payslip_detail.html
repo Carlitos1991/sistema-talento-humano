@@ -17,8 +17,11 @@
 
             <div class="payslip-summary-banner">
                 <div class="payslip-banner-item">
-                    <span class="payslip-banner-label">Cédula</span>
-                    <span class="payslip-banner-value">{{ payslip.employee.person.identification|default:payslip.employee.person.document_number }}</span>
+                    <span class="payslip-banner-label">Cuenta</span>
+                    {% with ba=payslip.employee.person.economic_data.bank_account %}
+                        <span class="payslip-banner-value">{% if ba and ba.account_number %}{{ ba.account_number }}{% else %}—{% endif %}</span>
+                        <small class="text-muted d-block" style="font-size:0.75rem;">{% if ba and ba.bank %}{{ ba.bank.name }}{% endif %}</small>
+                    {% endwith %}
                 </div>
                 <div class="payslip-banner-divider"></div>
                 <div class="payslip-banner-item">
@@ -89,9 +92,9 @@
                                 <li class="empty-message">No hay egresos</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer incomes-total">
+                        <div class="payslip-list-footer deductions-total">
                             <span>Total Egresos</span>
-                            <span id="total-egresos">$ {{ payslip.total_income }}</span>
+                            <span id="total-egresos" class="text-danger">$ {{ payslip.total_deduction }}</span>
                         </div>
                     </div>
                 </div>

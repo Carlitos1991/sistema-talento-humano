@@ -50,6 +50,36 @@ function closeDetailModal() {
 function refreshPayslipTable() {
     const periodId = window.CURRENT_PERIOD_ID || '';
     if (!periodId || !window.URLS || !window.URLS.baseList) return;
+    // Preserve/merge existing URL params with saved session values so we don't wipe user's filters when refreshing
+    try{
+        const params = new URLSearchParams(window.location.search || '');
+        // Ensure period_id is present/overridden
+        params.set('period_id', periodId);
+
+        // If q/page not present in URL, try sessionStorage (support both reserve_funds and payslip keys)
+        if (!params.has('q')) {
+            const q = sessionStorage.getItem('reserve_funds_q') || sessionStorage.getItem('payslip_q') || '';
+            if (q) params.set('q', q);
+        }
+        if (!params.has('page')) {
+            const p = sessionStorage.getItem('reserve_funds_page') || sessionStorage.getItem('payslip_page') || '';
+            if (p) params.set('page', p);
+        }
+
+        const url = window.URLS.baseList + '?' + params.toString();
+        fetch(url, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.html) {
+                    const container = document.getElementById('payslip-table-container');
+                    if (container) container.innerHTML = data.html;
+                }
+            })
+            .catch(err => console.debug('Error refrescando tabla de roles:', err));
+        return;
+    }catch(e){
+        // fallback to simple URL if anything fails
+    }
     const url = window.URLS.baseList + `?period_id=${periodId}`;
     fetch(url, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
         .then(res => res.json())

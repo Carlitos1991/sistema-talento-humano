@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const groupFilter = document.getElementById('groupFilter');
     const container = document.getElementById('payslip-table-container');
 
+    const STORAGE_Q = 'payslip_q';
+    const STORAGE_PAGE = 'payslip_page';
+
     // Inicializar controles de paginación: busca botones prev/next con atributo data-page
     function initPaginationControls(root) {
         const pagination = (root || document).querySelector('#js-pagination');
@@ -148,6 +151,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     const el2 = document.getElementById('total-liquidado');
                     if (el2) el2.innerText = `$ ${formatNumberES(data.total_liquidado)}`;
                 }
+                // Persistir búsqueda y página para restaurar después (por ejemplo al cerrar modales)
+                try{
+                    sessionStorage.setItem(STORAGE_Q, paramsObj.q || '');
+                    sessionStorage.setItem(STORAGE_PAGE, String(paramsObj.page || 1));
+                }catch(e){/* ignore */}
+
                 container.style.opacity = '1';
                 return Promise.resolve();
             })
@@ -198,6 +207,17 @@ document.addEventListener('DOMContentLoaded', function () {
             loadFullOnce();
         });
     }
+
+    // Restaurar búsqueda/página desde sessionStorage si existe
+    try{
+        const storedQ = sessionStorage.getItem(STORAGE_Q);
+        const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE)||'1',10) || 1;
+        if (storedQ && storedQ.trim() !== '') {
+            if (searchInput) searchInput.value = storedQ;
+            // Realizar búsqueda paginada con la página almacenada
+            performSearch({page: storedPage});
+        }
+    }catch(e){/* ignore */}
 
     // Exponer para que otras funciones globales (onchange inline) puedan invocarla
     window.performSearch = performSearch;
