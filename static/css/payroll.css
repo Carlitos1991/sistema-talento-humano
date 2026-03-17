@@ -244,6 +244,20 @@
     color: #ffffff !important;
 }
 
+/* Variante verde para estados activos tipo 'ON' (usada en Fondos de Reserva / Mensualiza) */
+.modern-toggle-wrapper.modern-toggle-green {
+    background: linear-gradient(180deg, #10b981, #059669) !important;
+    border-color: #059669 !important;
+    box-shadow: 0 6px 18px rgba(6, 95, 70, 0.18);
+}
+.modern-toggle-wrapper.modern-toggle-green .modern-toggle-circle {
+    border-color: #ffffff !important;
+    background-color: #ffffff !important;
+}
+.modern-toggle-wrapper.modern-toggle-green .modern-toggle-text {
+    color: #ffffff !important;
+}
+
 /* =====================================================================
    CONTROLES DE TABLA (GRID LAYOUT)
    ===================================================================== */

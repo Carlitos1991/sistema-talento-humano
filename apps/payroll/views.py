@@ -549,6 +549,68 @@ class DeductionUpdateView(UpdateView):
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
+class FondosReservaListView(LoginRequiredMixin, ListView):
+    """Lista de empleados activos mostrando Fondos de Reserva y Mensualiza Décimos."""
+    model = Employee
+    template_name = 'payroll/reserve_funds_list.html'
+    context_object_name = 'employees'
+    paginate_by = 10
+    partial_template_name = 'payroll/partials/partial_reserve_funds_table.html'
+
+    def get_queryset(self):
+        qs = Employee.objects.filter(is_active=True, person__is_active=True)
+        # Traer relaciones comúnmente usadas para evitar N+1
+        qs = qs.select_related('person__economic_data__payroll_info', 'area').prefetch_related('current_budget_line__position_item')
+        # Soporte de búsqueda simple desde frontend
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(person__first_name__icontains=q) |
+                Q(person__last_name__icontains=q) |
+                Q(person__document_number__icontains=q)
+            )
+        return qs.order_by('person__last_name', 'person__first_name')
+
+    def render_to_response(self, context, **response_kwargs):
+        # Si es petición AJAX devolvemos solo el partial con la tabla y datos de paginación
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            page_obj = context.get('page_obj')
+            if page_obj:
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+            else:
+                pagination_data = {
+                    'start_index': 0,
+                    'end_index': 0,
+                    'total_count': 0,
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'has_previous': False,
+                    'has_next': False,
+                }
+
+            return JsonResponse({'html': html, 'pagination': pagination_data})
+        return super().render_to_response(context, **response_kwargs)
+
+    def get_paginate_by(self, queryset):
+        """Return None to disable server-side pagination and return all employees."""
+        # Usar el valor definido en `paginate_by` para habilitar paginación servidor
+        return self.paginate_by
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Fondos de Reserva'
+        return context
+
+
 class InstitutionalReportView(TemplateView):
     template_name = 'payroll/reports/institutional_report.html'
 

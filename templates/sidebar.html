@@ -480,6 +480,16 @@
                         </li>
                     {% endif %}
 
+                    {% if perms.payroll.view_payslip %}
+                        <li>
+                            <a href="{% url 'payroll:reserve_funds' %}"
+                               class="{% if request.resolver_match.url_name == 'reserve_funds' %}active-child{% endif %}">
+                                <i class="fa-solid fa-piggy-bank"></i>
+                                <span class="menu-text">Fondos de Reserva</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
                 </ul>
             </li>
         {% endif %}

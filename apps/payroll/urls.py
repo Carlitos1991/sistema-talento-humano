@@ -4,6 +4,7 @@ from .views import (
     GeneratePayrollUIView, GeneratePayrollSelectedView,
     ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
     PayrollListView, PayslipListView, PayslipDetailView,
+    FondosReservaListView,
     IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
     InstitutionalReportView, MappingListView,
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
@@ -61,6 +62,7 @@ urlpatterns = [
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
     path('payslips/recalculate/', RecalculatePayslipsView.as_view(), name='payslip_recalculate'),
+    path('reserve-funds/', FondosReservaListView.as_view(), name='reserve_funds'),
     path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
     path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
     # Reporte exclusivo para el Banco (Reporte 4)

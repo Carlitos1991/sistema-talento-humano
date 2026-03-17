@@ -638,7 +638,10 @@ window.setupHierarchyListeners = function () {
     initBudgetFormCascades();
 };
 window.openChangesHistory = function (pk) {
-    fetch(`/budget/history/changes/${pk}/`)
+    // Sanear el id por si viene con separadores de miles (p.ej. 1.071)
+    const id = String(pk).replace(/[^0-9]/g, '');
+    if (!id) return console.warn('openChangesHistory: id inválido', pk);
+    fetch(`/budget/history/changes/${id}/`)
         .then(res => res.text())
         .then(html => {
             document.getElementById('modal-inject-container').innerHTML = html;
@@ -648,7 +651,10 @@ window.openChangesHistory = function (pk) {
 };
 
 window.openOccupantsHistory = function (pk) {
-    fetch(`/budget/history/occupants/${pk}/`)
+    // Sanear el id por si viene con separadores de miles (p.ej. 1.071)
+    const id = String(pk).replace(/[^0-9]/g, '');
+    if (!id) return console.warn('openOccupantsHistory: id inválido', pk);
+    fetch(`/budget/history/occupants/${id}/`)
         .then(res => res.text())
         .then(html => {
             document.getElementById('modal-inject-container').innerHTML = html;
