@@ -9,7 +9,8 @@ from .views import (
     MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
     GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
-    GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days
+    GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days,
+    RecalculatePayslipsView
 )
 
 app_name = 'payroll'
@@ -59,6 +60,7 @@ urlpatterns = [
 
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
+    path('payslips/recalculate/', RecalculatePayslipsView.as_view(), name='payslip_recalculate'),
     path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
     path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
     # Reporte exclusivo para el Banco (Reporte 4)

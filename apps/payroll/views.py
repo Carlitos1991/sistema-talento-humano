@@ -1318,6 +1318,55 @@ class MarkPeriodAsPaidAPIView(LoginRequiredMixin, View):
             'is_closed': not faltan_por_pagar
         })
 
+class RecalculatePayslipsView(LoginRequiredMixin, View):
+    """
+    Recalcula los roles que coinciden con los filtros enviados (q, group, show_withheld).
+    Se usa desde la interfaz para recalcular la búsqueda actual sin regenerar todo el periodo.
+    """
+
+    def post(self, request):
+        period_id = request.POST.get('period_id') or request.GET.get('period_id')
+        if not period_id:
+            return JsonResponse({'success': False, 'message': 'Periodo no especificado.'}, status=400)
+
+        period = get_object_or_404(PayrollPeriod, pk=period_id)
+
+        # Capturar filtros opcionales
+        search_query = (request.POST.get('q') or request.GET.get('q') or '').strip()
+        group_filter = (request.POST.get('group') or request.GET.get('group') or '').strip()
+        show_withheld = (request.POST.get('show_withheld') or request.GET.get('show_withheld') or '').lower()
+
+        qs = Payslip.objects.filter(period=period)
+        if search_query:
+            qs = qs.filter(
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__document_number__icontains=search_query) |
+                Q(items__budget_line__budget_group__short_code__icontains=search_query)
+            ).distinct()
+        if group_filter:
+            qs = qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
+
+        if show_withheld in ['only', '1', 'true', 'yes']:
+            qs = qs.filter(is_withheld=True)
+
+        emp_ids = list(qs.values_list('employee_id', flat=True).distinct())
+        if not emp_ids:
+            return JsonResponse({'success': True, 'message': 'No hay roles que coincidan con los filtros.', 'count': 0})
+
+        employees = list(Employee.objects.filter(id__in=emp_ids))
+
+        pairs = []
+        for p in Payslip.objects.filter(period=period, employee_id__in=emp_ids):
+            pairs.append((p.employee, p.worked_days or period.working_days))
+
+        try:
+            svc = PayrollCalculatorService(period, employees)
+            result = svc.generate_for_selected(pairs)
+            return JsonResponse({'success': True, 'message': 'Recalculo ejecutado.', 'result': result, 'count': len(emp_ids)})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 class GenerateMissingPayrollView(LoginRequiredMixin, View):
     """

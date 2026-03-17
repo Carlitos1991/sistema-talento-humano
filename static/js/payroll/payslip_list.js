@@ -213,6 +213,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Inicializar paginación en carga inicial si el template ya la renderizó
     initPaginationControls(container);
+
+    // Handler para el botón Recalcular Roles
+    const btnRecalc = document.getElementById('btn-recalculate');
+    if (btnRecalc) {
+        btnRecalc.addEventListener('click', function () {
+            const checkbox = document.getElementById('toggleWithheld');
+            const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+            const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
+            if (!periodId) return alert('Periodo no seleccionado.');
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({title: 'Recalculando roles...', didOpen: () => { Swal.showLoading(); }, allowOutsideClick: false});
+            }
+
+            const form = new FormData();
+            form.append('period_id', periodId);
+            form.append('q', searchInput ? searchInput.value : '');
+            form.append('group', groupFilter ? groupFilter.value : '');
+            form.append('show_withheld', show_withheld);
+
+            fetch('/payroll/payslips/recalculate/', {
+                method: 'POST', headers: {'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || ''}, body: form
+            })
+            .then(res => res.json())
+            .then(data => {
+                try { if (typeof Swal !== 'undefined') Swal.close(); } catch(e){}
+                if (data && data.success) {
+                    // mostrar resumen y refrescar la tabla para ver nuevos totales
+                    try {
+                        if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${data.count || 0} roles.`, 'success');
+                    } catch(e){}
+                    performSearch({page: 1});
+                } else {
+                    if (typeof Swal !== 'undefined') Swal.fire('Error', data && data.message || 'Error', 'error');
+                }
+            })
+            .catch(err => {
+                try { if (typeof Swal !== 'undefined') Swal.close(); } catch(e){}
+                console.error('Error recalculando roles:', err);
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al recalcular roles', 'error');
+            });
+        });
+    }
 });
 
 function downloadFilteredReport(type) {
