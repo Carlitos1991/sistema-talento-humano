@@ -354,14 +354,23 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
     
     def get(self, request):
-        employee_id = request.GET.get('employee')
-        if not employee_id:
+        employee_raw = request.GET.get('employee')
+        if not employee_raw:
             return JsonResponse({
                 'success': False,
                 'message': 'ID de empleado no proporcionado'
             }, status=400)
-        
-        employee = get_object_or_404(Employee, pk=employee_id)
+
+        # Normalizar: eliminar separadores de miles u otros caracteres no numéricos
+        import re
+        employee_id = re.sub(r'[^0-9]', '', str(employee_raw))
+        if not employee_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID de empleado inválido'
+            }, status=400)
+
+        employee = get_object_or_404(Employee, pk=int(employee_id))
         
         # Obtener tipos padre (sin parent)
         parent_types = PermitType.objects.filter(
@@ -382,8 +391,12 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
     def post(self, request):
         """Procesa el formulario de generación de permiso"""
         try:
-            employee_id = request.POST.get('employee')
-            employee = get_object_or_404(Employee, pk=employee_id)
+            employee_raw = request.POST.get('employee')
+            import re
+            employee_id = re.sub(r'[^0-9]', '', str(employee_raw or ''))
+            if not employee_id:
+                raise ValueError('ID de empleado inválido')
+            employee = get_object_or_404(Employee, pk=int(employee_id))
             
             # Crear instancia de PermitRequest
             permit = PermitRequest()
