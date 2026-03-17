@@ -8,7 +8,8 @@ from accounting.models import Journal, JournalItem, Account
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
 from schedule.models import ScheduleObservation
-from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt
+from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt, \
+    PayrollPeriod
 
 
 class PayrollCalculatorService:
@@ -114,6 +115,23 @@ class PayrollCalculatorService:
                     novelties_map[nov.employee_id]['incomes'].append(nov)
                 if nov.deduction_ref:
                     novelties_map[nov.employee_id]['deductions'].append(nov)
+            # ====================================================
+            # EXTRAER DÍAS EFECTIVOS DEL MES ANTERIOR (Optimizado)
+            # ====================================================
+            prev_period = PayrollPeriod.objects.filter(
+                end_date__lt=self.period.start_date
+            ).order_by('-end_date').first()
+
+            prev_effective_days_map = {}
+            if prev_period:
+                # Traemos solo 2 columnas de los empleados que aplican
+                prev_payslips = Payslip.objects.filter(
+                    period=prev_period,
+                    employee_id__in=emp_ids
+                ).values_list('employee_id', 'effective_worked_days')
+
+                for eid, eff_days in prev_payslips:
+                    prev_effective_days_map[eid] = eff_days
 
             # ====================================================
             # 3. CÁLCULO INDIVIDUAL CON MANEJO DE ERRORES (LOGS)
@@ -121,27 +139,61 @@ class PayrollCalculatorService:
             for slip in created_payslips:
                 try:
                     emp_assignments = assignment_map.get(slip.employee_id, [])
-
                     tramos = []
+
                     # 1. Modifica la creación del tramo para guardar las fechas reales
-                    for asi in emp_assignments:
-                        s_date = max(asi.start_date, self.period.start_date)
-                        e_date = min(asi.end_date, self.period.end_date) if asi.end_date else self.period.end_date
+                    if emp_assignments:
+                        # 1. Ordenar por fecha de inicio para evaluar cronológicamente
+                        emp_assignments.sort(key=lambda x: x.start_date)
 
-                        if s_date <= e_date:
-                            dias_reales = (e_date - s_date).days + 1
-                            if dias_reales == 31: dias_reales = 30
-                            if self.period.end_date.month == 2 and e_date == self.period.end_date:
-                                dias_reales += (30 - self.period.end_date.day)
+                        # 2. Corregir solapamientos al vuelo (El candado a prueba de balas)
+                        processed_assignments = []
+                        for i in range(len(emp_assignments)):
+                            current_asi = emp_assignments[i]
+                            effective_end = current_asi.end_date
 
-                            tramos.append({
-                                'assignment': asi,
-                                'dias': dias_reales,
-                                'sueldo_base': Decimal(str(asi.budget_line.remuneration or 0)),
-                                'partida': asi.budget_line,
-                                'real_start': s_date,  # <-- NUEVO: Inicio exacto del contrato en el mes
-                                'real_end': e_date  # <-- NUEVO: Fin exacto del contrato en el mes
+                            # Si hay una partida siguiente, la actual muere un día antes de que empiece la nueva
+                            if i + 1 < len(emp_assignments):
+                                next_start = emp_assignments[i + 1].start_date
+                                # Si no tiene fin, o su fin invade la nueva, la cortamos
+                                if not effective_end or effective_end >= next_start:
+                                    effective_end = next_start - timedelta(days=1)
+
+                            processed_assignments.append({
+                                'assignment': current_asi,
+                                'start': current_asi.start_date,
+                                'end': effective_end
                             })
+
+                        # 3. Crear los tramos asegurando que NUNCA pasen de 30 días
+                        total_dias_mes = 0
+
+                        for data in processed_assignments:
+                            s_date = max(data['start'], self.period.start_date)
+                            e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
+
+                            if s_date <= e_date:
+                                dias_reales = (e_date - s_date).days + 1
+
+                                # Ajuste comercial (mes de 30 días)
+                                if dias_reales == 31: dias_reales = 30
+                                if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                                    dias_reales += (30 - self.period.end_date.day)
+
+                                # Limitador extra: Si la suma acumulada pasa de 30, truncamos el excedente
+                                if total_dias_mes + dias_reales > 30:
+                                    dias_reales = 30 - total_dias_mes
+
+                                if dias_reales > 0:
+                                    tramos.append({
+                                        'assignment': data['assignment'],
+                                        'dias': dias_reales,
+                                        'sueldo_base': Decimal(str(data['assignment'].budget_line.remuneration or 0)),
+                                        'partida': data['assignment'].budget_line,
+                                        'real_start': s_date,
+                                        'real_end': e_date
+                                    })
+                                    total_dias_mes += dias_reales
 
                     if not tramos:
                         continue
@@ -189,7 +241,7 @@ class PayrollCalculatorService:
                                     mensualiza_fr = bool(payroll_info.reserve_funds)
                     except Exception:
                         pass
-
+                    effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     anios_servicio = 0
 
@@ -238,9 +290,24 @@ class PayrollCalculatorService:
                         elif code_clean == 'ALIMENTACION':
                             if regime_code == 'CT':
                                 # Configuramos la constante ALIMENTACION_DIARIA a 4.00 en la Base de Datos
-                                daily_food_allowance = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00')))
-                                # MULTIPLICACIÓN EXACTA: $4.00 x Días Reales (Ej: 4.00 * 20 días = 80.00)
-                                val = daily_food_allowance * Decimal(str(slip.effective_worked_days))
+                                daily_food = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00')))
+                                val = daily_food * Decimal(str(effective_days_prev))
+
+                        elif code_clean == 'TRANSPORTE':
+                            if regime_code == 'CT':
+                                # Multiplica los $0.50 por los días reales del rol anterior
+                                daily_transport = Decimal(str(self.config.get('TRANSPORTE_DIARIO', '0.50')))
+                                val = daily_transport * Decimal(str(effective_days_prev))
+                        elif code_clean == 'ANTIGUEDAD':
+                            if regime_code == 'CT' and anios_servicio >= 1:
+                                # Tomamos solo la parte entera de los años (años completos)
+                                anios_completos = int(anios_servicio)
+
+                                # 0.25% de su propio Sueldo Base
+                                pct_antiguedad = Decimal('0.25') / Decimal('100.0')
+
+                                # Nota: 'salary' ya contiene su remuneración mensual unificada en el código
+                                val = salary * pct_antiguedad * Decimal(str(anios_completos))
 
                         if val > 0:
                             items_buffer.append(
@@ -628,24 +695,58 @@ class PayrollCalculatorService:
                     emp_assignments = assignment_map.get(slip.employee_id, [])
 
                     tramos = []
-                    for asi in emp_assignments:
-                        s_date = max(asi.start_date, self.period.start_date)
-                        e_date = min(asi.end_date, self.period.end_date) if asi.end_date else self.period.end_date
+                    if emp_assignments:
+                        # 1. Ordenar por fecha de inicio para evaluar cronológicamente
+                        emp_assignments.sort(key=lambda x: x.start_date)
 
-                        if s_date <= e_date:
-                            dias_reales = (e_date - s_date).days + 1
-                            if dias_reales == 31: dias_reales = 30
-                            if self.period.end_date.month == 2 and e_date == self.period.end_date:
-                                dias_reales += (30 - self.period.end_date.day)
+                        # 2. Corregir solapamientos al vuelo (El candado a prueba de balas)
+                        processed_assignments = []
+                        for i in range(len(emp_assignments)):
+                            current_asi = emp_assignments[i]
+                            effective_end = current_asi.end_date
 
-                            tramos.append({
-                                'assignment': asi,
-                                'dias': dias_reales,
-                                'sueldo_base': Decimal(str(asi.budget_line.remuneration or 0)),
-                                'partida': asi.budget_line,
-                                'real_start': s_date,  # <-- NUEVO: Inicio exacto del contrato en el mes
-                                'real_end': e_date  # <-- NUEVO: Fin exacto del contrato en el mes
+                            # Si hay una partida siguiente, la actual muere un día antes de que empiece la nueva
+                            if i + 1 < len(emp_assignments):
+                                next_start = emp_assignments[i + 1].start_date
+                                # Si no tiene fin, o su fin invade la nueva, la cortamos
+                                if not effective_end or effective_end >= next_start:
+                                    effective_end = next_start - timedelta(days=1)
+
+                            processed_assignments.append({
+                                'assignment': current_asi,
+                                'start': current_asi.start_date,
+                                'end': effective_end
                             })
+
+                        # 3. Crear los tramos asegurando que NUNCA pasen de 30 días
+                        total_dias_mes = 0
+
+                        for data in processed_assignments:
+                            s_date = max(data['start'], self.period.start_date)
+                            e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
+
+                            if s_date <= e_date:
+                                dias_reales = (e_date - s_date).days + 1
+
+                                # Ajuste comercial (mes de 30 días)
+                                if dias_reales == 31: dias_reales = 30
+                                if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                                    dias_reales += (30 - self.period.end_date.day)
+
+                                # Limitador extra: Si la suma acumulada pasa de 30, truncamos el excedente
+                                if total_dias_mes + dias_reales > 30:
+                                    dias_reales = 30 - total_dias_mes
+
+                                if dias_reales > 0:
+                                    tramos.append({
+                                        'assignment': data['assignment'],
+                                        'dias': dias_reales,
+                                        'sueldo_base': Decimal(str(data['assignment'].budget_line.remuneration or 0)),
+                                        'partida': data['assignment'].budget_line,
+                                        'real_start': s_date,
+                                        'real_end': e_date
+                                    })
+                                    total_dias_mes += dias_reales
 
                     if not tramos:
                         continue

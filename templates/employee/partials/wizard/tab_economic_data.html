@@ -69,11 +69,11 @@
                 </span>
             </div>
             <div class="info-data-row mt-3 pt-2 border-top">
-                <label>Cargas Familiares:</label>
+                <label>Hijos dependientes:</label>
                 <span id="econ_payroll_family" class="fw-bold">{{ person.economic_data.payroll_info.family_dependents }}</span>
             </div>
             <div class="info-data-row">
-                <label>Cargas Educación:</label>
+                <label>Hijos con discapacidad:</label>
                 <span id="econ_payroll_education" class="fw-bold">{{ person.economic_data.payroll_info.education_dependents }}</span>
             </div>
             <div class="info-data-row mt-2">
@@ -193,16 +193,16 @@
 
             <hr>
 
-            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Cargas Familiares</h6>
+            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Hijos dependientes</h6>
             <div class="grid-2-cols gap-3 mb-4">
                 <div class="form-group">
-                    <label class="form-label required">Número de Cargas</label>
-                    <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
+                    <label class="form-label required">Hijos dependientes</label>
+                        <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
                 </div>
                 <div class="form-group">
-                    <label class="form-label required">Educación a Cargo</label>
-                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
-                           max="20">
+                        <label class="form-label required">Hijos con discapacidad</label>
+                        <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
+                               max="20">
                 </div>
             </div>
 

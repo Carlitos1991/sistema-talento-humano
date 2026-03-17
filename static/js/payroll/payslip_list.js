@@ -243,35 +243,142 @@ document.addEventListener('DOMContentLoaded', function () {
             const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
             if (!periodId) return alert('Periodo no seleccionado.');
 
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({title: 'Recalculando roles...', didOpen: () => { Swal.showLoading(); }, allowOutsideClick: false});
-            }
-
             const form = new FormData();
             form.append('period_id', periodId);
             form.append('q', searchInput ? searchInput.value : '');
             form.append('group', groupFilter ? groupFilter.value : '');
             form.append('show_withheld', show_withheld);
 
+            // UI: mostrar modal con spinner moderno (SweetAlert si está disponible)
+            function openProgressModal() {
+                const html = `
+                    <div class="recalc-progress-wrapper">
+                        <div class="recalc-spinner-wrapper">
+                            <div class="recalc-spinner" aria-hidden="true"></div>
+                            <div>
+                                <div class="recalc-progress-msg" id="recalc-progress-msg">Calculando, espere por favor</div>
+                            </div>
+                        </div>
+                
+                    </div>`;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Recalculando roles...',
+                        html: html,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            // keep focus out of modal
+                        }
+                    });
+                } else {
+                    // fallback simple: append to body
+                    const wrapper = document.createElement('div');
+                    wrapper.id = 'recalc-progress-fallback';
+                    wrapper.innerHTML = html;
+                    document.body.appendChild(wrapper);
+                }
+            }
+
+            function closeProgressModal() {
+                if (typeof Swal !== 'undefined') {
+                    try { Swal.close(); } catch(e){}
+                } else {
+                    const el = document.getElementById('recalc-progress-fallback'); if (el) el.remove();
+                }
+            }
+
+            function setProgress(pct, msg) {
+                try{
+                    const msgEl = document.getElementById('recalc-progress-msg');
+                    if (msgEl) msgEl.innerText = msg || (pct ? `${Math.round(pct)}%` : 'Procesando...');
+                }catch(e){/* ignore */}
+            }
+
+            openProgressModal();
+
+            // Start recalculation request
             fetch('/payroll/payslips/recalculate/', {
-                method: 'POST', headers: {'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || ''}, body: form
+                method: 'POST', headers: {'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '', 'X-Requested-With':'XMLHttpRequest'}, body: form
             })
             .then(res => res.json())
             .then(data => {
-                try { if (typeof Swal !== 'undefined') Swal.close(); } catch(e){}
-                if (data && data.success) {
-                    // mostrar resumen y refrescar la tabla para ver nuevos totales
-                    try {
-                        if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${data.count || 0} roles.`, 'success');
-                    } catch(e){}
+                if (!data) throw new Error('No response');
+
+                // If backend provides a task_id, poll for progress — show spinner and update message
+                if (data.task_id) {
+                    const taskId = data.task_id;
+                    const statusUrl = `/payroll/payslips/recalculate-status/?task_id=${encodeURIComponent(taskId)}`;
+                    let stopped = false;
+                    let lastPct = 0;
+                    let totalCount = (typeof data.total === 'number' && data.total>0) ? data.total : (typeof data.total_count==='number' && data.total_count>0? data.total_count : null);
+                    let lastProcessed = 0;
+
+                    // No cancel button: modal is informational only
+
+                    const poll = () => {
+                        if (stopped) return;
+                        fetch(statusUrl, { headers: {'X-Requested-With':'XMLHttpRequest'}, credentials: 'same-origin' })
+                            .then(r=>r.json())
+                            .then(s => {
+                                if (!s) return;
+                                if (typeof s.processed_count === 'number' && totalCount) {
+                                    lastProcessed = s.processed_count;
+                                    const pct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                    lastPct = pct;
+                                    setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                } else if (typeof s.processed === 'number' && totalCount) {
+                                    lastProcessed = s.processed;
+                                    const pct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                    lastPct = pct;
+                                    setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                } else {
+                                    const pct = typeof s.progress !== 'undefined' ? Number(s.progress) : (s.done?100: lastPct);
+                                    lastPct = isNaN(pct)? lastPct : pct;
+                                    setProgress(lastPct, s.message || (s.done? 'Completado' : 'Procesando...'));
+                                }
+
+                                if (s.done || (totalCount && lastProcessed>=totalCount) || (typeof s.progress !== 'undefined' && s.progress >= 100) || s.success) {
+                                    stopped = true;
+                                    closeProgressModal();
+                                    setTimeout(()=>{
+                                        if (s.success || (!s.success && s.done && lastProcessed>=totalCount)) {
+                                            if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`, 'success');
+                                            performSearch({page: 1});
+                                        } else {
+                                            if (typeof Swal !== 'undefined') Swal.fire('Error', s.message || 'Error en recalculo', 'error');
+                                        }
+                                    }, 300);
+                                } else {
+                                    setTimeout(poll, 900);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('poll error', err);
+                                setTimeout(poll, 1500);
+                            });
+                    };
+
+                    // seed UI
+                    if (totalCount) {
+                        setProgress(0, `0 / ${totalCount}`);
+                    } else {
+                        setProgress(5, 'Calculando, espere por favor');
+                    }
+                    setTimeout(poll, 600);
+                } else if (data && data.success) {
+                    // No task_id: server finished synchronously
+                    closeProgressModal();
+                    if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${data.count || 0} roles.`, 'success');
                     performSearch({page: 1});
                 } else {
+                    closeProgressModal();
                     if (typeof Swal !== 'undefined') Swal.fire('Error', data && data.message || 'Error', 'error');
                 }
             })
             .catch(err => {
-                try { if (typeof Swal !== 'undefined') Swal.close(); } catch(e){}
                 console.error('Error recalculando roles:', err);
+                closeProgressModal();
                 if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al recalcular roles', 'error');
             });
         });

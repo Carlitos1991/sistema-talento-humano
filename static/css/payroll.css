@@ -245,6 +245,49 @@
     text-overflow: ellipsis !important;
 }
 
+/* Recalculation progress modal styles */
+.recalc-progress-wrapper {
+    width: 100%;
+    max-width: 520px;
+}
+.recalc-progress-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+.recalc-progress-bar {
+    height: 14px;
+    background: #e6eef7;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    margin-bottom: 8px;
+}
+.recalc-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg,#4ade80 0%,#10b981 60%,#06b6d4 100%);
+    border-radius: 999px;
+    transition: width 400ms ease;
+}
+.recalc-progress-meta { display:flex; justify-content:space-between; gap:12px; align-items:center; font-size:0.9rem; color:#374151 }
+.recalc-progress-percent { font-weight:700; color:#0f172a }
+.recalc-progress-msg { color:#6b7280; font-size:0.85rem }
+
+/* Simple modern spinner */
+.recalc-spinner {
+    display:inline-block;
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    border:4px solid rgba(15,23,42,0.08);
+    border-top-color: #2563eb;
+    animation: spin 1s linear infinite;
+    margin: 6px 0;
+}
+@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+
+.recalc-spinner-wrapper{ display:flex; align-items:center; gap:14px }
+
 /* ==========================================================
    ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
    ========================================================== */

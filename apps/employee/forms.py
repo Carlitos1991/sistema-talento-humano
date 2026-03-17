@@ -62,6 +62,14 @@ class PayrollInfoForm(forms.ModelForm):
         model = PayrollInfo  # Make sure PayrollInfo is imported at top
         fields = ['monthly_payment', 'reserve_funds', 'family_dependents', 'education_dependents', 'roles_entry_date',
                   'roles_count']
+        labels = {
+            'monthly_payment': 'Mensualiza Décimos',
+            'reserve_funds': 'Fondos de Reserva',
+            'family_dependents': 'Hijos dependientes',
+            'education_dependents': 'Hijos con discapacidad',
+            'roles_entry_date': 'Fecha Ingreso a Roles',
+            'roles_count': 'Número de Roles'
+        }
         widgets = {
             'monthly_payment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
