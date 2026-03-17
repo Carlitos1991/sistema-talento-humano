@@ -94,6 +94,9 @@
         window.URLS = {
             baseList: "{% url 'payroll:payslip_list' %}"
         };
+        // TableManager compatibility: permitir que su fallback encuentre la URL
+        window._personExport = window._personExport || {};
+        window._personExport.listUrl = window.URLS.baseList;
     </script>
     <script src="{% static 'js/payroll/payslip_list.js' %}"></script>
     <script src="{% static 'js/payroll/payroll.js' %}"></script>

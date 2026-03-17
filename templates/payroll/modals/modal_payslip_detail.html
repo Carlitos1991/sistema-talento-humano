@@ -1,9 +1,10 @@
+{# Styles moved to static/css/payroll.css - keep template markup minimal #}
+
 <div id="payslipBackdrop" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-container-medium custom-payslip-modal" role="document"
-         style="max-width: 850px; padding:0 !important;">
+    <div class="modal-container-medium custom-payslip-modal" role="document">
 
         <div class="modal-header-refined">
-            <h5 class="header-title-main mb-0 d-flex align-items-center" style="gap: 10px;">
+            <h5 class="header-title-main mb-0 d-flex align-items-center">
                 <i class="fas fa-file-invoice-dollar"></i>
                 Detalle de Rol: {{ payslip.employee.person.last_name }} {{ payslip.employee.person.first_name }}
             </h5>
@@ -12,7 +13,7 @@
             </button>
         </div>
 
-        <div class="modal-body-custom" style="padding: 2rem;">
+        <div class="modal-body-custom">
 
             <div class="payslip-summary-banner">
                 <div class="payslip-banner-item">
@@ -31,7 +32,7 @@
                 </div>
 
                 <div class="payslip-net-box">
-                    <span class="payslip-banner-label" style="color: white; margin-bottom:2px; display:block;">Líquido a Pagar</span>
+                    <span class="payslip-banner-label payslip-net-label">Líquido a Pagar</span>
                     <span class="payslip-banner-value" id="liquido-pagar">$ {{ payslip.net_pay }}</span>
                 </div>
             </div>
@@ -49,20 +50,17 @@
                                     <div class="val-container">
                                         <span class="val"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        {% if not payslip.period.is_closed %}
-                                            <button type="button" class="btn-edit-inline edit-item-btn"
-                                                    data-id="{{ item.id }}"
-                                                    data-val="{{ item.value|stringformat:'f' }}"
-                                                    data-name="{{ item.income_ref.name }}"
-                                                    title="Modificar valor">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                        {% endif %}
+                                        <button type="button" class="btn-edit-inline edit-item-btn"
+                                                data-id="{{ item.id }}"
+                                                data-val="{{ item.value|stringformat:'f' }}"
+                                                data-name="{{ item.income_ref.name }}"
+                                                title="Modificar valor">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
                                     </div>
                                 </li>
                             {% empty %}
-                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay ingresos
-                                </li>
+                                <li class="empty-message">No hay ingresos</li>
                             {% endfor %}
                         </ul>
                         <div class="payslip-list-footer incomes-total">
@@ -84,32 +82,29 @@
                                     <div class="val-container">
                                         <span class="val"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        {% if not payslip.period.is_closed %}
-                                            <button type="button" class="btn-edit-inline edit-item-btn"
-                                                    data-id="{{ item.id }}"
-                                                    data-val="{{ item.value|stringformat:'f' }}"
-                                                    data-name="{{ item.deduction_ref.name }}"
-                                                    title="Modificar valor">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                        {% endif %}
+                                        <button type="button" class="btn-edit-inline edit-item-btn"
+                                                data-id="{{ item.id }}"
+                                                data-val="{{ item.value|stringformat:'f' }}"
+                                                data-name="{{ item.deduction_ref.name }}"
+                                                title="Modificar valor">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
                                     </div>
                                 </li>
                             {% empty %}
-                                <li style="justify-content: center; color: #94a3b8; padding: 2rem 0;">No hay egresos
-                                </li>
+                                <li class="empty-message">No hay egresos</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer deductions-total">
+                        <div class="payslip-list-footer incomes-total">
                             <span>Total Egresos</span>
-                            <span id="total-egresos">$ {{ payslip.total_deduction }}</span>
+                            <span id="total-egresos">$ {{ payslip.total_income }}</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="modal-footer" style="padding: 1.25rem 2rem; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <div class="modal-footer">
             <button type="button" class="btn-cancel" data-action="close">
                 <i class="fas fa-times me-1"></i> Cerrar
             </button>

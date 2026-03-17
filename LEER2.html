@@ -1,65 +1,119 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-{% endblock %}
-{% block content %}
-    <div class="header-card">
-        <div>
-            <h1>Aportes Institucionales</h1>
-            <p>Gestión de obligaciones patronales (Aporte Patronal, IECE, SECAP, etc.)</p>
-        </div>
-        <div class="header-actions">
-            <button type="button" class="btn btn-create"
-                    onclick="openPayrollModal('{% url 'payroll:contribution_create' %}')">
-                <i class="fas fa-plus"></i> Nuevo Aporte
-            </button>
-        </div>
+<div class="table-responsive">
+    <table class="table managed-table table-hover" data-page-size="15" data-title="Reporte de Roles" data-external-pagination="true" data-external-search="false" style="width: 100%; border-collapse: collapse;">
+        <thead>
+        <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+            <th style="padding: 12px;" data-field="employee__person__last_name">Empleado</th>
+            <th style="padding: 12px;" data-field="employee__person__document_number">Cédula</th>
+            <th style="padding: 12px;" data-field="items__budget_line__budget_group__short_code">Partida P.</th>
+            <th style="padding: 12px; text-align: right;" data-field="total_income">Ingresos</th>
+            <th style="padding: 12px; text-align: right;" data-field="total_deduction">Egresos</th>
+            <th style="padding: 12px; text-align: right;" data-field="net_pay">A Pagar</th>
+
+            {% if current_period and not current_period.is_closed %}
+                <th style="padding: 12px; text-align: center;">Retener</th>
+                <th style="padding: 12px; text-align: center;">Acciones</th>
+            {% else %}
+                <th style="padding: 12px; text-align: center;">Ver</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for p in payslips %}
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px;">
+                    <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.full_name }}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
+                </td>
+                <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
+                <td style="padding: 12px;">
+                    {% for item in p.items.all %}
+                        {% if item.income_ref.code == 'REMUNERACION' %}
+                            {{ item.budget_line_code|default:"Sin Partida" }}
+                        {% endif %}
+                    {% endfor %}
+                </td>
+                <td style="padding: 12px; text-align: right; color: #10b981;">$ {{ p.total_income }}</td>
+                <td style="padding: 12px; text-align: right; color: #ef4444;">$ {{ p.total_deduction }}</td>
+                <td style="padding: 12px; text-align: right;">
+                    <span class="payroll-value-badge">$ {{ p.net_pay }}</span>
+                </td>
+
+                {% if current_period and not current_period.is_closed %}
+                    <td style="padding: 12px; text-align: center;">
+                        <label class="modern-toggle-wrapper mb-0 {% if p.is_withheld %}modern-toggle-yellow{% endif %}" style="padding: 4px 10px;" title="Retener el pago">
+                            <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
+                                   data-id="{{ p.id }}"
+                                   {% if p.is_withheld %}checked{% endif %}>
+                            <span class="modern-toggle-circle"></span>
+                            <span class="modern-toggle-text">{% if p.is_withheld %}Retenido{% else %}
+                                Normal{% endif %}</span>
+                        </label>
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn-icon btn-primary-action"
+                                onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                title="Ver / Editar Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                {% else %}
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn-icon btn-primary-action"
+                                onclick="window.openPayslipDetail('{% url 'payroll:payslip_detail' p.id %}')"
+                                title="Consultar Rol Histórico">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-search fa-2x mb-3 d-block"></i>
+                    No se encontraron roles para esta búsqueda.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+    <div class="pagination-container" id="js-pagination" style="margin-top:25px; display:flex; justify-content:center; align-items:center; gap:12px;">
+        <span class="pagination-info" id="page-info">
+            {% if page_obj %}
+                Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+            {% else %}
+                Mostrando 0 de 0
+            {% endif %}
+        </span>
+        <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+            <li>
+                <button id="btn-first" class="page-btn btn-secondary" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+            </li>
+            <li>
+                <button id="btn-prev" class="page-btn btn-secondary" data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% endif %}" {% if not page_obj.has_previous %}disabled{% endif %}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </li>
+            <li>
+                <div class="page-input-wrapper">
+                    <input type="number" id="page-input" class="page-input" min="1" value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}" data-total="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}">
+                    <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}</span>
+                </div>
+            </li>
+            <li>
+                <button id="btn-next" class="page-btn btn-secondary" data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% endif %}" {% if not page_obj.has_next %}disabled{% endif %}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>
+            <li>
+                <button id="btn-last" class="page-btn btn-secondary" data-page="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}" {% if not page_obj.has_next %}disabled{% endif %}>
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </li>
+        </ul>
     </div>
-
-    <div class="content-table mt-4">
-
-        <div class="table-controls table-controls-grid">
-
-            <div class="table-controls-center">
-                <input class="modern-toggle-input" type="checkbox" id="toggleInactive"
-                       {% if request.GET.show_inactive == 'true' %}checked{% endif %}
-                       onchange="toggleInactiveRecords(this)">
-
-                <label class="modern-toggle-wrapper mb-0" for="toggleInactive">
-                    <div class="modern-toggle-circle"></div>
-                    <span class="modern-toggle-text">Mostrar Aportes Inactivos</span>
-                </label>
-            </div>
-
-            <div class="search-box table-controls-right">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="table-search-input" placeholder="Buscar aporte por nombre o código...">
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="table managed-table exportable-table" data-page-size="10" data-title="Reporte de Aportes">
-                <thead>
-                <tr>
-                    <th>Nombre del Aporte</th>
-                    <th>Código Algoritmo</th>
-                    <th>Cuenta Gasto (DEBE)</th>
-                    <th>Cuenta Pasivo (HABER)</th>
-                    <th class="text-center">Estado</th>
-                    <th class="actions no-sort">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% include 'payroll/partials/partial_contribution_table.html' %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="modal-root"></div>
-{% endblock %}
-
-{% block extra_js %}
-    <script src="{% static 'js/payroll/payroll.js' %}"></script>
-{% endblock %}
+{% endif %}

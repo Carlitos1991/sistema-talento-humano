@@ -1,13 +1,14 @@
 <div class="table-responsive">
-    <table class="table managed-table table-hover" data-page-size="15" data-title="Reporte de Roles" style="width: 100%; border-collapse: collapse;">
+    <table class="table managed-table table-hover" data-page-size="15" data-title="Reporte de Roles"
+           data-external-pagination="true" data-external-search="false" style="width: 100%; border-collapse: collapse;">
         <thead>
         <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
-            <th style="padding: 12px;">Empleado</th>
-            <th style="padding: 12px;">Cédula</th>
-            <th style="padding: 12px;">Partida P.</th>
-            <th style="padding: 12px; text-align: right;">Ingresos</th>
-            <th style="padding: 12px; text-align: right;">Egresos</th>
-            <th style="padding: 12px; text-align: right;">A Pagar</th>
+            <th style="padding: 12px;" data-field="employee__person__last_name">Empleado</th>
+            <th style="padding: 12px;" data-field="employee__person__document_number">Cédula</th>
+            <th style="padding: 12px;" data-field="items__budget_line__budget_group__short_code">Partida P.</th>
+            <th style="padding: 12px; text-align: right;" data-field="total_income">Ingresos</th>
+            <th style="padding: 12px; text-align: right;" data-field="total_deduction">Egresos</th>
+            <th style="padding: 12px; text-align: right;" data-field="net_pay">A Pagar</th>
 
             {% if current_period and not current_period.is_closed %}
                 <th style="padding: 12px; text-align: center;">Retener</th>
@@ -40,7 +41,8 @@
 
                 {% if current_period and not current_period.is_closed %}
                     <td style="padding: 12px; text-align: center;">
-                        <label class="modern-toggle-wrapper mb-0 {% if p.is_withheld %}modern-toggle-yellow{% endif %}" style="padding: 4px 10px;" title="Retener el pago">
+                        <label class="modern-toggle-wrapper mb-0 {% if p.is_withheld %}modern-toggle-yellow{% endif %}"
+                               style="padding: 4px 10px;" title="Retener el pago">
                             <input type="checkbox" class="modern-toggle-input toggle-withhold-btn"
                                    data-id="{{ p.id }}"
                                    {% if p.is_withheld %}checked{% endif %}>
@@ -79,15 +81,53 @@
 </div>
 
 {% if is_paginated %}
-    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px;">
-        {% if page_obj.has_previous %}
-            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.previous_page_number }})">Anterior
-            </button>
-        {% endif %}
-        <span style="font-weight: 500; color: #475569;">Pág {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-            <button class="btn-secondary" onclick="window.loadTablePage({{ page_obj.next_page_number }})">Siguiente
-            </button>
-        {% endif %}
+    <div class="pagination-container" id="js-pagination"
+         style="margin-top:25px; display:flex; justify-content:center; align-items:center; gap:12px;">
+        <span class="pagination-info" id="page-info">
+            {% if page_obj %}
+                Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+            {% else %}
+                Mostrando 0 de 0
+            {% endif %}
+        </span>
+        <ul class="pagination-list"
+            style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+            <li>
+                <button id="btn-first" class="page-btn btn-secondary" data-page="1"
+                        {% if not page_obj.has_previous %}disabled{% endif %}>
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+            </li>
+            <li>
+                <button id="btn-prev" class="page-btn btn-secondary"
+                        data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% endif %}"
+                        {% if not page_obj.has_previous %}disabled{% endif %}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </li>
+            <li>
+                <div class="page-input-wrapper">
+                    <input type="number" id="page-input" class="page-input" min="1"
+                           value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
+                           data-total="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}">
+                    <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}
+                        1{% endif %}</span>
+                </div>
+            </li>
+            <li>
+                <button id="btn-next" class="page-btn btn-secondary"
+                        data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% endif %}"
+                        {% if not page_obj.has_next %}disabled{% endif %}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>
+            <li>
+                <button id="btn-last" class="page-btn btn-secondary"
+                        data-page="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}"
+                        {% if not page_obj.has_next %}disabled{% endif %}>
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </li>
+        </ul>
     </div>
 {% endif %}

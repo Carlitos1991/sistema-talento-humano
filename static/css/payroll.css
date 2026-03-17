@@ -460,3 +460,297 @@
     align-items: center;
     gap: 8px;
 }
+
+/* ================== PAGINADOR (copiado de table-manager.css para parity) ================== */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 5px;
+    margin-top: 15px;
+    border-top: 1px solid #f1f5f9;
+    font-family: sans-serif;
+    color: #64748b;
+    font-size: 0.9em;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 6px;
+    color: #3b82f6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.page-btn:disabled {
+    color: #cbd5e1;
+    background: #f8fafc;
+    border-color: #f1f5f9;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 10px 0 6px;
+    height: 32px;
+}
+
+.page-input-wrapper .page-input,
+.page-input-wrapper input[type="number"].page-input {
+    width: 32px;
+    height: 100%;
+    text-align: center;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #334155;
+    padding: 0;
+    border-radius: 0;
+}
+
+.page-input-wrapper .page-input::-webkit-outer-spin-button,
+.page-input-wrapper .page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.page-input-wrapper .page-input:focus,
+.page-input-wrapper input[type="number"].page-input:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: #3b82f6;
+}
+
+.total-pages-badge {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #94a3b8;
+    white-space: nowrap;
+    padding-left: 6px;
+    border-left: 1px solid #e2e8f0;
+}
+
+/* ========================================================================================= */
+
+/* ======== Estilos para el modal detalle de rol (centralizados desde la plantilla) ======== */
+/* Reglas trasladadas desde templates/payroll/modals/modal_payslip_detail.html */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2,6,23,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal-container-medium {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.25);
+    width: 100%;
+    max-width: 980px;
+    overflow: hidden;
+}
+
+/* variante usada por el modal de rol para ajustar ancho/padding específicos */
+.modal-container-medium.custom-payslip-modal {
+    max-width: 850px;
+    padding: 0 !important;
+}
+
+.modal-header-refined {
+    background: linear-gradient(90deg,#0f172a 0%,#0b3a57 100%);
+    color: #fff;
+    padding: 18px 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+.modal-header-refined .header-title-main { font-size:1.05rem; font-weight:700; display:flex; gap:10px; align-items:center; }
+.btn-close-modal-refined { background:transparent; border: none; color: rgba(255,255,255,0.85); font-size:1.1rem; cursor:pointer; }
+
+.modal-body-custom { padding: 2rem; background: #fff; }
+.payslip-summary-banner {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    margin-bottom: 1.5rem;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.payslip-banner-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.payslip-banner-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.payslip-banner-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: white;
+}
+
+.payslip-banner-divider {
+    width: 1px;
+    height: 35px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.payslip-net-box {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    text-align: right;
+}
+
+.payslip-net-label {
+    color: white;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.payslip-net-box .payslip-banner-value {
+    color: #34d399; /* Verde esmeralda brillante */
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.payslip-list-wrapper {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.payslip-list-header {
+    padding: 14px 16px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.02em;
+}
+
+.payslip-list-header.incomes {
+    background: #ecfdf5;
+    color: #059669;
+    border-bottom: 2px solid #a7f3d0;
+}
+
+.payslip-list-header.deductions {
+    background: #fef2f2;
+    color: #dc2626;
+    border-bottom: 2px solid #fecaca;
+}
+
+.payslip-items-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+}
+
+.payslip-items-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+}
+
+.payslip-items-list li:last-child {
+    border-bottom: none;
+}
+
+.payslip-items-list li .desc {
+    color: #475569;
+    font-weight: 500;
+}
+
+.payslip-items-list li .val {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.payslip-items-list li.empty-message {
+    justify-content: center;
+    color: #94a3b8;
+    padding: 2rem 0;
+}
+
+.payslip-list-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    font-weight: 800;
+    font-size: 1.05rem;
+}
+
+.payslip-list-footer.incomes-total {
+    color: #059669;
+}
+
+.payslip-list-footer.deductions-total {
+    color: #dc2626;
+}
+
+.btn-save { background: linear-gradient(180deg,#075985,#0b5b83); color: #fff; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; }
+.btn-cancel { background:#fff; border:1px solid #e6eef6; padding:10px 16px; border-radius:8px; cursor:pointer; }
+
+/* Small tweaks for the print/close button row */
+.modal-footer { display:flex; gap:12px; padding: 1.25rem 2rem; background:#f8fafc; border-top:1px solid #e2e8f0; }
+
+/* Fin: estilos modal detalle de rol */

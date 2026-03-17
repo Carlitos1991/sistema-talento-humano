@@ -343,6 +343,12 @@ class PayslipListView(LoginRequiredMixin, ListView):
     context_object_name = 'payslips'
     paginate_by = 15
 
+    def get_paginate_by(self, queryset):
+        """Allow returning all results when frontend requests full dataset (full=1)."""
+        full = (self.request.GET.get('full') or '').lower()
+        if full in ['1', 'true', 'yes']:
+            return None
+        return self.paginate_by
     def get_queryset(self):
         period_id = self.request.GET.get('period_id')
         if not period_id or period_id == "None":
@@ -370,6 +376,18 @@ class PayslipListView(LoginRequiredMixin, ListView):
         else:
             # Por defecto mostramos TODOS excepto los retenidos
             queryset = queryset.filter(is_withheld=False)
+
+        # Soporte de ordenamiento desde el cliente (TableManager envía sort_field & sort_dir)
+        sort_field = self.request.GET.get('sort_field') or self.request.GET.get('sort')
+        sort_dir = (self.request.GET.get('sort_dir') or 'asc').lower()
+        allowed = {'employee__person__last_name', 'employee__person__document_number',
+                   'items__budget_line__budget_group__short_code', 'total_income', 'total_deduction', 'net_pay'}
+        if sort_field in allowed:
+            order = sort_field if sort_dir == 'asc' else f'-{sort_field}'
+            try:
+                queryset = queryset.order_by(order)
+            except Exception:
+                pass
 
         return queryset
 

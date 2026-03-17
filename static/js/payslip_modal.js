@@ -1,12 +1,19 @@
 /* JS para cargar y controlar el modal usando las clases globales de style.css */
 
 function openPayslipDetail(url) {
-    // 1. Buscamos el HTML en el servidor
-    fetch(url)
+    // 1. Buscamos el HTML en el servidor (solicitud AJAX para obtener solo el partial)
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(response => response.text())
         .then(html => {
-            // 2. Inyectamos el HTML en el contenedor
-            const container = document.getElementById('modal-container');
+            // 2. Inyectamos el HTML en el contenedor. Buscamos ids alternativos
+            let container = document.getElementById('modal-container') || document.getElementById('modal-root');
+            // Si no existe, lo creamos dinámicamente para evitar errores de null
+            if (!container) {
+                container = document.createElement('div');
+                // preferimos el id 'modal-root' usado por otras partes del sistema
+                container.id = 'modal-root';
+                document.body.appendChild(container);
+            }
             container.innerHTML = html;
 
             // 3. Mostramos el modal quitando la clase 'hidden' global
@@ -31,7 +38,8 @@ function closeDetailModal() {
 
         // Limpiamos el HTML para no dejar basura en el DOM
         setTimeout(() => {
-            document.getElementById('modal-container').innerHTML = '';
+            const container = document.getElementById('modal-container') || document.getElementById('modal-root');
+            if (container) container.innerHTML = '';
         }, 300);
     }
 }

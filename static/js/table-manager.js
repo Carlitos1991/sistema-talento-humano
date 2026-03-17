@@ -30,12 +30,18 @@ class TableManager {
         this.searchInput = this.wrapper.querySelector('.table-search-input')
             || document.getElementById('table-search');
 
-        // Evitar inicializar manejadores de ordenamiento en tablas que delegan
-        // paginación/búsqueda al backend (evita conflicto con código específico)
-        if (!this.externalPagination && !this.externalSearch) this.initSortHeaders();
-        if (!this.externalSearch) this.initSearch();
-        if (!this.externalPagination) this.initPagination();
-        if (!this.externalPagination) this.render();
+        // Inicializar ordenamiento y búsqueda local cuando LA BÚSQUEDA no está
+        // delegada al backend. Esto permite tener paginación externa pero
+        // búsqueda y sort locales (typing = filter cliente, Enter = fetch servidor).
+        if (!this.externalSearch) {
+            this.initSortHeaders();
+            this.initSearch();
+        }
+        // Paginación y render solo si no es paginación externa
+        if (!this.externalPagination) {
+            this.initPagination();
+            this.render();
+        }
 
         this.table._tableManager = this;
     }
