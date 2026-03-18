@@ -27,10 +27,14 @@
             <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancelar</button>
             <div style="display: flex; gap: 10px;">
                 <button onclick="downloadReport('banco')" class="btn btn-success"
-                        style="background-color:#10b981; color:white;">Banco
+                        style="background-color:#10b981; color:white; border:none;">Banco
                 </button>
                 <button onclick="downloadReport('nomina')" class="btn btn-primary"
-                        style="background-color:#0f172a; color:white;">Nómina
+                        style="background-color:#0f172a; color:white; border:none;">Nómina
+                </button>
+
+                <button onclick="downloadReport('negativos')" class="btn btn-warning"
+                        style="background-color:#f59e0b; color:white; border:none;">Saldos Neg.
                 </button>
             </div>
         </div>

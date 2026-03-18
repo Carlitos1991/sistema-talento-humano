@@ -13,8 +13,8 @@
         <td class="text-center actions">
             <div class="actions-wrapper">
                 {% if not p.is_closed %}
-                    <button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular"
-                            onclick="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}')">
+                        <button type="button" class="btn-icon btn-views-action" title="Procesar / Recalcular"
+                            onclick="openGenerateModal({{ p.id }}, '{{ p.month }} {{ p.year }}', true)">
                         <i class="fas fa-cogs"></i>
                     </button>
                     <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo">

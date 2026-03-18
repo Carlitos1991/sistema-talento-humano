@@ -335,6 +335,27 @@
 
 .recalc-spinner-wrapper{ display:flex; align-items:center; gap:14px }
 
+/* Estilos para los cards de acción dentro del modal de procesar nómina */
+#modalGeneratePayroll { z-index: 2050 !important; }
+#modalGeneratePayroll .modal-container-medium { max-width: 550px; z-index: 2051 !important; }
+#modalGeneratePayroll .action-card {
+    text-align: left; padding: 15px; display:flex; align-items:center; gap:12px; border-radius: 10px; cursor: pointer; background: transparent; border: 2px solid transparent;
+}
+#modalGeneratePayroll .action-card i { font-size: 28px; color: inherit; }
+#modalGeneratePayroll .action-card .muted { display:block; font-size:0.85rem; color: #6b7280; }
+#modalGeneratePayroll .action-card strong { display:block; font-size:1.05rem; }
+#modalGeneratePayroll .action-card.action-card-green { border-color: #10b981; color: #047857; }
+#modalGeneratePayroll .action-card.action-card-red { border-color: #ef4444; color: #b91c1c; }
+
+/* Alineación de footer similar al modal de periodo */
+/* Centrar el botón Cancelar y asegurar que sea interactuable */
+#modalGeneratePayroll .modal-footer-fixed { padding: 18px 22px; display:flex; justify-content:center !important; gap:10px; background: #fff; border-top: 1px solid #eee; }
+#modalGeneratePayroll .btn-cancel { background: #f8f9fa; border: 1px solid #e6e6e6; padding: 8px 16px; border-radius: 6px; cursor: pointer; pointer-events: auto !important; }
+
+/* Forzar que el botón de cierre tenga mayor prioridad */
+#modalGeneratePayroll .btn-close-modal-refined { z-index: 3000 !important; pointer-events: auto !important; }
+
+
 /* ==========================================================
    ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
    ========================================================== */
@@ -474,6 +495,18 @@
 
 .btn-views-action {
     background: linear-gradient(180deg, #f59e0b, #f97316);
+
+/* Forzar visibilidad del botón X en el modal de Procesar Nómina */
+#modalGeneratePayroll .btn-close-modal {
+    display: inline-block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 9999 !important;
+}
+
+/* Asegurar que el modal esté por debajo del botón y no oculte el control */
+#modalGeneratePayroll { z-index: 9998 !important; }
 }
 
 .btn-success-action {

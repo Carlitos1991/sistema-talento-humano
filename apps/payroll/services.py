@@ -268,6 +268,22 @@ class PayrollCalculatorService:
                                     for nov in emp_novelties['incomes']:
                                         if nov.value > 0:
                                             val_nov = Decimal(str(nov.value))
+
+                                            # ==================================================
+                                            # MAGIA: CÁLCULO DE HORAS EXTRAS (De Horas a Dinero)
+                                            # ==================================================
+                                            code_up = (nov.income_ref.code or '').strip().upper()
+
+                                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
+                                                # El valor del Excel son Horas. Multiplicamos por 2 (100% recargo)
+                                                sueldo_hora = salary / Decimal('240.0')
+                                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+
+                                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
+                                                # El valor del Excel son Horas. Multiplicamos por 1.5 (50% recargo)
+                                                sueldo_hora = salary / Decimal('240.0')
+                                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
+
                                             items_buffer.append(
                                                 PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
                                                             value=val_nov))
@@ -514,6 +530,22 @@ class PayrollCalculatorService:
                                     for nov in emp_novelties['incomes']:
                                         if nov.value > 0:
                                             val_nov = Decimal(str(nov.value))
+
+                                            # ==================================================
+                                            # MAGIA: CÁLCULO DE HORAS EXTRAS (De Horas a Dinero)
+                                            # ==================================================
+                                            code_up = (nov.income_ref.code or '').strip().upper()
+
+                                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
+                                                # El valor del Excel son Horas. Multiplicamos por 2 (100% recargo)
+                                                sueldo_hora = salary / Decimal('240.0')
+                                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+
+                                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
+                                                # El valor del Excel son Horas. Multiplicamos por 1.5 (50% recargo)
+                                                sueldo_hora = salary / Decimal('240.0')
+                                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
+
                                             items_buffer.append(
                                                 PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
                                                             value=val_nov))

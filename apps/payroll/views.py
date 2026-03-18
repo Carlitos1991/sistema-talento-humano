@@ -1,36 +1,35 @@
 import calendar
+import json
+from datetime import date
 from decimal import Decimal
-from django.template.loader import get_template
-from django.http import HttpResponse
-from xhtml2pdf import pisa
+
+import openpyxl
+from django import forms
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q, Sum, Case, When, IntegerField, Value
-from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
+from django.db.models.functions import Cast
+from django.http import HttpResponse
 from django.http import JsonResponse
-from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
-import openpyxl
-import json
-from .services import PayrollCalculatorService, rebuild_accounting_for_period
-from accounting.models import Journal, JournalItem
-from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
-    InstitutionalContributionForm
-from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, InstitutionalContribution
-from .services import PayrollCalculatorService
-from employee.models import Employee
-from .models import Income, Deduction
-from django.urls import reverse_lazy, reverse
 from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django import forms
-from django.contrib import messages
-from payroll.models import RubroBudgetMapping
+from django.template.loader import render_to_string
+from django.urls import reverse_lazy, reverse
+from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
+
+from accounting.models import JournalItem
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
-from datetime import date
-from django.db.models.functions import Cast
+from employee.models import Employee
+from payroll.models import RubroBudgetMapping
+from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
+    InstitutionalContributionForm
+from .models import Income, Deduction
+from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, InstitutionalContribution
+from .models import PendingDebt
+from .services import PayrollCalculatorService
+from .services import rebuild_accounting_for_period
 
 
 class PayrollListView(ListView):
@@ -349,6 +348,7 @@ class PayslipListView(LoginRequiredMixin, ListView):
         if full in ['1', 'true', 'yes']:
             return None
         return self.paginate_by
+
     def get_queryset(self):
         period_id = self.request.GET.get('period_id')
         if not period_id or period_id == "None":
@@ -560,7 +560,8 @@ class FondosReservaListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = Employee.objects.filter(is_active=True, person__is_active=True)
         # Traer relaciones comúnmente usadas para evitar N+1
-        qs = qs.select_related('person__economic_data__payroll_info', 'area').prefetch_related('current_budget_line__position_item')
+        qs = qs.select_related('person__economic_data__payroll_info', 'area').prefetch_related(
+            'current_budget_line__position_item')
         # Soporte de búsqueda simple desde frontend
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -1380,6 +1381,7 @@ class MarkPeriodAsPaidAPIView(LoginRequiredMixin, View):
             'is_closed': not faltan_por_pagar
         })
 
+
 class RecalculatePayslipsView(LoginRequiredMixin, View):
     """
     Recalcula los roles que coinciden con los filtros enviados (q, group, show_withheld).
@@ -1425,7 +1427,8 @@ class RecalculatePayslipsView(LoginRequiredMixin, View):
         try:
             svc = PayrollCalculatorService(period, employees)
             result = svc.generate_for_selected(pairs)
-            return JsonResponse({'success': True, 'message': 'Recalculo ejecutado.', 'result': result, 'count': len(emp_ids)})
+            return JsonResponse(
+                {'success': True, 'message': 'Recalculo ejecutado.', 'result': result, 'count': len(emp_ids)})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1606,3 +1609,51 @@ def api_calculate_working_days(request):
         return JsonResponse(response)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def export_negative_balances_report(request, period_id):
+    """
+    Genera un Excel con los empleados cuyo sueldo no alcanzó para cubrir
+    sus descuentos, respetando las prioridades de cobro.
+    """
+    period = get_object_or_404(PayrollPeriod, id=period_id)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="Saldos_Negativos_{period.month}_{period.year}.xlsx"'
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Saldos Negativos"
+
+    # Cabeceras del Excel
+    headers = [
+        'CÉDULA', 'NOMBRES Y APELLIDOS', 'CONCEPTO DESCUENTO',
+        'PRIORIDAD', 'VALOR ORIGINAL', 'VALOR DESCONTADO', 'VALOR PENDIENTE (DEUDA)'
+    ]
+    ws.append(headers)
+
+    # Consultamos las deudas del periodo que tengan saldo mayor a cero
+    debts = PendingDebt.objects.filter(
+        period=period,
+        pending_balance__gt=0
+    ).select_related(
+        'employee__person', 'deduction_ref'
+    ).order_by('employee__person__last_name', 'deduction_ref__priority')
+
+    for debt in debts:
+        person = debt.employee.person
+        # Dependiendo de tu modelo Persona, obtén la cédula
+        cedula = getattr(person, 'identification', getattr(person, 'cedula', 'N/A'))
+
+        ws.append([
+            cedula,
+            f"{person.last_name} {person.first_name}",
+            debt.deduction_ref.name,
+            debt.deduction_ref.priority,
+            float(debt.original_value),
+            float(debt.collected_value),
+            float(debt.pending_balance)
+        ])
+
+    wb.save(response)
+    return response

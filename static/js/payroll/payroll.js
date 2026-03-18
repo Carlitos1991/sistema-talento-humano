@@ -6,7 +6,7 @@
 try {
     if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
         const _origSwalFire = Swal.fire.bind(Swal);
-        Swal.fire = function(...args) {
+        Swal.fire = function (...args) {
             // Detectar icon si se pasa como objeto o como 3er argumento (title,text,icon)
             let icon = null;
             if (args.length === 1 && typeof args[0] === 'object') {
@@ -16,15 +16,20 @@ try {
             }
             const result = _origSwalFire(...args);
             // Si el diálogo es de resultado (success/info/error), eliminar cualquier boton Cancel que pudiera persistir
-            if (icon && ['success','info','error'].includes(String(icon))) {
+            if (icon && ['success', 'info', 'error'].includes(String(icon))) {
                 setTimeout(() => {
-                    try { document.querySelectorAll('.swal2-container .swal2-cancel').forEach(el => el.remove()); } catch (e) { /* ignore */ }
+                    try {
+                        document.querySelectorAll('.swal2-container .swal2-cancel').forEach(el => el.remove());
+                    } catch (e) { /* ignore */
+                    }
                 }, 40);
             }
             return result;
         };
     }
-} catch (e) { /* ignore */ }
+} catch (e) { /* ignore */
+}
+
 function openPayrollModal(url) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => response.text())
@@ -61,7 +66,7 @@ function initializePeriodModal() {
     }
 
     let isCalculating = false;
-    
+
     // Detectar si es modo edición (si hay valores preexistentes de fecha)
     const isEditMode = startDateInput.value && endDateInput.value;
 
@@ -73,11 +78,11 @@ function initializePeriodModal() {
 
     // Establecer mes actual por defecto si está vacío
     if (!monthSelect.value) {
-        const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
-                        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
         const currentMonth = months[new Date().getMonth()];
         monthSelect.value = currentMonth;
-        
+
         // Reinicializar Select2 para que refleje el nuevo valor
         $(monthSelect).val(currentMonth).trigger('change');
     }
@@ -101,20 +106,20 @@ function initializePeriodModal() {
         try {
             const calculateUrl = '/payroll/api/calculate-working-days/?month=' + encodeURIComponent(month) + '&year=' + encodeURIComponent(year);
             const response = await fetch(calculateUrl);
-            
+
             if (!response.ok) {
                 throw new Error('API retornó estado: ' + response.status);
             }
-            
+
             const data = await response.json();
 
             if (data.status === 'success') {
                 startDateInput.value = data.start_date;
                 endDateInput.value = data.end_date;
                 workingDaysInput.value = data.working_days;
-                
+
                 if (submitBtn) submitBtn.disabled = false;
-                
+
                 // Mostrar mensaje: advertencia si hay feriados, info si no los hay
                 if (data.warning) {
                     Swal.fire({
@@ -159,9 +164,9 @@ function initializePeriodModal() {
     // Para Select2, usar el evento 'change.select2' en lugar de 'change'
     $(monthSelect).on('change.select2', calculateWorkingDays);
     yearInput.addEventListener('change', calculateWorkingDays);
-    
+
     // Validar que el año solo acepte números y máximo 4 caracteres
-    yearInput.addEventListener('input', function(e) {
+    yearInput.addEventListener('input', function (e) {
         const oldValue = this.value;
         this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
         // Solo llamar a calculateWorkingDays si el valor cambió y tenemos 4 dígitos
@@ -206,8 +211,8 @@ function submitPayrollForm(event) {
     const formData = new FormData(form);
 
     // Obtener CSRF token del formulario
-    const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]')?.value || 
-                      document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+    const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]')?.value ||
+        document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
 
     fetch(form.action, {
         method: 'POST',
@@ -343,13 +348,13 @@ function toggleInactiveContributions(showInactive) {
             // Reiniciamos el paginador y buscador (table-manager.js)
             // para que cuente las nuevas filas renderizadas
             const table = document.querySelector('.managed-table');
-                if (table && table._tableManager) {
-                    table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
-                    table._tableManager.currentRows = [...table._tableManager.originalRows];
-                    if (typeof table._tableManager.render === 'function') {
-                        table._tableManager.render();
-                    }
+            if (table && table._tableManager) {
+                table._tableManager.originalRows = Array.from(tbody.querySelectorAll('tr'));
+                table._tableManager.currentRows = [...table._tableManager.originalRows];
+                if (typeof table._tableManager.render === 'function') {
+                    table._tableManager.render();
                 }
+            }
         })
         .catch(error => console.error('Error cargando la tabla:', error));
 }
@@ -517,7 +522,13 @@ function submitAccountForm(event) {
         .then(data => {
             if (data.status === 'success') {
                 closeContributionModal();
-                Swal.fire({icon: 'success', title: '¡Excelente!', text: data.message, timer: 1500, showConfirmButton: false})
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Excelente!',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                })
                     .then(() => location.reload());
             } else {
                 Swal.fire('Error', 'Por favor, revisa los datos ingresados.', 'error');
@@ -547,6 +558,7 @@ function toggleInactiveAccounts(showInactive) {
 
 // Añadimos placeholders dinámicamente cuando se abre el modal de cuentas
 const _origOpenAccountModal = window.openAccountModal;
+
 function openAccountModal(url) {
     // reutiliza la función genérica si existe
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
@@ -683,7 +695,7 @@ document.addEventListener('click', function (e) {
         console.log('delegated: generate click', id, name);
         try {
             if (typeof window.openGenerateModal === 'function') {
-                window.openGenerateModal(id, name);
+                window.openGenerateModal(id, name, true);
             } else {
                 console.warn('openGenerateModal no definido');
             }
@@ -731,8 +743,18 @@ function submitGenerate(mode) {
     if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
     const url = (mode === 'missing') ? window.URLS.generateMissing : window.URLS.generateAll;
     // Cerrar cualquier modal subyacente (ej. modal generado por server)
-    try { closePayrollModal(); } catch (e) { /* ignore */ }
-    try { const mg = document.getElementById('modalGeneratePayroll'); if (mg) { mg.style.display='none'; document.body.classList.remove('modal-open'); } } catch(e){}
+    try {
+        closePayrollModal();
+    } catch (e) { /* ignore */
+    }
+    try {
+        const mg = document.getElementById('modalGeneratePayroll');
+        if (mg) {
+            mg.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+    } catch (e) {
+    }
 
     // Usar AbortController para permitir cancelar la petición al pulsar "Cancelar"
     const controller = new AbortController();
@@ -751,7 +773,7 @@ function submitGenerate(mode) {
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
         allowOutsideClick: false,
-        customClass: { popup: 'swal2-recalc-popup' },
+        customClass: {popup: 'swal2-recalc-popup'},
         didOpen: () => {
             try {
                 // Inyectar estilos rápidos para centrar y keyframes si no existen
@@ -763,14 +785,28 @@ function submitGenerate(mode) {
                     document.head.appendChild(style);
                 }
                 // Ocultar temporalmente cualquier confirm que pudiera permanecer
-                const conf = document.querySelector('.swal2-confirm'); if (conf) conf.style.display = 'none';
+                const conf = document.querySelector('.swal2-confirm');
+                if (conf) conf.style.display = 'none';
                 // Forzar que el contenido no tenga scroll
-                const htmlCont = document.querySelector('.swal2-html-container'); if (htmlCont) { htmlCont.style.overflow = 'visible'; htmlCont.style.maxHeight = 'none'; }
-                const content = document.querySelector('.swal2-content'); if (content) { content.style.overflow = 'visible'; content.style.maxHeight = 'none'; }
+                const htmlCont = document.querySelector('.swal2-html-container');
+                if (htmlCont) {
+                    htmlCont.style.overflow = 'visible';
+                    htmlCont.style.maxHeight = 'none';
+                }
+                const content = document.querySelector('.swal2-content');
+                if (content) {
+                    content.style.overflow = 'visible';
+                    content.style.maxHeight = 'none';
+                }
                 // Vincular botón cancelar al AbortController
                 const btn = document.querySelector('.swal2-cancel');
                 if (btn) {
-                    btn.addEventListener('click', function () { try{ controller.abort(); }catch(e){} });
+                    btn.addEventListener('click', function () {
+                        try {
+                            controller.abort();
+                        } catch (e) {
+                        }
+                    });
                     btn.style.minWidth = '120px';
                 }
                 // Por seguridad: si el confirm sigue presente (versión diferente de Swal), eliminarlo buscando el texto del popup
@@ -779,14 +815,18 @@ function submitGenerate(mode) {
                         const containers = document.querySelectorAll('.swal2-container');
                         containers.forEach(c => {
                             if (c.innerText && c.innerText.indexOf('Calculando, Por favor espere') !== -1) {
-                                const conf = c.querySelector('.swal2-confirm'); if (conf) conf.remove();
+                                const conf = c.querySelector('.swal2-confirm');
+                                if (conf) conf.remove();
                                 // también quitar cualquier clase residual que muestre confirm
-                                const canc = c.querySelector('.swal2-cancel'); if (canc) canc.style.marginLeft = '0';
+                                const canc = c.querySelector('.swal2-cancel');
+                                if (canc) canc.style.marginLeft = '0';
                             }
                         });
-                    } catch (e) { /* ignore */ }
+                    } catch (e) { /* ignore */
+                    }
                 }, 60);
-            } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore */
+            }
         }
     });
 
@@ -796,32 +836,84 @@ function submitGenerate(mode) {
         body: new URLSearchParams({'period_id': id}),
         signal: signal
     }).then(r => r.json()).then(data => {
-        try { Swal.close(); } catch(e){}
+        try {
+            Swal.close();
+        } catch (e) {
+        }
         // Esperar un poco para asegurar cierre completo del DOM anterior
         setTimeout(() => {
-            try { document.querySelectorAll('.swal2-container').forEach(c => c.remove()); } catch(e){}
-            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
-            try { document.querySelectorAll('.swal2-confirm').forEach(el => el.remove()); } catch(e){}
+            try {
+                document.querySelectorAll('.swal2-container').forEach(c => c.remove());
+            } catch (e) {
+            }
+            try {
+                document.querySelectorAll('.swal2-cancel').forEach(el => el.remove());
+            } catch (e) {
+            }
+            try {
+                document.querySelectorAll('.swal2-confirm').forEach(el => el.remove());
+            } catch (e) {
+            }
             if (data.status === 'success' || data.success || data.message) {
-                Swal.fire({ title: 'Éxito', text: data.message || 'Operación completada', icon: 'success', confirmButtonText: 'OK', showCancelButton: false }).then(()=> location.reload());
+                Swal.fire({
+                    title: 'Éxito',
+                    text: data.message || 'Operación completada',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    showCancelButton: false
+                }).then(() => location.reload());
             } else if (data.status === 'info') {
-                Swal.fire({ title: 'Info', text: data.message, icon: 'info', confirmButtonText: 'OK', showCancelButton: false });
+                Swal.fire({
+                    title: 'Info',
+                    text: data.message,
+                    icon: 'info',
+                    confirmButtonText: 'OK',
+                    showCancelButton: false
+                });
             } else {
-                Swal.fire({ title: 'Error', text: data.message || 'Error al generar', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
+                Swal.fire({
+                    title: 'Error',
+                    text: data.message || 'Error al generar',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    showCancelButton: false
+                });
             }
         }, 140);
-    }).catch(err=>{
-        try { Swal.close(); } catch(e){}
+    }).catch(err => {
+        try {
+            Swal.close();
+        } catch (e) {
+        }
         if (err && err.name === 'AbortError') return;
         console.error(err);
-        setTimeout(()=>{ Swal.fire({ title: 'Error', text: 'Fallo de comunicación', icon: 'error', confirmButtonText: 'OK', showCancelButton: false }); }, 140);
+        setTimeout(() => {
+            Swal.fire({
+                title: 'Error',
+                text: 'Fallo de comunicación',
+                icon: 'error',
+                confirmButtonText: 'OK',
+                showCancelButton: false
+            });
+        }, 140);
     });
 }
 
 function downloadReport(kind) {
     const id = _resolveCurrentPeriodId();
     if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
-    let url = (kind === 'banco') ? window.URLS.reporteBanco : window.URLS.reporteNomina;
+
+    let url = '';
+    if (kind === 'banco') {
+        url = window.URLS.reporteBanco;
+    } else if (kind === 'nomina') {
+        url = window.URLS.reporteNomina;
+    } else if (kind === 'negativos') {
+        url = window.URLS.reporteNegativos; 
+    }
+
+    if (!url) return Swal.fire('Error', 'URL de reporte no encontrada', 'error');
+
     url = url.replace('999999', id);
     window.open(url, '_blank');
 }
@@ -832,10 +924,13 @@ function sellarComoPagados() {
     const url = (window.URLS.periodMarkPaid || '').replace('999999', id);
     fetch(url, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()}})
         .then(r => r.json()).then(data => {
-            if (data.success) {
-                Swal.fire('Hecho', data.message, 'success').then(()=> location.reload());
-            } else {
-                Swal.fire('Error', data.message || 'No se pudo sellar', 'error');
-            }
-        }).catch(err=>{console.error(err); Swal.fire('Error', 'Fallo de comunicación', 'error');});
+        if (data.success) {
+            Swal.fire('Hecho', data.message, 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo sellar', 'error');
+        }
+    }).catch(err => {
+        console.error(err);
+        Swal.fire('Error', 'Fallo de comunicación', 'error');
+    });
 }
