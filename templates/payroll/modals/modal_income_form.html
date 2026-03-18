@@ -15,7 +15,6 @@
 
         <form method="post" id="incomeForm" action="{{ request.path }}" onsubmit="submitIncomeForm(event)">
             {% csrf_token %}
-            {{ form.code }}
             <div class="modal-body-custom">
 
                 <div class="form-section-card">

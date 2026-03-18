@@ -15,7 +15,6 @@
 
         <form method="post" id="contributionForm" action="{{ request.path }}" onsubmit="submitContributionForm(event)">
             {% csrf_token %}
-            {{ form.code }}
             <div class="modal-body-custom">
 
                 <div class="form-section-card">

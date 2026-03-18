@@ -95,7 +95,7 @@ class RubroBudgetMappingForm(forms.ModelForm):
 
 
 class BaseRubroForm(forms.ModelForm):
-    """Formulario maestro que inyecta la lógica de mapeo presupuestario"""
+    """Formulario maestro que inyecta la lógica de mapeo presupuestario y autogenera códigos"""
     has_mapping = forms.BooleanField(label='¿Afecta al Presupuesto Institucional?', required=False,
                                      help_text="Marque esta casilla si este rubro debe generar una afectación presupuestaria.")
     dynamic_suffix = forms.CharField(label='Sufijo Presupuestario (Ej: 5.1.01.05)', required=False, max_length=50,
@@ -107,36 +107,63 @@ class BaseRubroForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Si el rubro ya existe en la base de datos (MODO EDICIÓN)
+        # 1. CANDADO ESTRICTO: El código SIEMPRE es de solo lectura y no es obligatorio para el usuario
+        if 'code' in self.fields:
+            self.fields['code'].required = False
+            self.fields['code'].widget.attrs['readonly'] = True
+            self.fields['code'].widget.attrs[
+                'style'] = 'background-color: #f1f5f9; cursor: not-allowed; color: #64748b; font-weight: bold;'
+
+            # Mensaje que sale cuando estás creando uno nuevo
+            if not self.instance.pk:
+                self.fields['code'].widget.attrs['placeholder'] = 'Se autogenerará al guardar...'
+
+        # 2. Cargar los datos del mapeo presupuestario (Si es edición)
         if self.instance and self.instance.pk:
-
-            # 1. Bloquear el campo 'code' para que sea de solo lectura
-            if 'code' in self.fields:
-                self.fields['code'].widget.attrs['readonly'] = True
-                # Le damos un fondo gris y cursor bloqueado para que el usuario entienda visualmente
-                self.fields['code'].widget.attrs[
-                    'style'] = 'background-color: #f1f5f9; cursor: not-allowed; color: #64748b;'
-
-            # 2. Cargar los datos del mapeo presupuestario (Tu código original)
             mapping = getattr(self.instance, 'budget_mapping', None)
             if mapping:
                 self.fields['has_mapping'].initial = True
                 self.fields['dynamic_suffix'].initial = mapping.dynamic_suffix
                 self.fields['is_fixed'].initial = mapping.is_fixed
 
-    def save(self, commit=True):
-        # 1. Guardamos el Ingreso/Egreso normal
-        instance = super().save(commit=commit)
+    def clean(self):
+        cleaned_data = super().clean()
+        code = cleaned_data.get('code')
+        name = cleaned_data.get('name')
 
-        # 2. Lógica del Mapeo Presupuestario
+        # 3. AUTOGENERACIÓN MÁGICA Y SEGURA
+        # Si el código viene vacío (nuevo rubro), lo generamos basándonos en el nombre
+        if not code and name:
+            import unicodedata
+            import re
+
+            # Paso A: Quitamos tildes y acentos (Ej: "Pensión" -> "Pension")
+            clean_name = ''.join((c for c in unicodedata.normalize('NFD', name) if unicodedata.category(c) != 'Mn'))
+            # Paso B: Reemplazamos espacios por guiones bajos y borramos símbolos raros
+            clean_name = re.sub(r'[^a-zA-Z0-9_]', '', clean_name.replace(' ', '_'))
+
+            nuevo_codigo = clean_name.upper()
+
+            # Lo inyectamos en los datos validados para que Django lo guarde
+            cleaned_data['code'] = nuevo_codigo
+            self.instance.code = nuevo_codigo
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
         if commit:
+            instance.save()
+
+            # Lógica del Mapeo Presupuestario
             has_mapping = self.cleaned_data.get('has_mapping')
             if has_mapping:
                 suffix = self.cleaned_data.get('dynamic_suffix')
                 is_fixed = self.cleaned_data.get('is_fixed')
                 kwargs = {'dynamic_suffix': suffix, 'is_fixed': is_fixed}
 
-                # Determinamos a qué modelo pertenece y creamos/actualizamos el mapeo
+                from .models import Income, Deduction, InstitutionalContribution, RubroBudgetMapping
                 if isinstance(instance, Income):
                     RubroBudgetMapping.objects.update_or_create(income=instance, defaults=kwargs)
                 elif isinstance(instance, Deduction):
@@ -144,7 +171,6 @@ class BaseRubroForm(forms.ModelForm):
                 elif isinstance(instance, InstitutionalContribution):
                     RubroBudgetMapping.objects.update_or_create(contribution=instance, defaults=kwargs)
             else:
-                # Si desmarcaron la casilla, borramos el mapeo de la base de datos
                 if hasattr(instance, 'budget_mapping') and instance.budget_mapping:
                     instance.budget_mapping.delete()
 

@@ -14,9 +14,10 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
+from xhtml2pdf import pisa
 
 from accounting.models import JournalItem
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
@@ -439,15 +440,16 @@ class PayslipDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Separamos ingresos y egresos para mostrarlos ordenados
-        context['incomes'] = self.object.items.filter(item_type='INCOME')
+        # FIX: Agregamos order_by para que respete tu configuración de "Orden"
+        context['incomes'] = self.object.items.filter(
+            item_type='INCOME'
+        ).order_by('income_ref__order')
 
-        # Filtro Mágico: Trae los descuentos, PERO excluye los que digan "PATRONAL"
         context['deductions'] = self.object.items.filter(
             item_type='DEDUCTION'
         ).exclude(
             deduction_ref__code__icontains='PATRONAL'
-        )
+        ).order_by('deduction_ref__order')
 
         return context
 
@@ -961,6 +963,7 @@ class ContributionUpdateView(UpdateView):
 class GroupedPayrollReportView(LoginRequiredMixin, View):
     """
     Motor de Generación de los 3 Reportes Financieros agrupados por Partida Presupuestaria.
+    100% Dinámico con prevención de Colisión de IDs (DED_ vs CON_)
     """
 
     def get(self, request, pk):
@@ -971,7 +974,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         group_filter = request.GET.get('group', '').strip()
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
 
-        # 2. FILTRADO INICIAL DE ROLES (Payslips)
         payslips_qs = Payslip.objects.filter(period=period)
 
         if search_query:
@@ -979,23 +981,16 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 Q(employee__person__first_name__icontains=search_query) |
                 Q(employee__person__last_name__icontains=search_query) |
                 Q(employee__person__document_number__icontains=search_query) |
-                # ---> FALTABA ESTA LÍNEA PARA QUE ENCUENTRE EL CÓDIGO <---
                 Q(items__budget_line__budget_group__short_code__icontains=search_query)
-            ).distinct()  # Importante el distinct
-        if group_filter:
-            # Filtramos roles que tengan al menos un rubro en esa agrupación
-            payslips_qs = payslips_qs.filter(
-                items__budget_line__budget_group__short_code=group_filter
             ).distinct()
 
-        # Soporte adicional: permitir que el cliente indique explícitamente
-        # si quiere ver solo retenidos (show_withheld=only). Esto lo usamos
-        # para que los botones de reporte respeten el checkbox del frontend.
+        if group_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
+
         show_withheld = (request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
             payslips_qs = payslips_qs.filter(is_withheld=True)
         else:
-            # Filtros de estado (Normal vs Rezagados)
             if tipo_filtro == 'NORMAL':
                 payslips_qs = payslips_qs.filter(is_withheld=False)
             elif tipo_filtro == 'REZAGADOS':
@@ -1003,9 +998,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
 
         valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
 
-        # ==============================================================
-        # 1. BLINDAJE DE MAPEOS (Conversión estricta a enteros y Sets)
-        # ==============================================================
         mapped_incomes = set(
             int(x) for x in RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True)
             if x)
@@ -1016,9 +1008,8 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                                    RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list(
                                        'contribution_id', flat=True) if x)
 
-        # 2. ESCUDO ANTI-MULTIPLICACIÓN Y APLICACIÓN DEL FILTRO
         items = PayslipItem.objects.filter(
-            payslip_id__in=valid_payslip_ids  # <--- MAGIA: Solo procesa los rubros de la gente filtrada
+            payslip_id__in=valid_payslip_ids
         ).select_related(
             'payslip__employee__person',
             'budget_line__budget_group',
@@ -1044,17 +1035,17 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                     'group_name': grupo_obj.name if grupo_obj else 'Registros sin agrupación',
                     'empleados': {},
                     'contabilidad': {},
-                    'presupuesto': {}
+                    'presupuesto': {},
+                    'ingresos_headers': {},
+                    'descuentos_headers': {},
+                    'aportes_headers': {}
                 }
 
             grupo_data = report_data[grupo_key]
-
-            # A. Llenado de Data para Reporte 1 (Sábana)
             emp_id = it.payslip.employee.id
+
             if emp_id not in grupo_data['empleados']:
-                banco_nombre = "NO REGISTRADO"
-                cuenta_tipo = ""
-                cuenta_numero = ""
+                banco_nombre, cuenta_tipo, cuenta_numero = "NO REGISTRADO", "", ""
                 try:
                     bank_acc = it.payslip.employee.person.economic_data.bank_account
                     banco_nombre = bank_acc.bank.name if bank_acc.bank else "Banco Desconocido"
@@ -1074,93 +1065,75 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                     'descuentos': Decimal(0),
                     'liquido': Decimal(0),
 
-                    'rmu': Decimal(0),
-                    'fondos_reserva': Decimal(0),
-                    'decimo_tercero': Decimal(0),
-                    'decimo_cuarto': Decimal(0),
-                    'iess_personal': Decimal(0),
-                    'iess_patronal': Decimal(0),
-                    'retenciones': Decimal(0),
-                    'prestamos_q': Decimal(0),
-                    'anticipos': Decimal(0),
-                    'otros_descuentos': Decimal(0),
+                    'ingresos_dict': {},
+                    'descuentos_dict': {},
+                    'aportes_dict': {},
                 }
 
             emp_dict = grupo_data['empleados'][emp_id]
 
-            if it.item_type == 'INCOME':
+            # A. LLENADO DINÁMICO CON BLINDAJE DE KEYS (Ej: INC_1, DED_1, CON_1)
+            if it.item_type == 'INCOME' and it.income_ref:
+                ref = it.income_ref
+                key = f"INC_{ref.id}"
+                order_val = ref.order if ref.order is not None else 999
+                grupo_data['ingresos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                emp_dict['ingresos_dict'][key] = emp_dict['ingresos_dict'].get(key, Decimal(0)) + val
                 emp_dict['ingresos'] += val
                 emp_dict['liquido'] += val
 
-                code_up = (it.income_ref.code or '').upper()
-                if 'REMUNERACION' in code_up:
-                    emp_dict['rmu'] += val
-                elif 'FONDOS_RESERVA' in code_up:
-                    emp_dict['fondos_reserva'] += val
-                elif 'DECIMO_TERCERO' in code_up:
-                    emp_dict['decimo_tercero'] += val
-                elif 'DECIMO_CUARTO' in code_up:
-                    emp_dict['decimo_cuarto'] += val
+            elif it.item_type == 'DEDUCTION' and it.deduction_ref:
+                ref = it.deduction_ref
+                key = f"DED_{ref.id}"
+                order_val = ref.order if ref.order is not None else 999
+                code_up = (ref.code or '').upper()
 
-            elif it.item_type == 'DEDUCTION':
+                if 'IESS_PER' in code_up or ('APORTE' in code_up and 'PATRONAL' not in code_up):
+                    grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                    emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
+                else:
+                    grupo_data['descuentos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                    emp_dict['descuentos_dict'][key] = emp_dict['descuentos_dict'].get(key, Decimal(0)) + val
+
                 emp_dict['descuentos'] += val
                 emp_dict['liquido'] -= val
 
-                code_up = (it.deduction_ref.code or '').upper()
-                if 'IESS_PER' in code_up:
-                    emp_dict['iess_personal'] += val
-                elif 'RETENCION' in code_up or 'JUDICIAL' in code_up:
-                    emp_dict['retenciones'] += val
-                elif 'PRESTAMO' in code_up or 'QUIROGRAFARIO' in code_up:
-                    emp_dict['prestamos_q'] += val
-                elif 'ANTICIPO' in code_up:
-                    emp_dict['anticipos'] += val
-                else:
-                    emp_dict['otros_descuentos'] += val
-
             elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
-                code_up = (it.contribution_ref.code or '').upper()
-                if 'PATRONAL' in code_up: emp_dict['iess_patronal'] += val
+                ref = it.contribution_ref
+                key = f"CON_{ref.id}"
+                order_val = ref.order if ref.order is not None else 999
+                grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
 
-            # ==========================================
-            # B. Llenado de Data para Reporte 3 (Presupuesto)
-            # ==========================================
+            # B. PRESUPUESTO
             b_code = getattr(it, 'budget_line_code', None)
             if b_code and str(b_code).strip():
-                afecta_presupuesto = False
-                nombre_rubro = ""
+                afecta_presupuesto, nombre_rubro = False, ""
 
                 if it.item_type == 'INCOME' and it.income_ref:
                     inc_id = it.income_ref.id
                     code_up = (it.income_ref.code or '').upper()
-                    # Comprobación de Tipo Estricto (int contra int)
                     if (inc_id in mapped_incomes) or ('REMUNERACION' in code_up):
-                        afecta_presupuesto = True
-                        nombre_rubro = it.income_ref.name
+                        afecta_presupuesto, nombre_rubro = True, it.income_ref.name
 
                 elif it.item_type == 'DEDUCTION' and it.deduction_ref:
                     if it.deduction_ref.id in mapped_deductions:
-                        afecta_presupuesto = True
-                        nombre_rubro = it.deduction_ref.name
+                        afecta_presupuesto, nombre_rubro = True, it.deduction_ref.name
 
                 elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
                     if it.contribution_ref.id in mapped_contributions:
-                        afecta_presupuesto = True
-                        nombre_rubro = it.contribution_ref.name
+                        afecta_presupuesto, nombre_rubro = True, it.contribution_ref.name
 
                 if afecta_presupuesto:
                     nombre_rubro = nombre_rubro or "Rubro Desconocido"
                     key_presup = f"{b_code}_{nombre_rubro}"
 
                     if key_presup not in grupo_data['presupuesto']:
-                        grupo_data['presupuesto'][key_presup] = {
-                            'partida': b_code,
-                            'concepto': nombre_rubro,
-                            'monto': Decimal(0)
-                        }
+                        grupo_data['presupuesto'][key_presup] = {'partida': b_code, 'concepto': nombre_rubro,
+                                                                 'monto': Decimal(0)}
                     grupo_data['presupuesto'][key_presup]['monto'] += val
 
-            # C. Llenado de Data para Reporte 2 (Contabilidad)
+            # C. CONTABILIDAD
             obj_ref = None
             if it.item_type == 'INCOME':
                 obj_ref = it.income_ref
@@ -1191,12 +1164,11 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 grupo_data['contabilidad']['2.1.3.51']['haber'] += val
 
         # ==============================================================
-        # POST-PROCESO: Totales, Columnas Dinámicas y Ordenamiento Contable
+        # POST-PROCESO: Ordenamiento y Conversión a Listas
         # ==============================================================
         from accounting.models import Account
         cta_gp = Account.objects.filter(code='2.1.3.51').first()
         nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
-
         cta_banco = Account.objects.filter(code='1.1.1.03.01').first()
         nombre_banco = cta_banco.name if cta_banco else 'Banco Central'
 
@@ -1207,40 +1179,50 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 g_data['contabilidad'].setdefault('2.1.3.51',
                                                   {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_gp})
                 g_data['contabilidad']['2.1.3.51']['debe'] += total_net_pay
-
                 g_data['contabilidad'].setdefault('1.1.1.03.01',
                                                   {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco})
                 g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
 
-            # MATRIZ DE TOTALES
+            g_data['ingresos_headers'] = sorted(g_data['ingresos_headers'].values(),
+                                                key=lambda x: (x['order'], x['name']))
+            g_data['descuentos_headers'] = sorted(g_data['descuentos_headers'].values(),
+                                                  key=lambda x: (x['order'], x['name']))
+            g_data['aportes_headers'] = sorted(g_data['aportes_headers'].values(),
+                                               key=lambda x: (x['order'], x['name']))
+
+            # Usamos h['key'] para extraer el dinero exacto de las columnas
+            for emp in g_data['empleados'].values():
+                emp['ingresos_list'] = [emp['ingresos_dict'].get(h['key'], Decimal(0)) for h in
+                                        g_data['ingresos_headers']]
+                emp['descuentos_list'] = [emp['descuentos_dict'].get(h['key'], Decimal(0)) for h in
+                                          g_data['descuentos_headers']]
+                emp['aportes_list'] = [emp['aportes_dict'].get(h['key'], Decimal(0)) for h in g_data['aportes_headers']]
+                emp['total_aportes'] = sum(emp['aportes_dict'].values())
+
             ts = {
-                'rmu': sum((e['rmu'] for e in g_data['empleados'].values()), Decimal(0)),
-                'fondos_reserva': sum((e['fondos_reserva'] for e in g_data['empleados'].values()), Decimal(0)),
-                'decimo_tercero': sum((e['decimo_tercero'] for e in g_data['empleados'].values()), Decimal(0)),
-                'decimo_cuarto': sum((e['decimo_cuarto'] for e in g_data['empleados'].values()), Decimal(0)),
                 'total_ingresos': sum((e['ingresos'] for e in g_data['empleados'].values()), Decimal(0)),
-
-                'iess_personal': sum((e['iess_personal'] for e in g_data['empleados'].values()), Decimal(0)),
-                'iess_patronal': sum((e['iess_patronal'] for e in g_data['empleados'].values()), Decimal(0)),
-
-                'retenciones': sum((e['retenciones'] for e in g_data['empleados'].values()), Decimal(0)),
-                'prestamos_q': sum((e['prestamos_q'] for e in g_data['empleados'].values()), Decimal(0)),
-                'anticipos': sum((e['anticipos'] for e in g_data['empleados'].values()), Decimal(0)),
-                'otros_descuentos': sum((e['otros_descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
                 'total_descuentos': sum((e['descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
-
+                'total_aportes': sum((e['total_aportes'] for e in g_data['empleados'].values()), Decimal(0)),
                 'liquido': sum((e['liquido'] for e in g_data['empleados'].values()), Decimal(0)),
+
+                'ingresos_list': [
+                    sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()),
+                        Decimal(0)) for h in g_data['ingresos_headers']],
+                'descuentos_list': [
+                    sum((e['descuentos_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()),
+                        Decimal(0)) for h in g_data['descuentos_headers']],
+                'aportes_list': [
+                    sum((e['aportes_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()), Decimal(0))
+                    for h in g_data['aportes_headers']],
             }
             g_data['totales_sabana'] = ts
 
-            # CÁLCULO DE COLUMNAS DINÁMICAS
             g_data['colspans'] = {
-                'aportes': (1 if ts['iess_personal'] > 0 else 0) + (1 if ts['iess_patronal'] > 0 else 0),
-                'descuentos': (1 if ts['retenciones'] > 0 else 0) + (1 if ts['prestamos_q'] > 0 else 0) +
-                              (1 if ts['anticipos'] > 0 else 0) + (1 if ts['otros_descuentos'] > 0 else 0)
+                'ingresos': len(g_data['ingresos_headers']) or 1,
+                'aportes': len(g_data['aportes_headers']),
+                'descuentos': len(g_data['descuentos_headers'])
             }
 
-            # ORDENAMIENTO CONTABLE
             cuentas_debe = []
             cuentas_solo_haber = []
 
@@ -1256,7 +1238,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             cuentas_solo_haber.sort(key=lambda x: x['codigo'])
 
             g_data['contabilidad_ordenada'] = cuentas_debe + cuentas_solo_haber
-
             g_data['total_contabilidad_debe'] = sum((c['debe'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_contabilidad_haber'] = sum((c['haber'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
@@ -1265,7 +1246,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         context = {
             'period': period,
             'grouped_reports': sorted_reports,
-            # ESTA LÍNEA ES LA MAGIA:
             'base_template': 'base_pdf.html' if request.GET.get('export') == 'pdf' else 'base.html'
         }
         return render(request, 'payroll/reports/grouped_financial_report.html', context)
@@ -1613,47 +1593,65 @@ def api_calculate_working_days(request):
 
 def export_negative_balances_report(request, period_id):
     """
-    Genera un Excel con los empleados cuyo sueldo no alcanzó para cubrir
-    sus descuentos, respetando las prioridades de cobro.
+    Genera un PDF Institucional con los empleados cuyo sueldo no alcanzó
+    para cubrir sus descuentos, agrupado por tipo de descuento con subtotales.
     """
     period = get_object_or_404(PayrollPeriod, id=period_id)
 
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="Saldos_Negativos_{period.month}_{period.year}.xlsx"'
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Saldos Negativos"
-
-    # Cabeceras del Excel
-    headers = [
-        'CÉDULA', 'NOMBRES Y APELLIDOS', 'CONCEPTO DESCUENTO',
-        'PRIORIDAD', 'VALOR ORIGINAL', 'VALOR DESCONTADO', 'VALOR PENDIENTE (DEUDA)'
-    ]
-    ws.append(headers)
-
-    # Consultamos las deudas del periodo que tengan saldo mayor a cero
+    # Consultamos y ordenamos primero por el nombre del descuento, luego por empleado
     debts = PendingDebt.objects.filter(
         period=period,
         pending_balance__gt=0
     ).select_related(
         'employee__person', 'deduction_ref'
-    ).order_by('employee__person__last_name', 'deduction_ref__priority')
+    ).order_by('deduction_ref__name', 'employee__person__last_name')
+
+    # Diccionario para agrupar los datos y calcular subtotales
+    grouped_data = {}
+    total_original = Decimal('0.0')
+    total_cobrado = Decimal('0.0')
+    total_pendiente = Decimal('0.0')
 
     for debt in debts:
-        person = debt.employee.person
-        # Dependiendo de tu modelo Persona, obtén la cédula
-        cedula = getattr(person, 'identification', getattr(person, 'cedula', 'N/A'))
+        concept_name = debt.deduction_ref.name
+        if concept_name not in grouped_data:
+            grouped_data[concept_name] = {
+                'items': [],
+                'sub_original': Decimal('0.0'),
+                'sub_cobrado': Decimal('0.0'),
+                'sub_pendiente': Decimal('0.0'),
+            }
 
-        ws.append([
-            cedula,
-            f"{person.last_name} {person.first_name}",
-            debt.deduction_ref.name,
-            debt.deduction_ref.priority,
-            float(debt.original_value),
-            float(debt.collected_value),
-            float(debt.pending_balance)
-        ])
+        # Agregamos el empleado al grupo
+        grouped_data[concept_name]['items'].append(debt)
 
-    wb.save(response)
+        # Sumamos a los subtotales del grupo
+        grouped_data[concept_name]['sub_original'] += debt.original_value
+        grouped_data[concept_name]['sub_cobrado'] += debt.collected_value
+        grouped_data[concept_name]['sub_pendiente'] += debt.pending_balance
+
+        # Sumamos a los totales generales
+        total_original += debt.original_value
+        total_cobrado += debt.collected_value
+        total_pendiente += debt.pending_balance
+
+    context = {
+        'period': period,
+        'grouped_data': grouped_data,
+        'total_original': total_original,
+        'total_cobrado': total_cobrado,
+        'total_pendiente': total_pendiente,
+        'has_debts': debts.exists()
+    }
+
+    template = get_template('payroll/reports/report_negative_balances.html')
+    html = template.render(context)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Saldos_Rezagados_{period.month}_{period.year}.pdf"'
+
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Ocurrió un error al generar el PDF', status=500)
+
     return response

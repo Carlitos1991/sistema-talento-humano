@@ -56,111 +56,100 @@
                         <tr>
                             <th rowspan="2" style="width: 2%;">N°</th>
                             <th rowspan="2" style="width: 15%;">Nombres Completos</th>
-                            <th colspan="4">Ingresos</th>
+                            <th colspan="{{ data.colspans.ingresos }}">Ingresos</th>
                             <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Ingresos</th>
 
                             {% if data.colspans.aportes > 0 %}
-                                <th colspan="{{ data.colspans.aportes }}">Aportes al IESS</th>{% endif %}
-                            <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Aportes</th>
+                                <th colspan="{{ data.colspans.aportes }}">APORTES AL IESS</th>
+                                <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total Aportes<br>al IESS</th>
+                            {% endif %}
 
                             {% if data.colspans.descuentos > 0 %}
-                                <th colspan="{{ data.colspans.descuentos }}">Descuentos</th>{% endif %}
+                                <th colspan="{{ data.colspans.descuentos }}">Descuentos</th>
+                            {% endif %}
+                            
                             <th rowspan="2" style="width: 6%; background-color: #e2e8f0;">Total<br>Desctos</th>
 
                             <th rowspan="2" style="width: 7%; background-color: #e2e8f0;">Valor a<br>Recibir</th>
                         </tr>
                         <tr>
-                            <th style="width: 5%;">R.M.U</th>
-                            <th style="width: 5%;">Fondos<br>Res.</th>
-                            <th style="width: 4%;">Décimo<br>3ro</th>
-                            <th style="width: 4%;">Décimo<br>4to</th>
+                            {% for inc in data.ingresos_headers %}
+                                <th>{{ inc.name }}</th>
+                            {% empty %}
+                                <th>Ingreso</th>
+                            {% endfor %}
 
-                            {% if data.totales_sabana.iess_personal > 0 %}
-                                <th style="width: 5%;">Individual<br>9.45%</th>{% endif %}
-                            {% if data.totales_sabana.iess_patronal > 0 %}
-                                <th style="width: 5%;">Patronal<br>11.15%</th>{% endif %}
+                            {% for apo in data.aportes_headers %}
+                                <th>{{ apo.name }}</th>
+                            {% endfor %}
 
-                            {% if data.totales_sabana.retenciones > 0 %}
-                                <th style="width: 5%;">Retenciones<br>Judiciales</th>{% endif %}
-                            {% if data.totales_sabana.prestamos_q > 0 %}
-                                <th style="width: 5%;">Prestamos<br>Quirog.</th>{% endif %}
-                            {% if data.totales_sabana.anticipos > 0 %}
-                                <th style="width: 5%;">Anticipos</th>{% endif %}
-                            {% if data.totales_sabana.otros_descuentos > 0 %}
-                                <th style="width: 5%;">Otros</th>{% endif %}
+                            {% for des in data.descuentos_headers %}
+                                <th>{{ des.name }}</th>
+                            {% endfor %}
                         </tr>
                         </thead>
+                        
                         <tbody>
                         {% for emp_id, emp in data.empleados.items %}
                             <tr>
                                 <td class="text-center">{{ forloop.counter }}</td>
                                 <td class="text-left" style="font-weight: 600;">{{ emp.persona.full_name }}</td>
 
-                                <td>{{ emp.rmu|floatformat:"2g" }}</td>
-                                <td>{% if emp.fondos_reserva > 0 %}{{ emp.fondos_reserva|floatformat:"2g" }}{% else %}
-                                    -{% endif %}</td>
-                                <td>{% if emp.decimo_tercero > 0 %}{{ emp.decimo_tercero|floatformat:"2g" }}{% else %}
-                                    -{% endif %}</td>
-                                <td>{% if emp.decimo_cuarto > 0 %}{{ emp.decimo_cuarto|floatformat:"2g" }}{% else %}
-                                    -{% endif %}</td>
+                                {% for val in emp.ingresos_list %}
+                                    <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                {% empty %}
+                                    <td>-</td>
+                                {% endfor %}
                                 <td class="col-highlight text-success">{{ emp.ingresos|floatformat:"2g" }}</td>
 
-                                {% if data.totales_sabana.iess_personal > 0 %}
-                                    <td>{% if emp.iess_personal > 0 %}{{ emp.iess_personal|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-                                {% if data.totales_sabana.iess_patronal > 0 %}
-                                    <td>{% if emp.iess_patronal > 0 %}{{ emp.iess_patronal|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-                                <td class="col-highlight">{{ emp.iess_personal|add:emp.iess_patronal|floatformat:"2g" }}</td>
+                                {% if data.colspans.aportes > 0 %}
+                                    {% for val in emp.aportes_list %}
+                                        <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                    {% endfor %}
+                                    <td class="col-highlight">{{ emp.total_aportes|floatformat:"2g" }}</td>
+                                {% endif %}
 
-                                {% if data.totales_sabana.retenciones > 0 %}
-                                    <td>{% if emp.retenciones > 0 %}{{ emp.retenciones|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-                                {% if data.totales_sabana.prestamos_q > 0 %}
-                                    <td>{% if emp.prestamos_q > 0 %}{{ emp.prestamos_q|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-                                {% if data.totales_sabana.anticipos > 0 %}
-                                    <td>{% if emp.anticipos > 0 %}{{ emp.anticipos|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-                                {% if data.totales_sabana.otros_descuentos > 0 %}
-                                    <td>{% if emp.otros_descuentos > 0 %}
-                                        {{ emp.otros_descuentos|floatformat:"2g" }}{% else %}
-                                        -{% endif %}</td>{% endif %}
-
+                                {% if data.colspans.descuentos > 0 %}
+                                    {% for val in emp.descuentos_list %}
+                                        <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                    {% endfor %}
+                                {% endif %}
                                 <td class="col-highlight text-danger">{{ emp.descuentos|floatformat:"2g" }}</td>
+
                                 <td style="font-weight: 800; color: #0f4c81;">$ {{ emp.liquido|floatformat:"2g" }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="15" class="text-center py-4">No hay empleados procesados.</td>
+                                <td colspan="20" class="text-center py-4">No hay empleados procesados.</td>
                             </tr>
                         {% endfor %}
                         </tbody>
+                        
                         <tfoot>
                         <tr style="background-color: #cbd5e1; font-weight: 800; color: #0f172a;">
                             <td colspan="2" class="text-right">TOTALES:</td>
-                            <td>{{ data.totales_sabana.rmu|floatformat:"2g" }}</td>
-                            <td>{{ data.totales_sabana.fondos_reserva|floatformat:"2g" }}</td>
-                            <td>{{ data.totales_sabana.decimo_tercero|floatformat:"2g" }}</td>
-                            <td>{{ data.totales_sabana.decimo_cuarto|floatformat:"2g" }}</td>
+
+                            {% for val in data.totales_sabana.ingresos_list %}
+                                <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                            {% empty %}
+                                <td>-</td>
+                            {% endfor %}
                             <td class="text-success">{{ data.totales_sabana.total_ingresos|floatformat:"2g" }}</td>
 
-                            {% if data.totales_sabana.iess_personal > 0 %}
-                                <td>{{ data.totales_sabana.iess_personal|floatformat:"2g" }}</td>{% endif %}
-                            {% if data.totales_sabana.iess_patronal > 0 %}
-                                <td>{{ data.totales_sabana.iess_patronal|floatformat:"2g" }}</td>{% endif %}
-                            <td>{{ data.totales_sabana.iess_personal|add:data.totales_sabana.iess_patronal|floatformat:"2g" }}</td>
+                            {% if data.colspans.aportes > 0 %}
+                                {% for val in data.totales_sabana.aportes_list %}
+                                    <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                {% endfor %}
+                                <td>{{ data.totales_sabana.total_aportes|floatformat:"2g" }}</td>
+                            {% endif %}
 
-                            {% if data.totales_sabana.retenciones > 0 %}
-                                <td>{{ data.totales_sabana.retenciones|floatformat:"2g" }}</td>{% endif %}
-                            {% if data.totales_sabana.prestamos_q > 0 %}
-                                <td>{{ data.totales_sabana.prestamos_q|floatformat:"2g" }}</td>{% endif %}
-                            {% if data.totales_sabana.anticipos > 0 %}
-                                <td>{{ data.totales_sabana.anticipos|floatformat:"2g" }}</td>{% endif %}
-                            {% if data.totales_sabana.otros_descuentos > 0 %}
-                                <td>{{ data.totales_sabana.otros_descuentos|floatformat:"2g" }}</td>{% endif %}
-
+                            {% if data.colspans.descuentos > 0 %}
+                                {% for val in data.totales_sabana.descuentos_list %}
+                                    <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                                {% endfor %}
+                            {% endif %}
                             <td class="text-danger">{{ data.totales_sabana.total_descuentos|floatformat:"2g" }}</td>
+
                             <td style="color: #0f4c81;">$ {{ data.totales_sabana.liquido|floatformat:"2g" }}</td>
                         </tr>
                         </tfoot>

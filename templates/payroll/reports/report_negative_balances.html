@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Saldos Rezagados</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 2cm;
+            @frame footer {
+            -pdf-frame-content: footerContent;
+            bottom: 1cm;
+            margin-left: 2cm;
+            margin-right: 2cm;
+            height: 1cm;
+        }
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 11px;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #0f172a;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: bold;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            text-align: left;
+        }
+
+        td {
+            padding: 7px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Estilos para la agrupación */
+        .group-header td {
+            background-color: #e2e8f0;
+            font-weight: bold;
+            color: #0f172a;
+            font-size: 12px;
+        }
+
+        .subtotal-row td {
+            background-color: #f8fafc;
+            font-weight: bold;
+            font-style: italic;
+            color: #334155;
+        }
+
+        .totals-row td {
+            background-color: #cbd5e1;
+            font-weight: bold;
+            color: #0f172a;
+            font-size: 12px;
+        }
+
+        .debt-text {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        /* Blindaje para que el $ no salte a otra línea */
+        .money {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="title">REPORTE DE ALCANCE Y SALDOS REZAGADOS</div>
+    <div class="subtitle">PERIODO: {{ period.month }} {{ period.year }}</div>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th style="width: 15%;">Cédula</th>
+        <th style="width: 40%;">Nombres y Apellidos</th>
+        <th class="text-right" style="width: 15%;">Original</th>
+        <th class="text-right" style="width: 15%;">Cobrado</th>
+        <th class="text-right" style="width: 15%;">Rezagado</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% if has_debts %}
+        {% for concept, data in grouped_data.items %}
+
+            <tr class="group-header">
+                <td colspan="5">RUBRO: {{ concept|upper }}</td>
+            </tr>
+
+            {% for debt in data.items %}
+                <tr>
+                    <td>
+                        {% if debt.employee.person.identification %}
+                            {{ debt.employee.person.identification }}
+                        {% elif debt.employee.person.cedula %}
+                            {{ debt.employee.person.cedula }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ debt.employee.person.last_name }} {{ debt.employee.person.first_name }}</td>
+                    <td class="text-right money">$&nbsp;{{ debt.original_value|floatformat:2 }}</td>
+                    <td class="text-right money">$&nbsp;{{ debt.collected_value|floatformat:2 }}</td>
+                    <td class="text-right debt-text money">$&nbsp;{{ debt.pending_balance|floatformat:2 }}</td>
+                </tr>
+            {% endfor %}
+
+            <tr class="subtotal-row">
+                <td colspan="2" class="text-right">SUBTOTAL {{ concept|upper }}:</td>
+                <td class="text-right money">$&nbsp;{{ data.sub_original|floatformat:2 }}</td>
+                <td class="text-right money">$&nbsp;{{ data.sub_cobrado|floatformat:2 }}</td>
+                <td class="text-right debt-text money">$&nbsp;{{ data.sub_pendiente|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+
+        <tr class="totals-row">
+            <td colspan="2" class="text-right">TOTAL GENERAL DEL PERIODO:</td>
+            <td class="text-right money">$&nbsp;{{ total_original|floatformat:2 }}</td>
+            <td class="text-right money">$&nbsp;{{ total_cobrado|floatformat:2 }}</td>
+            <td class="text-right debt-text money">$&nbsp;{{ total_pendiente|floatformat:2 }}</td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="5" class="text-center" style="padding: 20px; color: #64748b;">
+                No existen saldos rezagados en este periodo.
+            </td>
+        </tr>
+    {% endif %}
+    </tbody>
+</table>
+
+<div id="footerContent" style="text-align: right; font-size: 9px; color: #94a3b8;">
+    Página
+    <pdf:pagenumber> de
+        <pdf:pagecount>
+</div>
+
+</body>
+</html>
