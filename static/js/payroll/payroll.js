@@ -743,18 +743,9 @@ function submitGenerate(mode) {
     if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
     const url = (mode === 'missing') ? window.URLS.generateMissing : window.URLS.generateAll;
 
-    // Cerrar cualquier modal subyacente inmediatamente
+    // 1. Cerrar el modal actual usando nuestra nueva función global limpia
     if (typeof window.closeGenerateModal === 'function') {
         window.closeGenerateModal();
-    }
-    try {
-        const mg = document.getElementById('modalGeneratePayroll');
-        if (mg) {
-            mg.classList.remove('is-active');
-            mg.style.display = 'none';
-            document.body.classList.remove('modal-open');
-        }
-    } catch (e) {
     }
 
     // Usar AbortController para permitir cancelar la petición al pulsar "Cancelar"
@@ -774,7 +765,6 @@ function submitGenerate(mode) {
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
         allowOutsideClick: false,
-        scrollbarPadding: false, // <--- SOLUCIÓN AL PARPADEO (1/2): Evita que la tabla salte
         customClass: {popup: 'swal2-recalc-popup'},
         didOpen: () => {
             try {
@@ -811,7 +801,7 @@ function submitGenerate(mode) {
                     });
                     btn.style.minWidth = '120px';
                 }
-                // Por seguridad: si el confirm sigue presente, eliminarlo
+                // Por seguridad: si el confirm sigue presente, eliminarlo buscando el texto del popup
                 setTimeout(() => {
                     try {
                         const containers = document.querySelectorAll('.swal2-container');
@@ -841,6 +831,7 @@ function submitGenerate(mode) {
             Swal.close();
         } catch (e) {
         }
+
         // Esperar un poco para asegurar cierre completo del DOM anterior
         setTimeout(() => {
             try {
@@ -862,26 +853,15 @@ function submitGenerate(mode) {
                     text: data.message || 'Operación completada',
                     icon: 'success',
                     confirmButtonText: 'OK',
-                    showCancelButton: false,
-                    scrollbarPadding: false // <--- SOLUCIÓN AL PARPADEO (2/2)
-                }).then(() => {
-                    // <--- RECARGA INTELIGENTE (Sin pantallazo blanco de recarga de página)
-                    if (typeof window.loadTable === 'function') {
-                        window.loadTable(id); // Recarga tabla en Gestión de Roles
-                    } else if (typeof window.loadTablePage === 'function') {
-                        window.loadTablePage(1); // Recarga tabla en Periodos
-                    } else {
-                        location.reload(); // Fallback por si acaso
-                    }
-                });
+                    showCancelButton: false
+                }).then(() => location.reload());
             } else if (data.status === 'info') {
                 Swal.fire({
                     title: 'Info',
                     text: data.message,
                     icon: 'info',
                     confirmButtonText: 'OK',
-                    showCancelButton: false,
-                    scrollbarPadding: false
+                    showCancelButton: false
                 });
             } else {
                 Swal.fire({
@@ -889,8 +869,7 @@ function submitGenerate(mode) {
                     text: data.message || 'Error al generar',
                     icon: 'error',
                     confirmButtonText: 'OK',
-                    showCancelButton: false,
-                    scrollbarPadding: false
+                    showCancelButton: false
                 });
             }
         }, 140);
@@ -907,8 +886,7 @@ function submitGenerate(mode) {
                 text: 'Fallo de comunicación',
                 icon: 'error',
                 confirmButtonText: 'OK',
-                showCancelButton: false,
-                scrollbarPadding: false
+                showCancelButton: false
             });
         }, 140);
     });
