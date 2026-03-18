@@ -1,6 +1,30 @@
 // ==========================================
 // MODAL GENÉRICO PARA TODO EL SISTEMA
 // ==========================================
+// Wrapper de SweetAlert para asegurar que los diálogos de tipo
+// success/info/error muestren solo el botón `OK` (elimina botones Cancel si aparecen).
+try {
+    if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+        const _origSwalFire = Swal.fire.bind(Swal);
+        Swal.fire = function(...args) {
+            // Detectar icon si se pasa como objeto o como 3er argumento (title,text,icon)
+            let icon = null;
+            if (args.length === 1 && typeof args[0] === 'object') {
+                icon = args[0].icon;
+            } else if (args.length >= 3) {
+                icon = args[2];
+            }
+            const result = _origSwalFire(...args);
+            // Si el diálogo es de resultado (success/info/error), eliminar cualquier boton Cancel que pudiera persistir
+            if (icon && ['success','info','error'].includes(String(icon))) {
+                setTimeout(() => {
+                    try { document.querySelectorAll('.swal2-container .swal2-cancel').forEach(el => el.remove()); } catch (e) { /* ignore */ }
+                }, 40);
+            }
+            return result;
+        };
+    }
+} catch (e) { /* ignore */ }
 function openPayrollModal(url) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => response.text())
@@ -706,21 +730,92 @@ function submitGenerate(mode) {
     const id = _resolveCurrentPeriodId();
     if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
     const url = (mode === 'missing') ? window.URLS.generateMissing : window.URLS.generateAll;
-    Swal.fire({title: 'Procesando...', didOpen: () => {Swal.showLoading();}});
+    // Cerrar cualquier modal subyacente (ej. modal generado por server)
+    try { closePayrollModal(); } catch (e) { /* ignore */ }
+    try { const mg = document.getElementById('modalGeneratePayroll'); if (mg) { mg.style.display='none'; document.body.classList.remove('modal-open'); } } catch(e){}
+
+    // Usar AbortController para permitir cancelar la petición al pulsar "Cancelar"
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const html = `<div style="display:flex;align-items:center;gap:12px;">
+                    <div style=\"width:36px;height:36px;border:4px solid #e6e6e6;border-top-color:#4e73df;border-radius:50%;animation:sw-spin 1s linear infinite;\"></div>
+                    <div style=\"font-size:16px;font-weight:600;\">Calculando, Por favor espere</div>
+                  </div>`;
+
+    // Mostrar SweetAlert con solo botón Cancelar centrado
+    Swal.fire({
+        title: '',
+        html: html,
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        allowOutsideClick: false,
+        customClass: { popup: 'swal2-recalc-popup' },
+        didOpen: () => {
+            try {
+                // Inyectar estilos rápidos para centrar y keyframes si no existen
+                const styleId = 'swal2-recalc-style';
+                if (!document.getElementById(styleId)) {
+                    const style = document.createElement('style');
+                    style.id = styleId;
+                    style.innerHTML = `.swal2-recalc-popup .swal2-actions{justify-content:center!important;} .swal2-recalc-popup .swal2-html-container{overflow:visible!important;max-height:none!important;} @keyframes sw-spin{to{transform:rotate(360deg)}}`;
+                    document.head.appendChild(style);
+                }
+                // Ocultar temporalmente cualquier confirm que pudiera permanecer
+                const conf = document.querySelector('.swal2-confirm'); if (conf) conf.style.display = 'none';
+                // Forzar que el contenido no tenga scroll
+                const htmlCont = document.querySelector('.swal2-html-container'); if (htmlCont) { htmlCont.style.overflow = 'visible'; htmlCont.style.maxHeight = 'none'; }
+                const content = document.querySelector('.swal2-content'); if (content) { content.style.overflow = 'visible'; content.style.maxHeight = 'none'; }
+                // Vincular botón cancelar al AbortController
+                const btn = document.querySelector('.swal2-cancel');
+                if (btn) {
+                    btn.addEventListener('click', function () { try{ controller.abort(); }catch(e){} });
+                    btn.style.minWidth = '120px';
+                }
+                // Por seguridad: si el confirm sigue presente (versión diferente de Swal), eliminarlo buscando el texto del popup
+                setTimeout(() => {
+                    try {
+                        const containers = document.querySelectorAll('.swal2-container');
+                        containers.forEach(c => {
+                            if (c.innerText && c.innerText.indexOf('Calculando, Por favor espere') !== -1) {
+                                const conf = c.querySelector('.swal2-confirm'); if (conf) conf.remove();
+                                // también quitar cualquier clase residual que muestre confirm
+                                const canc = c.querySelector('.swal2-cancel'); if (canc) canc.style.marginLeft = '0';
+                            }
+                        });
+                    } catch (e) { /* ignore */ }
+                }, 60);
+            } catch (e) { /* ignore */ }
+        }
+    });
+
     fetch(url, {
         method: 'POST',
         headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()},
-        body: new URLSearchParams({'period_id': id})
+        body: new URLSearchParams({'period_id': id}),
+        signal: signal
     }).then(r => r.json()).then(data => {
-        Swal.close();
-        if (data.status === 'success' || data.success || data.message) {
-            Swal.fire('Éxito', data.message || 'Operación completada', 'success').then(()=> location.reload());
-        } else if (data.status === 'info') {
-            Swal.fire('Info', data.message, 'info');
-        } else {
-            Swal.fire('Error', data.message || 'Error al generar', 'error');
-        }
-    }).catch(err=>{Swal.close(); console.error(err); Swal.fire('Error', 'Fallo de comunicación', 'error');});
+        try { Swal.close(); } catch(e){}
+        // Esperar un poco para asegurar cierre completo del DOM anterior
+        setTimeout(() => {
+            try { document.querySelectorAll('.swal2-container').forEach(c => c.remove()); } catch(e){}
+            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
+            try { document.querySelectorAll('.swal2-confirm').forEach(el => el.remove()); } catch(e){}
+            if (data.status === 'success' || data.success || data.message) {
+                Swal.fire({ title: 'Éxito', text: data.message || 'Operación completada', icon: 'success', confirmButtonText: 'OK', showCancelButton: false }).then(()=> location.reload());
+            } else if (data.status === 'info') {
+                Swal.fire({ title: 'Info', text: data.message, icon: 'info', confirmButtonText: 'OK', showCancelButton: false });
+            } else {
+                Swal.fire({ title: 'Error', text: data.message || 'Error al generar', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
+            }
+        }, 140);
+    }).catch(err=>{
+        try { Swal.close(); } catch(e){}
+        if (err && err.name === 'AbortError') return;
+        console.error(err);
+        setTimeout(()=>{ Swal.fire({ title: 'Error', text: 'Fallo de comunicación', icon: 'error', confirmButtonText: 'OK', showCancelButton: false }); }, 140);
+    });
 }
 
 function downloadReport(kind) {

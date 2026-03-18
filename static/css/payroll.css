@@ -24,6 +24,53 @@
 /* Ajustes para la tabla heredada */
 .content-table {
     background: #fff;
+
+    /* SweetAlert2 - styles específicos para el modal de recalculo */
+    .swal2-recalc-popup.swal2-popup {
+        overflow: visible !important;
+    }
+    .swal2-recalc-popup .swal2-content {
+        overflow: visible !important;
+        max-height: none !important;
+        padding: 0 0 6px 0 !important;
+    }
+    .swal2-recalc-popup .swal2-html-container {
+        overflow: visible !important;
+        max-height: none !important;
+    }
+    .swal2-recalc-popup .swal2-html-container, .swal2-recalc-popup .swal2-content {
+        overflow-y: visible !important;
+    }
+    /* Hide any confirm/accept button inside the recalculation popup */
+    .swal2-recalc-popup .swal2-confirm, .swal2-recalc-popup .swal2-styled.swal2-confirm {
+        display: none !important;
+    }
+    /* Ensure cancel is the only visible action and centered */
+    .swal2-recalc-popup .swal2-actions { justify-content:center !important; }
+    /* Remove scrollbar visual artifacts inside SweetAlert */
+    .swal2-recalc-popup .swal2-html-container::-webkit-scrollbar { display: none; }
+    .swal2-recalc-popup .swal2-html-container { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .swal2-recalc-popup .swal2-actions {
+        justify-content: center !important;
+        padding-top: 14px !important;
+    }
+    /* Ocultar el botón Aceptar (confirm) en este popup y dejar solo Cancelar */
+    .swal2-recalc-popup .swal2-confirm {
+        display: none !important;
+    }
+    .swal2-recalc-popup .swal2-cancel {
+        min-width: 120px !important;
+        padding: 10px 18px !important;
+    }
+    /* Evitar que aparezca una scrollbar vertical dentro del popup */
+    .swal2-recalc-popup .swal2-content::-webkit-scrollbar { display:none; }
+    .swal2-recalc-popup .swal2-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Spinner tamaño y alineación */
+    .swal2-recalc-popup .recalc-spinner { width:36px; height:36px; border-width:4px; }
+    @keyframes sw-spin { to { transform: rotate(360deg); } }
+
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     padding: 20px;

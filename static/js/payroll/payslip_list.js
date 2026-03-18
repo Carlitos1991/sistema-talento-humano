@@ -101,6 +101,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (options.full) paramsObj['full'] = '1';
         const params = new URLSearchParams(paramsObj);
 
+        // Evitar parpadeo de layout: fijar altura mínima del contenedor mientras actualizamos
+        try {
+            const prevHeight = container.offsetHeight;
+            container.style.minHeight = prevHeight + 'px';
+        } catch (e) { /* ignore */ }
         container.style.opacity = '0.5';
 
         return fetch(`${window.URLS.baseList}?${params.toString()}`, {
@@ -108,6 +113,9 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(res => res.json())
             .then(data => {
+                // Guardar scroll para restaurarlo después de la actualización
+                const scrollTop = container.scrollTop;
+                const scrollLeft = container.scrollLeft;
                 container.innerHTML = data.html;
                 // Re-inicializar TableManager si existe en el HTML inyectado
                 const table = container.querySelector('.managed-table');
@@ -160,7 +168,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (periodId) sessionStorage.setItem(STORAGE_PERIOD, String(periodId));
                 }catch(e){/* ignore */}
 
+                // Restaurar scroll y quitar altura fija
+                try { container.scrollTop = scrollTop; container.scrollLeft = scrollLeft; } catch (e) {}
                 container.style.opacity = '1';
+                try { container.style.minHeight = ''; } catch (e) {}
                 return Promise.resolve();
             })
             .catch(err => {
@@ -270,6 +281,9 @@ document.addEventListener('DOMContentLoaded', function () {
             form.append('group', groupFilter ? groupFilter.value : '');
             form.append('show_withheld', show_withheld);
 
+            // Control que indica si el proceso fue cancelado por el usuario
+            let stopped = false;
+
             // UI: mostrar modal con spinner moderno (SweetAlert si está disponible)
             function openProgressModal() {
                 const html = `
@@ -277,19 +291,29 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="recalc-spinner-wrapper">
                             <div class="recalc-spinner" aria-hidden="true"></div>
                             <div>
-                                <div class="recalc-progress-msg" id="recalc-progress-msg">Calculando, espere por favor</div>
+                                <div class="recalc-progress-msg" id="recalc-progress-msg">Calculando, Por favor espere</div>
                             </div>
                         </div>
                 
                     </div>`;
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
-                        title: 'Recalculando roles...',
+                        title: '',
                         html: html,
                         showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancelar',
                         allowOutsideClick: false,
+                        customClass: { popup: 'swal2-recalc-popup' },
                         didOpen: () => {
-                            // keep focus out of modal
+                            // Vincular Cancelar para detener polling
+                            try {
+                                const btn = document.querySelector('.swal2-cancel');
+                                if (btn) {
+                                    btn.addEventListener('click', function () { stopped = true; try{ Swal.close(); }catch(e){} });
+                                    btn.style.minWidth = '120px';
+                                }
+                            } catch (e) { /* ignore */ }
                         }
                     });
                 } else {
@@ -330,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.task_id) {
                     const taskId = data.task_id;
                     const statusUrl = `/payroll/payslips/recalculate-status/?task_id=${encodeURIComponent(taskId)}`;
-                    let stopped = false;
+                    // stopped variable defined in outer scope will be used
                     let lastPct = 0;
                     let totalCount = (typeof data.total === 'number' && data.total>0) ? data.total : (typeof data.total_count==='number' && data.total_count>0? data.total_count : null);
                     let lastProcessed = 0;
@@ -364,10 +388,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                     closeProgressModal();
                                     setTimeout(()=>{
                                         if (s.success || (!s.success && s.done && lastProcessed>=totalCount)) {
-                                            if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`, 'success');
+                                            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
+                                            if (typeof Swal !== 'undefined') Swal.fire({ title: 'Recalculo completado', text: `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`, icon: 'success', confirmButtonText: 'OK', showCancelButton: false });
                                             performSearch({page: 1});
                                         } else {
-                                            if (typeof Swal !== 'undefined') Swal.fire('Error', s.message || 'Error en recalculo', 'error');
+                                            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
+                                            if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: s.message || 'Error en recalculo', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
                                         }
                                     }, 300);
                                 } else {
@@ -384,23 +410,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (totalCount) {
                         setProgress(0, `0 / ${totalCount}`);
                     } else {
-                        setProgress(5, 'Calculando, espere por favor');
+                        setProgress(5, 'Calculando, Por favor espere');
                     }
                     setTimeout(poll, 600);
                 } else if (data && data.success) {
                     // No task_id: server finished synchronously
                     closeProgressModal();
-                    if (typeof Swal !== 'undefined') Swal.fire('Recalculo completado', `Se recalcularon ${data.count || 0} roles.`, 'success');
+                    if (typeof Swal !== 'undefined') Swal.fire({ title: 'Recalculo completado', text: `Se recalcularon ${data.count || 0} roles.`, icon: 'success', confirmButtonText: 'OK', showCancelButton: false });
                     performSearch({page: 1});
                 } else {
                     closeProgressModal();
-                    if (typeof Swal !== 'undefined') Swal.fire('Error', data && data.message || 'Error', 'error');
+                    if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: data && data.message || 'Error', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
                 }
             })
             .catch(err => {
                 console.error('Error recalculando roles:', err);
                 closeProgressModal();
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'Fallo al recalcular roles', 'error');
+                if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: 'Fallo al recalcular roles', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
             });
         });
     }
