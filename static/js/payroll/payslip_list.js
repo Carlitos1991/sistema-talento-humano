@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const STORAGE_Q = 'payslip_q';
     const STORAGE_PAGE = 'payslip_page';
+    const STORAGE_PERIOD = 'payslip_period';
 
     // Inicializar controles de paginación: busca botones prev/next con atributo data-page
     function initPaginationControls(root) {
@@ -155,6 +156,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 try{
                     sessionStorage.setItem(STORAGE_Q, paramsObj.q || '');
                     sessionStorage.setItem(STORAGE_PAGE, String(paramsObj.page || 1));
+                    // Guardar el periodo actual asociado a la búsqueda
+                    if (periodId) sessionStorage.setItem(STORAGE_PERIOD, String(periodId));
                 }catch(e){/* ignore */}
 
                 container.style.opacity = '1';
@@ -210,12 +213,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Restaurar búsqueda/página desde sessionStorage si existe
     try{
-        const storedQ = sessionStorage.getItem(STORAGE_Q);
-        const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE)||'1',10) || 1;
-        if (storedQ && storedQ.trim() !== '') {
-            if (searchInput) searchInput.value = storedQ;
-            // Realizar búsqueda paginada con la página almacenada
-            performSearch({page: storedPage});
+        // Resolver periodo actual (misma lógica que performSearch)
+        let currentPeriod = window.CURRENT_PERIOD_ID;
+        if (!currentPeriod || currentPeriod === "" || currentPeriod === "None") {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentPeriod = urlParams.get('period_id');
+        }
+
+        const storedPeriod = sessionStorage.getItem(STORAGE_PERIOD);
+
+        // Si hay un periodo almacenado y es distinto al actual, limpiar la búsqueda guardada
+        if (storedPeriod && currentPeriod && String(storedPeriod) !== String(currentPeriod)) {
+            try {
+                sessionStorage.removeItem(STORAGE_Q);
+                sessionStorage.removeItem(STORAGE_PAGE);
+                sessionStorage.removeItem(STORAGE_PERIOD);
+            } catch (e) { /* ignore */ }
+        } else {
+            const storedQ = sessionStorage.getItem(STORAGE_Q);
+            const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE)||'1',10) || 1;
+            if (storedQ && storedQ.trim() !== '') {
+                if (searchInput) searchInput.value = storedQ;
+                // Realizar búsqueda paginada con la página almacenada
+                performSearch({page: storedPage});
+            }
         }
     }catch(e){/* ignore */}
 
