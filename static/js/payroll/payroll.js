@@ -742,14 +742,15 @@ function submitGenerate(mode) {
     const id = _resolveCurrentPeriodId();
     if (!id) return Swal.fire('Error', 'Periodo no seleccionado', 'error');
     const url = (mode === 'missing') ? window.URLS.generateMissing : window.URLS.generateAll;
-    // Cerrar cualquier modal subyacente (ej. modal generado por server)
-    try {
-        closePayrollModal();
-    } catch (e) { /* ignore */
+
+    // Cerrar cualquier modal subyacente inmediatamente
+    if (typeof window.closeGenerateModal === 'function') {
+        window.closeGenerateModal();
     }
     try {
         const mg = document.getElementById('modalGeneratePayroll');
         if (mg) {
+            mg.classList.remove('is-active');
             mg.style.display = 'none';
             document.body.classList.remove('modal-open');
         }
@@ -761,8 +762,8 @@ function submitGenerate(mode) {
     const signal = controller.signal;
 
     const html = `<div style="display:flex;align-items:center;gap:12px;">
-                    <div style=\"width:36px;height:36px;border:4px solid #e6e6e6;border-top-color:#4e73df;border-radius:50%;animation:sw-spin 1s linear infinite;\"></div>
-                    <div style=\"font-size:16px;font-weight:600;\">Calculando, Por favor espere</div>
+                    <div style="width:36px;height:36px;border:4px solid #e6e6e6;border-top-color:#4e73df;border-radius:50%;animation:sw-spin 1s linear infinite;"></div>
+                    <div style="font-size:16px;font-weight:600;">Calculando, Por favor espere</div>
                   </div>`;
 
     // Mostrar SweetAlert con solo botón Cancelar centrado
@@ -773,6 +774,7 @@ function submitGenerate(mode) {
         showCancelButton: true,
         cancelButtonText: 'Cancelar',
         allowOutsideClick: false,
+        scrollbarPadding: false, // <--- SOLUCIÓN AL PARPADEO (1/2): Evita que la tabla salte
         customClass: {popup: 'swal2-recalc-popup'},
         didOpen: () => {
             try {
@@ -809,7 +811,7 @@ function submitGenerate(mode) {
                     });
                     btn.style.minWidth = '120px';
                 }
-                // Por seguridad: si el confirm sigue presente (versión diferente de Swal), eliminarlo buscando el texto del popup
+                // Por seguridad: si el confirm sigue presente, eliminarlo
                 setTimeout(() => {
                     try {
                         const containers = document.querySelectorAll('.swal2-container');
@@ -817,15 +819,14 @@ function submitGenerate(mode) {
                             if (c.innerText && c.innerText.indexOf('Calculando, Por favor espere') !== -1) {
                                 const conf = c.querySelector('.swal2-confirm');
                                 if (conf) conf.remove();
-                                // también quitar cualquier clase residual que muestre confirm
                                 const canc = c.querySelector('.swal2-cancel');
                                 if (canc) canc.style.marginLeft = '0';
                             }
                         });
-                    } catch (e) { /* ignore */
+                    } catch (e) {
                     }
                 }, 60);
-            } catch (e) { /* ignore */
+            } catch (e) {
             }
         }
     });
@@ -854,21 +855,33 @@ function submitGenerate(mode) {
                 document.querySelectorAll('.swal2-confirm').forEach(el => el.remove());
             } catch (e) {
             }
+
             if (data.status === 'success' || data.success || data.message) {
                 Swal.fire({
                     title: 'Éxito',
                     text: data.message || 'Operación completada',
                     icon: 'success',
                     confirmButtonText: 'OK',
-                    showCancelButton: false
-                }).then(() => location.reload());
+                    showCancelButton: false,
+                    scrollbarPadding: false // <--- SOLUCIÓN AL PARPADEO (2/2)
+                }).then(() => {
+                    // <--- RECARGA INTELIGENTE (Sin pantallazo blanco de recarga de página)
+                    if (typeof window.loadTable === 'function') {
+                        window.loadTable(id); // Recarga tabla en Gestión de Roles
+                    } else if (typeof window.loadTablePage === 'function') {
+                        window.loadTablePage(1); // Recarga tabla en Periodos
+                    } else {
+                        location.reload(); // Fallback por si acaso
+                    }
+                });
             } else if (data.status === 'info') {
                 Swal.fire({
                     title: 'Info',
                     text: data.message,
                     icon: 'info',
                     confirmButtonText: 'OK',
-                    showCancelButton: false
+                    showCancelButton: false,
+                    scrollbarPadding: false
                 });
             } else {
                 Swal.fire({
@@ -876,7 +889,8 @@ function submitGenerate(mode) {
                     text: data.message || 'Error al generar',
                     icon: 'error',
                     confirmButtonText: 'OK',
-                    showCancelButton: false
+                    showCancelButton: false,
+                    scrollbarPadding: false
                 });
             }
         }, 140);
@@ -893,7 +907,8 @@ function submitGenerate(mode) {
                 text: 'Fallo de comunicación',
                 icon: 'error',
                 confirmButtonText: 'OK',
-                showCancelButton: false
+                showCancelButton: false,
+                scrollbarPadding: false
             });
         }, 140);
     });
@@ -909,7 +924,7 @@ function downloadReport(kind) {
     } else if (kind === 'nomina') {
         url = window.URLS.reporteNomina;
     } else if (kind === 'negativos') {
-        url = window.URLS.reporteNegativos; 
+        url = window.URLS.reporteNegativos;
     }
 
     if (!url) return Swal.fire('Error', 'URL de reporte no encontrada', 'error');
