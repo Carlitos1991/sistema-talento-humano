@@ -3,9 +3,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');
     const groupFilter = document.getElementById('groupFilter');
     const container = document.getElementById('payslip-table-container');
+    let currentPeriodId = window.CURRENT_PERIOD_ID;
+    if (!currentPeriodId || currentPeriodId === "" || currentPeriodId === "None") {
+        currentPeriodId = new URLSearchParams(window.location.search).get('period_id') || 'default';
+    }
 
     const STORAGE_Q = 'payslip_q';
     const STORAGE_PAGE = 'payslip_page';
+    const navEntries = performance.getEntriesByType("navigation");
+   if (navEntries.length > 0 && navEntries[0].type !== "reload") {
+        sessionStorage.removeItem(STORAGE_Q);
+        sessionStorage.removeItem(STORAGE_PAGE);
+    }
     const STORAGE_PERIOD = 'payslip_period';
 
     // Inicializar controles de paginación: busca botones prev/next con atributo data-page
@@ -21,51 +30,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const attach = (btn) => {
             if (!btn) return;
-                    const page = btn.getAttribute('data-page');
-                    btn.disabled = !page;
-                    btn.removeEventListener('click', btn._payrollHandler);
-                    btn._payrollHandler = function (e) {
-                        e.preventDefault();
-                        if (!page) return;
-                        window.loadTablePage(Number(page));
-                    };
-                    btn.addEventListener('click', btn._payrollHandler);
+            const page = btn.getAttribute('data-page');
+            btn.disabled = !page;
+            btn.removeEventListener('click', btn._payrollHandler);
+            btn._payrollHandler = function (e) {
+                e.preventDefault();
+                if (!page) return;
+                window.loadTablePage(Number(page));
+            };
+            btn.addEventListener('click', btn._payrollHandler);
         };
 
-                    attach(firstBtn);
-                    attach(prevBtn);
-                    attach(nextBtn);
-                    attach(lastBtn);
+        attach(firstBtn);
+        attach(prevBtn);
+        attach(nextBtn);
+        attach(lastBtn);
 
-                    // Input: permitir escribir número de página
-                    if (pageInput) {
-                        const total = parseInt(pageInput.getAttribute('data-total') || '1', 10) || 1;
-                        const submit = (v) => {
-                            let p = parseInt(String(v).trim(), 10) || 1;
-                            if (p < 1) p = 1;
-                            if (p > total) p = total;
-                            window.loadTablePage(p);
-                        };
-                        // Enter
-                        pageInput.removeEventListener('keypress', pageInput._keyHandler);
-                        pageInput._keyHandler = function (e) {
-                            if (e.key === 'Enter') submit(e.target.value);
-                        };
-                        pageInput.addEventListener('keypress', pageInput._keyHandler);
-                        // Blur (cuando sale del input)
-                        pageInput.removeEventListener('blur', pageInput._blurHandler);
-                        pageInput._blurHandler = function (e) {
-                            submit(e.target.value);
-                        };
-                        pageInput.addEventListener('blur', pageInput._blurHandler);
-                        // Validación rápida: evitar valores fuera de rango al cambiar
-                        pageInput.removeEventListener('input', pageInput._inputHandler);
-                        pageInput._inputHandler = function (e) {
-                            const val = e.target.value.replace(/[^0-9]/g, '');
-                            e.target.value = val;
-                        };
-                        pageInput.addEventListener('input', pageInput._inputHandler);
-                    }
+        // Input: permitir escribir número de página
+        if (pageInput) {
+            const total = parseInt(pageInput.getAttribute('data-total') || '1', 10) || 1;
+            const submit = (v) => {
+                let p = parseInt(String(v).trim(), 10) || 1;
+                if (p < 1) p = 1;
+                if (p > total) p = total;
+                window.loadTablePage(p);
+            };
+            // Enter
+            pageInput.removeEventListener('keypress', pageInput._keyHandler);
+            pageInput._keyHandler = function (e) {
+                if (e.key === 'Enter') submit(e.target.value);
+            };
+            pageInput.addEventListener('keypress', pageInput._keyHandler);
+            // Blur (cuando sale del input)
+            pageInput.removeEventListener('blur', pageInput._blurHandler);
+            pageInput._blurHandler = function (e) {
+                submit(e.target.value);
+            };
+            pageInput.addEventListener('blur', pageInput._blurHandler);
+            // Validación rápida: evitar valores fuera de rango al cambiar
+            pageInput.removeEventListener('input', pageInput._inputHandler);
+            pageInput._inputHandler = function (e) {
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                e.target.value = val;
+            };
+            pageInput.addEventListener('input', pageInput._inputHandler);
+        }
     }
 
     function performSearch(options) {
@@ -105,7 +114,8 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const prevHeight = container.offsetHeight;
             container.style.minHeight = prevHeight + 'px';
-        } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */
+        }
         container.style.opacity = '0.5';
 
         return fetch(`${window.URLS.baseList}?${params.toString()}`, {
@@ -147,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const decPart = parts[1];
                     return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + decPart;
                 }
+
                 function formatIntegerES(value) {
                     const n = parseInt(value || 0, 10) || 0;
                     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -161,17 +172,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (el2) el2.innerText = `$ ${formatNumberES(data.total_liquidado)}`;
                 }
                 // Persistir búsqueda y página para restaurar después (por ejemplo al cerrar modales)
-                try{
+                try {
                     sessionStorage.setItem(STORAGE_Q, paramsObj.q || '');
                     sessionStorage.setItem(STORAGE_PAGE, String(paramsObj.page || 1));
                     // Guardar el periodo actual asociado a la búsqueda
                     if (periodId) sessionStorage.setItem(STORAGE_PERIOD, String(periodId));
-                }catch(e){/* ignore */}
+                } catch (e) {/* ignore */
+                }
 
                 // Restaurar scroll y quitar altura fija
-                try { container.scrollTop = scrollTop; container.scrollLeft = scrollLeft; } catch (e) {}
+                try {
+                    container.scrollTop = scrollTop;
+                    container.scrollLeft = scrollLeft;
+                } catch (e) {
+                }
                 container.style.opacity = '1';
-                try { container.style.minHeight = ''; } catch (e) {}
+                try {
+                    container.style.minHeight = '';
+                } catch (e) {
+                }
                 return Promise.resolve();
             })
             .catch(err => {
@@ -187,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Debounce helper
     function debounce(fn, wait) {
         let t;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(t);
             t = setTimeout(() => fn.apply(this, args), wait);
         };
@@ -213,7 +232,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!q) return;
             performSearch({page: 1, full: true}).then(() => {
                 fullLoaded = true;
-            }).catch(() => {});
+            }).catch(() => {
+            });
         }, 300);
 
         searchInput.addEventListener('input', function (e) {
@@ -223,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Restaurar búsqueda/página desde sessionStorage si existe
-    try{
+    try {
         // Resolver periodo actual (misma lógica que performSearch)
         let currentPeriod = window.CURRENT_PERIOD_ID;
         if (!currentPeriod || currentPeriod === "" || currentPeriod === "None") {
@@ -239,17 +259,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 sessionStorage.removeItem(STORAGE_Q);
                 sessionStorage.removeItem(STORAGE_PAGE);
                 sessionStorage.removeItem(STORAGE_PERIOD);
-            } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore */
+            }
         } else {
             const storedQ = sessionStorage.getItem(STORAGE_Q);
-            const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE)||'1',10) || 1;
+            const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE) || '1', 10) || 1;
             if (storedQ && storedQ.trim() !== '') {
                 if (searchInput) searchInput.value = storedQ;
                 // Realizar búsqueda paginada con la página almacenada
                 performSearch({page: storedPage});
             }
         }
-    }catch(e){/* ignore */}
+    } catch (e) {/* ignore */
+    }
 
     // Exponer para que otras funciones globales (onchange inline) puedan invocarla
     window.performSearch = performSearch;
@@ -304,16 +326,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar',
                         allowOutsideClick: false,
-                        customClass: { popup: 'swal2-recalc-popup' },
+                        customClass: {popup: 'swal2-recalc-popup'},
                         didOpen: () => {
                             // Vincular Cancelar para detener polling
                             try {
                                 const btn = document.querySelector('.swal2-cancel');
                                 if (btn) {
-                                    btn.addEventListener('click', function () { stopped = true; try{ Swal.close(); }catch(e){} });
+                                    btn.addEventListener('click', function () {
+                                        stopped = true;
+                                        try {
+                                            Swal.close();
+                                        } catch (e) {
+                                        }
+                                    });
                                     btn.style.minWidth = '120px';
                                 }
-                            } catch (e) { /* ignore */ }
+                            } catch (e) { /* ignore */
+                            }
                         }
                     });
                 } else {
@@ -327,107 +356,156 @@ document.addEventListener('DOMContentLoaded', function () {
 
             function closeProgressModal() {
                 if (typeof Swal !== 'undefined') {
-                    try { Swal.close(); } catch(e){}
+                    try {
+                        Swal.close();
+                    } catch (e) {
+                    }
                 } else {
-                    const el = document.getElementById('recalc-progress-fallback'); if (el) el.remove();
+                    const el = document.getElementById('recalc-progress-fallback');
+                    if (el) el.remove();
                 }
             }
 
             function setProgress(pct, msg) {
-                try{
+                try {
                     const msgEl = document.getElementById('recalc-progress-msg');
                     if (msgEl) msgEl.innerText = msg || (pct ? `${Math.round(pct)}%` : 'Procesando...');
-                }catch(e){/* ignore */}
+                } catch (e) {/* ignore */
+                }
             }
 
             openProgressModal();
 
             // Start recalculation request
             fetch('/payroll/payslips/recalculate/', {
-                method: 'POST', headers: {'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '', 'X-Requested-With':'XMLHttpRequest'}, body: form
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: form
             })
-            .then(res => res.json())
-            .then(data => {
-                if (!data) throw new Error('No response');
+                .then(res => res.json())
+                .then(data => {
+                    if (!data) throw new Error('No response');
 
-                // If backend provides a task_id, poll for progress — show spinner and update message
-                if (data.task_id) {
-                    const taskId = data.task_id;
-                    const statusUrl = `/payroll/payslips/recalculate-status/?task_id=${encodeURIComponent(taskId)}`;
-                    // stopped variable defined in outer scope will be used
-                    let lastPct = 0;
-                    let totalCount = (typeof data.total === 'number' && data.total>0) ? data.total : (typeof data.total_count==='number' && data.total_count>0? data.total_count : null);
-                    let lastProcessed = 0;
+                    // If backend provides a task_id, poll for progress — show spinner and update message
+                    if (data.task_id) {
+                        const taskId = data.task_id;
+                        const statusUrl = `/payroll/payslips/recalculate-status/?task_id=${encodeURIComponent(taskId)}`;
+                        // stopped variable defined in outer scope will be used
+                        let lastPct = 0;
+                        let totalCount = (typeof data.total === 'number' && data.total > 0) ? data.total : (typeof data.total_count === 'number' && data.total_count > 0 ? data.total_count : null);
+                        let lastProcessed = 0;
 
-                    // No cancel button: modal is informational only
+                        // No cancel button: modal is informational only
 
-                    const poll = () => {
-                        if (stopped) return;
-                        fetch(statusUrl, { headers: {'X-Requested-With':'XMLHttpRequest'}, credentials: 'same-origin' })
-                            .then(r=>r.json())
-                            .then(s => {
-                                if (!s) return;
-                                if (typeof s.processed_count === 'number' && totalCount) {
-                                    lastProcessed = s.processed_count;
-                                    const pct = Math.min(100, (lastProcessed / totalCount) * 100);
-                                    lastPct = pct;
-                                    setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
-                                } else if (typeof s.processed === 'number' && totalCount) {
-                                    lastProcessed = s.processed;
-                                    const pct = Math.min(100, (lastProcessed / totalCount) * 100);
-                                    lastPct = pct;
-                                    setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
-                                } else {
-                                    const pct = typeof s.progress !== 'undefined' ? Number(s.progress) : (s.done?100: lastPct);
-                                    lastPct = isNaN(pct)? lastPct : pct;
-                                    setProgress(lastPct, s.message || (s.done? 'Completado' : 'Procesando...'));
-                                }
-
-                                if (s.done || (totalCount && lastProcessed>=totalCount) || (typeof s.progress !== 'undefined' && s.progress >= 100) || s.success) {
-                                    stopped = true;
-                                    closeProgressModal();
-                                    setTimeout(()=>{
-                                        if (s.success || (!s.success && s.done && lastProcessed>=totalCount)) {
-                                            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
-                                            if (typeof Swal !== 'undefined') Swal.fire({ title: 'Recalculo completado', text: `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`, icon: 'success', confirmButtonText: 'OK', showCancelButton: false });
-                                            performSearch({page: 1});
-                                        } else {
-                                            try { document.querySelectorAll('.swal2-cancel').forEach(el => el.remove()); } catch(e){}
-                                            if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: s.message || 'Error en recalculo', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
-                                        }
-                                    }, 300);
-                                } else {
-                                    setTimeout(poll, 900);
-                                }
+                        const poll = () => {
+                            if (stopped) return;
+                            fetch(statusUrl, {
+                                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                                credentials: 'same-origin'
                             })
-                            .catch(err => {
-                                console.error('poll error', err);
-                                setTimeout(poll, 1500);
-                            });
-                    };
+                                .then(r => r.json())
+                                .then(s => {
+                                    if (!s) return;
+                                    if (typeof s.processed_count === 'number' && totalCount) {
+                                        lastProcessed = s.processed_count;
+                                        const pct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                        lastPct = pct;
+                                        setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                    } else if (typeof s.processed === 'number' && totalCount) {
+                                        lastProcessed = s.processed;
+                                        const pct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                        lastPct = pct;
+                                        setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                    } else {
+                                        const pct = typeof s.progress !== 'undefined' ? Number(s.progress) : (s.done ? 100 : lastPct);
+                                        lastPct = isNaN(pct) ? lastPct : pct;
+                                        setProgress(lastPct, s.message || (s.done ? 'Completado' : 'Procesando...'));
+                                    }
 
-                    // seed UI
-                    if (totalCount) {
-                        setProgress(0, `0 / ${totalCount}`);
+                                    if (s.done || (totalCount && lastProcessed >= totalCount) || (typeof s.progress !== 'undefined' && s.progress >= 100) || s.success) {
+                                        stopped = true;
+                                        closeProgressModal();
+                                        setTimeout(() => {
+                                            if (s.success || (!s.success && s.done && lastProcessed >= totalCount)) {
+                                                try {
+                                                    document.querySelectorAll('.swal2-cancel').forEach(el => el.remove());
+                                                } catch (e) {
+                                                }
+                                                if (typeof Swal !== 'undefined') Swal.fire({
+                                                    title: 'Recalculo completado',
+                                                    text: `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`,
+                                                    icon: 'success',
+                                                    confirmButtonText: 'OK',
+                                                    showCancelButton: false
+                                                });
+                                                performSearch({page: 1});
+                                            } else {
+                                                try {
+                                                    document.querySelectorAll('.swal2-cancel').forEach(el => el.remove());
+                                                } catch (e) {
+                                                }
+                                                if (typeof Swal !== 'undefined') Swal.fire({
+                                                    title: 'Error',
+                                                    text: s.message || 'Error en recalculo',
+                                                    icon: 'error',
+                                                    confirmButtonText: 'OK',
+                                                    showCancelButton: false
+                                                });
+                                            }
+                                        }, 300);
+                                    } else {
+                                        setTimeout(poll, 900);
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('poll error', err);
+                                    setTimeout(poll, 1500);
+                                });
+                        };
+
+                        // seed UI
+                        if (totalCount) {
+                            setProgress(0, `0 / ${totalCount}`);
+                        } else {
+                            setProgress(5, 'Calculando, Por favor espere');
+                        }
+                        setTimeout(poll, 600);
+                    } else if (data && data.success) {
+                        // No task_id: server finished synchronously
+                        closeProgressModal();
+                        if (typeof Swal !== 'undefined') Swal.fire({
+                            title: 'Recalculo completado',
+                            text: `Se recalcularon ${data.count || 0} roles.`,
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            showCancelButton: false
+                        });
+                        performSearch({page: 1});
                     } else {
-                        setProgress(5, 'Calculando, Por favor espere');
+                        closeProgressModal();
+                        if (typeof Swal !== 'undefined') Swal.fire({
+                            title: 'Error',
+                            text: data && data.message || 'Error',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            showCancelButton: false
+                        });
                     }
-                    setTimeout(poll, 600);
-                } else if (data && data.success) {
-                    // No task_id: server finished synchronously
+                })
+                .catch(err => {
+                    console.error('Error recalculando roles:', err);
                     closeProgressModal();
-                    if (typeof Swal !== 'undefined') Swal.fire({ title: 'Recalculo completado', text: `Se recalcularon ${data.count || 0} roles.`, icon: 'success', confirmButtonText: 'OK', showCancelButton: false });
-                    performSearch({page: 1});
-                } else {
-                    closeProgressModal();
-                    if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: data && data.message || 'Error', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
-                }
-            })
-            .catch(err => {
-                console.error('Error recalculando roles:', err);
-                closeProgressModal();
-                if (typeof Swal !== 'undefined') Swal.fire({ title: 'Error', text: 'Fallo al recalcular roles', icon: 'error', confirmButtonText: 'OK', showCancelButton: false });
-            });
+                    if (typeof Swal !== 'undefined') Swal.fire({
+                        title: 'Error',
+                        text: 'Fallo al recalcular roles',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        showCancelButton: false
+                    });
+                });
         });
     }
 });

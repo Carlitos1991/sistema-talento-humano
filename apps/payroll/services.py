@@ -25,7 +25,6 @@ class PayrollCalculatorService:
             raise ValueError("Falta configurar la constante 'SBU' (Salario Básico Unificado).")
 
     def _prepare_mass_data(self, emp_ids):
-        # 1. Feriados
         holidays_qs = ScheduleObservation.objects.filter(
             is_holiday=True, is_active=True,
             start_date__lte=self.period.end_date, end_date__gte=self.period.start_date
@@ -38,7 +37,6 @@ class PayrollCalculatorService:
                 holiday_dates.add(curr)
                 curr += timedelta(days=1)
 
-        # 2. Días efectivos del mes anterior
         prev_period = PayrollPeriod.objects.filter(end_date__lt=self.period.start_date).order_by('-end_date').first()
         prev_effective_days_map = {}
         if prev_period:
@@ -47,7 +45,6 @@ class PayrollCalculatorService:
             for eid, eff_days in prev_payslips:
                 prev_effective_days_map[eid] = eff_days
 
-        # 3. Permisos Descontables
         tipos_descontables = Q(permit_type__name__icontains='Personal') | Q(permit_type__name__icontains='Médico') | Q(
             permit_type__name__icontains='Medico') | \
                              Q(permit_type__parent__name__icontains='Personal') | Q(
@@ -153,7 +150,7 @@ class PayrollCalculatorService:
                                 dias_reales = (e_date - s_date).days + 1
                                 if dias_reales == 31: dias_reales = 30
                                 if self.period.end_date.month == 2 and e_date == self.period.end_date: dias_reales += (
-                                        30 - self.period.end_date.day)
+                                            30 - self.period.end_date.day)
                                 if total_dias_mes + dias_reales > 30: dias_reales = 30 - total_dias_mes
                                 if dias_reales > 0:
                                     tramos.append({
@@ -195,7 +192,7 @@ class PayrollCalculatorService:
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     anios_servicio = (
-                            (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
+                                (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
                     regime_code = mp.contract_type.labor_regime.code.strip().upper() if mp and mp.contract_type and mp.contract_type.labor_regime else ''
 
                     for inc in active_incomes:
@@ -212,14 +209,14 @@ class PayrollCalculatorService:
                             continue
                         elif code_clean == 'DECIMO_TERCERO' and mensualiza_decimos and self.period.working_days:
                             val = (salary / Decimal('12.0')) * (
-                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
-                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'FONDOS_RESERVA' and anios_servicio > 1 and mensualiza_fr:
                             val = (salary * (
-                                    Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
-                                          Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
+                                              Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and anios_servicio >= 1:
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
                                 str(effective_days_prev))
@@ -228,7 +225,7 @@ class PayrollCalculatorService:
                                 str(effective_days_prev))
                         elif code_clean == 'SUBSIDIO_FAMILIAR' and regime_code == 'CT' and anios_servicio >= 1 and num_hijos_validos > 0:
                             val = Decimal(str(self.config.get('SBU', '460.00'))) * (
-                                    Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
+                                        Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
                         elif code_clean == 'ANTIGUEDAD' and regime_code == 'CT' and anios_servicio >= 1:
                             val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(anios_servicio)))
 
@@ -238,7 +235,9 @@ class PayrollCalculatorService:
                             total_ing += val
                             if code_clean == 'REMUNERACION': taxable_base += val
 
-                    # IESS y Aportes Patronales
+                    # ====================================================
+                    # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
+                    # ====================================================
                     target_iess_code = 'IESS_PER_EMP' if regime_code == 'LOSEP' else 'IESS_PER_TRA' if regime_code == 'CT' else 'IESS_PER'
                     target_patronal_code = 'APORTE_PATRONAL_EMP' if regime_code == 'LOSEP' else 'APORTE_PATRONAL_TRA' if regime_code == 'CT' else 'APORTE_PATRONAL'
 
@@ -252,69 +251,78 @@ class PayrollCalculatorService:
                                 PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION', value=val))
                             total_desc += val
 
-                            contrib_ref = contrib_map.get(target_patronal_code) or contrib_map.get('APORTE_PATRONAL')
-                            if contrib_ref:
-                                val_patronal = taxable_base * (Decimal(str(self.config.get(target_patronal_code,
-                                                                                           self.config.get(
-                                                                                               'APORTE_PATRONAL',
-                                                                                               '11.15')))) / Decimal(
-                                    '100.0'))
-                                if val_patronal > 0:
-                                    items_buffer.append(PayslipItem(payslip=slip, contribution_ref=contrib_ref,
-                                                                    item_type='CONTRIBUTION', value=val_patronal))
+                    contrib_ref = contrib_map.get(target_patronal_code) or contrib_map.get('APORTE_PATRONAL')
+                    if contrib_ref:
+                        val_patronal = taxable_base * (Decimal(str(self.config.get(target_patronal_code,
+                                                                                   self.config.get('APORTE_PATRONAL',
+                                                                                                   '11.15')))) / Decimal(
+                            '100.0'))
+                        if val_patronal > 0:
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, contribution_ref=contrib_ref, item_type='CONTRIBUTION',
+                                            value=val_patronal))
 
-                                    emp_novelties = novelties_map.get(slip.employee_id,
-                                                                      {'incomes': [], 'deductions': []})
-                                    for nov in emp_novelties['incomes']:
-                                        if nov.value > 0:
-                                            val_nov = Decimal(str(nov.value))
+                    # ====================================================
+                    # 2. NOVEDADES (Ingresos Extra y Horas del Excel)
+                    # ====================================================
+                    emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
 
-                                            # ==================================================
-                                            # MAGIA: CÁLCULO DE HORAS EXTRAS (De Horas a Dinero)
-                                            # ==================================================
-                                            code_up = (nov.income_ref.code or '').strip().upper()
+                    for nov in emp_novelties['incomes']:
+                        if nov.value > 0:
+                            val_nov = Decimal(str(nov.value))
+                            code_up = (nov.income_ref.code or '').strip().upper()
 
-                                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
-                                                # El valor del Excel son Horas. Multiplicamos por 2 (100% recargo)
-                                                sueldo_hora = salary / Decimal('240.0')
-                                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
+                                sueldo_hora = salary / Decimal('240.0')
+                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
+                                sueldo_hora = salary / Decimal('240.0')
+                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
 
-                                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
-                                                # El valor del Excel son Horas. Multiplicamos por 1.5 (50% recargo)
-                                                sueldo_hora = salary / Decimal('240.0')
-                                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME', value=val_nov))
+                            total_ing += val_nov
 
-                                            items_buffer.append(
-                                                PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
-                                                            value=val_nov))
-                                            total_ing += val_nov
+                    # ====================================================
+                    # 3. POCKET LOGIC (Descuentos y Deudas Viejas)
+                    # ====================================================
+                    available_balance = total_ing - total_desc
+                    deduction_novelties = sorted(emp_novelties['deductions'],
+                                                 key=lambda x: getattr(x.deduction_ref, 'priority', 100) or 100)
+                    deudas_pendientes = PendingDebt.objects.filter(employee_id=slip.employee_id,
+                                                                   pending_balance__gt=0).exclude(period=self.period)
 
-                                    # Pocket Logic (Descuentos)
-                                    available_balance = total_ing - total_desc
-                                    deduction_novelties = sorted(emp_novelties['deductions'],
-                                                                 key=lambda x: getattr(x.deduction_ref, 'priority',
-                                                                                       100))
-                                    for nov in deduction_novelties:
-                                        if nov.value > 0:
-                                            val_original = Decimal(str(nov.value))
-                                            real_discount = Decimal('0.0') if available_balance <= Decimal(
-                                                '0.0') else min(val_original, available_balance)
-                                            debt = val_original - real_discount
+                    for deuda in deudas_pendientes:
+                        val_deuda = Decimal(str(deuda.pending_balance))
+                        real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(val_deuda,
+                                                                                                       available_balance)
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=deuda.deduction_ref, item_type='DEDUCTION',
+                                        value=real_discount))
+                        if real_discount > 0:
+                            total_desc += real_discount
+                            available_balance -= real_discount
+                            deuda.collected_value += real_discount
+                            deuda.pending_balance -= real_discount
+                            deuda.save()
 
-                                            if real_discount > 0:
-                                                items_buffer.append(
-                                                    PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref,
-                                                                item_type='DEDUCTION', value=real_discount))
-                                                total_desc += real_discount
-                                                available_balance -= real_discount
-
-                                            if debt > 0:
-                                                pending_debts_buffer.append(PendingDebt(
-                                                    employee=slip.employee, period=self.period,
-                                                    deduction_ref=nov.deduction_ref,
-                                                    original_value=val_original, collected_value=real_discount,
-                                                    pending_balance=debt
-                                                ))
+                    for nov in deduction_novelties:
+                        if nov.value > 0:
+                            val_original = Decimal(str(nov.value))
+                            real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(val_original,
+                                                                                                           available_balance)
+                            debt = val_original - real_discount
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref, item_type='DEDUCTION',
+                                            value=real_discount))
+                            if real_discount > 0:
+                                total_desc += real_discount
+                                available_balance -= real_discount
+                            if debt > 0:
+                                pending_debts_buffer.append(PendingDebt(
+                                    employee=slip.employee, period=self.period, deduction_ref=nov.deduction_ref,
+                                    original_value=val_original, collected_value=real_discount, pending_balance=debt
+                                ))
 
                     slip.total_income, slip.total_deduction, slip.net_pay = total_ing, total_desc, total_ing - total_desc
                     payslips_to_update.append(slip)
@@ -329,7 +337,6 @@ class PayrollCalculatorService:
                                         ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
             PendingDebt.objects.bulk_create(pending_debts_buffer)
 
-            # Usamos los métodos auxiliares modulares
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
             warnings = self._generate_accounting_journal(created_payslips)
 
@@ -415,7 +422,7 @@ class PayrollCalculatorService:
                                 dias_reales = (e_date - s_date).days + 1
                                 if dias_reales == 31: dias_reales = 30
                                 if self.period.end_date.month == 2 and e_date == self.period.end_date: dias_reales += (
-                                        30 - self.period.end_date.day)
+                                            30 - self.period.end_date.day)
                                 if total_dias_mes + dias_reales > 30: dias_reales = 30 - total_dias_mes
                                 if dias_reales > 0:
                                     tramos.append({
@@ -457,7 +464,7 @@ class PayrollCalculatorService:
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     anios_servicio = (
-                            (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
+                                (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
                     regime_code = mp.contract_type.labor_regime.code.strip().upper() if mp and mp.contract_type and mp.contract_type.labor_regime else ''
 
                     for inc in active_incomes:
@@ -474,14 +481,14 @@ class PayrollCalculatorService:
                             continue
                         elif code_clean == 'DECIMO_TERCERO' and mensualiza_decimos and self.period.working_days:
                             val = (salary / Decimal('12.0')) * (
-                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
-                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'FONDOS_RESERVA' and anios_servicio > 1 and mensualiza_fr:
                             val = (salary * (
-                                    Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
-                                          Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                        Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
+                                              Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and anios_servicio >= 1:
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
                                 str(effective_days_prev))
@@ -490,7 +497,7 @@ class PayrollCalculatorService:
                                 str(effective_days_prev))
                         elif code_clean == 'SUBSIDIO_FAMILIAR' and regime_code == 'CT' and anios_servicio >= 1 and num_hijos_validos > 0:
                             val = Decimal(str(self.config.get('SBU', '460.00'))) * (
-                                    Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
+                                        Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
                         elif code_clean == 'ANTIGUEDAD' and regime_code == 'CT' and anios_servicio >= 1:
                             val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(anios_servicio)))
 
@@ -500,7 +507,9 @@ class PayrollCalculatorService:
                             total_ing += val
                             if code_clean == 'REMUNERACION': taxable_base += val
 
-                    # IESS y Aportes Patronales
+                    # ====================================================
+                    # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
+                    # ====================================================
                     target_iess_code = 'IESS_PER_EMP' if regime_code == 'LOSEP' else 'IESS_PER_TRA' if regime_code == 'CT' else 'IESS_PER'
                     target_patronal_code = 'APORTE_PATRONAL_EMP' if regime_code == 'LOSEP' else 'APORTE_PATRONAL_TRA' if regime_code == 'CT' else 'APORTE_PATRONAL'
 
@@ -514,69 +523,78 @@ class PayrollCalculatorService:
                                 PayslipItem(payslip=slip, deduction_ref=iess_ded, item_type='DEDUCTION', value=val))
                             total_desc += val
 
-                            contrib_ref = contrib_map.get(target_patronal_code) or contrib_map.get('APORTE_PATRONAL')
-                            if contrib_ref:
-                                val_patronal = taxable_base * (Decimal(str(self.config.get(target_patronal_code,
-                                                                                           self.config.get(
-                                                                                               'APORTE_PATRONAL',
-                                                                                               '11.15')))) / Decimal(
-                                    '100.0'))
-                                if val_patronal > 0:
-                                    items_buffer.append(PayslipItem(payslip=slip, contribution_ref=contrib_ref,
-                                                                    item_type='CONTRIBUTION', value=val_patronal))
+                    contrib_ref = contrib_map.get(target_patronal_code) or contrib_map.get('APORTE_PATRONAL')
+                    if contrib_ref:
+                        val_patronal = taxable_base * (Decimal(str(self.config.get(target_patronal_code,
+                                                                                   self.config.get('APORTE_PATRONAL',
+                                                                                                   '11.15')))) / Decimal(
+                            '100.0'))
+                        if val_patronal > 0:
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, contribution_ref=contrib_ref, item_type='CONTRIBUTION',
+                                            value=val_patronal))
 
-                                    emp_novelties = novelties_map.get(slip.employee_id,
-                                                                      {'incomes': [], 'deductions': []})
-                                    for nov in emp_novelties['incomes']:
-                                        if nov.value > 0:
-                                            val_nov = Decimal(str(nov.value))
+                    # ====================================================
+                    # 2. NOVEDADES (Ingresos Extra y Horas del Excel)
+                    # ====================================================
+                    emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
 
-                                            # ==================================================
-                                            # MAGIA: CÁLCULO DE HORAS EXTRAS (De Horas a Dinero)
-                                            # ==================================================
-                                            code_up = (nov.income_ref.code or '').strip().upper()
+                    for nov in emp_novelties['incomes']:
+                        if nov.value > 0:
+                            val_nov = Decimal(str(nov.value))
+                            code_up = (nov.income_ref.code or '').strip().upper()
 
-                                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
-                                                # El valor del Excel son Horas. Multiplicamos por 2 (100% recargo)
-                                                sueldo_hora = salary / Decimal('240.0')
-                                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
+                                sueldo_hora = salary / Decimal('240.0')
+                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
+                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
+                                sueldo_hora = salary / Decimal('240.0')
+                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
 
-                                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
-                                                # El valor del Excel son Horas. Multiplicamos por 1.5 (50% recargo)
-                                                sueldo_hora = salary / Decimal('240.0')
-                                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME', value=val_nov))
+                            total_ing += val_nov
 
-                                            items_buffer.append(
-                                                PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME',
-                                                            value=val_nov))
-                                            total_ing += val_nov
+                    # ====================================================
+                    # 3. POCKET LOGIC (Descuentos y Deudas Viejas)
+                    # ====================================================
+                    available_balance = total_ing - total_desc
+                    deduction_novelties = sorted(emp_novelties['deductions'],
+                                                 key=lambda x: getattr(x.deduction_ref, 'priority', 100) or 100)
+                    deudas_pendientes = PendingDebt.objects.filter(employee_id=slip.employee_id,
+                                                                   pending_balance__gt=0).exclude(period=self.period)
 
-                                    # Pocket Logic (Descuentos)
-                                    available_balance = total_ing - total_desc
-                                    deduction_novelties = sorted(emp_novelties['deductions'],
-                                                                 key=lambda x: getattr(x.deduction_ref, 'priority',
-                                                                                       100))
-                                    for nov in deduction_novelties:
-                                        if nov.value > 0:
-                                            val_original = Decimal(str(nov.value))
-                                            real_discount = Decimal('0.0') if available_balance <= Decimal(
-                                                '0.0') else min(val_original, available_balance)
-                                            debt = val_original - real_discount
+                    for deuda in deudas_pendientes:
+                        val_deuda = Decimal(str(deuda.pending_balance))
+                        real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(val_deuda,
+                                                                                                       available_balance)
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, deduction_ref=deuda.deduction_ref, item_type='DEDUCTION',
+                                        value=real_discount))
+                        if real_discount > 0:
+                            total_desc += real_discount
+                            available_balance -= real_discount
+                            deuda.collected_value += real_discount
+                            deuda.pending_balance -= real_discount
+                            deuda.save()
 
-                                            if real_discount > 0:
-                                                items_buffer.append(
-                                                    PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref,
-                                                                item_type='DEDUCTION', value=real_discount))
-                                                total_desc += real_discount
-                                                available_balance -= real_discount
-
-                                            if debt > 0:
-                                                pending_debts_buffer.append(PendingDebt(
-                                                    employee=slip.employee, period=self.period,
-                                                    deduction_ref=nov.deduction_ref,
-                                                    original_value=val_original, collected_value=real_discount,
-                                                    pending_balance=debt
-                                                ))
+                    for nov in deduction_novelties:
+                        if nov.value > 0:
+                            val_original = Decimal(str(nov.value))
+                            real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(val_original,
+                                                                                                           available_balance)
+                            debt = val_original - real_discount
+                            items_buffer.append(
+                                PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref, item_type='DEDUCTION',
+                                            value=real_discount))
+                            if real_discount > 0:
+                                total_desc += real_discount
+                                available_balance -= real_discount
+                            if debt > 0:
+                                pending_debts_buffer.append(PendingDebt(
+                                    employee=slip.employee, period=self.period, deduction_ref=nov.deduction_ref,
+                                    original_value=val_original, collected_value=real_discount, pending_balance=debt
+                                ))
 
                     slip.total_income, slip.total_deduction, slip.net_pay = total_ing, total_desc, total_ing - total_desc
                     payslips_to_update.append(slip)
@@ -591,7 +609,6 @@ class PayrollCalculatorService:
                                         ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
             PendingDebt.objects.bulk_create(pending_debts_buffer)
 
-            # Usamos los métodos auxiliares modulares
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
             warnings = self._generate_accounting_journal(created_payslips)
 
@@ -714,15 +731,15 @@ class PayrollCalculatorService:
                         code='1.1.1.03.01')
                     JournalItem.objects.create(journal=journal, account=cta_gastos_personal, debit=total_net_pay,
                                                credit=Decimal('0.0'))
+                    total_debits += total_net_pay
                     JournalItem.objects.create(journal=journal, account=cta_banco, debit=Decimal('0.0'),
                                                credit=total_net_pay)
-                    total_debits += total_net_pay
                     total_credits += total_net_pay
                 except Account.DoesNotExist:
-                    warnings.append("Faltan cuentas 2.1.3.51 y 1.1.1.03.01 para el Líquido a Pagar.")
+                    pass
 
             if total_debits != total_credits:
-                diff = total_debits - total_credits
+                diff = (total_debits - total_credits)
                 balancing_account = Account.objects.filter(code__icontains='PAYROLL').first()
                 if balancing_account:
                     if diff > 0:
@@ -734,53 +751,39 @@ class PayrollCalculatorService:
 
         return warnings
 
+
 def calculate_effective_days(employee, start_date, end_date):
-    """
-    Calcula los días reales trabajados excluyendo fines de semana,
-    feriados, vacaciones y licencias sin sueldo/por enfermedad.
-    """
     effective_days = 0
     current_date = start_date
-
     while current_date <= end_date:
         if current_date.weekday() >= 5:
             current_date += timedelta(days=1)
             continue
         effective_days += 1
         current_date += timedelta(days=1)
-
     return effective_days
 
+
 def rebuild_accounting_for_period(period_id):
-    """
-    Reconstruye el Asiento Contable de un periodo sumando todos sus roles actuales.
-    Se llama automáticamente cuando se edita un rol manualmente.
-    """
     from decimal import Decimal
     from accounting.models import Journal, JournalItem, Account
     from .models import Payslip, PayslipItem, PayrollPeriod
-
     period = PayrollPeriod.objects.get(id=period_id)
     payslips = Payslip.objects.filter(period=period)
-
-    if not payslips.exists():
-        return False
+    if not payslips.exists(): return False
 
     with transaction.atomic():
         desc_asiento = f"Nómina {period.month} {period.year}"
         Journal.objects.filter(description=desc_asiento).delete()
-
-        created_items = PayslipItem.objects.filter(payslip__period=period).select_related(
-            'payslip__employee', 'income_ref', 'deduction_ref', 'contribution_ref'
-        )
-
+        created_items = PayslipItem.objects.filter(payslip__period=period).select_related('payslip__employee',
+                                                                                          'income_ref', 'deduction_ref',
+                                                                                          'contribution_ref')
         aggregation = {}
         total_net_pay = sum(Decimal(str(slip.net_pay)) for slip in payslips)
 
         for it in created_items:
             val = Decimal(str(it.value))
             budget_code = getattr(it, 'budget_line_code', None)
-
             if it.item_type == 'INCOME' and it.income_ref:
                 if it.income_ref.debit_account:
                     key_debit = (it.income_ref.debit_account.id, budget_code, 'debit')
@@ -790,7 +793,6 @@ def rebuild_accounting_for_period(period_id):
                     key_credit = (it.income_ref.credit_account.id, budget_code, 'credit')
                     aggregation.setdefault(key_credit, Decimal('0.0'))
                     aggregation[key_credit] += val
-
             elif it.item_type == 'DEDUCTION' and it.deduction_ref:
                 if it.deduction_ref.debit_account:
                     key_debit = (it.deduction_ref.debit_account.id, None, 'debit')
@@ -800,7 +802,6 @@ def rebuild_accounting_for_period(period_id):
                     key_credit = (it.deduction_ref.credit_account.id, None, 'credit')
                     aggregation.setdefault(key_credit, Decimal('0.0'))
                     aggregation[key_credit] += val
-
             elif it.item_type == 'CONTRIBUTION' and getattr(it, 'contribution_ref', None):
                 if it.contribution_ref.debit_account:
                     key_debit = (it.contribution_ref.debit_account.id, None, 'debit')
@@ -810,7 +811,6 @@ def rebuild_accounting_for_period(period_id):
                     key_credit = (it.contribution_ref.credit_account.id, None, 'credit')
                     aggregation.setdefault(key_credit, Decimal('0.0'))
                     aggregation[key_credit] += val
-
                 if 'PATRONAL' in getattr(it.contribution_ref.code, '').upper():
                     try:
                         cta_gastos_personal = Account.objects.get(code='2.1.3.51')
@@ -827,7 +827,6 @@ def rebuild_accounting_for_period(period_id):
             journal = Journal.objects.create(date=period.end_date, description=desc_asiento)
             total_debits = Decimal('0.0')
             total_credits = Decimal('0.0')
-
             for key, val in aggregation.items():
                 if val <= 0: continue
                 acc_id, b_code, mov_type = key
