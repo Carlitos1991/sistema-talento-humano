@@ -15,11 +15,20 @@
 
     <div class="content-table mt-4">
         <div class="table-controls table-controls-grid">
-            <div></div>
+            <div>
+                <button type="button" class="btn-header-premium"
+                        style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);"
+                        onclick="document.getElementById('fileMassUpdate').click();">
+                    <i class="fas fa-file-excel me-2"></i> Subir Excel IESS (Acumulan)
+                </button>
+                <input type="file" id="fileMassUpdate" accept=".xlsx, .xls" style="display: none;"
+                       onchange="uploadMassReserveFunds(this)">
+            </div>
 
             <div class="search-box table-controls-right">
                 <i class="fas fa-search search-icon"></i>
-                <input id="reserve-search-input" type="text" class="table-search-input" placeholder="Buscar por nombre o cédula...">
+                <input id="reserve-search-input" type="text" class="table-search-input"
+                       placeholder="Buscar por nombre o cédula...">
             </div>
         </div>
 
@@ -27,8 +36,6 @@
             <div id="reserve-table-content">
                 {% include 'payroll/partials/partial_reserve_funds_table.html' %}
             </div>
-
-            <!-- Pagination controls are rendered by TableManager (.pagination-container) -->
         </div>
     </div>
 {% endblock %}
@@ -37,4 +44,64 @@
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script src="{% static 'js/payroll/reserve_funds.js' %}"></script>
     <script src="{% static 'js/payroll/reserve_funds_pagination.js' %}"></script>
+
+    <script>
+        function uploadMassReserveFunds(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Mostrar el spinner moderno de SweetAlert
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Procesando...',
+                    text: 'Configurando acumulación/mensualización de fondos...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            }
+
+            // Enviar a nuestra nueva API
+            fetch("{% url 'payroll:reserve_funds_mass_update' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('¡Éxito!', data.message, 'success').then(() => location.reload());
+                        } else {
+                            alert(data.message);
+                            location.reload();
+                        }
+                    } else {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('Error', data.message, 'error');
+                        } else {
+                            alert("Error: " + data.message);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Error', 'Ocurrió un problema de comunicación con el servidor.', 'error');
+                    }
+                })
+                .finally(() => {
+                    // Reiniciar el input para que permita subir el mismo archivo si es necesario corregirlo
+                    input.value = '';
+                });
+        }
+    </script>
 {% endblock %}

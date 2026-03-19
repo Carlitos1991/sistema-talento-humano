@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');
     const groupFilter = document.getElementById('groupFilter');
+    const regimeFilter = document.getElementById('regimeFilter');
     const container = document.getElementById('payslip-table-container');
     let currentPeriodId = window.CURRENT_PERIOD_ID;
     if (!currentPeriodId || currentPeriodId === "" || currentPeriodId === "None") {
@@ -10,10 +11,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const STORAGE_Q = 'payslip_q';
     const STORAGE_PAGE = 'payslip_page';
+    const STORAGE_REGIME = 'payslip_regime';
     const navEntries = performance.getEntriesByType("navigation");
-   if (navEntries.length > 0 && navEntries[0].type !== "reload") {
+    if (navEntries.length > 0 && navEntries[0].type === "navigate") {
         sessionStorage.removeItem(STORAGE_Q);
         sessionStorage.removeItem(STORAGE_PAGE);
+        sessionStorage.removeItem(STORAGE_REGIME);
     }
     const STORAGE_PERIOD = 'payslip_period';
 
@@ -94,7 +97,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const paramsObj = {
             period_id: periodId,
             q: searchInput ? searchInput.value : '',
-            group: groupFilter ? groupFilter.value : ''
+            group: groupFilter ? groupFilter.value : '',
+            regime: regimeFilter ? regimeFilter.value : ''
         };
 
         // Opciones adicionales (p.ej. mostrar retenidos)
@@ -175,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     sessionStorage.setItem(STORAGE_Q, paramsObj.q || '');
                     sessionStorage.setItem(STORAGE_PAGE, String(paramsObj.page || 1));
+                    sessionStorage.setItem(STORAGE_REGIME, paramsObj.regime || '');
                     // Guardar el periodo actual asociado a la búsqueda
                     if (periodId) sessionStorage.setItem(STORAGE_PERIOD, String(periodId));
                 } catch (e) {/* ignore */
@@ -200,6 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    if (regimeFilter) regimeFilter.addEventListener('change', () => performSearch({page: 1}));
     // Buscar con Enter: el botón de buscar fue eliminado, la búsqueda se dispara al presionar Enter
     if (groupFilter) groupFilter.addEventListener('change', performSearch);
 
@@ -301,6 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
             form.append('period_id', periodId);
             form.append('q', searchInput ? searchInput.value : '');
             form.append('group', groupFilter ? groupFilter.value : '');
+            form.append('regime', regimeFilter ? regimeFilter.value : '');
             form.append('show_withheld', show_withheld);
 
             // Control que indica si el proceso fue cancelado por el usuario
@@ -513,9 +520,11 @@ document.addEventListener('DOMContentLoaded', function () {
 function downloadFilteredReport(type) {
     const searchInput = document.getElementById('searchInput');
     const groupFilter = document.getElementById('groupFilter');
+    const regimeFilter = document.getElementById('regimeFilter');
 
     const q = searchInput ? searchInput.value : '';
     const group = groupFilter ? groupFilter.value : '';
+    const regime = regimeFilter ? regimeFilter.value : '';
 
     // Misma magia para la descarga de reportes
     let periodId = window.CURRENT_PERIOD_ID;
@@ -531,7 +540,7 @@ function downloadFilteredReport(type) {
     const reportPath = type === 'banco' ? 'bank' : 'grouped';
     const checkbox = document.getElementById('toggleWithheld');
     const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
-    const url = `/payroll/reports/${reportPath}/${periodId}/?q=${encodeURIComponent(q)}&group=${encodeURIComponent(group)}&filtro=NORMAL&show_withheld=${show_withheld}`;
+    const url = `/payroll/reports/${reportPath}/${periodId}/?q=${encodeURIComponent(q)}&group=${encodeURIComponent(group)}&regime=${encodeURIComponent(regime)}&filtro=NORMAL&show_withheld=${show_withheld}`;
     window.open(url, '_blank');
 }
 

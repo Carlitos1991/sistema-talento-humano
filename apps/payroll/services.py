@@ -177,7 +177,7 @@ class PayrollCalculatorService:
                     salary = sum((t['sueldo_base'] / Decimal('30.0')) * Decimal(str(t['dias'])) for t in tramos)
 
                     total_ing, total_desc, taxable_base = Decimal('0.0'), Decimal('0.0'), Decimal('0.0')
-                    mensualiza_decimos, mensualiza_fr, num_hijos_validos = False, False, 0
+                    mensualiza_decimos, mensualiza_fr, num_hijos_validos = False, True, 0
 
                     try:
                         payroll_info = getattr(getattr(getattr(slip.employee, 'person', None), 'economic_data', None),
@@ -449,7 +449,7 @@ class PayrollCalculatorService:
                     salary = sum((t['sueldo_base'] / Decimal('30.0')) * Decimal(str(t['dias'])) for t in tramos)
 
                     total_ing, total_desc, taxable_base = Decimal('0.0'), Decimal('0.0'), Decimal('0.0')
-                    mensualiza_decimos, mensualiza_fr, num_hijos_validos = False, False, 0
+                    mensualiza_decimos, mensualiza_fr, num_hijos_validos = False, True, 0
 
                     try:
                         payroll_info = getattr(getattr(getattr(slip.employee, 'person', None), 'economic_data', None),

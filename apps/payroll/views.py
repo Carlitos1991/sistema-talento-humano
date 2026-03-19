@@ -2,7 +2,7 @@ import calendar
 import json
 from datetime import date
 from decimal import Decimal
-
+from core.models import CatalogItem
 import openpyxl
 from django import forms
 from django.contrib import messages
@@ -367,10 +367,9 @@ class PayslipListView(LoginRequiredMixin, ListView):
                 Q(employee__person__document_number__icontains=q) |
                 Q(items__budget_line__budget_group__short_code__icontains=q)
             ).distinct()
-
-        # Lógica de filtro por retenidos:
-        # - 'only'  => mostrar sólo los retenidos
-        # - 'exclude' o vacío => excluir los retenidos (comportamiento por defecto)
+        regime = self.request.GET.get('regime', '').strip()
+        if regime:
+            queryset = queryset.filter(items__budget_line__regime_item_id=regime).distinct()
         show_withheld = (self.request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['1', 'true', 'on', 'only']:
             queryset = queryset.filter(is_withheld=True)
@@ -395,7 +394,8 @@ class PayslipListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['budget_groups'] = BudgetGroup.objects.all()
-
+        context['labor_regimes'] = CatalogItem.objects.filter(catalog__code='LABOR_REGIMES', is_active=True).order_by(
+            'name')
         period_id = self.request.GET.get('period_id')
         if period_id and period_id != "None":
             context['current_period'] = PayrollPeriod.objects.filter(id=period_id).first()
@@ -972,6 +972,7 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         # 1. CAPTURA DE FILTROS DESDE LA URL
         search_query = request.GET.get('q', '').strip()
         group_filter = request.GET.get('group', '').strip()
+        regime_filter = request.GET.get('regime', '').strip()
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
 
         payslips_qs = Payslip.objects.filter(period=period)
@@ -986,6 +987,9 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
 
         if group_filter:
             payslips_qs = payslips_qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
+
+        if regime_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         show_withheld = (request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
@@ -1183,6 +1187,13 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                                                   {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco})
                 g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
 
+            g_data['ingresos_headers'] = {k: v for k, v in g_data['ingresos_headers'].items() if sum(
+                emp['ingresos_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
+            g_data['descuentos_headers'] = {k: v for k, v in g_data['descuentos_headers'].items() if sum(
+                emp['descuentos_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
+            g_data['aportes_headers'] = {k: v for k, v in g_data['aportes_headers'].items() if sum(
+                emp['aportes_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
+
             g_data['ingresos_headers'] = sorted(g_data['ingresos_headers'].values(),
                                                 key=lambda x: (x['order'], x['name']))
             g_data['descuentos_headers'] = sorted(g_data['descuentos_headers'].values(),
@@ -1378,6 +1389,7 @@ class RecalculatePayslipsView(LoginRequiredMixin, View):
         # Capturar filtros opcionales
         search_query = (request.POST.get('q') or request.GET.get('q') or '').strip()
         group_filter = (request.POST.get('group') or request.GET.get('group') or '').strip()
+        regime_filter = (request.POST.get('regime') or request.GET.get('regime') or '').strip()  # NUEVO
         show_withheld = (request.POST.get('show_withheld') or request.GET.get('show_withheld') or '').lower()
 
         qs = Payslip.objects.filter(period=period)
@@ -1393,6 +1405,8 @@ class RecalculatePayslipsView(LoginRequiredMixin, View):
 
         if show_withheld in ['only', '1', 'true', 'yes']:
             qs = qs.filter(is_withheld=True)
+        if regime_filter:
+            qs = qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         emp_ids = list(qs.values_list('employee_id', flat=True).distinct())
         if not emp_ids:
@@ -1467,6 +1481,7 @@ class BankTransferReportView(LoginRequiredMixin, View):
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
+        regime_filter = request.GET.get('regime', '').strip()
         search_query = request.GET.get('q', '').strip()
 
         payslips_qs = Payslip.objects.filter(period=period).select_related(
@@ -1493,6 +1508,9 @@ class BankTransferReportView(LoginRequiredMixin, View):
                 payslips_qs = payslips_qs.filter(is_withheld=False)
             elif tipo_filtro == 'REZAGADOS':
                 payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+
+        if regime_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         # 3. PRE-CARGA CRÍTICA: Traemos los datos bancarios para evitar que el template colapse
         payslips_qs = payslips_qs.prefetch_related(
@@ -1655,3 +1673,66 @@ def export_negative_balances_report(request, period_id):
         return HttpResponse('Ocurrió un error al generar el PDF', status=500)
 
     return response
+
+
+class MassUpdateReserveFundsView(View):
+    """
+    API para carga masiva de Fondos de Reserva.
+    Lee un Excel con Cédulas:
+    - Los que estén en el Excel pasan a ACUMULAR (False).
+    - Los que NO estén pasan a MENSUALIZAR (True) automáticamente.
+    """
+
+    def post(self, request):
+        excel_file = request.FILES.get('file')
+        if not excel_file:
+            return JsonResponse({'status': 'error', 'message': 'No se subió ningún archivo'})
+
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
+            sheet = wb.active
+
+            # 1. Leer las cédulas del Excel (ignora si la primera celda dice "CEDULA")
+            cedulas_acumulan = set()
+            for row in sheet.iter_rows(min_row=1, values_only=True):
+                if not row[0]: continue
+                raw = str(row[0]).strip()
+                if raw.replace('.', '').isdigit():
+                    if raw.endswith('.0'): raw = raw[:-2]
+                    cedulas_acumulan.add(raw.zfill(10))
+
+            # 2. Traer a los empleados y preparar la actualización masiva
+            empleados = Employee.objects.filter(is_active=True).select_related('person__economic_data__payroll_info')
+            infos_to_update = []
+
+            with transaction.atomic():
+                for emp in empleados:
+                    try:
+                        # Navegamos hasta el perfil económico/nómina del empleado
+                        info = emp.person.economic_data.payroll_info
+                        if info:
+                            cedula = emp.person.document_number
+
+                            # LÓGICA MAESTRA: Si está en el Excel, Acumula (False). Si no, Mensualiza (True).
+                            nuevo_estado = False if cedula in cedulas_acumulan else True
+
+                            # Solo lo actualizamos si es diferente a lo que ya tenía, para ahorrar memoria
+                            if getattr(info, 'reserve_funds') != nuevo_estado:
+                                info.reserve_funds = nuevo_estado
+                                infos_to_update.append(info)
+                    except AttributeError:
+                        continue
+
+                # 3. Guardado ultra-rápido en base de datos (Bulk Update)
+                if infos_to_update:
+                    ModelClass = type(infos_to_update[0])  # Obtenemos el modelo dinámicamente
+                    ModelClass.objects.bulk_update(infos_to_update, ['reserve_funds'])
+
+            return JsonResponse({
+                'status': 'success',
+                'message': f'¡Proceso exitoso! Se configuraron {len(cedulas_acumulan)} empleados para ACUMULAR en el IESS. El resto mensualizará automáticamente.'
+            })
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Error procesando el archivo: {str(e)}'})

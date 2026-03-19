@@ -71,6 +71,16 @@
                     <div style="display:flex; justify-content:flex-end; justify-self: end;">
                         <div class="search-box"
                              style="width: 100%; max-width: 600px; display:flex; gap:8px; align-items:center;">
+                            <select id="regimeFilter" class="table-search-input"
+                                    style="width: auto; max-width: 250px; background-color: #f8fafc; border: 1px solid #cbd5e1;">
+                                <option value="">Todos</option>
+                                {% for reg in labor_regimes %}
+                                    <option value="{{ reg.id }}"
+                                            {% if selected_regime == reg.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ reg.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" id="searchInput" class="table-search-input"
                                    placeholder="Buscar por nombre, cédula o partida..." value="{{ search_query }}"
