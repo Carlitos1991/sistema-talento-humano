@@ -5,18 +5,27 @@
     <meta charset="UTF-8">
     <title>Impresión Rol - {{ payslip.employee.person.full_name }}</title>
     <style>
-        /* Configuramos el tamaño de la hoja PDF */
-        @page {
-            size: A4;
-            margin: 1.5cm;
+        /* 🟢 TRUCO MAESTRO: Obliga a Chrome/Edge a imprimir los colores de fondo */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
             color: #000;
-            background: #fff;
+            background: #f3f4f6; /* Fondo grisáceo para la pantalla */
             margin: 0;
-            padding: 0;
+            padding: 20px 0;
+        }
+
+        /* 🟢 EFECTO HOJA A4 PARA LA PANTALLA */
+        .a4-container {
+            max-width: 21cm; /* Ancho exacto de una hoja A4 */
+            margin: 0 auto;
+            background: #fff;
+            padding: 1.5cm;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* Sombra elegante */
         }
 
         .loja-header {
@@ -49,7 +58,7 @@
 
         .loja-info-grid {
             width: 100%;
-            background-color: #e6f0fa;
+            background-color: #e6f0fa; /* Celeste pastel */
             border: 1px solid #000;
             border-collapse: collapse;
             margin-bottom: 20px;
@@ -61,7 +70,6 @@
             border: 1px solid #000;
         }
 
-        /* Estilos de las tablas internas */
         .loja-detail-table {
             width: 100%;
             border-collapse: collapse;
@@ -71,7 +79,6 @@
 
         .loja-detail-table th, .loja-detail-table td {
             padding: 5px 8px;
-            color: #000;
             border: 1px solid #000;
         }
 
@@ -81,6 +88,7 @@
             font-weight: bold;
         }
 
+        /* Colores de las tablas */
         .th-ingresos {
             background-color: #d9ead3 !important;
         }
@@ -89,7 +97,6 @@
             background-color: #f4cccc !important;
         }
 
-        /* Celdas de relleno sin bordes horizontales */
         .loja-detail-table tbody td {
             border-top: none;
             border-bottom: none;
@@ -118,10 +125,6 @@
 
         .total-label {
             text-align: left;
-        }
-
-        .total-value {
-            text-align: center;
         }
 
         .loja-summary-bar {
@@ -153,163 +156,182 @@
             margin-top: 40px;
         }
 
+        /* 🟢 REGLAS ESPECÍFICAS PARA CUANDO SALE POR LA IMPRESORA */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .a4-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+        }
     </style>
 </head>
 <body>
 
-<table class="loja-header">
-    <tr>
-        <td style="width: 15%; text-align: left; vertical-align: middle;">
-            <img src="{% static 'img/logo.png' %}" alt="Escudo de Loja" class="loja-logo">
-        </td>
-        <td class="loja-titles">
-            <h2>GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA</h2>
-            <h3>ROL DE PAGOS – {{ payslip.period.month|upper }} {{ payslip.period.year }}</h3>
-        </td>
-        <td style="width: 15%;"></td>
-    </tr>
-</table>
+<div class="a4-container">
+    <table class="loja-header">
+        <tr>
+            <td style="width: 15%; text-align: left; vertical-align: middle;">
+                <img src="{% static 'img/logo.png' %}" alt="Escudo de Loja" class="loja-logo">
+            </td>
+            <td class="loja-titles">
+                <h2>GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA</h2>
+                <h3>ROL DE PAGOS – {{ payslip.period.month|upper }} {{ payslip.period.year }}</h3>
+            </td>
+            <td style="width: 15%;"></td>
+        </tr>
+    </table>
 
-{% with cb=payslip.employee.current_budget_line.first %}
     <table class="loja-info-grid">
         <tr>
             <td style="width: 50%;"><b>Servidor:</b> {{ payslip.employee.person.full_name }}</td>
-            <td style="width: 50%;"><b>Cargo:</b> {{ cb.position_item.name|default:"—" }}</td>
+            <td style="width: 50%;">
+                <b>Cargo:</b> {{ payslip.employee.current_budget_line.first.position_item.name|default:"—" }}</td>
         </tr>
         <tr>
             <td><b>Cédula:</b> {{ payslip.employee.person.document_number }}</td>
-            <td>
-                <b>Unidad:</b> {{ cb.activity.project.subprogram.program.name|default:cb.budget_group.name|default:"—" }}
+            <td><b>Unidad:</b> {{ payslip.employee.area.name|default:"—" }}</td>
+        </tr>
+    </table>
+
+    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+        <tr>
+            <td style="width: 49%; vertical-align: top; padding-right: 1%;">
+                <table class="loja-detail-table table-ingresos">
+                    <thead>
+                    <tr>
+                        <th colspan="2" class="th-ingresos">INGRESO</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 70%;">Concepto</th>
+                        <th style="width: 30%;">Valor</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in incomes %}
+                        <tr class="filled-row">
+                            <td>{{ item.income_ref.name }}</td>
+                            <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td class="total-label th-ingresos"><u>TOTAL INGRESOS</u></td>
+                        <td class="text-center th-ingresos">$ {{ payslip.total_income|floatformat:"2g" }}</td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </td>
+
+            <td style="width: 49%; vertical-align: top; padding-left: 1%;">
+                <table class="loja-detail-table table-descuentos">
+                    <thead>
+                    <tr>
+                        <th colspan="2" class="th-descuentos">DESCUENTOS</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 70%;">Concepto</th>
+                        <th style="width: 30%;">Valor</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in deductions %}
+                        <tr class="filled-row">
+                            <td>{{ item.deduction_ref.name }}</td>
+                            <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    <tr class="empty-filler-row">
+                        <td>&nbsp;</td>
+                        <td></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td class="total-label th-descuentos"><u>TOTAL DESCUENTOS</u></td>
+                        <td class="text-center th-descuentos">$ {{ payslip.total_deduction|floatformat:"2g" }}</td>
+                    </tr>
+                    </tfoot>
+                </table>
             </td>
         </tr>
     </table>
-{% endwith %}
 
-<table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-    <tr>
-        <td style="width: 49%; vertical-align: top; padding-right: 1%;">
-            <table class="loja-detail-table table-ingresos">
-                <thead>
-                <tr>
-                    <th colspan="2" class="th-ingresos">INGRESO</th>
-                </tr>
-                <tr>
-                    <th style="width: 70%;">Concepto</th>
-                    <th style="width: 30%;">Valor</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for item in incomes %}
-                    <tr class="filled-row">
-                        <td>{{ item.income_ref.name }}</td>
-                        <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
-                    </tr>
-                {% endfor %}
+    <table class="loja-summary-bar">
+        <tr>
+            <td style="width: 33.33%;"><u>TOTAL INGRESO:</u> $ {{ payslip.total_income|floatformat:"2g" }}</td>
+            <td style="width: 33.33%;"><u>TOTAL DESCUENTOS:</u> $ {{ payslip.total_deduction|floatformat:"2g" }}</td>
+            <td style="width: 33.33%;">VALOR A RECIBIR: {{ payslip.net_pay|floatformat:"2g" }}</td>
+        </tr>
+    </table>
 
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                </tbody>
-                <tfoot>
-                <tr>
-                    <td class="total-label th-ingresos"><u>TOTAL INGRESOS</u></td>
-                    <td class="total-value th-ingresos">$ {{ payslip.total_income|floatformat:"2g" }}</td>
-                </tr>
-                </tfoot>
-            </table>
-        </td>
+    <div class="loja-deposit-info">
+        {% with ba=payslip.employee.person.economic_data.bank_account %}
+            <p><b>Depositado en:</b> {% if ba %}{{ ba.bank.name|default:"—" }} – Cuenta Nro. xxxxxx
+                {{ ba.account_number|slice:"-4:"|default:"----" }}{% else %}No registrado{% endif %}</p>
+        {% endwith %}
+        <p><b>LÍQUIDO A RECIBIR:</b> {{ net_pay_words|default:"(Error al cargar letras)" }}</p>
+    </div>
 
-        <td style="width: 49%; vertical-align: top; padding-left: 1%;">
-            <table class="loja-detail-table table-descuentos">
-                <thead>
-                <tr>
-                    <th colspan="2" class="th-descuentos">DESCUENTOS</th>
-                </tr>
-                <tr>
-                    <th style="width: 70%;">Concepto</th>
-                    <th style="width: 30%;">Valor</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for item in deductions %}
-                    <tr class="filled-row">
-                        <td>{{ item.deduction_ref.name }}</td>
-                        <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
-                    </tr>
-                {% endfor %}
-
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                <tr class="empty-filler-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                </tr>
-                </tbody>
-                <tfoot>
-                <tr>
-                    <td class="total-label th-descuentos"><u>TOTAL DESCUENTOS</u></td>
-                    <td class="total-value th-descuentos">$ {{ payslip.total_deduction|floatformat:"2g" }}</td>
-                </tr>
-                </tfoot>
-            </table>
-        </td>
-    </tr>
-</table>
-
-<table class="loja-summary-bar">
-    <tr>
-        <td style="width: 33.33%;"><u>TOTAL INGRESO:</u> $ {{ payslip.total_income|floatformat:"2g" }}</td>
-        <td style="width: 33.33%;"><u>TOTAL DESCUENTOS:</u> $ {{ payslip.total_deduction|floatformat:"2g" }}</td>
-        <td style="width: 33.33%;">VALOR A RECIBIR: {{ payslip.net_pay|floatformat:"2g" }}</td>
-    </tr>
-</table>
-
-<div class="loja-deposit-info">
-    {% with ba=payslip.employee.person.economic_data.bank_account %}
-        <p><b>Depositado en:</b> {% if ba %}{{ ba.bank.name|default:"—" }} – Cuenta Nro. xxxxxx
-            {{ ba.account_number|slice:"-4:"|default:"----" }}{% else %}No registrado{% endif %}</p>
-    {% endwith %}
-    <p><b>LIQUIDO A RECIBIR:</b> {{ payslip.net_pay_words|default:"(Valor numérico procesado)" }}</p>
-</div>
-
-<div class="loja-legal-footer">
-    ESTE DOCUMENTO TIENE VALIDEZ LEGAL AL ESTAR SELLADO Y FIRMADO POR LA DIRECCIÓN DE TALENTO HUMANO
+    <div class="loja-legal-footer">
+        ESTE DOCUMENTO TIENE VALIDEZ LEGAL AL ESTAR SELLADO Y FIRMADO POR LA DIRECCIÓN DE TALENTO HUMANO
+    </div>
 </div>
 
 <script>
     window.onload = function () {
-        window.print();
+        // Le damos 500ms de retraso para asegurar que los estilos de color carguen bien antes de abrir el diálogo
+        setTimeout(function () {
+            window.print();
+        }, 500);
     }
 </script>
 </body>

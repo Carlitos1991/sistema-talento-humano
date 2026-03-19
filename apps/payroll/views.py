@@ -1764,6 +1764,19 @@ class PrintablePayslipView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        payslip = self.object
+        
+        if num2words:
+            try:
+                entero = int(payslip.net_pay)
+                decimales = int(round((payslip.net_pay - entero) * 100))
+                letras_entero = num2words(entero, lang='es').upper()
+                context['net_pay_words'] = f"{letras_entero} CON {decimales:02d}/100 DÓLARES"
+            except Exception:
+                context['net_pay_words'] = f"{payslip.net_pay} (Error al convertir)"
+        else:
+            context['net_pay_words'] = f"{payslip.net_pay} (Instalar num2words)"
+
         # Ordenamos igual que en el modal
         context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
         context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
