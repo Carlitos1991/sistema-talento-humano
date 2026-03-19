@@ -550,3 +550,54 @@ function performSearchWithOptions() {
     performSearch({show_withheld: checkbox && checkbox.checked});
 }
 
+function sendPayslipEmail(payslipId) {
+    if (typeof Swal === 'undefined') {
+        alert("El sistema de alertas no está cargado.");
+        return;
+    }
+
+    Swal.fire({
+        title: '¿Enviar Rol por Correo?',
+        text: "Se enviará una notificación con los valores al correo registrado del servidor.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#ef4444',
+        confirmButtonText: 'Sí, enviar ahora',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            // Pantalla de carga
+            Swal.fire({
+                title: 'Enviando correo...',
+                text: 'Por favor, espere.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Llamada AJAX a la nueva vista
+            fetch(`/payroll/payslips/${payslipId}/send-email/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire('¡Enviado!', data.message, 'success');
+                    } else {
+                        Swal.fire('Atención', data.message, 'warning');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', 'Hubo un problema de conexión al intentar enviar el correo.', 'error');
+                });
+        }
+    });
+}

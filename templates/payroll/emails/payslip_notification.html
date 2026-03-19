@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .email-container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        .email-header { background-color: #0f4c81; color: #ffffff; padding: 25px; text-align: center; }
+        .email-header h2 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+        .email-header p { margin: 5px 0 0 0; font-size: 15px; color: #e0f2fe; }
+        .email-body { padding: 35px 30px; color: #333333; line-height: 1.6; }
+
+        .highlight-box { background-color: #e6f0fa; border-left: 5px solid #0f4c81; padding: 20px; margin: 25px 0; border-radius: 4px; }
+        .amount-title { margin: 0; font-size: 13px; text-transform: uppercase; color: #475569; font-weight: bold; }
+        .amount { font-size: 28px; font-weight: 800; color: #0f4c81; margin: 5px 0 0 0; }
+
+        .email-footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h2>Municipio de Loja</h2>
+            <p>Dirección de Talento Humano</p>
+        </div>
+
+        <div class="email-body">
+            <p style="font-size: 16px;">Estimado/a <strong>{{ empleado }}</strong>,</p>
+
+            <p style="font-size: 15px;">Le informamos que su Rol de Pagos correspondiente al periodo de <strong>{{ mes|upper }} {{ anio }}</strong> ha sido procesado y depositado exitosamente.</p>
+
+            <div class="highlight-box">
+                <p class="amount-title">Líquido a recibir:</p>
+                <p class="amount">$ {{ liquido }}</p>
+            </div>
+
+            <p style="font-size: 15px;">Para visualizar, descargar o imprimir el detalle oficial completo de sus ingresos y descuentos, por favor ingrese con sus credenciales al sistema de nómina institucional.</p>
+
+            <p style="margin-top: 40px; font-size: 14px; color: #475569;">
+                Atentamente,<br>
+                <strong>Equipo de Talento Humano-Nomina</strong><br>
+                Gobierno Autónomo Descentralizado Municipal de Loja
+            </p>
+        </div>
+
+        <div class="email-footer">
+            Este es un mensaje automático generado de forma segura por el Sistema de Nómina. Por favor, no responda a este correo electrónico.
+        </div>
+    </div>
+</body>
+</html>

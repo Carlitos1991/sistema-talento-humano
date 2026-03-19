@@ -1,12 +1,20 @@
 import calendar
+import io
 import json
+import os
 from datetime import date
 from decimal import Decimal
-from core.models import CatalogItem
+
+try:
+    from num2words import num2words
+except ImportError:
+    num2words = None
 import openpyxl
 from django import forms
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Q, Sum, Case, When, IntegerField, Value
 from django.db.models.functions import Cast
@@ -16,12 +24,16 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string, get_template
 from django.urls import reverse_lazy, reverse
+from django.utils.html import strip_tags
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from xhtml2pdf import pisa
 
 from accounting.models import JournalItem
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
+from core.models import CatalogItem
 from employee.models import Employee
 from payroll.models import RubroBudgetMapping
 from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
@@ -1742,3 +1754,203 @@ class MassUpdateReserveFundsView(View):
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Error procesando el archivo: {str(e)}'})
+
+
+class PrintablePayslipView(LoginRequiredMixin, DetailView):
+    """Genera el rol de pagos en pantalla completa para impresión oficial"""
+    model = Payslip
+    template_name = 'payroll/reports/printable_payslip.html'
+    context_object_name = 'payslip'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ordenamos igual que en el modal
+        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
+        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
+        return context
+
+
+class SendPayslipEmailView(LoginRequiredMixin, View):
+    """Genera un PDF ultraligero con ReportLab y lo envía por correo"""
+
+    def post(self, request, pk):
+        payslip = get_object_or_404(Payslip, pk=pk)
+
+        inst_data = getattr(payslip.employee, 'institutional_data', None)
+        correo_empleado = inst_data.institutional_email if inst_data else None
+
+        if not correo_empleado:
+            return JsonResponse({'status': 'error', 'message': 'Sin correo institucional.'})
+
+        try:
+            mes_str = str(payslip.period.month).upper()
+            asunto = f"Notificación de Pago: {mes_str} {payslip.period.year} - GAD Loja"
+
+            context_email = {
+                'empleado': payslip.employee.person.full_name,
+                'mes': payslip.period.month,
+                'anio': payslip.period.year,
+                'liquido': payslip.net_pay,
+            }
+            html_content = render_to_string('payroll/emails/payslip_notification.html', context_email)
+            text_content = strip_tags(html_content)
+
+            remitente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'nomina@loja.gob.ec')
+            email = EmailMultiAlternatives(subject=asunto, body=text_content, from_email=remitente,
+                                           to=[correo_empleado])
+            email.attach_alternative(html_content, "text/html")
+
+            # ====================================================================
+            # CREACIÓN DEL PDF CON REPORTLAB
+            # ====================================================================
+            buffer = io.BytesIO()
+            p = canvas.Canvas(buffer, pagesize=A4)
+            width, height = A4
+
+            # 1. DIBUJAR LOGO
+            logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
+            if os.path.exists(logo_path):
+                p.drawImage(logo_path, 40, height - 90, width=60, height=60, preserveAspectRatio=True, mask='auto')
+
+            # 2. DIBUJAR ENCABEZADO
+            p.setFont("Helvetica-Bold", 12)
+            p.drawCentredString(width / 2.0, height - 50, "GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA")
+            p.setFont("Helvetica-Bold", 10)
+            p.drawCentredString(width / 2.0, height - 65, f"ROL DE PAGOS – {mes_str} {payslip.period.year}")
+
+            # 3. DIBUJAR CAJA DEL SERVIDOR
+            y_info = height - 120
+            p.setLineWidth(1)
+
+            # 🟢 NUEVO: Pintar el fondo de celeste (RGB: 230, 240, 250)
+            p.setFillColorRGB(0.90, 0.94, 0.98)
+            p.rect(40, y_info - 40, 515, 40, fill=1, stroke=1)  # fill=1 activa el color
+            p.setFillColorRGB(0, 0, 0)  # Regresar el pincel a color negro para las letras
+
+            p.line(40, y_info - 20, 555, y_info - 20)
+            p.line(width / 2.0, y_info - 40, width / 2.0, y_info)
+
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(45, y_info - 14, "Servidor:")
+            p.drawString(45, y_info - 34, "Cédula:")
+            p.drawString(width / 2.0 + 5, y_info - 14, "Cargo:")
+            p.drawString(width / 2.0 + 5, y_info - 34, "Unidad:")
+
+            p.setFont("Helvetica", 9)
+            p.drawString(95, y_info - 14, str(payslip.employee.person.full_name)[:35])
+            p.drawString(90, y_info - 34, str(payslip.employee.person.document_number))
+
+            cb = payslip.employee.current_budget_line.first()
+            cargo = cb.position_item.name if cb and cb.position_item else "—"
+
+            # 🟢 NUEVO: Extraer la Unidad Administrativa directa del modelo Employee
+            unidad = payslip.employee.area.name if payslip.employee.area else "—"
+
+            p.drawString(width / 2.0 + 40, y_info - 14, str(cargo)[:35])
+            p.drawString(width / 2.0 + 45, y_info - 34, str(unidad)[:35])
+
+            # 4. DIBUJAR CABECERAS DE TABLAS
+            y_tables = y_info - 60
+            p.rect(40, y_tables - 15, 250, 15);
+            p.rect(305, y_tables - 15, 250, 15)
+            p.setFont("Helvetica-Bold", 9)
+            p.drawCentredString(165, y_tables - 11, "INGRESOS");
+            p.drawCentredString(430, y_tables - 11, "DESCUENTOS")
+
+            y_titles = y_tables - 30
+            p.rect(40, y_titles, 250, 15);
+            p.rect(305, y_titles, 250, 15)
+            p.drawString(45, y_titles + 4, "Concepto");
+            p.drawRightString(285, y_titles + 4, "Valor")
+            p.drawString(310, y_titles + 4, "Concepto");
+            p.drawRightString(550, y_titles + 4, "Valor")
+
+            # 5. DIBUJAR DATOS
+            p.setFont("Helvetica", 9)
+            y_inc = y_titles - 15
+            for item in payslip.items.filter(item_type='INCOME').order_by('income_ref__order'):
+                p.drawString(45, y_inc + 4, str(item.income_ref.name)[:35])
+                p.drawRightString(285, y_inc + 4, f"{item.value:.2f}")
+                p.line(40, y_inc, 290, y_inc)
+                y_inc -= 15
+
+            y_ded = y_titles - 15
+            for item in payslip.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order'):
+                p.drawString(310, y_ded + 4, str(item.deduction_ref.name)[:35])
+                p.drawRightString(550, y_ded + 4, f"{item.value:.2f}")
+                p.line(305, y_ded, 555, y_ded)
+                y_ded -= 15
+
+            y_bottom = min(y_inc, y_ded) - 15
+            p.line(40, y_titles, 40, y_bottom);
+            p.line(290, y_titles, 290, y_bottom)
+            p.line(305, y_titles, 305, y_bottom);
+            p.line(555, y_titles, 555, y_bottom)
+            p.line(40, y_bottom, 290, y_bottom);
+            p.line(305, y_bottom, 555, y_bottom)
+
+            # 6. TOTALES
+            y_totals = y_bottom - 15
+            p.rect(40, y_totals, 250, 15);
+            p.rect(305, y_totals, 250, 15)
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(45, y_totals + 4, "TOTAL INGRESOS");
+            p.drawRightString(285, y_totals + 4, f"$ {payslip.total_income:.2f}")
+            p.drawString(310, y_totals + 4, "TOTAL DESCUENTOS");
+            p.drawRightString(550, y_totals + 4, f"$ {payslip.total_deduction:.2f}")
+
+            # 7. BARRA DE RESUMEN
+            y_sum = y_totals - 30
+
+            # 🟢 NUEVO: Pintar el fondo de celeste (RGB: 230, 240, 250)
+            p.setFillColorRGB(0.90, 0.94, 0.98)
+            p.rect(40, y_sum, 515, 20, fill=1, stroke=1)
+            p.setFillColorRGB(0, 0, 0)  # Regresar a negro
+
+            p.line(40 + 171, y_sum, 40 + 171, y_sum + 20);
+            p.line(40 + 342, y_sum, 40 + 342, y_sum + 20)
+            p.drawCentredString(40 + 85, y_sum + 6, f"TOTAL INGRESO: $ {payslip.total_income:.2f}")
+            p.drawCentredString(40 + 256, y_sum + 6, f"TOTAL DESCUENTOS: $ {payslip.total_deduction:.2f}")
+            p.drawCentredString(40 + 428, y_sum + 6, f"VALOR A RECIBIR: $ {payslip.net_pay:.2f}")
+
+            # 8. INFO BANCARIA Y FIRMA
+            y_foot = y_sum - 25
+            p.setFont("Helvetica", 9)
+            ba = payslip.employee.person.economic_data.bank_account
+            cuenta = f"Cuenta Nro. xxxxxx{ba.account_number[-4:]}" if ba and ba.account_number else "No registrado"
+            banco = ba.bank.name if ba and ba.bank else "—"
+            p.drawString(40, y_foot, f"Depositado en: {banco} – {cuenta}")
+
+            p.setFont("Helvetica-Bold", 9)
+
+            # 🟢 NUEVO: Transformar el valor numérico a letras automáticamente
+            if num2words:
+                entero = int(payslip.net_pay)
+                decimales = int(round((payslip.net_pay - entero) * 100))
+                letras_entero = num2words(entero, lang='es').upper()
+                net_words = f"{letras_entero} CON {decimales:02d}/100 DÓLARES"
+            else:
+                net_words = f"{payslip.net_pay} (Instalar num2words)"
+
+            p.drawString(40, y_foot - 15, f"LÍQUIDO A RECIBIR: {net_words}")
+
+            p.setFont("Helvetica-Bold", 8)
+            p.drawCentredString(width / 2.0, y_foot - 50,
+                                "ESTE DOCUMENTO TIENE VALIDEZ LEGAL AL ESTAR SELLADO Y FIRMADO POR LA DIRECCIÓN DE TALENTO HUMANO")
+
+            # Finalizar PDF
+            p.showPage()
+            p.save()
+            pdf_file = buffer.getvalue()
+            buffer.close()
+            # ====================================================================
+
+            nombre_archivo = f"Rol_{mes_str}_{payslip.period.year}.pdf"
+            email.attach(nombre_archivo, pdf_file, 'application/pdf')
+            email.send(fail_silently=False)
+
+            return JsonResponse(
+                {'status': 'success', 'message': f'Notificación enviada exitosamente a {correo_empleado}'})
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Error al enviar por Zimbra: {str(e)}'})

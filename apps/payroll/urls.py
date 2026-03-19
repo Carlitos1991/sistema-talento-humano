@@ -11,7 +11,8 @@ from .views import (
     SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
     GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
     GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days,
-    RecalculatePayslipsView, export_negative_balances_report, MassUpdateReserveFundsView
+    RecalculatePayslipsView, export_negative_balances_report, MassUpdateReserveFundsView, PrintablePayslipView,
+    SendPayslipEmailView
 )
 
 app_name = 'payroll'
@@ -72,4 +73,6 @@ urlpatterns = [
     path('reports/negative-balances/<int:period_id>/', export_negative_balances_report,
          name='report_negative_balances'),
     path('reserve-funds/mass-update/', MassUpdateReserveFundsView.as_view(), name='reserve_funds_mass_update'),
+    path('payslips/<int:pk>/print/', PrintablePayslipView.as_view(), name='payslip_print'),
+    path('payslips/<int:pk>/send-email/', SendPayslipEmailView.as_view(), name='payslip_send_email'),
 ]
