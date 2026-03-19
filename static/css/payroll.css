@@ -26,50 +26,89 @@
     background: #fff;
 
     /* SweetAlert2 - styles específicos para el modal de recalculo */
+
     .swal2-recalc-popup.swal2-popup {
         overflow: visible !important;
     }
+
     .swal2-recalc-popup .swal2-content {
         overflow: visible !important;
         max-height: none !important;
         padding: 0 0 6px 0 !important;
     }
+
     .swal2-recalc-popup .swal2-html-container {
         overflow: visible !important;
         max-height: none !important;
     }
+
     .swal2-recalc-popup .swal2-html-container, .swal2-recalc-popup .swal2-content {
         overflow-y: visible !important;
     }
+
     /* Hide any confirm/accept button inside the recalculation popup */
+
     .swal2-recalc-popup .swal2-confirm, .swal2-recalc-popup .swal2-styled.swal2-confirm {
         display: none !important;
     }
+
     /* Ensure cancel is the only visible action and centered */
-    .swal2-recalc-popup .swal2-actions { justify-content:center !important; }
+
+    .swal2-recalc-popup .swal2-actions {
+        justify-content: center !important;
+    }
+
     /* Remove scrollbar visual artifacts inside SweetAlert */
-    .swal2-recalc-popup .swal2-html-container::-webkit-scrollbar { display: none; }
-    .swal2-recalc-popup .swal2-html-container { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .swal2-recalc-popup .swal2-html-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .swal2-recalc-popup .swal2-html-container {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
 
     .swal2-recalc-popup .swal2-actions {
         justify-content: center !important;
         padding-top: 14px !important;
     }
+
     /* Ocultar el botón Aceptar (confirm) en este popup y dejar solo Cancelar */
+
     .swal2-recalc-popup .swal2-confirm {
         display: none !important;
     }
+
     .swal2-recalc-popup .swal2-cancel {
         min-width: 120px !important;
         padding: 10px 18px !important;
     }
+
     /* Evitar que aparezca una scrollbar vertical dentro del popup */
-    .swal2-recalc-popup .swal2-content::-webkit-scrollbar { display:none; }
-    .swal2-recalc-popup .swal2-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .swal2-recalc-popup .swal2-content::-webkit-scrollbar {
+        display: none;
+    }
+
+    .swal2-recalc-popup .swal2-content {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
 
     /* Spinner tamaño y alineación */
-    .swal2-recalc-popup .recalc-spinner { width:36px; height:36px; border-width:4px; }
-    @keyframes sw-spin { to { transform: rotate(360deg); } }
+
+    .swal2-recalc-popup .recalc-spinner {
+        width: 36px;
+        height: 36px;
+        border-width: 4px;
+    }
+
+    @keyframes sw-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -268,22 +307,29 @@
     display: inline-flex !important;
     gap: 8px !important;
 }
+
 .managed-table .modern-toggle-wrapper .modern-toggle-text {
     display: inline-block;
     line-height: 1 !important;
     font-size: 0.85rem !important;
 }
+
 .managed-table .modern-toggle-wrapper .modern-toggle-circle {
     width: 14px !important;
     height: 14px !important;
 }
+
 /* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
-.managed-table .modern-toggle-wrapper { background-clip: padding-box !important; min-width: 100px !important; }
+.managed-table .modern-toggle-wrapper {
+    background-clip: padding-box !important;
+    min-width: 100px !important;
+}
 
 /* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
 .managed-table .modern-toggle-wrapper {
     justify-content: center !important;
 }
+
 .managed-table .modern-toggle-wrapper .modern-toggle-text {
     width: 88px !important; /* fixed width to accommodate longest label */
     text-align: center !important;
@@ -297,63 +343,148 @@
     width: 100%;
     max-width: 520px;
 }
+
 .recalc-progress-title {
     font-weight: 600;
     margin-bottom: 12px;
 }
+
 .recalc-progress-bar {
     height: 14px;
     background: #e6eef7;
     border-radius: 999px;
     overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
     margin-bottom: 8px;
 }
+
 .recalc-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg,#4ade80 0%,#10b981 60%,#06b6d4 100%);
+    background: linear-gradient(90deg, #4ade80 0%, #10b981 60%, #06b6d4 100%);
     border-radius: 999px;
     transition: width 400ms ease;
 }
-.recalc-progress-meta { display:flex; justify-content:space-between; gap:12px; align-items:center; font-size:0.9rem; color:#374151 }
-.recalc-progress-percent { font-weight:700; color:#0f172a }
-.recalc-progress-msg { color:#6b7280; font-size:0.85rem }
+
+.recalc-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #374151
+}
+
+.recalc-progress-percent {
+    font-weight: 700;
+    color: #0f172a
+}
+
+.recalc-progress-msg {
+    color: #6b7280;
+    font-size: 0.85rem
+}
 
 /* Simple modern spinner */
 .recalc-spinner {
-    display:inline-block;
-    width:48px;
-    height:48px;
-    border-radius:50%;
-    border:4px solid rgba(15,23,42,0.08);
+    display: inline-block;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 4px solid rgba(15, 23, 42, 0.08);
     border-top-color: #2563eb;
     animation: spin 1s linear infinite;
     margin: 6px 0;
 }
-@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
 
-.recalc-spinner-wrapper{ display:flex; align-items:center; gap:14px }
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.recalc-spinner-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 14px
+}
 
 /* Estilos para los cards de acción dentro del modal de procesar nómina */
-#modalGeneratePayroll { z-index: 2050 !important; }
-#modalGeneratePayroll .modal-container-medium { max-width: 550px; z-index: 2051 !important; }
-#modalGeneratePayroll .action-card {
-    text-align: left; padding: 15px; display:flex; align-items:center; gap:12px; border-radius: 10px; cursor: pointer; background: transparent; border: 2px solid transparent;
+#modalGeneratePayroll {
+    z-index: 2050 !important;
 }
-#modalGeneratePayroll .action-card i { font-size: 28px; color: inherit; }
-#modalGeneratePayroll .action-card .muted { display:block; font-size:0.85rem; color: #6b7280; }
-#modalGeneratePayroll .action-card strong { display:block; font-size:1.05rem; }
-#modalGeneratePayroll .action-card.action-card-green { border-color: #10b981; color: #047857; }
-#modalGeneratePayroll .action-card.action-card-red { border-color: #ef4444; color: #b91c1c; }
+
+#modalGeneratePayroll .modal-container-medium {
+    max-width: 550px;
+    z-index: 2051 !important;
+}
+
+#modalGeneratePayroll .action-card {
+    text-align: left;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    background: transparent;
+    border: 2px solid transparent;
+}
+
+#modalGeneratePayroll .action-card i {
+    font-size: 28px;
+    color: inherit;
+}
+
+#modalGeneratePayroll .action-card .muted {
+    display: block;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+#modalGeneratePayroll .action-card strong {
+    display: block;
+    font-size: 1.05rem;
+}
+
+#modalGeneratePayroll .action-card.action-card-green {
+    border-color: #10b981;
+    color: #047857;
+}
+
+#modalGeneratePayroll .action-card.action-card-red {
+    border-color: #ef4444;
+    color: #b91c1c;
+}
 
 /* Alineación de footer similar al modal de periodo */
 /* Centrar el botón Cancelar y asegurar que sea interactuable */
-#modalGeneratePayroll .modal-footer-fixed { padding: 18px 22px; display:flex; justify-content:center !important; gap:10px; background: #fff; border-top: 1px solid #eee; }
-#modalGeneratePayroll .btn-cancel { background: #f8f9fa; border: 1px solid #e6e6e6; padding: 8px 16px; border-radius: 6px; cursor: pointer; pointer-events: auto !important; }
+#modalGeneratePayroll .modal-footer-fixed {
+    padding: 18px 22px;
+    display: flex;
+    justify-content: center !important;
+    gap: 10px;
+    background: #fff;
+    border-top: 1px solid #eee;
+}
+
+#modalGeneratePayroll .btn-cancel {
+    background: #f8f9fa;
+    border: 1px solid #e6e6e6;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    pointer-events: auto !important;
+}
 
 /* Forzar que el botón de cierre tenga mayor prioridad */
-#modalGeneratePayroll .btn-close-modal-refined { z-index: 3000 !important; pointer-events: auto !important; }
+#modalGeneratePayroll .btn-close-modal-refined {
+    z-index: 3000 !important;
+    pointer-events: auto !important;
+}
 
 
 /* ==========================================================
@@ -382,10 +513,12 @@
     border-color: #f59e0b !important;
     box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
 }
+
 .modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-circle {
     border-color: #ffffff !important;
     background-color: #ffffff !important;
 }
+
 .modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-text {
     color: #ffffff !important;
 }
@@ -395,12 +528,14 @@
     background: linear-gradient(180deg, #10b981, #059669) !important;
     border-color: #059669 !important;
     /* Keep box-shadow subtle to avoid perceived size change */
-    box-shadow: 0 1px 3px rgba(6,95,70,0.12) !important;
+    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.12) !important;
 }
+
 .modern-toggle-wrapper.modern-toggle-green .modern-toggle-circle {
     border-color: #ffffff !important;
     background-color: #ffffff !important;
 }
+
 .modern-toggle-wrapper.modern-toggle-green .modern-toggle-text {
     color: #ffffff !important;
 }
@@ -409,6 +544,7 @@
 .modern-toggle-wrapper {
     min-width: 110px;
 }
+
 .modern-toggle-wrapper .modern-toggle-circle {
     flex: 0 0 auto;
     margin-right: 10px;
@@ -496,17 +632,21 @@
 .btn-views-action {
     background: linear-gradient(180deg, #f59e0b, #f97316);
 
-/* Forzar visibilidad del botón X en el modal de Procesar Nómina */
-#modalGeneratePayroll .btn-close-modal {
-    display: inline-block !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-    z-index: 9999 !important;
-}
+    /* Forzar visibilidad del botón X en el modal de Procesar Nómina */
 
-/* Asegurar que el modal esté por debajo del botón y no oculte el control */
-#modalGeneratePayroll { z-index: 9998 !important; }
+    #modalGeneratePayroll .btn-close-modal {
+        display: inline-block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 9999 !important;
+    }
+
+    /* Asegurar que el modal esté por debajo del botón y no oculte el control */
+
+    #modalGeneratePayroll {
+        z-index: 9998 !important;
+    }
 }
 
 .btn-success-action {
@@ -750,18 +890,21 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(2,6,23,0.55);
+    background: rgba(2, 6, 23, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1200;
 }
-.modal-overlay.hidden { display: none; }
+
+.modal-overlay.hidden {
+    display: none;
+}
 
 .modal-container-medium {
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 8px 30px rgba(2,6,23,0.25);
+    box-shadow: 0 8px 30px rgba(2, 6, 23, 0.25);
     width: 100%;
     max-width: 980px;
     overflow: hidden;
@@ -774,17 +917,35 @@
 }
 
 .modal-header-refined {
-    background: linear-gradient(90deg,#0f172a 0%,#0b3a57 100%);
+    background: linear-gradient(90deg, #0f172a 0%, #0b3a57 100%);
     color: #fff;
     padding: 18px 22px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.modal-header-refined .header-title-main { font-size:1.05rem; font-weight:700; display:flex; gap:10px; align-items:center; }
-.btn-close-modal-refined { background:transparent; border: none; color: rgba(255,255,255,0.85); font-size:1.1rem; cursor:pointer; }
 
-.modal-body-custom { padding: 2rem; background: #fff; }
+.modal-header-refined .header-title-main {
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-close-modal-refined {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.modal-body-custom {
+    padding: 2rem;
+    background: #fff;
+}
+
 .payslip-summary-banner {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border-radius: 12px;
@@ -804,7 +965,7 @@
 }
 
 .payslip-banner-label {
-    font-size: 0.7rem;
+    font-size: 0.5rem;
     font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
@@ -812,7 +973,7 @@
 }
 
 .payslip-banner-value {
-    font-size: 1.05rem;
+    font-size: 0.90rem;
     font-weight: 700;
     color: white;
 }
@@ -839,7 +1000,7 @@
 
 .payslip-net-box .payslip-banner-value {
     color: #34d399; /* Verde esmeralda brillante */
-    font-size: 1.4rem;
+    font-size: 1rem;
     font-weight: 800;
 }
 
@@ -918,7 +1079,7 @@
 
 /* Efecto visual al entrar en modo edición */
 .val-input.editing {
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
     border: 1px solid #3b82f6;
 }
 
@@ -926,14 +1087,28 @@
 .val.seal-animate {
     animation: sealPulse 420ms ease-out;
 }
+
 @keyframes sealPulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 rgba(59,130,246,0); }
-    40% { transform: scale(1.02); box-shadow: 0 6px 18px rgba(59,130,246,0.08); }
-    100% { transform: scale(1); box-shadow: none; }
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+    }
+    40% {
+        transform: scale(1.02);
+        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: none;
+    }
 }
 
 /* Input inline para edición */
-.val-input { padding: 4px 8px; border-radius: 6px; border: 1px solid #e6eef6; }
+.val-input {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #e6eef6;
+}
 
 /* Nota que se agrega al imprimir */
 .print-note {
@@ -983,10 +1158,30 @@
     color: #dc2626;
 }
 
-.btn-save { background: linear-gradient(180deg,#075985,#0b5b83); color: #fff; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; }
-.btn-cancel { background:#fff; border:1px solid #e6eef6; padding:10px 16px; border-radius:8px; cursor:pointer; }
+.btn-save {
+    background: linear-gradient(180deg, #075985, #0b5b83);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: #fff;
+    border: 1px solid #e6eef6;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
 
 /* Small tweaks for the print/close button row */
-.modal-footer { display:flex; gap:12px; padding: 1.25rem 2rem; background:#f8fafc; border-top:1px solid #e2e8f0; }
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 1.25rem 2rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
 
 /* Fin: estilos modal detalle de rol */

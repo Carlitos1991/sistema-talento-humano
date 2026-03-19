@@ -1481,8 +1481,9 @@ class BankTransferReportView(LoginRequiredMixin, View):
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
         tipo_filtro = request.GET.get('filtro', 'NORMAL')
-        regime_filter = request.GET.get('regime', '').strip()
         search_query = request.GET.get('q', '').strip()
+        group_filter = request.GET.get('group', '').strip()
+        regime_filter = request.GET.get('regime', '').strip()
 
         payslips_qs = Payslip.objects.filter(period=period).select_related(
             'employee__person'
@@ -1494,9 +1495,14 @@ class BankTransferReportView(LoginRequiredMixin, View):
                 Q(employee__person__first_name__icontains=search_query) |
                 Q(employee__person__last_name__icontains=search_query) |
                 Q(employee__person__document_number__icontains=search_query) |
-                # ---> FALTABA ESTA LÍNEA PARA QUE ENCUENTRE EL CÓDIGO <---
                 Q(items__budget_line__budget_group__short_code__icontains=search_query)
             ).distinct()  # Importante el distinct
+
+        if group_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
+
+        if regime_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         # 2. Filtros de Retención (Liberados vs Retenidos)
         # Soporte para parámetro `show_withheld` enviado por el frontend
