@@ -1,4 +1,6 @@
 from django import forms
+
+from accounting.models import Account
 from .models import PayrollPeriod, PayrollConstant, RubroBudgetMapping, Income, Deduction, InstitutionalContribution
 
 
@@ -177,14 +179,14 @@ class BaseRubroForm(forms.ModelForm):
         return instance
 
 
-# Heredamos la magia para cada modelo
 class IncomeForm(BaseRubroForm):
     class Meta:
         model = Income
-        # 'code' se incluye pero como campo oculto (HiddenInput)
-        fields = ['name', 'code', 'order', 'description', 'is_active', 'debit_account', 'credit_account']
+        fields = ['name', 'code', 'order', 'description', 'is_active', 'debit_account', 'credit_account',
+                  'abbreviation']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Sueldo Básico'}),
+            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Coop. Mun.'}),
             'code': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Código del sistema (Ej: IESS_PER)'}),
             'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 1'}),
@@ -195,14 +197,24 @@ class IncomeForm(BaseRubroForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtramos para que solo muestre cuentas activas y las ordenamos por código
+        if 'debit_account' in self.fields:
+            self.fields['debit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+        if 'credit_account' in self.fields:
+            self.fields['credit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+
 
 class DeductionForm(BaseRubroForm):
     class Meta:
         model = Deduction
         # Incluimos 'priority' para que el campo esté disponible en el formulario/modal
-        fields = ['name', 'code', 'order', 'priority', 'description', 'is_active', 'debit_account', 'credit_account']
+        fields = ['name', 'code', 'order', 'priority', 'description', 'is_active', 'debit_account', 'credit_account',
+                  'abbreviation']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: IESS'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Cooperativa Municipal'}),
+            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Coop. Mun.'}),
             'code': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Código del sistema (Ej: IESS_PER)'}),
             'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 1'}),
@@ -214,15 +226,24 @@ class DeductionForm(BaseRubroForm):
             'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 1'})
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'debit_account' in self.fields:
+            self.fields['debit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+        if 'credit_account' in self.fields:
+            self.fields['credit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+
 
 class InstitutionalContributionForm(BaseRubroForm):
     class Meta:
         model = InstitutionalContribution
         # 'code' oculto: generado automáticamente desde el nombre
-        fields = ['name', 'code', 'order', 'description', 'is_active', 'debit_account', 'credit_account']
+        fields = ['name', 'code', 'order', 'description', 'is_active', 'debit_account', 'credit_account',
+                  'abbreviation']
         widgets = {
             'code': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Código del sistema (Ej: IESS_PER)'}),
+            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Coop. Mun.'}),
             'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 1'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Aporte Patronal'}),
             'description': forms.Textarea(
@@ -231,3 +252,10 @@ class InstitutionalContributionForm(BaseRubroForm):
             'credit_account': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'debit_account' in self.fields:
+            self.fields['debit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+        if 'credit_account' in self.fields:
+            self.fields['credit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')

@@ -26,8 +26,9 @@ class PayrollConstant(models.Model):
 class Income(models.Model):
     """Rubros de Ingresos (Sueldo, Bonos, etc.)"""
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Nombre"))
-    code = models.CharField(max_length=30, unique=True)
-    description = models.TextField(verbose_name=_("Descripción"))
+    code = models.CharField(max_length=50, unique=True)
+    description = models.TextField(null=True, blank=True, verbose_name=_("Descripción"))
+    abbreviation = models.CharField(max_length=30, blank=True, null=True)
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
     # Orden de presentación en reportes (menor número = aparece primero)
     order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
@@ -51,8 +52,9 @@ class Income(models.Model):
 class Deduction(models.Model):
     """Rubros de Egresos (IESS, Préstamos, etc.)"""
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Nombre"))
-    code = models.CharField(max_length=30, unique=True)
-    description = models.TextField(verbose_name=_("Descripción"))
+    code = models.CharField(max_length=50, unique=True)
+    description = models.TextField(null=True, blank=True, verbose_name=_("Descripción"))
+    abbreviation = models.CharField(max_length=30, blank=True, null=True)
     is_active = models.BooleanField(default=True, verbose_name=_("Activo"))
     priority = models.IntegerField(
         default=100,
@@ -210,8 +212,9 @@ class InstitutionalContribution(models.Model):
     No afectan el líquido a pagar del empleado, pero generan asientos contables y presupuestarios.
     """
     name = models.CharField(max_length=100, verbose_name="Nombre del Aporte")
-    code = models.CharField(max_length=50, unique=True, verbose_name="Código del Algoritmo")
-    description = models.TextField(blank=True, verbose_name=_("Descripción"))
+    code = models.CharField(max_length=50, unique=True)
+    description = models.TextField(null=True, blank=True, verbose_name=_("Descripción"))
+    abbreviation = models.CharField(max_length=30, blank=True, null=True)
     # Orden de presentación en reportes (menor número = aparece primero)
     order = models.IntegerField(default=100, verbose_name=_("Orden de Presentación"))
 

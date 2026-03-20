@@ -4,6 +4,7 @@ import json
 import os
 from datetime import date
 from decimal import Decimal
+from accounting.models import Account
 
 try:
     from num2words import num2words
@@ -1093,7 +1094,8 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 ref = it.income_ref
                 key = f"INC_{ref.id}"
                 order_val = ref.order if ref.order is not None else 999
-                grupo_data['ingresos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                grupo_data['ingresos_headers'][key] = {'key': key, 'name': ref.name, 'abbreviation': ref.abbreviation,
+                                                       'order': order_val}
                 emp_dict['ingresos_dict'][key] = emp_dict['ingresos_dict'].get(key, Decimal(0)) + val
                 emp_dict['ingresos'] += val
                 emp_dict['liquido'] += val
@@ -1105,10 +1107,12 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 code_up = (ref.code or '').upper()
 
                 if 'IESS_PER' in code_up or ('APORTE' in code_up and 'PATRONAL' not in code_up):
-                    grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                    grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
+                                                          'abbreviation': ref.abbreviation}
                     emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
                 else:
-                    grupo_data['descuentos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                    grupo_data['descuentos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
+                                                             'abbreviation': ref.abbreviation, }
                     emp_dict['descuentos_dict'][key] = emp_dict['descuentos_dict'].get(key, Decimal(0)) + val
 
                 emp_dict['descuentos'] += val
@@ -1118,25 +1122,30 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 ref = it.contribution_ref
                 key = f"CON_{ref.id}"
                 order_val = ref.order if ref.order is not None else 999
-                grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val}
+                grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
+                                                      'abbreviation': ref.abbreviation}
                 emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
 
             # B. PRESUPUESTO
             b_code = getattr(it, 'budget_line_code', None)
             if b_code and str(b_code).strip():
                 afecta_presupuesto, nombre_rubro = False, ""
+                obj_ref = None
 
                 if it.item_type == 'INCOME' and it.income_ref:
+                    obj_ref = it.income_ref
                     inc_id = it.income_ref.id
                     code_up = (it.income_ref.code or '').upper()
                     if (inc_id in mapped_incomes) or ('REMUNERACION' in code_up):
                         afecta_presupuesto, nombre_rubro = True, it.income_ref.name
 
                 elif it.item_type == 'DEDUCTION' and it.deduction_ref:
+                    obj_ref = it.deduction_ref
                     if it.deduction_ref.id in mapped_deductions:
                         afecta_presupuesto, nombre_rubro = True, it.deduction_ref.name
 
                 elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
+                    obj_ref = it.contribution_ref
                     if it.contribution_ref.id in mapped_contributions:
                         afecta_presupuesto, nombre_rubro = True, it.contribution_ref.name
 
@@ -1144,9 +1153,20 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                     nombre_rubro = nombre_rubro or "Rubro Desconocido"
                     key_presup = f"{b_code}_{nombre_rubro}"
 
+                    # 🟢 BÚSQUEDA EXHAUSTIVA DEL ORDEN
+                    orden_rubro = 99999
+                    if hasattr(obj_ref, 'order') and obj_ref.order is not None:
+                        orden_rubro = obj_ref.order
+                    elif hasattr(it, 'order') and it.order is not None:
+                        orden_rubro = it.order
+
                     if key_presup not in grupo_data['presupuesto']:
-                        grupo_data['presupuesto'][key_presup] = {'partida': b_code, 'concepto': nombre_rubro,
-                                                                 'monto': Decimal(0)}
+                        grupo_data['presupuesto'][key_presup] = {
+                            'partida': b_code,
+                            'concepto': nombre_rubro,
+                            'monto': Decimal(0),
+                            'order': orden_rubro
+                        }
                     grupo_data['presupuesto'][key_presup]['monto'] += val
 
             # C. CONTABILIDAD
@@ -1162,41 +1182,52 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 cuenta_debe = getattr(obj_ref, 'debit_account', None)
                 if cuenta_debe:
                     cta_debe = cuenta_debe.code
-                    grupo_data['contabilidad'].setdefault(cta_debe, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                     'nombre': cuenta_debe.name})
+                    grupo_data['contabilidad'].setdefault(cta_debe, {
+                        'debe': Decimal(0), 'haber': Decimal(0),
+                        'nombre': cuenta_debe.name,
+                        'order': cuenta_debe.order or 99999
+                    })
                     grupo_data['contabilidad'][cta_debe]['debe'] += val
 
                 cuenta_haber = getattr(obj_ref, 'credit_account', None)
                 if cuenta_haber:
                     cta_haber = cuenta_haber.code
-                    grupo_data['contabilidad'].setdefault(cta_haber, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                      'nombre': cuenta_haber.name})
+                    grupo_data['contabilidad'].setdefault(cta_haber, {
+                        'debe': Decimal(0), 'haber': Decimal(0),
+                        'nombre': cuenta_haber.name,
+                        'order': cuenta_haber.order or 99999
+                    })
                     grupo_data['contabilidad'][cta_haber]['haber'] += val
 
             if it.item_type == 'CONTRIBUTION' and obj_ref and 'PATRONAL' in getattr(obj_ref, 'code', '').upper():
-                grupo_data['contabilidad'].setdefault('2.1.3.51', {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                   'nombre': 'GASTOS DE PERSONAL'})
+                grupo_data['contabilidad'].setdefault('2.1.3.51', {
+                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': 'GASTOS DE PERSONAL', 'order': 99999
+                })
                 grupo_data['contabilidad']['2.1.3.51']['debe'] += val
                 grupo_data['contabilidad']['2.1.3.51']['haber'] += val
 
         # ==============================================================
         # POST-PROCESO: Ordenamiento y Conversión a Listas
         # ==============================================================
-        from accounting.models import Account
+
         cta_gp = Account.objects.filter(code='2.1.3.51').first()
         nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
+        orden_gp = cta_gp.order if cta_gp and cta_gp.order else 99999
         cta_banco = Account.objects.filter(code='1.1.1.03.01').first()
         nombre_banco = cta_banco.name if cta_banco else 'Banco Central'
-
+        orden_banco = cta_banco.order if cta_banco and cta_banco.order else 99999
         for g_key, g_data in report_data.items():
             total_net_pay = sum((emp['liquido'] for emp in g_data['empleados'].values()), Decimal(0))
 
             if total_net_pay > 0:
-                g_data['contabilidad'].setdefault('2.1.3.51',
-                                                  {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_gp})
+                g_data['contabilidad'].setdefault('2.1.3.51', {
+                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_gp, 'order': orden_gp
+                })
                 g_data['contabilidad']['2.1.3.51']['debe'] += total_net_pay
-                g_data['contabilidad'].setdefault('1.1.1.03.01',
-                                                  {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco})
+
+                g_data['contabilidad'].setdefault('1.1.1.03.01', {
+                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco, 'order': orden_banco
+                })
                 g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
 
             g_data['ingresos_headers'] = {k: v for k, v in g_data['ingresos_headers'].items() if sum(
@@ -1213,7 +1244,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             g_data['aportes_headers'] = sorted(g_data['aportes_headers'].values(),
                                                key=lambda x: (x['order'], x['name']))
 
-            # Usamos h['key'] para extraer el dinero exacto de las columnas
             for emp in g_data['empleados'].values():
                 emp['ingresos_list'] = [emp['ingresos_dict'].get(h['key'], Decimal(0)) for h in
                                         g_data['ingresos_headers']]
@@ -1245,25 +1275,26 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 'aportes': len(g_data['aportes_headers']),
                 'descuentos': len(g_data['descuentos_headers'])
             }
-
-            cuentas_debe = []
-            cuentas_solo_haber = []
-
+            lista_cuentas = []
             for cta, c_data in g_data['contabilidad'].items():
-                if c_data['debe'] > 0:
-                    cuentas_debe.append(
-                        {'codigo': cta, 'nombre': c_data['nombre'], 'debe': c_data['debe'], 'haber': c_data['haber']})
-                elif c_data['haber'] > 0:
-                    cuentas_solo_haber.append(
-                        {'codigo': cta, 'nombre': c_data['nombre'], 'debe': Decimal(0), 'haber': c_data['haber']})
+                if c_data['debe'] > 0 or c_data['haber'] > 0:
+                    lista_cuentas.append({
+                        'codigo': cta,
+                        'nombre': c_data['nombre'],
+                        'debe': c_data['debe'],
+                        'haber': c_data['haber'],
+                        'order': c_data.get('order', 99999)  # Si no tiene orden, se va al final
+                    })
 
-            cuentas_debe.sort(key=lambda x: x['codigo'], reverse=True)
-            cuentas_solo_haber.sort(key=lambda x: x['codigo'])
+            g_data['contabilidad_ordenada'] = sorted(lista_cuentas, key=lambda x: (x['order'], x['codigo']))
 
-            g_data['contabilidad_ordenada'] = cuentas_debe + cuentas_solo_haber
             g_data['total_contabilidad_debe'] = sum((c['debe'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_contabilidad_haber'] = sum((c['haber'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
+            g_data['presupuesto'] = dict(sorted(
+                g_data['presupuesto'].items(),
+                key=lambda item: (int(item[1].get('order', 99999)), str(item[1].get('concepto', '')))
+            ))
 
         sorted_reports = dict(sorted(report_data.items()))
         context = {
@@ -1765,7 +1796,7 @@ class PrintablePayslipView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         payslip = self.object
-        
+
         if num2words:
             try:
                 entero = int(payslip.net_pay)

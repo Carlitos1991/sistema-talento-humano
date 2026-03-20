@@ -75,17 +75,30 @@
                         </tr>
                         <tr>
                             {% for inc in data.ingresos_headers %}
-                                <th>{{ inc.name }}</th>
+                                {% if inc.abbreviation %}
+                                    <th>{{ inc.abbreviation }}</th>
+                                {% else %}
+                                    <th>{{ inc.name }}</th>
+                                {% endif %}
+
                             {% empty %}
                                 <th>Ingreso</th>
                             {% endfor %}
 
                             {% for apo in data.aportes_headers %}
-                                <th>{{ apo.name }}</th>
+                                {% if apo.abbreviation %}
+                                    <th>{{ apo.abbreviation }}</th>
+                                {% else %}
+                                    <th>{{ apo.name }}</th>
+                                {% endif %}
                             {% endfor %}
 
                             {% for des in data.descuentos_headers %}
-                                <th>{{ des.name }}</th>
+                                {% if des.abbreviation %}
+                                    <th>{{ des.abbreviation }}</th>
+                                {% else %}
+                                    <th>{{ des.name }}</th>
+                                {% endif %}
                             {% endfor %}
                         </tr>
                         </thead>

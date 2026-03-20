@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.db.models import Q
 from core.models import BaseModel
 
 
@@ -16,10 +16,35 @@ class Account(BaseModel):
     name = models.CharField(max_length=255, verbose_name='Nombre Cuenta')
     type = models.CharField(max_length=20, choices=ACCOUNT_TYPES, verbose_name='Tipo de Cuenta')
     is_active = models.BooleanField(default=True)
+    order = models.IntegerField(null=True, blank=True, verbose_name="Orden de Reporte")
 
     class Meta:
         verbose_name = 'Cuenta Contable'
         verbose_name_plural = 'Plan de Cuentas'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order'],
+                condition=Q(is_active=True),
+                name='unique_active_account_order'
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if getattr(self, 'is_active', True) and self.order is None:
+            # Buscamos el último orden registrado
+            ultimo_orden = Account.objects.filter(
+                is_active=True, order__isnull=False
+            ).order_by('-order').first()
+
+            # Le sumamos 1 al último, o le ponemos 1 si es la primera cuenta
+            self.order = (ultimo_orden.order + 1) if ultimo_orden else 1
+
+        # Si la cuenta se inactiva, liberamos su número de orden para que pueda ser reusado
+        elif not getattr(self, 'is_active', True):
+            self.order = None
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.code} - {self.name}"

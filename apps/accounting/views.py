@@ -50,11 +50,13 @@ class AccountListView(ListView):
 
     def get(self, request, *args, **kwargs):
         show_inactive = request.GET.get('show_inactive')
-        qs = Account.objects.all().order_by('code')
+
+        from django.db.models import F
+        qs = Account.objects.all().order_by(F('order').asc(nulls_last=True), 'code')
+
         if show_inactive is None or show_inactive.lower() in ['false', '0', '']:
             qs = qs.filter(is_active=True)
 
-        # Si es petición AJAX devolvemos solo las filas (tbody)
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             from django.template.loader import render_to_string
             html = render_to_string('accounting/_account_rows.html', {'accounts': qs})
