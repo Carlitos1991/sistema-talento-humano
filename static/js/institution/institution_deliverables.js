@@ -86,28 +86,7 @@ createApp({
             }
         };
 
-        const deleteItem = async (id) => {
-            const result = await Swal.fire({
-                title: '¿Eliminar entregable?',
-                text: "Esta acción no se puede deshacer.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            });
-
-            if (result.isConfirmed) {
-                const formData = new FormData();
-                formData.append('csrfmiddlewaretoken', csrfToken);
-                try {
-                    await fetch(`/institution/api/deliverables/delete/${id}/`, {method: 'POST', body: formData});
-                    await fetchDeliverables();
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-        };
+        // Eliminación directa removida; solo se permite crear/editar (soft-delete disabled in UI)
 
         onMounted(() => {
             fetchDeliverables();
@@ -123,8 +102,7 @@ createApp({
             openModal,
             closeModal,
             resetForm,
-            saveDeliverable,
-            deleteItem
+            saveDeliverable
         };
     }
 }).mount('#deliverables-app');

@@ -145,7 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     // Recargar HTML tabla
-                    const r = await fetch('/institution/levels/partial_table/');
+                    const toggleEl = document.getElementById('toggleInactiveLevels');
+                    const showInactive = toggleEl && toggleEl.checked ? 'true' : 'false';
+                    const r = await fetch('/institution/levels/partial_table/?show_inactive=' + showInactive);
                     const html = await r.text();
                     document.getElementById('table-content-wrapper').innerHTML = html;
 
@@ -168,5 +170,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire('Error', 'Conexión', 'error');
             }
         }
+    };
+
+    // --- 4. TOGGLE INACTIVOS (Mostrar/Ocultar) ---
+    window.toggleInactiveLevels = function (showInactive) {
+        const val = showInactive ? 'true' : 'false';
+        fetch('/institution/levels/partial_table/?show_inactive=' + val)
+            .then(res => res.text())
+            .then(html => {
+                document.getElementById('table-content-wrapper').innerHTML = html;
+                const newTable = document.querySelector('.managed-table');
+                if (newTable) new TableManager(newTable);
+
+                // Reaplicar filtro visual actual de tarjetas
+                const activeCard = document.querySelector('.stat-card:not(.opacity-low)');
+                if (activeCard && activeCard.id === 'card-filter-active') window.filterByStatus('true');
+                else if (activeCard && activeCard.id === 'card-filter-inactive') window.filterByStatus('false');
+                else window.filterByStatus('all');
+            })
+            .catch(err => console.error('Error cargando niveles:', err));
     };
 });

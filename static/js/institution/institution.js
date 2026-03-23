@@ -27,33 +27,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.filterByParent = function (parentId) {
-        const table = document.querySelector('.managed-table');
-        if (!table || !table._tableManager) return;
+    // Estado actual de navegación (padre y nivel)
+    let currentParentId = null;
+    let currentLevelOrder = null;
 
-        if (!parentId || parentId === '' || parentId === 'None') {
-            table._tableManager.filterByColumnData('parent', 'all');
-            const firstCard = document.querySelector('.stat-card');
-            if (firstCard) {
-                Object.values(levelCards).forEach(c => {
-                    if (c) c.classList.add('opacity-low');
-                });
-                firstCard.classList.remove('opacity-low');
-            }
-        } else {
-            Object.values(levelCards).forEach(c => {
-                if (c) c.classList.add('opacity-low');
-            });
-            table._tableManager.filterByColumnData('parent', String(parentId));
+    // Función para cargar la tabla parcial respetando el parent y show_inactive
+    async function loadUnitsPartial({parentId = null, showInactive = false, q = ''} = {}) {
+        const params = new URLSearchParams();
+        if (parentId) params.set('parent_id', parentId);
+        if (showInactive) params.set('show_inactive', 'true');
+        if (q) params.set('q', q);
+
+        const url = '/institution/units/partial_table/?' + params.toString();
+        try {
+            const r = await fetch(url);
+            const html = await r.text();
+            document.getElementById('table-content-wrapper').innerHTML = html;
+            const newTable = document.querySelector('.managed-table');
+            if (newTable) new TableManager(newTable);
+        } catch (e) {
+            console.error('Error cargando unidades:', e);
         }
+    }
+
+    // Filtrar por padre: hace drill-down y actualiza estado
+    window.filterByParent = function (parentId, nextLevelOrder) {
+        // Normalizar
+        if (!parentId || parentId === '' || parentId === 'None') {
+            currentParentId = null;
+            currentLevelOrder = 1;
+        } else {
+            currentParentId = parentId;
+            currentLevelOrder = nextLevelOrder || null;
+        }
+
+        const toggleEl = document.getElementById('toggleInactiveUnits');
+        const showInactive = toggleEl && toggleEl.checked;
+        const input = document.querySelector('.table-search-input');
+        const q = input ? input.value.trim() : '';
+
+        loadUnitsPartial({parentId: currentParentId, showInactive: showInactive, q: q});
     };
 
     // Inicialización visual
-    const statsRow = document.getElementById('stats-row');
-    setTimeout(() => {
-        window.filterByLevel('1');
-        if (statsRow) statsRow.style.display = 'flex';
-    }, 50);
+    // Removed stats-driven initialization to improve performance
 
     Object.entries(levelCards).forEach(([levelId, card]) => {
         if (card) {
@@ -106,8 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const tm = document.querySelector('.managed-table')?._tableManager;
         const savedSearch = tm?.filterState.search || '';
         const savedFilter = {...tm?.filterState};
-
-        const r = await fetch('/institution/units/partial_table/');
+        // Respect current toggle state and parent when refreshing
+        const toggleEl = document.getElementById('toggleInactiveUnits');
+        const showInactive = toggleEl && toggleEl.checked;
+        const input = document.querySelector('.table-search-input');
+        const q = input ? input.value.trim() : '';
+        const params = new URLSearchParams();
+        if (currentParentId) params.set('parent_id', currentParentId);
+        if (showInactive) params.set('show_inactive', 'true');
+        if (q) params.set('q', q);
+        const r = await fetch('/institution/units/partial_table/?' + params.toString());
         const html = await r.text();
         document.getElementById('table-content-wrapper').innerHTML = html;
 
@@ -128,6 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.filterByLevel(activeCard.id.replace('card-filter-', ''), activeCard);
         }
     }
+
+    // Toggle para mostrar unidades inactivas
+    window.toggleInactiveUnits = function (showInactive) {
+        const val = showInactive ? true : false;
+        const input = document.querySelector('.table-search-input');
+        const q = input ? input.value.trim() : '';
+        loadUnitsPartial({parentId: currentParentId, showInactive: val, q: q});
+    };
 
     // =========================================================================
     // 3. MODAL CREAR / EDITAR UNIDAD (VUE APP)

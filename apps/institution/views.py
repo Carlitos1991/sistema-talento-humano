@@ -94,23 +94,31 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'institution.view_administrativeunit'
 
     def get_queryset(self):
-        return AdministrativeUnit.objects.all().select_related(
+        qs = AdministrativeUnit.objects.all().select_related(
             'level', 'parent', 'boss__person'
         ).annotate(
             code_len=Length('code')
         ).order_by('level__level_order', 'code_len', 'code', 'name')
 
+        q = self.request.GET.get('q')
+        show_inactive = self.request.GET.get('show_inactive')
+
+        # Filtrar por nivel raíz (nivel 1) y por activo/inactivo según parámetro
+        qs = qs.filter(level__level_order=1)
+        if show_inactive == 'true':
+            qs = qs.filter(is_active=False)
+        else:
+            qs = qs.filter(is_active=True)
+
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q))
+
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = AdministrativeUnitForm()
-        level_stats = get_level_stats()
-        if isinstance(level_stats, dict) and 'level_stats' in level_stats:
-            context['level_stats'] = level_stats['level_stats']
-        else:
-            context['level_stats'] = []
-        context['total'] = AdministrativeUnit.objects.count()
-        context['active'] = AdministrativeUnit.objects.filter(is_active=True).count()
-        context['inactive'] = AdministrativeUnit.objects.filter(is_active=False).count()
+        # Removed level stats and global counts to improve performance
         return context
 
     def get(self, request, *args, **kwargs):
@@ -378,7 +386,32 @@ class UnitToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 @login_required
 def unit_partial_table(request):
-    context = get_units_context()
+    show_inactive = request.GET.get('show_inactive')
+    parent_id = request.GET.get('parent_id')
+    q = request.GET.get('q')
+
+    # Base queryset with selects/annotations
+    qs = AdministrativeUnit.objects.all().select_related('level', 'parent', 'boss__person')\
+        .annotate(code_len=Length('code'))\
+        .order_by('level__level_order', 'code_len', 'code', 'name')
+
+    # If parent_id provided, show children of that parent; else default to level 1
+    if parent_id:
+        qs = qs.filter(parent_id=parent_id)
+    else:
+        qs = qs.filter(level__level_order=1)
+
+    # Active/inactive filter
+    if show_inactive == 'true':
+        qs = qs.filter(is_active=False)
+    else:
+        qs = qs.filter(is_active=True)
+
+    # Optional text search
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q))
+
+    context = get_units_context(units_queryset=qs)
     html = render_to_string(
         'institution/partials/partial_unit_table.html',
         context,
@@ -442,14 +475,23 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         qs = OrganizationalLevel.objects.all().order_by('level_order')
         q = self.request.GET.get('q')
         status = self.request.GET.get('status')
+        show_inactive = self.request.GET.get('show_inactive')
 
         if q:
             qs = qs.filter(name__icontains=q)
 
-        if status == 'true':
-            qs = qs.filter(is_active=True)
-        elif status == 'false':
+        # Priorizar parámetro show_inactive: si es 'true' mostramos solo inactivos
+        if show_inactive == 'true':
             qs = qs.filter(is_active=False)
+        else:
+            # Si se pasa explicitamente status lo respetamos
+            if status == 'true':
+                qs = qs.filter(is_active=True)
+            elif status == 'false':
+                qs = qs.filter(is_active=False)
+            else:
+                # Por defecto: solo activos
+                qs = qs.filter(is_active=True)
 
         return qs
 
@@ -894,12 +936,7 @@ def get_units_context(units_queryset=None):
         ).annotate(
             code_len=Length('code')
         ).order_by('level__level_order', 'code_len', 'code', 'name')
-
-    stats_data = get_level_stats()
+    # Return minimal context to avoid expensive stats queries
     return {
         'units': units_queryset,
-        'level_stats': stats_data.get('level_stats', []),
-        'total': AdministrativeUnit.objects.count(),
-        'active': AdministrativeUnit.objects.filter(is_active=True).count(),
-        'inactive': AdministrativeUnit.objects.filter(is_active=False).count(),
     }
