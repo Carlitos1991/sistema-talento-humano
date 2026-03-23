@@ -114,7 +114,7 @@ class PayrollCalculatorService:
 
             mp_map = {mp.employee_id: mp for mp in
                       ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
-                          'contract_type__labor_regime').order_by('employee_id', '-start_date')}
+                          'contract_type__labor_regime').order_by('employee_id', 'start_date')}
 
             novelties_map = {}
             for nov in PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(
@@ -386,7 +386,7 @@ class PayrollCalculatorService:
 
             mp_map = {mp.employee_id: mp for mp in
                       ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
-                          'contract_type__labor_regime').order_by('employee_id', '-start_date')}
+                          'contract_type__labor_regime').order_by('employee_id', 'start_date')}
 
             novelties_map = {}
             for nov in PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(

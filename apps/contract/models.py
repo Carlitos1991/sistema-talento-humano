@@ -88,8 +88,10 @@ class ManagementPeriod(BaseModel):
         related_name='management_periods', verbose_name='Empleado'
     )
     budget_line = models.ForeignKey(
-        BudgetLine, on_delete=models.PROTECT,
-        related_name='management_periods', verbose_name='Partida Presupuestaria'
+        'budget.BudgetLine',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
     )
     contract_type = models.ForeignKey(
         ContractType, on_delete=models.PROTECT,
@@ -219,6 +221,19 @@ class History(models.Model):
     )
     reason = models.TextField(
         verbose_name='Motivo',
+        blank=True,
+        null=True
+    )
+    historical_position = models.CharField(
+        verbose_name='Cargo en ese momento',
+        max_length=255,
+        blank=True,
+        null=True
+    )
+    historical_salary = models.DecimalField(
+        verbose_name='Sueldo en ese momento',
+        max_digits=12,
+        decimal_places=2,
         blank=True,
         null=True
     )

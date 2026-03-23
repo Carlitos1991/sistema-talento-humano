@@ -770,7 +770,11 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
 @login_required
 def level_partial_table(request):
-    levels = OrganizationalLevel.objects.all()
+    show_inactive = request.GET.get('show_inactive')
+    if show_inactive == 'true':
+        levels = OrganizationalLevel.objects.all().order_by('level_order')
+    else:
+        levels = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')
     context = {'levels': levels}
     html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
     return HttpResponse(html)

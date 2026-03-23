@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from decouple import config
 from dotenv import load_dotenv
+
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
@@ -102,6 +103,14 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
+    },
+    'old_db': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'db_talento_2020',  # El nombre de la base vieja
+        'USER': 'postgres',
+        'PASSWORD': r'Talento2023**',
+        'HOST': '192.168.1.253',  # La IP del servidor donde está la BD vieja
+        'PORT': '5432',
     }
 }
 
