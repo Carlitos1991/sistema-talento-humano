@@ -450,25 +450,66 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. ASIGNAR JEFE
     // =============================================================================
     window.openAssignBoss = async function (unitId) {
+        // Reuse an existing site modal overlay if present to avoid double backdrops
         let modalContainer = document.getElementById('assign-boss-modal-container');
         if (!modalContainer) {
-            modalContainer = document.createElement('div');
-            modalContainer.id = 'assign-boss-modal-container';
-            modalContainer.className = 'custom-modal-overlay';
-            modalContainer.innerHTML = '<div class="custom-modal-dialog"></div>';
-            document.body.appendChild(modalContainer);
+            const existingOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+            if (existingOverlay) {
+                modalContainer = existingOverlay;
+                // ensure it has an inner container for injection
+                let inner = modalContainer.querySelector('.modal-container-medium') || modalContainer.querySelector('.modal-dialog') || modalContainer.querySelector('.modal-content');
+                if (!inner) {
+                    inner = document.createElement('div');
+                    inner.className = 'modal-container-medium';
+                    modalContainer.appendChild(inner);
+                }
+                // give it an id so other functions can reference it
+                modalContainer.id = 'assign-boss-modal-container';
+            } else {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'assign-boss-modal-container';
+                modalContainer.className = 'custom-modal-overlay';
+                modalContainer.innerHTML = '<div class="custom-modal-dialog"></div>';
+                document.body.appendChild(modalContainer);
+            }
         }
 
         try {
             const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
             const html = await res.text();
-            modalContainer.firstElementChild.innerHTML = html;
-            modalContainer.style.display = 'flex';
+            // insert HTML into the dialog/container we created or reused
+            const dialog = modalContainer.querySelector('.custom-modal-dialog, .modal-container-medium, .modal-dialog, .modal-content');
+            if (dialog) dialog.innerHTML = html;
+
+            // Antes de mostrar, ocultar overlays redundantes para evitar dobles fondos
+            Array.from(document.querySelectorAll('.modal-overlay')).forEach(o => {
+                if (o === modalContainer) return;
+                // si el overlay no contiene contenido significativo, ocultarlo
+                const hasContent = o.querySelector('.modal-container, .modal-container-medium, .custom-modal-dialog, .modal-dialog, .modal-content');
+                if (!hasContent) {
+                    o.classList.add('hidden');
+                }
+            });
+
+            // show overlay (custom or existing) y asegurar fondo consistente
+            if (modalContainer.classList.contains('custom-modal-overlay')) {
+                modalContainer.style.display = 'flex';
+                // forzar fondo algo más opaco para evitar ver artefactos detrás
+                modalContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
+                modalContainer.style.backdropFilter = 'none';
+            } else {
+                modalContainer.classList.remove('hidden');
+                // asegurar que el overlay visible tenga opacidad y sin blur para consistencia
+                modalContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
+                modalContainer.style.backdropFilter = 'none';
+            }
             document.body.classList.add('modal-open');
             modalContainer.dataset.unitId = unitId;
 
+            // initialize select2 with correct dropdown parent (the visible overlay)
+            const $parent = $(modalContainer);
             $('#id_boss_assign').select2({
-                dropdownParent: $('#assign-boss-modal-container'),
+                dropdownParent: $parent,
                 width: '100%',
                 placeholder: 'Buscar empleado...',
                 ajax: {

@@ -1,54 +1,35 @@
-<div class="modal-header">
-    <h5 class="modal-title">
-        <i class="fas fa-user-tie me-2"></i>Asignar Jefe Inmediato
-    </h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeAssignModal()"></button>
-</div>
-<form id="assignBossForm" method="post">
-    {% csrf_token %}
-    <div class="modal-body">
-        <div class="alert alert-info py-2">
-            <small><i class="fas fa-info-circle"></i> Unidad: <strong>{{ unit.name }}</strong></small>
+<div class="modal-container-medium">
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle"><i class="fas fa-user-tie"></i></div>
+            <h3 class="header-title-main">Asignar Jefe Inmediato</h3>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Funcionario</label>
-            {{ form.boss }}
-            <script>
-            $(function() {
-                $('#id_boss_assign').select2({
-                    theme: 'bootstrap-5',
-                    width: '100%',
-                    placeholder: 'Buscar empleado...',
-                    allowClear: true,
-                    minimumInputLength: 3,
-                    ajax: {
-                        url: '/institution/api/employee/search/',
-                        dataType: 'json',
-                        delay: 250,
-                        data: function (params) {
-                            return {
-                                term: params.term
-                            };
-                        },
-                        processResults: function (data) {
-                            return {
-                                results: data.results
-                            };
-                        },
-                        cache: true
-                    }
-                });
-            });
-            </script>
-            <div class="form-text text-muted">
-                Puede buscar por nombre o número de cédula. No se muestran ex-empleados.
-            </div>
-        </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="submitAssignBoss()">
-            <i class="fas fa-save me-2"></i>Guardar Asignación
+        <button type="button" class="btn-close-modal-refined" onclick="closeAssignModal()">
+            <i class="fas fa-times"></i>
         </button>
     </div>
-</form>
+
+    <form id="assignBossForm" method="post" onsubmit="submitAssignBoss(); return false;">
+        {% csrf_token %}
+        <div class="modal-body-custom">
+            <div class="form-section-card">
+                <div class="row g-3">
+                    <div class="col-12 form-group">
+                        <div class="alert alert-info py-2">
+                            <small><i class="fas fa-info-circle"></i> Unidad: <strong>{{ unit.name }}</strong></small>
+                        </div>
+                        <label class="form-label fw-bold">Funcionario</label>
+                        {{ form.boss }}
+                        <div class="form-text text-muted">Puede buscar por nombre o número de cédula. No se muestran ex-empleados.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel" onclick="closeAssignModal()">Cancelar</button>
+            <button type="button" class="btn-save" onclick="submitAssignBoss()"><i class="fas fa-save"></i> Guardar Asignación</button>
+        </div>
+    </form>
+</div>
