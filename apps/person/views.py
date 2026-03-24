@@ -468,7 +468,10 @@ class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         try:
             form = PersonForm(request.POST, request.FILES)
             if form.is_valid():
-                person = form.save()
+                # Forzar que la persona creada quede activa
+                person = form.save(commit=False)
+                person.is_active = True
+                person.save()
                 return JsonResponse({
                     'success': True,
                     'message': 'Persona registrada correctamente.',

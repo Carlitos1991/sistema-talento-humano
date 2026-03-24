@@ -596,7 +596,12 @@ def level_toggle_status(request, pk):
 
 def api_get_administrative_children(request):
     parent_id = request.GET.get('parent_id')
-    filters = {'parent__isnull': True} if not parent_id else {'parent_id': parent_id}
+    # Si se provee parent_id, traer hijos de ese padre.
+    # Si no, limitar a raíces que sean de nivel 1 (nivel jerárquico superior).
+    if parent_id:
+        filters = {'parent_id': parent_id}
+    else:
+        filters = {'parent__isnull': True, 'level__level_order': 1}
     filters['is_active'] = True
 
     units = AdministrativeUnit.objects.filter(**filters).order_by('name')
