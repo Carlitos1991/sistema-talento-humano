@@ -179,12 +179,10 @@ class ManagementPeriod(BaseModel):
             super().save(*args, **kwargs)
 
             # Actualizar el área del empleado automáticamente
-            if self.employee and self.administrative_unit:
-                # Solo actualizamos si es diferente para ahorrar recursos
-                if self.employee.area != self.administrative_unit:
-                    self.employee.area = self.administrative_unit
-                    # Actualizamos también el estado laboral a activo si fuera necesario
-                    self.employee.save()
+            # if self.employee and self.administrative_unit:
+            #     if self.employee.area != self.administrative_unit:
+            #         self.employee.area = self.administrative_unit
+            #         self.employee.save()
 
 
 class History(models.Model):
