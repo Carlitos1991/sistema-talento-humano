@@ -1,4 +1,8 @@
 <div class="modal-overlay">
+    <style>
+        .input-error { border: 1px solid #b91c1c !important; box-shadow: 0 0 0 3px rgba(185,28,28,0.06); }
+        .text-error { color: #b91c1c; font-size: 0.85rem; margin-top: 6px; }
+    </style>
     <div class="modal-container-medium" style="width: 600px; margin: auto;">
         <div class="modal-header-medium modal-header-gradient"
              style="background: linear-gradient(to right, #dc2626, #ef4444);">
@@ -44,6 +48,12 @@
                     <label class="form-label">Razón de Liberación (Opcional)</label>
                     <textarea name="observation" class="input-field" rows="2"
                               placeholder="Ej: Renuncia, Traslado..."></textarea>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Fecha Fin</label>
+                    <input type="date" name="fecha_fin" id="release-fecha-fin" class="input-field">
+                    <div id="err-fecha_fin" class="text-error"></div>
                 </div>
 
                 <div class="alert-info mt-3" style="background: #fff5f5; border-color: #feb2b2; color: #c53030;">

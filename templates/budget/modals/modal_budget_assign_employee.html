@@ -1,5 +1,9 @@
 <!-- templates/budget/modals/modal_budget_assign_employee.html -->
 <div class="modal-overlay">
+    <style>
+        .input-error { border: 1px solid #b91c1c !important; box-shadow: 0 0 0 3px rgba(185,28,28,0.06); }
+        .text-error { color: #b91c1c; font-size: 0.85rem; margin-top: 6px; }
+    </style>
     <div class="modal-container-medium" style="width: 750px; margin: auto;">
         <div class="modal-header-medium modal-header-gradient"
              style="background: linear-gradient(to right, #2563eb, #3b82f6);">
@@ -56,6 +60,12 @@
                     <label class="form-label">Observaciones</label>
                     <textarea name="observation" class="input-field" rows="2"
                               placeholder="Motivo de la asignación..."></textarea>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Fecha Ingreso</label>
+                    <input type="date" name="fecha_ingreso" id="assign-fecha-ingreso" class="input-field">
+                    <div id="err-fecha_ingreso" class="text-error" style="color:#b91c1c; font-size:0.85rem; margin-top:6px;"></div>
                 </div>
 
                 <div class="alert-info mt-3" style="font-size: 0.85rem;">

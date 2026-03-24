@@ -36,12 +36,8 @@ def search_employee_by_cedula(request):
         return JsonResponse({'success': False, 'message': 'Cédula no proporcionada.'})
 
     try:
-        # Buscamos el Empleado a través de su relación con Persona
-        # Nota: El campo en tu modelo Person es 'document_number'
-        emp = Employee.objects.select_related('person').get(
-            person__document_number=cedula,
-            is_active=True
-        )
+        # Buscamos el Empleado a través de su relación con Persona (incluir inactivos)
+        emp = Employee.objects.select_related('person').get(person__document_number=cedula)
 
         # VALIDACIÓN: ¿Este empleado ya ocupa OTRA partida?
         # Buscamos si el ID de este empleado ya está en algún BudgetLine
@@ -63,10 +59,20 @@ def search_employee_by_cedula(request):
         })
 
     except Employee.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'message': 'No se encontró un registro de Empleado con esa cédula. Asegúrese de que la Persona esté registrada y tenga un perfil de Empleado activo.'
-        })
+        # Si no existe Employee, buscar directamente en Person (incluir inactivos)
+        try:
+            p = Person.objects.get(document_number=cedula)
+            # Si existe Person pero no Employee, informar para crear perfil
+            if hasattr(p, 'employee_profile') and p.employee_profile:
+                emp = p.employee_profile
+                existing_assignment = BudgetLine.objects.filter(current_employee=emp).first()
+                if existing_assignment:
+                    return JsonResponse({'success': False, 'message': f'La persona {emp.person.full_name} ya tiene asignada la partida {existing_assignment.code}.'})
+                return JsonResponse({'success': True, 'id': emp.id, 'full_name': emp.person.full_name, 'email': emp.person.email or 'Sin correo registrado', 'photo_url': emp.person.photo.url if emp.person.photo else None})
+            else:
+                return JsonResponse({'success': False, 'message': 'Se encontró la Persona pero no tiene perfil de Empleado. Cree el perfil de Empleado antes de asignar la partida.'})
+        except Person.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'No se encontró un registro de Persona o Empleado con esa cédula.'})
 
 
 class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):

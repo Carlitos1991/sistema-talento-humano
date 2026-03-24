@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
 from django.http import JsonResponse
 from django.db.models import Q, Count
-from datetime import date
+from datetime import date, datetime, timedelta
 from core.models import CatalogItem
 from employee.models import Employee
 from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetModificationHistory, \
@@ -482,6 +482,16 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
         line = get_object_or_404(BudgetLine, pk=pk)
         employee_id = request.POST.get('employee_id')
         observation = request.POST.get('observation', 'Asignación de partida')
+        # Leer fecha ingresada por el usuario (input type=date -> 'YYYY-MM-DD')
+        fecha_ingreso = request.POST.get('fecha_ingreso')
+        # Validación: fecha_ingreso es obligatoria en el modal
+        if not fecha_ingreso or not fecha_ingreso.strip():
+            return JsonResponse({'success': False, 'errors': {'fecha_ingreso': ['Campo obligatorio']}}, status=400)
+
+        try:
+            start_date = datetime.strptime(fecha_ingreso, '%Y-%m-%d').date()
+        except Exception:
+            return JsonResponse({'success': False, 'errors': {'fecha_ingreso': ['Formato de fecha inválido']}}, status=400)
 
         try:
             with transaction.atomic():
@@ -490,17 +500,19 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
 
                 # --- LIMPIEZA DE HISTORIAL "ZOMBIE" ---
                 # Cerramos cualquier historial previo de este empleado que haya quedado como is_current
-                # pero que en realidad ya no tenga la partida asignada.
+                # y que en realidad ya no tenga la partida asignada. Ajustamos end_date al día anterior
+                # al nuevo start_date para evitar solapamientos.
+                prev_end = start_date - timedelta(days=1)
                 BudgetAssignmentHistory.objects.filter(
                     employee=emp,
                     is_current=True
-                ).update(is_current=False, end_date=timezone.now().date())
+                ).update(is_current=False, end_date=prev_end)
 
-                # 1. Crear el nuevo historial
+                # 1. Crear el nuevo historial usando la fecha proporcionada
                 BudgetAssignmentHistory.objects.create(
                     budget_line=line,
                     employee=emp,
-                    start_date=timezone.now().date(),
+                    start_date=start_date,
                     is_current=True,
                     observation=observation
                 )
@@ -526,19 +538,32 @@ class BudgetReleaseView(LoginRequiredMixin, View):
     def post(self, request, pk):
         line = get_object_or_404(BudgetLine, pk=pk)
         reason = request.POST.get('observation', 'Liberación de partida')
+        fecha_fin = request.POST.get('fecha_fin')
+
+        # Validación: fecha_fin obligatoria
+        if not fecha_fin or not fecha_fin.strip():
+            return JsonResponse({'success': False, 'errors': {'fecha_fin': ['Campo obligatorio']}}, status=400)
+
+        try:
+            end_date = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+        except Exception:
+            return JsonResponse({'success': False, 'errors': {'fecha_fin': ['Formato de fecha inválido']}}, status=400)
 
         try:
             with transaction.atomic():
                 # 1. "Cerrar" la asignación actual en el historial de forma estricta
-                # Buscamos la asignación que el sistema cree que está activa
                 history = BudgetAssignmentHistory.objects.filter(
                     budget_line=line,
                     is_current=True
                 ).first()
 
                 if history:
-                    history.end_date = timezone.now().date()
-                    history.is_current = False  # <--- CRUCIAL: Cambiar a False
+                    # Validar que la fecha de fin no sea anterior a la fecha de inicio registrada
+                    if history.start_date and end_date < history.start_date:
+                        return JsonResponse({'success': False, 'errors': {'fecha_fin': ['La fecha de fin no puede ser anterior a la fecha de inicio']}}, status=400)
+
+                    history.end_date = end_date
+                    history.is_current = False
                     history.observation = reason
                     history.save()
 

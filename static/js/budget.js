@@ -458,6 +458,23 @@ window.submitAssignEmployee = async (e, pk) => {
     const form = e.target;
     const btn = document.getElementById('btn-submit-assign');
 
+    // Limpiar errores previos y estilos
+    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
+    form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+
+    // Validación cliente: fecha_ingreso obligatoria
+    const fechaInput = form.querySelector('[name="fecha_ingreso"]');
+    const fechaVal = fechaInput ? fechaInput.value : '';
+    if (!fechaVal) {
+        const errDiv = document.getElementById('err-fecha_ingreso');
+        if (errDiv) errDiv.textContent = 'Campo obligatorio';
+        if (fechaInput) {
+            fechaInput.classList.add('input-error');
+            fechaInput.focus();
+        }
+        return;
+    }
+
     // Bloqueo visual preventivo
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
@@ -476,17 +493,32 @@ window.submitAssignEmployee = async (e, pk) => {
 
         if (res.ok && data.success) {
             window.handleActionSuccess(data);
+            return;
+        }
+
+        // Si hay errores de validación, mostrarlos en los campos correspondientes
+        if (data && data.errors) {
+            Object.keys(data.errors).forEach(key => {
+                const errDiv = document.getElementById(`err-${key}`);
+                if (errDiv) {
+                    errDiv.textContent = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
+                }
+                // Marcar campo con borde rojo si existe un input con ese nombre
+                const inputEl = form.querySelector(`[name="${key}"]`);
+                if (inputEl) inputEl.classList.add('input-error');
+            });
         } else {
-            // Manejo de errores de validación (Ej: Empleado ya tiene partida)
+            // Manejo general de mensajes
             Swal.fire({
                 icon: 'warning',
                 title: 'Atención',
                 text: data.message || 'No se pudo completar la asignación.',
                 confirmButtonColor: '#1e40af'
             });
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-user-check me-2"></i> Asignar Persona';
         }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-check me-2"></i> Asignar Persona';
     } catch (error) {
         console.error("Error:", error);
         Swal.fire('Error', 'Fallo de conexión con el servidor.', 'error');
@@ -505,12 +537,56 @@ window.openReleaseModal = (pk) => {
 
 window.submitReleaseForm = async (e, pk) => {
     e.preventDefault();
-    const res = await fetch(`/budget/release/${pk}/`, {
-        method: 'POST',
-        body: new FormData(e.target),
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-    });
-    window.handleActionSuccess(await res.json());
+    const form = e.target;
+
+    // Limpiar errores previos y estilos
+    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
+    form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+
+    // Validación cliente: fecha_fin obligatoria
+    const fechaInput = form.querySelector('[name="fecha_fin"]');
+    const fechaVal = fechaInput ? fechaInput.value : '';
+    if (!fechaVal) {
+        const errDiv = document.getElementById('err-fecha_fin');
+        if (errDiv) errDiv.textContent = 'Campo obligatorio';
+        if (fechaInput) {
+            fechaInput.classList.add('input-error');
+            fechaInput.focus();
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`/budget/release/${pk}/`, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            window.handleActionSuccess(data);
+            return;
+        }
+
+        if (data && data.errors) {
+            Object.keys(data.errors).forEach(key => {
+                const errDiv = document.getElementById(`err-${key}`);
+                if (errDiv) errDiv.textContent = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
+                const inputEl = form.querySelector(`[name="${key}"]`);
+                if (inputEl) inputEl.classList.add('input-error');
+            });
+            return;
+        }
+
+        // Mensaje general
+        if (data && data.message) Toast.fire({icon: 'warning', title: data.message});
+
+    } catch (err) {
+        console.error('Error en submitReleaseForm:', err);
+        Toast.fire({icon: 'error', title: 'Error de conexión con el servidor'});
+    }
 };
 
 window.openChangeStatusModal = (pk) => {
