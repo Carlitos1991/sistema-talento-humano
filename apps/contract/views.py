@@ -13,6 +13,7 @@ from django.views.generic import ListView, View
 from budget.models import BudgetModificationHistory
 from core.models import CatalogItem
 from employee.models import Employee
+from person.models import Person
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
 from .forms import LaborRegimeForm, ContractTypeForm
