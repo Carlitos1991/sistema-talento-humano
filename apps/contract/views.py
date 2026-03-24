@@ -272,43 +272,56 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
 class ValidateEmployeeAPIView(LoginRequiredMixin, View):
     def get(self, request, doc_number):
         try:
-            # 1. Buscar el empleado
-            employee = Employee.objects.select_related('person').filter(
-                person__document_number=doc_number,
-                is_active=True
-            ).first()
-
-            if not employee:
+            # 1. Buscar la persona activa
+            person = Person.objects.filter(document_number=doc_number, is_active=True).first()
+            if not person:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Cédula no registrada como empleado activo.'
+                    'message': 'Cédula no registrada o persona inactiva.'
                 })
 
-            # 2. VALIDACIÓN DE PARTIDA ASIGNADA PREVIAMENTE
-            budget_line = employee.current_budget_line.first()
-            if not budget_line:
+            # 2. Si existe un empleado activo relacionado, bloquear (no debe ser empleado activo)
+            active_employee = Employee.objects.filter(person=person, is_active=True).first()
+            if active_employee:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Bloqueo: El empleado no tiene una partida presupuestaria asignada. Debe asignarle una en el módulo de Partidas antes de continuar.'
+                    'message': 'Atención: la persona ya es un empleado activo.'
                 })
 
-            # 3. Verificar si ya tiene contrato formal activo
+            # 3. Buscar un registro de Employee vinculado que tenga una partida presupuestaria asignada
+            employees = Employee.objects.filter(person=person).select_related('person').prefetch_related('current_budget_line__position_item')
+            employee_with_line = None
+            budget_line = None
+            for emp in employees:
+                bl = emp.current_budget_line.first()
+                if bl:
+                    employee_with_line = emp
+                    budget_line = bl
+                    break
+
+            if not employee_with_line or not budget_line:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Bloqueo: La persona no tiene una partida presupuestaria asignada. Asigne una partida antes de continuar.'
+                })
+
+            # 4. Verificar si ya tiene contrato formal activo
             has_active = ManagementPeriod.objects.filter(
-                employee=employee, status__code='ACTIVO'
+                employee=employee_with_line, status__code='ACTIVO'
             ).exists()
 
             if has_active:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Atención: El empleado ya posee un Inicio de Gestión (Contrato) vigente.'
+                    'message': 'Atención: La persona ya posee un Inicio de Gestión (Contrato) vigente.'
                 })
 
             return JsonResponse({
                 'success': True,
                 'employee': {
-                    'id': employee.id,
-                    'full_name': employee.person.full_name,
-                    'photo': employee.person.photo.url if employee.person.photo else None,
+                    'id': employee_with_line.id,
+                    'full_name': person.full_name,
+                    'photo': person.photo.url if person.photo else None,
                     'budget_line': {
                         'id': budget_line.id,
                         'number': budget_line.number_individual or budget_line.code,
