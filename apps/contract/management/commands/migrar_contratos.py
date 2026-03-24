@@ -13,12 +13,12 @@ from contract.models import ManagementPeriod, LaborRegime, ContractType, History
 
 
 class Command(BaseCommand):
-    help = 'Migración Total: Unidades estrictas y respaldo en historial'
+    help = 'Migración Total: Unidades estrictas usando departamento_id y direccion_id reales'
 
     def handle(self, *args, **options):
         log_file = "log_migracion_contratos.txt"
         with open(log_file, "w", encoding="utf-8") as f:
-            f.write(f"--- MIGRACIÓN ESTRICTA: {datetime.now()} ---\n\n")
+            f.write(f"--- MIGRACIÓN DE UNIDADES EXACTAS: {datetime.now()} ---\n\n")
 
         def escribir_log(mensaje):
             with open(log_file, "a", encoding="utf-8") as f:
@@ -45,7 +45,7 @@ class Command(BaseCommand):
                                        password=DB_PASS)
             cursor = con_old.cursor()
 
-            # Usamos c.lugar_trabajo porque ahí escribían el departamento
+            # 🟢 Tablas actualizadas según tu captura de pgAdmin
             cursor.execute("""
                            SELECT p.cedula,
                                   c.regimen,
@@ -59,10 +59,14 @@ class Command(BaseCommand):
                                   c.fecha_inicio,
                                   c.fecha_fin,
                                   c.estado,
-                                  c.codigo
+                                  c.codigo,
+                                  dep.nombre AS depto_nombre,
+                                  dir.nombre AS dir_nombre
                            FROM contrato_contrato c
                                     JOIN employee_employee e ON c.empleado_id = e.id
                                     JOIN person_person p ON e.person_id = p.id
+                                    LEFT JOIN institution_departamento dep ON c.departamento_id = dep.id
+                                    LEFT JOIN institution_direccion dir ON c.direccion_id = dir.id
                            """)
             registros = cursor.fetchall()
 
@@ -71,49 +75,52 @@ class Command(BaseCommand):
             status_finalizado = CatalogItem.objects.filter(catalog__code='STATUS_CONTRACT',
                                                            name__icontains='FINALIZADO').first()
             default_schedule = Schedule.objects.first()
-            default_unit = AdministrativeUnit.objects.first()  # Unidad comodín
+            default_unit = AdministrativeUnit.objects.first()  # Unidad comodín si no existe
 
             for row in registros:
-                (cedula, reg, tipo, func, lugar, cert, part_old, cargo_old, rem_old, f_ini, f_fin, est, cod) = row
+                # Recibimos depto_nombre y dir_nombre de la consulta
+                (cedula, reg, tipo, func, lugar, cert, part_old, cargo_old, rem_old, f_ini, f_fin, est, cod,
+                 depto_nombre, dir_nombre) = row
 
                 empleado = Employee.objects.filter(person__document_number=cedula).first()
                 if not empleado:
                     stats['error_cedula'] += 1
                     continue
 
-                # 1. Normalización de Cargo
+                # Normalización de Cargo y Partida
                 cargo_str = str(cargo_old).upper().strip() if cargo_old else "SIN CARGO"
                 cargo_base = re.sub(r'/\s*[AO]\b', '', cargo_str).replace('(A)', '').replace('(O)', '')
                 cargo_base = re.sub(r'\s+', ' ', cargo_base).strip()
 
-                # 2. Búsqueda de Partida
                 budget_line = BudgetLine.objects.filter(number_individual=part_old).first()
                 if not budget_line:
                     budget_line = BudgetLine.objects.filter(position_item__name__iexact=cargo_base).first()
 
-                # 3. BÚSQUEDA 100% ESTRICTA DE LA UNIDAD
-                unidad_str = str(lugar or '').strip().upper()
+                # 🟢 BÚSQUEDA DE LA UNIDAD REAL:
+                # Damos prioridad al departamento (nivel más bajo). Si es nulo, usamos la dirección.
+                unidad_antigua_str = str(depto_nombre or dir_nombre or '').strip().upper()
+
                 unidad_obj = None
+                if unidad_antigua_str and unidad_antigua_str != 'NONE':
+                    # 1. Búsqueda exacta
+                    unidad_obj = AdministrativeUnit.objects.filter(name__iexact=unidad_antigua_str).first()
+                    # 2. Si no encuentra exacta, busca coincidencia parcial
+                    if not unidad_obj:
+                        unidad_obj = AdministrativeUnit.objects.filter(name__icontains=unidad_antigua_str).first()
 
-                if unidad_str and unidad_str != 'NONE':
-                    # Solo coincide si es EXACTAMENTE igual
-                    unidad_obj = AdministrativeUnit.objects.filter(name__iexact=unidad_str).first()
-
-                # Respaldo en Historial si falla la unidad
+                # Respaldo en Historial si la unidad no existe en el sistema nuevo
                 texto_historial = cargo_str
                 if unidad_obj:
                     unidad_final = unidad_obj
                 else:
                     unidad_final = default_unit
-                    if unidad_str and unidad_str != 'NONE':
+                    if unidad_antigua_str and unidad_antigua_str != 'NONE':
                         stats['unidades_no_encontradas'] += 1
-                        # Concatenamos la unidad original al cargo para no perder la memoria
-                        texto_historial = f"{cargo_str} | Unidad 2020: {unidad_str}"
+                        texto_historial = f"{cargo_str} | Unidad Orig: {unidad_antigua_str}"
 
                 try:
                     with transaction.atomic():
                         nuevo_estado = status_firmado if est == 'Firmado' else status_finalizado
-
                         reg_original = str(reg or '').upper().strip()
                         reg_codigo = MAPEO_REGIMEN.get(reg_original, reg_original.replace(" ", "_")[:10])
                         reg_obj, _ = LaborRegime.objects.get_or_create(code=reg_codigo,
@@ -145,7 +152,7 @@ class Command(BaseCommand):
                             contract=nuevo_contrato,
                             type="MIGRACION",
                             user_register="SISTEMA",
-                            historical_position=texto_historial,  # 👈 Se guarda el texto completo
+                            historical_position=texto_historial,
                             historical_salary=Decimal(str(rem_old)) if rem_old else Decimal('0.00')
                         )
                         stats['exitosos'] += 1
@@ -155,7 +162,7 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS(f"\n✅ MIGRACIÓN FINALIZADA"))
             self.stdout.write(f"Total Migrados:          {stats['exitosos']}")
-            self.stdout.write(self.style.WARNING(f"Deptos como Texto Plano: {stats['unidades_no_encontradas']}"))
+            self.stdout.write(self.style.WARNING(f"Deptos no enlazados (Texto): {stats['unidades_no_encontradas']}"))
             self.stdout.write(self.style.ERROR(f"Cédulas faltantes:       {stats['error_cedula']}"))
 
         except Exception as e:
