@@ -252,11 +252,15 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
         context = super().get_context_data(**kwargs)
         qs = ManagementPeriod.objects.filter(is_active=True)
 
-        # Estadísticas dinámicas según el video
-        context['total_active'] = qs.count()
-        # conteo
-        context['count_losep'] = qs.filter(contract_type__labor_regime__code='LOSEP').count()
-        context['count_ct'] = qs.filter(contract_type__labor_regime__code='CT').count()
+        # Estadísticas dinámicas: realizar en una sola agregación para reducir consultas
+        aggs = qs.aggregate(
+            total_active=Count('id'),
+            count_losep=Count('id', filter=Q(contract_type__labor_regime__code='LOSEP')),
+            count_ct=Count('id', filter=Q(contract_type__labor_regime__code='CT'))
+        )
+        context['total_active'] = aggs.get('total_active', 0)
+        context['count_losep'] = aggs.get('count_losep', 0)
+        context['count_ct'] = aggs.get('count_ct', 0)
 
         context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related('contract_types')
         context['schedules'] = Schedule.objects.filter(is_active=True)
@@ -340,24 +344,22 @@ class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
 
 class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
     def get(self, request):
-        # 1. Filtros avanzados
-        is_advanced = request.GET.get('advanced', 'false') == 'true'
+        # 1. Filtros
         q = request.GET.get('q', '').strip()
         regime_code_filter = request.GET.get('regime_code', '').strip()
         unit_id = request.GET.get('unit', '')
-        regime_id = request.GET.get('regime', '')
-        doc_num = request.GET.get('doc_number', '').strip()
         status_code = request.GET.get('status_code', '')
-        date_from = request.GET.get('date_from', '')
-        date_to = request.GET.get('date_to', '')
 
-        # 2. QuerySet Base
+        # 2. QuerySet REALMENTE Optimizado
         queryset = ManagementPeriod.objects.select_related(
-            'employee__person', 'budget_line__position_item',
-            'contract_type__labor_regime', 'administrative_unit', 'status'
-        ).all().order_by('-start_date')
+            'employee__person',
+            'budget_line__position_item',
+            'contract_type__labor_regime',
+            'administrative_unit',
+            'status'
+        ).order_by('-start_date')
 
-        # 3. Aplicación de lógica de filtrado
+        # 3. Filtros (Igual que antes pero sin evaluar el queryset todavía)
         if q:
             queryset = queryset.filter(
                 Q(employee__person__first_name__icontains=q) |
@@ -367,32 +369,51 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
             )
         if regime_code_filter:
             queryset = queryset.filter(contract_type__labor_regime__code=regime_code_filter)
-        if unit_id: queryset = queryset.filter(administrative_unit_id=unit_id)
-        if regime_id: queryset = queryset.filter(contract_type__labor_regime_id=regime_id)
-        if doc_num: queryset = queryset.filter(document_number__icontains=doc_num)
-        if status_code: queryset = queryset.filter(status__code=status_code)
-        if date_from: queryset = queryset.filter(start_date__gte=date_from)
-        if date_to: queryset = queryset.filter(start_date__lte=date_to)
+        if unit_id:
+            queryset = queryset.filter(administrative_unit_id=unit_id)
+        if status_code:
+            queryset = queryset.filter(status__code=status_code)
 
-        # Límite de performance
-        has_filters = any([q, regime_code_filter, unit_id, regime_id, doc_num, status_code, date_from, date_to])
-        queryset = queryset[:2000] if (is_advanced or has_filters) else queryset[:50]
+        # 4. Paginación de Servidor (Aquí es donde ocurre la magia)
+        from django.core.paginator import Paginator, EmptyPage
+        page = int(request.GET.get('page', 1))
+        page_size = 10  # Mostrar 10 registros por página (consistente con otras tablas)
 
-        # 4. Estadísticas Dinámicas
-        active_status = ['SIN_FIRMAR', 'FIRMADO', 'ACTIVO']
-        total_active = ManagementPeriod.objects.filter(status__code__in=active_status).count()
-        regime_stats = LaborRegime.objects.filter(is_active=True).annotate(
-            active_contracts=Count('contract_types__management_periods', filter=Q(contract_types__management_periods__status__code__in=active_status))
-        ).order_by('name')
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except EmptyPage:
+            page_obj = paginator.page(1)
 
-        regimes_data = [{'code': r.code, 'name': r.name, 'count': r.active_contracts} for r in regime_stats]
+        # 5. Renderizado (Solo procesará 50 filas, no 6450)
+        html = render_to_string(
+            'contract/partials/partial_management_period_table.html',
+            {'periods': page_obj},
+            request=request
+        )
 
-        html = render_to_string('contract/partials/partial_management_period_table.html', {'periods': queryset}, request=request)
+        # 6. Estadísticas Dinámicas para las tarjetas superiores
+        regimes_stats = LaborRegime.objects.filter(is_active=True).annotate(
+            count=Count('contract_types__management_periods',
+                        filter=Q(contract_types__management_periods__is_active=True))
+        ).values('code', 'name', 'count')
+        total_active = ManagementPeriod.objects.filter(is_active=True).count()
+
         return JsonResponse({
             'success': True,
             'table_html': html,
-            'stats': {'total': total_active, 'regimes': regimes_data},
-            'count': queryset.count()
+            'stats': {
+                'total': total_active,
+                'regimes': list(regimes_stats)
+            },
+            'pagination': {
+                'total': paginator.count,
+                'page': page_obj.number,
+                'has_next': page_obj.has_next(),
+                'has_prev': page_obj.has_previous(),
+                'start': page_obj.start_index(),
+                'end': page_obj.end_index(),
+            }
         })
 
 
@@ -430,7 +451,7 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 }
                 exit_status = mapping.get(current_status, 'PERSONA')
                 period.employee.set_status(exit_status)
-                
+
                 # Cambiar is_active del empleado a False
                 period.employee.is_active = False
                 period.employee.save()
@@ -547,7 +568,7 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     else:
                         new_status = 'EMPLEADO'
                 period.employee.set_status(new_status)
-                
+
                 # --- REGISTRO EN HISTORIAL DE CONTRATO ---
                 History.objects.create(
                     employee=period.employee,
@@ -556,7 +577,7 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     type='FIRMA',
                     reason='CONTRATO FIRMADO'
                 )
-                
+
                 # --- REGISTRO EN HISTORIAL DE HORARIOS ---
                 from schedule.models import EmployeeScheduleHistory
                 EmployeeScheduleHistory.objects.create(

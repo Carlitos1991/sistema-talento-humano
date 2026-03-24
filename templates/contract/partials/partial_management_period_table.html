@@ -1,19 +1,22 @@
 {% load static %}
 <div class="table-container">
-    <table>
+    <table class="table managed-table exportable-table table-hover"
+           data-title="Inicios de Gestión"
+           data-external-pagination="true"
+           data-external-search="true">
         <thead>
         <tr>
-            <th><i class="fas fa-user-tie header-icon"></i> Empleado / Documento</th>
-            <th><i class="fas fa-briefcase header-icon"></i> Cargo y Partida</th>
-            <th><i class="fas fa-sitemap header-icon"></i> Dependencia</th>
-            <th><i class="fas fa-file-contract header-icon"></i> Tipo de Contrato</th>
-            <th><i class="fas fa-calendar-alt header-icon"></i> Vigencia</th>
-            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
+            <th data-field="employee"><i class="fas fa-user-tie header-icon"></i> Empleado / Documento</th>
+            <th data-field="budget_line"><i class="fas fa-briefcase header-icon"></i> Cargo y Partida</th>
+            <th data-field="unit"><i class="fas fa-sitemap header-icon"></i> Dependencia</th>
+            <th data-field="contract_type"><i class="fas fa-file-contract header-icon"></i> Tipo de Contrato</th>
+            <th data-field="start_date"><i class="fas fa-calendar-alt header-icon"></i> Vigencia</th>
+            <th data-field="status"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
+            <th class="actions no-sort" data-field="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
         </tr>
         </thead>
         <tbody id="management-table-body">
-        {% for period in periods %}
+        {% for period in periods.object_list %}
             <tr class="period-row">
                 <td>
                     <div class="person-info">
@@ -32,7 +35,9 @@
                 </td>
                 <td>
                     <div class="font-weight-700 text-primary">{{ period.budget_line.position_item.name }}</div>
-                    <small class="text-muted">Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}</small>
+                    <small class="text-muted">Partida: {% if period.budget_line.number_individual %}
+                        {{ period.budget_line.number_individual }}{% else %}
+                        {{ period.budget_line.code }}{% endif %}</small>
                 </td>
                 <td><span class="small font-weight-600">{{ period.administrative_unit.name }}</span></td>
                 <td>
@@ -68,7 +73,7 @@
                         <button class="btn-list-action" data-id="{{ period.id }}" data-action="view" title="Expediente">
                             <i class="fas fa-eye"></i>
                         </button>
-                        {% if period.status.code != 'FINALIZADO' and period.status.code == 'FIRMADO'%}
+                        {% if period.status.code != 'FINALIZADO' and period.status.code == 'FIRMADO' %}
                             <button class="btn-delete-action"
                                     data-id="{{ period.id }}"
                                     data-action="terminate"
@@ -105,3 +110,41 @@
         </tbody>
     </table>
 </div>
+<div id="pagination-metadata" class="hidden"
+     data-total="{{ periods.paginator.count }}"
+     data-page="{{ periods.number }}"
+     data-pages="{{ periods.paginator.num_pages }}"
+     data-start="{{ periods.start_index }}"
+     data-end="{{ periods.end_index }}"
+     data-has-next="{{ periods.has_next|yesno:'true,false' }}"
+     data-has-prev="{{ periods.has_previous|yesno:'true,false' }}">
+</div>
+
+<script>
+    // Inicializar TableManager en tablas inyectadas por AJAX: reintenta hasta 2s
+    (function () {
+        const tblSelector = '#table-content-wrapper .managed-table';
+        const maxAttempts = 40; // 40 * 50ms = 2000ms
+        let attempts = 0;
+        const iv = setInterval(() => {
+            attempts += 1;
+            const tbl = document.querySelector(tblSelector);
+            if (tbl && tbl._tableManager) {
+                clearInterval(iv);
+                return;
+            }
+            if (typeof TableManager === 'function' && tbl) {
+                try {
+                    new TableManager(tbl);
+                } catch (e) {
+                    console.warn('TableManager init error', e);
+                }
+                clearInterval(iv);
+                return;
+            }
+            if (attempts >= maxAttempts) {
+                clearInterval(iv);
+            }
+        }, 50);
+    })();
+</script>

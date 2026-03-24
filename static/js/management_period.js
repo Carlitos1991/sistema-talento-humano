@@ -25,7 +25,7 @@ const periodApp = createApp({
         const container = document.getElementById('period-app');
         return {
             // --- ESTADOS DE CONTROL ---
-            loading: false,
+            loading: true,
             step: 1,
             showWizard: false,
             showDetailModal: false,
@@ -63,11 +63,15 @@ const periodApp = createApp({
                 total: 0,
                 regimes: [] // Lista vacía inicial
             },
+            pagination: {start: 0, end: 0},
             filters: {status: ''}
         }
     },
 
     mounted() {
+        setTimeout(() => {
+            this.fetchTable();
+        }, 100);
         this.fetchTable();
         this.initDelegatedListeners();
     },
@@ -80,10 +84,15 @@ const periodApp = createApp({
             // Buscador Frontend
             const searchInput = document.getElementById('table-search-input');
             if (searchInput) {
+                let debounce;
                 searchInput.addEventListener('input', (e) => {
-                    this.searchTerm = e.target.value.toLowerCase().trim();
-                    this.currentPage = 1;
-                    this.applyFrontendLogic();
+                    clearTimeout(debounce);
+                    debounce = setTimeout(() => {
+                        this.advancedFilters.q = e.target.value.trim();
+                        this.searchTerm = this.advancedFilters.q;
+                        this.currentPage = 1;
+                        this.fetchTable(false);
+                    }, 450);
                 });
             }
 
@@ -396,30 +405,81 @@ const periodApp = createApp({
             // Construimos los parámetros incluyendo los de búsqueda avanzada y el código de régimen
             const params = new URLSearchParams({
                 advanced: advanced,
-                q: this.advancedQuery,
+                sort: this.sortField,
+                order: this.sortOrder,
+                q: this.advancedFilters.q || this.advancedQuery,
                 regime_code: this.advancedFilters.regime_code, // <-- IMPORTANTE
                 status: this.filters.status,
+                page: this.currentPage,
+                page_size: this.pageSize,
                 ...this.advancedFilters // Esto expande el resto (unit, dates, etc.)
             }).toString();
 
             try {
-                const response = await fetch(`/contract/periods/partial-table/?${params}`);
-                const data = await response.json();
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-                const container = document.getElementById('table-content-wrapper');
-                if (container) container.innerHTML = data.table_html;
+                const response = await fetch(`/contract/periods/partial-table/?${params}`, {signal: controller.signal});
+                clearTimeout(timeoutId);
 
-                // Actualizamos los stats reactivamente (esto cambiará los 0s por los números reales)
-                if (data.stats) {
-                    this.stats = data.stats;
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    // JSON parse error (server returned HTML or empty). Show generic message.
+                    this.loading = false;
+                    this.showToast('error', 'Error al procesar la respuesta del servidor');
+                    console.error('JSON parse error:', e);
+                    return;
                 }
 
-                this.$nextTick(() => {
-                    setTimeout(() => {
-                        this.indexRows();
-                        this.applyFrontendLogic();
-                    }, 100);
-                });
+                if (!response.ok) {
+                    this.loading = false;
+                    const msg = (data && (data.message || (data.errors && Object.values(data.errors)[0]))) || 'Error en la petición al servidor';
+                    this.showToast('error', msg);
+                    console.error('Server error:', response.status, data);
+                    return;
+                }
+
+                const container = document.getElementById('table-content-wrapper');
+                if (container) {
+                    container.innerHTML = data.table_html;
+                }
+
+                // Actualizamos los stats reactivamente
+                if (data.stats) this.stats = data.stats;
+
+                // Actualizamos paginación desde metadata del servidor
+                if (data.pagination) {
+                    this.totalRows = data.pagination.total;
+                    this.currentPage = data.pagination.page;
+                    this.pagination = data.pagination;
+                    this.$nextTick(() => {
+                        if (window.addExportButtonsToTables) window.addExportButtonsToTables();
+                        const tbl = document.querySelector('.managed-table');
+                        if (tbl && typeof TableManager === 'function') {
+                            new TableManager(tbl);
+                        }
+                        setTimeout(() => {
+                            this.indexRows();
+                            // Mostrar/ocultar fila de 'no results'
+                            const emptyRow = document.getElementById('frontend-no-results');
+                            if (emptyRow) {
+                                if (this.totalRows === 0) emptyRow.classList.remove('hidden');
+                                else emptyRow.classList.add('hidden');
+                            }
+                            this.updatePaginationUI(data.pagination);
+                        }, 100);
+                    });
+                } else {
+                    // Fallback: comport. anterior
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            this.indexRows();
+                            this.applyFrontendLogic();
+                        }, 100);
+                    });
+                }
 
             } catch (e) {
                 console.error("Fallo al cargar tabla:", e);
@@ -460,24 +520,12 @@ const periodApp = createApp({
             this.updatePaginationUI(totalPages);
         },
 
-        updatePaginationUI(totalPages) {
+        updatePaginationUI(pagination) {
+            const start = pagination.total === 0 ? 0 : pagination.start;
             const pageInfo = document.getElementById('page-info');
-            const pageDisplay = document.getElementById('current-page-display');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
-
             if (pageInfo) {
-                if (this.totalRows > 0) {
-                    const start = (this.currentPage - 1) * this.pageSize + 1;
-                    const end = Math.min(this.currentPage * this.pageSize, this.totalRows);
-                    pageInfo.textContent = `Mostrando ${start}-${end} de ${this.totalRows} registros`;
-                } else {
-                    pageInfo.textContent = "Sin registros para mostrar";
-                }
+                pageInfo.textContent = `Mostrando ${start}-${pagination.end} de ${pagination.total} registros`;
             }
-            if (pageDisplay) pageDisplay.textContent = this.currentPage;
-            if (btnPrev) btnPrev.disabled = (this.currentPage === 1);
-            if (btnNext) btnNext.disabled = (this.currentPage >= totalPages || this.totalRows === 0);
         },
 
         // ==========================================
@@ -754,15 +802,13 @@ const periodApp = createApp({
         // 6. UTILITARIOS
         // ==========================================
         nextPage() {
-            if (this.currentPage < Math.ceil(this.totalRows / this.pageSize)) {
-                this.currentPage++;
-                this.applyFrontendLogic();
-            }
+            this.currentPage++;
+            this.fetchTable(this.isAdvancedSearch);
         },
         prevPage() {
             if (this.currentPage > 1) {
                 this.currentPage--;
-                this.applyFrontendLogic();
+                this.fetchTable(this.isAdvancedSearch);
             }
         },
         showToast(icon, title) {

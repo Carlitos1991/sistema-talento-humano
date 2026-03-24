@@ -46,39 +46,43 @@
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
-                    <button type="button" class="btn-search" @click="openSearchModal">
-                        <i class="fas fa-database"></i> Búsqueda Avanzada
-                    </button>
-                    <button v-if="isAdvancedSearch || searchTerm" class="btn-cancel btn-compact"
-                            @click="clearSearch">
-                        <i class="fas fa-sync-alt"></i> Limpiar
-                    </button>
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search-input" class="input-field"
-                               placeholder="Filtrar en esta lista...">
+                        <input type="text" id="table-search-input"
+                               class="form-control with-icon"
+                               placeholder="Buscar por cédula o nombre..."
+                               v-model="searchTerm">
                     </div>
+                    <button type="button" class="btn-search btn-secondary-search ms-2" @click="openSearchModal">
+                        <i class="fas fa-filter"></i> Búsqueda Avanzada
+                    </button>
+                </div>
+
+                <div id="table-content-wrapper">
+                    {% include 'contract/partials/partial_management_period_table.html' %}
                 </div>
             </div>
-            <div id="table-content-wrapper">
-                {% include 'contract/partials/partial_management_period_table.html' %}
-            </div>
-            <!-- Paginación -->
+
             <div class="pagination-container">
-                <span class="pagination-info" id="page-info">Calculando...</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button class="page-btn" @click="prevPage" id="btn-prev">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                    </li>
-                    <li><span id="current-page-display" class="page-current-display">1</span></li>
-                    <li>
-                        <button class="page-btn" @click="nextPage" id="btn-next">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </li>
-                </ul>
+                <div id="page-info" class="pagination-info">Mostrando [[ pagination.start ]]-[[ pagination.end ]] de [[
+                    totalRows ]] registros
+                </div>
+                <div class="pagination-controls">
+                    <button class="page-btn" @click="prevPage" :disabled="loading || currentPage === 1">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+
+                    <div class="page-input-wrapper">
+                        <input type="number" class="page-input" v-model.number="currentPage"
+                               @change="fetchTable(isAdvancedSearch)">
+                        <span class="total-pages-badge">de [[ Math.ceil(totalRows / pageSize) || 1 ]]</span>
+                    </div>
+
+                    <button class="page-btn" @click="nextPage"
+                            :disabled="loading || (currentPage * pageSize >= totalRows)">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
