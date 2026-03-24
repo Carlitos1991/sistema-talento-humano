@@ -19,6 +19,13 @@ def create_employee_profile(sender, instance, created, **kwargs):
                 emp, emp_created = Employee.objects.get_or_create(person=instance)
                 if emp_created:
                     print(f"Empleado creado automáticamente para Persona id={instance.id}")
+                    # Por defecto BaseModel.is_active=True; para empleados creados automáticamente
+                    # queremos que el registro `Employee` quede inactivo hasta que se confirme.
+                    try:
+                        emp.is_active = False
+                        emp.save(update_fields=['is_active'])
+                    except Exception as e:
+                        print(f"No se pudo marcar Employee.is_active=False para Employee id={getattr(emp,'id',None)}: {e}")
                 # Crear datos institucionales vacíos si no existen
                 try:
                     inst, inst_created = InstitutionalData.objects.get_or_create(employee=emp)
