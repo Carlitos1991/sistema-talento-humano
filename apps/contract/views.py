@@ -542,6 +542,27 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 period.full_clean()
                 period.save()  # Aquí se dispara la secuencia y el update del Employee
 
+                # Si se solicitó marcar como jefe inmediato, actualizar employee.is_boss y unit.boss
+                try:
+                    is_boss_flag = data.get('is_boss')
+                    is_boss = str(is_boss_flag).lower() in ('1', 'true', 'on', 'yes')
+                    if is_boss:
+                        try:
+                            employee.is_boss = True
+                            employee.save(update_fields=['is_boss'])
+                        except Exception as e:
+                            print(f"No se pudo marcar employee.is_boss=True: {e}")
+
+                        try:
+                            unit = AdministrativeUnit.objects.filter(pk=period.administrative_unit_id).first()
+                            if unit:
+                                unit.boss = employee
+                                unit.save(update_fields=['boss'])
+                        except Exception as e:
+                            print(f"No se pudo actualizar AdministrativeUnit.boss: {e}")
+                except Exception:
+                    pass
+
                 return JsonResponse({
                     'success': True,
                     'message': f'Gestión {period.document_number} registrada y área del empleado actualizada.'

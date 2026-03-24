@@ -57,6 +57,7 @@ const periodApp = createApp({
                 workplace: '', start_date: '', end_date: '', document_number: '',
                 job_functions: '', institutional_need_memo: '', budget_certification: ''
             },
+                is_boss: false,
 
             // --- ESTADÍSTICAS ---
             stats: {
@@ -598,7 +599,8 @@ const periodApp = createApp({
             this.form = {
                 administrative_unit: '', budget_line: '', schedule: '', workplace: '',
                 start_date: '', end_date: '', document_number: '', job_functions: '',
-                institutional_need_memo: '', budget_certification: ''
+                institutional_need_memo: '', budget_certification: '',
+                is_boss: false
             };
         },
 
@@ -666,6 +668,8 @@ const periodApp = createApp({
             Object.keys(this.form).forEach(key => {
                 if (this.form[key]) formData.append(key, this.form[key]);
             });
+            // Siempre enviar explicitamente el flag is_boss (0/1)
+            formData.append('is_boss', this.form.is_boss ? '1' : '0');
 
             try {
                 const response = await fetch('/contract/periods/create/', {

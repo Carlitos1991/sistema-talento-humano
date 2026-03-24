@@ -108,6 +108,13 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="form-group mt-3">
+                            <label class="form-label d-flex align-items-center">
+                                <input type="checkbox" v-model="form.is_boss" class="me-2">
+                                Marcar como jefe inmediato de la unidad seleccionada
+                            </label>
+                            <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de la unidad seleccionada.</small>
+                        </div>
                         <div class="grid-2-cols mt-4">
                             <div class="form-group">
                                 <label class="form-label">Memo Necesidad</label>
