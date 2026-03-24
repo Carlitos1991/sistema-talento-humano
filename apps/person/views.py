@@ -276,7 +276,7 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'marital_status'  # Agregamos esto para optimizar
         ).annotate(
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
-        ).order_by('last_name')
+        ).order_by('-pk')
 
         # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')
