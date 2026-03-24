@@ -465,16 +465,29 @@ class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
 
     def post(self, request, *args, **kwargs):
         # Nota: request.FILES es necesario para la foto
-        form = PersonForm(request.POST, request.FILES)
-        if form.is_valid():
-            person = form.save()
-            return JsonResponse({
-                'success': True,
-                'message': 'Persona registrada correctamente.',
-                # Devolvemos datos útiles por si quieres actualizar la tabla via JS sin recargar
-                'data': {'id': person.id, 'full_name': person.full_name}
-            })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        try:
+            form = PersonForm(request.POST, request.FILES)
+            if form.is_valid():
+                person = form.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Persona registrada correctamente.',
+                    # Devolvemos datos útiles por si quieres actualizar la tabla via JS sin recargar
+                    'data': {'id': person.id, 'full_name': person.full_name}
+                })
+            # Loguear errores del formulario para facilitar debugging
+            try:
+                print("PersonCreateView - form invalid. POST keys:", dict(request.POST).keys())
+                print("PersonCreateView - FILES keys:", request.FILES.keys())
+                print("PersonCreateView - form errors:", form.errors.as_json())
+            except Exception:
+                pass
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        except Exception as e:
+            import traceback
+            print("Error en PersonCreateView:", str(e))
+            traceback.print_exc()
+            return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
 
 class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -579,12 +592,34 @@ def person_quick_view_partial(request, pk):
         ),
         pk=pk
     )
-    employee_pk = Employee.objects.get(person=pk)
-    budget = BudgetLine.objects.get(current_employee=employee_pk)
-    institutional_data = InstitutionalData.objects.get(employee=employee_pk)
-    return render(request, 'person/partials/partial_person_quick_view.html', {
-        'person': person, 'budget': budget, 'institutional_data': institutional_data
-    })
+    # Recuperar objetos relacionados de forma segura.
+    try:
+        # Intentar usar el related_name si existe
+        try:
+            employee = person.employee_profile
+        except Exception:
+            employee = None
+
+        budget = None
+        institutional_data = None
+
+        if employee:
+            budget = BudgetLine.objects.filter(current_employee=employee).first()
+            institutional_data = InstitutionalData.objects.filter(employee=employee).first()
+
+        # Si faltan datos institucionales o partida, podemos mostrar el modal con mensaje informativo
+        return render(request, 'person/partials/partial_person_quick_view.html', {
+            'person': person,
+            'budget': budget,
+            'institutional_data': institutional_data
+        })
+    except Exception as e:
+        # En caso de error inesperado, loguear y devolver un fragmento simple para el modal
+        import traceback
+        print('Error cargando vista rápida de persona:', str(e))
+        traceback.print_exc()
+        html = f"<div class='p-4 text-error'>No se pudo cargar la información completa: {str(e)}</div>"
+        return HttpResponse(html, status=200)
 
 
 @method_decorator(require_POST, name='dispatch')

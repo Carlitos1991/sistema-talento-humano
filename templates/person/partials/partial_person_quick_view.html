@@ -67,24 +67,24 @@
                 <div class="grid-2-cols mt-3">
                     <div class="info-group">
                         <label class="info-label">Expediente</label>
-                        <p class="info-value">{{ institutional_data.file_number|default:"Sin Numero de Expediente" }}</p>
+                        <p class="info-value">{% if institutional_data and institutional_data.file_number %}{{ institutional_data.file_number }}{% else %}Sin Numero de Expediente{% endif %}</p>
                     </div>
                     <div class="info-group">
                         <label class="info-label">Código Biométrico</label>
                         <p class="info-value">
-                            <b>{{ institutional_data.biometric_id|default:"Sin Código Biométrico" }}</b>
+                            <b>{% if institutional_data and institutional_data.biometric_id %}{{ institutional_data.biometric_id }}{% else %}Sin Código Biométrico{% endif %}</b>
                         </p>
                     </div>
                 </div>
                 <div class="grid-2-cols mt-3">
                     <div class="info-group">
                         <label class="info-label">R.M.U.</label>
-                        <p class="info-value">{{ budget.remuneration|default:"Sin cargo asignado" }}</p>
+                        <p class="info-value">{% if budget and budget.remuneration %}{{ budget.remuneration }}{% else %}Sin cargo asignado{% endif %}</p>
                     </div>
                     <div class="info-group">
                         <label class="info-label">Partida/Individual</label>
                         <p class="info-value">
-                            <span class="status-badge general">{{ budget.code|default:"Sin partida asignada" }} /<u>{{ budget.number_individual|default:"Sin partida asignada" }}</u></span>
+                            <span class="status-badge general">{% if budget and budget.code %}{{ budget.code }}{% else %}Sin partida asignada{% endif %} /<u>{% if budget and budget.number_individual %}{{ budget.number_individual }}{% else %}Sin partida asignada{% endif %}</u></span>
                         </p>
                     </div>
                 </div>
@@ -92,7 +92,7 @@
                     <div class="info-group">
                         <label class="info-label">Cargo</label>
                         <p class="info-value">
-                            <span class="status-badge general">{{ budget.position_item.name|default:"Sin cargo asignado" }}</span>
+                            <span class="status-badge general">{% if budget and budget.position_item %}{{ budget.position_item.name }}{% else %}Sin cargo asignado{% endif %}</span>
                         </p>
                     </div>
                 </div>

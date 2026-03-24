@@ -209,6 +209,20 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
                 if qs.exists():
                     self.add_error('document_number', "Ya existe una persona con esta cédula.")
 
+        # 4. Validación general de unicidad de número de documento (normalizado)
+        # Normalizamos y verificamos unicidad independientemente del tipo de documento
+        if doc_num:
+            try:
+                normalized = doc_num.strip()
+                cleaned_data['document_number'] = normalized
+                qs2 = Person.objects.filter(document_number__iexact=normalized)
+                if self.instance.pk:
+                    qs2 = qs2.exclude(pk=self.instance.pk)
+                if qs2.exists():
+                    self.add_error('document_number', "Ya existe una persona con este número de documento.")
+            except Exception:
+                pass
+
         return cleaned_data
 
 
