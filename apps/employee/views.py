@@ -894,7 +894,10 @@ def save_institutional_data_api(request, person_id):
 
             inst_data.file_number = request.POST.get('file_number')
             inst_data.biometric_id = request.POST.get('biometric_id')
-            inst_data.institutional_email = request.POST.get('institutional_email')
+            # Guardar correo institucional como None si viene vacío para evitar conflicto con unique=True
+            inst_email = request.POST.get('institutional_email')
+            inst_email = inst_email.strip() if inst_email and isinstance(inst_email, str) else inst_email
+            inst_data.institutional_email = inst_email if inst_email else None
             inst_data.observations = request.POST.get('observations')
             # Nuevos campos
             collective_contract = request.POST.get('collective_contract')

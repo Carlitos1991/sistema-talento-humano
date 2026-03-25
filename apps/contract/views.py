@@ -371,7 +371,7 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
             'contract_type__labor_regime',
             'administrative_unit',
             'status'
-        ).order_by('-start_date')
+        ).order_by('-created_at')
 
         # 3. Filtros (Igual que antes pero sin evaluar el queryset todavía)
         if q:

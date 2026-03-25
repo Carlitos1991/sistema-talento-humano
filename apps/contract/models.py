@@ -133,7 +133,7 @@ class ManagementPeriod(BaseModel):
         db_table = 'contract_management_period'
         verbose_name = 'Período de Gestión'
         verbose_name_plural = 'Períodos de Gestión'
-        ordering = ['-start_date']
+        ordering = ['-created_at']
 
     def __str__(self):
         return f'{self.document_number} | {self.employee.person.full_name}'
