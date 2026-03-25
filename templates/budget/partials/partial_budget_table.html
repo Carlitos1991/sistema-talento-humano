@@ -16,21 +16,20 @@
                 <i class="fa-solid fa-hashtag"></i> Partida
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th onclick="sortBudgetTable('activity')" class="sortable-header">
-                <i class="fa-solid fa-sitemap"></i> Areá / Programa
-                <span class="sort-arrow">⇅</span>
-            </th>
             <th onclick="sortBudgetTable('position_item')" class="sortable-header">
                 <i class="fa-solid fa-briefcase"></i> Cargo:
                 <span class="sort-arrow">⇅</span>
             </th>
             <th onclick="sortBudgetTable('remuneration')" class="sortable-header">
-                <i class="fa-solid fa-money-bill-wave"></i> Remuneración
+                <i class="fa-solid fa-money-bill-wave"></i> RMU
                 <span class="sort-arrow">⇅</span>
             </th>
             <th onclick="sortBudgetTable('current_employee')" class="sortable-header">
                 <i class="fa-solid fa-user"></i> Empleado
                 <span class="sort-arrow">⇅</span>
+            </th>
+            <th class="">
+                <i class="fa-solid fa-id-card"></i> Cédula
             </th>
             <th onclick="sortBudgetTable('status_item')" class="sortable-header">
                 <i class="fa-solid fa-toggle-on"></i> Estado
@@ -49,14 +48,6 @@
                 <!-- Columna 1.2: Partida Completa -->
                 <td>
                     <span class="fw-bold text-primary">{{ line.code|default:"S/N" }}</span>
-                </td>
-
-                <!-- Columna 2: Estructura -->
-                <td>
-                    <div class="d-flex flex-column text-xs">
-                        <span class="fw-bold text-dark"
-                              title="Actividad">{{ line.activity.project.subprogram.program.name }}</span>
-                    </div>
                 </td>
 
                 <!-- Columna 3: Cargo -->
@@ -81,6 +72,15 @@
                         </div>
                     {% else %}
                         <span class="status-badge badge-neutral">SIN ASIGNAR</span>
+                    {% endif %}
+                </td>
+
+                <!-- Columna 5.1: Cédula del custodio -->
+                <td>
+                    {% if line.current_employee and line.current_employee.person and line.current_employee.person.document_number %}
+                        <span class="text-xs">{{ line.current_employee.person.document_number }}</span>
+                    {% else %}
+                        <span class="text-xs text-muted">-</span>
                     {% endif %}
                 </td>
 
