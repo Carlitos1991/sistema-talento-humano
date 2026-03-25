@@ -142,18 +142,8 @@ class ManagementPeriod(BaseModel):
         super().clean()
         if self.end_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': 'La fecha de fin no puede ser anterior al inicio.'})
-
-        if not self.pk:
-            # VALIDACIÓN DINÁMICA:
-            # Bloquear si la partida tiene cualquier contrato que NO esté FINALIZADO
-            active_occupation = ManagementPeriod.objects.filter(
-                budget_line=self.budget_line
-            ).exclude(status__code='FINALIZADO').exists()
-
-            if active_occupation:
-                raise ValidationError({
-                    'budget_line': 'Esta partida ya se encuentra ocupada o tiene un proceso de contrato en curso.'
-                })
+        # Nota: validación de ocupación de partida removida.
+        # La validación de integridad sobre asignaciones se gestiona desde el módulo de presupuesto.
 
     @property
     def is_currently_active(self):
