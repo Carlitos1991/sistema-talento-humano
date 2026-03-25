@@ -604,6 +604,14 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                         new_status = 'EMPLEADO'
                 period.employee.set_status(new_status)
 
+                # Cuando el contrato está FIRMADO, el empleado debe estar activo
+                try:
+                    if not period.employee.is_active:
+                        period.employee.is_active = True
+                        period.employee.save(update_fields=['is_active'])
+                except Exception as e:
+                    print(f"No se pudo activar employee tras firma (id={getattr(period.employee,'id',None)}): {e}")
+
                 # --- REGISTRO EN HISTORIAL DE CONTRATO ---
                 History.objects.create(
                     employee=period.employee,
