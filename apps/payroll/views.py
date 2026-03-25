@@ -232,14 +232,21 @@ class GeneratePayrollUIView(View):
                         join = getattr(inst, 'entry_date', None) if inst else None
                 # si no hay fecha, considerar completo
                 if not join or join <= period.start_date:
-                    worked = period.working_days
+                    worked = period.working_days  # Generalmente 30
                 elif join > period.end_date:
                     continue
                 else:
-                    days_not_worked = join.day - 1
-                    worked = max(0, period.working_days - days_not_worked)
+                    # Aplicamos la misma lógica comercial
+                    if period.end_date.month == 2 and join.month == 2 and join.day >= 28:
+                        # Febrero: Si entra el 28, paga 3 días (28, 29, 30)
+                        worked = (30 - join.day) + 1
+                    elif join.day == 31:
+                        worked = 1
+                    else:
+                        # Mes estándar: del día de ingreso al 30
+                        worked = (30 - join.day) + 1
 
-                rows.append({'employee': emp, 'worked_days': worked})
+                rows.append({'employee': emp, 'worked_days': max(0, worked)})
 
             context.update({'current_period': period, 'rows': rows})
 

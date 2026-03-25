@@ -147,16 +147,33 @@ class PayrollCalculatorService:
                             s_date = max(data['start'], self.period.start_date)
                             e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
                             if s_date <= e_date:
-                                dias_reales = (e_date - s_date).days + 1
-                                if dias_reales == 31: dias_reales = 30
-                                if self.period.end_date.month == 2 and e_date == self.period.end_date: dias_reales += (
-                                            30 - self.period.end_date.day)
-                                if total_dias_mes + dias_reales > 30: dias_reales = 30 - total_dias_mes
+                                # Lógica mejorada para Mes Comercial (30 días)
+                                if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                                    # Si es febrero y es el último día del mes, estiramos a 30
+                                    # Ej: Ingreso 28 de Feb -> (30 - 28) + 1 = 3 días a pagar
+                                    dias_reales = (30 - s_date.day) + 1
+                                elif s_date.day == 31:
+                                    # Caso especial: Ingreso un día 31
+                                    dias_reales = 1
+                                else:
+                                    # Regla general: (Día Fin - Día Inicio) + 1
+                                    # Limitamos el día de fin a 30 para meses de 31 días
+                                    dia_fin_comercial = min(e_date.day, 30)
+                                    dias_reales = (dia_fin_comercial - s_date.day) + 1
+
+                                # Asegurar que no exceda los 30 días ni sea negativo
+                                if total_dias_mes + dias_reales > 30:
+                                    dias_reales = 30 - total_dias_mes
+
+                                dias_reales = max(0, dias_reales)
+
                                 if dias_reales > 0:
                                     tramos.append({
-                                        'assignment': data['assignment'], 'dias': dias_reales,
+                                        'assignment': data['assignment'],
+                                        'dias': dias_reales,
                                         'sueldo_base': Decimal(str(data['assignment'].budget_line.remuneration or 0)),
-                                        'partida': data['assignment'].budget_line, 'real_start': s_date,
+                                        'partida': data['assignment'].budget_line,
+                                        'real_start': s_date,
                                         'real_end': e_date
                                     })
                                     total_dias_mes += dias_reales
@@ -419,16 +436,33 @@ class PayrollCalculatorService:
                             s_date = max(data['start'], self.period.start_date)
                             e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
                             if s_date <= e_date:
-                                dias_reales = (e_date - s_date).days + 1
-                                if dias_reales == 31: dias_reales = 30
-                                if self.period.end_date.month == 2 and e_date == self.period.end_date: dias_reales += (
-                                            30 - self.period.end_date.day)
-                                if total_dias_mes + dias_reales > 30: dias_reales = 30 - total_dias_mes
+                                # Lógica mejorada para Mes Comercial (30 días)
+                                if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                                    # Si es febrero y es el último día del mes, estiramos a 30
+                                    # Ej: Ingreso 28 de Feb -> (30 - 28) + 1 = 3 días a pagar
+                                    dias_reales = (30 - s_date.day) + 1
+                                elif s_date.day == 31:
+                                    # Caso especial: Ingreso un día 31
+                                    dias_reales = 1
+                                else:
+                                    # Regla general: (Día Fin - Día Inicio) + 1
+                                    # Limitamos el día de fin a 30 para meses de 31 días
+                                    dia_fin_comercial = min(e_date.day, 30)
+                                    dias_reales = (dia_fin_comercial - s_date.day) + 1
+
+                                # Asegurar que no exceda los 30 días ni sea negativo
+                                if total_dias_mes + dias_reales > 30:
+                                    dias_reales = 30 - total_dias_mes
+
+                                dias_reales = max(0, dias_reales)
+
                                 if dias_reales > 0:
                                     tramos.append({
-                                        'assignment': data['assignment'], 'dias': dias_reales,
+                                        'assignment': data['assignment'],
+                                        'dias': dias_reales,
                                         'sueldo_base': Decimal(str(data['assignment'].budget_line.remuneration or 0)),
-                                        'partida': data['assignment'].budget_line, 'real_start': s_date,
+                                        'partida': data['assignment'].budget_line,
+                                        'real_start': s_date,
                                         'real_end': e_date
                                     })
                                     total_dias_mes += dias_reales
