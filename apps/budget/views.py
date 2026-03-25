@@ -522,26 +522,14 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
                 line.status_item = status_occupied
                 line.save(modified_by=request.user)
 
-                # 3. Asegurar estado: la Persona debe permanecer activa, y el Employee debe quedar inactivo
+                # 3. Asegurar Person.is_active = True; NO modificar el estado ni la bandera is_active del Employee
                 try:
-                    # Forzar Person.is_active = True
                     if getattr(emp, 'person', None):
                         if not emp.person.is_active:
                             emp.person.is_active = True
                             emp.person.save(update_fields=['is_active'])
                 except Exception as e:
                     print(f"No se pudo asegurar Person.is_active=True para Person id={getattr(emp.person,'id',None)}: {e}")
-
-                try:
-                    # Forzar Employee.is_active = False para empleados creados/gestionados automáticamente
-                    if emp.is_active:
-                        emp.is_active = False
-                        emp.save(update_fields=['is_active'])
-                except Exception as e:
-                    print(f"No se pudo marcar Employee.is_active=False para Employee id={getattr(emp,'id',None)}: {e}")
-
-                # 4. Actualizar estado laboral (catalog item) sin alterar la bandera is_active
-                emp.set_status('INACTIVE_WITH_BUDGET')
 
             return JsonResponse({'success': True, 'message': 'Asignación procesada correctamente.'})
         except Exception as e:
