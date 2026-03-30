@@ -5622,3 +5622,27 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
         transform: translateY(0);
     }
 }
+
+.header-card-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.header-card-info h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.header-card-info p {
+    color: var(--text-muted);
+    margin: 5px 0 0 0;
+    font-size: 0.9rem;
+}

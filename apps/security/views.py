@@ -9,6 +9,9 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, View, ListView, UpdateView
 from person.models import Person
 from .forms import RoleForm, UserFilterForm, CredentialCreationForm
+from django.contrib.sessions.models import Session
+from django.utils import timezone
+from .models import UserSession
 
 
 # --- 1. GESTIÓN DE USUARIOS (PERSONAS) ---
@@ -17,7 +20,6 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = 'security/users/user_list.html'
     context_object_name = 'persons'
     paginate_by = 10
-    # CORREGIDO: El modelo Person está en la app 'person', no 'security'
     permission_required = 'person.view_person'
 
     def get_queryset(self):
@@ -417,3 +419,47 @@ class UserToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
             'message': f'Usuario {action_verb} correctamente.',
             'new_stats': stats
         })
+
+
+# --- 4. CONTROL DE USUARIOS (LISTA DE USUARIOS CON ESTADO DE CONEXIÓN) ---
+class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = get_user_model()
+    template_name = 'security/users/user_control_list.html'
+    context_object_name = 'users'
+    permission_required = 'auth.view_user'
+
+    def get_queryset(self):
+        return get_user_model().objects.filter(last_login__isnull=False).order_by('-last_login')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get all active sessions
+        sessions = Session.objects.filter(expire_date__gte=timezone.now())
+        
+        # Get user IDs from active sessions
+        user_ids = []
+        for session in sessions:
+            data = session.get_decoded()
+            user_id = data.get('_auth_user_id')
+            if user_id:
+                user_ids.append(user_id)
+
+        # Get active users
+        active_users = get_user_model().objects.filter(id__in=user_ids)
+        
+        # Get last login details
+        user_sessions = UserSession.objects.order_by('user', '-created_at').distinct('user')
+        
+        user_data = []
+        for user in self.get_queryset():
+            is_online = user in active_users
+            last_session = next((s for s in user_sessions if s.user == user), None)
+            user_data.append({
+                'user': user,
+                'is_online': is_online,
+                'ip_address': last_session.ip_address if last_session else 'N/A',
+            })
+            
+        context['user_data'] = user_data
+        return context

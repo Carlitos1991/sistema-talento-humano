@@ -542,6 +542,14 @@
                             </a>
                         </li>
                     {% endif %}
+                    {% if perms.auth.view_user %}
+                        <li>
+                            <a href="{% url 'security:user_control_list' %}">
+                                <i class="fa-solid fa-users-gear"></i>
+                                <span class="menu-text">Control de Usuarios</span>
+                            </a>
+                        </li>
+                    {% endif %}
                     {% if perms.core.view_catalog %}
                         <li>
                             <a href="{% url 'core:catalog_list' %}">
