@@ -138,18 +138,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
 
                     if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Éxito!',
-                            text: data.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
                         closeModal();
-
-                        // Recargar tabla
-                        if (window.fetchUsers) window.fetchUsers();
-                        else location.reload();
+                        
+                        if (data.require_logout) {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Sesión terminada',
+                                text: data.message,
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = '/login/';
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Éxito!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            
+                            // Recargar tabla
+                            if (window.fetchUsers) window.fetchUsers();
+                            else location.reload();
+                        }
                     } else {
                         if (data.errors) {
                             errors.value = data.errors;

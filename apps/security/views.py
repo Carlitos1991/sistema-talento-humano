@@ -342,8 +342,17 @@ class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View)
         try:
             form = CredentialCreationForm(person_id, request.POST)
             if form.is_valid():
-                form.save()
-                return JsonResponse({'success': True, 'message': 'Credenciales generadas y asignadas.'})
+                user_updated = form.save()
+                message_text = 'Credenciales generadas y asignadas.'
+                require_logout = False
+                
+                # Si el usuario cambia su propia contraseña y es válida, debe reiniciar sesión pero avisamos al frontend.
+                if user_updated and form.cleaned_data.get('password'):
+                    if request.user == user_updated:
+                        require_logout = True
+                        message_text = 'Contraseña actualizada. Deberá iniciar sesión nuevamente.'
+                        
+                return JsonResponse({'success': True, 'message': message_text, 'require_logout': require_logout})
             return JsonResponse({'success': False, 'errors': form.errors}, status=400)
         except Exception as e:
             import traceback

@@ -93,6 +93,7 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
     )
     password = forms.CharField(
         label="Contraseña",
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'input-field',
             'placeholder': '******'
@@ -101,6 +102,7 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
     )
     confirm_password = forms.CharField(
         label="Repetir Contraseña",
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'input-field',
             'placeholder': '******'
