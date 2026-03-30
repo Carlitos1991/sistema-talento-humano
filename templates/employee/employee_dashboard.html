@@ -71,7 +71,8 @@
          data-person-id="{{ person.id }}"
          data-titles="{{ person.curriculum.academic_titles.count|default:0 }}"
          data-experiences="{{ person.curriculum.work_experiences.count|default:0 }}"
-         data-courses="{{ person.curriculum.trainings.count|default:0 }}">
+         data-courses="{{ person.curriculum.trainings.count|default:0 }}"
+         data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
 
         <div class="banner-employee-detail">
             <div class="banner-info-employee-detail">
@@ -131,28 +132,12 @@
                 {% include 'employee/partials/wizard/tab_institutional_data.html' %}
             </div>
 
-            <div v-if="activeTab === 'budget'">
-                {% include 'employee/partials/wizard/tab_budget_data.html' %}
-            </div>
-
-            <div v-if="activeTab === 'contracts'">
-                {% include 'employee/partials/wizard/tab_contracts_data.html' %}
-            </div>
-
-            <div v-if="activeTab === 'actions'">
-                {% include 'employee/partials/wizard/tab_actions_personal.html' %}
-            </div>
-
             <div v-if="activeTab === 'permissions'">
                 {% include 'employee/partials/wizard/tab_permissions_data.html' %}
             </div>
 
             <div v-if="activeTab === 'payments'">
                 {% include 'employee/partials/wizard/tab_payment_roles.html' %}
-            </div>
-
-            <div v-if="activeTab === 'sanctions'">
-                {% include 'employee/partials/wizard/tab_sanctions_data.html' %}
             </div>
 
             <div v-if="activeTab === 'vacations'">

@@ -224,7 +224,14 @@ const app = createApp({
         };
 
         // --- 4. CONFIGURACIÓN DE PESTAÑAS ---
-        const tabs = [
+        const hiddenTabIds = new Set(
+            (appElement?.dataset.hiddenTabs || '')
+                .split(',')
+                .map(t => t.trim())
+                .filter(Boolean)
+        );
+
+        const tabsBase = [
             {
                 id: 'personal',
                 name: 'Datos Personales',
@@ -287,6 +294,12 @@ const app = createApp({
                 class: 'employee-detail-button-payments'
             },
         ];
+
+        const tabs = tabsBase.filter(tab => !hiddenTabIds.has(tab.id));
+
+        if (!tabs.some(tab => tab.id === activeTab.value)) {
+            activeTab.value = tabs.length ? tabs[0].id : 'personal';
+        }
 
         // Inicializar estadísticas del CV al montar
         onMounted(() => {

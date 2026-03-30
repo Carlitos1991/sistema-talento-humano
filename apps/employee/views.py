@@ -371,6 +371,12 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
             raise Http404("El usuario no tiene persona asociada.")
         return user_person
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['restricted_tab_ids'] = 'budget,contracts,actions'
+        context['can_view_restricted_tabs'] = False
+        return context
+
 
 @transaction.atomic
 def upload_cv_pdf(request, person_id):
