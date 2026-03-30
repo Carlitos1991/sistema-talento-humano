@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="header-card">
+            <div>
+                <h1 class="h3 mb-2 text-gray-800">Control de Usuarios</h1>
+                <p class="mb-4">Lista de usuarios que han ingresado al sistema, su estado de conexión y última
+                    actividad.</p>
+            </div>
+        </div>
+
+        <div class="content-table">
+            <div class="table-controls" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="form-control table-search-input" placeholder="Buscar usuario">
+                </div>
+            </div>
+            <div id="user-control-table-container" class="table-container">
+                {% include 'security/users/partials/partial_user_control_table.html' %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/table-manager.js' %}"></script>
+    <script src="{% static 'js/table-export.js' %}"></script>
+    <script src="{% static 'js/security/user_control_list.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const table = document.querySelector('.exportable-table');
+            if (table) {
+                initializeTableExport(table, {
+                    filename: 'control-de-usuarios',
+                    sheetName: 'Usuarios'
+                });
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
+{% endblock %}
