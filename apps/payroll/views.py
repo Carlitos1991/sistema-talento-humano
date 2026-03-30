@@ -1302,6 +1302,12 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 g_data['presupuesto'].items(),
                 key=lambda item: (int(item[1].get('order', 99999)), str(item[1].get('concepto', '')))
             ))
+            
+            # Ordenar empleados de la A a la Z por apellido
+            g_data['empleados'] = dict(sorted(
+                g_data['empleados'].items(),
+                key=lambda item: (item[1]['persona'].last_name or "").lower()
+            ))
 
         sorted_reports = dict(sorted(report_data.items()))
         context = {
