@@ -48,9 +48,15 @@
                  Quitamos v-if y @mouseleave que eran de Vue. -->
             <div class="dropdown-menu hidden">
 
-                <a href="{% url 'core:profile' %}" class="dropdown-item">
-                    <i class="fa-regular fa-user"></i> Ver Perfil
-                </a>
+                {% if request.user.person %}
+                    <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
+                        <i class="fa-regular fa-user"></i> Ver Perfil
+                    </a>
+                {% else %}
+                    <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
+                        <i class="fa-regular fa-user"></i> Ver Perfil
+                    </a>
+                {% endif %}
 
                 <a href="#" class="dropdown-item" onclick="openChangePasswordModal(); return false;">
                     <i class="fa-solid fa-key"></i> Cambiar Contraseña

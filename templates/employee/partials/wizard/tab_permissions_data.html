@@ -1,55 +1,119 @@
-<!-- Pestaña Permisos - Historial de permisos del empleado -->
-<!-- Historial de Permisos -->
-<div class="grid-info-personal mt-3">
-    <div class="info-box-styled info-box-accent-pink" style="grid-column: span 3;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-            <h6 class="section-title section-title-accent-pink" style="margin:0"><i class="fa-solid fa-history"></i>
-                Historial de Permisos</h6>
-            <div class="permission-filters">
-                <button class="permission-filter-btn btn btn-sm btn-outline" data-filter="ALL">Todos</button>
-                <button class="permission-filter-btn btn btn-sm btn-outline" data-filter="APPROVED">Aprobados</button>
-                <button class="permission-filter-btn btn btn-sm btn-outline" data-filter="REJECTED">Rechazados</button>
-                <button class="permission-filter-btn btn btn-sm btn-outline" data-filter="REQUESTED">Pendientes</button>
+<div class="content-table mt-3" data-permission-history-table>
+    <div class="table-controls" style="display:flex;justify-content:center;align-items:flex-end;gap:8px;flex-wrap:nowrap;">
+            <div class="form-group mb-0" style="min-width:150px;max-width:170px;">
+                <label class="form-label" style="font-size:0.72rem;">Fecha Desde</label>
+                <input type="date" class="input-field" data-permission-date-from style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
             </div>
-        </div>
-        <div class="p-3 bg-light rounded" style="max-height: 320px; overflow-y: auto;">
-            {% if permissions_history and permissions_history|length > 0 %}
-                <div class="budget-history-list">
-                    {% for p in permissions_history %}
-                        <div class="budget-history-item" data-status="{{ p.status_code }}">
-                            <div class="budget-history-left">
-                                <div class="budget-history-title">
-                                    <a href="#" class="open-permission contract-title-link" data-id="{{ p.id }}"
-                                       data-url="{% url 'permissions:permit_detail' p.id %}">{{ p.start_date|date:"d \d\e F \d\e Y" }}</a>
-                                </div>
-                                <div class="budget-history-sub">
-                                    Estado:
-                                    <span class="status-badge status-badge-mini {% if p.status_code == 'APPROVED' %}active{% elif p.status_code == 'REJECTED' %}inactive{% else %}neutral{% endif %}">
-                                        {{ p.status|default:'—' }}
-                                    </span>
-                                    &nbsp; | &nbsp; Días: {{ p.days }} Horas: {{ p.hours }}
-                                </div>
-                                <div class="budget-history-cat">Tipo: {{ p.permit_type|default:'—' }}</div>
-                            </div>
-                            <div class="budget-history-right">
-                                <div class="permission-action-group">
-                                    {% if p.status_code == 'APPROVED' %}
-                                        <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
-                                           class="btn btn-sm btn-outline btn-action-print" title="Imprimir reporte">
-                                            <i class="fa-solid fa-print"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
+            <div class="form-group mb-0" style="min-width:150px;max-width:170px;">
+                <label class="form-label" style="font-size:0.72rem;">Fecha Hasta</label>
+                <input type="date" class="input-field" data-permission-date-to style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+            </div>
+            <div class="form-group mb-0" style="min-width:190px;max-width:210px;">
+                <label class="form-label" style="font-size:0.72rem;">Tipo de Permiso</label>
+                <select class="input-field" data-permission-type style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+                    <option value="">Todos los tipos</option>
+                    {% for type_id, type_name in permission_filter_types %}
+                        <option value="{{ type_id }}">{{ type_name }}</option>
                     {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center py-3 opacity-50">
-                    <i class="fa-solid fa-box-open fa-2x mb-2 text-secondary"></i>
-                    <p class="text-muted mb-0 small">No hay historial de permisos.</p>
-                </div>
+                </select>
+            </div>
+            <div class="form-group mb-0" style="min-width:90px;">
+                <label class="form-label" style="font-size:0.72rem;visibility:hidden;">Accion</label>
+                <button type="button" class="btn btn-cancel" data-permission-clear-btn
+                        style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;white-space:nowrap;">
+                    <i class="fa-solid fa-eraser"></i> Limpiar
+                </button>
+            </div>
+    </div>
+
+    <div class="mt-2 mb-3" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="text-muted small" data-permission-list-label data-default-label="Listado: {{ permissions_month_label }}">
+            <i class="fa-regular fa-calendar"></i>
+            Listado: {{ permissions_month_label }}
+        </div>
+        <div class="header-actions" style="justify-content:flex-end;align-items:center;">
+            {% if perms.permitrequest.add_permitrequest and person.employee_profile %}
+                <button type="button" class="btn btn-create js-generate-permit-self"
+                        data-employee-id="{{ person.employee_profile.id }}"
+                        data-employee-name="{{ person.full_name }}"
+                        style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;white-space:nowrap;">
+                    <i class="fa-solid fa-plus"></i> Generar Permiso
+                </button>
             {% endif %}
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table" data-permission-table>
+            <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Duración</th>
+                <th>Estado</th>
+                <th class="actions no-sort">Acciones</th>
+            </tr>
+            </thead>
+            <tbody data-permission-tbody>
+            {% for p in permissions_history %}
+                <tr data-permission-row
+                    data-start-date="{{ p.start_date|date:'Y-m-d' }}"
+                    data-permit-type="{{ p.permit_type_id|default:'' }}">
+                    <td>
+                        <a href="#" class="open-permission contract-title-link" data-id="{{ p.id }}"
+                           data-url="{% url 'permissions:permit_detail' p.id %}">
+                            {{ p.start_date|date:"d/m/Y" }}
+                        </a>
+                    </td>
+                    <td>{{ p.permit_type|default:'—' }}</td>
+                    <td>{{ p.duration_text|default:'Días: 0 | Horas: 0' }}</td>
+                    <td>
+                        <span class="status-badge {% if p.status_code == 'APPROVED' %}active{% elif p.status_code == 'REJECTED' %}inactive{% else %}neutral{% endif %}">
+                            {{ p.status|default:'—' }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <div class="actions-wrapper">
+                            {% if p.status_code == 'APPROVED' %}
+                                <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
+                                   class="btn-print-action" title="Imprimir reporte">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr data-permission-empty-row>
+                    <td colspan="5" class="text-center py-5">
+                        <i class="fas fa-inbox" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                        <p class="text-muted mt-3 mb-0">No hay permisos para los filtros seleccionados.</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-container" data-permission-pagination>
+        <div class="pagination-info" data-permission-page-info>Mostrando 0-0 de 0</div>
+        <div class="pagination-controls" data-permission-controls>
+            <button type="button" class="page-btn" title="Primera" data-permission-first>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn" title="Anterior" data-permission-prev>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" min="1" value="1" data-permission-page-input>
+                <span class="total-pages-badge" data-permission-total-pages>de 1</span>
+            </div>
+            <button type="button" class="page-btn" title="Siguiente" data-permission-next>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn" title="Última" data-permission-last>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
         </div>
     </div>
 </div>

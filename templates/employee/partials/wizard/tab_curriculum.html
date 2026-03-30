@@ -44,9 +44,11 @@
         </div>
         <div class="cv-buttons-centered">
             <!-- Usamos onclick con una función global o capturada por el listener -->
+            {% if can_view_restricted_tabs %}
             <button class="btn-cv-pill new" onclick="handleCvAction('academic', 'new')">
                 <i class="fa-solid fa-plus"></i> Nuevo
             </button>
+            {% endif %}
             <button class="btn-cv-pill list" onclick="handleCvAction('academic', 'list')">
     <i class="fa-solid fa-list"></i> Listado
 </button>
@@ -54,6 +56,7 @@
     </div>
 
     <!-- TARJETA: EXPERIENCIA LABORAL -->
+    {% if can_view_restricted_tabs %}
     <div class="info-box-styled medical-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
         <div class="cv-stat-inner-container">
@@ -69,6 +72,7 @@
             </button>
         </div>
     </div>
+    {% endif %}
 
     <!-- TARJETA: CURSOS -->
     <div class="info-box-styled location-border shadow-sm">
@@ -78,9 +82,11 @@
             <div class="cv-stat-label">Capacitaciones</div>
         </div>
         <div class="cv-buttons-centered">
+            {% if can_view_restricted_tabs %}
             <button class="btn-cv-pill new" onclick="handleCvAction('training', 'new')">
                 <i class="fa-solid fa-plus"></i> Nuevo
             </button>
+            {% endif %}
             <button class="btn-cv-pill list" onclick="handleCvAction('training', 'list')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>

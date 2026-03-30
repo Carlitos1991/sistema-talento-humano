@@ -80,6 +80,7 @@
         </div>
     </div>
     <!-- Medico -->
+    {% if can_view_restricted_tabs %}
     <div class="info-box-styled medical-border">
         <h6 class="section-title"><i class="fa-solid fa-heart-pulse"></i> Información Médica</h6>
         <div class="info-data-row">
@@ -103,6 +104,7 @@
             </span>
         </div>
     </div>
+    {% endif %}
     <!-- Contacto de emergencia -->
     <div class="info-box-styled emergency-border">
         <h6 class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Contacto de Emergencia</h6>

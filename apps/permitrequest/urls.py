@@ -29,6 +29,7 @@ urlpatterns = [
     # --- Administración de Permisos ---
     path('admin/', views.PermitAdminListView.as_view(), name='permit_admin'),
     path('admin/<int:pk>/detail/', views.PermitDetailView.as_view(), name='permit_detail'),
+    path('validate/<str:token>/', views.PublicPermitValidationView.as_view(), name='permit_public_validate'),
     path('admin/<int:pk>/report/', views.PermitReportView.as_view(), name='permit_report'),
     path('admin/<int:pk>/<str:action>/', views.PermitResponseView.as_view(), name='permit_response'),
     

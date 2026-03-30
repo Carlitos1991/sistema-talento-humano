@@ -29,11 +29,13 @@
             </div>
 
             <!-- Footer con botón centrado -->
+            {% if can_view_restricted_tabs %}
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
                 </button>
             </div>
+            {% endif %}
         {% else %}
             <div class="text-center py-4">
                 <div class="mb-3 text-secondary opacity-50">
@@ -82,11 +84,13 @@
             </div>
 
             <!-- Footer con botón centrado -->
+            {% if can_view_restricted_tabs %}
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
                 </button>
             </div>
+            {% endif %}
         {% else %}
             <div class="text-center py-4">
                 <div class="mb-3 text-secondary opacity-50">

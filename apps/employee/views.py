@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
+from django.utils import timezone
 
 from core.models import CatalogItem, Location
 from person.models import Person
@@ -19,12 +20,13 @@ from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Trainin
 from budget.models import BudgetLine
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
-from permitrequest.models import PermitRequest
+from permitrequest.models import PermitRequest, PermitType
 from personnel_actions.models import PersonnelAction
 from payroll.models import Payslip
 from sanctions.models import Sanction
 from vacation.models import EmployeeVacationBalance
 from decimal import Decimal
+from datetime import datetime, time
 from django.urls import reverse
 
 
@@ -94,6 +96,9 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Por defecto, el wizard completo mantiene todas las secciones visibles.
+        context['can_view_restricted_tabs'] = True
+        context['restricted_tab_ids'] = ''
         # Catálogos para los modales del Wizard
         context['education_levels'] = CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS', is_active=True)
         context['banks_list'] = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True)
@@ -202,6 +207,14 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             context['contract_history'] = []
 
         # Permiso actual y historial de permisos (vacaciones/horas/otros)
+        # Compatible con configuraciones con/sin TZ activa.
+        now = timezone.now().date()
+        month_names = {
+            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+        }
+        default_permissions_month_label = f"{month_names.get(now.month, '')} de {now.year}"
         try:
             if employee:
                 latest_perm = PermitRequest.objects.filter(employee=employee).order_by('-start_date', '-created_at').first()
@@ -220,27 +233,70 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 else:
                     context['current_permission'] = None
 
-                perms = PermitRequest.objects.filter(employee=employee).order_by('-start_date')[:50]
+                perms = PermitRequest.objects.filter(
+                    employee=employee,
+                ).select_related('permit_type').order_by('-start_date', '-created_at')
+
+                type_ids = list(
+                    perms.values_list('permit_type_id', flat=True).distinct()
+                )
+                context['permission_filter_types'] = list(
+                    PermitType.objects.filter(id__in=type_ids).order_by('name').values_list('id', 'name')
+                )
+                context['permissions_month_label'] = default_permissions_month_label
+
                 ph = []
                 for p in perms:
+                    duration_days = int(p.days or 0)
+                    duration_hours = int(p.hours or 0)
+                    duration_minutes = int(getattr(p, 'minutes', 0) or 0)
+
+                    # Si no hay duración persistida, calcularla desde fechas/horas.
+                    if duration_days == 0 and duration_hours == 0 and duration_minutes == 0 and p.start_date and p.end_date:
+                        start_dt = datetime.combine(p.start_date, p.start_time or time.min)
+                        end_dt = datetime.combine(p.end_date, p.end_time or time.min)
+                        if end_dt < start_dt:
+                            end_dt = start_dt
+
+                        total_minutes = int((end_dt - start_dt).total_seconds() // 60)
+                        if total_minutes == 0 and p.end_date > p.start_date:
+                            total_minutes = (p.end_date - p.start_date).days * 24 * 60
+
+                        # Convención laboral: 1 día = 8 horas.
+                        duration_days = total_minutes // (8 * 60)
+                        remainder = total_minutes % (8 * 60)
+                        duration_hours = remainder // 60
+                        duration_minutes = remainder % 60
+
+                    duration_parts = [f"Días: {duration_days}", f"Horas: {duration_hours}"]
+                    if duration_minutes > 0:
+                        duration_parts.append(f"Min: {duration_minutes}")
+
                     ph.append({
                         'id': p.id,
+                        'permit_type_id': p.permit_type_id,
                         'permit_type': p.permit_type.name if p.permit_type else '',
                         'start_date': p.start_date if p.start_date else None,
                         'end_date': p.end_date if p.end_date else None,
                         'status': dict(PermitRequest.STATUS_CHOICES).get(p.status, p.status),
                         'status_code': p.status,
-                        'days': p.days,
-                        'hours': p.hours,
+                        'days': duration_days,
+                        'hours': duration_hours,
+                        'minutes': duration_minutes,
+                        'duration_text': ' | '.join(duration_parts),
                         'justification_file_url': p.justification_file.url if getattr(p, 'justification_file', None) else None
                     })
                 context['permissions_history'] = ph
             else:
                 context['current_permission'] = None
                 context['permissions_history'] = []
+                context['permission_filter_types'] = []
+                context['permissions_month_label'] = default_permissions_month_label
         except Exception:
             context['current_permission'] = None
             context['permissions_history'] = []
+            context['permission_filter_types'] = []
+            context['permissions_month_label'] = default_permissions_month_label
 
         # Acciones de personal (historial)
         try:

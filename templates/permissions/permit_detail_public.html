@@ -5,185 +5,395 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalle del Permiso - {{ permit.employee.person.full_name }}</title>
-    <link rel="stylesheet" href="{% static 'css/permission_detail.css' %}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body style="background: #f3f4f6; padding: 20px 10px;">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<div class="permit-detail-view">
-    <!-- Header -->
-    <div class="permit-detail-header">
-        <h1><i class="fas fa-file-alt"></i> DETALLE DEL PERMISO</h1>
-        <p>Sistema de Gestión de Talento Humano - SIGETH</p>
+        :root {
+            --ink: #0f172a;
+            --muted: #475569;
+            --line: #dbe2ea;
+            --paper: #ffffff;
+            --soft: #f8fafc;
+            --soft-2: #f1f7ff;
+            --brand: #0b5cab;
+            --ok-bg: #dcfce7;
+            --ok-text: #166534;
+            --warn-bg: #fef3c7;
+            --warn-text: #92400e;
+            --bad-bg: #fee2e2;
+            --bad-text: #991b1b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(17, 129, 204, 0.12) 0, transparent 38%),
+                linear-gradient(180deg, #eef4fb 0%, #e8eff7 100%);
+            color: var(--ink);
+            padding: 12px;
+        }
+
+        .sheet {
+            width: min(940px, 100%);
+            margin: 0 auto;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+        }
+
+        .header {
+            padding: 14px 18px;
+            background: linear-gradient(125deg, #0b355f 0%, #0b5cab 55%, #1181cc 100%);
+            color: #fff;
+            border-bottom: 3px solid #0a4f8a;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .header-ident {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-ident img {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.18);
+            padding: 4px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            letter-spacing: 0.04em;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .header p {
+            font-size: 11px;
+            opacity: 0.95;
+        }
+
+        .doc-meta {
+            text-align: right;
+            font-size: 10px;
+            line-height: 1.4;
+            opacity: 0.95;
+            min-width: 180px;
+        }
+
+        .body {
+            padding: 12px 14px 14px;
+        }
+
+        .status-row {
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+        }
+
+        .status-approved {
+            background: var(--ok-bg);
+            color: var(--ok-text);
+            border-color: #86efac;
+        }
+
+        .status-requested {
+            background: var(--warn-bg);
+            color: var(--warn-text);
+            border-color: #fde68a;
+        }
+
+        .status-rejected,
+        .status-canceled {
+            background: var(--bad-bg);
+            color: var(--bad-text);
+            border-color: #fecaca;
+        }
+
+        .section {
+            margin-bottom: 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        }
+
+        .section-title {
+            padding: 8px 11px;
+            background: linear-gradient(90deg, #edf5ff 0%, #f8fbff 100%);
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e293b;
+            border-bottom: 1px solid var(--line);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            position: relative;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 100%;
+            background: #0b5cab;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cell {
+            background: linear-gradient(180deg, var(--soft) 0%, var(--soft-2) 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 9px;
+            min-height: 52px;
+        }
+
+        .cell.wide {
+            grid-column: span 2;
+        }
+
+        .cell.full {
+            grid-column: 1 / -1;
+        }
+
+        .label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .value {
+            font-size: 12px;
+            color: #0f172a;
+            font-weight: 600;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .footer {
+            border-top: 1px solid var(--line);
+            margin-top: 0;
+            padding: 8px 10px 6px;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.35;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding: 8px;
+            }
+
+            .header,
+            .body {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .doc-meta {
+                text-align: left;
+                min-width: 0;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .grid.two {
+                grid-template-columns: 1fr;
+            }
+
+            .cell.wide,
+            .cell.full {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sheet">
+    <div class="header">
+        <div class="header-top">
+            <div class="header-ident">
+                <img src="{% static 'img/logo.png' %}" alt="SIGETH">
+                <div>
+                    <h1>MUNICIPIO DE LOJA</h1>
+                    <p>Validación pública de permiso - SIGETH</p>
+                </div>
+            </div>
+            <div class="doc-meta">
+                <div><strong>No. Permiso:</strong> {{ permit.id }}</div>
+                <div><strong>Consultado:</strong> {% now "d/m/Y H:i" %}</div>
+                <div><strong>Empleado:</strong> {{ permit.employee.person.document_number|default:'N/A' }}</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Información del Empleado -->
-    <div class="permit-section">
-        <div class="permit-section-title">
-            <i class="fas fa-user"></i>
-            <span>EMPLEADO</span>
-        </div>
-        <div class="permit-employee-card">
-            {% if permit.employee.person.photo %}
-                <img src="{{ permit.employee.person.photo.url }}" 
-                     alt="{{ permit.employee.person.full_name }}"
-                     class="permit-employee-photo">
-            {% else %}
-                <div class="permit-employee-placeholder">
-                    <i class="fas fa-user"></i>
-                </div>
+    <div class="body">
+        <div class="status-row">
+            {% if permit.status == 'APPROVED' %}
+                <span class="status-badge status-approved">Permiso aprobado</span>
+            {% elif permit.status == 'REQUESTED' %}
+                <span class="status-badge status-requested">Permiso pendiente</span>
+            {% elif permit.status == 'REJECTED' %}
+                <span class="status-badge status-rejected">Permiso rechazado</span>
+            {% elif permit.status == 'CANCELED' %}
+                <span class="status-badge status-canceled">Permiso anulado</span>
             {% endif %}
-            <div class="permit-employee-info">
-                <h3>{{ permit.employee.person.full_name }}</h3>
-                <p><strong>CI:</strong> {{ permit.employee.person.document_number }}</p>
-                {% if permit.employee.budgetline_set.first %}
-                    <p><strong>Cargo:</strong> {{ permit.employee.budgetline_set.first.position.name }}</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Datos Del Empleado</div>
+            <div class="grid two">
+                <div class="cell">
+                    <div class="label">Cédula</div>
+                    <div class="value">{{ permit.employee.person.document_number|default:'N/A' }}</div>
+                </div>
+                <div class="cell">
+                    <div class="label">Servidor Público</div>
+                    <div class="value">{{ permit.employee.person.full_name }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Detalle Del Permiso</div>
+            <div class="grid two">
+                <div class="cell">
+                    <div class="label">Tipo de Permiso</div>
+                    <div class="value">{{ permit.permit_type.name|default:'N/A' }}</div>
+                </div>
+                <div class="cell">
+                    <div class="label">Afecta Vacaciones</div>
+                    <div class="value">{% if permit.permit_type.affects_vacation %}Sí{% else %}No{% endif %}</div>
+                </div>
+                <div class="cell">
+                    <div class="label">Fecha/Hora Inicio</div>
+                    <div class="value">
+                        {{ permit.start_date|date:"d/m/Y" }}
+                        {% if permit.start_time %}- {{ permit.start_time|time:"H:i" }}{% endif %}
+                    </div>
+                </div>
+                <div class="cell">
+                    <div class="label">Fecha/Hora Fin</div>
+                    <div class="value">
+                        {% if permit.end_date %}
+                            {{ permit.end_date|date:"d/m/Y" }}
+                            {% if permit.end_time %}- {{ permit.end_time|time:"H:i" }}{% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="cell">
+                    <div class="label">Duración</div>
+                    <div class="value">
+                        {% if permit.days > 0 %}{{ permit.days }} día(s){% endif %}
+                        {% if permit.hours > 0 %} {{ permit.hours }} hora(s){% endif %}
+                        {% if permit.minutes > 0 %} {{ permit.minutes }} minuto(s){% endif %}
+                        {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}N/A{% endif %}
+                    </div>
+                </div>
+                {% if permit.justification_file %}
+                    <div class="cell full">
+                        <div class="label">Justificativo</div>
+                        <div class="value">Documento PDF adjunto en expediente digital.</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
-    </div>
 
-    <!-- Datos del Permiso -->
-    <div class="permit-section">
-        <div class="permit-section-title">
-            <i class="fas fa-clipboard-list"></i>
-            <span>DATOS DEL PERMISO</span>
-        </div>
-        <div class="permit-info-grid">
-            <div class="permit-info-item">
-                <div class="permit-info-label">Tipo de Permiso</div>
-                <div class="permit-info-value">{{ permit.permit_type.name }}</div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Estado</div>
-                <div class="permit-info-value">
-                    {% if permit.status == 'REQUESTED' %}
-                        <span class="permit-status-badge permit-status-pending">
-                            <i class="fas fa-clock"></i> PENDIENTE
-                        </span>
-                    {% elif permit.status == 'APPROVED' %}
-                        <span class="permit-status-badge permit-status-approved">
-                            <i class="fas fa-check-circle"></i> APROBADO
-                        </span>
-                    {% elif permit.status == 'REJECTED' %}
-                        <span class="permit-status-badge permit-status-rejected">
-                            <i class="fas fa-times-circle"></i> RECHAZADO
-                        </span>
+        {% if permit.status != 'REQUESTED' and permit.response_by %}
+            <div class="section">
+                <div class="section-title">Validación Y Respuesta</div>
+                <div class="grid two">
+                    <div class="cell">
+                        <div class="label">Procesado Por</div>
+                        <div class="value">{{ permit.response_by.get_full_name|default:permit.response_by.username }}</div>
+                    </div>
+                    <div class="cell">
+                        <div class="label">Fecha de Respuesta</div>
+                        <div class="value">{{ permit.response_date|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% if permit.response_note %}
+                        <div class="cell full">
+                            <div class="label">Observación</div>
+                            <div class="value">{{ permit.response_note }}</div>
+                        </div>
                     {% endif %}
                 </div>
             </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Fecha de Inicio</div>
-                <div class="permit-info-value">
-                    {{ permit.start_date|date:"d/m/Y" }}
-                    {% if permit.start_time %}{{ permit.start_time|time:"H:i" }}{% endif %}
-                </div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Fecha de Fin</div>
-                <div class="permit-info-value">
-                    {% if permit.end_date %}
-                        {{ permit.end_date|date:"d/m/Y" }}
-                        {% if permit.end_time %}{{ permit.end_time|time:"H:i" }}{% endif %}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Duración</div>
-                <div class="permit-info-value">
-                    {% if permit.days > 0 %}{{ permit.days }} día(s) {% endif %}
-                    {% if permit.hours > 0 %}{{ permit.hours }} hora(s) {% endif %}
-                    {% if permit.minutes > 0 %}{{ permit.minutes }} min{% endif %}
-                    {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}N/A{% endif %}
-                </div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Afecta Vacaciones</div>
-                <div class="permit-info-value">
-                    {% if permit.permit_type.affects_vacation %}
-                        <i class="fas fa-check-circle" style="color: #10b981;"></i> Sí
-                    {% else %}
-                        <i class="fas fa-times-circle" style="color: #ef4444;"></i> No
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        {% if permit.justification_file %}
-        <div class="permit-info-grid" style="margin-top: 15px;">
-            <div class="permit-info-item" style="grid-column: span 2;">
-                <div class="permit-info-label">Archivo Adjunto</div>
-                <div class="permit-info-value">
-                    <i class="fas fa-file-pdf" style="color: #ef4444;"></i> Justificativo adjunto
-                </div>
-            </div>
-        </div>
         {% endif %}
-    </div>
 
-    <!-- Respuesta (solo si está aprobado o rechazado) -->
-    {% if permit.status != 'REQUESTED' and permit.response_by %}
-    <div class="permit-section">
-        <div class="permit-section-title">
-            <i class="fas fa-check-double"></i>
-            <span>RESPUESTA</span>
-        </div>
-        <div class="permit-info-grid">
-            <div class="permit-info-item">
-                <div class="permit-info-label">
-                    {% if permit.status == 'APPROVED' %}Aprobado{% else %}Rechazado{% endif %} Por
+        <div class="section">
+            <div class="section-title">Auditoría</div>
+            <div class="grid two">
+                <div class="cell">
+                    <div class="label">Registrado Por</div>
+                    <div class="value">
+                        {{ permit.created_by.get_full_name|default:permit.created_by.username|default:"Sistema" }}
+                    </div>
                 </div>
-                <div class="permit-info-value">
-                    {{ permit.response_by.get_full_name|default:permit.response_by.username }}
-                </div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Fecha de Respuesta</div>
-                <div class="permit-info-value">
-                    {{ permit.response_date|date:"d/m/Y H:i" }}
+                <div class="cell">
+                    <div class="label">Fecha de Registro</div>
+                    <div class="value">{{ permit.created_at|date:"d/m/Y H:i" }}</div>
                 </div>
             </div>
         </div>
-        
-        {% if permit.response_note %}
-        <div class="permit-info-grid" style="margin-top: 10px;">
-            <div class="permit-info-item" style="grid-column: span 2;">
-                <div class="permit-info-label">Observaciones</div>
-                <div class="permit-info-value">{{ permit.response_note }}</div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
 
-    <!-- Auditoría -->
-    <div class="permit-section">
-        <div class="permit-section-title">
-            <i class="fas fa-history"></i>
-            <span>AUDITORÍA</span>
-        </div>
-        <div class="permit-info-grid">
-            <div class="permit-info-item">
-                <div class="permit-info-label">Registrado Por</div>
-                <div class="permit-info-value">
-                    {{ permit.created_by.get_full_name|default:permit.created_by.username|default:"Sistema" }}
-                </div>
-            </div>
-            <div class="permit-info-item">
-                <div class="permit-info-label">Fecha de Registro</div>
-                <div class="permit-info-value">{{ permit.created_at|date:"d/m/Y H:i" }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="permit-footer">
+        <div class="footer">
         <p>
-            <strong>Documento consultado electrónicamente</strong><br>
-            Fecha de consulta: {% now "d/m/Y H:i" %} | SIGETH v1.0
+                Documento consultado electrónicamente por código QR.<br>
+                Fecha de consulta: {% now "d/m/Y H:i" %}
         </p>
+        </div>
     </div>
 </div>
 

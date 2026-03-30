@@ -51,10 +51,12 @@
                 </div>
             </div>
             <div class="header-actions-wrapper">
+                {% if can_view_restricted_tabs %}
                 <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
                         style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
                     <i class="fa-solid fa-user-pen"></i> Editar Perfil
                 </button>
+                {% endif %}
             </div>
         </div>
 

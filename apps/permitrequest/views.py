@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
+from django.core import signing
+from django.http import Http404
 from io import BytesIO
 import base64
 
@@ -13,6 +15,23 @@ from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
 from employee.models import Employee
 from budget.models import BudgetLine
+
+
+PERMIT_PUBLIC_TOKEN_SALT = 'permitrequest.public.validation'
+
+
+def build_public_permit_token(permit_id):
+    """Genera un token firmado para validación pública de permisos."""
+    return signing.dumps({'permit_id': permit_id}, salt=PERMIT_PUBLIC_TOKEN_SALT)
+
+
+def parse_public_permit_token(token):
+    """Obtiene el ID del permiso desde un token firmado."""
+    payload = signing.loads(token, salt=PERMIT_PUBLIC_TOKEN_SALT)
+    permit_id = payload.get('permit_id')
+    if not permit_id:
+        raise signing.BadSignature('Token sin permit_id')
+    return int(permit_id)
 
 
 # --- MIXIN PARA BÚSQUEDA AJAX (Híbrido) ---
@@ -587,6 +606,29 @@ class PermitDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return HttpResponse(html)
 
 
+class PublicPermitValidationView(View):
+    """Vista pública para validar un permiso aprobado mediante token QR."""
+
+    def get(self, request, token):
+        try:
+            permit_id = parse_public_permit_token(token)
+        except (signing.BadSignature, ValueError, TypeError):
+            raise Http404('Código de validación inválido')
+
+        permit = get_object_or_404(
+            PermitRequest.objects.select_related('employee__person', 'permit_type', 'created_by', 'response_by'),
+            pk=permit_id,
+            status='APPROVED'
+        )
+
+        html = render_to_string(
+            'permissions/permit_detail_public.html',
+            {'permit': permit},
+            request=request
+        )
+        return HttpResponse(html)
+
+
 class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Vista para aprobar o rechazar un permiso"""
     permission_required = 'permitrequest.change_permitrequest'
@@ -674,9 +716,10 @@ class PermitReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 '<html><body><script>alert("Solo se pueden imprimir permisos aprobados"); window.close();</script></body></html>'
             )
         
-        # Generar código QR
+        # Generar URL pública firmada para validación mediante QR
+        validation_token = build_public_permit_token(permit.id)
         detail_url = request.build_absolute_uri(
-            reverse_lazy('permissions:permit_detail', kwargs={'pk': permit.id})
+            reverse_lazy('permissions:permit_public_validate', kwargs={'token': validation_token})
         )
         
         # Importar qrcode dentro del método para evitar conflictos
@@ -703,7 +746,8 @@ class PermitReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
             {
                 'permit': permit,
                 'qr_code': img_str,
-                'detail_url': detail_url
+                'detail_url': detail_url,
+                'validation_code': f"{validation_token[:10]}...{validation_token[-8:]}"
             },
             request=request
         )
