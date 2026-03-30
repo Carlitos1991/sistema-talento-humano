@@ -4492,9 +4492,29 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 /* Grid info personal */
 .grid-info-personal {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 1fr;
     gap: 20px;
     margin-top: 30px;
+}
+
+body.employee-dashboard-page .grid-info-personal {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+@media (min-width: 768px) {
+    body:not(.employee-dashboard-page) .grid-info-personal {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    body:not(.employee-dashboard-page) .grid-info-personal {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 .grid-info-secondary {
@@ -5498,6 +5518,12 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     }
 }
 
+@media (min-width: 768px) {
+    body.employee-dashboard-page .grid-info-personal {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 640px) {
     .permissions-toggle-grid {
         grid-template-columns: 1fr;
@@ -5505,10 +5531,6 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 
     .quick-view-info-grid {
         grid-template-columns: 1fr;
-    }
-
-    body.employee-dashboard-page .grid-info-personal {
-        grid-template-columns: repeat(2, 1fr);
     }
 }
 

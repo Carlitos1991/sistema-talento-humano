@@ -1,71 +1,32 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Mi Dashboard | SIGETH</title>
 
-    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% block title %}Mi Dashboard | SIGETH{% endblock %}
 
-    <link rel="stylesheet" href="{% static 'css/swal2-toast-font-sm.css' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
-    <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
-    <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
-    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
-    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
-    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
-    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+<link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+<link rel="stylesheet" href="{% static 'css/permission.css' %}">
+<link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+<style>
+    .employee-standalone-wrapper {
+        padding: 24px;
+    }
 
-    <style>
-        [v-cloak] {
-            display: none !important;
+    @media (max-width: 768px) {
+        .employee-standalone-wrapper {
+            padding: 12px;
         }
+    }
+</style>
+{% endblock %}
 
-        body.employee-dashboard-page {
-            background: #f3f4f6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+{% block content %}
+<script>
+    document.body.classList.add('employee-dashboard-page');
+</script>
 
-        body.employee-dashboard-page .employee-standalone-wrapper {
-            padding: 24px;
-            flex: 1 1 auto;
-        }
-
-        body.employee-dashboard-page #app-content {
-            width: 100%;
-            max-width: 100% !important;
-            margin: 0 !important;
-            overflow: visible;
-            padding: 24px;
-            padding-bottom: 72px;
-        }
-
-        body.employee-dashboard-page .navbar .sidebar-toggle {
-            display: none !important;
-        }
-
-        body.employee-dashboard-page .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            margin-top: 0;
-            z-index: 40;
-        }
-    </style>
-</head>
-<body class="employee-dashboard-page">
-{% include 'navbar.html' %}
-
-<main id="app-content" class="employee-standalone-wrapper">
+<div class="employee-standalone-wrapper">
     <div id="employeeWizardApp"
          v-cloak
          data-person-id="{{ person.id }}"
@@ -152,11 +113,11 @@
         {% include 'employee/modals/modal_cv_generic_list.html' %}
     </div>
 
-            <div id="period-app-employee">
-                {% include 'contract/modals/modal_management_period_detail.html' %}
-            </div>
-            <div id="permission-modal-employee"></div>
-            <div id="action-modal-employee"></div>
+    <div id="period-app-employee">
+        {% include 'contract/modals/modal_management_period_detail.html' %}
+    </div>
+    <div id="permission-modal-employee"></div>
+    <div id="action-modal-employee"></div>
 
     <div id="modalNewVacation" class="modal-overlay hidden"></div>
     <div id="modalHourPermit" class="modal-overlay hidden"></div>
@@ -166,19 +127,10 @@
     <div id="vacationHistoryModalContainer"></div>
     <div id="permitHistoryModalContainer"></div>
     <div id="permitReportModalContainer"></div>
-</main>
+</div>
+{% endblock %}
 
-{% include 'footer.html' %}
-
-{% include 'modals/modal_change_password.html' %}
-
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="{% static 'js/core/modal-change-password.js' %}"></script>
-<script src="{% static 'js/table-manager.js' %}"></script>
-<script src="{% static 'js/table-sort.js' %}"></script>
-<script src="{% static 'js/table-export.js' %}"></script>
+{% block extra_js %}
 <script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
 <script src="{% static 'js/employee_wizard.js' %}"></script>
 <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
@@ -186,12 +138,4 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
 <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
-<script src="{% static 'js/dashboard.js' %}"></script>
-
-<script>
-    $(document).ready(function () {
-        $('.select2').select2();
-    });
-</script>
-</body>
-</html>
+{% endblock %}
