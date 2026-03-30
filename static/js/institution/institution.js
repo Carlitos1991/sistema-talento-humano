@@ -455,6 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modalContainer) {
             modalContainer = document.createElement('div');
             modalContainer.id = 'dynamic-modal-container';
+            // Add the overlay class for proper styling
+            modalContainer.classList.add('custom-modal-overlay');
             document.body.appendChild(modalContainer);
         }
 
@@ -467,6 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Inject the HTML and show the modal
             modalContainer.innerHTML = html;
+            modalContainer.style.display = 'flex'; // Explicitly show the overlay
+            
             const modalElement = modalContainer.querySelector('.custom-modal-main'); // Use the project's specific modal class
             if (modalElement) {
                 modalElement.classList.add('active'); // Use 'active' class to show
@@ -495,13 +499,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalContainer = document.getElementById('dynamic-modal-container');
         if (modalContainer) {
             modalContainer.innerHTML = ''; // Just clear the content
+            modalContainer.style.display = 'none'; // Re-hide the overlay
         }
     };
 
     window.submitAssignBoss = async function () {
         const form = document.getElementById('assignBossForm');
+        if (!form) {
+            console.error('Assign boss form not found');
+            return;
+        }
         const unitId = form.dataset.unitId;
+        const btn = form.querySelector('button[type="submit"]');
+
         try {
+            if(btn) btn.disabled = true;
             const formData = new FormData(form);
             const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
                 method: 'POST',
@@ -509,19 +521,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             const data = await res.json();
+
             if (data.success) {
                 closeDynamicModal();
-                Swal.fire('Éxito', data.message, 'success').then(() => {
-                    location.reload(); // Reload to see the change
-                });
-            } else {
-                // Handle errors if needed
-                console.error('Error assigning boss:', data.errors);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    };
+                await Swal.fire('Éxito', data.message, 'success');
+
+                // Si estamos en la página de detalle, actualizamos el header.
+                // Si no, refrescamos la tabla.
                 if (document.getElementById('deliverables-app')) {
                     try {
                         const detailRes = await fetch(`/institution/units/detail/${unitId}/json/`);
@@ -535,9 +541,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const profileBtn = d.boss_data.person_id ? `<a href="/employee/detail/${d.boss_data.person_id}/" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" title="Ver Detalle Completo"><i class="fa-solid fa-user"></i> Ver perfil</a>` : '';
                                     const changeBtn = `<button type="button" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato"><i class="fa-solid fa-retweet"></i> Cambiar</button>`;
                                     const positionLabel = d.boss_data.position ? d.boss_data.position : 'JEFE INMEDIATO';
-                                    hdr.innerHTML = `\n                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">\n                                            ${photo}\n                                            <div class="boss-info">\n                                                <span class="boss-name">${d.boss_data.text}</span>\n                                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i> ${positionLabel}</span>\n                                                <div class="nomina-actions">${profileBtn}${changeBtn}</div>\n                                            </div>\n                                        </div>`;
+                                    hdr.innerHTML = `
+                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                                            ${photo}
+                                            <div class="boss-info">
+                                                <span class="boss-name">${d.boss_data.text}</span>
+                                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i> ${positionLabel}</span>
+                                                <div class="nomina-actions">${profileBtn}${changeBtn}</div>
+                                            </div>
+                                        </div>`;
                                 } else {
-                                    hdr.innerHTML = `\n                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">\n                                            <h2 class="boss-name" style="font-size: 14px"><i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>\n                                            <button type="button" class="btn-icon btn-list-action" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato">\n                                                <i class="fas fa-user-tie"></i>\n                                            </button>\n                                        </div>`;
+                                    hdr.innerHTML = `
+                                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                                            <h2 class="boss-name" style="font-size: 14px"><i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
+                                            <button type="button" class="btn-icon btn-list-action" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato">
+                                                <i class="fas fa-user-tie"></i>
+                                            </button>
+                                        </div>`;
                                 }
                             }
                         }
@@ -547,13 +567,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(function() { window.location.reload(); }, 600);
                     }
                 } else {
+                    // Si no es la vista de detalle, refrescar la tabla parcial
                     await refreshTablePartial();
                 }
             } else {
-                Swal.fire('Error', 'Revise los datos', 'error');
+                Swal.fire('Error', data.message || 'Revise los datos', 'error');
             }
         } catch (e) {
             console.error(e);
+            Swal.fire('Error', 'Error de conexión', 'error');
+        } finally {
+            if(btn) btn.disabled = false;
         }
     };
 });
