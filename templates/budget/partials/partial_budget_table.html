@@ -36,6 +36,7 @@
                 <span class="sort-arrow">⇅</span>
             </th>
             <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+            <th class="text-center"><i class="fa-solid fa-timeline"></i> Historial</th>
         </tr>
         </thead>
         <tbody id="table-body">
@@ -119,19 +120,19 @@
                         {% endif %}
                         {% if line.current_employee %}
                             <!-- Botón Liberar (Rojo) -->
-                            <button class="btn-icon btn-delete-action" onclick="openReleaseModal({{ line.id }})"
+                            <button class="btn-views-action btn-delete-action" onclick="openReleaseModal({{ line.id }})"
                                     title="Liberar Partida">
                                 <i class="fa-solid fa-user-minus"></i>
                             </button>
                         {% else %}
                             <!-- Botón Asignar (Azul) -->
-                            <button class="btn-icon" style="background: #2563eb; color:white;"
+                            <button class="btn-views-action" style="background: #2563eb; color:white;"
                                     onclick="openAssignEmployeeModal({{ line.id }})" title="Asignar Persona">
                                 <i class="fa-solid fa-user-plus"></i>
                             </button>
                         {% endif %}
                         {% if not line.current_employee %}
-                            <button class="btn-icon"
+                            <button class="btn-views-action"
                                     onclick="openChangeStatusModal({{ line.id }})"
                                     title="Pasar a Concurso/Litigio/Inactiva"
                                     style="background: linear-gradient(to right, #6366f1, #818cf8); color: white;">
@@ -139,12 +140,21 @@
                             </button>
                         {% endif %}
                         <a href="{% url 'budget:budget_detail' line.id %}"
-                           class="btn-icon"
-                           style="background: linear-gradient(to right, #475569, #64748b); color: white;"
+                           class="btn-list-action"
                            title="Ver Detalle Completo">
-                            <i class="fa-solid fa-eye"></i>
+                            <i class="fa-solid fa-folder-closed"></i>
                         </a>
                     </div>
+                </td>
+                <td>
+                    <button onclick="window.openChangesHistory({{ line.pk }})" class="btn-views-action"
+                            style="background: linear-gradient(to right, #0515c1, #1a37ca);">
+                        <i class="fas fa-timeline"></i>
+                    </button>
+                    <button onclick="window.openOccupantsHistory({{ line.pk }})" class="btn-views-action"
+                            style="background: linear-gradient(to right, #61bd93, #118f5f)">
+                        <i class="fa-solid fa-people-arrows"></i>
+                    </button>
                 </td>
             </tr>
         {% endfor %}
