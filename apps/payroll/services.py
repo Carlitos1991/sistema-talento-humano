@@ -112,9 +112,20 @@ class PayrollCalculatorService:
             assignment_map = {}
             for a in assignments_qs: assignment_map.setdefault(a.employee_id, []).append(a)
 
-            mp_map = {mp.employee_id: mp for mp in
-                      ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
-                          'contract_type__labor_regime').order_by('employee_id', 'start_date')}
+            mp_map = {}
+            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related('contract_type__labor_regime', 'status').order_by('employee_id', 'start_date'):
+                curr = mp_map.get(mp.employee_id)
+                if not curr:
+                    mp_map[mp.employee_id] = mp
+                else:
+                    if mp.start_date > curr.start_date:
+                        mp_map[mp.employee_id] = mp
+                    elif mp.start_date == curr.start_date:
+                        code_curr = str(curr.status.code if curr.status else '').upper()
+                        if 'FINA' in code_curr:
+                            mp_map[mp.employee_id] = mp
+                        elif curr.end_date is not None and mp.end_date is None:
+                            mp_map[mp.employee_id] = mp
 
             novelties_map = {}
             for nov in PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(
@@ -401,9 +412,20 @@ class PayrollCalculatorService:
             assignment_map = {}
             for a in assignments_qs: assignment_map.setdefault(a.employee_id, []).append(a)
 
-            mp_map = {mp.employee_id: mp for mp in
-                      ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
-                          'contract_type__labor_regime').order_by('employee_id', 'start_date')}
+            mp_map = {}
+            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related('contract_type__labor_regime', 'status').order_by('employee_id', 'start_date'):
+                curr = mp_map.get(mp.employee_id)
+                if not curr:
+                    mp_map[mp.employee_id] = mp
+                else:
+                    if mp.start_date > curr.start_date:
+                        mp_map[mp.employee_id] = mp
+                    elif mp.start_date == curr.start_date:
+                        code_curr = str(curr.status.code if curr.status else '').upper()
+                        if 'FINA' in code_curr:
+                            mp_map[mp.employee_id] = mp
+                        elif curr.end_date is not None and mp.end_date is None:
+                            mp_map[mp.employee_id] = mp
 
             novelties_map = {}
             for nov in PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(
