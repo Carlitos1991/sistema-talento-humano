@@ -337,7 +337,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                         'total_income': float(payslip.total_income or 0),
                         'total_deduction': float(payslip.total_deduction or 0),
                         'net_pay': float(payslip.net_pay or 0),
-                        'print_url': reverse('payroll:payslip_detail', args=[payslip.pk])
+                        'print_url': reverse('payroll:payslip_print', args=[payslip.pk])
                     })
                 context['payment_roles_history'] = roles_history
             else:

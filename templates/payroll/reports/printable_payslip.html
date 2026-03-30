@@ -156,6 +156,41 @@
             margin-top: 40px;
         }
 
+        .loja-qr-footer {
+            margin-top: 24px;
+            border-top: 1px solid #d1d5db;
+            padding-top: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .loja-qr-footer .qr-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 6px;
+            background: #fff;
+            line-height: 0;
+        }
+
+        .loja-qr-footer .qr-box img {
+            width: 72px;
+            height: 72px;
+            display: block;
+        }
+
+        .loja-qr-meta {
+            font-size: 0.75rem;
+            color: #334155;
+            line-height: 1.35;
+            text-align: left;
+        }
+
+        .loja-qr-meta .code {
+            font-weight: 700;
+        }
+
         /* 🟢 REGLAS ESPECÍFICAS PARA CUANDO SALE POR LA IMPRESORA */
         @media print {
             body {
@@ -321,17 +356,29 @@
         <p><b>LÍQUIDO A RECIBIR:</b> {{ net_pay_words|default:"(Error al cargar letras)" }}</p>
     </div>
 
-    <div class="loja-legal-footer">
-        ESTE DOCUMENTO TIENE VALIDEZ LEGAL AL ESTAR SELLADO Y FIRMADO POR LA DIRECCIÓN DE TALENTO HUMANO
+    <div class="loja-qr-footer">
+        <div class="qr-box">
+            {% if qr_code %}
+                <img src="data:image/png;base64,{{ qr_code }}" alt="Codigo QR de validacion">
+            {% endif %}
+        </div>
+        <div class="loja-qr-meta">
+            <div><strong>Validacion publica del rol</strong></div>
+            <div>Escanee el codigo QR para verificar este documento.</div>
+            {% if validation_code %}
+                <div class="code">Codigo: {{ validation_code }}</div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <script>
     window.onload = function () {
-        // Le damos 500ms de retraso para asegurar que los estilos de color carguen bien antes de abrir el diálogo
-        setTimeout(function () {
-            window.print();
-        }, 500);
+        if ({{ auto_print|yesno:'true,false' }}) {
+            setTimeout(function () {
+                window.print();
+            }, 500);
+        }
     }
 </script>
 </body>

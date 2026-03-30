@@ -2,10 +2,12 @@
 <!-- Pestaña Vacaciones -->
 
 <!-- Fila superior: 3 tarjetas de métricas -->
-<div class="grid-info-personal mt-3">
+<div class="row g-3 mt-3">
+
+    <div class="col-12 col-md-4">
 
     <!-- Permisos cargados a vacaciones -->
-    <div class="info-box-styled" style="border-top: 3px solid #f59e0b;">
+    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #f59e0b; margin-bottom:0;">
         <h6 class="section-title" style="color:#b45309;">
             <i class="fa-solid fa-clock"></i> Permisos
         </h6>
@@ -20,7 +22,9 @@
             <span>
                 {% if vacation_balances and vacation_balances|length > 0 %}
                     <button class="btn btn-sm btn-outline" style="border-color:#f59e0b; color:#b45309;"
-                            onclick="openPermitHistoryModal({{ vacation_balances.0.id }})">
+                            type="button"
+                            data-open-permit-history
+                            data-balance-id="{{ vacation_balances.0.id }}">
                         <i class="fa-solid fa-list-ul"></i> Ver listado
                     </button>
                 {% elif person.employee_profile %}
@@ -31,9 +35,12 @@
             </span>
         </div>
     </div>
+    </div>
+
+    <div class="col-12 col-md-4">
 
     <!-- Vacaciones liquidadas -->
-    <div class="info-box-styled" style="border-top: 3px solid #0ea5a4;">
+    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #0ea5a4; margin-bottom:0;">
         <h6 class="section-title" style="color:#0ea5a4;">
             <i class="fa-solid fa-plane-departure"></i> Liquidaciones
         </h6>
@@ -59,9 +66,12 @@
             </span>
         </div>
     </div>
+    </div>
+
+    <div class="col-12 col-md-4">
 
     <!-- Saldo disponible -->
-    <div class="info-box-styled" style="border-top: 3px solid #06b6d4;">
+    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #06b6d4; margin-bottom:0;">
         <h6 class="section-title" style="color:#0891b2;">
             <i class="fa-solid fa-piggy-bank"></i> Saldo Actual
         </h6>
@@ -72,10 +82,21 @@
             </span>
         </div>
         <div class="info-data-row">
+            <label>Acción:</label>
+            <span class="text-muted" style="visibility:hidden;">Reservado</span>
         </div>
+        <div class="info-data-row" style="display:none;">
+        </div>
+    </div>
     </div>
 
 </div>
+
+<style>
+    .vacation-metric-card {
+        min-height: 168px;
+    }
+</style>
 
 <!-- Fila inferior: gráfico donut + lista de periodos -->
 <div class="grid-info-personal mt-2">
@@ -147,3 +168,72 @@
 </div>
 
 <!-- El inicializador del gráfico se encuentra en static/js/employee_vacation_chart.js -->
+
+<script>
+    (function () {
+        if (window.__employeeVacationPermitHistoryBound) return;
+
+        function showError(message) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: message,
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+            alert(message);
+        }
+
+        function openHistory(balanceId) {
+            if (!balanceId) {
+                showError('No se pudo identificar el periodo para consultar el historial.');
+                return;
+            }
+
+            fetch(`/vacation/requests/permit-history/${balanceId}/`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then((html) => {
+                    let modalContainer = document.getElementById('permitHistoryModalContainer');
+                    if (!modalContainer) {
+                        modalContainer = document.createElement('div');
+                        modalContainer.id = 'permitHistoryModalContainer';
+                        document.body.appendChild(modalContainer);
+                    } else if (modalContainer.parentElement !== document.body) {
+                        document.body.appendChild(modalContainer);
+                    }
+
+                    modalContainer.innerHTML = html;
+                    const overlay = document.getElementById('permitHistoryModalOverlay');
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        document.body.classList.add('modal-open');
+                        return;
+                    }
+
+                    throw new Error('No se encontró el modal del historial en la respuesta.');
+                })
+                .catch(() => {
+                    showError('No se pudo cargar el historial de permisos.');
+                });
+        }
+
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest && event.target.closest('[data-open-permit-history]');
+            if (!trigger) return;
+            event.preventDefault();
+            openHistory(trigger.dataset.balanceId);
+        });
+
+        window.__employeeVacationPermitHistoryBound = true;
+        window.openEmployeePermitHistoryModal = openHistory;
+    })();
+</script>

@@ -2,6 +2,7 @@ import calendar
 import io
 import json
 import os
+import base64
 from datetime import date
 from decimal import Decimal
 from accounting.models import Account
@@ -21,6 +22,8 @@ from django.db.models import Q, Sum, Case, When, IntegerField, Value
 from django.db.models.functions import Cast
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.http import Http404
+from django.core import signing
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string, get_template
@@ -44,6 +47,23 @@ from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, Payrol
 from .models import PendingDebt
 from .services import PayrollCalculatorService
 from .services import rebuild_accounting_for_period
+
+
+PAYSLIP_PUBLIC_TOKEN_SALT = 'payroll.public.validation'
+
+
+def build_public_payslip_token(payslip_id):
+    """Genera token firmado para validacion publica del rol."""
+    return signing.dumps({'payslip_id': payslip_id}, salt=PAYSLIP_PUBLIC_TOKEN_SALT)
+
+
+def parse_public_payslip_token(token):
+    """Obtiene el id del rol desde un token firmado."""
+    payload = signing.loads(token, salt=PAYSLIP_PUBLIC_TOKEN_SALT)
+    payslip_id = payload.get('payslip_id')
+    if not payslip_id:
+        raise signing.BadSignature('Token sin payslip_id')
+    return int(payslip_id)
 
 
 class PayrollListView(ListView):
@@ -1824,6 +1844,85 @@ class PrintablePayslipView(LoginRequiredMixin, DetailView):
         # Ordenamos igual que en el modal
         context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
         context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
+
+        validation_token = build_public_payslip_token(payslip.id)
+        validation_url = self.request.build_absolute_uri(
+            reverse('payroll:payslip_public_validate', kwargs={'token': validation_token})
+        )
+
+        import qrcode as qr_module
+        qr = qr_module.QRCode(
+            version=1,
+            error_correction=qr_module.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(validation_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+
+        buffered = io.BytesIO()
+        img.save(buffered, format='PNG')
+        context['qr_code'] = base64.b64encode(buffered.getvalue()).decode()
+        context['validation_code'] = f"{validation_token[:10]}...{validation_token[-8:]}"
+        context['validation_url'] = validation_url
+        context['auto_print'] = True
+        return context
+
+
+class PublicPayslipValidationView(DetailView):
+    """Vista publica para validar un rol de pago mediante token QR."""
+    model = Payslip
+    template_name = 'payroll/reports/printable_payslip.html'
+    context_object_name = 'payslip'
+
+    def get_object(self, queryset=None):
+        token = self.kwargs.get('token')
+        try:
+            payslip_id = parse_public_payslip_token(token)
+        except (signing.BadSignature, ValueError, TypeError):
+            raise Http404('Codigo de validacion invalido')
+        return get_object_or_404(Payslip, pk=payslip_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        payslip = self.object
+        token = self.kwargs.get('token')
+
+        if num2words:
+            try:
+                entero = int(payslip.net_pay)
+                decimales = int(round((payslip.net_pay - entero) * 100))
+                letras_entero = num2words(entero, lang='es').upper()
+                context['net_pay_words'] = f"{letras_entero} CON {decimales:02d}/100 DOLARES"
+            except Exception:
+                context['net_pay_words'] = f"{payslip.net_pay} (Error al convertir)"
+        else:
+            context['net_pay_words'] = f"{payslip.net_pay} (Instalar num2words)"
+
+        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
+        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
+        validation_url = self.request.build_absolute_uri(
+            reverse('payroll:payslip_public_validate', kwargs={'token': token})
+        )
+
+        import qrcode as qr_module
+        qr = qr_module.QRCode(
+            version=1,
+            error_correction=qr_module.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(validation_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+
+        buffered = io.BytesIO()
+        img.save(buffered, format='PNG')
+        context['qr_code'] = base64.b64encode(buffered.getvalue()).decode()
+        context['validation_code'] = f"{token[:10]}...{token[-8:]}"
+        context['validation_url'] = validation_url
+        context['auto_print'] = False
         return context
 
 
