@@ -7,4 +7,5 @@ class SecurityConfig(AppConfig):
     verbose_name = 'Seguridad y Accesos'
 
     def ready(self):
-        import security.signals
+        # import security.signals  <-- Comenta esto temporalmente
+        pass
