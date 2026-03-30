@@ -471,14 +471,14 @@ document.addEventListener('DOMContentLoaded', () => {
             modalContainer.innerHTML = html;
             modalContainer.style.display = 'flex'; // Explicitly show the overlay
             
-            const modalElement = modalContainer.querySelector('.custom-modal-main'); // Use the project's specific modal class
+            const modalElement = modalContainer.querySelector('.custom-modal-dialog'); // Use the project's specific modal class
             if (modalElement) {
                 modalElement.classList.add('active'); // Use 'active' class to show
             }
 
             // 4. Initialize Select2 for the employee search
             $('#id_boss_assign').select2({
-                dropdownParent: $(modalContainer.querySelector('.custom-modal-main')), // Attach to the visible modal
+                dropdownParent: $(modalContainer.querySelector('.custom-modal-dialog')), // Attach to the visible modal
                 width: '100%',
                 placeholder: 'Buscar empleado...',
                 ajax: {
