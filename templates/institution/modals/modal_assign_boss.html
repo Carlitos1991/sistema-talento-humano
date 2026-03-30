@@ -1,16 +1,15 @@
-<div class="modal-container-medium">
-
+<div class="custom-modal-main">
     <div class="modal-header-refined">
         <div class="header-content-group">
             <div class="header-icon-circle"><i class="fas fa-user-tie"></i></div>
             <h3 class="header-title-main">Asignar Jefe Inmediato</h3>
         </div>
-        <button type="button" class="btn-close-modal-refined" onclick="closeAssignModal()">
+        <button type="button" class="btn-close-modal-refined" onclick="closeDynamicModal()">
             <i class="fas fa-times"></i>
         </button>
     </div>
 
-    <form id="assignBossForm" method="post" onsubmit="submitAssignBoss(); return false;">
+    <form id="assignBossForm" data-unit-id="{{ unit.id }}" method="post" onsubmit="submitAssignBoss(); return false;">
         {% csrf_token %}
         <div class="modal-body-custom">
             <div class="form-section-card">

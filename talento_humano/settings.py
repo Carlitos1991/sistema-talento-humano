@@ -168,6 +168,12 @@ STORAGES = {
     },
 }
 
+# --- CONFIGURACIÓN DE DURACIÓN DE SESIÓN ---
+# Cierra la sesión después de 12 horas de inactividad.
+SESSION_COOKIE_AGE = 43200  # 12 horas en segundos
+# Actualiza la vida de la sesión con cada petición.
+SESSION_SAVE_EVERY_REQUEST = True
+
 # --- CONFIGURACIÓN DE AUTENTICACIÓN PERSONALIZADA ---
 
 # 1. URL a la que redirige si el usuario intenta entrar a una zona privada sin loguearse

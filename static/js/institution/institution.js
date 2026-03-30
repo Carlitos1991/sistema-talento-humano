@@ -450,66 +450,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. ASIGNAR JEFE
     // =============================================================================
     window.openAssignBoss = async function (unitId) {
-        // Reuse an existing site modal overlay if present to avoid double backdrops
-        let modalContainer = document.getElementById('assign-boss-modal-container');
+        // 1. Create a container for the modal if it doesn't exist
+        let modalContainer = document.getElementById('dynamic-modal-container');
         if (!modalContainer) {
-            const existingOverlay = document.querySelector('.modal-overlay:not(.hidden)');
-            if (existingOverlay) {
-                modalContainer = existingOverlay;
-                // ensure it has an inner container for injection
-                let inner = modalContainer.querySelector('.modal-container-medium') || modalContainer.querySelector('.modal-dialog') || modalContainer.querySelector('.modal-content');
-                if (!inner) {
-                    inner = document.createElement('div');
-                    inner.className = 'modal-container-medium';
-                    modalContainer.appendChild(inner);
-                }
-                // give it an id so other functions can reference it
-                modalContainer.id = 'assign-boss-modal-container';
-            } else {
-                modalContainer = document.createElement('div');
-                modalContainer.id = 'assign-boss-modal-container';
-                modalContainer.className = 'custom-modal-overlay';
-                modalContainer.innerHTML = '<div class="custom-modal-dialog"></div>';
-                document.body.appendChild(modalContainer);
-            }
+            modalContainer = document.createElement('div');
+            modalContainer.id = 'dynamic-modal-container';
+            document.body.appendChild(modalContainer);
         }
 
         try {
-            const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
-            const html = await res.text();
-            // insert HTML into the dialog/container we created or reused
-            const dialog = modalContainer.querySelector('.custom-modal-dialog, .modal-container-medium, .modal-dialog, .modal-content');
-            if (dialog) dialog.innerHTML = html;
-
-            // Antes de mostrar, ocultar overlays redundantes para evitar dobles fondos
-            Array.from(document.querySelectorAll('.modal-overlay')).forEach(o => {
-                if (o === modalContainer) return;
-                // si el overlay no contiene contenido significativo, ocultarlo
-                const hasContent = o.querySelector('.modal-container, .modal-container-medium, .custom-modal-dialog, .modal-dialog, .modal-content');
-                if (!hasContent) {
-                    o.classList.add('hidden');
-                }
+            // 2. Fetch the modal content from the server
+            const response = await fetch(`/institution/units/assign-boss/${unitId}/`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
+            const html = await response.text();
 
-            // show overlay (custom or existing) y asegurar fondo consistente
-            if (modalContainer.classList.contains('custom-modal-overlay')) {
-                modalContainer.style.display = 'flex';
-                // forzar fondo algo más opaco para evitar ver artefactos detrás
-                modalContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
-                modalContainer.style.backdropFilter = 'none';
-            } else {
-                modalContainer.classList.remove('hidden');
-                // asegurar que el overlay visible tenga opacidad y sin blur para consistencia
-                modalContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
-                modalContainer.style.backdropFilter = 'none';
+            // 3. Inject the HTML and show the modal
+            modalContainer.innerHTML = html;
+            const modalElement = modalContainer.querySelector('.custom-modal-main'); // Use the project's specific modal class
+            if (modalElement) {
+                modalElement.classList.add('active'); // Use 'active' class to show
             }
-            document.body.classList.add('modal-open');
-            modalContainer.dataset.unitId = unitId;
 
-            // initialize select2 with correct dropdown parent (the visible overlay)
-            const $parent = $(modalContainer);
+            // 4. Initialize Select2 for the employee search
             $('#id_boss_assign').select2({
-                dropdownParent: $parent,
+                dropdownParent: $(modalContainer.querySelector('.custom-modal-main')), // Attach to the visible modal
                 width: '100%',
                 placeholder: 'Buscar empleado...',
                 ajax: {
@@ -519,23 +484,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     processResults: (data) => ({results: data.results})
                 }
             });
+
         } catch (e) {
-            console.error(e);
+            console.error('Error opening assign boss modal:', e);
         }
     };
 
-    window.closeAssignModal = function () {
-        const modalContainer = document.getElementById('assign-boss-modal-container');
+    // This function should be called by the 'Cancel' or 'Close' button inside the modal's HTML
+    window.closeDynamicModal = function () {
+        const modalContainer = document.getElementById('dynamic-modal-container');
         if (modalContainer) {
-            modalContainer.style.display = 'none';
-            document.body.classList.remove('modal-open');
+            modalContainer.innerHTML = ''; // Just clear the content
         }
     };
 
     window.submitAssignBoss = async function () {
-        const container = document.getElementById('assign-boss-modal-container');
-        const unitId = container.dataset.unitId;
         const form = document.getElementById('assignBossForm');
+        const unitId = form.dataset.unitId;
         try {
             const formData = new FormData(form);
             const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
@@ -545,9 +510,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.success) {
-                window.closeAssignModal();
-                Swal.fire('Éxito', data.message, 'success');
-                // Si estamos en la vista detalle (tiene #deliverables-app) actualizamos solo el header
+                closeDynamicModal();
+                Swal.fire('Éxito', data.message, 'success').then(() => {
+                    location.reload(); // Reload to see the change
+                });
+            } else {
+                // Handle errors if needed
+                console.error('Error assigning boss:', data.errors);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
                 if (document.getElementById('deliverables-app')) {
                     try {
                         const detailRes = await fetch(`/institution/units/detail/${unitId}/json/`);
