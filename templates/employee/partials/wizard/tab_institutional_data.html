@@ -4,9 +4,11 @@
         <h4><i class="fa-solid fa-building-user me-2"></i>Información Institucional</h4>
         <p>Datos del expediente y ubicación organizacional del empleado</p>
     </div>
+    {% if can_view_restricted_tabs %}
     <button class="btn-institutional-action" @click="openInstitutionalModal({{ person.id }})">
         <i class="fa-solid fa-pen-to-square me-1"></i> Actualizar
     </button>
+    {% endif %}
 </div>
 
 <!-- Grid de información similar a Datos Personales -->
@@ -96,12 +98,14 @@
 </div>
 
 <!-- Observaciones -->
+{% if can_view_restricted_tabs %}
 <div class="grid-info-personal mt-3">
     <div class="info-box-styled" style="border-left: 4px solid #64748b; grid-column: span 3;">
         <h6 class="section-title"><i class="fa-solid fa-comment-dots"></i> Observaciones</h6>
         <p id="inst_observations" class="mb-0 text-dark small">{{ person.employee_profile.institutional_data.observations|default:"Ninguna observación registrada." }}</p>
     </div>
 </div>
+{% endif %}
 
 <!-- MODAL INSTITUCIONAL -->
 <div id="modalInstitutionalOverlay" class="modal-overlay hidden">

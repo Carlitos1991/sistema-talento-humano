@@ -5506,6 +5506,10 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     .quick-view-info-grid {
         grid-template-columns: 1fr;
     }
+
+    body.employee-dashboard-page .grid-info-personal {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 576px) {

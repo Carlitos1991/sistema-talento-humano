@@ -373,7 +373,7 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['restricted_tab_ids'] = 'budget,contracts,actions'
+        context['restricted_tab_ids'] = 'budget,contracts,actions,sanctions'
         context['can_view_restricted_tabs'] = False
         return context
 
