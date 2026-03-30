@@ -107,7 +107,8 @@
                         {% for emp_id, emp in data.empleados.items %}
                             <tr>
                                 <td class="text-center">{{ forloop.counter }}</td>
-                                <td class="text-left" style="font-weight: 600;">{{ emp.persona.full_name }}</td>
+                                <td class="text-left"
+                                    style="font-weight: 600;">{{ emp.persona.last_name }} {{ emp.persona.first_name }}</td>
 
                                 {% for val in emp.ingresos_list %}
                                     <td>{% if val > 0 %}{{ val|floatformat:"2g" }}{% else %}-{% endif %}</td>
