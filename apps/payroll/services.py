@@ -214,7 +214,7 @@ class PayrollCalculatorService:
 
                     for inc in active_incomes:
                         val, code_clean = Decimal('0.0'), inc.code.strip().upper() if inc.code else ''
-                        if code_clean == 'REMUNERACION':
+                        if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'):
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
                                 if val_tramo > 0:
@@ -250,7 +250,7 @@ class PayrollCalculatorService:
                             items_buffer.append(
                                 PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val))
                             total_ing += val
-                            if code_clean == 'REMUNERACION': taxable_base += val
+                            if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'): taxable_base += val
 
                     # ====================================================
                     # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
@@ -503,7 +503,7 @@ class PayrollCalculatorService:
 
                     for inc in active_incomes:
                         val, code_clean = Decimal('0.0'), inc.code.strip().upper() if inc.code else ''
-                        if code_clean == 'REMUNERACION':
+                        if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'):
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
                                 if val_tramo > 0:
@@ -539,7 +539,7 @@ class PayrollCalculatorService:
                             items_buffer.append(
                                 PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val))
                             total_ing += val
-                            if code_clean == 'REMUNERACION': taxable_base += val
+                            if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'): taxable_base += val
 
                     # ====================================================
                     # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
@@ -900,3 +900,5 @@ def rebuild_accounting_for_period(period_id):
                                                    credit=Decimal('0.0'))
 
     return True
+
+
