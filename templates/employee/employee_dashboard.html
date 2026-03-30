@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Dashboard | SIGETH</title>
+
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link rel="stylesheet" href="{% static 'css/swal2-toast-font-sm.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
+    <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
+    <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
+    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+
+        body.employee-dashboard-page {
+            background: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.employee-dashboard-page .employee-standalone-wrapper {
+            padding: 24px;
+            flex: 1 1 auto;
+        }
+
+        body.employee-dashboard-page #app-content {
+            width: 100%;
+            max-width: 100% !important;
+            margin: 0 !important;
+            overflow: visible;
+            padding: 24px;
+            padding-bottom: 72px;
+        }
+
+        body.employee-dashboard-page .navbar .sidebar-toggle {
+            display: none !important;
+        }
+
+        body.employee-dashboard-page .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            margin-top: 0;
+            z-index: 40;
+        }
+    </style>
+</head>
+<body class="employee-dashboard-page">
+{% include 'navbar.html' %}
+
+<main id="app-content" class="employee-standalone-wrapper">
+    <div id="employeeWizardApp"
+         v-cloak
+         data-person-id="{{ person.id }}"
+         data-titles="{{ person.curriculum.academic_titles.count|default:0 }}"
+         data-experiences="{{ person.curriculum.work_experiences.count|default:0 }}"
+         data-courses="{{ person.curriculum.trainings.count|default:0 }}">
+
+        <div class="banner-employee-detail">
+            <div class="banner-info-employee-detail">
+                <span class="banner-label-top">Expediente Digital</span>
+                <h1>{{ person.full_name }}</h1>
+                <div class="banner-badges-group">
+                    <span class="banner-badge-info">
+                        <i class="fa-solid fa-id-card"></i>
+                        {{ person.document_number }}
+                    </span>
+                    <span class="banner-badge-info">
+                        <i class="fa-solid fa-briefcase"></i>
+                        {{ person.employee_profile.area.name|default:"SIN AREA ASIGNADA" }}
+                    </span>
+                </div>
+            </div>
+            <div class="header-actions-wrapper">
+                <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
+                        style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
+                    <i class="fa-solid fa-user-pen"></i> Editar Perfil
+                </button>
+            </div>
+        </div>
+
+        <div class="employee-detail-buttons-container">
+            <h3 class="buttons-section-title">
+                <i class="fa fa-th-large"></i>
+                Acciones y Modulos
+            </h3>
+            <div class="module-grid-premium">
+                <div v-for="tab in tabs"
+                     :key="tab.id"
+                     @click="activeTab = tab.id"
+                     :class="['employee-detail-button', tab.class, { active: activeTab === tab.id }]">
+                    <div class="employee-detail-button-icon">
+                        <i :class="tab.icon"></i>
+                    </div>
+                    <span class="employee-detail-button-label">[[ tab.name ]]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="animate__animated animate__fadeIn mt-4">
+            <div v-if="activeTab === 'personal'">
+                {% include 'employee/partials/wizard/tab_personal_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'curriculum'" id="curriculum-tab-container" class="animate__animated animate__fadeIn">
+                {% include 'employee/partials/wizard/tab_curriculum.html' %}
+            </div>
+
+            <div v-if="activeTab === 'economic'">
+                {% include 'employee/partials/wizard/tab_economic_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'institutional'">
+                {% include 'employee/partials/wizard/tab_institutional_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'budget'">
+                {% include 'employee/partials/wizard/tab_budget_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'contracts'">
+                {% include 'employee/partials/wizard/tab_contracts_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'actions'">
+                {% include 'employee/partials/wizard/tab_actions_personal.html' %}
+            </div>
+
+            <div v-if="activeTab === 'permissions'">
+                {% include 'employee/partials/wizard/tab_permissions_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'payments'">
+                {% include 'employee/partials/wizard/tab_payment_roles.html' %}
+            </div>
+
+            <div v-if="activeTab === 'sanctions'">
+                {% include 'employee/partials/wizard/tab_sanctions_data.html' %}
+            </div>
+
+            <div v-if="activeTab === 'vacations'">
+                {% include 'employee/partials/wizard/tab_vacations_data.html' %}
+            </div>
+        </div>
+
+        {% include 'employee/modals/modal_person_edit_wizard.html' %}
+        {% include 'employee/modals/modal_academic_title.html' %}
+        {% include 'employee/modals/modal_work_experience.html' %}
+        {% include 'employee/modals/modal_training.html' %}
+        {% include 'employee/modals/modal_cv_generic_list.html' %}
+    </div>
+
+            <div id="period-app-employee">
+                {% include 'contract/modals/modal_management_period_detail.html' %}
+            </div>
+            <div id="permission-modal-employee"></div>
+            <div id="action-modal-employee"></div>
+
+    <div id="modalNewVacation" class="modal-overlay hidden"></div>
+    <div id="modalHourPermit" class="modal-overlay hidden"></div>
+    <div id="modalDayPermit" class="modal-overlay hidden"></div>
+    <div id="modalPermitList" class="modal-overlay hidden"></div>
+    <div id="liquidationListModalContainer"></div>
+    <div id="vacationHistoryModalContainer"></div>
+    <div id="permitHistoryModalContainer"></div>
+    <div id="permitReportModalContainer"></div>
+</main>
+
+{% include 'footer.html' %}
+
+{% include 'modals/modal_change_password.html' %}
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="{% static 'js/core/modal-change-password.js' %}"></script>
+<script src="{% static 'js/table-manager.js' %}"></script>
+<script src="{% static 'js/table-sort.js' %}"></script>
+<script src="{% static 'js/table-export.js' %}"></script>
+<script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
+<script src="{% static 'js/employee_wizard.js' %}"></script>
+<script src="{% static 'js/employee_period_modal_init.js' %}"></script>
+<script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/employee_vacation_chart.js' %}"></script>
+<script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+<script src="{% static 'js/dashboard.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        $('.select2').select2();
+    });
+</script>
+</body>
+</html>

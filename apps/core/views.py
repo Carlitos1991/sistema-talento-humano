@@ -9,7 +9,7 @@ from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm
 from .forms import UserProfileForm
 from .models import Catalog, CatalogItem, Location, Authority
 from .models import User
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 from django.views.generic import View
 from django.contrib.auth.decorators import permission_required
@@ -31,6 +31,17 @@ class CustomLoginView(LoginView):
 # --- 2. DASHBOARD ---
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            has_employee_dashboard = request.user.has_perm('auth.dashboard_empleado')
+            has_hr_dashboard = request.user.has_perm('auth.dashboard_talento_humano')
+            has_boss_dashboard = request.user.has_perm('auth.dashboard_jefe')
+
+            if has_employee_dashboard and not has_hr_dashboard and not has_boss_dashboard:
+                return redirect('employee:self_dashboard')
+
+        return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

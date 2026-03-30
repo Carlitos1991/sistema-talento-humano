@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 # apps/employee/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -359,6 +359,17 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             context['vacation_chart'] = {'total_capacity': 0, 'permits': 0, 'vacations': 0, 'saldo': 0}
 
         return context
+
+
+class EmployeeSelfDashboardView(EmployeeDetailWizardView):
+    template_name = 'employee/employee_dashboard.html'
+    permission_required = ()
+
+    def get_object(self, queryset=None):
+        user_person = getattr(self.request.user, 'person', None)
+        if not user_person:
+            raise Http404("El usuario no tiene persona asociada.")
+        return user_person
 
 
 @transaction.atomic
