@@ -16,6 +16,10 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Evita advertencias COOP en desarrollo HTTP local.
+if DEBUG:
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
 ALLOWED_HOSTS = ['*']
 
 # Application definition

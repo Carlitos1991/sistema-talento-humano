@@ -880,10 +880,13 @@ function submitGenerate(mode) {
         }
         if (err && err.name === 'AbortError') return;
         console.error(err);
+        const networkHint = (err && /Failed to fetch|ERR_EMPTY_RESPONSE/i.test(String(err.message || err)))
+            ? 'La conexión se cerró antes de terminar. El cálculo puede estar demorando más de lo permitido por el servidor.'
+            : 'Fallo de comunicación';
         setTimeout(() => {
             Swal.fire({
                 title: 'Error',
-                text: 'Fallo de comunicación',
+                text: networkHint,
                 icon: 'error',
                 confirmButtonText: 'OK',
                 showCancelButton: false
