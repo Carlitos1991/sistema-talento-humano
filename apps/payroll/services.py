@@ -478,64 +478,90 @@ class PayrollCalculatorService:
 
     def _assign_budget_lines_to_items(self, created_payslips, assignment_map):
         """Asigna partidas presupuestarias a ítems de nómina post-creación."""
-        try:
-            created_items = PayslipItem.objects.filter(payslip__in=created_payslips).select_related('payslip__employee',
-                                                                                                    'income_ref',
-                                                                                                    'deduction_ref',
-                                                                                                    'contribution_ref')
-        except Exception:
-            created_items = PayslipItem.objects.filter(payslip__in=created_payslips).select_related('payslip__employee',
-                                                                                                    'income_ref',
-                                                                                                    'deduction_ref')
+        created_item_rows = list(
+            PayslipItem.objects.filter(payslip__in=created_payslips).values(
+                'id',
+                'item_type',
+                'payslip__employee_id',
+                'income_ref_id',
+                'deduction_ref_id',
+                'contribution_ref_id',
+                'budget_line_code',
+            )
+        )
 
         latest_budget_line_by_employee = {}
         for employee_id, assignments in assignment_map.items():
             if not assignments:
                 continue
             latest_assignment = max(assignments, key=lambda x: x.start_date)
-            latest_budget_line_by_employee[employee_id] = latest_assignment.budget_line
+            bl = latest_assignment.budget_line
+            if bl:
+                latest_budget_line_by_employee[employee_id] = (bl.id, bl.code)
 
         income_ids = set()
         deduction_ids = set()
         contribution_ids = set()
-        for it in created_items:
-            if it.item_type == 'INCOME' and it.income_ref_id:
-                income_ids.add(it.income_ref_id)
-            elif it.item_type == 'DEDUCTION' and it.deduction_ref_id:
-                deduction_ids.add(it.deduction_ref_id)
-            elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id:
-                contribution_ids.add(it.contribution_ref_id)
+        for row in created_item_rows:
+            if row['item_type'] == 'INCOME' and row['income_ref_id']:
+                income_ids.add(row['income_ref_id'])
+            elif row['item_type'] == 'DEDUCTION' and row['deduction_ref_id']:
+                deduction_ids.add(row['deduction_ref_id'])
+            elif row['item_type'] == 'CONTRIBUTION' and row['contribution_ref_id']:
+                contribution_ids.add(row['contribution_ref_id'])
 
         income_mapping_map = {
-            m.income_id: m
+            m.income_id: (m.dynamic_suffix, m.is_fixed)
             for m in RubroBudgetMapping.objects.filter(income_id__in=income_ids)
             .only('income_id', 'dynamic_suffix', 'is_fixed')
         }
         deduction_mapping_map = {
-            m.deduction_id: m
+            m.deduction_id: (m.dynamic_suffix, m.is_fixed)
             for m in RubroBudgetMapping.objects.filter(deduction_id__in=deduction_ids)
             .only('deduction_id', 'dynamic_suffix', 'is_fixed')
         }
         contribution_mapping_map = {
-            m.contribution_id: m
+            m.contribution_id: (m.dynamic_suffix, m.is_fixed)
             for m in RubroBudgetMapping.objects.filter(contribution_id__in=contribution_ids)
             .only('contribution_id', 'dynamic_suffix', 'is_fixed')
         }
 
-        items_to_update = []
-        for it in created_items:
-            resolved_item = self._resolve_budget_line_for_item(
-                it,
-                latest_budget_line_by_employee,
-                income_mapping_map,
-                deduction_mapping_map,
-                contribution_mapping_map,
-            )
-            if resolved_item:
-                items_to_update.append(resolved_item)
+        updates = []
+        for row in created_item_rows:
+            if row['budget_line_code']:
+                continue
 
-        if items_to_update:
-            PayslipItem.objects.bulk_update(items_to_update, ['budget_line', 'budget_line_code'])
+            employee_id = row['payslip__employee_id']
+            base_bl = latest_budget_line_by_employee.get(employee_id)
+            if not base_bl:
+                continue
+            base_bl_id, base_bl_code = base_bl
+
+            mapping = None
+            if row['item_type'] == 'INCOME' and row['income_ref_id']:
+                mapping = income_mapping_map.get(row['income_ref_id'])
+            elif row['item_type'] == 'DEDUCTION' and row['deduction_ref_id']:
+                mapping = deduction_mapping_map.get(row['deduction_ref_id'])
+            elif row['item_type'] == 'CONTRIBUTION' and row['contribution_ref_id']:
+                mapping = contribution_mapping_map.get(row['contribution_ref_id'])
+
+            new_code = base_bl_code
+            if mapping and mapping[0]:
+                dynamic_suffix, is_fixed = mapping
+                if is_fixed:
+                    new_code = dynamic_suffix
+                else:
+                    base_parts = base_bl_code.split('.')
+                    suffix_parts = dynamic_suffix.split('.')
+                    if len(base_parts) > len(suffix_parts):
+                        new_code = f"{'.'.join(base_parts[:-len(suffix_parts)])}.{dynamic_suffix}"
+                    else:
+                        new_code = dynamic_suffix
+
+            updates.append(PayslipItem(id=row['id'], budget_line_id=base_bl_id, budget_line_code=new_code))
+
+        if updates:
+            PayslipItem.objects.bulk_update(updates, ['budget_line', 'budget_line_code'], batch_size=1000)
 
     def _generate_accounting_journal(self, created_payslips):
         """Genera asiento contable de nómina con caché de cuentas para evitar N+1 queries."""
