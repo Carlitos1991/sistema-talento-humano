@@ -28,7 +28,7 @@
                 <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
                 <td style="padding: 12px;">
                     {% for item in p.items.all %}
-                        {% if item.income_ref.code == 'REMUNERACION' %}
+                        {% if item.income_ref.code == 'REMUNERACION' or item.income_ref.code == 'SALARIOS_BASICOS' %}
                             {{ item.budget_line_code|default:"Sin Partida" }}
                         {% endif %}
                     {% endfor %}

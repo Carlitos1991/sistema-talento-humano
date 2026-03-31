@@ -100,6 +100,8 @@ class PayrollCalculatorService:
             debts_to_update = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
+            active_income_codes = {inc.code.strip().upper() for inc in active_incomes if inc.code}
+            has_ct_base_income = 'SALARIOS_BASICOS' in active_income_codes
             active_deductions = list(Deduction.objects.filter(is_active=True))
             ded_map = {d.code.strip().upper(): d for d in active_deductions if d.code}
             contrib_map = {c.code.strip().upper(): c for c in InstitutionalContribution.objects.filter(is_active=True)
@@ -234,7 +236,12 @@ class PayrollCalculatorService:
 
                     for inc in active_incomes:
                         val, code_clean = Decimal('0.0'), inc.code.strip().upper() if inc.code else ''
-                        if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'):
+                        is_ct_base_income = (code_clean == 'SALARIOS_BASICOS') if has_ct_base_income else (
+                                code_clean == 'REMUNERACION')
+                        is_base_income = (regime_code == 'CT' and is_ct_base_income) or (
+                                regime_code != 'CT' and code_clean == 'REMUNERACION')
+
+                        if is_base_income:
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
                                 if val_tramo > 0:
@@ -270,7 +277,8 @@ class PayrollCalculatorService:
                             items_buffer.append(
                                 PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val))
                             total_ing += val
-                            if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'): taxable_base += val
+                            if is_base_income:
+                                taxable_base += val
 
                     # ====================================================
                     # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
@@ -410,6 +418,8 @@ class PayrollCalculatorService:
             debts_to_update = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
+            active_income_codes = {inc.code.strip().upper() for inc in active_incomes if inc.code}
+            has_ct_base_income = 'SALARIOS_BASICOS' in active_income_codes
             active_deductions = list(Deduction.objects.filter(is_active=True))
             ded_map = {d.code.strip().upper(): d for d in active_deductions if d.code}
             contrib_map = {c.code.strip().upper(): c for c in InstitutionalContribution.objects.filter(is_active=True)
@@ -544,7 +554,12 @@ class PayrollCalculatorService:
 
                     for inc in active_incomes:
                         val, code_clean = Decimal('0.0'), inc.code.strip().upper() if inc.code else ''
-                        if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'):
+                        is_ct_base_income = (code_clean == 'SALARIOS_BASICOS') if has_ct_base_income else (
+                                code_clean == 'REMUNERACION')
+                        is_base_income = (regime_code == 'CT' and is_ct_base_income) or (
+                                regime_code != 'CT' and code_clean == 'REMUNERACION')
+
+                        if is_base_income:
                             for tramo in tramos:
                                 val_tramo = (tramo['sueldo_base'] / Decimal('30.0')) * Decimal(str(tramo['dias']))
                                 if val_tramo > 0:
@@ -580,7 +595,8 @@ class PayrollCalculatorService:
                             items_buffer.append(
                                 PayslipItem(payslip=slip, income_ref=inc, item_type='INCOME', value=val))
                             total_ing += val
-                            if (code_clean == 'REMUNERACION' and regime_code != 'CT') or (code_clean == 'SALARIOS_BASICOS' and regime_code == 'CT'): taxable_base += val
+                            if is_base_income:
+                                taxable_base += val
 
                     # ====================================================
                     # 1. IESS y Aportes Patronales (CORRECTAMENTE ALINEADO)
