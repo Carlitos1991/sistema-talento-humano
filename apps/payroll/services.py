@@ -97,6 +97,7 @@ class PayrollCalculatorService:
             holiday_dates, prev_effective_days_map, absent_dates_map = self._prepare_mass_data(emp_ids)
 
             items_buffer, payslips_to_update, pending_debts_buffer = [], [], []
+            debts_to_update = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
             active_deductions = list(Deduction.objects.filter(is_active=True))
@@ -134,6 +135,14 @@ class PayrollCalculatorService:
                                                                                            'deductions': []}
                 if nov.income_ref: novelties_map[nov.employee_id]['incomes'].append(nov)
                 if nov.deduction_ref: novelties_map[nov.employee_id]['deductions'].append(nov)
+
+            existing_pending_debts_map = {}
+            old_debts_qs = PendingDebt.objects.filter(
+                employee_id__in=emp_ids,
+                pending_balance__gt=0
+            ).exclude(period=self.period).select_related('deduction_ref').order_by('employee_id', 'id')
+            for debt in old_debts_qs:
+                existing_pending_debts_map.setdefault(debt.employee_id, []).append(debt)
 
             for slip in created_payslips:
                 try:
@@ -317,8 +326,7 @@ class PayrollCalculatorService:
                     available_balance = total_ing - total_desc
                     deduction_novelties = sorted(emp_novelties['deductions'],
                                                  key=lambda x: getattr(x.deduction_ref, 'priority', 100) or 100)
-                    deudas_pendientes = PendingDebt.objects.filter(employee_id=slip.employee_id,
-                                                                   pending_balance__gt=0).exclude(period=self.period)
+                    deudas_pendientes = existing_pending_debts_map.get(slip.employee_id, [])
 
                     for deuda in deudas_pendientes:
                         val_deuda = Decimal(str(deuda.pending_balance))
@@ -332,7 +340,7 @@ class PayrollCalculatorService:
                             available_balance -= real_discount
                             deuda.collected_value += real_discount
                             deuda.pending_balance -= real_discount
-                            deuda.save()
+                            debts_to_update.append(deuda)
 
                     for nov in deduction_novelties:
                         if nov.value > 0:
@@ -364,6 +372,8 @@ class PayrollCalculatorService:
             Payslip.objects.bulk_update(payslips_to_update,
                                         ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
             PendingDebt.objects.bulk_create(pending_debts_buffer)
+            if debts_to_update:
+                PendingDebt.objects.bulk_update(debts_to_update, ['collected_value', 'pending_balance'])
 
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
             warnings = self._generate_accounting_journal(created_payslips)
@@ -397,6 +407,7 @@ class PayrollCalculatorService:
             holiday_dates, prev_effective_days_map, absent_dates_map = self._prepare_mass_data(emp_ids)
 
             items_buffer, payslips_to_update, pending_debts_buffer = [], [], []
+            debts_to_update = []
 
             active_incomes = list(Income.objects.filter(is_active=True))
             active_deductions = list(Deduction.objects.filter(is_active=True))
@@ -434,6 +445,14 @@ class PayrollCalculatorService:
                                                                                            'deductions': []}
                 if nov.income_ref: novelties_map[nov.employee_id]['incomes'].append(nov)
                 if nov.deduction_ref: novelties_map[nov.employee_id]['deductions'].append(nov)
+
+            existing_pending_debts_map = {}
+            old_debts_qs = PendingDebt.objects.filter(
+                employee_id__in=emp_ids,
+                pending_balance__gt=0
+            ).exclude(period=self.period).select_related('deduction_ref').order_by('employee_id', 'id')
+            for debt in old_debts_qs:
+                existing_pending_debts_map.setdefault(debt.employee_id, []).append(debt)
 
             for slip in created_payslips:
                 try:
@@ -617,8 +636,7 @@ class PayrollCalculatorService:
                     available_balance = total_ing - total_desc
                     deduction_novelties = sorted(emp_novelties['deductions'],
                                                  key=lambda x: getattr(x.deduction_ref, 'priority', 100) or 100)
-                    deudas_pendientes = PendingDebt.objects.filter(employee_id=slip.employee_id,
-                                                                   pending_balance__gt=0).exclude(period=self.period)
+                    deudas_pendientes = existing_pending_debts_map.get(slip.employee_id, [])
 
                     for deuda in deudas_pendientes:
                         val_deuda = Decimal(str(deuda.pending_balance))
@@ -632,7 +650,7 @@ class PayrollCalculatorService:
                             available_balance -= real_discount
                             deuda.collected_value += real_discount
                             deuda.pending_balance -= real_discount
-                            deuda.save()
+                            debts_to_update.append(deuda)
 
                     for nov in deduction_novelties:
                         if nov.value > 0:
@@ -664,6 +682,8 @@ class PayrollCalculatorService:
             Payslip.objects.bulk_update(payslips_to_update,
                                         ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'])
             PendingDebt.objects.bulk_create(pending_debts_buffer)
+            if debts_to_update:
+                PendingDebt.objects.bulk_update(debts_to_update, ['collected_value', 'pending_balance'])
 
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
             warnings = self._generate_accounting_journal(created_payslips)
