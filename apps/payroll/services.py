@@ -1,4 +1,6 @@
 import traceback
+import logging
+import time
 from decimal import Decimal
 from datetime import timedelta
 from django.db import transaction
@@ -11,6 +13,9 @@ from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation
 from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt, \
     PayrollPeriod, PayrollNovelty
+
+
+logger = logging.getLogger(__name__)
 
 
 class PayrollCalculatorService:
@@ -110,6 +115,15 @@ class PayrollCalculatorService:
 
     def _execute_payroll_calculation(self, payslip_buffer, delete_entire_period=False, employee_ids_to_delete=None):
         """Núcleo compartido de cálculo de nómina para bulk y seleccionados."""
+        t0 = time.perf_counter()
+        t_mark = t0
+
+        def _lap(label):
+            nonlocal t_mark
+            now = time.perf_counter()
+            logger.info("[PAYROLL][PERF] %s -> +%.3fs (acum: %.3fs)", label, now - t_mark, now - t0)
+            t_mark = now
+
         with transaction.atomic():
             if delete_entire_period:
                 PendingDebt.objects.filter(period=self.period).delete()
@@ -117,11 +131,14 @@ class PayrollCalculatorService:
             elif employee_ids_to_delete:
                 PendingDebt.objects.filter(period=self.period, employee_id__in=employee_ids_to_delete).delete()
                 Payslip.objects.filter(period=self.period, employee_id__in=employee_ids_to_delete).delete()
+            _lap("delete previous payroll data")
 
             created_payslips = Payslip.objects.bulk_create(payslip_buffer)
             emp_ids = [p.employee.id for p in created_payslips]
+            _lap("bulk_create payslips")
 
             holiday_dates, prev_effective_days_map, absent_dates_map = self._prepare_mass_data(emp_ids)
+            _lap("prepare mass data")
 
             items_buffer, payslips_to_update, pending_debts_buffer = [], [], []
             debts_to_update = []
@@ -172,6 +189,7 @@ class PayrollCalculatorService:
             ).exclude(period=self.period).select_related('deduction_ref').order_by('employee_id', 'id')
             for debt in old_debts_qs:
                 existing_pending_debts_map.setdefault(debt.employee_id, []).append(debt)
+            _lap("load mappings and novelties")
 
             for slip in created_payslips:
                 try:
@@ -402,6 +420,7 @@ class PayrollCalculatorService:
                     print(f"\n{'=' * 60}\n🔥 ERROR EMPLEADO: {slip.employee_id}\nMensaje: {str(e)}\n{'=' * 60}\n")
                     traceback.print_exc()
                     raise e
+            _lap("calculate items loop")
 
             PayslipItem.objects.bulk_create(items_buffer, batch_size=1000)
             Payslip.objects.bulk_update(payslips_to_update,
@@ -409,9 +428,13 @@ class PayrollCalculatorService:
             PendingDebt.objects.bulk_create(pending_debts_buffer, batch_size=1000)
             if debts_to_update:
                 PendingDebt.objects.bulk_update(debts_to_update, ['collected_value', 'pending_balance'])
+            _lap("bulk persist items and debts")
 
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
+            _lap("assign budget lines")
             warnings = self._generate_accounting_journal(created_payslips)
+            _lap("generate accounting journal")
+            logger.info("[PAYROLL][PERF] total payroll execution: %.3fs", time.perf_counter() - t0)
 
             return {"success": True, "warnings": warnings}
 
