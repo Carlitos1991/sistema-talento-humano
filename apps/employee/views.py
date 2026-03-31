@@ -638,21 +638,34 @@ def add_bank_account(request, person_id):
 
 @transaction.atomic
 def update_payroll_info(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        economic_data, created = EconomicData.objects.get_or_create(person=person)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
 
-        instance = getattr(economic_data, 'payroll_info', None)
-        form = PayrollInfoForm(request.POST, instance=instance)
+    person = get_object_or_404(Person, pk=person_id)
+    economic_data, _ = EconomicData.objects.get_or_create(person=person)
 
-        if form.is_valid():
-            payroll = form.save(commit=False)
-            payroll.economic_data = economic_data
-            payroll.save()
-            return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
+    instance = getattr(economic_data, 'payroll_info', None)
+    post_data = request.POST.copy()
 
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    return None
+    # Permite actualizaciones parciales desde toggles JS sin romper validaciones del ModelForm.
+    if 'family_dependents' not in post_data:
+        post_data['family_dependents'] = str(getattr(instance, 'family_dependents', 0) or 0)
+    if 'education_dependents' not in post_data:
+        post_data['education_dependents'] = str(getattr(instance, 'education_dependents', 0) or 0)
+    if 'roles_count' not in post_data:
+        post_data['roles_count'] = str(getattr(instance, 'roles_count', 0) or 0)
+    if 'roles_entry_date' not in post_data:
+        entry_date = getattr(instance, 'roles_entry_date', None)
+        post_data['roles_entry_date'] = entry_date.isoformat() if entry_date else ''
+
+    form = PayrollInfoForm(post_data, instance=instance)
+    if form.is_valid():
+        payroll = form.save(commit=False)
+        payroll.economic_data = economic_data
+        payroll.save()
+        return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
+
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 @login_required
