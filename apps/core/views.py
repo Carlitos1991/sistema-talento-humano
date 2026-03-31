@@ -1,10 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.contrib.auth import get_user_model
 from django.http import JsonResponse
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.generic import CreateView
 from django.views.generic import TemplateView, ListView, UpdateView
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
 from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm
 from .forms import UserProfileForm
 from .models import Catalog, CatalogItem, Location, Authority
@@ -26,6 +31,172 @@ class CustomLoginView(LoginView):
     def form_invalid(self, form):
         messages.error(self.request, "Credenciales incorrectas. Intente nuevamente.")
         return super().form_invalid(form)
+
+
+class ForgotPasswordView(TemplateView):
+    template_name = 'core/forgot_password.html'
+
+    def post(self, request, *args, **kwargs):
+        from person.models import Person
+
+        cedula = (request.POST.get('cedula') or '').strip()
+        birth_date_raw = (request.POST.get('birth_date') or '').strip()
+
+        if not cedula or not birth_date_raw:
+            return JsonResponse({'status': 'error', 'message': 'Debe ingresar la cédula y la fecha de nacimiento.'})
+
+        person = Person.objects.filter(
+            document_number=cedula
+        ).select_related('user', 'employee_profile__institutional_data').first()
+
+        if not person:
+            return JsonResponse({'status': 'error', 'message': 'No se encontró un registro con la cédula ingresada.'})
+
+        if not person.birth_date or str(person.birth_date) != birth_date_raw:
+            return JsonResponse({'status': 'error', 'message': 'La fecha de nacimiento no coincide con el registro.'})
+
+        if not person.user:
+            return JsonResponse({'status': 'error', 'message': 'La persona aún no tiene usuario creado.'})
+
+        employee_profile = getattr(person, 'employee_profile', None)
+        institutional_data = getattr(employee_profile, 'institutional_data', None) if employee_profile else None
+        institutional_email = getattr(institutional_data, 'institutional_email', None)
+
+        if not institutional_email:
+            return JsonResponse({'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+
+        username = person.user.username or cedula
+        plain_password = cedula
+
+        person.user.username = username
+        person.user.email = institutional_email
+        person.user.first_name = person.first_name
+        person.user.last_name = person.last_name
+        person.user.set_password(plain_password)
+        person.user.save()
+
+        subject = 'Recuperación de credenciales - SIGETH'
+        
+        context_email = {
+            'nombre': person.full_name,
+            'usuario': username,
+            'contraseña': plain_password,
+        }
+        html_content = render_to_string('core/emails/forgot_password_notification.html', context_email)
+        text_content = strip_tags(html_content)
+
+        remitente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'nomina@loja.gob.ec')
+        email = EmailMultiAlternatives(subject=subject, body=text_content, from_email=remitente,
+                                       to=[institutional_email])
+        email.attach_alternative(html_content, "text/html")
+
+        try:
+            email.send(fail_silently=False)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+
+        masked_email = institutional_email
+        if institutional_email and len(institutional_email) > 8:
+            masked_email = f"{institutional_email[:4]}{'*' * (len(institutional_email) - 8)}{institutional_email[-4:]}"
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'Se enviaron el usuario y la contraseña al correo {masked_email}'
+        })
+
+
+class CreateUserFromLoginView(TemplateView):
+    template_name = 'core/create_user_from_login.html'
+
+    def post(self, request, *args, **kwargs):
+        from django.contrib.auth.models import Group, Permission
+        from django.contrib.contenttypes.models import ContentType
+        from person.models import Person
+        from employee.models import Employee
+
+        cedula = (request.POST.get('cedula') or '').strip()
+        if not cedula:
+            return JsonResponse({'status': 'error', 'message': 'Debe ingresar la cédula para continuar.'})
+
+        person = Person.objects.filter(
+            document_number=cedula
+        ).select_related('user', 'employee_profile__institutional_data', 'employee_profile__employment_status').first()
+
+        if not person:
+            return JsonResponse({'status': 'error', 'message': 'No se encontró una persona registrada con esa cédula.'})
+
+        employee_profile = getattr(person, 'employee_profile', None)
+        if not employee_profile or not employee_profile.is_active:
+            return JsonResponse({'status': 'error', 'message': 'Para crear usuario debe estar registrado como empleado o trabajador de la institución.'})
+
+        employment_code = (getattr(getattr(employee_profile, 'employment_status', None), 'code', '') or '').upper()
+        if employment_code not in ['EMPLEADO', 'TRABAJADOR']:
+            return JsonResponse({'status': 'error', 'message': 'Solo se pueden crear usuarios para registros con estado laboral EMPLEADO o TRABAJADOR.'})
+
+        institutional_data = getattr(employee_profile, 'institutional_data', None)
+        institutional_email = getattr(institutional_data, 'institutional_email', None)
+        if not institutional_email:
+            return JsonResponse({'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+
+        username = cedula
+        plain_password = cedula
+        user_model = get_user_model()
+
+        user = getattr(person, 'user', None)
+        if user is not None:
+            return JsonResponse({'status': 'error', 'message': 'Usted ya tiene un usuario registrado en el sistema.'})
+
+        if user is None:
+            if user_model.objects.filter(username=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Ya existe un usuario con esa cédula. Contacte a Talento Humano.'})
+
+            user = user_model.objects.create_user(
+                username=username,
+                password=plain_password,
+                email=institutional_email,
+                first_name=person.first_name,
+                last_name=person.last_name,
+                is_active=True
+            )
+            person.user = user
+            person.save(update_fields=['user', 'updated_at'])
+
+        normal_group, _ = Group.objects.get_or_create(name='USUARIO_NORMAL')
+        user.groups.add(normal_group)
+
+        # Garantiza acceso al dashboard de empleado para el usuario normal.
+        ct = ContentType.objects.get_for_model(Group)
+        dashboard_perm, _ = Permission.objects.get_or_create(
+            codename='dashboard_empleado',
+            content_type=ct,
+            defaults={'name': 'Acceso dashboard empleado'}
+        )
+        user.user_permissions.add(dashboard_perm)
+
+        subject = 'Creación de usuario - SIGETH'
+        
+        context_email = {
+            'nombre': person.full_name,
+            'usuario': username,
+            'contraseña': plain_password,
+        }
+        html_content = render_to_string('core/emails/create_user_notification.html', context_email)
+        text_content = strip_tags(html_content)
+
+        remitente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'nomina@loja.gob.ec')
+        email = EmailMultiAlternatives(subject=subject, body=text_content, from_email=remitente,
+                                       to=[institutional_email])
+        email.attach_alternative(html_content, "text/html")
+
+        try:
+            email.send(fail_silently=False)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'El usuario y la contraseña han sido enviados al correo {institutional_email}'
+        })
 
 
 # --- 2. DASHBOARD ---
@@ -53,6 +224,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from django.db.models import Count, Q, Avg, Sum
         from datetime import date, timedelta
         from django.utils import timezone
+
+        force_boss_view = self.request.GET.get('view') == 'jefe'
+        has_boss_dashboard = self.request.user.has_perm('auth.dashboard_jefe')
+        can_use_boss_view = (
+            self.request.user.has_perm('auth.dashboard_jefe') or
+            self.request.user.has_perm('auth.dashboard_talento_humano')
+        )
+        # Los usuarios con permiso de jefatura deben ver siempre su dashboard de jefe,
+        # aunque no lleguen con ?view=jefe (ej.: navegación directa o menú antiguo).
+        context['show_boss_dashboard'] = has_boss_dashboard or (force_boss_view and can_use_boss_view)
         
         # === ESTADÍSTICAS DE EMPLEADOS (SOLO ACTIVOS) ===
         active_employees = Employee.objects.filter(is_active=True)
@@ -205,6 +386,105 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['profiles_total'] = 0
             context['profiles_legalized'] = 0
             context['profiles_pending'] = 0
+
+        # === DASHBOARD DE JEFE ===
+        context['boss_unit'] = None
+        context['boss_unit_detail_url'] = ''
+        context['boss_total_personal'] = 0
+        context['boss_pending_permits_count'] = 0
+        context['boss_pending_permits'] = []
+        context['boss_can_manage_permits'] = self.request.user.has_perm('permitrequest.change_permitrequest')
+
+        try:
+            if context['show_boss_dashboard']:
+                from institution.models import AdministrativeUnit
+                from permitrequest.models import PermitRequest
+                from person.models import Person
+
+                user_person = getattr(self.request.user, 'person', None)
+                employee_profile = getattr(user_person, 'employee_profile', None) if user_person else None
+
+                # Fallback 1: buscar persona por cédula (username suele ser la cédula)
+                if not employee_profile:
+                    person_by_document = Person.objects.filter(
+                        document_number=self.request.user.username
+                    ).select_related('employee_profile').first()
+                    if person_by_document:
+                        employee_profile = getattr(person_by_document, 'employee_profile', None)
+
+                # Fallback 2: buscar por email del usuario
+                if not employee_profile and self.request.user.email:
+                    person_by_email = Person.objects.filter(
+                        email__iexact=self.request.user.email
+                    ).select_related('employee_profile').first()
+                    if person_by_email:
+                        employee_profile = getattr(person_by_email, 'employee_profile', None)
+
+                managed_unit = None
+
+                if employee_profile:
+                    managed_unit = AdministrativeUnit.objects.filter(
+                        boss=employee_profile,
+                        is_active=True
+                    ).select_related('level').order_by('level__level_order', 'name').first()
+
+                    # Fallback 3: buscar unidad por cédula del jefe asignado
+                    if not managed_unit and getattr(employee_profile, 'person', None):
+                        managed_unit = AdministrativeUnit.objects.filter(
+                            boss__person__document_number=employee_profile.person.document_number,
+                            is_active=True
+                        ).select_related('level').order_by('level__level_order', 'name').first()
+
+                    # Fallback: si no tiene unidad gestionada pero su perfil esta marcado como jefe,
+                    # usar su unidad actual para no dejar el dashboard vacio.
+                    if not managed_unit and employee_profile.is_boss and employee_profile.area_id:
+                        managed_unit = employee_profile.area
+
+                if managed_unit:
+                    def collect_unit_tree_ids(root_unit):
+                        """Devuelve IDs de la unidad raiz y todas sus dependencias hijas."""
+                        collected = [root_unit.id]
+                        frontier = [root_unit.id]
+
+                        while frontier:
+                            children_ids = list(
+                                AdministrativeUnit.objects.filter(
+                                    parent_id__in=frontier,
+                                    is_active=True
+                                ).values_list('id', flat=True)
+                            )
+                            if not children_ids:
+                                break
+                            collected.extend(children_ids)
+                            frontier = children_ids
+
+                        return collected
+
+                    scoped_unit_ids = collect_unit_tree_ids(managed_unit)
+
+                    unit_employees = Employee.objects.filter(
+                        is_active=True,
+                        area_id__in=scoped_unit_ids
+                    ).select_related('person', 'area')
+
+                    unit_permits_qs = PermitRequest.objects.filter(
+                        employee__in=unit_employees,
+                        status__in=['REQUESTED', 'APPROVED', 'REJECTED']
+                    ).select_related('employee__person', 'permit_type').order_by('-created_at')
+
+                    pending_permits_count = unit_permits_qs.filter(status='REQUESTED').count()
+
+                    context['boss_unit'] = managed_unit
+                    context['boss_unit_detail_url'] = reverse('institution:unit_detail', args=[managed_unit.id])
+                    context['boss_total_personal'] = unit_employees.count()
+                    context['boss_pending_permits_count'] = pending_permits_count
+                    context['boss_pending_permits'] = unit_permits_qs
+        except Exception:
+            context['boss_unit'] = None
+            context['boss_unit_detail_url'] = ''
+            context['boss_total_personal'] = 0
+            context['boss_pending_permits_count'] = 0
+            context['boss_pending_permits'] = []
         
         return context
 
@@ -792,12 +1072,6 @@ class ChangePasswordView(LoginRequiredMixin, View):
         
         # Verificar requisitos de contraseña
         import re
-        if not re.search(r'[A-Z]', new_password):
-            return JsonResponse({
-                'success': False,
-                'message': 'La contraseña debe contener al menos una mayúscula.'
-            })
-        
         if not re.search(r'[a-z]', new_password):
             return JsonResponse({
                 'success': False,

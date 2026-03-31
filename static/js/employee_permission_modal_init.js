@@ -3,6 +3,14 @@
 // - generar permiso con el mismo modal de la lista de permisos
 // - tabla con filtros (desde/hasta/tipo) y paginacion local
 (function () {
+    function getCookie(name) {
+        const cookieValue = document.cookie
+            .split(';')
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(name + '='));
+        return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : '';
+    }
+
     function showToast(title, text, icon) {
         if (window.Swal) {
             Swal.fire({
@@ -35,6 +43,11 @@
                 document.body.classList.add('no-scroll');
             })
             .catch(e => console.error('Error cargando detalle permiso', e));
+    }
+
+    function openInsistModal(url) {
+        if (!url) return;
+        fetchAndShow(url, '#permission-modal-employee');
     }
 
     function initGeneratePermitForm(container) {
@@ -282,7 +295,7 @@
             emptyRow = document.createElement('tr');
             emptyRow.setAttribute('data-permission-empty-row', '1');
             emptyRow.innerHTML = `
-                <td colspan="5" class="text-center py-5">
+                <td colspan="7" class="text-center py-5">
                     <i class="fas fa-inbox" style="font-size: 2.5rem; color: #cbd5e1;"></i>
                     <p class="text-muted mt-3 mb-0">No hay permisos para los filtros seleccionados.</p>
                 </td>
@@ -478,6 +491,13 @@
                 return;
             }
 
+            const insistBtn = ev.target.closest && ev.target.closest('[data-permit-insist]');
+            if (insistBtn) {
+                ev.preventDefault();
+                openInsistModal(insistBtn.dataset.insistUrl);
+                return;
+            }
+
             const closeBtn = ev.target.closest && ev.target.closest('.js-close-modal');
             if (closeBtn) {
                 const permContainer = document.getElementById('permission-modal-employee');
@@ -486,6 +506,46 @@
                     document.body.classList.remove('no-scroll');
                 }
             }
+        });
+
+        document.addEventListener('submit', function (ev) {
+            const form = ev.target;
+            if (!form || form.id !== 'insistPermitForm') return;
+
+            ev.preventDefault();
+
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+                .then(async (res) => {
+                    let data = {};
+                    try {
+                        data = await res.json();
+                    } catch (_) {
+                        data = {};
+                    }
+
+                    if (!res.ok || !data.success) {
+                        showToast('Error', data.message || 'No se pudo insistir la solicitud', 'error');
+                        return;
+                    }
+
+                    const permContainer = document.getElementById('permission-modal-employee');
+                    if (permContainer) permContainer.innerHTML = '';
+                    document.body.classList.remove('no-scroll');
+
+                    showToast('Correcto', data.message || 'Solicitud insistida correctamente', 'success');
+                    setTimeout(() => window.location.reload(), 350);
+                })
+                .catch(() => {
+                    showToast('Error', 'Error de comunicacion al insistir la solicitud', 'error');
+                });
         });
 
         window.__permissionDelegationBound = true;

@@ -110,10 +110,13 @@
         {% if permit.response_note %}
             <div class="section-card-standard border-left-{% if permit.status == 'APPROVED' %}success{% else %}danger{% endif %}">
                 <h4 class="section-title">
-                    <i class="fas fa-comment-dots text-primary"></i> RESPUESTA
+                    <i class="fas fa-comment-dots text-primary"></i>
+                    {% if permit.status == 'REQUESTED' %}OBSERVACIONES / HISTORIAL{% else %}RESPUESTA{% endif %}
                 </h4>
                 <div class="form-group">
-                    <label class="form-label font-weight-700">Motivo</label>
+                    <label class="form-label font-weight-700">
+                        {% if permit.status == 'REQUESTED' %}Observaciones{% else %}Motivo{% endif %}
+                    </label>
                     <p class="form-control-static">{{ permit.response_note }}</p>
                 </div>
                 {% if permit.response_date %}

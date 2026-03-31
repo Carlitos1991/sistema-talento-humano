@@ -1,5 +1,6 @@
 # apps/institution/models.py
 from django.db import models
+from django.db import transaction
 from core.models import BaseModel
 
 
@@ -63,6 +64,36 @@ class AdministrativeUnit(BaseModel):
         if self.parent:
             return f"{self.parent.get_full_path()} > {self.name}"
         return self.name
+
+    def save(self, *args, **kwargs):
+        """
+        Regla de negocio: un empleado solo puede ser jefe inmediato de una unidad.
+        Si se asigna un jefe que ya estaba en otra unidad, se limpia automaticamente
+        su asignacion anterior y se mantiene el estado is_boss consistente.
+        """
+        previous_boss_id = None
+        if self.pk:
+            previous_boss_id = AdministrativeUnit.objects.filter(pk=self.pk).values_list('boss_id', flat=True).first()
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            from employee.models import Employee
+
+            if self.boss_id:
+                # Quitar este jefe de cualquier otra unidad para evitar duplicidad.
+                AdministrativeUnit.objects.filter(
+                    boss_id=self.boss_id
+                ).exclude(pk=self.pk).update(boss=None)
+
+                # Marcar al jefe actual como jefe activo.
+                Employee.objects.filter(pk=self.boss_id).update(is_boss=True)
+
+            # Si cambió el jefe de esta unidad, revisar si el anterior sigue a cargo de otra.
+            if previous_boss_id and previous_boss_id != self.boss_id:
+                old_still_manages = AdministrativeUnit.objects.filter(boss_id=previous_boss_id).exists()
+                if not old_still_manages:
+                    Employee.objects.filter(pk=previous_boss_id).update(is_boss=False)
 
 
 class Deliverable(BaseModel):

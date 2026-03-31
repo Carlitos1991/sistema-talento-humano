@@ -96,6 +96,17 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user_person = getattr(self.request.user, 'person', None)
+        context['can_generate_self_permit'] = bool(
+            context.get('person') and getattr(context['person'], 'employee_profile', None) and (
+                self.request.user.has_perm('permitrequest.add_permitrequest') or
+                (user_person and user_person.id == self.object.id)
+            )
+        )
+        context['can_insist_rejected_permits'] = bool(
+            self.request.user.has_perm('permitrequest.add_permitrequest') or
+            (user_person and user_person.id == self.object.id)
+        )
         # Por defecto, el wizard completo mantiene todas las secciones visibles.
         context['can_view_restricted_tabs'] = True
         context['restricted_tab_ids'] = ''
@@ -277,6 +288,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                         'permit_type_id': p.permit_type_id,
                         'permit_type': p.permit_type.name if p.permit_type else '',
                         'start_date': p.start_date if p.start_date else None,
+                        'start_time': p.start_time if p.start_time else None,
                         'end_date': p.end_date if p.end_date else None,
                         'status': dict(PermitRequest.STATUS_CHOICES).get(p.status, p.status),
                         'status_code': p.status,
@@ -284,6 +296,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                         'hours': duration_hours,
                         'minutes': duration_minutes,
                         'duration_text': ' | '.join(duration_parts),
+                        'response_note': p.response_note or '',
                         'justification_file_url': p.justification_file.url if getattr(p, 'justification_file', None) else None
                     })
                 context['permissions_history'] = ph

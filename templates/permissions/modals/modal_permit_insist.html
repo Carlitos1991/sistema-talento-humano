@@ -1,0 +1,53 @@
+{% load static %}
+
+<div class="modal-container-medium shadow-card">
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle" style="background:#f59e0b;">
+                <i class="fas fa-rotate-right"></i>
+            </div>
+            <h2 class="header-title-main">Insistir Solicitud de Permiso</h2>
+        </div>
+    </div>
+
+    <form method="post" id="insistPermitForm" action="{% url 'permissions:permit_insist' permit.id %}">
+        {% csrf_token %}
+
+        <div class="modal-body-scrolled">
+            <div class="section-card-standard">
+                <p><strong>Empleado:</strong> {{ permit.employee.person.full_name }}</p>
+                <p><strong>Tipo:</strong> {{ permit.permit_type.name }}</p>
+                <p><strong>Fecha:</strong> {{ permit.start_date|date:"d/m/Y" }}</p>
+            </div>
+
+            <div class="section-card-standard">
+                <div class="form-group">
+                    <label class="form-label font-weight-700">
+                        Motivo de insistencia
+                        <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="insist_message"
+                              class="form-control"
+                              rows="4"
+                              required
+                              maxlength="1000"
+                              placeholder="Explique por que solicita una nueva revision del permiso"></textarea>
+                    <small class="text-muted">Este mensaje se agregara a las observaciones y sera visible para el jefe.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fas fa-times-circle"></i> CANCELAR
+            </button>
+            <button type="submit" class="btn-save" style="background:#f59e0b; border-color:#f59e0b;">
+                <i class="fas fa-paper-plane"></i> ENVIAR INSISTENCIA
+            </button>
+        </div>
+    </form>
+</div>

@@ -8,10 +8,12 @@
 
     <div class="navbar-actions">
         <!-- 1. Notificaciones -->
-        <div class="notification-wrapper" title="Notificaciones">
-            <i class="fa-regular fa-bell fa-lg"></i>
-            <span class="notification-badge">3</span>
-        </div>
+        {% if navbar_show_permit_notifications %}
+            <a href="{{ navbar_permit_notifications_url }}" class="notification-wrapper" title="Solicitudes de permiso pendientes">
+                <i class="fa-regular fa-bell fa-lg"></i>
+                <span class="notification-badge">{{ navbar_permit_notifications_count }}</span>
+            </a>
+        {% endif %}
 
         <!-- 2. Usuario Dropdown -->
         <div class="user-dropdown-container">
@@ -55,6 +57,12 @@
                 {% else %}
                     <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
                         <i class="fa-regular fa-user"></i> Ver Perfil
+                    </a>
+                {% endif %}
+
+                {% if perms.auth.dashboard_talento_humano %}
+                    <a href="{% url 'core:dashboard' %}?view=jefe" class="dropdown-item">
+                        <i class="fa-regular fa-building"></i> Oficina
                     </a>
                 {% endif %}
 

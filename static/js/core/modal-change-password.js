@@ -26,14 +26,12 @@ function closeChangePasswordModal() {
 function validatePasswordRequirements(password) {
     const requirements = {
         length: password.length >= 8,
-        uppercase: /[A-Z]/.test(password),
         lowercase: /[a-z]/.test(password),
         number: /[0-9]/.test(password)
     };
 
     // Actualizar UI de requisitos
     document.getElementById('req-length').classList.toggle('req-met', requirements.length);
-    document.getElementById('req-uppercase').classList.toggle('req-met', requirements.uppercase);
     document.getElementById('req-lowercase').classList.toggle('req-met', requirements.lowercase);
     document.getElementById('req-number').classList.toggle('req-met', requirements.number);
 
@@ -75,8 +73,7 @@ function updateSubmitButton() {
     const submitBtn = document.getElementById('submitChangePasswordBtn');
 
     const requirements = validatePasswordRequirements(newPassword);
-    const allMet = requirements.length && requirements.uppercase && 
-                  requirements.lowercase && requirements.number && 
+    const allMet = requirements.length && requirements.lowercase && requirements.number && 
                   newPassword === confirmPassword;
 
     submitBtn.disabled = !allMet;

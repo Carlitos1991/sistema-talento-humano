@@ -20,6 +20,18 @@ from .forms import AssignBossForm
 from .models import AdministrativeUnit, OrganizationalLevel, Deliverable, InstitutionOrganigram
 
 
+def _get_reassigned_unit_names_for_boss(boss, exclude_unit_id=None):
+    """Obtiene los nombres de unidades donde el jefe ya estaba asignado."""
+    if not boss:
+        return []
+
+    qs = AdministrativeUnit.objects.filter(boss=boss)
+    if exclude_unit_id:
+        qs = qs.exclude(pk=exclude_unit_id)
+
+    return list(qs.order_by('name').values_list('name', flat=True))
+
+
 class ParentOptionsJsonView(LoginRequiredMixin, View):
     def get(self, request):
         level_id = request.GET.get('level_id')
@@ -145,12 +157,20 @@ class UnitCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         form = self.get_form()
         if form.is_valid():
+            selected_boss = form.cleaned_data.get('boss')
+            reassigned_from = _get_reassigned_unit_names_for_boss(selected_boss)
+
             unit = form.save(commit=False)
             unit.is_active = True
             unit.save()
+
+            message = 'Unidad creada correctamente.'
+            if reassigned_from:
+                message += f" El jefe fue reasignado automáticamente desde: {', '.join(reassigned_from)}."
+
             return JsonResponse({
                 'success': True,
-                'message': 'Unidad creada correctamente.',
+                'message': message,
                 'new_stats': get_unit_stats()
             })
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
@@ -291,12 +311,20 @@ class UnitUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         
         form = self.get_form()
         if form.is_valid():
+            selected_boss = form.cleaned_data.get('boss')
+            reassigned_from = _get_reassigned_unit_names_for_boss(selected_boss, exclude_unit_id=self.object.id)
+
             print(f"  - Form válido")
             print(f"  - Cleaned data parent: {form.cleaned_data.get('parent')}")
             print(f"  - Cleaned data level: {form.cleaned_data.get('level')}")
             form.save()
             print(f"  - Parent en DB después de guardar: {self.object.parent_id}")
-            return JsonResponse({'success': True, 'message': 'Unidad actualizada correctamente.'})
+
+            message = 'Unidad actualizada correctamente.'
+            if reassigned_from:
+                message += f" El jefe fue reasignado automáticamente desde: {', '.join(reassigned_from)}."
+
+            return JsonResponse({'success': True, 'message': message})
         else:
             print(f"  - Form INVÁLIDO")
             print(f"  - Errores: {form.errors}")
@@ -796,6 +824,9 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         form = self.get_form()
 
         if form.is_valid():
+            selected_boss = form.cleaned_data.get('boss')
+            reassigned_from = _get_reassigned_unit_names_for_boss(selected_boss, exclude_unit_id=self.object.id)
+
             unit = form.save()
             new_boss = unit.boss
 
@@ -808,10 +839,11 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
                     old_boss.is_boss = False
                     old_boss.save(update_fields=['is_boss'])
 
-            return JsonResponse({
-                'success': True,
-                'message': f'Jefe asignado correctamente a {self.object.name}.'
-            })
+            message = f'Jefe asignado correctamente a {self.object.name}.'
+            if reassigned_from:
+                message += f" Reasignado automáticamente desde: {', '.join(reassigned_from)}."
+
+            return JsonResponse({'success': True, 'message': message})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 

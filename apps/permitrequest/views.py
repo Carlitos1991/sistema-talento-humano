@@ -8,6 +8,7 @@ from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from django.core import signing
 from django.http import Http404
+from django.utils import timezone
 from io import BytesIO
 import base64
 
@@ -361,16 +362,36 @@ class EmployeePermitHistoryView(LoginRequiredMixin, PermissionRequiredMixin, Vie
 
 class GeneratePermitFormView(LoginRequiredMixin, View):
     """Vista para cargar el formulario de generar permiso"""
-    
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm('permitrequest.add_permitrequest'):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No tiene permisos para generar permisos'
-                }, status=403)
-            return HttpResponse('Acceso denegado', status=403)
-        return super().dispatch(request, *args, **kwargs)
+
+    def _resolve_request_employee(self, request):
+        user_person = getattr(request.user, 'person', None)
+        employee_profile = getattr(user_person, 'employee_profile', None) if user_person else None
+
+        if employee_profile:
+            return employee_profile
+
+        from person.models import Person
+
+        person_by_document = Person.objects.filter(
+            document_number=request.user.username
+        ).select_related('employee_profile').first()
+        if person_by_document and getattr(person_by_document, 'employee_profile', None):
+            return person_by_document.employee_profile
+
+        if request.user.email:
+            person_by_email = Person.objects.filter(
+                email__iexact=request.user.email
+            ).select_related('employee_profile').first()
+            if person_by_email and getattr(person_by_email, 'employee_profile', None):
+                return person_by_email.employee_profile
+
+        return None
+
+    def _can_generate_for_employee(self, request, employee):
+        if request.user.has_perm('permitrequest.add_permitrequest'):
+            return True
+        request_employee = self._resolve_request_employee(request)
+        return bool(request_employee and request_employee.id == employee.id)
     
     def get(self, request):
         employee_raw = request.GET.get('employee')
@@ -390,6 +411,12 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
             }, status=400)
 
         employee = get_object_or_404(Employee, pk=int(employee_id))
+
+        if not self._can_generate_for_employee(request, employee):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para generar permisos'
+            }, status=403)
         
         # Obtener tipos padre (sin parent)
         parent_types = PermitType.objects.filter(
@@ -416,6 +443,12 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
             if not employee_id:
                 raise ValueError('ID de empleado inválido')
             employee = get_object_or_404(Employee, pk=int(employee_id))
+
+            if not self._can_generate_for_employee(request, employee):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No tiene permisos para generar permisos'
+                }, status=403)
             
             # Crear instancia de PermitRequest
             permit = PermitRequest()
@@ -425,13 +458,17 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
             permit.start_time = request.POST.get('start_time')
             permit.end_date = request.POST.get('end_date')
             permit.end_time = request.POST.get('end_time')
-            permit.reason = request.POST.get('reason', '')
+            permit.days = int(request.POST.get('days') or 0)
+            permit.hours = int(request.POST.get('hours') or 0)
+            permit.minutes = int(request.POST.get('minutes') or 0)
+            permit.response_note = request.POST.get('reason', '').strip()
             permit.created_by = request.user
+            permit.updated_by = request.user
             permit.status = 'REQUESTED'
             
             # Manejar archivo adjunto
-            if 'attachment' in request.FILES:
-                permit.attachment = request.FILES['attachment']
+            if 'justification_file' in request.FILES:
+                permit.justification_file = request.FILES['justification_file']
             
             permit.save()
             
@@ -667,11 +704,16 @@ class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
             }, status=400)
         
         response_note = request.POST.get('response_note', '').strip()
+        now = timezone.now()
+        if timezone.is_aware(now):
+            now = timezone.localtime(now)
+        user_full_name = request.user.get_full_name().strip() or request.user.username
         
         if action == 'approve':
             permit.status = 'APPROVED'
             if not response_note:
                 response_note = "Se acepta el permiso"
+            action_label = 'APROBACION'
             message = 'Permiso aprobado correctamente'
         elif action == 'reject':
             permit.status = 'REJECTED'
@@ -680,15 +722,19 @@ class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     'success': False,
                     'message': 'Debe ingresar el motivo de la negativa'
                 }, status=400)
+            action_label = 'RECHAZO'
             message = 'Permiso rechazado correctamente'
         else:
             return JsonResponse({
                 'success': False,
                 'message': 'Acción no válida'
             }, status=400)
-        
-        from django.utils import timezone
-        permit.response_note = response_note
+
+        history_entry = f"{action_label} ({now.strftime('%d/%m/%Y %H:%M')}) por {user_full_name}: {response_note}"
+        if permit.response_note:
+            permit.response_note = f"{permit.response_note}\n\n{history_entry}"
+        else:
+            permit.response_note = history_entry
         permit.response_date = timezone.now()
         permit.response_by = request.user
         permit.updated_by = request.user
@@ -696,19 +742,129 @@ class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
         
         return JsonResponse({
             'success': True,
-            'message': message
+            'message': message,
+            'status': permit.status,
+            'response_note': permit.response_note or ''
         })
 
 
-class PermitReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class PermitInsistView(LoginRequiredMixin, View):
+    """Permite insistir una solicitud rechazada y reenviarla a revisión."""
+
+    def _can_insist(self, request, permit):
+        if request.user.has_perm('permitrequest.add_permitrequest'):
+            return True
+        user_person = getattr(request.user, 'person', None)
+        return bool(user_person and permit.employee.person_id == user_person.id)
+
+    def get(self, request, pk):
+        permit = get_object_or_404(PermitRequest.objects.select_related('employee__person', 'permit_type'), pk=pk)
+
+        if permit.status != 'REJECTED':
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo se puede insistir en permisos rechazados.'
+            }, status=400)
+
+        if not self._can_insist(request, permit):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para insistir esta solicitud.'
+            }, status=403)
+
+        html = render_to_string(
+            'permissions/modals/modal_permit_insist.html',
+            {'permit': permit},
+            request=request
+        )
+        return HttpResponse(html)
+
+    def post(self, request, pk):
+        permit = get_object_or_404(PermitRequest.objects.select_related('employee__person'), pk=pk)
+
+        if permit.status != 'REJECTED':
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo se puede insistir en permisos rechazados.'
+            }, status=400)
+
+        if not self._can_insist(request, permit):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tiene permisos para insistir esta solicitud.'
+            }, status=403)
+
+        insist_message = request.POST.get('insist_message', '').strip()
+        if not insist_message:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe escribir un mensaje para insistir la solicitud.'
+            }, status=400)
+
+        now = timezone.now()
+        if timezone.is_aware(now):
+            now = timezone.localtime(now)
+        user_full_name = request.user.get_full_name().strip() or request.user.username
+        insist_note = f"INSISTENCIA ({now.strftime('%d/%m/%Y %H:%M')}) por {user_full_name}: {insist_message}"
+
+        if permit.response_note:
+            permit.response_note = f"{permit.response_note}\n\n{insist_note}"
+        else:
+            permit.response_note = insist_note
+
+        permit.status = 'REQUESTED'
+        permit.response_date = None
+        permit.response_by = None
+        permit.updated_by = request.user
+        permit.save(update_fields=['status', 'response_note', 'response_date', 'response_by', 'updated_by', 'updated_at'])
+
+        return JsonResponse({
+            'success': True,
+            'message': 'La solicitud fue insistida y enviada nuevamente al jefe para revisión.'
+        })
+
+
+class PermitReportView(LoginRequiredMixin, View):
     """Vista para generar reporte imprimible del permiso con código QR"""
-    permission_required = 'permitrequest.view_permitrequest'
+
+    def _resolve_request_employee(self, request):
+        user_person = getattr(request.user, 'person', None)
+        employee_profile = getattr(user_person, 'employee_profile', None) if user_person else None
+
+        if employee_profile:
+            return employee_profile
+
+        from person.models import Person
+
+        person_by_document = Person.objects.filter(
+            document_number=request.user.username
+        ).select_related('employee_profile').first()
+        if person_by_document and getattr(person_by_document, 'employee_profile', None):
+            return person_by_document.employee_profile
+
+        if request.user.email:
+            person_by_email = Person.objects.filter(
+                email__iexact=request.user.email
+            ).select_related('employee_profile').first()
+            if person_by_email and getattr(person_by_email, 'employee_profile', None):
+                return person_by_email.employee_profile
+
+        return None
+
+    def _can_view_report(self, request, permit):
+        if request.user.has_perm('permitrequest.view_permitrequest'):
+            return True
+        request_employee = self._resolve_request_employee(request)
+        return bool(request_employee and request_employee.id == permit.employee_id)
 
     def get(self, request, pk):
         permit = get_object_or_404(
             PermitRequest.objects.select_related('employee__person', 'permit_type', 'response_by'),
             pk=pk
         )
+
+        if not self._can_view_report(request, permit):
+            return HttpResponse('Acceso denegado', status=403)
         
         # Solo permitir imprimir si el permiso está aprobado
         if permit.status != 'APPROVED':

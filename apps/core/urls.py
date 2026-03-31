@@ -7,6 +7,8 @@ app_name = 'core'
 urlpatterns = [
     # Login Personalizado
     path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('login/forgot-password/', views.ForgotPasswordView.as_view(), name='forgot_password'),
+    path('login/create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
 
     # Logout
     path('logout/', auth_views.LogoutView.as_view(next_page='core:login'), name='logout'),
