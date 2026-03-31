@@ -12,7 +12,7 @@ from contract.models import ManagementPeriod
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation
 from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt, \
-    PayrollPeriod, PayrollNovelty
+    PayrollPeriod, PayrollNovelty, RubroBudgetMapping
 
 
 logger = logging.getLogger(__name__)
@@ -442,22 +442,19 @@ class PayrollCalculatorService:
 
             return {"success": True, "warnings": warnings}
 
-    def _resolve_budget_line_for_item(self, payslip_item, latest_budget_line_by_employee):
+    def _resolve_budget_line_for_item(self, payslip_item, latest_budget_line_by_employee, income_mapping_map,
+                                      deduction_mapping_map, contribution_mapping_map):
         """Resuelve la partida presupuestaria final para un ítem, basada en asignación y mapeo."""
         if getattr(payslip_item, 'budget_line_code', None):
             return None  # Ya procesado
 
         mapping = None
-        try:
-            if payslip_item.item_type == 'INCOME' and getattr(payslip_item.income_ref, 'budget_mapping', None):
-                mapping = payslip_item.income_ref.budget_mapping
-            elif payslip_item.item_type == 'DEDUCTION' and getattr(payslip_item.deduction_ref, 'budget_mapping', None):
-                mapping = payslip_item.deduction_ref.budget_mapping
-            elif payslip_item.item_type == 'CONTRIBUTION' and getattr(payslip_item, 'contribution_ref', None) and getattr(
-                    payslip_item.contribution_ref, 'budget_mapping', None):
-                mapping = payslip_item.contribution_ref.budget_mapping
-        except Exception:
-            mapping = None
+        if payslip_item.item_type == 'INCOME' and payslip_item.income_ref_id:
+            mapping = income_mapping_map.get(payslip_item.income_ref_id)
+        elif payslip_item.item_type == 'DEDUCTION' and payslip_item.deduction_ref_id:
+            mapping = deduction_mapping_map.get(payslip_item.deduction_ref_id)
+        elif payslip_item.item_type == 'CONTRIBUTION' and payslip_item.contribution_ref_id:
+            mapping = contribution_mapping_map.get(payslip_item.contribution_ref_id)
 
         base_bl = (payslip_item._historical_bl if hasattr(payslip_item, '_historical_bl')
                    else latest_budget_line_by_employee.get(payslip_item.payslip.employee_id))
@@ -498,9 +495,42 @@ class PayrollCalculatorService:
             latest_assignment = max(assignments, key=lambda x: x.start_date)
             latest_budget_line_by_employee[employee_id] = latest_assignment.budget_line
 
+        income_ids = set()
+        deduction_ids = set()
+        contribution_ids = set()
+        for it in created_items:
+            if it.item_type == 'INCOME' and it.income_ref_id:
+                income_ids.add(it.income_ref_id)
+            elif it.item_type == 'DEDUCTION' and it.deduction_ref_id:
+                deduction_ids.add(it.deduction_ref_id)
+            elif it.item_type == 'CONTRIBUTION' and it.contribution_ref_id:
+                contribution_ids.add(it.contribution_ref_id)
+
+        income_mapping_map = {
+            m.income_id: m
+            for m in RubroBudgetMapping.objects.filter(income_id__in=income_ids)
+            .only('income_id', 'dynamic_suffix', 'is_fixed')
+        }
+        deduction_mapping_map = {
+            m.deduction_id: m
+            for m in RubroBudgetMapping.objects.filter(deduction_id__in=deduction_ids)
+            .only('deduction_id', 'dynamic_suffix', 'is_fixed')
+        }
+        contribution_mapping_map = {
+            m.contribution_id: m
+            for m in RubroBudgetMapping.objects.filter(contribution_id__in=contribution_ids)
+            .only('contribution_id', 'dynamic_suffix', 'is_fixed')
+        }
+
         items_to_update = []
         for it in created_items:
-            resolved_item = self._resolve_budget_line_for_item(it, latest_budget_line_by_employee)
+            resolved_item = self._resolve_budget_line_for_item(
+                it,
+                latest_budget_line_by_employee,
+                income_mapping_map,
+                deduction_mapping_map,
+                contribution_mapping_map,
+            )
             if resolved_item:
                 items_to_update.append(resolved_item)
 
