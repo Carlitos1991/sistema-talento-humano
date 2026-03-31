@@ -1,6 +1,7 @@
 # apps/biometric/adms_views.py
 import json
 import logging
+import time
 from datetime import datetime
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -12,6 +13,19 @@ from .models import BiometricCommand
 
 logger = logging.getLogger(__name__)
 
+_HEARTBEAT_LOG_WINDOW_SECONDS = 60
+_last_heartbeat_log_by_sn = {}
+
+
+def _should_log_heartbeat(sn):
+    now = time.time()
+    key = sn or 'UNKNOWN'
+    last = _last_heartbeat_log_by_sn.get(key, 0)
+    if now - last >= _HEARTBEAT_LOG_WINDOW_SECONDS:
+        _last_heartbeat_log_by_sn[key] = now
+        return True
+    return False
+
 
 @csrf_exempt
 def iclock_registry(request):
@@ -22,11 +36,12 @@ def iclock_registry(request):
 @csrf_exempt
 def iclock_getrequest(request):
     sn = request.GET.get('SN') or request.GET.get('sn')
-    print(f"🔔 [ADMS] Heartbeat recibido de SN: '{sn}'")
+    if _should_log_heartbeat(sn):
+        logger.info("[ADMS] Heartbeat SN='%s'", sn)
 
     device = BiometricDevice.objects.filter(serial_number=sn, is_active=True).first()
     if not device:
-        print(f"⚠️ [ADMS] Rechazado: El SN '{sn}' no existe en BD o está inactivo.")  # <--- Y ESTA
+        logger.warning("[ADMS] Rechazado SN='%s' (no existe o inactivo)", sn)
         return HttpResponse("OK", content_type="text/plain")
 
     # Buscar el comando más antiguo pendiente (FIFO)
@@ -40,7 +55,7 @@ def iclock_getrequest(request):
         cmd.status = 'SENT'
         cmd.save()
 
-        print(f"📤 [ADMS] Enviando comando a {sn}: {cmd.command}")
+        logger.info("[ADMS] Enviando comando a SN='%s': %s", sn, cmd.command)
         return HttpResponse(response_str, content_type="text/plain")
 
     return HttpResponse("OK", content_type="text/plain")
@@ -56,7 +71,7 @@ def iclock_devicecmd(request):
         try:
             # Los datos suelen venir en el body como texto plano: ID=1&Return=0
             raw_body = request.body.decode('utf-8', errors='ignore')
-            print(f"📩 [ADMS] Respuesta de comando: {raw_body}")
+            logger.info("[ADMS] Respuesta de comando: %s", raw_body)
 
             # Parsear respuesta
             data = {}
@@ -76,10 +91,10 @@ def iclock_devicecmd(request):
                     cmd.return_value = ret_val
                     cmd.execution_time = datetime.now()
                     cmd.save()
-                    print(f"✅ Comando {cmd_id} ejecutado con código {ret_val}")
+                    logger.info("[ADMS] Comando %s ejecutado con codigo %s", cmd_id, ret_val)
 
         except Exception as e:
-            print(f"❌ Error procesando devicecmd: {e}")
+            logger.error("[ADMS] Error procesando devicecmd: %s", e)
 
     return HttpResponse("OK", content_type="text/plain")
 
