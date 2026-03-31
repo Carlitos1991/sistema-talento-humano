@@ -121,7 +121,9 @@ class PayrollCalculatorService:
         def _lap(label):
             nonlocal t_mark
             now = time.perf_counter()
-            logger.info("[PAYROLL][PERF] %s -> +%.3fs (acum: %.3fs)", label, now - t_mark, now - t0)
+            msg = f"[PAYROLL][PERF] {label} -> +{(now - t_mark):.3f}s (acum: {(now - t0):.3f}s)"
+            logger.info(msg)
+            print(msg)
             t_mark = now
 
         with transaction.atomic():
@@ -434,7 +436,9 @@ class PayrollCalculatorService:
             _lap("assign budget lines")
             warnings = self._generate_accounting_journal(created_payslips)
             _lap("generate accounting journal")
-            logger.info("[PAYROLL][PERF] total payroll execution: %.3fs", time.perf_counter() - t0)
+            total_msg = f"[PAYROLL][PERF] total payroll execution: {(time.perf_counter() - t0):.3f}s"
+            logger.info(total_msg)
+            print(total_msg)
 
             return {"success": True, "warnings": warnings}
 
