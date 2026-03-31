@@ -23,7 +23,8 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'person.view_person'
 
     def get_queryset(self):
-        qs = Person.objects.select_related('user').prefetch_related('user__groups').all().order_by('last_name')
+        # En la gestión de usuarios solo se listan personas activas.
+        qs = Person.objects.filter(is_active=True).select_related('user').prefetch_related('user__groups').order_by('last_name')
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(
@@ -64,8 +65,8 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['filter_form'] = UserFilterForm(self.request.GET)
         context['creds_form'] = CredentialCreationForm()
 
-        all_persons = Person.objects.all()
-        context['stats_total'] = User.objects.count()
+        all_persons = Person.objects.filter(is_active=True)
+        context['stats_total'] = all_persons.count()
         context['stats_active'] = all_persons.filter(user__is_active=True).count()
         context['stats_inactive'] = all_persons.filter(user__is_active=False).count()
 
@@ -415,10 +416,11 @@ class UserToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
         user.is_active = not user.is_active
         user.save()
 
+        active_persons = Person.objects.filter(is_active=True)
         stats = {
-            'total': Person.objects.count(),
-            'active': Person.objects.filter(user__is_active=True).count(),
-            'inactive': Person.objects.filter(user__isnull=False, user__is_active=False).count(),
+            'total': active_persons.count(),
+            'active': active_persons.filter(user__is_active=True).count(),
+            'inactive': active_persons.filter(user__isnull=False, user__is_active=False).count(),
         }
 
         action_verb = "activado" if user.is_active else "desactivado"

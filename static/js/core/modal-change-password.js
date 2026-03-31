@@ -31,9 +31,33 @@ function validatePasswordRequirements(password) {
     };
 
     // Actualizar UI de requisitos
-    document.getElementById('req-length').classList.toggle('req-met', requirements.length);
-    document.getElementById('req-lowercase').classList.toggle('req-met', requirements.lowercase);
-    document.getElementById('req-number').classList.toggle('req-met', requirements.number);
+    const reqLength = document.getElementById('req-length');
+    const reqLowercase = document.getElementById('req-lowercase');
+    const reqNumber = document.getElementById('req-number');
+
+    if (requirements.length) {
+        reqLength.classList.remove('text-danger');
+        reqLength.classList.add('req-met');
+    } else {
+        reqLength.classList.add('text-danger');
+        reqLength.classList.remove('req-met');
+    }
+
+    if (requirements.lowercase) {
+        reqLowercase.classList.remove('text-danger');
+        reqLowercase.classList.add('req-met');
+    } else {
+        reqLowercase.classList.add('text-danger');
+        reqLowercase.classList.remove('req-met');
+    }
+
+    if (requirements.number) {
+        reqNumber.classList.remove('text-danger');
+        reqNumber.classList.add('req-met');
+    } else {
+        reqNumber.classList.add('text-danger');
+        reqNumber.classList.remove('req-met');
+    }
 
     return requirements;
 }
