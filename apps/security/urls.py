@@ -17,4 +17,7 @@ urlpatterns = [
     path('users/create-credentials/<int:person_id>/', views.CreateUserForPersonView.as_view(),
          name='user_create_credentials'),
     path('users/toggle/<int:pk>/', views.UserToggleStatusView.as_view(), name='user_toggle_status'),
+    
+    # API
+    path('api/update-session-info/', views.UpdateSessionInfoView.as_view(), name='update_session_info'),
 ]

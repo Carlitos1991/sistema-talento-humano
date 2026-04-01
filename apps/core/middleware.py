@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 
 
 class SIGETHSecurityMiddleware:
@@ -7,12 +8,24 @@ class SIGETHSecurityMiddleware:
     Middleware global de seguridad.
     Controla que solo usuarios autenticados accedan al sistema,
     pero deja puertas abiertas para el hardware (ADMS).
+    También registra la actividad de cada usuario.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        # Actualizar última actividad del usuario si está autenticado
+        if request.user.is_authenticated:
+            try:
+                from security.models import UserSession
+                # Actualizar la última actividad de la sesión actual
+                UserSession.objects.filter(user=request.user).update(
+                    last_activity=timezone.now()
+                )
+            except Exception:
+                pass  # Silenciar errores en la actualización de actividad
+
         path = request.path_info
 
         # Intentar resolver la URL de login, fallback a la configuración directa

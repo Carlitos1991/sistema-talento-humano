@@ -444,33 +444,58 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from datetime import timedelta
         
-        # Get all active sessions
-        sessions = Session.objects.filter(expire_date__gte=timezone.now())
-        
-        # Get user IDs from active sessions
-        user_ids = []
-        for session in sessions:
-            data = session.get_decoded()
-            user_id = data.get('_auth_user_id')
-            if user_id:
-                user_ids.append(user_id)
-
-        # Get active users
-        active_users = get_user_model().objects.filter(id__in=user_ids)
-        
-        # Get last login details
-        user_sessions = UserSession.objects.order_by('user', '-created_at').distinct('user')
+        # Obtener la última sesión de cada usuario
+        user_sessions_dict = {}
+        for session in UserSession.objects.all().order_by('user_id', '-last_activity').distinct('user_id'):
+            if session.user_id not in user_sessions_dict:
+                user_sessions_dict[session.user_id] = session
         
         user_data = []
+        SESSION_TIMEOUT_HOURS = 12
+        timeout_threshold = timezone.now() - timedelta(hours=SESSION_TIMEOUT_HOURS)
+        
         for user in self.get_queryset():
-            is_online = user in active_users
-            last_session = next((s for s in user_sessions if s.user == user), None)
+            last_session = user_sessions_dict.get(user.id)
+            
+            # Determinar si está en línea:
+            # - Debe tener una sesión registrada
+            # - La última actividad debe ser menor a 12 horas
+            if last_session and last_session.last_activity >= timeout_threshold:
+                is_online = True
+            else:
+                is_online = False
+            
             user_data.append({
                 'user': user,
                 'is_online': is_online,
                 'ip_address': last_session.ip_address if last_session else 'N/A',
+                'mac_address': last_session.mac_address if last_session else 'N/A',
+                'device_info': last_session.user_agent if last_session else 'N/A',
             })
             
         context['user_data'] = user_data
         return context
+
+
+class UpdateSessionInfoView(LoginRequiredMixin, View):
+    """API para actualizar información del dispositivo en la sesión de usuario"""
+    
+    def post(self, request):
+        import json
+        
+        try:
+            data = json.loads(request.body)
+            mac_address = data.get('mac_address', '')
+            device_info = data.get('device_info', '')
+            
+            # Actualizar la sesión actual del usuario con la información del dispositivo
+            UserSession.objects.filter(user=request.user).update(
+                mac_address=mac_address[:17] if mac_address else None,  # Limitar a longitud de MAC
+                user_agent=device_info[:500] if device_info else None   # Limitar longitud
+            )
+            
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

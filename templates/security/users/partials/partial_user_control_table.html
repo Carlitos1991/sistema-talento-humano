@@ -6,6 +6,7 @@
                 <th>Nombres Completos</th>
                 <th>Última Conexión</th>
                 <th>Dirección IP</th>
+                <th>MAC</th>
                 <th>Estado</th>
             </tr>
         </thead>
@@ -16,6 +17,7 @@
                 <td>{{ data.user.get_full_name }}</td>
                 <td>{{ data.user.last_login|date:"d/m/Y H:i" }}</td>
                 <td>{{ data.ip_address }}</td>
+                <td>{{ data.mac_address }}</td>
                 <td>
                     {% if data.is_online %}
                         <span class="status-badge active">En Línea</span>
