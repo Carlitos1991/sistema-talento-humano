@@ -21,19 +21,26 @@ def user_logged_in_handler(sender, request, user, **kwargs):
     """
     Registra la sesión del usuario con IP cuando inicia sesión.
     """
-    session_key = request.session.session_key
-    ip_address = get_client_ip(request)
-    user_agent = get_user_agent(request)
-    
-    # Crear o actualizar la sesión con los datos más nuevos
-    UserSession.objects.update_or_create(
-        user=user,
-        session_key=session_key,
-        defaults={
-            'ip_address': ip_address,
-            'user_agent': user_agent,
-        }
-    )
+    try:
+        ip_address = get_client_ip(request)
+        user_agent = get_user_agent(request)
+        
+        try:
+            session_key = request.session.session_key
+        except Exception:
+            session_key = None
+        
+        # Crear o actualizar la sesión usando solo el usuario como clave
+        UserSession.objects.update_or_create(
+            user=user,
+            defaults={
+                'ip_address': ip_address or '0.0.0.0',
+                'session_key': session_key,
+                'user_agent': user_agent,
+            }
+        )
+    except Exception as e:
+        pass  # Silenciar errores en signal
 
 @receiver(user_logged_out)
 def user_logged_out_handler(sender, request, user, **kwargs):

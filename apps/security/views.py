@@ -445,27 +445,24 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from datetime import timedelta
-        
-        # Obtener la última sesión de cada usuario
-        user_sessions_dict = {}
-        for session in UserSession.objects.all().order_by('user_id', '-last_activity').distinct('user_id'):
-            if session.user_id not in user_sessions_dict:
-                user_sessions_dict[session.user_id] = session
+        from django.db.models import Q
         
         user_data = []
         SESSION_TIMEOUT_HOURS = 12
         timeout_threshold = timezone.now() - timedelta(hours=SESSION_TIMEOUT_HOURS)
         
+        # Obtener todas mis sesiones
+        all_sessions = {obj.user_id: obj for obj in UserSession.objects.select_related('user').all()}
+        
         for user in self.get_queryset():
-            last_session = user_sessions_dict.get(user.id)
+            last_session = all_sessions.get(user.id)
             
             # Determinar si está en línea:
             # - Debe tener una sesión registrada
-            # - La última actividad debe ser menor a 12 horas
-            if last_session and last_session.last_activity >= timeout_threshold:
-                is_online = True
-            else:
-                is_online = False
+            # - La última actividad debe ser MAYOR o igual al threshold (dentro de 12 horas)
+            is_online = False
+            if last_session and last_session.last_activity:
+                is_online = last_session.last_activity >= timeout_threshold
             
             user_data.append({
                 'user': user,

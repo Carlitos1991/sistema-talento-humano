@@ -19,29 +19,28 @@ class SIGETHSecurityMiddleware:
         if request.user.is_authenticated:
             try:
                 from security.models import UserSession
-                # Obtener o crear la sesión del usuario
+                # Obtener IP del cliente
                 ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
                 if not ip_address:
                     ip_address = request.META.get('REMOTE_ADDR', '')
                 
-                session_key = getattr(request, 'session', {}).session_key or None
+                # Obtener session_key (puede ser None en primera petición)
+                try:
+                    session_key = request.session.session_key
+                except Exception:
+                    session_key = None
                 
-                # Crear o actualizar la sesión
-                if session_key:
-                    UserSession.objects.update_or_create(
-                        user=request.user,
-                        session_key=session_key,
-                        defaults={
-                            'ip_address': ip_address,
-                            'last_activity': timezone.now(),
-                        }
-                    )
-                else:
-                    # Sin session_key, solo actualizar last_activity si existe
-                    updated = UserSession.objects.filter(user=request.user).update(
-                        last_activity=timezone.now()
-                    )
-            except Exception:
+                # Actualizar o crear sesión usando SOLO el usuario como clave
+                # Esto asegura que hay una sola sesión por usuario
+                UserSession.objects.update_or_create(
+                    user=request.user,
+                    defaults={
+                        'ip_address': ip_address or '0.0.0.0',
+                        'session_key': session_key,
+                        'last_activity': timezone.now(),
+                    }
+                )
+            except Exception as e:
                 pass  # Silenciar errores en la actualización de actividad
 
         path = request.path_info
