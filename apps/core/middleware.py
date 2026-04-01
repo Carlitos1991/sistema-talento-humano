@@ -19,27 +19,45 @@ class SIGETHSecurityMiddleware:
         if request.user.is_authenticated:
             try:
                 from security.models import UserSession
-                # Obtener IP del cliente
-                ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
-                if not ip_address:
-                    ip_address = request.META.get('REMOTE_ADDR', '')
                 
-                # Obtener session_key (puede ser None en primera petición)
+                # Obtener IP del cliente (mejorado)
+                ip_address = None
+                
+                # Intenta obtner de X-Forwarded-For (proxy/load balancer)
+                x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                if x_forwarded_for:
+                    ip_address = x_forwarded_for.split(',')[0].strip()
+                
+                # Si no, intenta X-Real-IP
+                if not ip_address:
+                    ip_address = request.META.get('HTTP_X_REAL_IP', '').strip()
+                
+                # Si no, usa REMOTE_ADDR
+                if not ip_address:
+                    ip_address = request.META.get('REMOTE_ADDR', '').strip()
+                
+                # Obtener session_key
                 try:
                     session_key = request.session.session_key
                 except Exception:
                     session_key = None
                 
                 # Actualizar o crear sesión usando SOLO el usuario como clave
-                # Esto asegura que hay una sola sesión por usuario
-                UserSession.objects.update_or_create(
-                    user=request.user,
-                    defaults={
-                        'ip_address': ip_address or '0.0.0.0',
-                        'session_key': session_key,
-                        'last_activity': timezone.now(),
-                    }
-                )
+                if ip_address:  # Solo actualizar si tenemos IP válida
+                    UserSession.objects.update_or_create(
+                        user=request.user,
+                        defaults={
+                            'ip_address': ip_address,
+                            'session_key': session_key,
+                            'last_activity': timezone.now(),
+                        }
+                    )
+                else:
+                    # Si no hay IP, solo actualizar last_activity
+                    UserSession.objects.filter(user=request.user).update(
+                        last_activity=timezone.now(),
+                        session_key=session_key
+                    )
             except Exception as e:
                 pass  # Silenciar errores en la actualización de actividad
 
