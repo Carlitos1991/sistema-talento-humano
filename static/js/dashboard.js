@@ -48,61 +48,123 @@ if (typeof Swal !== 'undefined') {
 // 2. LÓGICA DEL LAYOUT (Vanilla JS)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-
     const wrapper = document.querySelector('.layout-wrapper');
-    const toggleBtn = document.querySelector('.sidebar-toggle'); // Asegúrate que tu botón en navbar tenga esta clase
     const sidebar = document.querySelector('.sidebar');
+    const isSidebarCollapsed = () => {
+        return !!(wrapper && wrapper.classList.contains('is-collapsed')) || !!(sidebar && sidebar.classList.contains('collapsed'));
+    };
 
-    // 1. Recuperar estado del Sidebar
-    const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
-    if (isCollapsed && wrapper) {
-        wrapper.classList.add('is-collapsed');
-        if (sidebar) sidebar.classList.add('collapsed');
-    }
-
-    // 2. Evento Toggle Sidebar
-    if (toggleBtn && wrapper) {
-        toggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            wrapper.classList.toggle('is-collapsed');
-
-            // Guardar estado
-            const collapsed = wrapper.classList.contains('is-collapsed');
-            if (sidebar) sidebar.classList.toggle('collapsed');
-            localStorage.setItem('sidebar_collapsed', collapsed);
+    const closeCollapsedSubmenus = (exceptItem = null) => {
+        document.querySelectorAll('.sidebar .has-submenu.collapsed-open').forEach((item) => {
+            if (item !== exceptItem) {
+                const submenu = item.querySelector('.submenu');
+                if (submenu) {
+                    submenu.classList.remove('collapsed-floating');
+                    submenu.style.top = '';
+                    submenu.style.left = '';
+                    submenu.style.minWidth = '';
+                    submenu.style.transform = '';
+                    submenu.style.maxHeight = '';
+                    submenu.style.display = '';
+                }
+                item.classList.remove('collapsed-open');
+            }
         });
-    }
+    };
 
-    // 3. Manejo de Submenús (Acordeón)
-    const menuItems = document.querySelectorAll('.has-submenu > a');
-    menuItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            // Si el sidebar está colapsado, no hacemos acordeón (se usa hover CSS)
-            if (wrapper.classList.contains('is-collapsed')) return;
+    const positionFloatingSubmenu = (submenu, trigger) => {
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const triggerRect = trigger.getBoundingClientRect();
 
-            e.preventDefault();
-            const parentLi = item.parentElement;
+        submenu.style.display = 'block';
+        submenu.style.position = 'fixed';
+        submenu.style.minWidth = '220px';
 
-            // Cerrar otros abiertos
-            document.querySelectorAll('.sidebar-menu li.open').forEach(li => {
-                if (li !== parentLi) li.classList.remove('open');
-            });
+        requestAnimationFrame(() => {
+            const menuHeight = submenu.offsetHeight || 220;
+            const viewportPadding = 12;
+            const idealTop = triggerRect.top;
+            const maxTop = window.innerHeight - menuHeight - viewportPadding;
+            const top = Math.max(viewportPadding, Math.min(idealTop, maxTop));
 
-            // Toggle actual
-            parentLi.classList.toggle('open');
-            
-            // Si cerramos el menú principal, cerramos también los submenús internos
-            if (!parentLi.classList.contains('open')) {
-                const innerOpen = parentLi.querySelector('.has-inner-submenu.is-open');
-                if (innerOpen) {
-                    innerOpen.classList.remove('is-open');
-                    localStorage.setItem('admin_menu_open', 'false');
+            submenu.classList.add('collapsed-floating');
+            submenu.style.top = `${top}px`;
+            submenu.style.left = `${sidebarRect.right + 6}px`;
+            submenu.style.transform = 'none';
+            submenu.style.maxHeight = '70vh';
+        });
+    };
+
+    const openActiveSidebarBranches = () => {
+        document.querySelectorAll('.sidebar-menu a.active, .sidebar-menu a.active-child').forEach((link) => {
+            const parentSubmenu = link.closest('.has-submenu');
+            if (parentSubmenu) {
+                parentSubmenu.classList.add('open');
+            }
+
+            const innerSubmenu = link.closest('.has-inner-submenu');
+            if (innerSubmenu) {
+                innerSubmenu.classList.add('is-open');
+            }
+        });
+    };
+
+    openActiveSidebarBranches();
+
+    document.querySelectorAll('.sidebar .has-submenu > a').forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+            if (!isSidebarCollapsed()) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            const parentItem = trigger.parentElement;
+            const submenu = parentItem.querySelector('.submenu');
+            const wasOpen = parentItem.classList.contains('collapsed-open');
+
+            closeCollapsedSubmenus(parentItem);
+            parentItem.classList.toggle('collapsed-open', !wasOpen);
+
+            if (!wasOpen) {
+                if (submenu) {
+                    positionFloatingSubmenu(submenu, trigger);
                 }
             }
         });
     });
 
-    // 4. User Dropdown (Si existe)
+    document.addEventListener('click', (event) => {
+        if (!isSidebarCollapsed()) {
+            return;
+        }
+
+        const clickedInsideSidebar = event.target.closest('.sidebar');
+        if (!clickedInsideSidebar) {
+            closeCollapsedSubmenus();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (!isSidebarCollapsed()) {
+            return;
+        }
+
+        const openItem = document.querySelector('.sidebar .has-submenu.collapsed-open');
+        if (!openItem) {
+            return;
+        }
+
+        const trigger = openItem.querySelector(':scope > a');
+        const submenu = openItem.querySelector('.submenu');
+        if (!trigger || !submenu) {
+            return;
+        }
+
+        positionFloatingSubmenu(submenu, trigger);
+    });
+
+    // User Dropdown (Si existe)
     const userTrigger = document.querySelector('.user-trigger');
     const dropdownMenu = document.querySelector('.dropdown-menu'); // Asegúrate de tener clases unicas si hay varios
 
@@ -122,24 +184,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 // dropdownMenu.style.display = 'none';
             }
         });
-    }
-    const innerToggles = document.querySelectorAll('.inner-toggle');
-    innerToggles.forEach(innerToggle => {
-        innerToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            const parent = innerToggle.closest('.has-inner-submenu');
-            parent.classList.toggle('is-open');
-
-            // Guardar estado en localStorage
-            localStorage.setItem('admin_menu_open', parent.classList.contains('is-open'));
-        });
-    });
-
-    // Restaurar estado
-    if (localStorage.getItem('admin_menu_open') === 'true') {
-        const adminSubmenu = document.querySelector('.has-inner-submenu');
-        if (adminSubmenu) {
-            adminSubmenu.classList.add('is-open');
-        }
     }
 });
