@@ -527,7 +527,7 @@
             {% endif %}
             <li class="sidebar-section-title">Configuracion</li>
             <!--  Ajustes -->
-            {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location %}
+            {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location or request.user.is_authenticated %}
                 <li class="has-submenu">
                     <a href="#">
                         <i class="fa-solid fa-gear"></i>
@@ -544,7 +544,18 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.auth.view_group %}
+                        <li>
+                            <a href="{% url 'security:help_message_list' %}">
+                                <i class="fa-solid fa-circle-question"></i>
+                                <span class="menu-text">Ayuda</span>
+                                {% if help_messages_show_notifications %}
+                                    <span id="helpMessagesBadge" class="notification-badge" style="margin-left:auto;">{{ help_messages_unread_count }}</span>
+                                {% else %}
+                                    <span id="helpMessagesBadge" class="notification-badge hidden" style="margin-left:auto;">0</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% if perms.auth.view_group %}
                             <li>
                                 <a href="{% url 'security:role_list' %}">
                                     <i class="fa-solid fa-user-lock"></i>

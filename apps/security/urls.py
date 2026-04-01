@@ -13,6 +13,12 @@ urlpatterns = [
     path('roles/create/', views.RoleCreateView.as_view(), name='role_create'),
     path('roles/update/<int:pk>/', views.RoleUpdateView.as_view(), name='role_update'),
 
+    # Ayuda / Mensajería
+    path('help/messages/', views.HelpMessageListView.as_view(), name='help_message_list'),
+    path('help/messages/create/', views.HelpMessageCreateView.as_view(), name='help_message_create'),
+    path('help/messages/<int:pk>/mark-read/', views.HelpMessageMarkReadView.as_view(), name='help_message_mark_read'),
+    path('help/messages/<int:pk>/reply/', views.HelpMessageReplyView.as_view(), name='help_message_reply'),
+
     # Credenciales
     path('users/create-credentials/<int:person_id>/', views.CreateUserForPersonView.as_view(),
          name='user_create_credentials'),

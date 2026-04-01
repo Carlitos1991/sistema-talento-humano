@@ -250,3 +250,48 @@ class UserFilterForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'input-field'})
     )
+
+
+class HelpMessageForm(BaseFormMixin, forms.Form):
+    recipient_person = forms.ModelChoiceField(
+        queryset=Person.objects.none(),
+        label='Dirigido a',
+        widget=forms.Select(attrs={'class': 'input-field select2-field', 'id': 'id_help_recipient'}),
+        error_messages={'required': 'Debes seleccionar un destinatario.'}
+    )
+    subject = forms.CharField(
+        label='Asunto',
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Asunto del mensaje'}),
+        error_messages={'required': 'El asunto es obligatorio.'}
+    )
+    detail = forms.CharField(
+        label='Detalle',
+        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Describe tu solicitud o mensaje.'}),
+        error_messages={'required': 'El detalle es obligatorio.'}
+    )
+    attachment = forms.FileField(
+        label='Anexo',
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'input-field'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['recipient_person'].queryset = Person.objects.filter(
+            user__isnull=False,
+            is_active=True
+        ).select_related('user').order_by('last_name', 'first_name')
+
+
+class HelpMessageReplyForm(BaseFormMixin, forms.Form):
+    detail = forms.CharField(
+        label='Respuesta',
+        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Escribe la respuesta...'}),
+        error_messages={'required': 'La respuesta es obligatoria.'}
+    )
+    attachment = forms.FileField(
+        label='Anexo',
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'input-field'})
+    )

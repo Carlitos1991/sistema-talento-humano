@@ -1,17 +1,19 @@
 from django.contrib.auth import get_user_model
+from django.contrib import messages as django_messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Group
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, View, ListView, UpdateView
 from person.models import Person
-from .forms import RoleForm, UserFilterForm, CredentialCreationForm
+from .forms import RoleForm, UserFilterForm, CredentialCreationForm, HelpMessageForm, HelpMessageReplyForm
 from django.contrib.sessions.models import Session
 from django.utils import timezone
-from .models import UserSession
+from .models import UserSession, HelpMessage
 
 
 # --- 1. GESTIÓN DE USUARIOS (PERSONAS) ---
@@ -496,3 +498,140 @@ class UpdateSessionInfoView(LoginRequiredMixin, View):
             return JsonResponse({'status': 'success'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+class HelpMessageListView(LoginRequiredMixin, ListView):
+    model = HelpMessage
+    template_name = 'security/help_messages/message_list.html'
+    context_object_name = 'help_messages'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = HelpMessage.objects.filter(
+            recipient_user=self.request.user
+        ).select_related(
+            'sender_user__person',
+            'recipient_user__person',
+            'original_message'
+        ).order_by('-created_at')
+
+        query = self.request.GET.get('q')
+        if query:
+            qs = qs.filter(
+                Q(subject__icontains=query) |
+                Q(detail__icontains=query) |
+                Q(sender_user__username__icontains=query) |
+                Q(sender_user__person__first_name__icontains=query) |
+                Q(sender_user__person__last_name__icontains=query)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_form'] = HelpMessageForm()
+        context['reply_form'] = HelpMessageReplyForm()
+        context['messages_total'] = HelpMessage.objects.filter(recipient_user=self.request.user).count()
+        context['messages_unread'] = HelpMessage.objects.filter(
+            recipient_user=self.request.user,
+            status=HelpMessage.Status.SENT
+        ).count()
+        context['messages_read'] = HelpMessage.objects.filter(
+            recipient_user=self.request.user,
+            status=HelpMessage.Status.READ
+        ).count()
+        context['messages_attended'] = HelpMessage.objects.filter(
+            recipient_user=self.request.user,
+            status=HelpMessage.Status.ATTENDED
+        ).count()
+        return context
+
+
+class HelpMessageCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        form = HelpMessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            recipient_person = form.cleaned_data['recipient_person']
+            recipient_user = recipient_person.user
+            HelpMessage.objects.create(
+                sender_user=request.user,
+                recipient_user=recipient_user,
+                subject=form.cleaned_data['subject'],
+                detail=form.cleaned_data['detail'],
+                attachment=form.cleaned_data.get('attachment'),
+                status=HelpMessage.Status.SENT,
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            django_messages.success(request, 'Mensaje enviado correctamente.')
+            return redirect('security:help_message_list')
+
+        context = {
+            'help_messages': HelpMessage.objects.filter(recipient_user=request.user).select_related('sender_user__person', 'recipient_user__person', 'original_message').order_by('-created_at'),
+            'create_form': form,
+            'reply_form': HelpMessageReplyForm(),
+            'messages_total': HelpMessage.objects.filter(recipient_user=request.user).count(),
+            'messages_unread': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.SENT).count(),
+            'messages_read': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.READ).count(),
+            'messages_attended': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.ATTENDED).count(),
+            'open_create_modal': True,
+        }
+        return render(request, 'security/help_messages/message_list.html', context, status=400)
+
+
+class HelpMessageMarkReadView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        message = get_object_or_404(HelpMessage, pk=pk, recipient_user=request.user)
+        if message.status == HelpMessage.Status.SENT:
+            message.status = HelpMessage.Status.READ
+            message.read_at = timezone.now()
+            message.updated_by = request.user
+            message.save(update_fields=['status', 'read_at', 'updated_by', 'updated_at'])
+
+        remaining_unread = HelpMessage.objects.filter(
+            recipient_user=request.user,
+            status=HelpMessage.Status.SENT
+        ).count()
+
+        return JsonResponse({'success': True, 'status': message.status, 'remaining_unread': remaining_unread})
+
+
+class HelpMessageReplyView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        original = get_object_or_404(HelpMessage, pk=pk, recipient_user=request.user)
+        form = HelpMessageReplyForm(request.POST, request.FILES)
+        if form.is_valid():
+            reply_subject = f'Respuesta a mensaje: {original.subject}'
+            HelpMessage.objects.create(
+                sender_user=request.user,
+                recipient_user=original.sender_user,
+                subject=reply_subject,
+                detail=form.cleaned_data['detail'],
+                attachment=form.cleaned_data.get('attachment'),
+                status=HelpMessage.Status.ATTENDED,
+                original_message=original,
+                attended_at=timezone.now(),
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            original.status = HelpMessage.Status.ATTENDED
+            original.attended_at = timezone.now()
+            original.updated_by = request.user
+            original.save(update_fields=['status', 'attended_at', 'updated_by', 'updated_at'])
+            django_messages.success(request, 'Respuesta enviada correctamente.')
+            return redirect('security:help_message_list')
+
+        context = {
+            'help_messages': HelpMessage.objects.filter(recipient_user=request.user).select_related('sender_user__person', 'recipient_user__person', 'original_message').order_by('-created_at'),
+            'create_form': HelpMessageForm(),
+            'reply_form': form,
+            'messages_total': HelpMessage.objects.filter(recipient_user=request.user).count(),
+            'messages_unread': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.SENT).count(),
+            'messages_read': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.READ).count(),
+            'messages_attended': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.ATTENDED).count(),
+            'open_reply_modal': True,
+            'reply_target_url': reverse('security:help_message_reply', args=[original.pk]),
+            'reply_original_id': original.pk,
+            'reply_original_subject': original.subject,
+            'reply_sender_name': original.sender_name,
+        }
+        return render(request, 'security/help_messages/message_list.html', context, status=400)

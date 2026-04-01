@@ -1,0 +1,40 @@
+{% load static %}
+<div id="helpMessageDetailModal" class="modal-overlay hidden">
+    <div class="modal-container-medium shadow-card">
+        <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle" style="background:#14b8a6;">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                </div>
+                <h2 class="header-title-main">Detalle del Mensaje</h2>
+            </div>
+        </div>
+
+        <div class="modal-body-scrolled">
+            <div class="section-card-standard">
+                <p><strong>Asunto:</strong> <span id="detailMessageSubject"></span></p>
+                <p><strong>Solicitante:</strong> <span id="detailMessageSender"></span></p>
+                <p><strong>Dirigido a:</strong> <span id="detailMessageRecipient"></span></p>
+                <p><strong>Fecha:</strong> <span id="detailMessageCreatedAt"></span></p>
+                <p><strong>Estado:</strong> <span id="detailMessageStatus"></span></p>
+            </div>
+            <div class="section-card-standard">
+                <label class="form-label font-weight-700">Detalle</label>
+                <div id="detailMessageDetail" style="white-space: pre-wrap;"></div>
+            </div>
+            <div class="section-card-standard" id="detailMessageAttachmentBox" style="display:none;">
+                <p><strong>Anexo:</strong> <a id="detailMessageAttachment" href="#" target="_blank" rel="noopener">Ver archivo</a></p>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fas fa-times-circle"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>

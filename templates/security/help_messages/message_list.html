@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Ayuda | SIGETH{% endblock %}
+
+{% block content %}
+<div class="header-card">
+    <div>
+        <h1>Ayuda y Mensajería</h1>
+        <p>Consulta, responde y envía mensajes a cualquier usuario del sistema.</p>
+    </div>
+    <button type="button" class="btn btn-save" onclick="helpMessagesActions.openCreate()">
+        <i class="fa-solid fa-plus"></i> Nuevo Mensaje
+    </button>
+</div>
+
+<div class="stats-row">
+    <div class="stat-card color-one">
+        <div class="stat-left">
+            <h3>Total</h3>
+            <div class="number">{{ messages_total|default:'0' }}</div>
+        </div>
+        <i class="fa-solid fa-envelope stat-icon"></i>
+    </div>
+    <div class="stat-card color-two opacity-low">
+        <div class="stat-left">
+            <h3>Pendientes</h3>
+            <div class="number">{{ messages_unread|default:'0' }}</div>
+        </div>
+        <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
+    </div>
+    <div class="stat-card color-three opacity-low">
+        <div class="stat-left">
+            <h3>Leídos</h3>
+            <div class="number">{{ messages_read|default:'0' }}</div>
+        </div>
+        <i class="fa-solid fa-eye stat-icon"></i>
+    </div>
+    <div class="stat-card color-four opacity-low">
+        <div class="stat-left">
+            <h3>Atendidos</h3>
+            <div class="number">{{ messages_attended|default:'0' }}</div>
+        </div>
+        <i class="fa-solid fa-circle-check stat-icon"></i>
+    </div>
+</div>
+
+<div class="content-table">
+    <div class="table-controls">
+        <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o solicitante" value="{{ request.GET.q }}">
+        </form>
+    </div>
+
+    <div id="table-content-wrapper">
+        {% include 'security/help_messages/partials/partial_help_message_table.html' %}
+    </div>
+
+    {% if is_paginated %}
+        <div class="pagination-container">
+            <span class="pagination-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            <ul class="pagination-list">
+                {% if page_obj.has_previous %}
+                    <li><a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"><i class="fas fa-chevron-left"></i></a></li>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <li><a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"><i class="fas fa-chevron-right"></i></a></li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+    {% include 'security/help_messages/modals/modal_help_message_form.html' %}
+    {% include 'security/help_messages/modals/modal_help_message_detail.html' %}
+    {% include 'security/help_messages/modals/modal_help_message_reply.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/security/help_messages.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            {% if open_create_modal %}
+                window.helpMessagesActions.openCreate();
+            {% endif %}
+            {% if open_reply_modal %}
+                const replyButton = {
+                    dataset: {
+                        messageId: '{{ reply_original_id|default:"" }}',
+                        subject: '{{ reply_original_subject|escapejs }}',
+                        sender: '{{ reply_sender_name|escapejs }}',
+                        replyUrl: '{{ reply_target_url|default:"" }}'
+                    }
+                };
+                window.helpMessagesActions.openReply(replyButton);
+            {% endif %}
+        });
+    </script>
+{% endblock %}
