@@ -58,6 +58,10 @@
                                 data-status-label="{{ message.status_label|escapejs }}"
                                 data-created-at="{{ message.created_at|date:'d/m/Y H:i' }}"
                                 data-mark-read-url="{% url 'security:help_message_mark_read' message.id %}"
+                                data-show-attended-actions="{% if message.can_initiator_attended_actions %}1{% else %}0{% endif %}"
+                                data-finalize-url="{% url 'security:help_message_finalize' message.id %}"
+                                data-correction-url="{% url 'security:help_message_correction' message.id %}"
+                                data-correction-target="{{ message.last_message.sender_name|escapejs }}"
                                 onclick="helpMessagesActions.openDetail(this)">
                             <i class="fa-solid fa-eye"></i>
                         </button>
@@ -88,7 +92,7 @@
                                 <i class="fa-solid fa-person-walking-arrow-right"></i>
                             </button>
                         {% endif %}
-                        {% if message.status != 'attended' %}
+                        {% if message.status != 'attended' and message.status != 'finalized' %}
                             <button type="button"
                                     class="btn-icon btn-create-action js-read-gated"
                                     data-conversation-id="{{ message.id }}"

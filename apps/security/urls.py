@@ -18,8 +18,10 @@ urlpatterns = [
     path('help/messages/create/', views.HelpMessageCreateView.as_view(), name='help_message_create'),
     path('help/messages/<int:pk>/mark-read/', views.HelpMessageMarkReadView.as_view(), name='help_message_mark_read'),
     path('help/messages/<int:pk>/reply/', views.HelpMessageReplyView.as_view(), name='help_message_reply'),
+    path('help/messages/<int:pk>/correction/', views.HelpMessageCorrectionView.as_view(), name='help_message_correction'),
     path('help/messages/<int:pk>/sumilla/', views.HelpMessageSumillaView.as_view(), name='help_message_sumilla'),
     path('help/messages/<int:pk>/mark-attended/', views.HelpMessageMarkAttendedView.as_view(), name='help_message_mark_attended'),
+    path('help/messages/<int:pk>/finalize/', views.HelpMessageFinalizeByInitiatorView.as_view(), name='help_message_finalize'),
 
     # Credenciales
     path('users/create-credentials/<int:person_id>/', views.CreateUserForPersonView.as_view(),

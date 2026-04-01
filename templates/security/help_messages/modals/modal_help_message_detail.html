@@ -28,8 +28,17 @@
             </div>
         </div>
 
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-cancel js-close-modal">
+        <div class="modal-footer-fixed" style="gap:8px; justify-content:center; flex-wrap:wrap;">
+            <form id="detailFinalizeForm" method="post" action="#" style="display:none; width:100%; margin:0;">
+                {% csrf_token %}
+                <button type="submit" id="detailFinalizeBtn" class="btn-save" style="background:#0f766e; border-color:#0f766e; width:100%;">
+                    <i class="fa-solid fa-circle-check"></i> Finalizar
+                </button>
+            </form>
+            <button type="button" id="detailCorrectionBtn" class="btn-save" style="display:none; background:#7c3aed; border-color:#7c3aed; width:100%;">
+                <i class="fa-solid fa-reply"></i> Responder/Solicitar Corrección
+            </button>
+            <button type="button" class="btn-cancel js-close-modal" style="width:100%;">
                 <i class="fas fa-times-circle"></i> Cerrar
             </button>
         </div>

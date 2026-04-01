@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const replyForm = document.getElementById('replyHelpMessageForm');
     const sumillaForm = document.getElementById('sumillaHelpMessageForm');
     const closeForm = document.getElementById('closeHelpMessageForm');
+    const detailFinalizeForm = document.getElementById('detailFinalizeForm');
+    const detailFinalizeBtn = document.getElementById('detailFinalizeBtn');
+    const detailCorrectionBtn = document.getElementById('detailCorrectionBtn');
     const unreadBadge = document.getElementById('helpMessagesBadge');
 
     const closeModal = (modal) => {
@@ -47,8 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.classList.remove('conversation-unread');
                 const statusCell = row.querySelector('td:nth-child(7)');
                 if (statusCell) {
-                    if ((payload.status || '').toLowerCase() === 'finalized') {
+                    const nextStatus = (payload.status || '').toLowerCase();
+                    if (nextStatus === 'finalized') {
                         statusCell.innerHTML = '<span class="status-badge active">Finalizado</span>';
+                    } else if (nextStatus === 'attended') {
+                        statusCell.innerHTML = '<span class="status-badge active">Atendido</span>';
+                    } else if (nextStatus === 'sent') {
+                        statusCell.innerHTML = '<span class="status-badge inactive">En Proceso</span>';
                     } else {
                         statusCell.innerHTML = '<span class="status-badge badge-neutral">En Revisión</span>';
                     }
@@ -107,7 +115,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if ((button.dataset.statusLabel || '').toLowerCase() !== 'atendido') {
+            const canShowAttendedActions = button.dataset.showAttendedActions === '1';
+            if (detailFinalizeForm && detailFinalizeBtn) {
+                if (canShowAttendedActions) {
+                    detailFinalizeForm.style.display = '';
+                    detailFinalizeForm.action = button.dataset.finalizeUrl || '#';
+                } else {
+                    detailFinalizeForm.style.display = 'none';
+                    detailFinalizeForm.action = '#';
+                }
+            }
+            if (detailCorrectionBtn) {
+                if (canShowAttendedActions) {
+                    detailCorrectionBtn.style.display = '';
+                    detailCorrectionBtn.dataset.messageId = button.dataset.conversationId || '';
+                    detailCorrectionBtn.dataset.subject = button.dataset.subject || '';
+                    detailCorrectionBtn.dataset.sender = button.dataset.correctionTarget || button.dataset.sender || '';
+                    detailCorrectionBtn.dataset.replyUrl = button.dataset.correctionUrl || '#';
+                } else {
+                    detailCorrectionBtn.style.display = 'none';
+                    detailCorrectionBtn.dataset.messageId = '';
+                    detailCorrectionBtn.dataset.replyUrl = '';
+                }
+            }
+
+            if ((button.dataset.statusLabel || '').toLowerCase() !== 'finalizado') {
                 const rowId = `message-row-${conversationId}`;
                 const row = document.getElementById(rowId);
                 if (row && row.dataset.userTurn === '1') {
@@ -140,7 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
             originalId.value = button.dataset.messageId || '';
             replySender.textContent = button.dataset.sender || '';
             replyOriginalSubject.textContent = button.dataset.subject || '';
-            replyGeneratedSubject.textContent = `Respuesta a mensaje: ${button.dataset.subject || ''}`;
+            
+            const isCorrection = button.dataset.isCorrection === '1';
+            if (isCorrection) {
+                replyGeneratedSubject.textContent = `Corrección/Alcance: ${button.dataset.subject || ''}`;
+            } else {
+                replyGeneratedSubject.textContent = `Respuesta a mensaje: ${button.dataset.subject || ''}`;
+            }
+            
             replyForm.action = button.dataset.replyUrl || replyForm.action;
             openModal(replyModal);
         },
@@ -188,6 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
             window.helpMessagesActions.closeAll();
         });
     });
+
+    if (detailCorrectionBtn) {
+        detailCorrectionBtn.addEventListener('click', () => {
+            const payload = {
+                dataset: {
+                    messageId: detailCorrectionBtn.dataset.messageId || '',
+                    subject: detailCorrectionBtn.dataset.subject || '',
+                    sender: detailCorrectionBtn.dataset.sender || '',
+                    replyUrl: detailCorrectionBtn.dataset.replyUrl || '',
+                    isCorrection: '1'
+                }
+            };
+            closeModal(detailModal);
+            window.helpMessagesActions.openReply(payload);
+        });
+    }
 
     [createModal, detailModal, replyModal, sumillaModal, closeModalEl].forEach((modal) => {
         if (!modal) return;
