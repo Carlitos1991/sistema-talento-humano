@@ -83,6 +83,13 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
     context_object_name = 'person'
     permission_required = 'person.view_person'
 
+    def has_permission(self):
+        # Los admins (staff/superuser) pueden ver todo sin restricción de permiso específico
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return True
+        # Para otros usuarios, verificar el permiso requerido
+        return super().has_permission()
+
     def get_queryset(self):
         return Person.objects.select_related(
             'employee_profile__area',

@@ -227,13 +227,23 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         force_boss_view = self.request.GET.get('view') == 'jefe'
         has_boss_dashboard = self.request.user.has_perm('auth.dashboard_jefe')
+        has_hr_dashboard = self.request.user.has_perm('auth.dashboard_talento_humano')
         can_use_boss_view = (
             self.request.user.has_perm('auth.dashboard_jefe') or
             self.request.user.has_perm('auth.dashboard_talento_humano')
         )
-        # Los usuarios con permiso de jefatura deben ver siempre su dashboard de jefe,
-        # aunque no lleguen con ?view=jefe (ej.: navegación directa o menú antiguo).
-        context['show_boss_dashboard'] = has_boss_dashboard or (force_boss_view and can_use_boss_view)
+        
+        # Lógica mejorada: Si el usuario es admin (tiene ambos permisos), mostrar el de Talento Humano por defecto
+        # Solo mostrar dashboard de Jefe si ESPECÍFICAMENTE se solicita o si SOLO tiene ese permiso
+        if has_hr_dashboard and has_boss_dashboard:
+            # Admin con ambos permisos: mostrar Talento Humano por defecto, a menos que pida jefe
+            context['show_boss_dashboard'] = force_boss_view and force_boss_view == 'jefe'
+        elif has_boss_dashboard and not has_hr_dashboard:
+            # Solo jefe: mostrar siempre dashboard de jefe
+            context['show_boss_dashboard'] = True
+        else:
+            # Solo admin o solo con un permiso
+            context['show_boss_dashboard'] = force_boss_view and can_use_boss_view
         
         # === ESTADÍSTICAS DE EMPLEADOS (SOLO ACTIVOS) ===
         active_employees = Employee.objects.filter(is_active=True)
