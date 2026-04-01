@@ -3,14 +3,14 @@ from django.contrib import messages as django_messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Group
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, View, ListView, UpdateView
 from person.models import Person
-from .forms import RoleForm, UserFilterForm, CredentialCreationForm, HelpMessageForm, HelpMessageReplyForm
+from .forms import RoleForm, UserFilterForm, CredentialCreationForm, HelpMessageForm, HelpMessageReplyForm, HelpMessageSumillaForm, HelpMessageCloseForm
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from .models import UserSession, HelpMessage
@@ -506,14 +506,78 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
     context_object_name = 'help_messages'
     paginate_by = 10
 
+    @staticmethod
+    def _thread_participant_ids(root):
+        participants = set([root.sender_user_id, root.recipient_user_id])
+        thread_users = HelpMessage.objects.filter(
+            Q(id=root.id) | Q(original_message=root)
+        ).values_list('sender_user_id', 'recipient_user_id')
+        for sender_id, recipient_id in thread_users:
+            participants.add(sender_id)
+            participants.add(recipient_id)
+        return participants
+
+    @staticmethod
+    def _format_elapsed(delta):
+        total_seconds = max(0, int(delta.total_seconds()))
+        days, rem = divmod(total_seconds, 86400)
+        hours, rem = divmod(rem, 3600)
+        minutes, _ = divmod(rem, 60)
+        return f'{days}d {hours}h {minutes}m'
+
+    @staticmethod
+    def _pending_turn_count(user):
+        roots = list(
+            HelpMessage.objects.filter(
+                original_message__isnull=True
+            ).exclude(
+                status__in=[HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]
+            ).filter(
+                Q(sender_user=user) | Q(recipient_user=user)
+            ).values_list('id', flat=True)
+        )
+
+        if not roots:
+            return 0
+
+        thread_messages = HelpMessage.objects.filter(
+            Q(id__in=roots) | Q(original_message_id__in=roots)
+        ).values('id', 'original_message_id', 'recipient_user_id', 'created_at').order_by('created_at')
+
+        last_recipient_by_root = {}
+        for item in thread_messages:
+            root_id = item['original_message_id'] or item['id']
+            last_recipient_by_root[root_id] = item['recipient_user_id']
+
+        return sum(1 for _, recipient_id in last_recipient_by_root.items() if recipient_id == user.id)
+
     def get_queryset(self):
+        tab = self.request.GET.get('tab', 'received')
+        user = self.request.user
+        own_messages = HelpMessage.objects.filter(
+            Q(recipient_user=user) | Q(sender_user=user)
+        )
+
+        root_ids = list(
+            own_messages.annotate(
+                root_id=Coalesce('original_message_id', 'id')
+            ).values_list('root_id', flat=True).distinct()
+        )
+
         qs = HelpMessage.objects.filter(
-            recipient_user=self.request.user
+            id__in=root_ids,
+            original_message__isnull=True
         ).select_related(
             'sender_user__person',
-            'recipient_user__person',
-            'original_message'
-        ).order_by('-created_at')
+            'recipient_user__person'
+        )
+
+        if tab == 'sent':
+            qs = qs.filter(sender_user=user)
+        elif tab == 'received':
+            qs = qs.exclude(sender_user=user)
+        elif tab == 'attended':
+            qs = qs.filter(status__in=[HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED])
 
         query = self.request.GET.get('q')
         if query:
@@ -521,27 +585,70 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
                 Q(subject__icontains=query) |
                 Q(detail__icontains=query) |
                 Q(sender_user__username__icontains=query) |
+                Q(recipient_user__username__icontains=query) |
                 Q(sender_user__person__first_name__icontains=query) |
-                Q(sender_user__person__last_name__icontains=query)
+                Q(sender_user__person__last_name__icontains=query) |
+                Q(recipient_user__person__first_name__icontains=query) |
+                Q(recipient_user__person__last_name__icontains=query)
             )
-        return qs
+
+        qs = qs.order_by('-updated_at', '-created_at')
+        roots = list(qs)
+
+        thread_messages = HelpMessage.objects.filter(
+            Q(id__in=[root.id for root in roots]) | Q(original_message_id__in=[root.id for root in roots])
+        ).select_related('sender_user__person', 'recipient_user__person').order_by('created_at')
+
+        thread_map = {}
+        for root in roots:
+            thread_map[root.id] = []
+
+        for item in thread_messages:
+            root_id = item.original_message_id or item.id
+            if root_id in thread_map:
+                thread_map[root_id].append(item)
+
+        for root in roots:
+            root.thread_messages = thread_map.get(root.id, [root])
+            root.last_message = root.thread_messages[-1] if root.thread_messages else root
+            root.direction = 'sent' if root.sender_user_id == user.id else 'received'
+            root.counterpart_name = root.recipient_name if root.direction == 'sent' else root.sender_name
+            participants = self._thread_participant_ids(root)
+            is_closed = root.status in [HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]
+            root.can_reply = (not is_closed) and (user.id in participants)
+            root.can_sumilla = (not is_closed) and (root.direction == 'received') and (user.id in participants)
+            root.user_has_unread = any(
+                m.recipient_user_id == user.id and m.status == HelpMessage.Status.SENT
+                for m in root.thread_messages
+            )
+            root.is_user_turn = (not is_closed) and (root.last_message.recipient_user_id == user.id)
+            root.actions_unlocked = root.is_user_turn and (not root.user_has_unread)
+            end_time = root.attended_at if is_closed and root.attended_at else timezone.now()
+            root.elapsed_label = self._format_elapsed(end_time - root.created_at)
+
+        return roots
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        own_messages = HelpMessage.objects.filter(
+            Q(recipient_user=self.request.user) | Q(sender_user=self.request.user)
+        )
         context['create_form'] = HelpMessageForm()
         context['reply_form'] = HelpMessageReplyForm()
-        context['messages_total'] = HelpMessage.objects.filter(recipient_user=self.request.user).count()
-        context['messages_unread'] = HelpMessage.objects.filter(
-            recipient_user=self.request.user,
-            status=HelpMessage.Status.SENT
-        ).count()
+        context['sumilla_form'] = HelpMessageSumillaForm(current_user=self.request.user)
+        context['close_form'] = HelpMessageCloseForm()
+        context['active_tab'] = self.request.GET.get('tab', 'received')
+        context['messages_total'] = own_messages.count()
+        context['messages_sent'] = own_messages.filter(sender_user=self.request.user, original_message__isnull=True).count()
+        context['messages_received'] = own_messages.filter(recipient_user=self.request.user, original_message__isnull=True).count()
+        context['messages_unread'] = self._pending_turn_count(self.request.user)
         context['messages_read'] = HelpMessage.objects.filter(
             recipient_user=self.request.user,
             status=HelpMessage.Status.READ
         ).count()
         context['messages_attended'] = HelpMessage.objects.filter(
             recipient_user=self.request.user,
-            status=HelpMessage.Status.ATTENDED
+            status__in=[HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]
         ).count()
         return context
 
@@ -565,73 +672,182 @@ class HelpMessageCreateView(LoginRequiredMixin, View):
             django_messages.success(request, 'Mensaje enviado correctamente.')
             return redirect('security:help_message_list')
 
-        context = {
-            'help_messages': HelpMessage.objects.filter(recipient_user=request.user).select_related('sender_user__person', 'recipient_user__person', 'original_message').order_by('-created_at'),
-            'create_form': form,
-            'reply_form': HelpMessageReplyForm(),
-            'messages_total': HelpMessage.objects.filter(recipient_user=request.user).count(),
-            'messages_unread': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.SENT).count(),
-            'messages_read': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.READ).count(),
-            'messages_attended': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.ATTENDED).count(),
-            'open_create_modal': True,
-        }
-        return render(request, 'security/help_messages/message_list.html', context, status=400)
+        django_messages.error(request, 'No se pudo enviar el mensaje. Revisa los campos requeridos.')
+        return redirect('security:help_message_list')
 
 
 class HelpMessageMarkReadView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        message = get_object_or_404(HelpMessage, pk=pk, recipient_user=request.user)
-        if message.status == HelpMessage.Status.SENT:
-            message.status = HelpMessage.Status.READ
-            message.read_at = timezone.now()
-            message.updated_by = request.user
-            message.save(update_fields=['status', 'read_at', 'updated_by', 'updated_at'])
+        root = get_object_or_404(HelpMessage, pk=pk, original_message__isnull=True)
+        participants = HelpMessageListView._thread_participant_ids(root)
+        if request.user.id not in participants:
+            return JsonResponse({'success': False}, status=403)
 
-        remaining_unread = HelpMessage.objects.filter(
+        now = timezone.now()
+        unread_qs = HelpMessage.objects.filter(
+            Q(id=root.id) | Q(original_message=root),
             recipient_user=request.user,
             status=HelpMessage.Status.SENT
-        ).count()
+        )
+        unread_qs.update(
+            status=HelpMessage.Status.READ,
+            read_at=now,
+            updated_by=request.user,
+            updated_at=now,
+        )
 
-        return JsonResponse({'success': True, 'status': message.status, 'remaining_unread': remaining_unread})
+        initiator_has_read_closure = HelpMessage.objects.filter(
+            original_message=root,
+            recipient_user=root.sender_user,
+            subject__istartswith='Cierre de trámite:'
+        ).exclude(read_at__isnull=True).exists() or HelpMessage.objects.filter(
+            original_message=root,
+            recipient_user=root.sender_user,
+            subject__istartswith='Cierre de tramite:'
+        ).exclude(read_at__isnull=True).exists()
+
+        if initiator_has_read_closure:
+            root.status = HelpMessage.Status.FINALIZED
+            root.updated_by = request.user
+            root.save(update_fields=['status', 'updated_by', 'updated_at'])
+        elif root.status not in [HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]:
+            root.status = HelpMessage.Status.READ
+            root.updated_by = request.user
+            root.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+        remaining_unread = HelpMessageListView._pending_turn_count(request.user)
+
+        return JsonResponse({'success': True, 'status': root.status, 'remaining_unread': remaining_unread})
 
 
 class HelpMessageReplyView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        original = get_object_or_404(HelpMessage, pk=pk, recipient_user=request.user)
+        original = get_object_or_404(HelpMessage, pk=pk, original_message__isnull=True)
+        participants = HelpMessageListView._thread_participant_ids(original)
+        if request.user.id not in participants:
+            return redirect('security:help_message_list')
+
+        if original.status in [HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]:
+            django_messages.warning(request, 'La conversación ya está atendida y no admite más respuestas.')
+            return redirect('security:help_message_list')
+
         form = HelpMessageReplyForm(request.POST, request.FILES)
         if form.is_valid():
             reply_subject = f'Respuesta a mensaje: {original.subject}'
+            thread_last = HelpMessage.objects.filter(
+                Q(id=original.id) | Q(original_message=original)
+            ).order_by('-created_at').first()
+            if not thread_last:
+                thread_last = original
+            reply_recipient = thread_last.sender_user if thread_last.sender_user_id != request.user.id else thread_last.recipient_user
             HelpMessage.objects.create(
                 sender_user=request.user,
-                recipient_user=original.sender_user,
+                recipient_user=reply_recipient,
                 subject=reply_subject,
                 detail=form.cleaned_data['detail'],
                 attachment=form.cleaned_data.get('attachment'),
-                status=HelpMessage.Status.ATTENDED,
+                status=HelpMessage.Status.SENT,
                 original_message=original,
-                attended_at=timezone.now(),
                 created_by=request.user,
                 updated_by=request.user,
             )
-            original.status = HelpMessage.Status.ATTENDED
-            original.attended_at = timezone.now()
+            original.status = HelpMessage.Status.SENT
             original.updated_by = request.user
-            original.save(update_fields=['status', 'attended_at', 'updated_by', 'updated_at'])
+            original.save(update_fields=['status', 'updated_by', 'updated_at'])
             django_messages.success(request, 'Respuesta enviada correctamente.')
             return redirect('security:help_message_list')
 
-        context = {
-            'help_messages': HelpMessage.objects.filter(recipient_user=request.user).select_related('sender_user__person', 'recipient_user__person', 'original_message').order_by('-created_at'),
-            'create_form': HelpMessageForm(),
-            'reply_form': form,
-            'messages_total': HelpMessage.objects.filter(recipient_user=request.user).count(),
-            'messages_unread': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.SENT).count(),
-            'messages_read': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.READ).count(),
-            'messages_attended': HelpMessage.objects.filter(recipient_user=request.user, status=HelpMessage.Status.ATTENDED).count(),
-            'open_reply_modal': True,
-            'reply_target_url': reverse('security:help_message_reply', args=[original.pk]),
-            'reply_original_id': original.pk,
-            'reply_original_subject': original.subject,
-            'reply_sender_name': original.sender_name,
-        }
-        return render(request, 'security/help_messages/message_list.html', context, status=400)
+        django_messages.error(request, 'No se pudo enviar la respuesta. Revisa los campos requeridos.')
+        return redirect('security:help_message_list')
+
+
+class HelpMessageMarkAttendedView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        root = get_object_or_404(HelpMessage, pk=pk, original_message__isnull=True)
+        participants = HelpMessageListView._thread_participant_ids(root)
+        if request.user.id not in participants:
+            return redirect('security:help_message_list')
+
+        if root.status in [HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]:
+            django_messages.warning(request, 'La conversación ya está atendida.')
+            return redirect('security:help_message_list')
+
+        close_form = HelpMessageCloseForm(request.POST, request.FILES)
+        if not close_form.is_valid():
+            django_messages.error(request, 'Debes escribir un mensaje final para cerrar el trámite.')
+            return redirect('security:help_message_list')
+
+        now = timezone.now()
+        HelpMessage.objects.filter(
+            Q(id=root.id) | Q(original_message=root)
+        ).update(
+            status=HelpMessage.Status.ATTENDED,
+            attended_at=now,
+            updated_by=request.user,
+            updated_at=now,
+        )
+
+        # El mensaje final siempre se envía al usuario que inició el trámite.
+        # Se crea DESPUÉS del cierre masivo para que permanezca como nuevo (SENT)
+        # y el iniciador lo pueda leer con trazabilidad de lectura.
+        HelpMessage.objects.create(
+            sender_user=request.user,
+            recipient_user=root.sender_user,
+            subject=f'Cierre de trámite: {root.subject}',
+            detail=close_form.cleaned_data['detail'],
+            attachment=close_form.cleaned_data.get('attachment'),
+            status=HelpMessage.Status.SENT,
+            original_message=root,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+
+        root.updated_by = request.user
+        root.save(update_fields=['updated_by', 'updated_at'])
+        django_messages.success(request, 'Trámite finalizado y mensaje de cierre enviado.')
+        return redirect('security:help_message_list')
+
+
+class HelpMessageSumillaView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        root = get_object_or_404(HelpMessage, pk=pk, original_message__isnull=True)
+        participants = HelpMessageListView._thread_participant_ids(root)
+        if request.user.id not in participants:
+            return redirect('security:help_message_list')
+
+        if root.status in [HelpMessage.Status.ATTENDED, HelpMessage.Status.FINALIZED]:
+            django_messages.warning(request, 'La conversación está atendida. No se puede sumillar.')
+            return redirect('security:help_message_list')
+
+        form = HelpMessageSumillaForm(request.POST, request.FILES, current_user=request.user)
+        if not form.is_valid():
+            django_messages.error(request, 'No se pudo enviar la sumilla. Revisa los campos requeridos.')
+            return redirect('security:help_message_list')
+
+        recipient_person = form.cleaned_data['recipient_person']
+        recipient_user = recipient_person.user
+
+        if recipient_user.id in participants:
+            django_messages.warning(request, 'Ese usuario ya participa en la conversación.')
+            return redirect('security:help_message_list')
+
+        sumilla_subject = f'Sumilla: {root.subject}'
+        sumilla_detail = form.cleaned_data['detail']
+        HelpMessage.objects.create(
+            sender_user=request.user,
+            recipient_user=recipient_user,
+            subject=sumilla_subject,
+            detail=sumilla_detail,
+            attachment=form.cleaned_data.get('attachment'),
+            status=HelpMessage.Status.SENT,
+            original_message=root,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+
+        root.status = HelpMessage.Status.SENT
+        root.updated_by = request.user
+        root.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+        django_messages.success(request, 'Sumilla enviada correctamente.')
+        return redirect('security:help_message_list')

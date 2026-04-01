@@ -2,7 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const createModal = document.getElementById('helpMessageCreateModal');
     const detailModal = document.getElementById('helpMessageDetailModal');
     const replyModal = document.getElementById('helpMessageReplyModal');
+    const sumillaModal = document.getElementById('helpMessageSumillaModal');
+    const closeModalEl = document.getElementById('helpMessageCloseModal');
     const replyForm = document.getElementById('replyHelpMessageForm');
+    const sumillaForm = document.getElementById('sumillaHelpMessageForm');
+    const closeForm = document.getElementById('closeHelpMessageForm');
     const unreadBadge = document.getElementById('helpMessagesBadge');
 
     const closeModal = (modal) => {
@@ -40,9 +44,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = rowId ? document.getElementById(rowId) : null;
             if (row) {
                 row.dataset.status = payload.status || 'read';
-                const statusCell = row.querySelector('td:nth-child(6)');
+                row.classList.remove('conversation-unread');
+                const statusCell = row.querySelector('td:nth-child(7)');
                 if (statusCell) {
-                    statusCell.innerHTML = '<span class="status-badge badge-neutral">Leído</span>';
+                    if ((payload.status || '').toLowerCase() === 'finalized') {
+                        statusCell.innerHTML = '<span class="status-badge active">Finalizado</span>';
+                    } else {
+                        statusCell.innerHTML = '<span class="status-badge badge-neutral">En Revisión</span>';
+                    }
+                }
+                if (row.dataset.userTurn === '1') {
+                    row.querySelectorAll('.js-read-gated').forEach((actionBtn) => {
+                        actionBtn.style.display = '';
+                    });
+                }
+
+                const hiddenTimeline = row.querySelector(`#conversation-thread-${rowId.replace('message-row-', '')}`);
+                if (hiddenTimeline) {
+                    hiddenTimeline.querySelectorAll('.js-unread-indicator').forEach((unreadNode) => {
+                        unreadNode.classList.remove('js-unread-indicator', 'conversation-body-unread');
+                        if (unreadNode.classList.contains('msg-read-badge')) {
+                            unreadNode.textContent = 'Leído';
+                            unreadNode.classList.remove('pending', 'pending-own', 'pending-other');
+                            unreadNode.classList.add('read');
+                        }
+                    });
                 }
             }
             if (typeof payload.remaining_unread === 'number') {
@@ -63,30 +89,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const detailRecipient = document.getElementById('detailMessageRecipient');
             const detailCreatedAt = document.getElementById('detailMessageCreatedAt');
             const detailStatus = document.getElementById('detailMessageStatus');
-            const detailDetail = document.getElementById('detailMessageDetail');
-            const attachmentBox = document.getElementById('detailMessageAttachmentBox');
-            const attachmentLink = document.getElementById('detailMessageAttachment');
+            const detailConversationTimeline = document.getElementById('detailConversationTimeline');
+            const conversationId = button.dataset.conversationId;
+            const threadTemplate = conversationId ? document.getElementById(`conversation-thread-${conversationId}`) : null;
 
             detailSubject.textContent = button.dataset.subject || '';
             detailSender.textContent = button.dataset.sender || '';
             detailRecipient.textContent = button.dataset.recipient || '';
             detailCreatedAt.textContent = button.dataset.createdAt || '';
             detailStatus.textContent = button.dataset.statusLabel || '';
-            detailDetail.textContent = button.dataset.detail || '';
 
-            if ((button.dataset.statusLabel || '').toLowerCase() === 'enviado') {
-                detailStatus.textContent = 'Leído';
+            if (detailConversationTimeline) {
+                if (threadTemplate) {
+                    detailConversationTimeline.innerHTML = threadTemplate.innerHTML;
+                } else {
+                    detailConversationTimeline.innerHTML = '<p>No hay historial disponible.</p>';
+                }
             }
 
-            if (button.dataset.attachmentUrl) {
-                attachmentBox.style.display = 'block';
-                attachmentLink.href = button.dataset.attachmentUrl;
+            if ((button.dataset.statusLabel || '').toLowerCase() !== 'atendido') {
+                const rowId = `message-row-${conversationId}`;
+                const row = document.getElementById(rowId);
+                if (row && row.dataset.userTurn === '1') {
+                    row.querySelectorAll('.js-read-gated').forEach((actionBtn) => {
+                        actionBtn.style.display = '';
+                    });
+                }
+                markAsRead(button.dataset.markReadUrl, rowId);
+                if (detailConversationTimeline) {
+                    detailConversationTimeline.querySelectorAll('.js-unread-indicator').forEach((unreadNode) => {
+                        unreadNode.classList.remove('js-unread-indicator', 'conversation-body-unread');
+                        if (unreadNode.classList.contains('msg-read-badge')) {
+                            unreadNode.textContent = 'Leído';
+                            unreadNode.classList.remove('pending', 'pending-own', 'pending-other');
+                            unreadNode.classList.add('read');
+                        }
+                    });
+                }
             } else {
-                attachmentBox.style.display = 'none';
-                attachmentLink.href = '#';
+                detailStatus.textContent = 'Atendido';
             }
-
-            markAsRead(button.dataset.markReadUrl, `message-row-${button.dataset.messageId}`);
             openModal(detailModal);
         },
         openReply(button) {
@@ -102,10 +144,42 @@ document.addEventListener('DOMContentLoaded', () => {
             replyForm.action = button.dataset.replyUrl || replyForm.action;
             openModal(replyModal);
         },
+        openSumilla(button) {
+            const originalId = document.getElementById('sumillaOriginalMessageId');
+            const originalSubject = document.getElementById('sumillaOriginalSubject');
+
+            if (originalId) {
+                originalId.value = button.dataset.messageId || '';
+            }
+            if (originalSubject) {
+                originalSubject.textContent = button.dataset.subject || '';
+            }
+            if (sumillaForm) {
+                sumillaForm.action = button.dataset.sumillaUrl || sumillaForm.action;
+            }
+            openModal(sumillaModal);
+        },
+        openClose(button) {
+            const closeOriginalId = document.getElementById('closeOriginalMessageId');
+            const closeOriginalSubject = document.getElementById('closeOriginalSubject');
+
+            if (closeOriginalId) {
+                closeOriginalId.value = button.dataset.conversationId || '';
+            }
+            if (closeOriginalSubject) {
+                closeOriginalSubject.textContent = button.dataset.subject || '';
+            }
+            if (closeForm) {
+                closeForm.action = button.dataset.closeUrl || closeForm.action;
+            }
+            openModal(closeModalEl);
+        },
         closeAll() {
             closeModal(createModal);
             closeModal(detailModal);
             closeModal(replyModal);
+            closeModal(sumillaModal);
+            closeModal(closeModalEl);
         }
     };
 
@@ -115,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    [createModal, detailModal, replyModal].forEach((modal) => {
+    [createModal, detailModal, replyModal, sumillaModal, closeModalEl].forEach((modal) => {
         if (!modal) return;
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
@@ -123,4 +197,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    if (window.$ && window.$.fn && window.$.fn.select2) {
+        const sumillaRecipient = window.$('#id_help_sumilla_recipient');
+        if (sumillaRecipient.length) {
+            sumillaRecipient.select2({
+                width: '100%',
+                dropdownParent: window.$('#helpMessageSumillaModal')
+            });
+        }
+    }
 });

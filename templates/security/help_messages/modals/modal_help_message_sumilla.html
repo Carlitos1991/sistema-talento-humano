@@ -1,0 +1,52 @@
+{% load static %}
+<div id="helpMessageSumillaModal" class="modal-overlay hidden">
+    <div class="modal-container-medium shadow-card">
+        <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle" style="background:#f97316;">
+                    <i class="fa-solid fa-share-from-square"></i>
+                </div>
+                <h2 class="header-title-main">Sumillar Conversación</h2>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="sumillaHelpMessageForm" action="#">
+            {% csrf_token %}
+            <input type="hidden" name="original_message_id" id="sumillaOriginalMessageId" value="">
+            <div class="modal-body-scrolled">
+                <div class="section-card-standard">
+                    <p><strong>Conversación:</strong> <span id="sumillaOriginalSubject"></span></p>
+                </div>
+                <div class="section-card-standard">
+                    <div class="form-group">
+                        <label class="form-label">Derivar a</label>
+                        {{ sumilla_form.recipient_person }}
+                        {{ sumilla_form.recipient_person.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sumilla</label>
+                        {{ sumilla_form.detail }}
+                        {{ sumilla_form.detail.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Anexo</label>
+                        {{ sumilla_form.attachment }}
+                        {{ sumilla_form.attachment.errors }}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-cancel js-close-modal">
+                    <i class="fas fa-times-circle"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-save" style="background:#f97316; border-color:#f97316;">
+                    <i class="fas fa-paper-plane"></i> Enviar Sumilla
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -13,6 +13,7 @@ class HelpMessage(models.Model):
         SENT = 'sent', 'Enviado'
         READ = 'read', 'Leído'
         ATTENDED = 'attended', 'Atendido'
+        FINALIZED = 'finalized', 'Finalizado'
 
     sender_user = models.ForeignKey(
         User,
@@ -50,6 +51,7 @@ class HelpMessage(models.Model):
     )
     read_at = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de lectura')
     attended_at = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de atención')
+    is_active = models.BooleanField(default=True, verbose_name='Estado')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(

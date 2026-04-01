@@ -544,18 +544,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        <li>
-                            <a href="{% url 'security:help_message_list' %}">
-                                <i class="fa-solid fa-circle-question"></i>
-                                <span class="menu-text">Ayuda</span>
-                                {% if help_messages_show_notifications %}
-                                    <span id="helpMessagesBadge" class="notification-badge" style="margin-left:auto;">{{ help_messages_unread_count }}</span>
-                                {% else %}
-                                    <span id="helpMessagesBadge" class="notification-badge hidden" style="margin-left:auto;">0</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                    {% if perms.auth.view_group %}
+                        {% if perms.auth.view_group %}
                             <li>
                                 <a href="{% url 'security:role_list' %}">
                                     <i class="fa-solid fa-user-lock"></i>
@@ -598,14 +587,24 @@
                     </ul>
                 </li>
             {% endif %}
+            <li>
+                <a href="{% url 'security:help_message_list' %}">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span class="menu-text">Ayuda</span>
+                </a>
+            </li>
         </ul>
 
     </div>
     <div class="sidebar-footer">
-        <a href="#" class="sidebar-footer-action" id="sidebarMessagesBtn" title="Mensajes">
+        <a href="{% url 'security:help_message_list' %}" class="sidebar-footer-action" id="sidebarMessagesBtn" title="Mensajes">
             <i class="fa-solid fa-message"></i>
             <span class="menu-text">Mensajes</span>
-            <span class="sidebar-badge" id="sidebarMessageCount">0</span>
+            {% if help_messages_show_notifications %}
+                <span class="sidebar-badge" id="helpMessagesBadge">{{ help_messages_unread_count }}</span>
+            {% else %}
+                <span class="sidebar-badge hidden" id="helpMessagesBadge">0</span>
+            {% endif %}
         </a>
         <a href="{% url 'core:logout' %}" class="sidebar-footer-action sidebar-footer-logout" title="Salir del sistema">
             <i class="fa-solid fa-power-off"></i>

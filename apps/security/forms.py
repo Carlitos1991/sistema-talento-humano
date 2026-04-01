@@ -295,3 +295,46 @@ class HelpMessageReplyForm(BaseFormMixin, forms.Form):
         required=False,
         widget=forms.ClearableFileInput(attrs={'class': 'input-field'})
     )
+
+
+class HelpMessageSumillaForm(BaseFormMixin, forms.Form):
+    recipient_person = forms.ModelChoiceField(
+        queryset=Person.objects.none(),
+        label='Derivar a',
+        widget=forms.Select(attrs={'class': 'input-field select2-field', 'id': 'id_help_sumilla_recipient'}),
+        error_messages={'required': 'Debes seleccionar un destinatario para la sumilla.'}
+    )
+    detail = forms.CharField(
+        label='Sumilla',
+        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Redacta la sumilla para el nuevo usuario...'}),
+        error_messages={'required': 'La sumilla es obligatoria.'}
+    )
+    attachment = forms.FileField(
+        label='Anexo',
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'input-field'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        queryset = Person.objects.filter(
+            user__isnull=False,
+            is_active=True
+        ).select_related('user').order_by('last_name', 'first_name')
+        if current_user:
+            queryset = queryset.exclude(user=current_user)
+        self.fields['recipient_person'].queryset = queryset
+
+
+class HelpMessageCloseForm(BaseFormMixin, forms.Form):
+    detail = forms.CharField(
+        label='Mensaje de cierre',
+        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Escribe el mensaje final de cierre del trámite...'}),
+        error_messages={'required': 'El mensaje final es obligatorio para cerrar el trámite.'}
+    )
+    attachment = forms.FileField(
+        label='Anexo',
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'input-field'})
+    )

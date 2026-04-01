@@ -46,9 +46,24 @@
 
 <div class="content-table">
     <div class="table-controls">
+        <div class="message-tabs" role="tablist" aria-label="Filtro de conversaciones">
+            <a href="?tab=received{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+               class="message-tab {% if active_tab == 'received' %}is-active{% endif %}">
+                Recibidos ({{ messages_received|default:'0' }})
+            </a>
+            <a href="?tab=sent{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+               class="message-tab {% if active_tab == 'sent' %}is-active{% endif %}">
+                Enviados ({{ messages_sent|default:'0' }})
+            </a>
+            <a href="?tab=attended{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+               class="message-tab {% if active_tab == 'attended' %}is-active{% endif %}">
+                Atendidos
+            </a>
+        </div>
         <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
+            <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o solicitante" value="{{ request.GET.q }}">
+            <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o usuario" value="{{ request.GET.q }}">
         </form>
     </div>
 
@@ -61,10 +76,10 @@
             <span class="pagination-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
             <ul class="pagination-list">
                 {% if page_obj.has_previous %}
-                    <li><a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"><i class="fas fa-chevron-left"></i></a></li>
+                    <li><a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i class="fas fa-chevron-left"></i></a></li>
                 {% endif %}
                 {% if page_obj.has_next %}
-                    <li><a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"><i class="fas fa-chevron-right"></i></a></li>
+                    <li><a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i class="fas fa-chevron-right"></i></a></li>
                 {% endif %}
             </ul>
         </div>
@@ -72,30 +87,129 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+    <style>
+        .message-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .message-tab {
+            border: 1px solid #d6deeb;
+            background: #f7fafc;
+            color: #234;
+            border-radius: 999px;
+            padding: 8px 14px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .message-tab.is-active {
+            border-color: #0f3f8f;
+            background: #0f3f8f;
+            color: #fff;
+        }
+
+        .conversation-thread {
+            display: grid;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .conversation-item {
+            border: 1px solid #dde5f2;
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        .conversation-item.is-own {
+            border-color: #c5dbff;
+            background: #eef5ff;
+        }
+
+        .conversation-unread {
+            background: #fffdf0;
+        }
+
+        .conversation-unread td {
+            border-bottom-color: #f6e6a8;
+        }
+
+        .conversation-body-unread {
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .msg-read-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: .72rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .msg-read-badge.pending {
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+        }
+
+        .msg-read-badge.pending-own {
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fdba74;
+        }
+
+        .msg-read-badge.pending-other {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .msg-read-badge.read {
+            background: #ecfeff;
+            color: #155e75;
+            border: 1px solid #a5f3fc;
+        }
+
+        .is-locked {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        .conversation-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+            font-size: 0.82rem;
+            color: #50607a;
+        }
+
+        .conversation-body {
+            white-space: pre-wrap;
+            color: #213047;
+        }
+    </style>
+{% endblock %}
+
 {% block modals %}
     {% include 'security/help_messages/modals/modal_help_message_form.html' %}
     {% include 'security/help_messages/modals/modal_help_message_detail.html' %}
     {% include 'security/help_messages/modals/modal_help_message_reply.html' %}
+    {% include 'security/help_messages/modals/modal_help_message_sumilla.html' %}
+    {% include 'security/help_messages/modals/modal_help_message_close.html' %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/security/help_messages.js' %}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            {% if open_create_modal %}
-                window.helpMessagesActions.openCreate();
-            {% endif %}
-            {% if open_reply_modal %}
-                const replyButton = {
-                    dataset: {
-                        messageId: '{{ reply_original_id|default:"" }}',
-                        subject: '{{ reply_original_subject|escapejs }}',
-                        sender: '{{ reply_sender_name|escapejs }}',
-                        replyUrl: '{{ reply_target_url|default:"" }}'
-                    }
-                };
-                window.helpMessagesActions.openReply(replyButton);
-            {% endif %}
-        });
-    </script>
 {% endblock %}

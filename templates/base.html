@@ -57,6 +57,63 @@
 <!-- Modal: Cambiar Contraseña (Global) -->
 {% include 'modals/modal_change_password.html' %}
 
+<!-- DATA ISLAND (Mensajes Django globales) -->
+<script id="django-messages" type="application/json">
+    [
+    {% for message in messages %}
+        {
+            "tag": "{{ message.tags|escapejs }}",
+            "text": "{{ message|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+    ]
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const node = document.getElementById('django-messages');
+        if (!node || typeof Swal === 'undefined') {
+            return;
+        }
+
+        let payload = [];
+        try {
+            payload = JSON.parse(node.textContent || '[]');
+        } catch (error) {
+            payload = [];
+        }
+
+        if (!Array.isArray(payload) || payload.length === 0) {
+            return;
+        }
+
+        const iconMap = {
+            success: 'success',
+            error: 'error',
+            danger: 'error',
+            warning: 'warning',
+            info: 'info'
+        };
+
+        payload.forEach((item, index) => {
+            const rawTag = (item.tag || '').split(' ')[0].toLowerCase();
+            const icon = iconMap[rawTag] || 'info';
+
+            setTimeout(() => {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon,
+                    title: item.text || '',
+                    showConfirmButton: false,
+                    timer: 3200,
+                    timerProgressBar: true
+                });
+            }, index * 180);
+        });
+    });
+</script>
+
 <!-- Scripts Base -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

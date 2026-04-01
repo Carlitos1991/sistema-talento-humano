@@ -67,10 +67,12 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
         from openpyxl.utils import get_column_letter
 
         unit_id = request.GET.get('unit_id') or request.GET.get('pk')
-        if not unit_id:
-            return JsonResponse({'success': False, 'message': 'Unidad no especificada.'}, status=400)
+        unit = None
+        report_scope_name = 'TODA LA INSTITUCION'
+        if unit_id:
+            unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+            report_scope_name = unit.name
 
-        unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
         # fields como lista separada por comas
         fields_param = request.GET.get('fields', '')
         selected_fields = [f for f in (fields_param.split(',') if fields_param else []) if f]
@@ -110,8 +112,15 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                 return emp.person.emergency_contact_phone or ''
             return ''
 
-        # Obtener unidades con profundidad
-        units_with_depth = self.get_descendants_with_depth(unit, depth=0)
+        # Obtener unidades con profundidad: si no se selecciona unidad,
+        # incluir toda la institución desde las unidades raíz activas.
+        if unit:
+            units_with_depth = self.get_descendants_with_depth(unit, depth=0)
+        else:
+            units_with_depth = []
+            root_units = AdministrativeUnit.objects.filter(parent__isnull=True, is_active=True).order_by('name')
+            for root_unit in root_units:
+                units_with_depth.extend(self.get_descendants_with_depth(root_unit, depth=0))
 
         # Preparar workbook
         wb = Workbook()
@@ -157,7 +166,7 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
         row_idx = 1
 
         # Añadimos encabezado general
-        title_cell = ws.cell(row=row_idx, column=1, value=f"REPORTE: {unit.name}")
+        title_cell = ws.cell(row=row_idx, column=1, value=f"REPORTE: {report_scope_name}")
         title_cell.font = Font(bold=True, size=14)
         row_idx += 1
 
@@ -241,7 +250,7 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
 
         # Preparar respuesta
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        filename = f"Reporte_Empleados_{unit.name.replace(' ', '_')}.xlsx"
+        filename = f"Reporte_Empleados_{report_scope_name.replace(' ', '_')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response

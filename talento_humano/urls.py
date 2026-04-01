@@ -7,12 +7,15 @@ from django.views.generic import TemplateView
 from django.views.static import serve
 
 from biometric import adms_views
+from security import views as security_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('person/', include('person.urls')),
     path('security/', include('security.urls')),
+    # Alias sin namespace para compatibilidad con referencias legacy.
+    path('security/help/messages/<int:pk>/sumilla/', security_views.HelpMessageSumillaView.as_view(), name='help_message_sumilla'),
     path('institution/', include('institution.urls')),
     path('budget/', include('budget.urls')),
     path('payroll/', include('payroll.urls')),

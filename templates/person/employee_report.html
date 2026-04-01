@@ -13,7 +13,7 @@
     <div class="header-card">
         <div>
             <h1>Reportes</h1>
-            <p>Reporte por Unidad Administrativa</p>
+            <p>Reporte por Unidad Administrativa (opcional). Sin selección se genera para toda la institución.</p>
         </div>
     </div>
 
@@ -226,17 +226,11 @@
             }
 
             document.getElementById('exportBtn').addEventListener('click', async function(){
-                if(!selectedUnitId){ 
-                    if(window.Swal){
-                        Swal.fire({ icon: 'info', title: 'Seleccione una unidad administrativa', confirmButtonText: 'Aceptar' });
-                    } else {
-                        alert('Seleccione una unidad administrativa');
-                    }
-                    return; 
-                }
                 const checked = Array.from(document.querySelectorAll('input[name=fields]:checked')).map(i=>i.value);
                 const params = new URLSearchParams();
-                params.set('unit_id', selectedUnitId);
+                if(selectedUnitId){
+                    params.set('unit_id', selectedUnitId);
+                }
                 if(checked.length) params.set('fields', checked.join(','));
 
                 const url = exportUrl + '?' + params.toString();

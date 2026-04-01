@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.querySelector('.sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
     const tooltip = document.createElement('div');
-    const textMeasureCanvas = document.createElement('canvas');
 
     if (!wrapper || !sidebar) {
         return;
@@ -31,18 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltip.style.left = `${left}px`;
     }
 
-    function measureTextWidth(text, font) {
-        const context = textMeasureCanvas.getContext('2d');
-        context.font = font;
-        return context.measureText(text).width;
-    }
-
     function truncateWithSingleDot(textElement) {
         const fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
         textElement.dataset.fullLabel = fullLabel;
 
-        const computedStyle = window.getComputedStyle(textElement);
-        const font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+        // Evita truncar etiquetas cortas como "Inicio".
+        if (fullLabel.length <= 8) {
+            textElement.textContent = fullLabel;
+            return false;
+        }
+
         const maxWidth = textElement.clientWidth;
 
         if (!fullLabel || !maxWidth) {
@@ -50,26 +47,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        if (measureTextWidth(fullLabel, font) <= maxWidth) {
+        textElement.textContent = fullLabel;
+
+        // Usa overflow real renderizado para decidir si truncar.
+        if (textElement.scrollWidth <= (textElement.clientWidth + 1)) {
             textElement.textContent = fullLabel;
             return false;
         }
 
         const dot = '.';
-        let left = 0;
-        let right = fullLabel.length;
+        let right = fullLabel.length - 1;
         let best = dot;
 
-        while (left <= right) {
-            const middle = Math.floor((left + right) / 2);
-            const candidate = `${fullLabel.slice(0, middle).trimEnd()}${dot}`;
+        while (right >= 1) {
+            const candidate = `${fullLabel.slice(0, right).trimEnd()}${dot}`;
+            textElement.textContent = candidate;
 
-            if (measureTextWidth(candidate, font) <= maxWidth) {
+            if (textElement.scrollWidth <= maxWidth) {
                 best = candidate;
-                left = middle + 1;
-            } else {
-                right = middle - 1;
+                break;
             }
+
+            right -= 1;
         }
 
         textElement.textContent = best;
@@ -182,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openActiveMenus();
     window.setTimeout(syncMenuLabels, 0);
+    window.addEventListener('load', syncMenuLabels);
     window.addEventListener('resize', syncMenuLabels);
     window.addEventListener('scroll', hideTooltip, true);
     document.addEventListener('click', hideTooltip);
@@ -224,13 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
             parent.classList.toggle('is-open');
         });
     });
-
-    const messagesBtn = document.getElementById('sidebarMessagesBtn');
-    if (messagesBtn) {
-        messagesBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-        });
-    }
 
     sidebar.addEventListener('mouseover', (event) => {
         const link = event.target.closest('.sidebar-menu a.has-tooltip');
