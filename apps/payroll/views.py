@@ -4,7 +4,7 @@ import json
 import os
 import base64
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from accounting.models import Account
 
 try:
@@ -817,6 +817,8 @@ class ParseNoveltyExcelView(View):
 
     def post(self, request):
         excel_file = request.FILES.get('file')
+        rubro_type = request.POST.get('rubro_type')
+        rubro_id = request.POST.get('rubro_id')
         if not excel_file:
             return JsonResponse({'status': 'error', 'message': 'No se subió ningún archivo'})
 
@@ -825,8 +827,28 @@ class ParseNoveltyExcelView(View):
             wb = openpyxl.load_workbook(excel_file, data_only=True)
             sheet = wb.active
 
-            data = []
-            not_found = []
+            data_map = {}
+            not_found = set()
+
+            income_code = ''
+            if rubro_type == 'INCOME' and rubro_id:
+                income = Income.objects.filter(pk=rubro_id).only('code').first()
+                income_code = (income.code or '').strip().upper() if income else ''
+
+            is_hours_extra = ('HORAS_EXTRAS' in income_code or 'HORA_EXTRA' in income_code)
+            is_hours_supp = ('SUPLEMENTARIAS' in income_code or 'SUPLEMENTARIA' in income_code)
+            is_hours_mode = is_hours_extra or is_hours_supp
+
+            # Para formato en 2 filas por cédula: 1ra fila = horas extra, 2da fila = suplementarias
+            occurrence_by_cedula = {}
+
+            def to_decimal(value):
+                if value is None:
+                    return Decimal('0.00')
+                try:
+                    return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                except Exception:
+                    return Decimal('0.00')
 
             # Empezamos desde la FILA 1 (así no importa si el usuario olvidó poner encabezados)
             for row in sheet.iter_rows(min_row=1, values_only=True):
@@ -845,27 +867,45 @@ class ParseNoveltyExcelView(View):
                 # 3. Las cédulas ecuatorianas son de 10 dígitos. Si Excel borró el 0 inicial, lo reponemos
                 cedula = raw_cedula.zfill(10)
 
-                # Si la segunda columna está vacía, asumimos 0.00
-                valor_bruto = row[1] if len(row) > 1 and row[1] is not None else 0.00
+                col_2 = to_decimal(row[1] if len(row) > 1 else None)
+                col_3 = to_decimal(row[2] if len(row) > 2 else None)
 
-                try:
-                    valor = float(valor_bruto)
-                except (ValueError, TypeError):
-                    valor = 0.00
+                if is_hours_mode:
+                    # Formato A: Cedula | Horas Extra | Horas Suplementarias
+                    if len(row) > 2:
+                        valor = col_2 if is_hours_extra else col_3
+                    else:
+                        # Formato B: 2 filas por cédula
+                        occ = occurrence_by_cedula.get(cedula, 0) + 1
+                        occurrence_by_cedula[cedula] = occ
+                        if is_hours_extra:
+                            valor = col_2 if occ == 1 else Decimal('0.00')
+                        else:
+                            valor = col_2 if occ == 2 else Decimal('0.00')
+                else:
+                    valor = col_2
 
                 # Buscamos al empleado por la cédula (usamos document_number que es como lo tienes en DB)
                 emp = Employee.objects.filter(person__document_number=cedula, is_active=True).first()
                 if emp:
-                    data.append({
-                        'emp_id': emp.id,
-                        'cedula': cedula,
-                        'nombres': f"{emp.person.last_name} {emp.person.first_name}",
-                        'valor': round(valor, 2)
-                    })
+                    if emp.id not in data_map:
+                        data_map[emp.id] = {
+                            'emp_id': emp.id,
+                            'cedula': cedula,
+                            'nombres': f"{emp.person.last_name} {emp.person.first_name}",
+                            'valor': Decimal('0.00')
+                        }
+                    data_map[emp.id]['valor'] += valor
                 else:
-                    not_found.append(cedula)
+                    not_found.add(cedula)
 
-            return JsonResponse({'status': 'success', 'data': data, 'not_found': not_found})
+            data = []
+            for item in data_map.values():
+                item['valor'] = float(item['valor'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+                data.append(item)
+
+            data = sorted(data, key=lambda x: x['nombres'])
+            return JsonResponse({'status': 'success', 'data': data, 'not_found': sorted(list(not_found))})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -1935,7 +1975,7 @@ class PublicPayslipValidationView(DetailView):
 
 
 class SendPayslipEmailView(LoginRequiredMixin, View):
-    """Genera un PDF ultraligero con ReportLab y lo envía por correo"""
+    """Genera PDF usando el mismo template que la impresión y lo envía por correo"""
 
     def post(self, request, pk):
         payslip = get_object_or_404(Payslip, pk=pk)
@@ -1965,150 +2005,65 @@ class SendPayslipEmailView(LoginRequiredMixin, View):
             email.attach_alternative(html_content, "text/html")
 
             # ====================================================================
-            # CREACIÓN DEL PDF CON REPORTLAB
+            # GENERAR PDF DESDE EL MISMO TEMPLATE QUE LA IMPRESIÓN
             # ====================================================================
-            buffer = io.BytesIO()
-            p = canvas.Canvas(buffer, pagesize=A4)
-            width, height = A4
+            # Preparar el contexto igual que PrintablePayslipView
+            context = {
+                'payslip': payslip,
+                'incomes': payslip.items.filter(item_type='INCOME').order_by('income_ref__order'),
+                'deductions': payslip.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order'),
+            }
 
-            # 1. DIBUJAR LOGO
-            logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
-            if os.path.exists(logo_path):
-                p.drawImage(logo_path, 40, height - 90, width=60, height=60, preserveAspectRatio=True, mask='auto')
-
-            # 2. DIBUJAR ENCABEZADO
-            p.setFont("Helvetica-Bold", 12)
-            p.drawCentredString(width / 2.0, height - 50, "GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA")
-            p.setFont("Helvetica-Bold", 10)
-            p.drawCentredString(width / 2.0, height - 65, f"ROL DE PAGOS – {mes_str} {payslip.period.year}")
-
-            # 3. DIBUJAR CAJA DEL SERVIDOR
-            y_info = height - 120
-            p.setLineWidth(1)
-
-            # 🟢 NUEVO: Pintar el fondo de celeste (RGB: 230, 240, 250)
-            p.setFillColorRGB(0.90, 0.94, 0.98)
-            p.rect(40, y_info - 40, 515, 40, fill=1, stroke=1)  # fill=1 activa el color
-            p.setFillColorRGB(0, 0, 0)  # Regresar el pincel a color negro para las letras
-
-            p.line(40, y_info - 20, 555, y_info - 20)
-            p.line(width / 2.0, y_info - 40, width / 2.0, y_info)
-
-            p.setFont("Helvetica-Bold", 9)
-            p.drawString(45, y_info - 14, "Servidor:")
-            p.drawString(45, y_info - 34, "Cédula:")
-            p.drawString(width / 2.0 + 5, y_info - 14, "Cargo:")
-            p.drawString(width / 2.0 + 5, y_info - 34, "Unidad:")
-
-            p.setFont("Helvetica", 9)
-            p.drawString(95, y_info - 14, str(payslip.employee.person.full_name)[:35])
-            p.drawString(90, y_info - 34, str(payslip.employee.person.document_number))
-
-            cb = payslip.employee.current_budget_line.first()
-            cargo = cb.position_item.name if cb and cb.position_item else "—"
-
-            # 🟢 NUEVO: Extraer la Unidad Administrativa directa del modelo Employee
-            unidad = payslip.employee.area.name if payslip.employee.area else "—"
-
-            p.drawString(width / 2.0 + 40, y_info - 14, str(cargo)[:35])
-            p.drawString(width / 2.0 + 45, y_info - 34, str(unidad)[:35])
-
-            # 4. DIBUJAR CABECERAS DE TABLAS
-            y_tables = y_info - 60
-            p.rect(40, y_tables - 15, 250, 15);
-            p.rect(305, y_tables - 15, 250, 15)
-            p.setFont("Helvetica-Bold", 9)
-            p.drawCentredString(165, y_tables - 11, "INGRESOS");
-            p.drawCentredString(430, y_tables - 11, "DESCUENTOS")
-
-            y_titles = y_tables - 30
-            p.rect(40, y_titles, 250, 15);
-            p.rect(305, y_titles, 250, 15)
-            p.drawString(45, y_titles + 4, "Concepto");
-            p.drawRightString(285, y_titles + 4, "Valor")
-            p.drawString(310, y_titles + 4, "Concepto");
-            p.drawRightString(550, y_titles + 4, "Valor")
-
-            # 5. DIBUJAR DATOS
-            p.setFont("Helvetica", 9)
-            y_inc = y_titles - 15
-            for item in payslip.items.filter(item_type='INCOME').order_by('income_ref__order'):
-                p.drawString(45, y_inc + 4, str(item.income_ref.name)[:35])
-                p.drawRightString(285, y_inc + 4, f"{item.value:.2f}")
-                p.line(40, y_inc, 290, y_inc)
-                y_inc -= 15
-
-            y_ded = y_titles - 15
-            for item in payslip.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order'):
-                p.drawString(310, y_ded + 4, str(item.deduction_ref.name)[:35])
-                p.drawRightString(550, y_ded + 4, f"{item.value:.2f}")
-                p.line(305, y_ded, 555, y_ded)
-                y_ded -= 15
-
-            y_bottom = min(y_inc, y_ded) - 15
-            p.line(40, y_titles, 40, y_bottom);
-            p.line(290, y_titles, 290, y_bottom)
-            p.line(305, y_titles, 305, y_bottom);
-            p.line(555, y_titles, 555, y_bottom)
-            p.line(40, y_bottom, 290, y_bottom);
-            p.line(305, y_bottom, 555, y_bottom)
-
-            # 6. TOTALES
-            y_totals = y_bottom - 15
-            p.rect(40, y_totals, 250, 15);
-            p.rect(305, y_totals, 250, 15)
-            p.setFont("Helvetica-Bold", 9)
-            p.drawString(45, y_totals + 4, "TOTAL INGRESOS");
-            p.drawRightString(285, y_totals + 4, f"$ {payslip.total_income:.2f}")
-            p.drawString(310, y_totals + 4, "TOTAL DESCUENTOS");
-            p.drawRightString(550, y_totals + 4, f"$ {payslip.total_deduction:.2f}")
-
-            # 7. BARRA DE RESUMEN
-            y_sum = y_totals - 30
-
-            # 🟢 NUEVO: Pintar el fondo de celeste (RGB: 230, 240, 250)
-            p.setFillColorRGB(0.90, 0.94, 0.98)
-            p.rect(40, y_sum, 515, 20, fill=1, stroke=1)
-            p.setFillColorRGB(0, 0, 0)  # Regresar a negro
-
-            p.line(40 + 171, y_sum, 40 + 171, y_sum + 20);
-            p.line(40 + 342, y_sum, 40 + 342, y_sum + 20)
-            p.drawCentredString(40 + 85, y_sum + 6, f"TOTAL INGRESO: $ {payslip.total_income:.2f}")
-            p.drawCentredString(40 + 256, y_sum + 6, f"TOTAL DESCUENTOS: $ {payslip.total_deduction:.2f}")
-            p.drawCentredString(40 + 428, y_sum + 6, f"VALOR A RECIBIR: $ {payslip.net_pay:.2f}")
-
-            # 8. INFO BANCARIA Y FIRMA
-            y_foot = y_sum - 25
-            p.setFont("Helvetica", 9)
-            ba = payslip.employee.person.economic_data.bank_account
-            cuenta = f"Cuenta Nro. xxxxxx{ba.account_number[-4:]}" if ba and ba.account_number else "No registrado"
-            banco = ba.bank.name if ba and ba.bank else "—"
-            p.drawString(40, y_foot, f"Depositado en: {banco} – {cuenta}")
-
-            p.setFont("Helvetica-Bold", 9)
-
-            # 🟢 NUEVO: Transformar el valor numérico a letras automáticamente
+            # Generar números en letras
             if num2words:
-                entero = int(payslip.net_pay)
-                decimales = int(round((payslip.net_pay - entero) * 100))
-                letras_entero = num2words(entero, lang='es').upper()
-                net_words = f"{letras_entero} CON {decimales:02d}/100 DÓLARES"
+                try:
+                    entero = int(payslip.net_pay)
+                    decimales = int(round((payslip.net_pay - entero) * 100))
+                    letras_entero = num2words(entero, lang='es').upper()
+                    context['net_pay_words'] = f"{letras_entero} CON {decimales:02d}/100 DÓLARES"
+                except Exception:
+                    context['net_pay_words'] = f"{payslip.net_pay} (Error al convertir)"
             else:
-                net_words = f"{payslip.net_pay} (Instalar num2words)"
+                context['net_pay_words'] = f"{payslip.net_pay} (Instalar num2words)"
 
-            p.drawString(40, y_foot - 15, f"LÍQUIDO A RECIBIR: {net_words}")
+            # Generar QR de validación
+            validation_token = build_public_payslip_token(payslip.id)
+            validation_url = request.build_absolute_uri(
+                reverse('payroll:payslip_public_validate', kwargs={'token': validation_token})
+            )
 
-            p.setFont("Helvetica-Bold", 8)
-            p.drawCentredString(width / 2.0, y_foot - 50,
-                                "ESTE DOCUMENTO TIENE VALIDEZ LEGAL AL ESTAR SELLADO Y FIRMADO POR LA DIRECCIÓN DE TALENTO HUMANO")
+            import qrcode as qr_module
+            qr = qr_module.QRCode(
+                version=1,
+                error_correction=qr_module.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(validation_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color='black', back_color='white')
 
-            # Finalizar PDF
-            p.showPage()
-            p.save()
-            pdf_file = buffer.getvalue()
-            buffer.close()
-            # ====================================================================
+            buffered = io.BytesIO()
+            img.save(buffered, format='PNG')
+            context['qr_code'] = base64.b64encode(buffered.getvalue()).decode()
+            context['validation_code'] = f"{validation_token[:10]}...{validation_token[-8:]}"
+            context['validation_url'] = validation_url
+            context['auto_print'] = False
 
+            # Renderizar el template HTML a string
+            html_payslip = render_to_string('payroll/reports/printable_payslip.html', context)
+
+            # Convertir HTML a PDF usando xhtml2pdf
+            pdf_buffer = io.BytesIO()
+            pisa.CreatePDF(
+                io.StringIO(html_payslip),
+                pdf_buffer,
+                raise_exception=True
+            )
+            pdf_file = pdf_buffer.getvalue()
+            pdf_buffer.close()
+
+            # Adjuntar PDF al correo
             nombre_archivo = f"Rol_{mes_str}_{payslip.period.year}.pdf"
             email.attach(nombre_archivo, pdf_file, 'application/pdf')
             email.send(fail_silently=False)

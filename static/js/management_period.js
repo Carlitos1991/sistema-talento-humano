@@ -763,16 +763,40 @@ const periodApp = createApp({
         },
 
         async terminatePeriod(id) {
-            const {value: reason, isConfirmed} = await Swal.fire({
+            const {value: formValues, isConfirmed} = await Swal.fire({
                 title: 'Finalizar Gestión',
-                input: 'textarea',
-                inputLabel: 'Motivo de salida',
-                showCancelButton: true, confirmButtonText: 'Finalizar'
+                html: `
+                    <div style="text-align:left; display:grid; gap:10px;">
+                        <label style="font-weight:600;">Motivo de salida</label>
+                        <textarea id="swal-terminate-reason" class="swal2-textarea" placeholder="Detalle el motivo"></textarea>
+                        <label style="font-weight:600;">Fecha fin de gestión</label>
+                        <input id="swal-terminate-end-date" type="date" class="swal2-input" style="margin:0; width:100%;" />
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Finalizar',
+                preConfirm: () => {
+                    const reasonEl = document.getElementById('swal-terminate-reason');
+                    const endDateEl = document.getElementById('swal-terminate-end-date');
+                    const reason = reasonEl ? reasonEl.value.trim() : '';
+                    const endDate = endDateEl ? endDateEl.value : '';
+                    if (!reason) {
+                        Swal.showValidationMessage('El motivo de salida es obligatorio.');
+                        return false;
+                    }
+                    if (!endDate) {
+                        Swal.showValidationMessage('La fecha fin de gestión es obligatoria.');
+                        return false;
+                    }
+                    return {reason, end_date: endDate};
+                }
             });
 
-            if (isConfirmed && reason) {
+            if (isConfirmed && formValues) {
                 const formData = new FormData();
-                formData.append('reason', reason);
+                formData.append('reason', formValues.reason);
+                formData.append('end_date', formValues.end_date);
                 try {
                     const response = await fetch(`/contract/periods/terminate/${id}/`, {
                         method: 'POST',
@@ -783,6 +807,8 @@ const periodApp = createApp({
                     if (data.success) {
                         Swal.fire('Éxito', data.message, 'success');
                         this.fetchTable();
+                    } else {
+                        this.showToast('error', data.message || 'No se pudo finalizar la gestión');
                     }
                 } catch (e) {
                     this.showToast('error', 'Error al terminar');

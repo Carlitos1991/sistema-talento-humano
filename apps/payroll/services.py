@@ -1,7 +1,7 @@
 import traceback
 import logging
 import time
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta
 from django.db import transaction
 from django.db.models import Q
@@ -281,6 +281,34 @@ class PayrollCalculatorService:
                                 (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
                     regime_code = mp.contract_type.labor_regime.code.strip().upper() if mp and mp.contract_type and mp.contract_type.labor_regime else ''
 
+                    emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
+                    prepared_income_novelties = []
+                    hours_income_total = Decimal('0.00')
+                    for nov in emp_novelties['incomes']:
+                        if nov.value <= 0:
+                            continue
+                        val_nov = Decimal(str(nov.value))
+                        code_up = (nov.income_ref.code or '').strip().upper()
+
+                        if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
+                            sueldo_dia = (salary / Decimal('30.0')).quantize(Decimal('0.01'),
+                                                                              rounding=ROUND_HALF_UP)
+                            sueldo_hora = (sueldo_dia / Decimal('8.0')).quantize(Decimal('0.01'),
+                                                                                  rounding=ROUND_HALF_UP)
+                            val_nov = (sueldo_hora * Decimal('1.50') * val_nov).quantize(Decimal('0.01'),
+                                                                                           rounding=ROUND_HALF_UP)
+                            hours_income_total += val_nov
+                        elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
+                            sueldo_dia = (salary / Decimal('30.0')).quantize(Decimal('0.01'),
+                                                                              rounding=ROUND_HALF_UP)
+                            sueldo_hora = (sueldo_dia / Decimal('8.0')).quantize(Decimal('0.01'),
+                                                                                  rounding=ROUND_HALF_UP)
+                            val_nov = (sueldo_hora * Decimal('2.00') * val_nov).quantize(Decimal('0.01'),
+                                                                                           rounding=ROUND_HALF_UP)
+                            hours_income_total += val_nov
+
+                        prepared_income_novelties.append((nov, val_nov))
+
                     for inc in active_incomes:
                         val, code_clean = Decimal('0.0'), inc.code.strip().upper() if inc.code else ''
                         is_ct_base_income = (code_clean == 'SALARIOS_BASICOS') if has_ct_base_income else (
@@ -299,7 +327,8 @@ class PayrollCalculatorService:
                                     taxable_base += val_tramo
                             continue
                         elif code_clean == 'DECIMO_TERCERO' and mensualiza_decimos and self.period.working_days:
-                            val = (salary / Decimal('12.0')) * (
+                            base_decimo_tercero = salary + hours_income_total
+                            val = (base_decimo_tercero / Decimal('12.0')) * (
                                         Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
@@ -357,23 +386,10 @@ class PayrollCalculatorService:
                     # ====================================================
                     # 2. NOVEDADES (Ingresos Extra y Horas del Excel)
                     # ====================================================
-                    emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
-
-                    for nov in emp_novelties['incomes']:
-                        if nov.value > 0:
-                            val_nov = Decimal(str(nov.value))
-                            code_up = (nov.income_ref.code or '').strip().upper()
-
-                            if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
-                                sueldo_hora = salary / Decimal('240.0')
-                                val_nov = sueldo_hora * Decimal('2.0') * val_nov
-                            elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
-                                sueldo_hora = salary / Decimal('240.0')
-                                val_nov = sueldo_hora * Decimal('1.5') * val_nov
-
-                            items_buffer.append(
-                                PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME', value=val_nov))
-                            total_ing += val_nov
+                    for nov, val_nov in prepared_income_novelties:
+                        items_buffer.append(
+                            PayslipItem(payslip=slip, income_ref=nov.income_ref, item_type='INCOME', value=val_nov))
+                        total_ing += val_nov
 
                     # ====================================================
                     # 3. POCKET LOGIC (Descuentos y Deudas Viejas)

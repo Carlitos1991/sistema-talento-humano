@@ -64,6 +64,12 @@
                     <div class="form-group mt-4">
                         <label class="form-label">Subir o Actualizar con Excel (.xlsx)</label>
                         <input type="file" id="excel_file" class="form-control" accept=".xlsx, .xls">
+                        <small class="text-muted d-block mt-2">
+                            Para rubros de horas: puede usar formato de 2 columnas
+                            (<strong>Cédula, Horas</strong>) cargando cada rubro por separado,
+                            o 3 columnas (<strong>Cédula, Horas Extra, Horas Suplementarias</strong>).
+                            En formato de 2 filas por cédula, la primera fila se toma como horas extra y la segunda como suplementarias.
+                        </small>
                     </div>
 
                     <button type="button" class="btn-create w-100 mt-3" onclick="uploadExcel()">
@@ -174,43 +180,84 @@
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            const doUpload = (mergeMode) => {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const rubroId = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+                formData.append('rubro_type', rubro_type);
+                formData.append('rubro_id', rubroId);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
-            fetch('{% url "payroll:parse_novelty_excel" %}', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(res => {
-                    if (res.status === 'success') {
-                        // MAGIA DE FUSIÓN: Mezclamos el Excel con lo que ya está en la tabla
-                        res.data.forEach(newRow => {
-                            const existingIndex = parsedData.findIndex(r => r.emp_id === newRow.emp_id);
-                            if (existingIndex >= 0) {
-                                parsedData[existingIndex].valor = newRow.valor; // Actualiza
-                            } else {
-                                parsedData.push(newRow); // Agrega nuevo
-                            }
-                        });
-
-                        renderTable();
-
-                        if (res.not_found.length > 0) {
-                            Swal.fire('Advertencia', `No se encontraron ${res.not_found.length} cédulas del Excel en la base de datos.`, 'info');
-                        } else {
-                            Swal.fire({
-                                toast: true, position: 'top-end', icon: 'success',
-                                title: 'Excel fusionado con éxito', showConfirmButton: false, timer: 2000
+                fetch('{% url "payroll:parse_novelty_excel" %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(res => {
+                        if (res.status === 'success') {
+                            // Fusión según modo elegido: REPLACE o ADD
+                            res.data.forEach(newRow => {
+                                const existingIndex = parsedData.findIndex(r => r.emp_id === newRow.emp_id);
+                                if (existingIndex >= 0) {
+                                    if (mergeMode === 'add') {
+                                        const current = parseFloat(parsedData[existingIndex].valor) || 0;
+                                        const incoming = parseFloat(newRow.valor) || 0;
+                                        parsedData[existingIndex].valor = parseFloat((current + incoming).toFixed(2));
+                                    } else {
+                                        parsedData[existingIndex].valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                                    }
+                                } else {
+                                    newRow.valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                                    parsedData.push(newRow);
+                                }
                             });
+
+                            renderTable();
+
+                            if (res.not_found.length > 0) {
+                                Swal.fire('Advertencia', `No se encontraron ${res.not_found.length} cédulas del Excel en la base de datos.`, 'info');
+                            } else {
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'success',
+                                    title: mergeMode === 'add' ? 'Excel adicionado con éxito' : 'Excel reemplazado con éxito',
+                                    showConfirmButton: false,
+                                    timer: 2000
+                                });
+                            }
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
                         }
+                        // Limpiar input de archivo
+                        fileInput.value = '';
+                    });
+            };
+
+            // Si ya hay datos cargados, preguntar cómo fusionar este nuevo Excel.
+            if (parsedData.length > 0) {
+                Swal.fire({
+                    title: '¿Cómo deseas cargar el nuevo Excel?',
+                    text: 'Reemplazar: sustituye valores existentes. Adicionar: suma por cédula.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: 'Reemplazar todo',
+                    denyButtonText: 'Adicionar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doUpload('replace');
+                    } else if (result.isDenied) {
+                        doUpload('add');
                     } else {
-                        Swal.fire('Error', res.message, 'error');
+                        fileInput.value = '';
                     }
-                    // Limpiar input de archivo
-                    fileInput.value = '';
                 });
+            } else {
+                // Primera carga: comportamiento normal (equivalente a reemplazar)
+                doUpload('replace');
+            }
         }
 
         function renderTable(isEmpty = false) {

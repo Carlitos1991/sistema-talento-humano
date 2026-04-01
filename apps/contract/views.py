@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
@@ -10,7 +11,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.generic import ListView, View
 
-from budget.models import BudgetModificationHistory
+from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
 from core.models import CatalogItem
 from employee.models import Employee
 from person.models import Person
@@ -440,9 +441,23 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
         reason = request.POST.get('reason', '').strip()
+        end_date_raw = request.POST.get('end_date', '').strip()
 
         if not reason:
             return JsonResponse({'success': False, 'message': 'El motivo de salida es obligatorio.'}, status=400)
+        if not end_date_raw:
+            return JsonResponse({'success': False, 'message': 'La fecha fin de gestión es obligatoria.'}, status=400)
+
+        try:
+            end_date = datetime.strptime(end_date_raw, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'Formato de fecha fin inválido.'}, status=400)
+
+        if period.start_date and end_date < period.start_date:
+            return JsonResponse({
+                'success': False,
+                'message': 'La fecha fin de gestión no puede ser menor a la fecha de inicio.'
+            }, status=400)
 
         try:
             with transaction.atomic():
@@ -450,13 +465,13 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 finalizado_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
                 libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
                 current_status = period.employee.employment_status.code
-                exit_status = 'PERSONA'
+
                 # 2. Finalizar el Periodo
                 period.status = finalizado_status
-                if not period.end_date:
-                    period.end_date = timezone.now().date()
+                period.end_date = end_date
                 period.updated_by = request.user
                 period.save()
+
                 mapping = {
                     'EMPLEADO': 'EX_EMPLEADO',
                     'TRABAJADOR': 'EX_TRABAJADOR',
@@ -472,21 +487,43 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
 
                 # 3. Liberar la Partida
                 budget_line = period.budget_line
+                if not budget_line:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El período de gestión no tiene una partida presupuestaria asignada.'
+                    }, status=400)
+
+                # 3.1 Cerrar historial de asignación con la misma fecha/observación de finalización
+                assignment_history = BudgetAssignmentHistory.objects.filter(
+                    budget_line=budget_line,
+                    employee=period.employee,
+                    is_current=True
+                ).first()
+                if assignment_history:
+                    if assignment_history.start_date and end_date < assignment_history.start_date:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'La fecha fin no puede ser menor a la fecha de inicio en el historial de partida.'
+                        }, status=400)
+                    assignment_history.end_date = end_date
+                    assignment_history.is_current = False
+                    assignment_history.observation = reason
+                    assignment_history.save()
+
                 budget_line.status_item = libre_status
                 budget_line.current_employee = None
-                budget_line.updated_by = request.user
-                budget_line.save()
+                budget_line.save(modified_by=request.user)
 
-                # --- 4. REGISTRO EN HISTORIAL DE CONTRATO ---
+                # 4. Registro en historial de contrato
                 History.objects.create(
                     employee=period.employee,
                     contract=period,
                     user_register=request.user.get_full_name() or request.user.username,
                     type='TERMINACIÓN',
-                    reason=reason  # Aquí se guarda lo que el usuario escribió en el modal
+                    reason=reason
                 )
 
-                # 5. Auditoría en Historial de Partida (Ya lo tenías)
+                # 5. Auditoría en historial de partida
                 BudgetModificationHistory.objects.create(
                     budget_line=budget_line,
                     modified_by=request.user,
@@ -494,7 +531,7 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                     field_name='Estado y Ocupante',
                     old_value=f"Ocupada por {period.employee.person.full_name}",
                     new_value="LIBRE / VACANTE",
-                    reason=f"Terminación de contrato. Motivo: {reason}"
+                    reason=f"Terminación de contrato ({end_date}). Motivo: {reason}"
                 )
 
             return JsonResponse({
