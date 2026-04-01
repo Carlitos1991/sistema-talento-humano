@@ -25,15 +25,14 @@ def user_logged_in_handler(sender, request, user, **kwargs):
     ip_address = get_client_ip(request)
     user_agent = get_user_agent(request)
     
-    # Eliminar sesiones anteriores del mismo usuario (solo mantener una activa)
-    UserSession.objects.filter(user=user).delete()
-    
-    # Crear nueva sesión
-    UserSession.objects.create(
+    # Crear o actualizar la sesión con los datos más nuevos
+    UserSession.objects.update_or_create(
         user=user,
-        ip_address=ip_address,
         session_key=session_key,
-        user_agent=user_agent
+        defaults={
+            'ip_address': ip_address,
+            'user_agent': user_agent,
+        }
     )
 
 @receiver(user_logged_out)

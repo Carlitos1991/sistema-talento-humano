@@ -19,10 +19,28 @@ class SIGETHSecurityMiddleware:
         if request.user.is_authenticated:
             try:
                 from security.models import UserSession
-                # Actualizar la última actividad de la sesión actual
-                UserSession.objects.filter(user=request.user).update(
-                    last_activity=timezone.now()
-                )
+                # Obtener o crear la sesión del usuario
+                ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                if not ip_address:
+                    ip_address = request.META.get('REMOTE_ADDR', '')
+                
+                session_key = getattr(request, 'session', {}).session_key or None
+                
+                # Crear o actualizar la sesión
+                if session_key:
+                    UserSession.objects.update_or_create(
+                        user=request.user,
+                        session_key=session_key,
+                        defaults={
+                            'ip_address': ip_address,
+                            'last_activity': timezone.now(),
+                        }
+                    )
+                else:
+                    # Sin session_key, solo actualizar last_activity si existe
+                    updated = UserSession.objects.filter(user=request.user).update(
+                        last_activity=timezone.now()
+                    )
             except Exception:
                 pass  # Silenciar errores en la actualización de actividad
 
