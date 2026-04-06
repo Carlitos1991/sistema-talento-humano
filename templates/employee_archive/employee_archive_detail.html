@@ -1,0 +1,761 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Archivo Digital - {{ employee.person.full_name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card archive-header-card archive-detail-header">
+        <div class="archive-detail-person-block">
+            <div class="archive-detail-photo-wrap">
+                {% if employee.person.photo %}
+                    <img src="{{ employee.person.photo.url }}" alt="Foto de {{ employee.person.full_name }}" class="archive-detail-photo">
+                {% else %}
+                    <div class="archive-detail-photo archive-detail-photo--placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="archive-detail-person-data">
+                <h1>{{ employee.person.full_name }}</h1>
+                <p>Cédula: {{ employee.person.document_number|default:'-' }}</p>
+                <p>Área: {{ employee.area.name|default:'-' }}</p>
+                <p>Expediente físico: <strong>{{ expediente_number }}</strong></p>
+            </div>
+        </div>
+        <div class="archive-detail-header-action">
+            <a href="{% url 'employee_archive:employee_list' %}" class="btn btn-create archive-back-btn">
+                <i class="fas fa-arrow-left"></i> Volver al listado
+            </a>
+        </div>
+    </div>
+    
+
+    
+
+    <div class="content-table archive-content-table archive-spacing-bottom">
+        <div class="archive-documents-header">
+            <h4 class="archive-section-title">Documentos del archivo digital</h4>
+            <div class="archive-documents-header-actions">
+                <button type="button" class="btn btn-outline-primary" onclick="openArchiveLoanHistoryModal()">
+                    <i class="fas fa-clock-rotate-left"></i> Bitácora de Préstamos
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="openArchiveAuditModal()">
+                    <i class="fas fa-shield-halved"></i> Auditoría del archivo digital
+                </button>
+            </div>
+        </div>
+
+        <div class="archive-tab-buttons" id="archiveDocumentTabs">
+            {% for archive in archive_documents %}
+                {% if archive.document_type.code == 'EXPEDIENTE_INICIAL' %}
+                    <button type="button" class="archive-tab-btn is-active" data-tab-target="archive-tab-{{ archive.id }}">Expediente inicial</button>
+                {% endif %}
+            {% endfor %}
+            {% for archive in archive_documents %}
+                {% if archive.document_type.code == 'CONTRATOS' %}
+                    <button type="button" class="archive-tab-btn" data-tab-target="archive-tab-{{ archive.id }}">Contratos</button>
+                {% endif %}
+            {% endfor %}
+            {% for archive in archive_documents %}
+                {% if archive.document_type.code == 'ACCIONES_PERSONAL' %}
+                    <button type="button" class="archive-tab-btn" data-tab-target="archive-tab-{{ archive.id }}">Acciones de personal</button>
+                {% endif %}
+            {% endfor %}
+            {% for archive in archive_documents %}
+                {% if archive.document_type.code != 'EXPEDIENTE_INICIAL' and archive.document_type.code != 'CONTRATOS' and archive.document_type.code != 'ACCIONES_PERSONAL' %}
+                    <button type="button" class="archive-tab-btn" data-tab-target="archive-tab-{{ archive.id }}">{{ archive.document_type.name }}</button>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="archive-tab-content-wrapper">
+            {% for archive in archive_documents %}
+                <div id="archive-tab-{{ archive.id }}" class="archive-tab-pane {% if archive.document_type.code == 'EXPEDIENTE_INICIAL' %}is-active{% endif %}">
+                    <div class="table-container">
+                        {% if archive.document_type.code == 'CONTRATOS' %}
+                            <table id="contractsLinkedTable" class="table exportable-table table-hover" data-title="Contratos vinculados">
+                                <thead>
+                                <tr>
+                                    <th class="sortable-header" data-sort-index="0" style="cursor:pointer;">Contrato <span class="sort-arrow">⇅</span></th>
+                                    <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Referencia <span class="sort-arrow">⇅</span></th>
+                                    <th class="sortable-header" data-sort-index="2" data-sort-type="date" style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for task in contract_scan_tasks %}
+                                    {% if task.document_type_id == archive.document_type_id %}
+                                        <tr>
+                                            <td>{{ task.title }}</td>
+                                            <td>{{ task.source_reference|default:'-' }}</td>
+                                            <td>{{ task.source_date|date:'d/m/Y'|default:'-' }}</td>
+                                            <td>
+                                                {% if task.is_scanned %}
+                                                    Digitalizado{% if task.scanned_at %}<br><small>{{ task.scanned_at|date:'d/m/Y H:i' }}</small>{% endif %}
+                                                {% else %}
+                                                    Pendiente
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center actions">
+                                                <div class="actions-wrapper">
+                                                    {% if task.is_scanned and task.version %}
+                                                        <a class="btn-icon btn-views-action" href="{% url 'employee_archive:version_open' task.version.id %}" target="_blank" title="Ver PDF">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                    {% if perms.employee_archive.add_employeearchiveversion %}
+                                                        <button type="button"
+                                                                class="btn-icon btn-create-action"
+                                                                title="Subir PDF"
+                                                                data-document-name="{{ task.title }}"
+                                                                data-upload-url="{% url 'employee_archive:scan_task_upload' task.id %}"
+                                                                onclick="openArchiveVersionUploadModal(this)">
+                                                            <i class="fas fa-upload"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">
+                                            No hay contratos vinculados para este empleado.
+                                            {% if perms.employee_archive.add_employeearchiveversion %}
+                                                <div class="archive-empty-upload-action">
+                                                    <button type="button"
+                                                            class="btn btn-create"
+                                                            data-document-name="{{ archive.document_type.name }}"
+                                                            data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
+                                                            onclick="openArchiveVersionUploadModal(this)">
+                                                        <i class="fas fa-upload"></i> Subir primer documento
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% elif archive.document_type.code == 'ACCIONES_PERSONAL' %}
+                            <table class="table managed-table exportable-table table-hover" data-page-size="12" data-title="Acciones de personal vinculadas">
+                                <thead>
+                                <tr>
+                                    <th>Acción</th>
+                                    <th>Referencia</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for task in action_scan_tasks %}
+                                    {% if task.document_type_id == archive.document_type_id %}
+                                        <tr>
+                                            <td>{{ task.title }}</td>
+                                            <td>{{ task.source_reference|default:'-' }}</td>
+                                            <td>{{ task.source_date|date:'d/m/Y'|default:'-' }}</td>
+                                            <td>
+                                                {% if task.is_scanned %}
+                                                    Digitalizado{% if task.scanned_at %}<br><small>{{ task.scanned_at|date:'d/m/Y H:i' }}</small>{% endif %}
+                                                {% else %}
+                                                    Pendiente
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center actions">
+                                                <div class="actions-wrapper">
+                                                    {% if task.is_scanned and task.version %}
+                                                        <a class="btn-icon btn-views-action" href="{% url 'employee_archive:version_open' task.version.id %}" target="_blank" title="Ver PDF">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                    {% if perms.employee_archive.add_employeearchiveversion %}
+                                                        <button type="button"
+                                                                class="btn-icon btn-create-action"
+                                                                title="Subir PDF"
+                                                                data-document-name="{{ task.title }}"
+                                                                data-upload-url="{% url 'employee_archive:scan_task_upload' task.id %}"
+                                                                onclick="openArchiveVersionUploadModal(this)">
+                                                            <i class="fas fa-upload"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">
+                                            No hay acciones de personal vinculadas para este empleado.
+                                            {% if perms.employee_archive.add_employeearchiveversion %}
+                                                <div class="archive-empty-upload-action">
+                                                    <button type="button"
+                                                            class="btn btn-create"
+                                                            data-document-name="{{ archive.document_type.name }}"
+                                                            data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
+                                                            onclick="openArchiveVersionUploadModal(this)">
+                                                        <i class="fas fa-upload"></i> Subir primer documento
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <table class="table managed-table exportable-table table-hover" data-page-size="12" data-title="{{ archive.document_type.name }}">
+                                <thead>
+                                <tr>
+                                    <th>Fecha carga</th>
+                                    <th>Versión</th>
+                                    <th>Emisión</th>
+                                    <th>Caducidad</th>
+                                    <th>Observaciones</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for version in archive.versions.all %}
+                                    <tr>
+                                        <td>{{ version.created_at|date:'d/m/Y H:i' }}</td>
+                                        <td>
+                                            v{{ version.version_number }}
+                                            {% if version.is_current %}
+                                                <span class="archive-current-version">Actual</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ version.issue_date|date:'d/m/Y'|default:'-' }}</td>
+                                        <td>{{ version.expiration_date|date:'d/m/Y'|default:'-' }}</td>
+                                        <td>{{ version.observations|default:'-' }}</td>
+                                        <td class="text-center actions">
+                                            <div class="actions-wrapper">
+                                                {% if version.file %}
+                                                    <a class="btn-icon btn-views-action" href="{% url 'employee_archive:version_open' version.id %}" target="_blank" title="Ver PDF">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </a>
+                                                {% endif %}
+                                                {% if perms.employee_archive.add_employeearchiveversion %}
+                                                    <button type="button"
+                                                            class="btn-icon btn-create-action"
+                                                            title="Subir nueva versión"
+                                                            data-document-name="{{ archive.document_type.name }}"
+                                                            data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
+                                                            onclick="openArchiveVersionUploadModal(this)">
+                                                        <i class="fas fa-upload"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            Sin versiones registradas.
+                                            {% if perms.employee_archive.add_employeearchiveversion %}
+                                                <div class="archive-empty-upload-action">
+                                                    <button type="button"
+                                                            class="btn btn-create"
+                                                            data-document-name="{{ archive.document_type.name }}"
+                                                            data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
+                                                            onclick="openArchiveVersionUploadModal(this)">
+                                                        <i class="fas fa-upload"></i> Subir primer documento
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="archiveVersionUploadModal" class="modal-overlay hidden">
+        <div class="modal-container-medium shadow-card" style="max-width: 620px; width: min(620px, calc(100vw - 2rem));">
+            <form id="archiveVersionUploadModalForm" method="post" enctype="multipart/form-data" action="" class="archive-loan-request-form">
+                {% csrf_token %}
+                <div class="modal-header-medium modal-header-gradient">
+                    <h3 class="modal-title text-white">
+                        <i class="fas fa-upload me-2"></i>
+                        Subir archivo - <span id="archiveVersionUploadModalDocumentName"></span>
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveVersionUploadModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="archive-loan-request-body archive-form-grid">
+                    <input type="file" name="file" accept=".pdf" class="form-control" required>
+                    <div class="archive-upload-dates">
+                        <input type="date" name="issue_date" class="form-control">
+                        <input type="date" name="expiration_date" class="form-control">
+                    </div>
+                    <textarea name="observations" class="form-control" rows="3" placeholder="Observaciones"></textarea>
+                </div>
+                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveVersionUploadModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-create">Subir PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="archiveLoanHistoryModal" class="modal-overlay hidden">
+        <div class="modal-container-medium animate-scale-in archive-report-modal">
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fas fa-clock-rotate-left me-2"></i>
+                    Bitácora de Préstamos
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveLoanHistoryModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-custom archive-report-modal-body">
+                <div class="table-controls archive-modal-tools">
+                    <div class="archive-date-range-filters">
+                        <label>Desde</label>
+                        <input type="date" id="loanHistoryDateFrom" class="form-control">
+                        <label>Hasta</label>
+                        <input type="date" id="loanHistoryDateTo" class="form-control">
+                    </div>
+                </div>
+                <div class="table-container archive-report-table-container">
+                    <table id="loanHistoryTable" class="table table-hover" data-title="Bitacora de Prestamos">
+                        <thead>
+                        <tr>
+                            <th class="sortable-header" data-sort-index="0" data-sort-type="date" style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Usuario <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="2" style="cursor:pointer;">Estado <span class="sort-arrow">⇅</span></th>
+                            <th>Observaciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for loan in loan_history %}
+                            <tr>
+                                <td>{{ loan.requested_at|date:'d/m/Y H:i' }}</td>
+                                <td>{% firstof loan.borrower_user.get_full_name loan.borrower_user.username %}</td>
+                                <td>{{ loan.get_status_display }}</td>
+                                <td>
+                                    {{ loan.request_observation|default:'-' }}
+                                    {% if loan.return_observation %}<br>Devolución: {{ loan.return_observation }}{% endif %}
+                                    {% if loan.validation_observation %}<br>Validación: {{ loan.validation_observation }}{% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center">Sin registros de préstamo.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="archive-mini-pagination" id="loanHistoryPagination"></div>
+            </div>
+            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-report-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanHistoryModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="archiveAuditModal" class="modal-overlay hidden">
+        <div class="modal-container-medium animate-scale-in archive-report-modal">
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fas fa-shield-halved me-2"></i>
+                    Auditoría del archivo digital
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveAuditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-custom archive-report-modal-body">
+                <div class="table-controls archive-modal-tools">
+                    <div class="archive-date-range-filters">
+                        <label>Desde</label>
+                        <input type="date" id="auditDateFrom" class="form-control">
+                        <label>Hasta</label>
+                        <input type="date" id="auditDateTo" class="form-control">
+                    </div>
+                </div>
+                <div class="table-container archive-report-table-container">
+                    <table id="auditTable" class="table table-hover" data-title="Auditoria Archivo Digital">
+                        <thead>
+                        <tr>
+                            <th class="sortable-header" data-sort-index="0" data-sort-type="date" style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Usuario <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="2" style="cursor:pointer;">Tipo de documento <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="3" style="cursor:pointer;">Referencia <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header" data-sort-index="4" style="cursor:pointer;">Acción <span class="sort-arrow">⇅</span></th>
+                            <th>IP</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for log in access_logs %}
+                            <tr>
+                                <td>{{ log.created_at|date:'d/m/Y H:i' }}</td>
+                                <td>{% firstof log.user.get_full_name log.user.username %}</td>
+                                <td>{{ log.document_type_label }}</td>
+                                <td>{{ log.reference_label }}</td>
+                                <td>{{ log.get_action_display }}</td>
+                                <td>{{ log.ip_address|default:'-' }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="text-center">Sin trazas de auditoría.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="archive-mini-pagination" id="auditPagination"></div>
+            </div>
+            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-report-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveAuditModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function switchArchiveDocumentTab(targetId) {
+            document.querySelectorAll('.archive-tab-btn').forEach(function (btn) {
+                const isActive = btn.dataset.tabTarget === targetId;
+                btn.classList.toggle('is-active', isActive);
+            });
+            document.querySelectorAll('.archive-tab-pane').forEach(function (pane) {
+                pane.classList.toggle('is-active', pane.id === targetId);
+            });
+        }
+
+        function parseTableDate(value) {
+            if (!value) {
+                return null;
+            }
+            const match = value.trim().match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+            if (!match) {
+                return null;
+            }
+            const day = Number(match[1]);
+            const month = Number(match[2]) - 1;
+            const year = Number(match[3]);
+            const hours = Number(match[4] || 0);
+            const minutes = Number(match[5] || 0);
+            return new Date(year, month, day, hours, minutes);
+        }
+
+        function normalizeDateInput(value, endOfDay) {
+            if (!value) {
+                return null;
+            }
+            const parts = value.split('-');
+            if (parts.length !== 3) {
+                return null;
+            }
+            const year = Number(parts[0]);
+            const month = Number(parts[1]) - 1;
+            const day = Number(parts[2]);
+            if (endOfDay) {
+                return new Date(year, month, day, 23, 59, 59, 999);
+            }
+            return new Date(year, month, day, 0, 0, 0, 0);
+        }
+
+        function setupEnhancedTable(options) {
+            const table = document.getElementById(options.tableId);
+            if (!table) {
+                return null;
+            }
+
+            const tbody = table.querySelector('tbody');
+            if (!tbody) {
+                return null;
+            }
+
+            const allRows = Array.from(tbody.querySelectorAll('tr')).filter(function (row) {
+                return row.querySelectorAll('td').length > 1;
+            });
+
+            const state = {
+                page: 1,
+                pageSize: options.pageSize || 8,
+                sortIndex: null,
+                sortDir: 'asc'
+            };
+
+            function applyFilters() {
+                const dateFromInput = options.dateFromId ? document.getElementById(options.dateFromId) : null;
+                const dateToInput = options.dateToId ? document.getElementById(options.dateToId) : null;
+                const dateFrom = dateFromInput ? normalizeDateInput(dateFromInput.value, false) : null;
+                const dateTo = dateToInput ? normalizeDateInput(dateToInput.value, true) : null;
+                const textInput = options.textFilterId ? document.getElementById(options.textFilterId) : null;
+                const textValue = textInput ? textInput.value.trim().toLowerCase() : '';
+
+                let rows = allRows.filter(function (row) {
+                    let matchesText = true;
+                    if (textValue) {
+                        const cell = row.cells[options.textFilterIndex || 0];
+                        const cellText = (cell ? cell.textContent : '').toLowerCase();
+                        matchesText = cellText.includes(textValue);
+                    }
+
+                    let matchesDate = true;
+                    if (dateFrom || dateTo) {
+                        const dateCell = row.cells[options.dateColumnIndex || 0];
+                        const rowDate = parseTableDate(dateCell ? dateCell.textContent : '');
+                        if (!rowDate) {
+                            matchesDate = false;
+                        } else {
+                            if (dateFrom && rowDate < dateFrom) {
+                                matchesDate = false;
+                            }
+                            if (dateTo && rowDate > dateTo) {
+                                matchesDate = false;
+                            }
+                        }
+                    }
+
+                    return matchesText && matchesDate;
+                });
+
+                if (state.sortIndex !== null) {
+                    rows.sort(function (a, b) {
+                        const aCell = a.cells[state.sortIndex] ? a.cells[state.sortIndex].textContent.trim() : '';
+                        const bCell = b.cells[state.sortIndex] ? b.cells[state.sortIndex].textContent.trim() : '';
+                        let result = 0;
+                        if (options.sortTypeByIndex && options.sortTypeByIndex[state.sortIndex] === 'date') {
+                            const da = parseTableDate(aCell);
+                            const db = parseTableDate(bCell);
+                            result = (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+                        } else {
+                            result = aCell.localeCompare(bCell, 'es', {numeric: true, sensitivity: 'base'});
+                        }
+                        return state.sortDir === 'asc' ? result : -result;
+                    });
+                }
+
+                const total = rows.length;
+                const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+                if (state.page > totalPages) {
+                    state.page = totalPages;
+                }
+                const start = (state.page - 1) * state.pageSize;
+                const end = start + state.pageSize;
+                const pageRows = rows.slice(start, end);
+
+                tbody.innerHTML = '';
+                if (!pageRows.length) {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = table.querySelectorAll('thead th').length;
+                    emptyCell.className = 'text-center';
+                    emptyCell.textContent = options.emptyMessage || 'Sin resultados para los filtros aplicados.';
+                    emptyRow.appendChild(emptyCell);
+                    tbody.appendChild(emptyRow);
+                } else {
+                    pageRows.forEach(function (row) {
+                        tbody.appendChild(row);
+                    });
+                }
+
+                const pager = options.paginationId ? document.getElementById(options.paginationId) : null;
+                if (pager) {
+                    pager.innerHTML = '';
+                    const prevBtn = document.createElement('button');
+                    prevBtn.type = 'button';
+                    prevBtn.className = 'btn btn-outline-secondary btn-sm';
+                    prevBtn.textContent = 'Anterior';
+                    prevBtn.disabled = state.page <= 1;
+                    prevBtn.addEventListener('click', function () {
+                        state.page -= 1;
+                        applyFilters();
+                    });
+
+                    const info = document.createElement('span');
+                    info.className = 'archive-mini-pagination-info';
+                    info.textContent = 'Página ' + state.page + ' de ' + totalPages;
+
+                    const nextBtn = document.createElement('button');
+                    nextBtn.type = 'button';
+                    nextBtn.className = 'btn btn-outline-secondary btn-sm';
+                    nextBtn.textContent = 'Siguiente';
+                    nextBtn.disabled = state.page >= totalPages;
+                    nextBtn.addEventListener('click', function () {
+                        state.page += 1;
+                        applyFilters();
+                    });
+
+                    pager.appendChild(prevBtn);
+                    pager.appendChild(info);
+                    pager.appendChild(nextBtn);
+                }
+            }
+
+            table.querySelectorAll('thead th.sortable-header').forEach(function (th) {
+                th.addEventListener('click', function () {
+                    const idx = Number(th.dataset.sortIndex);
+                    if (Number.isNaN(idx)) {
+                        return;
+                    }
+                    if (state.sortIndex === idx) {
+                        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        state.sortIndex = idx;
+                        state.sortDir = 'asc';
+                    }
+                    state.page = 1;
+                    applyFilters();
+                });
+            });
+
+            if (options.dateFromId) {
+                document.getElementById(options.dateFromId)?.addEventListener('change', function () {
+                    state.page = 1;
+                    applyFilters();
+                });
+            }
+            if (options.dateToId) {
+                document.getElementById(options.dateToId)?.addEventListener('change', function () {
+                    state.page = 1;
+                    applyFilters();
+                });
+            }
+            if (options.textFilterId) {
+                document.getElementById(options.textFilterId)?.addEventListener('input', function () {
+                    state.page = 1;
+                    applyFilters();
+                });
+            }
+
+            applyFilters();
+            return {refresh: applyFilters};
+        }
+
+        function openArchiveVersionUploadModal(buttonElement) {
+            const modal = document.getElementById('archiveVersionUploadModal');
+            const form = document.getElementById('archiveVersionUploadModalForm');
+            const documentName = document.getElementById('archiveVersionUploadModalDocumentName');
+
+            if (!modal || !form || !documentName) {
+                return;
+            }
+
+            form.action = buttonElement.dataset.uploadUrl;
+            documentName.textContent = buttonElement.dataset.documentName || '';
+            form.reset();
+            modal.classList.remove('hidden');
+        }
+
+        function closeArchiveVersionUploadModal() {
+            const modal = document.getElementById('archiveVersionUploadModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openArchiveLoanHistoryModal() {
+            const modal = document.getElementById('archiveLoanHistoryModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeArchiveLoanHistoryModal() {
+            const modal = document.getElementById('archiveLoanHistoryModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openArchiveAuditModal() {
+            const modal = document.getElementById('archiveAuditModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeArchiveAuditModal() {
+            const modal = document.getElementById('archiveAuditModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabButtons = document.querySelectorAll('.archive-tab-btn');
+            tabButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    switchArchiveDocumentTab(btn.dataset.tabTarget);
+                });
+            });
+
+            if (tabButtons.length > 0 && !document.querySelector('.archive-tab-pane.is-active')) {
+                switchArchiveDocumentTab(tabButtons[0].dataset.tabTarget);
+            }
+
+            setupEnhancedTable({
+                tableId: 'contractsLinkedTable',
+                pageSize: 8,
+                dateColumnIndex: 2,
+                sortTypeByIndex: {2: 'date'},
+                emptyMessage: 'No hay contratos vinculados para este empleado.'
+            });
+
+            setupEnhancedTable({
+                tableId: 'loanHistoryTable',
+                pageSize: 8,
+                dateFromId: 'loanHistoryDateFrom',
+                dateToId: 'loanHistoryDateTo',
+                dateColumnIndex: 0,
+                sortTypeByIndex: {0: 'date'},
+                paginationId: 'loanHistoryPagination',
+                emptyMessage: 'Sin movimientos para el rango de fechas seleccionado.'
+            });
+
+            setupEnhancedTable({
+                tableId: 'auditTable',
+                pageSize: 10,
+                dateFromId: 'auditDateFrom',
+                dateToId: 'auditDateTo',
+                dateColumnIndex: 0,
+                sortTypeByIndex: {0: 'date'},
+                paginationId: 'auditPagination',
+                emptyMessage: 'Sin trazas para el rango de fechas seleccionado.'
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeArchiveVersionUploadModal();
+                closeArchiveLoanHistoryModal();
+                closeArchiveAuditModal();
+            }
+        });
+
+        document.getElementById('archiveVersionUploadModal')?.addEventListener('click', function (event) {
+            if (event.target === this) {
+                closeArchiveVersionUploadModal();
+            }
+        });
+
+        document.getElementById('archiveLoanHistoryModal')?.addEventListener('click', function (event) {
+            if (event.target === this) {
+                closeArchiveLoanHistoryModal();
+            }
+        });
+
+        document.getElementById('archiveAuditModal')?.addEventListener('click', function (event) {
+            if (event.target === this) {
+                closeArchiveAuditModal();
+            }
+        });
+    </script>
+    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+{% endblock %}

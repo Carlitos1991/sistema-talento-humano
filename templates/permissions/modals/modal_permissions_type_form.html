@@ -2,7 +2,7 @@
     <form id="modalForm" method="post" action="
 
             
-            {% if form.instance.pk %}{% url 'permissions:type_update' form.instance.pk %}{% else %}{% url 'permissions:type_create' %}{% endif %}">
+            {% if form.instance.pk %}{% url 'permissions:permit_type_update' form.instance.pk %}{% else %}{% url 'permissions:permit_type_create' %}{% endif %}">
         {% csrf_token %}
 
         <!-- HEADER con estilo gradient -->

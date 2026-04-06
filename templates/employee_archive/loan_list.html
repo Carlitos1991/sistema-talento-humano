@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Préstamos de Expedientes{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card archive-header-card">
+        <div>
+            <h1>Préstamos de Expedientes</h1>
+            <p>Control de solicitudes, préstamos y devoluciones de expedientes físicos.</p>
+        </div>
+    </div>
+
+    <div class="content-table archive-content-table archive-spacing-bottom">
+        <div class="table-controls archive-controls">
+            <form method="get" class="archive-inline-filters" id="archiveLoanFilterForm">
+                <div class="search-box archive-search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" name="q" class="table-search-input" placeholder="Buscar por expediente, empleado o usuario" value="{{ request.GET.q }}">
+                </div>
+                <select name="status" class="form-control archive-status-filter">
+                    <option value="">Todos los estados</option>
+                    <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>Solicitado</option>
+                    <option value="ON_LOAN" {% if request.GET.status == 'ON_LOAN' %}selected{% endif %}>En préstamo</option>
+                    <option value="RETURN_REPORTED" {% if request.GET.status == 'RETURN_REPORTED' %}selected{% endif %}>Devolución reportada</option>
+                    <option value="RETURN_VALIDATED" {% if request.GET.status == 'RETURN_VALIDATED' %}selected{% endif %}>Devuelto</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div class="content-table archive-content-table">
+        <div class="table-container">
+            <table class="table managed-table exportable-table table-hover" data-page-size="20" data-title="Prestamos de Expedientes">
+                <thead>
+                <tr>
+                    <th>Fecha solicitud</th>
+                    <th>Expediente</th>
+                    <th>Empleado</th>
+                    <th>Solicitante</th>
+                    <th>Observación solicitud</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for loan in loans %}
+                    <tr>
+                        <td>{{ loan.requested_at|date:'d/m/Y H:i' }}</td>
+                        <td><span class="payroll-code">{{ loan.expediente_number }}</span></td>
+                        <td>{{ loan.employee.person.full_name }}</td>
+                        <td>
+                            {% if loan.requested_by.first_name or loan.requested_by.last_name %}
+                                {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                            {% else %}
+                                {{ loan.requested_by.username }}
+                            {% endif %}
+                        </td>
+                        <td>{{ loan.request_observation|default:'-' }}</td>
+                        <td>{{ loan.get_status_display }}</td>
+                        <td class="text-center actions">
+                            <div class="actions-wrapper">
+                                <button type="button"
+                                        class="btn-icon btn-list-action"
+                                        title="Ver detalle de observaciones"
+                                        data-employee-name="{{ loan.employee.person.full_name }}"
+                                        data-expediente-number="{{ loan.expediente_number }}"
+                                        data-request-observation="{{ loan.request_observation|default_if_none:'' }}"
+                                        data-delivery-observation="{{ loan.delivery_observation|default_if_none:'' }}"
+                                        data-return-observation="{{ loan.return_observation|default_if_none:'' }}"
+                                        data-validation-observation="{{ loan.validation_observation|default_if_none:'' }}"
+                                        onclick="openLoanListObservationModal(this)">
+                                    <i class="fa-solid fa-list-check"></i>
+                                </button>
+                                {% if loan.status == 'REQUESTED' and perms.employee_archive.can_manage_archive_loans %}
+                                    <button type="button"
+                                            class="btn-icon btn-restore-action"
+                                            title="Entregar expediente"
+                                            data-employee-name="{{ loan.employee.person.full_name }}"
+                                            data-expediente-number="{{ loan.expediente_number }}"
+                                            data-deliver-url="{% url 'employee_archive:loan_deliver' loan.id %}"
+                                            onclick="openLoanListDeliverModal(this)">
+                                        <i class="fa-solid fa-box-open"></i>
+                                    </button>
+                                {% endif %}
+                                {% if loan.status == 'RETURN_REPORTED' and perms.employee_archive.can_validate_archive_returns %}
+                                    <button type="button"
+                                            class="btn-icon btn-info-action"
+                                            title="Validar devolución"
+                                            data-employee-name="{{ loan.employee.person.full_name }}"
+                                            data-expediente-number="{{ loan.expediente_number }}"
+                                            data-validate-url="{% url 'employee_archive:loan_return_validate' loan.id %}"
+                                            onclick="openLoanListValidateModal(this)">
+                                        <i class="fa-solid fa-clipboard-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center">No hay préstamos registrados.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="loanListDeliverModal" class="modal-overlay hidden">
+        <div class="modal-container-medium shadow-card" style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
+            <form id="loanListDeliverForm" method="post" action="" class="archive-loan-request-form">
+                {% csrf_token %}
+                <div class="modal-header-medium modal-header-gradient">
+                    <h3 class="modal-title text-white">
+                        <i class="fas fa-box-open me-2"></i>
+                        Entregar expediente
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListDeliverModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="archive-loan-request-body">
+                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListDeliverEmployeeName"></span></p>
+                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListDeliverExpedienteNumber"></span></p>
+                    <label class="archive-form-label archive-loan-request-label" for="loanListDeliveryObservation">Observación de entrega</label>
+                    <textarea id="loanListDeliveryObservation" name="delivery_observation" class="form-control" rows="4" placeholder="Puedes registrar una observación de entrega"></textarea>
+                </div>
+                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListDeliverModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-create">Entregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loanListValidateModal" class="modal-overlay hidden">
+        <div class="modal-container-medium shadow-card" style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
+            <form id="loanListValidateForm" method="post" action="" class="archive-loan-request-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'employee_archive:loan_list' %}">
+                <div class="modal-header-medium modal-header-gradient">
+                    <h3 class="modal-title text-white">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Validar devolución
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListValidateModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="archive-loan-request-body">
+                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListValidateEmployeeName"></span></p>
+                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListValidateExpedienteNumber"></span></p>
+                    <label class="archive-form-label archive-loan-request-label" for="loanListValidationObservation">Observación de validación</label>
+                    <textarea id="loanListValidationObservation" name="validation_observation" class="form-control" rows="4" placeholder="Puedes registrar una observación de validación"></textarea>
+                </div>
+                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListValidateModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-create">Validar devolución</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loanListObservationModal" class="modal-overlay hidden">
+        <div class="modal-container-medium shadow-card" style="max-width: 640px; width: min(640px, calc(100vw - 2rem));">
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fas fa-list-check me-2"></i>
+                    Detalle de observaciones
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListObservationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="archive-loan-request-body">
+                <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListObservationEmployeeName"></span></p>
+                <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListObservationExpedienteNumber"></span></p>
+
+                <div class="archive-form-grid">
+                    <div><strong>Solicitud:</strong> <span id="loanListObservationRequest">-</span></div>
+                    <div><strong>Entrega:</strong> <span id="loanListObservationDelivery">-</span></div>
+                    <div><strong>Devolución:</strong> <span id="loanListObservationReturn">-</span></div>
+                    <div><strong>Validación:</strong> <span id="loanListObservationValidation">-</span></div>
+                </div>
+            </div>
+            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListObservationModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function openLoanListDeliverModal(buttonElement) {
+            const modal = document.getElementById('loanListDeliverModal');
+            const form = document.getElementById('loanListDeliverForm');
+            const nameLabel = document.getElementById('loanListDeliverEmployeeName');
+            const expedienteLabel = document.getElementById('loanListDeliverExpedienteNumber');
+            const observation = document.getElementById('loanListDeliveryObservation');
+
+            if (!modal || !form || !nameLabel || !expedienteLabel || !observation) {
+                return;
+            }
+
+            form.action = buttonElement.dataset.deliverUrl;
+            nameLabel.textContent = buttonElement.dataset.employeeName || '';
+            expedienteLabel.textContent = buttonElement.dataset.expedienteNumber || '';
+            observation.value = '';
+            modal.classList.remove('hidden');
+            observation.focus();
+        }
+
+        function closeLoanListDeliverModal() {
+            const modal = document.getElementById('loanListDeliverModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openLoanListValidateModal(buttonElement) {
+            const modal = document.getElementById('loanListValidateModal');
+            const form = document.getElementById('loanListValidateForm');
+            const nameLabel = document.getElementById('loanListValidateEmployeeName');
+            const expedienteLabel = document.getElementById('loanListValidateExpedienteNumber');
+            const observation = document.getElementById('loanListValidationObservation');
+
+            if (!modal || !form || !nameLabel || !expedienteLabel || !observation) {
+                return;
+            }
+
+            form.action = buttonElement.dataset.validateUrl;
+            nameLabel.textContent = buttonElement.dataset.employeeName || '';
+            expedienteLabel.textContent = buttonElement.dataset.expedienteNumber || '';
+            observation.value = '';
+            modal.classList.remove('hidden');
+            observation.focus();
+        }
+
+        function closeLoanListValidateModal() {
+            const modal = document.getElementById('loanListValidateModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openLoanListObservationModal(buttonElement) {
+            const modal = document.getElementById('loanListObservationModal');
+            const employeeLabel = document.getElementById('loanListObservationEmployeeName');
+            const expedienteLabel = document.getElementById('loanListObservationExpedienteNumber');
+            const requestLabel = document.getElementById('loanListObservationRequest');
+            const deliveryLabel = document.getElementById('loanListObservationDelivery');
+            const returnLabel = document.getElementById('loanListObservationReturn');
+            const validationLabel = document.getElementById('loanListObservationValidation');
+
+            if (!modal || !employeeLabel || !expedienteLabel || !requestLabel || !deliveryLabel || !returnLabel || !validationLabel) {
+                return;
+            }
+
+            employeeLabel.textContent = buttonElement.dataset.employeeName || '';
+            expedienteLabel.textContent = buttonElement.dataset.expedienteNumber || '';
+            requestLabel.textContent = buttonElement.dataset.requestObservation || '-';
+            deliveryLabel.textContent = buttonElement.dataset.deliveryObservation || '-';
+            returnLabel.textContent = buttonElement.dataset.returnObservation || '-';
+            validationLabel.textContent = buttonElement.dataset.validationObservation || '-';
+            modal.classList.remove('hidden');
+        }
+
+        function closeLoanListObservationModal() {
+            const modal = document.getElementById('loanListObservationModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeLoanListDeliverModal();
+                closeLoanListValidateModal();
+                closeLoanListObservationModal();
+            }
+        });
+    </script>
+    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+{% endblock %}

@@ -39,7 +39,7 @@
                         <!-- EDITAR -->
                         {% if perms.sanctions.change_sanctiontype %}
                             <button class="btn-views-action js-edit"
-                                    data-url="{% url 'sanctions:type_update' type.pk %}"
+                                    data-url="{% url 'sanctions:sanction_type_update' type.pk %}"
                                     title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
@@ -48,7 +48,7 @@
                         <!-- ALTA/BAJA -->
                         {% if perms.sanctions.change_sanctiontype %}
                             <button class="btn-restore-action js-toggle"
-                                    data-url="{% url 'sanctions:type_toggle' type.pk %}"
+                                    data-url="{% url 'sanctions:sanction_type_toggle' type.pk %}"
                                     title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
                                 <i class="fa-solid fa-power-off"></i>
                             </button>
@@ -57,7 +57,7 @@
                         <!-- ELIMINAR -->
                         {% if perms.sanctions.delete_sanctiontype %}
                             <button class="btn-delete-action js-delete"
-                                    data-url="{% url 'sanctions:type_delete' type.pk %}"
+                                    data-url="{% url 'sanctions:sanction_type_delete' type.pk %}"
                                     title="Eliminar">
                                 <i class="fa-solid fa-trash"></i>
                             </button>

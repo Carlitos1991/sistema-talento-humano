@@ -237,7 +237,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Solo mostrar dashboard de Jefe si ESPECÍFICAMENTE se solicita o si SOLO tiene ese permiso
         if has_hr_dashboard and has_boss_dashboard:
             # Admin con ambos permisos: mostrar Talento Humano por defecto, a menos que pida jefe
-            context['show_boss_dashboard'] = force_boss_view and force_boss_view == 'jefe'
+            context['show_boss_dashboard'] = force_boss_view
         elif has_boss_dashboard and not has_hr_dashboard:
             # Solo jefe: mostrar siempre dashboard de jefe
             context['show_boss_dashboard'] = True

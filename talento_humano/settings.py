@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'permitrequest',
     'vacation',
     'sanctions',
-    'documents'
+    'documents',
+    'employee_archive',
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [
@@ -90,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.navbar_notifications',
+                'core.context_processors.employee_archive_notifications',
                 'security.context_processors.help_messages_notifications',
             ],
         },

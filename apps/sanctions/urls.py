@@ -5,14 +5,14 @@ app_name = 'sanctions'
 
 urlpatterns = [
     # --- Sanction Types (Configuration) ---
-    path('types/', views.SanctionTypeListView.as_view(), name='type_list'),
-    path('types/create/', views.SanctionTypeCreateView.as_view(), name='type_create'),
-    path('types/update/<int:pk>/', views.SanctionTypeUpdateView.as_view(), name='type_update'),
-    path('types/delete/<int:pk>/', views.SanctionTypeDeleteView.as_view(), name='type_delete'),
-    path('types/toggle/<int:pk>/', views.SanctionTypeToggleView.as_view(), name='type_toggle'),
+    path('types/', views.SanctionTypeListView.as_view(), name='sanction_type_list'),
+    path('types/create/', views.SanctionTypeCreateView.as_view(), name='sanction_type_create'),
+    path('types/update/<int:pk>/', views.SanctionTypeUpdateView.as_view(), name='sanction_type_update'),
+    path('types/delete/<int:pk>/', views.SanctionTypeDeleteView.as_view(), name='sanction_type_delete'),
+    path('types/toggle/<int:pk>/', views.SanctionTypeToggleView.as_view(), name='sanction_type_toggle'),
 
     # --- Employee List to Generate Sanctions ---
-    path('employees/', views.EmployeeSanctionListView.as_view(), name='employee_list'),
+    path('employees/', views.EmployeeSanctionListView.as_view(), name='sanction_employee_list'),
 
     # --- Sanction Creation ---
     path('generate/', views.GenerateSanctionFormView.as_view(), name='generate_sanction'),

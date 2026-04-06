@@ -102,3 +102,83 @@ def navbar_notifications(request):
         'navbar_permit_notifications_count': pending_count,
         'navbar_permit_notifications_url': notification_url
     }
+
+
+def employee_archive_notifications(request):
+    """Retorna el conteo de solicitudes de expediente físico para el sidebar."""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {
+            'employee_archive_loan_requests_count': 0,
+            'employee_archive_show_loan_counter': False,
+            'employee_archive_pending_returns_count': 0,
+            'employee_archive_show_return_counter': False,
+        }
+
+    request_count = 0
+    pending_return_count = 0
+    show_request_counter = False
+
+    try:
+        from employee.models import Employee
+        from employee_archive.models import EmployeeArchiveLoan
+
+        user = request.user
+
+        show_request_counter = (
+            user.has_perm('employee_archive.add_employeearchiveloan')
+            or user.has_perm('employee_archive.change_employeearchiveloan')
+            or user.has_perm('employee_archive.can_manage_archive_loans')
+        )
+
+        if show_request_counter:
+            if user.has_perm('employee_archive.can_manage_archive_loans'):
+                request_count = EmployeeArchiveLoan.objects.filter(
+                    status__in=[
+                        EmployeeArchiveLoan.Status.REQUESTED,
+                        EmployeeArchiveLoan.Status.RETURN_REPORTED,
+                    ],
+                    is_active=True,
+                ).count()
+            else:
+                user_employee = None
+                user_person = getattr(user, 'person', None)
+                if user_person:
+                    user_employee = getattr(user_person, 'employee_profile', None)
+
+                if not user_employee and user.email:
+                    user_employee = Employee.objects.filter(
+                        person__email__iexact=user.email,
+                        is_active=True,
+                    ).first()
+
+                if not user_employee and user.username:
+                    user_employee = Employee.objects.filter(
+                        person__document_number=user.username,
+                        is_active=True,
+                    ).first()
+
+                if user_employee:
+                    request_count = EmployeeArchiveLoan.objects.filter(
+                        employee=user_employee,
+                        status__in=[
+                            EmployeeArchiveLoan.Status.REQUESTED,
+                            EmployeeArchiveLoan.Status.RETURN_REPORTED,
+                        ],
+                        is_active=True,
+                    ).count()
+
+        pending_return_count = EmployeeArchiveLoan.objects.filter(
+            borrower_user=user,
+            status=EmployeeArchiveLoan.Status.ON_LOAN,
+            is_active=True,
+        ).count()
+    except Exception:
+        request_count = 0
+        pending_return_count = 0
+
+    return {
+        'employee_archive_loan_requests_count': request_count,
+        'employee_archive_show_loan_counter': show_request_counter,
+        'employee_archive_pending_returns_count': pending_return_count,
+        'employee_archive_show_return_counter': pending_return_count > 0,
+    }

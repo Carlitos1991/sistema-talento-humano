@@ -127,7 +127,7 @@ class PermitTypeCreateView(LoginRequiredMixin, CreateView):
     model = PermitType
     form_class = PermitTypeForm
     template_name = 'permissions/modals/modal_permissions_type_form.html'
-    success_url = reverse_lazy('permissions:type_list')
+    success_url = reverse_lazy('permissions:permit_type_list')
 
     def dispatch(self, request, *args, **kwargs):
         # Verificar permisos manualmente para mejor control de respuesta AJAX
@@ -172,7 +172,7 @@ class PermitTypeUpdateView(LoginRequiredMixin, UpdateView):
     model = PermitType
     form_class = PermitTypeForm
     template_name = 'permissions/modals/modal_permissions_type_form.html'
-    success_url = reverse_lazy('permissions:type_list')
+    success_url = reverse_lazy('permissions:permit_type_list')
 
     def dispatch(self, request, *args, **kwargs):
         # Verificar permisos manualmente para mejor control de respuesta AJAX
@@ -207,7 +207,7 @@ class PermitTypeUpdateView(LoginRequiredMixin, UpdateView):
 
 class PermitTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = PermitType
-    success_url = reverse_lazy('permissions:type_list')
+    success_url = reverse_lazy('permissions:permit_type_list')
     permission_required = 'permitrequest.delete_permittype'
 
     def delete(self, request, *args, **kwargs):
@@ -477,7 +477,7 @@ class GeneratePermitFormView(LoginRequiredMixin, View):
                     'success': True,
                     'message': 'Permiso generado correctamente'
                 })
-            return redirect('permissions:employee_list')
+            return redirect('permissions:permit_employee_list')
             
         except Exception as e:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos Documentales - Archivo Digital{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card archive-header-card">
+        <div>
+            <h1>Tipos Documentales del Archivo Digital</h1>
+            <p>Configure requisitos y reglas de carga de documentos por empleado.</p>
+        </div>
+    </div>
+
+    <div class="content-table archive-content-table archive-spacing-bottom">
+        <div class="table-controls archive-controls">
+            <form method="get" class="search-box archive-search-box" id="archiveTypeSearchForm">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" name="q" class="table-search-input" placeholder="Buscar por código o nombre" value="{{ request.GET.q }}">
+            </form>
+        </div>
+    </div>
+
+    {% if perms.employee_archive.add_employeedocumenttype %}
+        <div class="content-table archive-content-table archive-spacing-bottom">
+            <h4 class="archive-section-title">Nuevo tipo documental</h4>
+            <form method="post" action="{% url 'employee_archive:archive_type_create' %}" class="archive-form-grid">
+                {% csrf_token %}
+                {{ form.code }}
+                {{ form.name }}
+                {{ form.description }}
+                <label class="archive-check-label">{{ form.is_required }} Requisito de ingreso</label>
+                <label class="archive-check-label">{{ form.has_expiration }} Requiere caducidad</label>
+                {{ form.max_size_mb }}
+                <label class="archive-check-label">{{ form.is_active }} Activo</label>
+                <button class="btn btn-create archive-fit-btn" type="submit">Crear</button>
+            </form>
+        </div>
+    {% endif %}
+
+    <div class="content-table archive-content-table">
+        <div class="table-container">
+            <table class="table managed-table exportable-table table-hover" data-page-size="15" data-title="Tipos Documentales Archivo Digital">
+                    <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Requerido</th>
+                        <th>Caduca</th>
+                        <th>Max MB</th>
+                        <th>Activo</th>
+                        <th>Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in types %}
+                        <tr>
+                            <td><span class="payroll-code">{{ row.code }}</span></td>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.is_required|yesno:'Si,No' }}</td>
+                            <td>{{ row.has_expiration|yesno:'Si,No' }}</td>
+                            <td>{{ row.max_size_mb }}</td>
+                            <td>{{ row.is_active|yesno:'Si,No' }}</td>
+                            <td>
+                                {% if perms.employee_archive.change_employeedocumenttype %}
+                                    <a href="{% url 'employee_archive:archive_type_update' row.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i><br>
+                                No hay tipos documentales.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+{% endblock %}

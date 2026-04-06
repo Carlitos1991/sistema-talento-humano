@@ -91,8 +91,8 @@
                     </a>
                     <ul class="submenu">
                         <li>
-                            <a href="{% url 'personnel_actions:employee_list' %}"
-                               class="{% if request.resolver_match.app_name == 'personnel_actions' and request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
+                            <a href="{% url 'personnel_actions:action_employee_list' %}"
+                               class="{% if request.resolver_match.app_name == 'personnel_actions' and request.resolver_match.url_name == 'action_employee_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-user-plus"></i>
                                 <span class="menu-text">Generar acción</span>
                             </a>
@@ -105,8 +105,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'personnel_actions:type_list' %}"
-                               class="{% if request.resolver_match.app_name == 'personnel_actions' and request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                            <a href="{% url 'personnel_actions:action_type_list' %}"
+                               class="{% if request.resolver_match.app_name == 'personnel_actions' and request.resolver_match.url_name == 'action_type_list' %}active-child{% endif %}">
                                 <i class="fa-solid fa-list-check"></i>
                                 <span class="menu-text">Tipos de acciones</span>
                             </a>
@@ -117,14 +117,12 @@
             <!-- MÓDULO GESTIÓN DOCUMENTAL -->
             {% if perms.documents.view_document or perms.documents.view_documenttype %}
                 <li class="has-submenu">
-                    <!-- Se activa si estamos navegando dentro de la app 'documents' -->
-                    <a href="#" class="{% if 'documents' in request.resolver_match.app_name %}active{% endif %}">
+                    <a href="#" class="{% if request.resolver_match.app_name == 'documents' %}active{% endif %}">
                         <i class="fa-solid fa-folder-tree"></i>
                         <span class="menu-text">Gestión Documental</span>
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-
                         <!-- 1. Listado Principal de Documentos -->
                         {% if perms.documents.view_document %}
                             <li>
@@ -135,18 +133,72 @@
                                 </a>
                             </li>
                         {% endif %}
-
                         <!-- 2. CRUD Tipos de Documento (Configuración) -->
                         {% if perms.documents.view_documenttype %}
                             <li>
-                                <a href="{% url 'documents:type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                <a href="{% url 'documents:doc_type_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'doc_type_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-tags"></i>
                                     <span class="menu-text">Tipos de Documento</span>
                                 </a>
                             </li>
                         {% endif %}
+                    </ul>
+                </li>
+            {% endif %}
 
+            <!-- MÓDULO ARCHIVO DIGITAL -->
+            {% if perms.employee_archive.view_employeearchivedocument or perms.employee_archive.view_employeedocumenttype or perms.employee_archive.view_employeearchiveloan %}
+                <li class="has-submenu">
+                    <a href="#" class="{% if request.resolver_match.app_name == 'employee_archive' %}active{% endif %}">
+                        <i class="fa-solid fa-briefcase"></i>
+                        <span class="menu-text">Archivo Digital</span>
+                        {% if employee_archive_show_loan_counter and employee_archive_loan_requests_count > 0 %}
+                            <span class="sidebar-badge">{{ employee_archive_loan_requests_count }}</span>
+                        {% endif %}
+                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                    </a>
+                    <ul class="submenu">
+                        {% if perms.employee_archive.view_employeearchivedocument %}
+                            <li>
+                                <a href="{% url 'employee_archive:employee_list' %}"
+                                   class="{% if request.resolver_match.app_name == 'employee_archive' and request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                    <span class="menu-text">Expedientes</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if perms.employee_archive.view_employeedocumenttype %}
+                            <li>
+                                <a href="{% url 'employee_archive:archive_type_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'archive_type_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    <span class="menu-text">Tipos de Documento</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if perms.employee_archive.view_employeearchiveloan %}
+                            <li>
+                                <a href="{% url 'employee_archive:loan_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'loan_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-box-archive"></i>
+                                    <span class="menu-text">Préstamos</span>
+                                    {% if employee_archive_show_loan_counter and employee_archive_loan_requests_count > 0 %}
+                                        <span class="sidebar-badge">{{ employee_archive_loan_requests_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li>
+                            <a href="{% url 'employee_archive:notification_list' %}"
+                               class="{% if request.resolver_match.url_name == 'notification_list' %}active-child{% endif %}">
+                                <i class="fa-solid fa-bell"></i>
+                                <span class="menu-text">Notificaciones</span>
+                                {% if employee_archive_show_return_counter and employee_archive_pending_returns_count > 0 %}
+                                    <span class="sidebar-badge">{{ employee_archive_pending_returns_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
                     </ul>
                 </li>
             {% endif %}
@@ -277,8 +329,8 @@
                         <!-- 2. Generar Permisos (Listado de Empleados) -->
                         {% if perms.permitrequest.add_permitrequest %}
                             <li>
-                                <a href="{% url 'permissions:employee_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
+                                <a href="{% url 'permissions:permit_employee_list' %}"
+                                   class="{% if request.resolver_match.app_name == 'permissions' and request.resolver_match.url_name == 'permit_employee_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-plus-circle"></i>
                                     <span class="menu-text">Generar Permiso</span>
                                 </a>
@@ -288,9 +340,8 @@
                         <!-- 3. Tipos de Permisos (Configuración) -->
                         {% if perms.permitrequest.view_permittype %}
                             <li>
-                                <!-- Ajusta 'type_list' al nombre real de tu URL -->
-                                <a href="{% url 'permissions:type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                <a href="{% url 'permissions:permit_type_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'permit_type_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-sliders"></i>
                                     <span class="menu-text">Tipos de Permiso</span>
                                 </a>
@@ -346,8 +397,8 @@
                         <!-- 1. Generar Sanciones -->
                         {% if perms.sanctions.add_sanction %}
                             <li>
-                                <a href="{% url 'sanctions:employee_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'employee_list' %}active-child{% endif %}">
+                                <a href="{% url 'sanctions:sanction_employee_list' %}"
+                                   class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_employee_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-plus-circle"></i>
                                     <span class="menu-text">Generar Sanción</span>
                                 </a>
@@ -357,8 +408,8 @@
                         <!-- 2. Tipos de Sanciones -->
                         {% if perms.sanctions.view_sanctiontype %}
                             <li>
-                                <a href="{% url 'sanctions:type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                <a href="{% url 'sanctions:sanction_type_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'sanction_type_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-sliders"></i>
                                     <span class="menu-text">Tipos de Sanción</span>
                                 </a>

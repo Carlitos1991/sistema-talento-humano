@@ -6,7 +6,7 @@
             <span class="font-weight-700 text-primary">
                 <i class="fa-solid fa-folder-open me-2"></i>Sub-items de: {{ current_parent.name }}
             </span>
-            <button class="btn btn-sm btn-secondary js-load-parent" data-url="{% url 'permissions:type_list' %}">
+            <button class="btn btn-sm btn-secondary js-load-parent" data-url="{% url 'permissions:permit_type_list' %}">
                 <i class="fa-solid fa-arrow-up me-1"></i> Subir Nivel
             </button>
         </div>
@@ -71,7 +71,7 @@
                         <!-- 1. EDITAR (Amarillo/Ambar) -->
                         {% if perms.permitrequest.change_permittype %}
                             <button class="btn-views-action js-edit"
-                                    data-url="{% url 'permissions:type_update' type.pk %}"
+                                    data-url="{% url 'permissions:permit_type_update' type.pk %}"
                                     title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
@@ -80,7 +80,7 @@
                         <!-- 2. ALTA/BAJA (Cyan) -->
                         {% if perms.permitrequest.change_permittype %}
                             <button class="btn-restore-action js-toggle"
-                                    data-url="{% url 'permissions:type_toggle' type.pk %}"
+                                    data-url="{% url 'permissions:permit_type_toggle' type.pk %}"
                                     title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
                                 <i class="fa-solid fa-power-off"></i>
                             </button>
@@ -89,7 +89,7 @@
                         <!-- 3. AGREGAR SUB-ITEM (Verde) -->
                         {% if perms.permitrequest.add_permittype %}
                             <button class="btn-create-action js-add-sub"
-                                    data-url="{% url 'permissions:type_create' %}?parent={{ type.pk }}"
+                                    data-url="{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}"
                                     title="Agregar Sub-item">
                                 <i class="fa-solid fa-plus"></i>
                             </button>

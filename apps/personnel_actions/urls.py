@@ -9,7 +9,7 @@ urlpatterns = [
     path('create/', views.PersonnelActionCreateView.as_view(), name='action_create'),
 
     # --- Generar Acción (Lista de Empleados) ---
-    path('employees/', views.EmployeeActionListView.as_view(), name='employee_list'),
+    path('employees/', views.EmployeeActionListView.as_view(), name='action_employee_list'),
     
     # --- Historial de Acciones por Empleado ---
     path('history/<int:employee_id>/', views.ActionHistoryView.as_view(), name='action_history'),
@@ -21,12 +21,12 @@ urlpatterns = [
     path('<int:pk>/pdf/', views.ActionPDFView.as_view(), name='action_pdf'),
 
     # --- TIPOS DE ACCIÓN (CRUD VUE) ---
-    path('types/', views.ActionTypeListView.as_view(), name='type_list'),
+    path('types/', views.ActionTypeListView.as_view(), name='action_type_list'),
 
     # API Endpoints para Vue
-    path('types/api/save/', views.ActionTypeCreateOrUpdateView.as_view(), name='type_save'),
-    path('types/api/save/<int:pk>/', views.ActionTypeCreateOrUpdateView.as_view(), name='type_update'),
-    path('types/api/detail/<int:pk>/', views.ActionTypeDetailJsonView.as_view(), name='type_detail'),
-    path('types/api/delete/<int:pk>/', views.ActionTypeDeleteView.as_view(), name='type_delete'),
+    path('types/api/save/', views.ActionTypeCreateOrUpdateView.as_view(), name='action_type_save'),
+    path('types/api/save/<int:pk>/', views.ActionTypeCreateOrUpdateView.as_view(), name='action_type_update'),
+    path('types/api/detail/<int:pk>/', views.ActionTypeDetailJsonView.as_view(), name='action_type_detail'),
+    path('types/api/delete/<int:pk>/', views.ActionTypeDeleteView.as_view(), name='action_type_delete'),
     path('types/api/toggle/<int:pk>/', views.ActionTypeToggleStatusView.as_view(), name='type_toggle'),
 ]

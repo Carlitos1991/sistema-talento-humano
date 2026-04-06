@@ -11,7 +11,7 @@
     <div class="content-wrapper">
         <!-- Configuración oculta -->
         <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'permissions:type_list' %}">
+        <input type="hidden" id="url-list" value="{% url 'permissions:permit_type_list' %}">
 
         <!-- Encabezado -->
 
@@ -22,7 +22,7 @@
             </div>
             {% if perms.permitrequest.add_permittype %}
                 <button id="btn-add-type" type="button"
-                        data-url="{% url 'permissions:type_create' %}"
+                        data-url="{% url 'permissions:permit_type_create' %}"
                         class="btn btn-create">
                     <i class="fas fa-plus"></i> Nuevo Tipo de permiso
                 </button>

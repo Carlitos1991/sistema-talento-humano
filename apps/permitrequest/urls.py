@@ -5,16 +5,16 @@ app_name = 'permissions'
 
 urlpatterns = [
     # --- Tipos de Permiso (Configuración) ---
-    path('types/', views.PermitTypeListView.as_view(), name='type_list'),
-    path('types/create/', views.PermitTypeCreateView.as_view(), name='type_create'),
-    path('types/update/<int:pk>/', views.PermitTypeUpdateView.as_view(), name='type_update'),
-    path('types/delete/<int:pk>/', views.PermitTypeDeleteView.as_view(), name='type_delete'),
-    path('types/toggle/<int:pk>/', views.PermitTypeToggleView.as_view(), name='type_toggle'),
-    path('types/<int:pk>/subitems/', views.PermitTypeSubItemsView.as_view(), name='type_subitems'),
+    path('types/', views.PermitTypeListView.as_view(), name='permit_type_list'),
+    path('types/create/', views.PermitTypeCreateView.as_view(), name='permit_type_create'),
+    path('types/update/<int:pk>/', views.PermitTypeUpdateView.as_view(), name='permit_type_update'),
+    path('types/delete/<int:pk>/', views.PermitTypeDeleteView.as_view(), name='permit_type_delete'),
+    path('types/toggle/<int:pk>/', views.PermitTypeToggleView.as_view(), name='permit_type_toggle'),
+    path('types/<int:pk>/subitems/', views.PermitTypeSubItemsView.as_view(), name='permit_type_subitems'),
 
     # --- Lista de Empleados para Generar Permisos ---
-    path('employees/', views.EmployeePermitListView.as_view(), name='employee_list'),
-    path('employees/<int:employee_id>/history/', views.EmployeePermitHistoryView.as_view(), name='employee_history'),
+    path('employees/', views.EmployeePermitListView.as_view(), name='permit_employee_list'),
+    path('employees/<int:employee_id>/history/', views.EmployeePermitHistoryView.as_view(), name='permit_employee_history'),
 
     # --- Solicitudes de Permiso (OBSOLETO - usar permit_admin) ---
     # path('requests/', views.PermitRequestListView.as_view(), name='permit_list'),

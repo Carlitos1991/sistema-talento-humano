@@ -29,6 +29,7 @@ urlpatterns = [
     path('biometric/', include('biometric.urls')),
     path('vacation/', include('vacation.urls')),
     path('documents/', include('documents.urls')),
+    path('employee_archive/', include('employee_archive.urls')),
     path('sanctions/', include('sanctions.urls')),
     path('iclock/registry', adms_views.iclock_registry),
     path('iclock/pushoptions', adms_views.iclock_registry),

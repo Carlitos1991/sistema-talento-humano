@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notificaciones de Archivo Digital{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card archive-header-card">
+        <div>
+            <h1>Notificaciones de Archivo Digital</h1>
+            <p>Avisos de préstamos, devoluciones y validaciones de expedientes.</p>
+        </div>
+        <div class="archive-header-actions">
+            <button type="button" class="btn btn-outline-primary" onclick="openArchiveNotificationHistoryModal()">
+                <i class="fas fa-clock-rotate-left"></i> Ver historial
+            </button>
+        </div>
+    </div>
+
+    <div class="content-table archive-content-table archive-spacing-bottom">
+        <div class="archive-notification-summary">
+            <div>
+                <h4 class="archive-section-title">Tus expedientes pendientes de devolución</h4>
+                <p class="archive-notification-summary-text">Solo se muestran los expedientes que tienes bajo tu resguardo.</p>
+            </div>
+            <span class="archive-counter-pill">{{ pending_return_loans_count }}</span>
+        </div>
+
+        {% if pending_return_loans_count > 0 %}
+            <div class="table-container archive-return-table-container">
+                <table class="table managed-table table-hover" data-page-size="25" data-title="Expedientes Pendientes de Devolucion">
+                    <thead>
+                    <tr>
+                        <th>Expediente</th>
+                        <th>Empleado</th>
+                        <th>Fecha entrega</th>
+                        <th>Observaciones del préstamo</th>
+                        <th>Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for loan in pending_return_loans %}
+                        <tr>
+                            <td><span class="payroll-code">{{ loan.expediente_number }}</span></td>
+                            <td>{{ loan.employee.person.full_name }}</td>
+                            <td>
+                                {% if loan.delivered_at %}
+                                    {{ loan.delivered_at|date:'d/m/Y H:i' }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.request_observation %}
+                                    <div><strong>Solicitud:</strong> {{ loan.request_observation }}</div>
+                                {% endif %}
+                                {% if loan.delivery_observation %}
+                                    <div><strong>Entrega:</strong> {{ loan.delivery_observation }}</div>
+                                {% endif %}
+                                {% if loan.return_observation %}
+                                    <div><strong>Devolución:</strong> {{ loan.return_observation }}</div>
+                                {% endif %}
+                                {% if not loan.request_observation and not loan.delivery_observation and not loan.return_observation %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center actions">
+                                <div class="actions-wrapper">
+                                    <button type="button"
+                                            class="btn-icon btn-restore-action"
+                                            title="Devolver archivo"
+                                            data-employee-name="{{ loan.employee.person.full_name }}"
+                                            data-expediente-number="{{ loan.expediente_number }}"
+                                            data-return-url="{% url 'employee_archive:loan_return_report' loan.id %}"
+                                            onclick="openArchiveLoanReturnModal(this)">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="archive-empty-state">No tienes expedientes pendientes de devolución.</div>
+        {% endif %}
+    </div>
+
+    <div id="archiveLoanReturnModal" class="modal-overlay hidden">
+        <div class="modal-container-medium shadow-card" style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
+            <form id="archiveLoanReturnForm" method="post" action="" class="archive-loan-request-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'employee_archive:notification_list' %}">
+                <div class="modal-header-medium modal-header-gradient">
+                    <h3 class="modal-title text-white">
+                        <i class="fas fa-rotate-left me-2"></i>
+                        Devolver archivo
+                    </h3>
+                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveLoanReturnModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="archive-loan-request-body">
+                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="archiveLoanReturnEmployeeName"></span></p>
+                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="archiveLoanReturnExpedienteNumber"></span></p>
+                    <label class="archive-form-label archive-loan-request-label" for="archiveLoanReturnObservation">Observación de devolución (opcional)</label>
+                    <textarea id="archiveLoanReturnObservation" name="return_observation" class="form-control" rows="4" placeholder="Puedes escribir una observación o devolver sin comentario"></textarea>
+                </div>
+                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanReturnModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-create">Devolver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="archiveNotificationHistoryModal" class="modal-overlay hidden">
+        <div class="modal-container-large shadow-card" style="max-width: 920px; width: min(920px, calc(100vw - 2rem));">
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fas fa-clock-rotate-left me-2"></i>
+                    Historial de notificaciones
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveNotificationHistoryModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-medium" style="max-height: 70vh; overflow: auto;">
+                <div class="table-container">
+                    <table class="table managed-table table-hover" data-page-size="25" data-title="Historial de Notificaciones Archivo Digital">
+                        <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Título</th>
+                            <th>Mensaje</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in notifications %}
+                            <tr>
+                                <td>{{ item.created_at|date:'d/m/Y H:i' }}</td>
+                                <td>{{ item.title }}</td>
+                                <td>{{ item.message }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-center">No tiene notificaciones.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer-medium d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveNotificationHistoryModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function openArchiveLoanReturnModal(buttonElement) {
+            const modal = document.getElementById('archiveLoanReturnModal');
+            const form = document.getElementById('archiveLoanReturnForm');
+            const employeeLabel = document.getElementById('archiveLoanReturnEmployeeName');
+            const expedienteLabel = document.getElementById('archiveLoanReturnExpedienteNumber');
+            const observation = document.getElementById('archiveLoanReturnObservation');
+
+            if (!modal || !form || !employeeLabel || !expedienteLabel || !observation) {
+                return;
+            }
+
+            form.action = buttonElement.dataset.returnUrl;
+            employeeLabel.textContent = buttonElement.dataset.employeeName || '';
+            expedienteLabel.textContent = buttonElement.dataset.expedienteNumber || '';
+            observation.value = '';
+            modal.classList.remove('hidden');
+            observation.focus();
+        }
+
+        function closeArchiveLoanReturnModal() {
+            const modal = document.getElementById('archiveLoanReturnModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openArchiveNotificationHistoryModal() {
+            const modal = document.getElementById('archiveNotificationHistoryModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeArchiveNotificationHistoryModal() {
+            const modal = document.getElementById('archiveNotificationHistoryModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeArchiveLoanReturnModal();
+                closeArchiveNotificationHistoryModal();
+            }
+        });
+    </script>
+    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+{% endblock %}

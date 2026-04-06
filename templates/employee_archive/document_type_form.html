@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Tipo Documental{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-table archive-content-table archive-form-max-width">
+        <h4 class="archive-section-title">Editar tipo documental</h4>
+        <form method="post" class="archive-form-grid">
+            {% csrf_token %}
+            {{ form.code }}
+            {{ form.name }}
+            {{ form.description }}
+            <label class="archive-check-label">{{ form.is_required }} Requisito de ingreso</label>
+            <label class="archive-check-label">{{ form.has_expiration }} Requiere caducidad</label>
+            {{ form.max_size_mb }}
+            <label class="archive-check-label">{{ form.is_active }} Activo</label>
+            <div class="archive-form-actions">
+                <button class="btn btn-create" type="submit">Guardar</button>
+                <a class="btn btn-outline-secondary" href="{% url 'employee_archive:archive_type_list' %}">Volver</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+{% endblock %}

@@ -14,9 +14,9 @@ urlpatterns = [
     path('delete-file/<int:pk>/', views.delete_document_file, name='document_delete_file'),
     # path('delete/<int:pk>/', ...),
     # --- RUTAS PARA TIPOS DE DOCUMENTO ---
-    path('types/', views.DocumentTypeListView.as_view(), name='type_list'),
-    path('types/create/', views.DocumentTypeCreateView.as_view(), name='type_create'),
-    path('types/update/<int:pk>/', views.DocumentTypeUpdateView.as_view(), name='type_update'),
-    path('types/status/<int:pk>/', views.change_type_status, name='type_status'),
-    path('types/detail/<int:pk>/', views.document_type_detail, name='type_detail'),
+    path('types/', views.DocumentTypeListView.as_view(), name='doc_type_list'),
+    path('types/create/', views.DocumentTypeCreateView.as_view(), name='doc_type_create'),
+    path('types/update/<int:pk>/', views.DocumentTypeUpdateView.as_view(), name='doc_type_update'),
+    path('types/status/<int:pk>/', views.change_type_status, name='doc_type_status'),
+    path('types/detail/<int:pk>/', views.document_type_detail, name='doc_type_detail'),
 ]

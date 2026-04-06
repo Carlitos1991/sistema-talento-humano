@@ -88,7 +88,7 @@ class SanctionTypeCreateView(LoginRequiredMixin, CreateView):
     model = SanctionType
     form_class = SanctionTypeForm
     template_name = 'sanctions/modals/modal_sanctions_type_form.html'
-    success_url = reverse_lazy('sanctions:type_list')
+    success_url = reverse_lazy('sanctions:sanction_type_list')
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.has_perm('sanctions.add_sanctiontype'):
@@ -123,7 +123,7 @@ class SanctionTypeUpdateView(LoginRequiredMixin, UpdateView):
     model = SanctionType
     form_class = SanctionTypeForm
     template_name = 'sanctions/modals/modal_sanctions_type_form.html'
-    success_url = reverse_lazy('sanctions:type_list')
+    success_url = reverse_lazy('sanctions:sanction_type_list')
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.has_perm('sanctions.change_sanctiontype'):
@@ -156,7 +156,7 @@ class SanctionTypeUpdateView(LoginRequiredMixin, UpdateView):
 
 class SanctionTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = SanctionType
-    success_url = reverse_lazy('sanctions:type_list')
+    success_url = reverse_lazy('sanctions:sanction_type_list')
     permission_required = 'sanctions.delete_sanctiontype'
 
     def delete(self, request, *args, **kwargs):

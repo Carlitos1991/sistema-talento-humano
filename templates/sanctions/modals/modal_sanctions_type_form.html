@@ -1,5 +1,5 @@
 <div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
-    <form id="modalForm" method="post" action="{% if form.instance.pk %}{% url 'sanctions:type_update' form.instance.pk %}{% else %}{% url 'sanctions:type_create' %}{% endif %}">
+    <form id="modalForm" method="post" action="{% if form.instance.pk %}{% url 'sanctions:sanction_type_update' form.instance.pk %}{% else %}{% url 'sanctions:sanction_type_create' %}{% endif %}">
         {% csrf_token %}
 
         <!-- HEADER con estilo gradient -->

@@ -11,7 +11,7 @@
     <div class="content-wrapper">
         <!-- Configuración oculta -->
         <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'sanctions:type_list' %}">
+        <input type="hidden" id="url-list" value="{% url 'sanctions:sanction_type_list' %}">
 
         <!-- Encabezado -->
         <div class="header-card">
@@ -21,7 +21,7 @@
             </div>
             {% if perms.sanctions.add_sanctiontype %}
                 <button id="btn-add-type" type="button"
-                        data-url="{% url 'sanctions:type_create' %}"
+                        data-url="{% url 'sanctions:sanction_type_create' %}"
                         class="btn btn-create">
                     <i class="fas fa-plus"></i> Nuevo Tipo de Sanción
                 </button>

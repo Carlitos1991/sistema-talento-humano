@@ -1,4 +1,4 @@
-<form method="post" action="{% url 'personnel_actions:type_delete' object.pk %}">
+<form method="post" action="{% url 'personnel_actions:action_type_delete' object.pk %}">
     {% csrf_token %}
     <div class="text-center p-4">
         <i class="fa-solid fa-triangle-exclamation text-warning fa-3x mb-3"></i>
