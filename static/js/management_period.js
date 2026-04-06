@@ -47,7 +47,7 @@ const periodApp = createApp({
 
             // --- SELECCIÓN Y DATOS ---
             searchDoc: '',
-            selectedContractType: {id: null, name: ''},
+            selectedContractType: {id: null, name: '', code: ''},
             selectedEmployee: {id: null, full_name: '', photo: '', budget_line: null},
             selectedPeriod: {},
 
@@ -55,7 +55,8 @@ const periodApp = createApp({
             form: {
                 id: null, administrative_unit: '', budget_line: '', schedule: '',
                 workplace: '', start_date: '', end_date: '', document_number: '',
-                job_functions: '', institutional_need_memo: '', budget_certification: ''
+                job_functions: '', institutional_need_memo: '', budget_certification: '',
+                manual_position: '', manual_remuneration: ''
             },
                 is_boss: false,
 
@@ -594,18 +595,19 @@ const periodApp = createApp({
         resetWizard() {
             this.searchDoc = '';
             this.unitLevels = []; // Limpiar niveles
-            this.selectedContractType = {id: null, name: ''};
+            this.selectedContractType = {id: null, name: '', code: ''};
             this.selectedEmployee = {id: null, full_name: '', photo: '', budget_line: null};
             this.form = {
                 administrative_unit: '', budget_line: '', schedule: '', workplace: '',
                 start_date: '', end_date: '', document_number: '', job_functions: '',
                 institutional_need_memo: '', budget_certification: '',
+                manual_position: '', manual_remuneration: '',
                 is_boss: false
             };
         },
 
-        selectContractType(id, name) { // <-- MÉTODO REQUERIDO
-            this.selectedContractType = {id, name};
+        selectContractType(id, name, code) { // <-- MÉTODO REQUERIDO
+            this.selectedContractType = {id, name, code};
             this.step = 2;
         },
 
@@ -613,11 +615,11 @@ const periodApp = createApp({
             if (!this.searchDoc) return;
             this.loading = true;
             try {
-                const response = await fetch(`/contract/api/validate-employee/${this.searchDoc}/`);
+                const response = await fetch(`/contract/api/validate-employee/${this.searchDoc}/?contract_type_id=${this.selectedContractType.id}`);
                 const data = await response.json();
                 if (data.success) {
                     this.selectedEmployee = data.employee;
-                    this.form.budget_line = data.employee.budget_line.id;
+                    this.form.budget_line = data.employee.budget_line ? data.employee.budget_line.id : '';
                     this.step = 3;
                     this.$nextTick(() => this.initSelect2());
                 } else {
@@ -659,11 +661,20 @@ const periodApp = createApp({
                 return;
             }
 
+            if (this.selectedContractType.code === 'SERVICIOS_PROFESIONALES') {
+                if (!f.manual_position || !f.manual_remuneration) {
+                    CustomSwal.fire('Validación', 'Para Servicios Profesionales debe registrar cargo y remuneración manual.', 'warning');
+                    return;
+                }
+            }
+
             this.loading = true;
             const formData = new FormData();
             formData.append('employee', this.selectedEmployee.id);
             formData.append('contract_type', this.selectedContractType.id);
-            formData.append('budget_line', this.selectedEmployee.budget_line.id);
+            if (this.selectedEmployee.budget_line && this.selectedEmployee.budget_line.id) {
+                formData.append('budget_line', this.selectedEmployee.budget_line.id);
+            }
 
             Object.keys(this.form).forEach(key => {
                 if (this.form[key]) formData.append(key, this.form[key]);

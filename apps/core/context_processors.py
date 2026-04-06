@@ -1,4 +1,6 @@
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 
 def navbar_notifications(request):
@@ -181,4 +183,41 @@ def employee_archive_notifications(request):
         'employee_archive_show_loan_counter': show_request_counter,
         'employee_archive_pending_returns_count': pending_return_count,
         'employee_archive_show_return_counter': pending_return_count > 0,
+    }
+
+
+def contract_notifications(request):
+    """Retorna el conteo de contratos con fecha de fin dentro de los próximos 20 días."""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {
+            'contract_expiring_count': 0,
+            'contract_show_expiring_counter': False,
+        }
+
+    show_counter = request.user.has_perm('contract.view_managementperiod')
+    if not show_counter:
+        return {
+            'contract_expiring_count': 0,
+            'contract_show_expiring_counter': False,
+        }
+
+    count = 0
+    try:
+        from contract.models import ManagementPeriod
+
+        today = timezone.now().date()
+        deadline = today + timedelta(days=20)
+
+        count = ManagementPeriod.objects.filter(
+            is_active=True,
+            end_date__isnull=False,
+            end_date__gte=today,
+            end_date__lte=deadline,
+        ).count()
+    except Exception:
+        count = 0
+
+    return {
+        'contract_expiring_count': count,
+        'contract_show_expiring_counter': count > 0,
     }

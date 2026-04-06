@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
@@ -271,9 +271,78 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
         return context
 
 
+class ManagementPeriodNotificationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = ManagementPeriod
+    template_name = 'contract/management_period_notification_list.html'
+    permission_required = 'contract.view_managementperiod'
+    context_object_name = 'periods'
+    paginate_by = 10
+
+    def get_ordering(self):
+        sort = (self.request.GET.get('sort') or 'end_date').strip()
+        direction = (self.request.GET.get('direction') or 'asc').strip().lower()
+        allowed = {
+            'last_name': 'employee__person__last_name',
+            'document': 'employee__person__document_number',
+            'contract_type': 'contract_type__name',
+            'regime': 'contract_type__labor_regime__name',
+            'position': 'budget_line__position_item__name',
+            'start_date': 'start_date',
+            'end_date': 'end_date',
+        }
+        field = allowed.get(sort, 'end_date')
+        return f'-{field}' if direction == 'desc' else field
+
+    def get_queryset(self):
+        today = timezone.now().date()
+        deadline = today + timedelta(days=20)
+        q = (self.request.GET.get('q') or '').strip()
+
+        queryset = ManagementPeriod.objects.filter(
+            is_active=True,
+            end_date__isnull=False,
+            end_date__gte=today,
+            end_date__lte=deadline,
+        ).select_related(
+            'employee__person',
+            'contract_type__labor_regime',
+            'budget_line__position_item',
+        )
+
+        if q:
+            queryset = queryset.filter(
+                Q(employee__person__first_name__icontains=q)
+                | Q(employee__person__last_name__icontains=q)
+                | Q(employee__person__document_number__icontains=q)
+                | Q(contract_type__name__icontains=q)
+                | Q(contract_type__labor_regime__name__icontains=q)
+                | Q(budget_line__position_item__name__icontains=q)
+                | Q(manual_position__icontains=q)
+                | Q(document_number__icontains=q)
+            )
+
+        return queryset.order_by(self.get_ordering(), 'employee__person__last_name', 'employee__person__first_name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.now().date()
+        deadline = today + timedelta(days=20)
+        context['q'] = (self.request.GET.get('q') or '').strip()
+        context['current_sort'] = (self.request.GET.get('sort') or 'end_date').strip()
+        context['current_direction'] = (self.request.GET.get('direction') or 'asc').strip().lower()
+        context['window_start'] = today
+        context['window_end'] = deadline
+        return context
+
+
 class ValidateEmployeeAPIView(LoginRequiredMixin, View):
     def get(self, request, doc_number):
         try:
+            contract_type_id = request.GET.get('contract_type_id')
+            contract_type = ContractType.objects.filter(pk=contract_type_id).first() if contract_type_id else None
+            contract_code = (contract_type.code if contract_type else '').upper()
+            is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
+
             # 1. Buscar la persona activa
             person = Person.objects.filter(document_number=doc_number, is_active=True).first()
             if not person:
@@ -292,6 +361,7 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
 
             # 3. Buscar un registro de Employee vinculado que tenga una partida presupuestaria asignada
             employees = Employee.objects.filter(person=person).select_related('person').prefetch_related('current_budget_line__position_item')
+            employee_candidate = employees.first()
             employee_with_line = None
             budget_line = None
             for emp in employees:
@@ -301,7 +371,14 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     budget_line = bl
                     break
 
-            if not employee_with_line or not budget_line:
+            employee_selected = employee_with_line or employee_candidate
+            if not employee_selected:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Bloqueo: La persona no tiene un registro de empleado para generar gestión laboral.'
+                })
+
+            if not is_professional_service and (not employee_with_line or not budget_line):
                 return JsonResponse({
                     'success': False,
                     'message': 'Bloqueo: La persona no tiene una partida presupuestaria asignada. Asigne una partida antes de continuar.'
@@ -309,7 +386,7 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
 
             # 4. Verificar si ya tiene contrato formal activo
             has_active = ManagementPeriod.objects.filter(
-                employee=employee_with_line, status__code='ACTIVO'
+                employee=employee_selected, status__code='ACTIVO'
             ).exists()
 
             if has_active:
@@ -321,15 +398,16 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
             return JsonResponse({
                 'success': True,
                 'employee': {
-                    'id': employee_with_line.id,
+                    'id': employee_selected.id,
                     'full_name': person.full_name,
                     'photo': person.photo.url if person.photo else None,
-                    'budget_line': {
+                    'budget_line': ({
                         'id': budget_line.id,
                         'number': budget_line.number_individual or budget_line.code,
                         'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
-                    }
-                }
+                    } if budget_line else None),
+                    'requires_manual_compensation': is_professional_service
+                },
             })
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -380,7 +458,8 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
                 Q(employee__person__first_name__icontains=q) |
                 Q(employee__person__last_name__icontains=q) |
                 Q(employee__person__document_number__icontains=q) |
-                Q(document_number__icontains=q)
+                Q(document_number__icontains=q) |
+                Q(manual_position__icontains=q)
             )
         if regime_code_filter:
             queryset = queryset.filter(contract_type__labor_regime__code=regime_code_filter)
@@ -555,16 +634,36 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 )
 
                 employee = get_object_or_404(Employee, pk=data.get('employee'))
-                budget_line = employee.current_budget_line.first()
+                contract_type = get_object_or_404(ContractType, pk=data.get('contract_type'))
+                is_professional_service = (contract_type.code or '').upper() == 'SERVICIOS_PROFESIONALES'
+
+                budget_line = None if is_professional_service else employee.current_budget_line.first()
+
+                if not is_professional_service and not budget_line:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La persona no tiene una partida presupuestaria asignada para este tipo de contrato.'
+                    }, status=400)
+
+                manual_position = data.get('manual_position', '').strip().upper()
+                manual_remuneration = data.get('manual_remuneration')
+
+                if is_professional_service and (not manual_position or not manual_remuneration):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Para SERVICIOS_PROFESIONALES debe ingresar cargo y remuneración manual.'
+                    }, status=400)
 
                 # Creamos la instancia SIN document_number (el save() lo pondrá)
                 period = ManagementPeriod(
                     employee=employee,
                     budget_line=budget_line,
-                    contract_type_id=data.get('contract_type'),
+                    contract_type=contract_type,
                     administrative_unit_id=data.get('administrative_unit'),
                     schedule_id=data.get('schedule'),
                     status=status_initial,
+                    manual_position=manual_position or None,
+                    manual_remuneration=manual_remuneration or None,
 
                     # Estos campos se mantienen manuales
                     institutional_need_memo=data.get('institutional_need_memo', '').strip().upper(),
@@ -693,8 +792,9 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
                 'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
                 'status_name': p.status.name,
                 'status_code': p.status.code,
-                'budget_line_number': p.budget_line.number_individual or p.budget_line.code,
-                'position_name': p.budget_line.position_item.name,
+                'budget_line_number': (p.budget_line.number_individual or p.budget_line.code) if p.budget_line else 'SIN PARTIDA',
+                'position_name': p.display_position,
+                'remuneration': str(p.display_remuneration) if p.display_remuneration is not None else '-',
                 'unit_name': p.administrative_unit.name,
                 'institutional_need_memo': p.institutional_need_memo,
                 'budget_certification': p.budget_certification,

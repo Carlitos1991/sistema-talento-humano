@@ -92,6 +92,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.navbar_notifications',
                 'core.context_processors.employee_archive_notifications',
+                'core.context_processors.contract_notifications',
                 'security.context_processors.help_messages_notifications',
             ],
         },

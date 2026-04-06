@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notificaciones de Contratos | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-bell"></i> Notificaciones de Contratos por Vencer</h1>
+            <p>Contratos con fecha de finalización entre {{ window_start|date:'d/m/Y' }} y {{ window_end|date:'d/m/Y' }} (20 días de anticipación).</p>
+        </div>
+    </div>
+
+    <div class="content-table">
+        <div class="table-controls">
+            <form method="get" class="search-box" style="max-width: 430px;">
+                <i class="fas fa-search search-icon"></i>
+                <input
+                    type="text"
+                    class="input-field"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Buscar por nombre, cédula, tipo, régimen o cargo"
+                >
+                <input type="hidden" name="sort" value="{{ current_sort }}">
+                <input type="hidden" name="direction" value="{{ current_direction }}">
+            </form>
+        </div>
+
+        <div class="table-container">
+            <table class="table managed-table exportable-table table-hover"
+                   data-title="Notificaciones de Contratos por Vencer"
+                   data-external-pagination="true"
+                   data-external-search="true">
+                <thead>
+                <tr>
+                    <th class="no-sort">Nro.</th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=last_name&direction={% if current_sort == 'last_name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Apellidos y Nombres
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=document&direction={% if current_sort == 'document' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Cédula
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=contract_type&direction={% if current_sort == 'contract_type' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Tipo de Contrato
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=regime&direction={% if current_sort == 'regime' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Régimen
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=position&direction={% if current_sort == 'position' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Cargo
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=start_date&direction={% if current_sort == 'start_date' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Fecha de Inicio
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?q={{ q|urlencode }}&sort=end_date&direction={% if current_sort == 'end_date' and current_direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Fecha de Finalización
+                        </a>
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for period in periods %}
+                    <tr>
+                        <td>
+                            {% with row_number=periods.start_index|add:forloop.counter0 %}
+                                {{ row_number }}
+                            {% endwith %}
+                        </td>
+                        <td>{{ period.employee.person.full_name }}</td>
+                        <td>{{ period.employee.person.document_number|default:'-' }}</td>
+                        <td>{{ period.contract_type.name }}</td>
+                        <td>{{ period.contract_type.labor_regime.name }}</td>
+                        <td>
+                            {{ period.display_position }}
+                        </td>
+                        <td>{{ period.start_date|date:'d/m/Y' }}</td>
+                        <td>{{ period.end_date|date:'d/m/Y' }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            No hay contratos próximos a vencer en los siguientes 20 días.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <span class="pagination-info">
+                Mostrando {{ periods.start_index }} a {{ periods.end_index }} de {{ periods.paginator.count }} registros
+            </span>
+            <ul class="pagination-list">
+                <li>
+                    {% if periods.has_previous %}
+                        <a class="page-btn" href="?q={{ q|urlencode }}&sort={{ current_sort }}&direction={{ current_direction }}&page={{ periods.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    {% else %}
+                        <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    {% endif %}
+                </li>
+                <li><span style="padding: 0 10px; font-weight: 700;">{{ periods.number }}</span></li>
+                <li>
+                    {% if periods.has_next %}
+                        <a class="page-btn" href="?q={{ q|urlencode }}&sort={{ current_sort }}&direction={{ current_direction }}&page={{ periods.next_page_number }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% else %}
+                        <button class="page-btn" disabled><i class="fas fa-chevron-right"></i></button>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}

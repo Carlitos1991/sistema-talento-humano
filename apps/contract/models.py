@@ -93,6 +93,19 @@ class ManagementPeriod(BaseModel):
         null=True,
         blank=True
     )
+    manual_position = models.CharField(
+        verbose_name='Cargo Manual',
+        max_length=255,
+        blank=True,
+        null=True
+    )
+    manual_remuneration = models.DecimalField(
+        verbose_name='Remuneración Manual',
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
     contract_type = models.ForeignKey(
         ContractType, on_delete=models.PROTECT,
         related_name='management_periods', verbose_name='Tipo de Contrato'
@@ -142,8 +155,33 @@ class ManagementPeriod(BaseModel):
         super().clean()
         if self.end_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': 'La fecha de fin no puede ser anterior al inicio.'})
+        contract_code = (getattr(self.contract_type, 'code', '') or '').upper()
+        is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
+
+        if is_professional_service:
+            errors = {}
+            if not self.manual_position:
+                errors['manual_position'] = 'El cargo es obligatorio para Servicios Profesionales.'
+            if self.manual_remuneration in (None, ''):
+                errors['manual_remuneration'] = 'La remuneración es obligatoria para Servicios Profesionales.'
+            if errors:
+                raise ValidationError(errors)
+        elif not self.budget_line_id:
+            raise ValidationError({'budget_line': 'La partida presupuestaria es obligatoria para este tipo de contrato.'})
         # Nota: validación de ocupación de partida removida.
         # La validación de integridad sobre asignaciones se gestiona desde el módulo de presupuesto.
+
+    @property
+    def display_position(self):
+        if self.budget_line and self.budget_line.position_item:
+            return self.budget_line.position_item.name
+        return self.manual_position or 'SIN CARGO'
+
+    @property
+    def display_remuneration(self):
+        if self.budget_line and self.budget_line.remuneration is not None:
+            return self.budget_line.remuneration
+        return self.manual_remuneration
 
     @property
     def is_currently_active(self):

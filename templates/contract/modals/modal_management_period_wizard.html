@@ -42,7 +42,7 @@
                                 <div class="contract-cards-grid">
                                     {% for type in regime.contract_types.all %}
                                         <div class="contract-type-card"
-                                             @click="selectContractType({{ type.id }}, '{{ type.name }}')">
+                                             @click="selectContractType({{ type.id }}, '{{ type.name }}', '{{ type.code }}')">
                                             <i class="fas {% if type.contract_type_category == 'CONTRATO' %}fa-file-contract{% else %}fa-user-check{% endif %}"></i>
                                             <span>{{ type.name }}</span>
                                         </div>
@@ -58,7 +58,11 @@
                     <div class="form-section-card py-5 text-center">
                         <div class="avatar-placeholder-md mx-auto mb-4"><i class="fas fa-id-card-alt fa-2x"></i></div>
                         <h4 class="font-weight-800">Validación de Identidad</h4>
-                        <p class="text-muted mb-4">Ingrese la cédula para heredar la partida presupuestaria.</p>
+                        <p class="text-muted mb-4">
+                            [[ selectedContractType.code === 'SERVICIOS_PROFESIONALES'
+                                ? 'Ingrese la cédula para validar al empleado.'
+                                : 'Ingrese la cédula para heredar la partida presupuestaria.' ]]
+                        </p>
                         <div class="search-box mx-auto" style="max-width: 450px;">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" v-model="searchDoc" class="form-control with-icon"
@@ -86,6 +90,25 @@
                                 <small class="text-white-opacity">PARTIDA HEREDADA</small>
                                 <strong class="text-accent">[[ selectedEmployee.budget_line.number ]]</strong>
                                 <span class="d-block small text-white-opacity">[[ selectedEmployee.budget_line.position ]]</span>
+                            </div>
+                            <div class="budget-inherited-box ms-auto" v-else>
+                                <small class="text-white-opacity">MODO MANUAL</small>
+                                <strong class="text-accent">SIN PARTIDA</strong>
+                                <span class="d-block small text-white-opacity">SERVICIOS PROFESIONALES</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card mt-4" v-if="selectedContractType.code === 'SERVICIOS_PROFESIONALES'">
+                        <h6 class="section-title"><i class="fas fa-pen"></i> Cargo y Remuneración (Manual)</h6>
+                        <div class="grid-2-cols">
+                            <div class="form-group">
+                                <label class="form-label">Cargo</label>
+                                <input type="text" v-model="form.manual_position" class="input-field uppercase-input" placeholder="Ej: ASESOR PROFESIONAL">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Remuneración</label>
+                                <input type="number" min="0" step="0.01" v-model="form.manual_remuneration" class="input-field" placeholder="Ej: 1200.00">
                             </div>
                         </div>
                     </div>

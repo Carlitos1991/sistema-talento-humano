@@ -21,6 +21,7 @@ urlpatterns = [
 
     # Inicios de Gestión
     path('periods/', views.ManagementPeriodListView.as_view(), name='period_list'),
+     path('periods/notifications/', views.ManagementPeriodNotificationListView.as_view(), name='period_notification_list'),
     path('periods/partial-table/', views.ManagementPeriodTablePartialView.as_view(), name='period_partial_table'),
     path('periods/create/', views.ManagementPeriodCreateView.as_view(), name='period_create'),
 

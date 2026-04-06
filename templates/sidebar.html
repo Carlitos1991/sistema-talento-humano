@@ -365,7 +365,7 @@
                         {% if perms.vacation.view_vacationrequest %}
                             <li>
                                 <a href="{% url 'vacation:request_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
+                                   class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-list-check"></i>
                                     <span class="menu-text">Administrar Solicitudes</span>
                                 </a>
@@ -376,7 +376,7 @@
                         {% if perms.vacation.view_vacationperiod %}
                             <li>
                                 <a href="{% url 'vacation:period_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                   class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-calendar-days"></i>
                                     <span class="menu-text">Periodos y Saldos</span>
                                 </a>
@@ -429,7 +429,7 @@
                         {% if perms.contract.view_managementperiod %}
                             <li>
                                 <a href="{% url 'contract:period_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-file-signature"></i>
                                     <span class="menu-text">Inicios de Gestión</span>
                                 </a>
@@ -438,9 +438,21 @@
                         {% if perms.contract.view_laborregime %}
                             <li>
                                 <a href="{% url 'contract:regime_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'regime_list' %}active-child{% endif %}">
+                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'regime_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-briefcase"></i>
                                     <span class="menu-text">Regímenes Laborales</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if perms.contract.view_managementperiod %}
+                            <li>
+                                <a href="{% url 'contract:period_notification_list' %}"
+                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_notification_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-bell"></i>
+                                    <span class="menu-text">Notificaciones</span>
+                                    {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
+                                        <span class="sidebar-badge">{{ contract_expiring_count }}</span>
+                                    {% endif %}
                                 </a>
                             </li>
                         {% endif %}
@@ -487,7 +499,7 @@
                         {% if perms.payroll.view_payrollperiod %}
                             <li>
                                 <a href="{% url 'payroll:period_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                   class="{% if request.resolver_match.app_name == 'payroll' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-calendar-check"></i>
                                     <span class="menu-text">Gestión de Roles</span>
                                 </a>
