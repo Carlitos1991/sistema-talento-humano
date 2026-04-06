@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -264,7 +264,13 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, List
         context['count_losep'] = aggs.get('count_losep', 0)
         context['count_ct'] = aggs.get('count_ct', 0)
 
-        context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related('contract_types')
+        context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related(
+            Prefetch(
+                'contract_types',
+                queryset=ContractType.objects.filter(is_active=True).order_by('name'),
+                to_attr='active_contract_types'
+            )
+        )
         context['schedules'] = Schedule.objects.filter(is_active=True)
         context['units'] = AdministrativeUnit.objects.filter(is_active=True)
 

@@ -1,6 +1,7 @@
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+import re
 from core.models import BaseModel, CatalogItem
 from employee.models import Employee
 from budget.models import BudgetLine
@@ -191,26 +192,52 @@ class ManagementPeriod(BaseModel):
             date_active = date_active and today <= self.end_date
         return date_active and self.status.code == 'ACTIVO'
 
+    def _normalized_contract_type_code(self):
+        raw_code = (getattr(self.contract_type, 'code', '') or '').upper().strip()
+        normalized = re.sub(r'[^A-Z0-9]+', '_', raw_code).strip('_')
+        return (normalized or 'SIN_TIPO')[:20]
+
+    def _generate_document_number(self):
+        year = self.start_date.year if self.start_date else timezone.now().year
+        contract_type_code = self._normalized_contract_type_code()
+        prefix = f"ML-DTH-{year}-{contract_type_code}-"
+
+        max_sequence = 0
+        existing_numbers = ManagementPeriod.objects.filter(
+            document_number__startswith=prefix
+        ).values_list('document_number', flat=True)
+
+        for number in existing_numbers:
+            sequence_str = number.rsplit('-', 1)[-1]
+            if sequence_str.isdigit():
+                max_sequence = max(max_sequence, int(sequence_str))
+
+        return f"{prefix}{max_sequence + 1:04d}"
+
     def save(self, *args, **kwargs):
-        # 1. GENERACIÓN AUTOMÁTICA DEL CÓDIGO (Solo para registros nuevos)
-        if not self.pk or not self.document_number:
-            # Obtenemos el conteo histórico para la secuencia
-            sequence = ManagementPeriod.objects.count() + 1
-            regime_code = self.contract_type.labor_regime.code
+        is_new = not self.pk
+        auto_generate_document_number = is_new and not self.document_number
 
-            # Formato: ML-DTH-00n-CODE (con 3 ceros de padding)
-            self.document_number = f"ML-DTH-{sequence:03d}-{regime_code}"
+        for attempt in range(5):
+            if auto_generate_document_number:
+                self.document_number = self._generate_document_number()
 
-        # 2. TRANSACCIÓN ATÓMICA PARA SINCRONIZAR EMPLEADO
-        # Usamos transaction.atomic por seguridad si se llama fuera de una vista transaccional
-        with transaction.atomic():
-            super().save(*args, **kwargs)
+            try:
+                # Usamos transaction.atomic por seguridad si se llama fuera de una vista transaccional
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
 
-            # Actualizar el área del empleado automáticamente
-            if self.employee and self.administrative_unit:
-                if self.employee.area != self.administrative_unit:
-                    self.employee.area = self.administrative_unit
-                    self.employee.save()
+                    # Actualizar el área del empleado automáticamente
+                    if self.employee and self.administrative_unit:
+                        if self.employee.area != self.administrative_unit:
+                            self.employee.area = self.administrative_unit
+                            self.employee.save()
+                return
+            except IntegrityError as error:
+                # Reintento solo cuando el número fue autogenerado y colisiona por concurrencia.
+                if auto_generate_document_number and attempt < 4 and 'document_number' in str(error):
+                    continue
+                raise
 
 
 class History(models.Model):

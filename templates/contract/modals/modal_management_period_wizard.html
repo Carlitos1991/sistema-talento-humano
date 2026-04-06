@@ -40,7 +40,7 @@
                                 <h6 class="section-title"><i class="fas fa-briefcase"></i> Régimen: {{ regime.name }}
                                 </h6>
                                 <div class="contract-cards-grid">
-                                    {% for type in regime.contract_types.all %}
+                                    {% for type in regime.active_contract_types %}
                                         <div class="contract-type-card"
                                              @click="selectContractType({{ type.id }}, '{{ type.name }}', '{{ type.code }}')">
                                             <i class="fas {% if type.contract_type_category == 'CONTRATO' %}fa-file-contract{% else %}fa-user-check{% endif %}"></i>
@@ -182,7 +182,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Número de Documento / Acción</label>
-                                <input type="text" value="ML-DTH-XXX-REGIME" class="input-field bg-readonly" readonly>
+                                <input type="text" value="ML-DTH-AAAA-TIPO-0001" class="input-field bg-readonly" readonly>
                                 <small class="form-hint">El código secuencial se generará al guardar.</small>
                             </div>
                         </div>
