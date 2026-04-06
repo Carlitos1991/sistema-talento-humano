@@ -99,7 +99,7 @@ class RoleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = RoleForm()
+        context['form'] = RoleForm(current_user=self.request.user)
         context['stats_total'] = Group.objects.count()
         return context
 
@@ -116,6 +116,11 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     form_class = RoleForm
     template_name = 'security/groups/modals/modal_role_matrix.html'
     permission_required = 'auth.add_group'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -217,6 +222,11 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     template_name = 'security/groups/modals/modal_role_matrix.html'
     # CORREGIDO: auth.change_group
     permission_required = 'auth.change_group'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()

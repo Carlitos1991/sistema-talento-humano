@@ -7,6 +7,10 @@ from person.models import Person
 
 
 class RoleForm(BaseFormMixin, forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = Group
         fields = ['name']
@@ -18,16 +22,18 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         }
         labels = {'name': 'Nombre del Rol'}
 
-    def get_grouped_permissions(self):
+    def get_grouped_permissions(self, user=None):
         """
         Organiza los permisos por 'Aplicación' o 'Módulo' para pintar la tabla.
         Retorna un diccionario: { 'Nombre Módulo': [ {modelo: 'Persona', perms: {view, add, change, delete}} ] }
         """
+        current_user = user or self.current_user
         # 1. Definimos qué apps queremos gestionar (para no traer basura de Django interno)
         # Ajusta esto a los nombres reales de tus apps en settings
         target_apps = {
             'person': 'Gestión de Personal',
             'employee': 'Gestión de Empleados',
+            'employee_archive': 'Archivo Digital',
             'institution': 'Estructura Organizacional',
             'function_manual': 'Manual de Funciones',
             'core': 'Sistema y Usuarios',  # Aquí están User, Catalog, Location
@@ -44,6 +50,13 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         }
 
         grouped_data = {}
+
+        def can_manage_permission(permission):
+            if permission is None:
+                return False
+            if current_user is None or current_user.is_superuser:
+                return True
+            return current_user.has_perm(f'{permission.content_type.app_label}.{permission.codename}')
 
         for app_label, verbose_name in target_apps.items():
             # Obtener ContentTypes de esa app
@@ -62,15 +75,20 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
                 if not perms.exists():
                     continue
 
+                visible_perms = {
+                    'view': perms.filter(codename__startswith='view_').first(),
+                    'add': perms.filter(codename__startswith='add_').first(),
+                    'change': perms.filter(codename__startswith='change_').first(),
+                    'delete': perms.filter(codename__startswith='delete_').first(),
+                }
+                visible_perms = {key: perm for key, perm in visible_perms.items() if can_manage_permission(perm)}
+                if not visible_perms:
+                    continue
+
                 # Estructura para la fila de la tabla
                 model_data = {
                     'name': model_class._meta.verbose_name_plural.title(),
-                    'perms': {
-                        'view': perms.filter(codename__startswith='view_').first(),
-                        'add': perms.filter(codename__startswith='add_').first(),
-                        'change': perms.filter(codename__startswith='change_').first(),
-                        'delete': perms.filter(codename__startswith='delete_').first(),
-                    }
+                    'perms': visible_perms
                 }
                 module_models.append(model_data)
 
