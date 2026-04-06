@@ -135,11 +135,13 @@
                                         <i class="fa-solid fa-clipboard-check"></i>
                                     </button>
                                 {% endif %}
-                                <a class="btn-icon btn-views-action"
-                                   href="{% url 'employee_archive:employee_detail' employee.id %}"
-                                   title="Administrar archivo">
-                                    <i class="fas fa-folder-open"></i>
-                                </a>
+                                {% if perms.employee_archive.add_employeearchivedocument or perms.employee_archive.change_employeearchivedocument %}
+                                    <a class="btn-icon btn-views-action"
+                                       href="{% url 'employee_archive:employee_detail' employee.id %}"
+                                       title="Administrar archivo">
+                                        <i class="fas fa-folder-open"></i>
+                                    </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
