@@ -293,8 +293,8 @@ const periodApp = createApp({
                 <!-- Columna 1 -->
                 <div class="form-group">
                     <label class="form-label">Número de Documento</label>
-                    <input type="text" class="input-field readonly-styled" 
-                           value="ML-DTH-XXX-REGIME" readonly 
+                      <input id="swal-doc" type="text" class="input-field readonly-styled" 
+                          value="${p.document_number || ''}" readonly 
                            placeholder="Generado automáticamente">
                     <small class="form-hint">Este código se asignará al finalizar la gestión.</small>
                 </div>
@@ -346,14 +346,15 @@ const periodApp = createApp({
                 },
                 preConfirm: () => {
                     // Validación simple antes de enviar
-                    const doc = document.getElementById('swal-doc').value;
+                    const docInput = document.getElementById('swal-doc');
+                    const doc = (docInput && docInput.value ? docInput.value : (p.document_number || '')).trim().toUpperCase();
                     const start = document.getElementById('swal-start').value;
-                    if (!doc || !start) {
-                        Swal.showValidationMessage('Nro. Documento y Fecha Inicio son obligatorios');
+                    if (!start) {
+                        Swal.showValidationMessage('La Fecha Inicio es obligatoria');
                         return false;
                     }
                     return {
-                        doc: doc.trim().toUpperCase(),
+                        doc: doc,
                         workplace: document.getElementById('swal-workplace').value.trim().toUpperCase(),
                         memo: document.getElementById('swal-memo').value.trim().toUpperCase(),
                         cert: document.getElementById('swal-cert').value.trim().toUpperCase(),

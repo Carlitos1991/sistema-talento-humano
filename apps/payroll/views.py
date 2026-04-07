@@ -1868,11 +1868,28 @@ class MassUpdateReserveFundsView(View):
             return JsonResponse({'status': 'error', 'message': f'Error procesando el archivo: {str(e)}'})
 
 
-class PrintablePayslipView(LoginRequiredMixin, DetailView):
-    """Genera el rol de pagos en pantalla completa para impresión oficial"""
+class PrintablePayslipView(DetailView):
+    """Genera el rol de pagos en pantalla completa para impresión oficial - ACCESO PÚBLICO CON VALIDACIÓN POR TOKEN"""
     model = Payslip
     template_name = 'payroll/reports/printable_payslip.html'
     context_object_name = 'payslip'
+
+    def get_object(self, queryset=None):
+        """Permite acceso público si viene validado por token en parámetro GET"""
+        pk = self.kwargs.get('pk')
+        token = self.request.GET.get('token')
+        payslip = get_object_or_404(Payslip, pk=pk)
+        
+        # Si hay token, validamos que sea válido para este payslip
+        if token:
+            try:
+                payslip_id = parse_public_payslip_token(token)
+                if payslip_id != payslip.id:
+                    raise Http404('Código de validación no coincide con el rol')
+            except (signing.BadSignature, ValueError, TypeError):
+                raise Http404('Código de validación inválido o expirado')
+        
+        return payslip
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

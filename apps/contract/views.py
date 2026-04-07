@@ -832,7 +832,9 @@ class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMi
         try:
             with transaction.atomic():
                 # Actualización de campos permitidos
-                period.document_number = data.get('doc', '').strip().upper()
+                doc = data.get('doc')
+                if doc is not None and str(doc).strip():
+                    period.document_number = str(doc).strip().upper()
                 period.workplace = data.get('workplace', '').strip().upper()
                 period.institutional_need_memo = data.get('memo', '').strip().upper()
                 period.budget_certification = data.get('cert', '').strip().upper()
