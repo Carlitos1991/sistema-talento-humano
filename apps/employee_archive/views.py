@@ -529,7 +529,7 @@ def open_archive_version(request, version_id):
 
 
 @require_POST
-@permission_required('employee_archive.add_employeearchiveloan', raise_exception=True)
+@permission_required('employee_archive.view_employeearchivedocument', raise_exception=True)
 def request_archive_loan(request, employee_id):
     employee = get_object_or_404(Employee, pk=employee_id)
     list_url = reverse('employee_archive:employee_list')

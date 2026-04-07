@@ -94,7 +94,7 @@
                         </td>
                         <td class="text-center actions">
                             <div class="actions-wrapper">
-                                {% if perms.employee_archive.add_employeearchiveloan and employee.request_status_label == 'Sin solicitar' %}
+                                {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
                                     <button type="button"
                                             class="btn-icon btn-create-action"
                                             title="Solicitar archivo"

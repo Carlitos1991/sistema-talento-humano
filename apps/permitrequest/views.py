@@ -824,8 +824,8 @@ class PermitInsistView(LoginRequiredMixin, View):
         })
 
 
-class PermitReportView(LoginRequiredMixin, View):
-    """Vista para generar reporte imprimible del permiso con código QR"""
+class PermitReportView(View):
+    """Vista para generar reporte imprimible del permiso con código QR - ACCESO PÚBLICO CON VALIDACIÓN POR TOKEN"""
 
     def _resolve_request_employee(self, request):
         user_person = getattr(request.user, 'person', None)
@@ -863,8 +863,19 @@ class PermitReportView(LoginRequiredMixin, View):
             pk=pk
         )
 
-        if not self._can_view_report(request, permit):
-            return HttpResponse('Acceso denegado', status=403)
+        # Validar acceso: si hay token en GET, validarlo; si no, requiere permisos
+        token = request.GET.get('token')
+        if token:
+            try:
+                permit_id = parse_public_permit_token(token)
+                if permit_id != permit.id:
+                    return HttpResponse('Código de validación no coincide', status=403)
+            except (signing.BadSignature, ValueError, TypeError):
+                return HttpResponse('Código de validación inválido o expirado', status=403)
+        else:
+            # Si no hay token, validar permisos normales
+            if not self._can_view_report(request, permit):
+                return HttpResponse('Acceso denegado', status=403)
         
         # Solo permitir imprimir si el permiso está aprobado
         if permit.status != 'APPROVED':
