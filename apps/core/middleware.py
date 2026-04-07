@@ -78,6 +78,7 @@ class SIGETHSecurityMiddleware:
             '/media/',  # Archivos subidos
             '/biometric/adms/',  # Tu ruta antigua (opcional)
             '/iclock/',  # <--- ¡IMPORTANTE! Esta es la ruta que usa el ZKTeco
+            '/payroll/payslips/validate/',  # Validación pública de roles de pago mediante QR
         ]
 
         # 2. Verificar si la petición actual empieza con alguna ruta pública
