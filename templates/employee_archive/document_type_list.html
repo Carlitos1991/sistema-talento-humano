@@ -55,9 +55,24 @@
                             <td>{{ row.has_expiration|yesno:'Si,No' }}</td>
                             <td>{{ row.max_size_mb }}</td>
                             <td>{{ row.is_active|yesno:'Si,No' }}</td>
-                            <td>
+                            <td class="text-center actions">
                                 {% if perms.employee_archive.change_employeedocumenttype %}
-                                    <a href="{% url 'employee_archive:archive_type_update' row.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                    <div class="actions-wrapper">
+                                        <button type="button"
+                                                class="btn-icon btn-detail-action"
+                                                title="Editar"
+                                                data-update-url="{% url 'employee_archive:archive_type_update' row.id %}"
+                                                data-code="{{ row.code|default_if_none:'' }}"
+                                                data-name="{{ row.name|default_if_none:'' }}"
+                                                data-description="{{ row.description|default_if_none:''|escape }}"
+                                                data-is-required="{{ row.is_required|yesno:'1,0' }}"
+                                                data-has-expiration="{{ row.has_expiration|yesno:'1,0' }}"
+                                                data-max-size-mb="{{ row.max_size_mb }}"
+                                                data-is-active="{{ row.is_active|yesno:'1,0' }}"
+                                                onclick="openArchiveTypeEditModal(this)">
+                                            <i class="fas fa-pen-to-square"></i>
+                                        </button>
+                                    </div>
                                 {% else %}
                                     -
                                 {% endif %}
@@ -119,6 +134,56 @@
             </div>
         </div>
     {% endif %}
+
+    {% if perms.employee_archive.change_employeedocumenttype %}
+        <div id="archiveTypeEditModal" class="modal-overlay hidden">
+            <div class="modal-container-medium shadow-card" style="max-width: 640px; width: min(640px, calc(100vw - 2rem));">
+                <form id="archiveTypeEditForm" method="post" action="" class="archive-loan-request-form">
+                    {% csrf_token %}
+                    <div class="modal-header-medium modal-header-gradient">
+                        <h3 class="modal-title text-white">
+                            <i class="fas fa-pen-to-square me-2"></i>
+                            Editar tipo documental
+                        </h3>
+                        <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveTypeEditModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="archive-loan-request-body archive-form-grid">
+                        <div>
+                            <label class="archive-form-label" for="archiveTypeEditCode">Código</label>
+                            <input type="text" id="archiveTypeEditCode" name="code" class="form-control" required>
+                        </div>
+                        <div>
+                            <label class="archive-form-label" for="archiveTypeEditName">Nombre</label>
+                            <input type="text" id="archiveTypeEditName" name="name" class="form-control" required>
+                        </div>
+                        <div>
+                            <label class="archive-form-label" for="archiveTypeEditDescription">Descripción</label>
+                            <textarea id="archiveTypeEditDescription" name="description" class="form-control" rows="3"></textarea>
+                        </div>
+                        <label class="archive-check-label">
+                            <input type="checkbox" id="archiveTypeEditIsRequired" name="is_required" class="form-check-input"> Requisito de ingreso
+                        </label>
+                        <label class="archive-check-label">
+                            <input type="checkbox" id="archiveTypeEditHasExpiration" name="has_expiration" class="form-check-input"> Requiere caducidad
+                        </label>
+                        <div>
+                            <label class="archive-form-label" for="archiveTypeEditMaxSizeMb">Tamaño máximo (MB)</label>
+                            <input type="number" id="archiveTypeEditMaxSizeMb" name="max_size_mb" class="form-control" min="1" required>
+                        </div>
+                        <label class="archive-check-label">
+                            <input type="checkbox" id="archiveTypeEditIsActive" name="is_active" class="form-check-input"> Activo
+                        </label>
+                    </div>
+                    <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                        <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveTypeEditModal()">Cancelar</button>
+                        <button class="btn btn-create" type="submit">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -138,10 +203,41 @@
             }
         }
 
+        function openArchiveTypeEditModal(button) {
+            const modal = document.getElementById('archiveTypeEditModal');
+            const form = document.getElementById('archiveTypeEditForm');
+            if (!modal || !form || !button) {
+                return;
+            }
+
+            form.action = button.dataset.updateUrl || '';
+            document.getElementById('archiveTypeEditCode').value = button.dataset.code || '';
+            document.getElementById('archiveTypeEditName').value = button.dataset.name || '';
+            document.getElementById('archiveTypeEditDescription').value = button.dataset.description || '';
+            document.getElementById('archiveTypeEditIsRequired').checked = button.dataset.isRequired === '1';
+            document.getElementById('archiveTypeEditHasExpiration').checked = button.dataset.hasExpiration === '1';
+            document.getElementById('archiveTypeEditMaxSizeMb').value = button.dataset.maxSizeMb || '';
+            document.getElementById('archiveTypeEditIsActive').checked = button.dataset.isActive === '1';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeArchiveTypeEditModal() {
+            const modal = document.getElementById('archiveTypeEditModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
         document.addEventListener('click', function (event) {
             const modal = document.getElementById('archiveTypeCreateModal');
             if (modal && event.target === modal) {
                 closeArchiveTypeCreateModal();
+            }
+
+            const editModal = document.getElementById('archiveTypeEditModal');
+            if (editModal && event.target === editModal) {
+                closeArchiveTypeEditModal();
             }
         });
     </script>
