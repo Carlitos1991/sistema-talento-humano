@@ -268,6 +268,7 @@ function addExportButtonsToTables() {
         const wrapper = table.closest('.content-table');
         const controls = wrapper ? wrapper.querySelector('.table-controls') : null;
         if (!controls) return;
+        if (controls.dataset.manualExport === 'true') return;
 
         // Eliminar botones viejos — tras AJAX apuntaban a tabla anterior
         const existing = controls.querySelector('.table-export-btns');

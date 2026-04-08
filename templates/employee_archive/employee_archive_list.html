@@ -5,6 +5,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
     <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
 {% endblock %}
 
@@ -17,18 +18,18 @@
     </div>
 
     <div class="content-table archive-content-table archive-employee-list-width">
-        <div class="table-controls archive-controls" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div class="table-controls archive-controls archive-controls-row" data-manual-export="true">
             
-            <div style="display: flex; gap: 0.5rem;">
-                <button class="btn btn-success" onclick="exportTableToExcel('Archivo Digital por Empleado')">
+            <div class="archive-export-actions">
+                <button type="button" class="btn-export-excel" onclick="exportTableToExcel(document.querySelector('.archive-employee-list-table'))">
                     <i class="fas fa-file-excel"></i> Excel
                 </button>
-                <button class="btn btn-danger" onclick="exportTableToPDF('Archivo Digital por Empleado')">
+                <button type="button" class="btn-export-pdf" onclick="exportTableToPDF(document.querySelector('.archive-employee-list-table'))">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <div class="archive-toggle-notify">
                 <input class="modern-toggle-input archive-toggle-blue" type="checkbox" id="toggleLoanedExpedients"
                        {% if request.GET.show_loaned == 'true' %}checked{% endif %}
                        onchange="toggleLoanedExpedients(this.checked)">
@@ -39,11 +40,11 @@
                 </label>
                 
                 {% if total_loaned_count > 0 %}
-                    <span class="archive-loaned-badge">{{ total_loaned_count }}</span>
+                    <span class="archive-loaned-badge archive-loaned-badge--attached">{{ total_loaned_count }}</span>
                 {% endif %}
             </div>
 
-            <form method="get" class="search-box archive-search-box" id="archiveEmployeeSearchForm" style="margin-left: auto;">
+            <form method="get" class="search-box archive-search-box archive-search-right" id="archiveEmployeeSearchForm">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input"
                        placeholder="Buscar por nombre, cédula o expediente"

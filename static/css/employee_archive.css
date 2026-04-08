@@ -517,6 +517,36 @@
     width: 100%;
 }
 
+.content-table .table-controls.archive-controls-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.archive-export-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-self: start;
+}
+
+.archive-controls-row .archive-toggle-notify {
+    justify-self: center;
+}
+
+.content-table .table-controls.archive-controls-row .archive-search-right {
+    justify-self: end;
+    margin-left: 0;
+}
+
+.archive-toggle-notify {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
 .archive-loaned-badge {
     display: inline-flex;
     align-items: center;
@@ -530,6 +560,18 @@
     font-weight: 700;
     font-size: 0.94rem;
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.archive-loaned-badge--attached {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    font-size: 0.78rem;
+    border: 2px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
 }
 
 .archive-toggle-blue .modern-toggle-circle {
@@ -574,6 +616,21 @@
 }
 
 @media (max-width: 900px) {
+    .archive-controls-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .archive-export-actions,
+    .archive-controls-row .archive-toggle-notify,
+    .archive-search-right {
+        justify-self: stretch;
+    }
+
+    .archive-export-actions {
+        justify-content: flex-start;
+    }
+
     .archive-detail-header {
         flex-direction: column;
         align-items: stretch;

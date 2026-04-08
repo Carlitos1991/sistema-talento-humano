@@ -42,7 +42,7 @@
                     <th>Fecha solicitud</th>
                     <th>Expediente</th>
                     <th>Empleado</th>
-                    <th>Solicitante</th>
+                    <th>Prestado a</th>
                     <th>Observación solicitud</th>
                     <th>Estado</th>
                     <th class="text-center">Acciones</th>
@@ -55,10 +55,20 @@
                         <td><span class="payroll-code">{{ loan.expediente_number }}</span></td>
                         <td>{{ loan.employee.person.full_name }}</td>
                         <td>
-                            {% if loan.requested_by.first_name or loan.requested_by.last_name %}
-                                {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                            {% if loan.borrower_user %}
+                                {% if loan.borrower_user.first_name or loan.borrower_user.last_name %}
+                                    {{ loan.borrower_user.first_name }} {{ loan.borrower_user.last_name }}
+                                {% else %}
+                                    {{ loan.borrower_user.username }}
+                                {% endif %}
+                            {% elif loan.requested_by %}
+                                {% if loan.requested_by.first_name or loan.requested_by.last_name %}
+                                    {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                                {% else %}
+                                    {{ loan.requested_by.username }}
+                                {% endif %}
                             {% else %}
-                                {{ loan.requested_by.username }}
+                                -
                             {% endif %}
                         </td>
                         <td>{{ loan.request_observation|default:'-' }}</td>
