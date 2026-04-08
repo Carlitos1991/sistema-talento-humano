@@ -99,6 +99,18 @@ def _archive_staff_users():
     ).distinct()
 
 
+def _can_create_manual_archive_loan(user):
+    return user.has_perm('employee_archive.can_create_archive_manual_loan') or user.has_perm(
+        'employee_archive.change_employeearchivedocument'
+    )
+
+
+def _can_validate_archive_return(user):
+    return user.has_perm('employee_archive.can_validate_archive_returns') or user.has_perm(
+        'employee_archive.change_employeearchivedocument'
+    )
+
+
 def _ensure_base_archive_documents(employee, actor):
     type_map = ensure_predefined_document_types()
     docs_map = {}
@@ -592,8 +604,11 @@ def request_archive_loan(request, employee_id):
 
 
 @require_POST
-@permission_required('employee_archive.can_create_archive_manual_loan', raise_exception=True)
 def create_manual_archive_loan(request, employee_id):
+    if not _can_create_manual_archive_loan(request.user):
+        messages.error(request, 'No tiene permisos para registrar prestamos manuales.')
+        return redirect(reverse('employee_archive:employee_list'))
+
     employee = get_object_or_404(Employee, pk=employee_id)
     default_redirect_url = reverse('employee_archive:employee_detail', kwargs={'employee_id': employee.id})
     requested_next = request.POST.get('next', '')
@@ -722,8 +737,11 @@ def report_archive_return(request, loan_id):
 
 
 @require_POST
-@permission_required('employee_archive.can_validate_archive_returns', raise_exception=True)
 def validate_archive_return(request, loan_id):
+    if not _can_validate_archive_return(request.user):
+        messages.error(request, 'No tiene permisos para validar devoluciones.')
+        return redirect(reverse('employee_archive:employee_list'))
+
     loan = get_object_or_404(EmployeeArchiveLoan, pk=loan_id, is_active=True)
     default_redirect_url = reverse('employee_archive:employee_list')
     requested_next = request.POST.get('next', '')
@@ -814,8 +832,10 @@ class EmployeeArchiveNotificationListView(LoginRequiredMixin, ListView):
 
 
 @login_required
-@permission_required('employee_archive.can_create_archive_manual_loan', raise_exception=True)
 def user_search_json(request):
+    if not _can_create_manual_archive_loan(request.user):
+        return JsonResponse({'results': [], 'detail': 'No tiene permisos para buscar usuarios.'}, status=403)
+
     term = request.GET.get('term', '').strip()
     users = User.objects.filter(is_active=True)
     if term:
