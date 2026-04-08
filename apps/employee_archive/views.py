@@ -709,7 +709,7 @@ def report_archive_return(request, loan_id):
 @permission_required('employee_archive.can_validate_archive_returns', raise_exception=True)
 def validate_archive_return(request, loan_id):
     loan = get_object_or_404(EmployeeArchiveLoan, pk=loan_id, is_active=True)
-    default_redirect_url = reverse('employee_archive:employee_detail', kwargs={'employee_id': loan.employee_id})
+    default_redirect_url = reverse('employee_archive:employee_list')
     requested_next = request.POST.get('next', '')
     redirect_url = default_redirect_url
     if requested_next and url_has_allowed_host_and_scheme(requested_next, allowed_hosts={request.get_host()}):
