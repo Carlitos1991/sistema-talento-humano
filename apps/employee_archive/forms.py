@@ -25,6 +25,11 @@ class EmployeeDocumentTypeForm(forms.ModelForm):
                 classes = field.widget.attrs.get('class', '')
                 field.widget.attrs['class'] = f'{classes} form-control'.strip()
 
+        self.fields['code'].widget.attrs.update({'placeholder': 'Ej: CERT_MEDICO'})
+        self.fields['name'].widget.attrs.update({'placeholder': 'Ej: Certificado Medico'})
+        self.fields['description'].widget.attrs.update({'placeholder': 'Descripcion breve del tipo documental'})
+        self.fields['max_size_mb'].widget.attrs.update({'placeholder': 'Ej: 10', 'min': 1})
+
 
 class EmployeeArchiveDocumentForm(forms.ModelForm):
     class Meta:

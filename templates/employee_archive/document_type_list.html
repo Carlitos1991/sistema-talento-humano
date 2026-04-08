@@ -14,6 +14,13 @@
             <h1>Tipos Documentales del Archivo Digital</h1>
             <p>Configure requisitos y reglas de carga de documentos por empleado.</p>
         </div>
+        {% if perms.employee_archive.add_employeedocumenttype %}
+            <div>
+                <button type="button" class="btn btn-create" onclick="openArchiveTypeCreateModal()">
+                    <i class="fas fa-plus"></i> Nuevo tipo documental
+                </button>
+            </div>
+        {% endif %}
     </div>
 
     <div class="content-table archive-content-table archive-spacing-bottom">
@@ -22,11 +29,6 @@
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input" placeholder="Buscar por código o nombre" value="{{ request.GET.q }}">
             </form>
-            {% if perms.employee_archive.add_employeedocumenttype %}
-                <button type="button" class="btn btn-create" onclick="openArchiveTypeCreateModal()">
-                    <i class="fas fa-plus"></i> Nuevo tipo documental
-                </button>
-            {% endif %}
         </div>
     </div>
 
@@ -89,12 +91,24 @@
                         </button>
                     </div>
                     <div class="archive-loan-request-body archive-form-grid">
-                        {{ form.code }}
-                        {{ form.name }}
-                        {{ form.description }}
+                        <div>
+                            <label class="archive-form-label" for="{{ form.code.id_for_label }}">Código</label>
+                            {{ form.code }}
+                        </div>
+                        <div>
+                            <label class="archive-form-label" for="{{ form.name.id_for_label }}">Nombre</label>
+                            {{ form.name }}
+                        </div>
+                        <div>
+                            <label class="archive-form-label" for="{{ form.description.id_for_label }}">Descripción</label>
+                            {{ form.description }}
+                        </div>
                         <label class="archive-check-label">{{ form.is_required }} Requisito de ingreso</label>
                         <label class="archive-check-label">{{ form.has_expiration }} Requiere caducidad</label>
-                        {{ form.max_size_mb }}
+                        <div>
+                            <label class="archive-form-label" for="{{ form.max_size_mb.id_for_label }}">Tamaño máximo (MB)</label>
+                            {{ form.max_size_mb }}
+                        </div>
                         <label class="archive-check-label">{{ form.is_active }} Activo</label>
                     </div>
                     <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
