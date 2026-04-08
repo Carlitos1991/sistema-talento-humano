@@ -22,25 +22,13 @@
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input" placeholder="Buscar por código o nombre" value="{{ request.GET.q }}">
             </form>
+            {% if perms.employee_archive.add_employeedocumenttype %}
+                <button type="button" class="btn btn-create" onclick="openArchiveTypeCreateModal()">
+                    <i class="fas fa-plus"></i> Nuevo tipo documental
+                </button>
+            {% endif %}
         </div>
     </div>
-
-    {% if perms.employee_archive.add_employeedocumenttype %}
-        <div class="content-table archive-content-table archive-spacing-bottom">
-            <h4 class="archive-section-title">Nuevo tipo documental</h4>
-            <form method="post" action="{% url 'employee_archive:archive_type_create' %}" class="archive-form-grid">
-                {% csrf_token %}
-                {{ form.code }}
-                {{ form.name }}
-                {{ form.description }}
-                <label class="archive-check-label">{{ form.is_required }} Requisito de ingreso</label>
-                <label class="archive-check-label">{{ form.has_expiration }} Requiere caducidad</label>
-                {{ form.max_size_mb }}
-                <label class="archive-check-label">{{ form.is_active }} Activo</label>
-                <button class="btn btn-create archive-fit-btn" type="submit">Crear</button>
-            </form>
-        </div>
-    {% endif %}
 
     <div class="content-table archive-content-table">
         <div class="table-container">
@@ -85,8 +73,62 @@
             </table>
         </div>
     </div>
+
+    {% if perms.employee_archive.add_employeedocumenttype %}
+        <div id="archiveTypeCreateModal" class="modal-overlay hidden">
+            <div class="modal-container-medium shadow-card" style="max-width: 640px; width: min(640px, calc(100vw - 2rem));">
+                <form method="post" action="{% url 'employee_archive:archive_type_create' %}" class="archive-loan-request-form">
+                    {% csrf_token %}
+                    <div class="modal-header-medium modal-header-gradient">
+                        <h3 class="modal-title text-white">
+                            <i class="fas fa-folder-plus me-2"></i>
+                            Nuevo tipo documental
+                        </h3>
+                        <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveTypeCreateModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="archive-loan-request-body archive-form-grid">
+                        {{ form.code }}
+                        {{ form.name }}
+                        {{ form.description }}
+                        <label class="archive-check-label">{{ form.is_required }} Requisito de ingreso</label>
+                        <label class="archive-check-label">{{ form.has_expiration }} Requiere caducidad</label>
+                        {{ form.max_size_mb }}
+                        <label class="archive-check-label">{{ form.is_active }} Activo</label>
+                    </div>
+                    <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
+                        <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveTypeCreateModal()">Cancelar</button>
+                        <button class="btn btn-create" type="submit">Crear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+    <script>
+        function openArchiveTypeCreateModal() {
+            const modal = document.getElementById('archiveTypeCreateModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeArchiveTypeCreateModal() {
+            const modal = document.getElementById('archiveTypeCreateModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('click', function (event) {
+            const modal = document.getElementById('archiveTypeCreateModal');
+            if (modal && event.target === modal) {
+                closeArchiveTypeCreateModal();
+            }
+        });
+    </script>
 {% endblock %}
