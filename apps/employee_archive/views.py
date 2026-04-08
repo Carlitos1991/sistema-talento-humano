@@ -212,15 +212,16 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     permission_required = 'employee_archive.view_employeearchivedocument'
 
     def get_queryset(self):
-        queryset = Employee.objects.select_related('person', 'institutional_data').filter(is_active=True)
+        queryset = Employee.objects.select_related('person', 'institutional_data')
         query = self.request.GET.get('q')
         if query:
-            queryset = queryset.filter(
-                Q(person__first_name__icontains=query)
-                | Q(person__last_name__icontains=query)
-                | Q(person__document_number__icontains=query)
-                | Q(institutional_data__file_number__icontains=query)
-            )
+            for term in [part for part in query.split() if part]:
+                queryset = queryset.filter(
+                    Q(person__first_name__icontains=term)
+                    | Q(person__last_name__icontains=term)
+                    | Q(person__document_number__icontains=term)
+                    | Q(institutional_data__file_number__icontains=term)
+                )
 
         # Filtrar solo expedientes prestados si se solicita
         show_loaned = self.request.GET.get('show_loaned', 'false')

@@ -92,7 +92,7 @@
                 </thead>
                 <tbody>
                 {% for employee in employees %}
-                    <tr>
+                    <tr class="{% if employee.is_active %}archive-employee-row--active{% else %}archive-employee-row--inactive{% endif %}">
                         <td class="archive-col-employee">{{ employee.person.name_and_last_name }}</td>
                         <td class="archive-col-document">{{ employee.person.document_number|default:'-' }}</td>
                         <td class="text-center archive-col-expediente">
@@ -101,6 +101,11 @@
                             </span>
                         </td>
                         <td class="text-center archive-col-status">
+                            {% if employee.is_active %}
+                                <span class="archive-employee-state-badge archive-employee-state-badge--active">Activo</span>
+                            {% else %}
+                                <span class="archive-employee-state-badge archive-employee-state-badge--inactive">Inactivo</span>
+                            {% endif %}
                             {% if employee.request_status_label == 'Entregado' %}
                                 <span class="archive-request-status-badge archive-request-status-badge--delivered">Entregado</span>
                                 <div class="archive-request-status-subtitle">{{ employee.request_requested_at|date:'d/m/Y H:i' }}</div>
@@ -535,6 +540,20 @@
                 closeArchiveManualLoanModal();
             }
         });
+
+        const archiveSearchForm = document.getElementById('archiveEmployeeSearchForm');
+        const archiveSearchInput = archiveSearchForm ? archiveSearchForm.querySelector('input[name="q"]') : null;
+        let archiveSearchTimer = null;
+
+        if (archiveSearchForm && archiveSearchInput) {
+            archiveSearchInput.addEventListener('input', function () {
+                window.clearTimeout(archiveSearchTimer);
+                archiveSearchTimer = window.setTimeout(function () {
+                    archiveSearchForm.querySelector('input[name="page"]')?.remove();
+                    archiveSearchForm.submit();
+                }, 350);
+            });
+        }
 
         function archiveGoToPage(page) {
             const totalPages = {{ paginator.num_pages|default:1 }};
