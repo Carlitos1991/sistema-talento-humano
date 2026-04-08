@@ -210,6 +210,15 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                 | Q(institutional_data__file_number__icontains=query)
             )
 
+        # Filtrar solo expedientes prestados si se solicita
+        show_loaned = self.request.GET.get('show_loaned', 'false')
+        if show_loaned.lower() == 'true':
+            # Mostrar solo empleados que tienen un préstamo activo (ON_LOAN)
+            queryset = queryset.filter(
+                archive_loans__status=EmployeeArchiveLoan.Status.ON_LOAN,
+                archive_loans__is_active=True
+            ).distinct()
+
         sort_field = self.request.GET.get('sort_field', 'employee')
         sort_dir = self.request.GET.get('sort_dir', 'asc')
         allowed_sorts = {

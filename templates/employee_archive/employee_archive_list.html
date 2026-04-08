@@ -17,7 +17,7 @@
     </div>
 
     <div class="content-table archive-content-table archive-employee-list-width">
-        <div class="table-controls archive-controls">
+        <div class="table-controls archive-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem;">
             <form method="get" class="search-box archive-search-box" id="archiveEmployeeSearchForm">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input"
@@ -25,7 +25,19 @@
                        value="{{ request.GET.q }}">
                 <input type="hidden" name="sort_field" value="{{ request.GET.sort_field|default:'employee' }}">
                 <input type="hidden" name="sort_dir" value="{{ request.GET.sort_dir|default:'asc' }}">
+                <input type="hidden" name="show_loaned" value="{{ request.GET.show_loaned|default:'false' }}" id="archiveShowLoanedInput">
             </form>
+
+            <div style="display: flex; justify-content: center;">
+                <input class="modern-toggle-input" type="checkbox" id="toggleLoanedExpedients"
+                       {% if request.GET.show_loaned == 'true' %}checked{% endif %}
+                       onchange="toggleLoanedExpedients(this.checked)">
+
+                <label class="modern-toggle-wrapper mb-0" for="toggleLoanedExpedients">
+                    <div class="modern-toggle-circle"></div>
+                    <span class="modern-toggle-text">Mostrar Expedientes Prestados</span>
+                </label>
+            </div>
         </div>
 
         <div class="table-container archive-employee-list-table-container">
@@ -529,6 +541,7 @@
             const currentField = '{{ request.GET.sort_field|default:"employee"|escapejs }}';
             const currentDir = '{{ request.GET.sort_dir|default:"asc"|escapejs }}';
             const q = '{{ request.GET.q|default:""|escapejs }}';
+            const showLoaned = '{{ request.GET.show_loaned|default:"false"|escapejs }}';
 
             let nextDir = 'asc';
             if (currentField === field) {
@@ -541,6 +554,31 @@
             }
             params.set('sort_field', field);
             params.set('sort_dir', nextDir);
+            params.set('page', '1');
+            if (showLoaned === 'true') {
+                params.set('show_loaned', 'true');
+            }
+            window.location.search = params.toString();
+        }
+
+        function toggleLoanedExpedients(isChecked) {
+            const q = '{{ request.GET.q|default:""|escapejs }}';
+            const sortField = '{{ request.GET.sort_field|default:"employee"|escapejs }}';
+            const sortDir = '{{ request.GET.sort_dir|default:"asc"|escapejs }}';
+
+            const params = new URLSearchParams();
+            if (q) {
+                params.set('q', q);
+            }
+            if (sortField) {
+                params.set('sort_field', sortField);
+            }
+            if (sortDir) {
+                params.set('sort_dir', sortDir);
+            }
+            if (isChecked) {
+                params.set('show_loaned', 'true');
+            }
             params.set('page', '1');
             window.location.search = params.toString();
         }
