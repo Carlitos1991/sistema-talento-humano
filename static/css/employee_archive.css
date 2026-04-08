@@ -65,6 +65,61 @@
     margin-bottom: 1rem;
 }
 
+.archive-employee-list-width {
+    max-width: 1360px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.archive-employee-list-table-container {
+    overflow-x: auto;
+}
+
+.archive-employee-list-table {
+    min-width: 980px;
+}
+
+.archive-employee-list-table .archive-col-employee {
+    min-width: 260px;
+    max-width: 360px;
+    white-space: normal;
+}
+
+.archive-employee-list-table .archive-col-document {
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+.archive-employee-list-table .archive-col-expediente,
+.archive-employee-list-table .archive-col-status,
+.archive-employee-list-table .archive-col-holder {
+    min-width: 180px;
+    white-space: nowrap;
+}
+
+.archive-employee-list-table .archive-actions-col {
+    min-width: 170px;
+    width: 170px;
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    box-shadow: -10px 0 14px -14px rgba(15, 23, 42, 0.5);
+}
+
+.archive-employee-list-table thead .archive-actions-col {
+    z-index: 3;
+    background: #f8fafc;
+}
+
+.archive-employee-list-table tbody .archive-actions-col {
+    background: #ffffff;
+}
+
+.archive-employee-list-table tbody .archive-actions-col .actions-wrapper {
+    justify-content: center;
+    min-width: 140px;
+}
+
 .archive-notification-summary {
     display: flex;
     align-items: flex-start;
@@ -548,5 +603,14 @@
     .archive-loan-request-footer {
         padding-left: 1rem;
         padding-right: 1rem;
+    }
+
+    .archive-employee-list-table {
+        min-width: 760px;
+    }
+
+    .archive-employee-list-table .archive-actions-col {
+        min-width: 130px;
+        width: 130px;
     }
 }

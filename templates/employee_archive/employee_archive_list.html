@@ -9,14 +9,14 @@
 {% endblock %}
 
 {% block content %}
-    <div class="header-card archive-header-card">
+    <div class="header-card archive-header-card archive-employee-list-width">
         <div>
             <h1>Archivo Digital de Empleados</h1>
             <p>Seleccione un empleado para administrar su archivo digital.</p>
         </div>
     </div>
 
-    <div class="content-table archive-content-table">
+    <div class="content-table archive-content-table archive-employee-list-width">
         <div class="table-controls archive-controls">
             <form method="get" class="search-box archive-search-box" id="archiveEmployeeSearchForm">
                 <i class="fas fa-search search-icon"></i>
@@ -28,12 +28,12 @@
             </form>
         </div>
 
-        <div class="table-container">
-            <table class="table exportable-table table-hover"
+        <div class="table-container archive-employee-list-table-container">
+            <table class="table exportable-table table-hover archive-employee-list-table"
                    data-title="Archivo Digital por Empleado">
                 <thead>
                 <tr>
-                    <th class="sortable-header" style="cursor: pointer;" onclick="archiveSortBy('employee')">
+                    <th class="sortable-header archive-col-employee" style="cursor: pointer;" onclick="archiveSortBy('employee')">
                         Empleado
                         <span class="sort-arrow">
                             {% if request.GET.sort_field|default:'employee' == 'employee' and request.GET.sort_dir|default:'asc' == 'asc' %}
@@ -41,7 +41,7 @@
                                 ↓{% else %}⇅{% endif %}
                         </span>
                     </th>
-                    <th class="sortable-header" style="cursor: pointer;" onclick="archiveSortBy('document')">
+                    <th class="sortable-header archive-col-document" style="cursor: pointer;" onclick="archiveSortBy('document')">
                         Cédula
                         <span class="sort-arrow">
                             {% if request.GET.sort_field == 'document' and request.GET.sort_dir|default:'asc' == 'asc' %}
@@ -49,7 +49,7 @@
                                 ↓{% else %}⇅{% endif %}
                         </span>
                     </th>
-                    <th class="text-center sortable-header" style="cursor: pointer;"
+                    <th class="text-center sortable-header archive-col-expediente" style="cursor: pointer;"
                         onclick="archiveSortBy('expediente')">
                         Nro. Expediente
                         <span class="sort-arrow">
@@ -58,22 +58,22 @@
                                 ↓{% else %}⇅{% endif %}
                         </span>
                     </th>
-                    <th class="text-center">Estado Solicitud</th>
-                    <th class="text-center">Expediente Físico</th>
-                    <th class="text-center">Acciones</th>
+                    <th class="text-center archive-col-status">Estado Solicitud</th>
+                    <th class="text-center archive-col-holder">Expediente Físico</th>
+                    <th class="text-center archive-actions-col">Acciones</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for employee in employees %}
                     <tr>
-                        <td>{{ employee.person.name_and_last_name }}</td>
-                        <td>{{ employee.person.document_number|default:'-' }}</td>
-                        <td class="text-center">
+                        <td class="archive-col-employee">{{ employee.person.name_and_last_name }}</td>
+                        <td class="archive-col-document">{{ employee.person.document_number|default:'-' }}</td>
+                        <td class="text-center archive-col-expediente">
                             <span class="payroll-code archive-expediente-badge">
                                 {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
                             </span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center archive-col-status">
                             {% if employee.request_status_label == 'Entregado' %}
                                 <span class="archive-request-status-badge archive-request-status-badge--delivered">Entregado</span>
                                 <div class="archive-request-status-subtitle">{{ employee.request_requested_at|date:'d/m/Y H:i' }}</div>
@@ -87,12 +87,12 @@
                                 <span class="archive-request-status-badge archive-request-status-badge--empty">Sin solicitar</span>
                             {% endif %}
                         </td>
-                        <td class="text-center">
+                        <td class="text-center archive-col-holder">
                             <span class="archive-physical-holder-badge {% if employee.physical_holder_full_name %}archive-physical-holder-badge--loaned{% else %}archive-physical-holder-badge--archive{% endif %}">
                                 {{ employee.physical_holder_full_name|default:'Archivo' }}
                             </span>
                         </td>
-                        <td class="text-center actions">
+                        <td class="text-center actions archive-actions-col">
                             <div class="actions-wrapper">
                                 {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
                                     <button type="button"
@@ -105,7 +105,7 @@
                                         <i class="fa-solid fa-hand-holding-medical"></i>
                                     </button>
                                 {% endif %}
-                                {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' %}
+                                {% if (perms.employee_archive.can_create_archive_manual_loan or perms.employee_archive.change_employeearchivedocument) and employee.request_status_label == 'Sin solicitar' %}
                                     <button type="button"
                                             class="btn-icon btn-loan-manual-action"
                                             title="Prestar expediente"
@@ -125,7 +125,7 @@
                                         <i class="fa-solid fa-box-open"></i>
                                     </button>
                                 {% endif %}
-                                {% if employee.validate_loan_id and employee.physical_holder_full_name %}
+                                {% if (employee.validate_loan_id and employee.physical_holder_full_name) or (perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name) %}
                                     <button type="button"
                                             class="btn-icon btn-info-action"
                                             title="Validar devolución"
