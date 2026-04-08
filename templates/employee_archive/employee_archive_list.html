@@ -47,7 +47,7 @@
             <form method="get" class="search-box archive-search-box archive-search-right" id="archiveEmployeeSearchForm">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input"
-                       placeholder="Buscar por nombre, cédula o expediente"
+                      placeholder="Busca por nombre, apellido, cédula o expediente"
                        value="{{ request.GET.q }}">
                 <input type="hidden" name="sort_field" value="{{ request.GET.sort_field|default:'employee' }}">
                 <input type="hidden" name="sort_dir" value="{{ request.GET.sort_dir|default:'asc' }}">
@@ -85,39 +85,20 @@
                                 ↓{% else %}⇅{% endif %}
                         </span>
                     </th>
-                    <th class="text-center archive-col-status">Estado Solicitud</th>
                     <th class="text-center archive-col-holder">Expediente Físico</th>
                     <th class="text-center archive-actions-col">Acciones</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for employee in employees %}
-                    <tr class="{% if employee.is_active %}archive-employee-row--active{% else %}archive-employee-row--inactive{% endif %}">
+                    <tr class="{% if employee.is_active %}archive-employee-row--active{% else %}archive-employee-row--inactive{% endif %}"
+                        data-search-text="{{ employee.person.name_and_last_name|default:''|lower }} {{ employee.person.document_number|default:''|lower }} {{ employee.institutional_data.file_number|default:''|lower }} {{ employee.physical_holder_full_name|default:''|lower }}">
                         <td class="archive-col-employee">{{ employee.person.name_and_last_name }}</td>
                         <td class="archive-col-document">{{ employee.person.document_number|default:'-' }}</td>
                         <td class="text-center archive-col-expediente">
                             <span class="payroll-code archive-expediente-badge">
                                 {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
                             </span>
-                        </td>
-                        <td class="text-center archive-col-status">
-                            {% if employee.is_active %}
-                                <span class="archive-employee-state-badge archive-employee-state-badge--active">Activo</span>
-                            {% else %}
-                                <span class="archive-employee-state-badge archive-employee-state-badge--inactive">Inactivo</span>
-                            {% endif %}
-                            {% if employee.request_status_label == 'Entregado' %}
-                                <span class="archive-request-status-badge archive-request-status-badge--delivered">Entregado</span>
-                                <div class="archive-request-status-subtitle">{{ employee.request_requested_at|date:'d/m/Y H:i' }}</div>
-                            {% elif employee.request_status_label == 'Pendiente validacion' %}
-                                <span class="archive-request-status-badge archive-request-status-badge--return-reported">Pendiente validación</span>
-                                <div class="archive-request-status-subtitle">{{ employee.request_requested_at|date:'d/m/Y H:i' }}</div>
-                            {% elif employee.request_status_label == 'Solicitado' %}
-                                <span class="archive-request-status-badge archive-request-status-badge--requested">Solicitado</span>
-                                <div class="archive-request-status-subtitle">{{ employee.request_requested_at|date:'d/m/Y H:i' }}</div>
-                            {% else %}
-                                <span class="archive-request-status-badge archive-request-status-badge--empty">Sin solicitar</span>
-                            {% endif %}
                         </td>
                         <td class="text-center archive-col-holder">
                             <span class="archive-physical-holder-badge {% if employee.physical_holder_full_name %}archive-physical-holder-badge--loaned{% else %}archive-physical-holder-badge--archive{% endif %}">
@@ -179,7 +160,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
+                        <td colspan="5" class="text-center py-5 text-muted">
                             <i class="fas fa-inbox fa-3x mb-3"></i><br>
                             No se encontraron empleados.
                         </td>
@@ -543,16 +524,47 @@
 
         const archiveSearchForm = document.getElementById('archiveEmployeeSearchForm');
         const archiveSearchInput = archiveSearchForm ? archiveSearchForm.querySelector('input[name="q"]') : null;
-        let archiveSearchTimer = null;
+        const archiveRows = Array.from(document.querySelectorAll('.archive-employee-list-table tbody tr'));
+
+        function normalizeArchiveSearchText(value) {
+            return (value || '')
+                .toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+        }
+
+        function filterArchiveRows() {
+            if (!archiveSearchInput) {
+                return;
+            }
+
+            const terms = normalizeArchiveSearchText(archiveSearchInput.value)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            archiveRows.forEach(function (row) {
+                const rowText = normalizeArchiveSearchText(row.dataset.searchText || row.textContent || '');
+                const matches = terms.length === 0 || terms.every(function (term) {
+                    return rowText.includes(term);
+                });
+                row.style.display = matches ? '' : 'none';
+            });
+        }
 
         if (archiveSearchForm && archiveSearchInput) {
             archiveSearchInput.addEventListener('input', function () {
-                window.clearTimeout(archiveSearchTimer);
-                archiveSearchTimer = window.setTimeout(function () {
-                    archiveSearchForm.querySelector('input[name="page"]')?.remove();
-                    archiveSearchForm.submit();
-                }, 350);
+                filterArchiveRows();
             });
+
+            archiveSearchInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    archiveSearchForm.querySelector('input[name="page"]')?.remove();
+                }
+            });
+
+            filterArchiveRows();
         }
 
         function archiveGoToPage(page) {

@@ -4,7 +4,9 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Prefetch
+from django.db.models import CharField
 from django.db.models import Q
+from django.db.models import Value
 from django.http import JsonResponse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -18,6 +20,7 @@ from django.views.generic import CreateView
 from django.views.generic import ListView
 from django.views.generic import TemplateView
 from django.views.generic import UpdateView
+from django.db.models.functions import Concat
 
 from contract.models import ManagementPeriod
 from core.models import User
@@ -212,13 +215,19 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     permission_required = 'employee_archive.view_employeearchivedocument'
 
     def get_queryset(self):
-        queryset = Employee.objects.select_related('person', 'institutional_data')
+        queryset = Employee.objects.select_related('person', 'institutional_data').annotate(
+            archive_search_name=Concat(
+                'person__first_name',
+                Value(' '),
+                'person__last_name',
+                output_field=CharField(),
+            )
+        )
         query = self.request.GET.get('q')
         if query:
             for term in [part for part in query.split() if part]:
                 queryset = queryset.filter(
-                    Q(person__first_name__icontains=term)
-                    | Q(person__last_name__icontains=term)
+                    Q(archive_search_name__icontains=term)
                     | Q(person__document_number__icontains=term)
                     | Q(institutional_data__file_number__icontains=term)
                 )
