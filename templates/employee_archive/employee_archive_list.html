@@ -94,7 +94,7 @@
                         </td>
                         <td class="text-center actions">
                             <div class="actions-wrapper">
-                                {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
+                                {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
                                     <button type="button"
                                             class="btn-icon btn-create-action"
                                             title="Solicitar archivo"
@@ -125,7 +125,7 @@
                                         <i class="fa-solid fa-box-open"></i>
                                     </button>
                                 {% endif %}
-                                {% if perms.employee_archive.can_validate_archive_returns and employee.validate_loan_id %}
+                                {% if employee.validate_loan_id and employee.physical_holder_full_name %}
                                     <button type="button"
                                             class="btn-icon btn-info-action"
                                             title="Validar devolución"

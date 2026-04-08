@@ -262,6 +262,7 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                             'label': 'Entregado',
                             'at': loan.delivered_at or loan.requested_at,
                         }
+                        validate_loan_by_employee[loan.employee_id] = loan.id
 
                 if loan.status in [EmployeeArchiveLoan.Status.ON_LOAN, EmployeeArchiveLoan.Status.RETURN_REPORTED] and loan.employee_id not in holder_by_employee:
                     full_name = f'{loan.borrower_user.first_name or ""} {loan.borrower_user.last_name or ""}'.strip()
@@ -714,8 +715,8 @@ def validate_archive_return(request, loan_id):
     if requested_next and url_has_allowed_host_and_scheme(requested_next, allowed_hosts={request.get_host()}):
         redirect_url = requested_next
 
-    if loan.status != EmployeeArchiveLoan.Status.RETURN_REPORTED:
-        messages.error(request, 'Solo puede validar devoluciones reportadas.')
+    if loan.status not in [EmployeeArchiveLoan.Status.RETURN_REPORTED, EmployeeArchiveLoan.Status.ON_LOAN]:
+        messages.error(request, 'Solo puede validar expedientes en prestamo activo o con devolucion reportada.')
         return redirect(redirect_url)
 
     form = ArchiveLoanReturnValidationForm(request.POST)
