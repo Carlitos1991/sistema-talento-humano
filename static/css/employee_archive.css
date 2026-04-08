@@ -517,6 +517,35 @@
     width: 100%;
 }
 
+.archive-loaned-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.94rem;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.archive-toggle-blue .modern-toggle-circle {
+    background: #cbd5e1;
+    transition: all 0.3s ease;
+}
+
+.archive-toggle-blue:checked + .modern-toggle-wrapper .modern-toggle-circle {
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+}
+
+.archive-toggle-blue:checked + .modern-toggle-wrapper {
+    background: linear-gradient(to right, #1e3a8a, #0284c7) !important;
+}
+
 .archive-loan-request-form {
     margin: 0;
 }

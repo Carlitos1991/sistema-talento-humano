@@ -237,6 +237,13 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         employees_page = list(context.get('employees', []))
         employee_ids = [row.id for row in employees_page]
 
+        # Contar total de expedientes prestados (ON_LOAN)
+        total_loaned = EmployeeArchiveLoan.objects.filter(
+            status=EmployeeArchiveLoan.Status.ON_LOAN,
+            is_active=True
+        ).count()
+        context['total_loaned_count'] = total_loaned
+
         holder_by_employee = {}
         request_state_by_employee = {}
         deliver_loan_by_employee = {}

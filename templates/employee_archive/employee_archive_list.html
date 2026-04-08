@@ -17,8 +17,26 @@
     </div>
 
     <div class="content-table archive-content-table archive-employee-list-width">
-        <div class="table-controls archive-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem;">
-            <form method="get" class="search-box archive-search-box" id="archiveEmployeeSearchForm">
+        <div class="table-controls archive-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1.5rem;">
+            
+            <div></div>
+
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.8rem;">
+                <input class="modern-toggle-input archive-toggle-blue" type="checkbox" id="toggleLoanedExpedients"
+                       {% if request.GET.show_loaned == 'true' %}checked{% endif %}
+                       onchange="toggleLoanedExpedients(this.checked)">
+
+                <label class="modern-toggle-wrapper mb-0" for="toggleLoanedExpedients">
+                    <div class="modern-toggle-circle"></div>
+                    <span class="modern-toggle-text">Mostrar Expedientes Prestados</span>
+                </label>
+                
+                {% if total_loaned_count > 0 %}
+                    <span class="archive-loaned-badge">{{ total_loaned_count }}</span>
+                {% endif %}
+            </div>
+
+            <form method="get" class="search-box archive-search-box" id="archiveEmployeeSearchForm" style="margin-left: auto;">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" name="q" class="table-search-input"
                        placeholder="Buscar por nombre, cédula o expediente"
@@ -27,17 +45,6 @@
                 <input type="hidden" name="sort_dir" value="{{ request.GET.sort_dir|default:'asc' }}">
                 <input type="hidden" name="show_loaned" value="{{ request.GET.show_loaned|default:'false' }}" id="archiveShowLoanedInput">
             </form>
-
-            <div style="display: flex; justify-content: center;">
-                <input class="modern-toggle-input" type="checkbox" id="toggleLoanedExpedients"
-                       {% if request.GET.show_loaned == 'true' %}checked{% endif %}
-                       onchange="toggleLoanedExpedients(this.checked)">
-
-                <label class="modern-toggle-wrapper mb-0" for="toggleLoanedExpedients">
-                    <div class="modern-toggle-circle"></div>
-                    <span class="modern-toggle-text">Mostrar Expedientes Prestados</span>
-                </label>
-            </div>
         </div>
 
         <div class="table-container archive-employee-list-table-container">
