@@ -174,7 +174,7 @@
             <span class="pagination-info">
                 Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
             </span>
-            <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+            <div class="pagination-controls">
                 <button class="page-btn" title="Primera"
                         {% if not page_obj.has_previous %}disabled{% endif %}
                         onclick="archiveGoToPage(1)">
