@@ -105,7 +105,7 @@
                                         <i class="fa-solid fa-hand-holding-medical"></i>
                                     </button>
                                 {% endif %}
-                                {% if (perms.employee_archive.can_create_archive_manual_loan or perms.employee_archive.change_employeearchivedocument) and employee.request_status_label == 'Sin solicitar' %}
+                                {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' or perms.employee_archive.change_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
                                     <button type="button"
                                             class="btn-icon btn-loan-manual-action"
                                             title="Prestar expediente"
@@ -125,7 +125,7 @@
                                         <i class="fa-solid fa-box-open"></i>
                                     </button>
                                 {% endif %}
-                                {% if (employee.validate_loan_id and employee.physical_holder_full_name) or (perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name) %}
+                                {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
                                     <button type="button"
                                             class="btn-icon btn-info-action"
                                             title="Validar devolución"
