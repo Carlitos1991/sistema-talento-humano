@@ -43,6 +43,7 @@
                     <th>Expediente</th>
                     <th>Empleado</th>
                     <th>Prestado a</th>
+                    <th>Registrado por</th>
                     <th>Observación solicitud</th>
                     <th>Estado</th>
                     <th class="text-center">Acciones</th>
@@ -62,6 +63,17 @@
                                     {{ loan.borrower_user.username }}
                                 {% endif %}
                             {% elif loan.requested_by %}
+                                {% if loan.requested_by.first_name or loan.requested_by.last_name %}
+                                    {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                                {% else %}
+                                    {{ loan.requested_by.username }}
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if loan.requested_by %}
                                 {% if loan.requested_by.first_name or loan.requested_by.last_name %}
                                     {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
                                 {% else %}
@@ -113,7 +125,7 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="7" class="text-center">No hay préstamos registrados.</td></tr>
+                    <tr><td colspan="8" class="text-center">No hay préstamos registrados.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

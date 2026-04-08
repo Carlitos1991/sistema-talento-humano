@@ -811,7 +811,9 @@ class EmployeeArchiveLoanListView(LoginRequiredMixin, PermissionRequiredMixin, L
         if status:
             queryset = queryset.filter(status=status)
 
-        if self.request.user.has_perm('employee_archive.can_manage_archive_loans'):
+        if self.request.user.has_perm('employee_archive.can_manage_archive_loans') or _can_create_manual_archive_loan(
+            self.request.user
+        ):
             return queryset
         return queryset.filter(Q(borrower_user=self.request.user) | Q(requested_by=self.request.user))
 
