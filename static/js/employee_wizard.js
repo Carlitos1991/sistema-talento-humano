@@ -1203,6 +1203,8 @@ const app = createApp({
             activeTab,
             isSaving,
             loadingList,
+            detailPhotoPreviewUrl,
+            detailPhotoHasFile,
             personStats,
             refreshSelect2,
             initSelect2,

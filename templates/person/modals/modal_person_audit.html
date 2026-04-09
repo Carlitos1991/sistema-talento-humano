@@ -1,0 +1,41 @@
+<div id="personAuditOverlay" class="modal-overlay hidden" v-cloak>
+    <div class="modal-container-xl" style="max-width: 980px;">
+        <div class="modal-header modal-header-gradient">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h3 class="header-title-main">Auditoría del Expediente</h3>
+                    <p class="text-white-50 small mb-0">{{ person.full_name }}</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close-modal-refined" @click="closeAuditModal">&times;</button>
+        </div>
+
+        <div class="modal-body-scrolled bg-light">
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <input type="text" id="personAuditSearchInput" class="form-control" style="min-width: 260px;" placeholder="Buscar usuario, sección o detalle">
+                    <button type="button" class="btn btn-outline-primary" id="personAuditSearchBtn">
+                        <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="personAuditResetBtn">
+                        Limpiar
+                    </button>
+                </div>
+                <button type="button" class="btn btn-success" id="personAuditExportBtn">
+                    <i class="fa-solid fa-file-excel"></i> Exportar Excel
+                </button>
+            </div>
+            <div id="personAuditResults" class="person-audit-results">
+                <div class="py-4 text-center text-muted" id="personAuditLoadingState">
+                <i class="fa-solid fa-spinner fa-spin me-2"></i>
+                Cargando movimientos...
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-fixed d-flex justify-content-end">
+            <button type="button" class="btn-cancel" @click="closeAuditModal">Cerrar</button>
+        </div>
+    </div>
+</div>
