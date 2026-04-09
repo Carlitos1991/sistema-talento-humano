@@ -51,7 +51,7 @@ class SanctionNotificationType(BaseModel):
 
 class SanctionNotificationTypeMapping(models.Model):
     """
-    Define un mapeo reutilizable entre un marcador del Word y una fuente de datos.
+    Define un mapeo reutilizable entre un marcador y una fuente de datos.
     """
     SOURCE_CHOICES = [
         ('employee_full_name', 'Nombre completo del empleado'),
@@ -125,7 +125,7 @@ class SanctionNotificationMapping(BaseModel):
 
 class SanctionNotificationTypeRegime(models.Model):
     """
-    Plantilla Word específica de un tipo de notificación para un régimen laboral.
+    Plantilla específica de un tipo de notificación para un régimen laboral.
     """
     notification_type = models.ForeignKey(
         SanctionNotificationType,
@@ -138,12 +138,6 @@ class SanctionNotificationTypeRegime(models.Model):
         on_delete=models.PROTECT,
         related_name='notification_templates',
         verbose_name='Régimen laboral',
-    )
-    template_file = models.FileField(
-        upload_to='documents/sanction_notifications/%Y/%m/',
-        verbose_name='Formato Word',
-        blank=True,
-        null=True,
     )
 
     class Meta:
@@ -224,7 +218,7 @@ class TemplateSection(BaseModel):
 
 class SanctionNotification(BaseModel):
     """
-    Registro de una notificación generada desde una plantilla Word.
+    Registro de una notificación generada desde una plantilla interna.
     """
     MONTH_LABELS = {
         1: 'ENERO',
@@ -306,12 +300,6 @@ class SanctionNotification(BaseModel):
         blank=True,
         default='',
         editable=False,
-    )
-    generated_docx = models.FileField(
-        upload_to='documents/sanction_notifications/generated/%Y/%m/',
-        verbose_name='Documento Word generado',
-        blank=True,
-        null=True,
     )
     generated_pdf = models.FileField(
         upload_to='documents/sanction_notifications/generated/%Y/%m/',

@@ -227,7 +227,7 @@ class SanctionForm(forms.ModelForm):
             }),
             'attachment_file': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': '.pdf,.doc,.docx'
+                'accept': '.pdf'
             }),
         }
 

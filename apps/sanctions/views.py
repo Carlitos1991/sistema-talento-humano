@@ -30,7 +30,7 @@ from types import SimpleNamespace
 
 from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
 from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
-from .services import build_notification_replacements, build_replacements_from_global_mappings, extract_docx_preview
+from .services import build_notification_replacements, build_replacements_from_global_mappings
 from employee.models import Employee
 from budget.models import BudgetLine
 from personnel_actions.models import PersonnelAction, ActionType, ActionMovement
@@ -863,23 +863,6 @@ class SanctionNotificationPdfView(LoginRequiredMixin, PermissionRequiredMixin, V
             return HttpResponse('Error al generar el PDF', status=500)
 
 
-class SanctionNotificationTypeTemplateDownloadView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'sanctions.view_sanctionnotificationtype'
-
-    def get(self, request, link_id):
-        link = get_object_or_404(
-            SanctionNotificationTypeRegime.objects.select_related('notification_type', 'labor_regime'),
-            pk=link_id,
-        )
-
-        if not link.template_file:
-            return JsonResponse({'success': False, 'message': 'Este régimen no tiene formato cargado.'}, status=404)
-
-        filename = link.template_file.name.rsplit('/', 1)[-1]
-        response = FileResponse(link.template_file.open('rb'), as_attachment=True, filename=filename)
-        return response
-
-
 class SanctionNotificationTypeHelpView(LoginRequiredMixin, View):
     def dispatch(self, request, *args, **kwargs):
         if not (request.user.has_perm('sanctions.view_sanctionnotificationmapping') or request.user.has_perm('sanctions.view_sanctionnotificationtype')):
@@ -909,17 +892,8 @@ class SanctionNotificationTypePreviewView(LoginRequiredMixin, PermissionRequired
 
         preview_rows = []
         for link in notification_type.regime_templates.all():
-            blocks = []
-            if link.template_file:
-                try:
-                    if Path(link.template_file.path).exists():
-                        blocks = extract_docx_preview(link.template_file.path)
-                except Exception:
-                    blocks = []
-
             preview_rows.append({
                 'link': link,
-                'blocks': blocks,
             })
 
         context = {

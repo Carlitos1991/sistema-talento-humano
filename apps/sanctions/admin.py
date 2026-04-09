@@ -63,7 +63,7 @@ class SanctionNotificationAdmin(admin.ModelAdmin):
     list_filter = ['notification_type', 'labor_regime', 'month', 'year', 'registration_date']
     search_fields = ['employee__person__first_name', 'employee__person__last_name', 'employee__person__document_number', 'notification_type__name', 'user_code']
     readonly_fields = ['sequence_number', 'user_code', 'created_at', 'updated_at', 'created_by', 'updated_by']
-    exclude = ['generated_docx', 'generated_pdf']
+    exclude = ['generated_pdf']
     ordering = ['-registration_date', '-created_at']
 
 

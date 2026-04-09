@@ -18,7 +18,6 @@ urlpatterns = [
     path('notification-types/toggle/<int:pk>/', views.SanctionNotificationTypeToggleView.as_view(), name='notification_type_toggle'),
     path('notification-types/preview/<int:pk>/', views.SanctionNotificationTypePreviewView.as_view(), name='notification_type_preview'),
     path('notification-types/help/', views.SanctionNotificationTypeHelpView.as_view(), name='notification_type_help'),
-    path('notification-types/template/<int:link_id>/download/', views.SanctionNotificationTypeTemplateDownloadView.as_view(), name='notification_type_template_download'),
     path('notifications/generate/', views.GenerateSanctionNotificationView.as_view(), name='generate_notification'),
     path('notifications/preview/', views.SanctionNotificationPreviewView.as_view(), name='notification_preview'),
     path('notifications/list/', views.SanctionNotificationListView.as_view(), name='notification_list'),
