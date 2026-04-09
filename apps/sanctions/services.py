@@ -36,10 +36,36 @@ PLACEHOLDER_KEYS = [
 ]
 
 
+def _format_spanish_date(date_value):
+    months = {
+        1: 'enero',
+        2: 'febrero',
+        3: 'marzo',
+        4: 'abril',
+        5: 'mayo',
+        6: 'junio',
+        7: 'julio',
+        8: 'agosto',
+        9: 'septiembre',
+        10: 'octubre',
+        11: 'noviembre',
+        12: 'diciembre',
+    }
+    if not date_value:
+        return ''
+    return f"{date_value.day:02d} de {months.get(date_value.month, '')} de {date_value.year}"
+
+
 def build_notification_replacements(data):
     sequence_code = str(data.get('sequence_code', '') or '')
     user_code = str(data.get('user_code', '') or '')
     registration_date = data.get('registration_date', '')
+    minutes_late = data.get('minutes_late')
+    regs_without_mark = data.get('regs_without_mark')
+
+    minutes_late_text = '0' if minutes_late is None else str(minutes_late)
+    regs_without_mark_text = '0' if regs_without_mark is None else str(regs_without_mark)
+
     replacements = {
         '[FULL_NAME]': data.get('employee_full_name', ''),
         '[NAME]': data.get('employee_first_name', ''),
@@ -77,9 +103,9 @@ def build_notification_replacements(data):
         '[CARGO_AUTORIDAD1]': data.get('authority_1_position', ''),
         '[NOMBRE_AUTORIDAD2]': data.get('authority_2_name', ''),
         '[CARGO_AUTORIDAD2]': data.get('authority_2_position', ''),
-        '[MINUTES_LATE]': str(data.get('minutes_late', '') or ''),
-        '[MINUTOS]': str(data.get('minutes_late', '') or ''),
-        '[REGS_WITHOUT_MARK]': str(data.get('regs_without_mark', '') or ''),
+        '[MINUTES_LATE]': minutes_late_text,
+        '[MINUTOS]': minutes_late_text,
+        '[REGS_WITHOUT_MARK]': regs_without_mark_text,
         '[OBSERVATIONS]': data.get('observations', ''),
     }
     return replacements
@@ -144,7 +170,7 @@ def evaluate_mapping_expression(expression, data):
         return ''
 
     if expression.lower() == 'today':
-        return date.today().strftime('%d/%m/%Y')
+        return _format_spanish_date(date.today())
 
     if expression.lower().startswith('today:'):
         date_format = expression.split(':', 1)[1].strip() or '%d/%m/%Y'
@@ -156,7 +182,7 @@ def evaluate_mapping_expression(expression, data):
             value_parts.append(token[1:-1])
             continue
         if token.lower() == 'today':
-            value_parts.append(date.today().strftime('%d/%m/%Y'))
+            value_parts.append(_format_spanish_date(date.today()))
             continue
         if token.lower().startswith('today:'):
             date_format = token.split(':', 1)[1].strip() or '%d/%m/%Y'

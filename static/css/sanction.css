@@ -863,6 +863,21 @@ textarea.form-control:focus {
     margin-bottom: 0;
 }
 
+.template-editor-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.template-editor-header-actions .btn-create {
+    border-radius: 10px;
+    font-weight: 700;
+    min-height: 38px;
+    padding: 0.5rem 1rem;
+}
+
 .template-editor-header-card h1 {
     color: #ffffff;
     margin-bottom: 0.25rem;
@@ -937,9 +952,177 @@ textarea.form-control:focus {
     border-radius: 10px !important;
 }
 
+.template-editor-variables-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.16);
+    color: #f8fafc;
+    font-weight: 600;
+}
+
+.template-editor-variables-btn:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.template-editor-actions .btn-create {
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.template-editor-modal-top-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.template-editor-page #sectionEditorModal .templates-modal-box {
+    width: min(92vw, 825px) !important;
+    max-width: 825px !important;
+    height: 77vh !important;
+    max-height: 77vh;
+    min-height: 77vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.template-editor-page #sectionEditorModal .templates-modal-body {
+    flex: 1;
+    height: calc(77vh - 138px);
+    max-height: none;
+    min-height: 0;
+    padding: 1.15rem 1.35rem;
+}
+
+.template-editor-page #sectionEditorModal #sectionEditorContent {
+    min-height: clamp(700px, 82vh, 980px);
+    resize: vertical;
+}
+
+.template-editor-modal-footer {
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.template-editor-modal-btn {
+    min-width: 170px;
+    min-height: 46px;
+    border-radius: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+}
+
+.template-editor-modal-vars-btn {
+    background-color: #e2e8f0;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
+.template-editor-modal-vars-btn:hover {
+    background-color: #cbd5e1;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.template-editor-vars-swal {
+    border-radius: 14px;
+    width: 705px !important;
+    max-width: 705px !important;
+}
+
+.template-editor-vars-swal .swal2-actions {
+    justify-content: center !important;
+}
+
+.template-editor-vars-swal .swal2-cancel {
+    display: none !important;
+}
+
+.template-editor-vars-swal .template-editor-swal-confirm-btn {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: 140px;
+}
+
+.template-editor-var-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    text-align: left;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 0.1rem;
+}
+
+.template-editor-var-item {
+    border: 1px solid #dbe3ea;
+    border-radius: 10px;
+    padding: 0.55rem 0.65rem;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.template-editor-var-item code {
+    color: #b91c1c;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.template-editor-var-item span {
+    color: #475569;
+    font-size: 0.82rem;
+}
+
+.template-editor-var-empty {
+    grid-column: 1 / -1;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0.9rem;
+    text-align: center;
+    color: #64748b;
+    font-weight: 600;
+}
+
 @media (max-width: 992px) {
     .template-editor-page .sticky-top {
         position: static !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .template-editor-header-actions {
+        justify-content: flex-start;
+    }
+
+    .template-editor-header-actions .btn,
+    .template-editor-modal-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .template-editor-page #sectionEditorModal .templates-modal-box {
+        min-height: auto;
+        max-height: 77vh;
+        height: 77vh !important;
+    }
+
+    .template-editor-page #sectionEditorModal #sectionEditorContent {
+        min-height: 560px;
+    }
+
+    .template-editor-var-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

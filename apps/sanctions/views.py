@@ -28,7 +28,7 @@ from contract.models import ManagementPeriod
 from employee.models import Employee
 from types import SimpleNamespace
 
-from .models import NotificationTemplate, SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
+from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
 from .forms import SanctionNotificationForm, SanctionNotificationMappingForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
 from .services import build_notification_replacements, build_replacements_from_global_mappings, extract_docx_preview
 from employee.models import Employee
@@ -153,23 +153,53 @@ def _get_next_notification_sequence():
     return last_sequence + 1
 
 
+def _format_spanish_date(date_value):
+    months = {
+        1: 'enero',
+        2: 'febrero',
+        3: 'marzo',
+        4: 'abril',
+        5: 'mayo',
+        6: 'junio',
+        7: 'julio',
+        8: 'agosto',
+        9: 'septiembre',
+        10: 'octubre',
+        11: 'noviembre',
+        12: 'diciembre',
+    }
+    if not date_value:
+        return ''
+    return f"{date_value.day:02d} de {months.get(date_value.month, '')} de {date_value.year}"
+
+
+def _first_token(value):
+    parts = str(value or '').strip().split()
+    return parts[0] if parts else ''
+
+
 def _build_user_code(user):
     person = getattr(user, 'person', None)
-    first_name = ''
-    last_name = ''
+    first_name_token = ''
+    last_name_token = ''
 
     if person:
-        first_name = person.first_name or ''
-        last_name = person.last_name or ''
+        first_name_token = _first_token(person.first_name)
+        last_name_token = _first_token(person.last_name)
     else:
         full_name = user.get_full_name() or user.username or ''
         parts = full_name.split()
         if parts:
-            first_name = parts[0]
-            last_name = parts[1] if len(parts) > 1 else parts[0]
+            first_name_token = parts[0]
+            if len(parts) >= 3:
+                last_name_token = parts[-2]
+            elif len(parts) > 1:
+                last_name_token = parts[1]
+            else:
+                last_name_token = parts[0]
 
-    first_code = ''.join(char for char in first_name if char.isalpha())[:2].upper()
-    last_code = ''.join(char for char in last_name if char.isalpha())[:2].upper()
+    first_code = ''.join(char for char in first_name_token if char.isalpha())[:2].upper()
+    last_code = ''.join(char for char in last_name_token if char.isalpha())[:2].upper()
     return f'{first_code}{last_code}'
 
 
@@ -210,7 +240,7 @@ def _build_notification_data_context(employee, regime_context, notification_type
         'month_name': dict(form.fields['month'].choices).get(int(form.cleaned_data['month']), ''),
         'month_number': form.cleaned_data['month'],
         'year': form.cleaned_data['year'],
-        'registration_date': form.cleaned_data['registration_date'].strftime('%d/%m/%Y'),
+        'registration_date': _format_spanish_date(form.cleaned_data['registration_date']),
         'authority_1_name': form.cleaned_data['authority_1'].name,
         'authority_1_position': form.cleaned_data['authority_1'].position,
         'authority_2_name': form.cleaned_data['authority_2'].name if form.cleaned_data.get('authority_2') else '',
@@ -246,7 +276,21 @@ def _render_inline_formatting(content):
     safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]', r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]', r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]', r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
     return safe_text.replace('\n', '<br>')
+
+
+def _normalize_template_section_content(content):
+    """
+    Normaliza texto del editor cuando llega con secuencias escapadas literales
+    (ej. "\\u000A", "\\n", "\\t") para persistir contenido legible.
+    """
+    text = str(content or '')
+    text = text.replace('\\r\\n', '\n').replace('\\n', '\n').replace('\\r', '\n').replace('\\t', '\t')
+    text = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), text)
+    return text.strip()
 
 
 def _get_letterhead_resource(request):
@@ -313,7 +357,7 @@ def _build_notification_render_context(employee, regime_context, notification_ty
     return {
         'header_code': full_code,
         'city': city,
-        'registration_date': form.cleaned_data['registration_date'].strftime('%d/%m/%Y'),
+        'registration_date': _format_spanish_date(form.cleaned_data['registration_date']),
         'sections': sections,
         'letterhead_path': _get_letterhead_resource(request),
         'has_dynamic_template': bool(dynamic_template and sections),
@@ -1000,6 +1044,9 @@ def _template_editor_render_inline_formatting(content):
     safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]', r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]', r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]', r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
     return safe_text.replace('\n', '<br>')
 
 
@@ -1077,7 +1124,11 @@ class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         template = self.object
-        context['available_mappings'] = SanctionNotificationMapping.objects.filter(is_active=True)
+        context['available_mappings'] = list(
+            SanctionNotificationMapping.objects.filter(is_active=True)
+            .order_by('order', 'label')
+            .values('placeholder', 'label')
+        )
         context['header_format'] = f'NOTIFICACIÓN Nº [SECUENCIA]-{template.labor_regime.code}-[AÑO]-[CODIGO_USUARIO]'
         context['location'] = 'Loja'
         context['date_format'] = '[today]'
@@ -1089,6 +1140,8 @@ class TemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin,
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para agregar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, template_id):
@@ -1097,7 +1150,7 @@ class TemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin,
         try:
             data = json.loads(request.body)
             section_type = data.get('section_type')
-            content = data.get('content', '').strip()
+            content = _normalize_template_section_content(data.get('content', ''))
             order = data.get('order', 0)
 
             if not content:
@@ -1135,6 +1188,8 @@ class TemplateSectionUpdateAjaxView(LoginRequiredMixin, PermissionRequiredMixin,
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para editar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, section_id):
@@ -1142,7 +1197,7 @@ class TemplateSectionUpdateAjaxView(LoginRequiredMixin, PermissionRequiredMixin,
 
         try:
             data = json.loads(request.body)
-            section.content = data.get('content', section.content).strip()
+            section.content = _normalize_template_section_content(data.get('content', section.content))
             section.section_type = data.get('section_type', section.section_type)
             section.order = data.get('order', section.order)
             section.updated_by = request.user
@@ -1169,6 +1224,8 @@ class TemplateSectionDeleteAjaxView(LoginRequiredMixin, PermissionRequiredMixin,
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para eliminar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, section_id):
@@ -1187,6 +1244,8 @@ class TemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequiredMixin
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para reordenar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, template_id):
@@ -1233,8 +1292,8 @@ class TemplatePreviewAjaxView(LoginRequiredMixin, View):
                 'sequence_code': '0001',
                 'sequence_number': '0001',
                 'year': datetime.now().year,
-                'registration_date': datetime.now().strftime('%d/%m/%Y'),
-                'today': datetime.now().strftime('%d/%m/%Y'),
+                'registration_date': _format_spanish_date(datetime.now().date()),
+                'today': _format_spanish_date(datetime.now().date()),
                 'location': 'Loja',
                 'user_code': 'JUPE',
                 'created_by': SimpleNamespace(person=SimpleNamespace(
@@ -1245,7 +1304,7 @@ class TemplatePreviewAjaxView(LoginRequiredMixin, View):
             replacements = build_notification_replacements(data)
             regime_code = template.labor_regime.code
             header = f'NOTIFICACIÓN Nº {replacements.get("[SECUENCIA]", "0001")}-{regime_code}-{replacements.get("[AÑO]", datetime.now().year)}-{replacements.get("[CODIGO_USUARIO]", "XXXX")}';
-            location_date = f'{replacements.get("[LOCALIDAD]", "Loja")}, {replacements.get("[today]", datetime.now().strftime("%d/%m/%Y"))}'
+            location_date = f'{replacements.get("[LOCALIDAD]", "Loja")}, {replacements.get("[today]", _format_spanish_date(datetime.now().date()))}'
 
             sections_html = ''
             for section in template.sections.filter(is_active=True).order_by('order'):
