@@ -4,7 +4,7 @@ from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q
 from django.http import FileResponse, JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -29,7 +29,7 @@ from employee.models import Employee
 from types import SimpleNamespace
 
 from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
-from .forms import SanctionNotificationForm, SanctionNotificationMappingForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
+from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
 from .services import build_notification_replacements, build_replacements_from_global_mappings, extract_docx_preview
 from employee.models import Employee
 from budget.models import BudgetLine
@@ -931,111 +931,6 @@ class SanctionNotificationTypePreviewView(LoginRequiredMixin, PermissionRequired
         return HttpResponse(html)
 
 
-class SanctionNotificationMappingListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
-    model = SanctionNotificationMapping
-    template_name = 'sanctions/mapping_list.html'
-    partial_template_name = 'sanctions/partials/partial_mapping_list.html'
-    context_object_name = 'mappings'
-    permission_required = 'sanctions.view_sanctionnotificationmapping'
-    paginate_by = 10
-
-    def get_queryset(self):
-        queryset = SanctionNotificationMapping.objects.all()
-        query = self.request.GET.get('q')
-        if query:
-            queryset = queryset.filter(
-                Q(placeholder__icontains=query)
-                | Q(label__icontains=query)
-                | Q(expression__icontains=query)
-                | Q(description__icontains=query)
-            )
-        return queryset.order_by('order', 'label')
-
-    def render_to_response(self, context, **response_kwargs):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.partial_template_name, context, request=self.request)
-            page_obj = context.get('page_obj')
-            pagination_data = {
-                'start_index': page_obj.start_index() if page_obj else 0,
-                'end_index': page_obj.end_index() if page_obj else 0,
-                'total_count': page_obj.paginator.count if page_obj else 0,
-                'current_page': page_obj.number if page_obj else 1,
-                'total_pages': page_obj.paginator.num_pages if page_obj else 1,
-                'has_previous': page_obj.has_previous() if page_obj else False,
-                'has_next': page_obj.has_next() if page_obj else False,
-            }
-            return JsonResponse({'html': html, 'pagination': pagination_data})
-        return super().render_to_response(context, **response_kwargs)
-
-
-class SanctionNotificationMappingCreateView(LoginRequiredMixin, View):
-    permission_required = 'sanctions.add_sanctionnotificationmapping'
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear mapeos'}, status=403)
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        form = SanctionNotificationMappingForm()
-        html = render_to_string('sanctions/modals/modal_mapping_form.html', {'form': form}, request=request)
-        return HttpResponse(html)
-
-    def post(self, request, *args, **kwargs):
-        form = SanctionNotificationMappingForm(request.POST)
-        if form.is_valid():
-            mapping = form.save(commit=False)
-            mapping.created_by = request.user
-            mapping.updated_by = request.user
-            mapping.save()
-            return JsonResponse({'success': True, 'message': 'Mapeo creado correctamente.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-class SanctionNotificationMappingUpdateView(LoginRequiredMixin, View):
-    permission_required = 'sanctions.change_sanctionnotificationmapping'
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': 'No tiene permisos para modificar mapeos'}, status=403)
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_object(self, pk):
-        return get_object_or_404(SanctionNotificationMapping, pk=pk)
-
-    def get(self, request, pk, *args, **kwargs):
-        mapping = self.get_object(pk)
-        form = SanctionNotificationMappingForm(instance=mapping)
-        html = render_to_string('sanctions/modals/modal_mapping_form.html', {'form': form, 'mapping': mapping}, request=request)
-        return HttpResponse(html)
-
-    def post(self, request, pk, *args, **kwargs):
-        mapping = self.get_object(pk)
-        form = SanctionNotificationMappingForm(request.POST, instance=mapping)
-        if form.is_valid():
-            mapping = form.save(commit=False)
-            mapping.updated_by = request.user
-            mapping.save()
-            return JsonResponse({'success': True, 'message': 'Mapeo actualizado correctamente.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-class SanctionNotificationMappingToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'sanctions.change_sanctionnotificationmapping'
-
-    def post(self, request, pk):
-        mapping = get_object_or_404(SanctionNotificationMapping, pk=pk)
-        mapping.toggle_status()
-        status = 'activado' if mapping.is_active else 'desactivado'
-        return JsonResponse({'success': True, 'message': f'Mapeo {status} correctamente.', 'is_active': mapping.is_active})
-
-
 def _template_editor_render_inline_formatting(content):
     raw_text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
     safe_text = escape(raw_text)
@@ -1048,71 +943,6 @@ def _template_editor_render_inline_formatting(content):
     safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]', r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]', r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
     return safe_text.replace('\n', '<br>')
-
-
-class TemplateEditorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    model = NotificationTemplate
-    template_name = 'sanctions/template_editor/template_list.html'
-    context_object_name = 'templates'
-    permission_required = 'sanctions.change_notificationtemplate'
-    paginate_by = 20
-
-    def get_queryset(self):
-        notification_types = SanctionNotificationType.objects.filter(is_active=True).prefetch_related('regime_templates__labor_regime')
-        for notification_type in notification_types:
-            for link in notification_type.regime_templates.select_related('labor_regime').all():
-                NotificationTemplate.objects.get_or_create(
-                    notification_type=notification_type,
-                    labor_regime=link.labor_regime,
-                    defaults={'is_active': True},
-                )
-
-        queryset = NotificationTemplate.objects.select_related('notification_type', 'labor_regime').order_by('labor_regime__code', 'notification_type__name')
-
-        query = self.request.GET.get('q', '').strip()
-        if query:
-            queryset = queryset.filter(
-                Q(notification_type__name__icontains=query)
-                | Q(labor_regime__name__icontains=query)
-                | Q(labor_regime__code__icontains=query)
-            )
-
-        month = self.request.GET.get('month')
-        year = self.request.GET.get('year')
-        if month or year:
-            notifications = SanctionNotification.objects.filter(
-                notification_type=OuterRef('notification_type'),
-                labor_regime=OuterRef('labor_regime'),
-            )
-
-            try:
-                month_int = int(month) if month else None
-            except (TypeError, ValueError):
-                month_int = None
-
-            try:
-                year_int = int(year) if year else None
-            except (TypeError, ValueError):
-                year_int = None
-
-            if month_int is not None:
-                notifications = notifications.filter(month=month_int)
-            if year_int is not None:
-                notifications = notifications.filter(year=year_int)
-
-            queryset = queryset.annotate(has_matching_notifications=Exists(notifications)).filter(has_matching_notifications=True)
-
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['notification_types'] = SanctionNotificationType.objects.filter(is_active=True)
-        context['labor_regimes'] = LaborRegime.objects.filter(is_active=True)
-        context['month_choices'] = MONTH_CHOICES[1:]
-        context['search_query'] = self.request.GET.get('q', '').strip()
-        context['selected_month'] = self.request.GET.get('month', '')
-        context['selected_year'] = self.request.GET.get('year', '')
-        return context
 
 
 class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):

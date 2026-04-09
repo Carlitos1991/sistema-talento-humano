@@ -426,27 +426,6 @@
                             </li>
                         {% endif %}
 
-                        {% if perms.sanctions.view_sanctionnotificationmapping %}
-                            <li>
-                                <a href="{% url 'sanctions:notification_mapping_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'notification_mapping_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-diagram-project"></i>
-                                    <span class="menu-text">Administrar Mapeos</span>
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        {% if perms.sanctions.change_notificationtemplate %}
-                            <li>
-                                <a href="{% url 'sanctions:template_editor_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'template_editor_list' or request.resolver_match.url_name == 'template_editor_detail' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                    <span class="menu-text">Editor de Templates</span>
-                                </a>
-                            </li>
-                        {% endif %}
-
-
                     </ul>
                 </li>
             {% endif %}

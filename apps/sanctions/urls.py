@@ -24,12 +24,6 @@ urlpatterns = [
     path('notifications/list/', views.SanctionNotificationListView.as_view(), name='notification_list'),
     path('notifications/<int:pk>/pdf/', views.SanctionNotificationPdfView.as_view(), name='notification_pdf'),
 
-    # --- Global Mappings (Configuration) ---
-    path('mappings/', views.SanctionNotificationMappingListView.as_view(), name='notification_mapping_list'),
-    path('mappings/create/', views.SanctionNotificationMappingCreateView.as_view(), name='notification_mapping_create'),
-    path('mappings/update/<int:pk>/', views.SanctionNotificationMappingUpdateView.as_view(), name='notification_mapping_update'),
-    path('mappings/toggle/<int:pk>/', views.SanctionNotificationMappingToggleView.as_view(), name='notification_mapping_toggle'),
-
     # --- Employee List to Generate Sanctions ---
     path('employees/', views.EmployeeSanctionListView.as_view(), name='sanction_employee_list'),
 
@@ -46,7 +40,6 @@ urlpatterns = [
     path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
 
     # --- Template Editor (Dynamic Templates) ---
-    path('templates/editor/', views.TemplateEditorListView.as_view(), name='template_editor_list'),
     path('templates/editor/<int:pk>/', views.TemplateEditorDetailView.as_view(), name='template_editor_detail'),
     path('templates/<int:template_id>/sections/create/', views.TemplateSectionCreateAjaxView.as_view(), name='template_section_create'),
     path('templates/sections/<int:section_id>/update/', views.TemplateSectionUpdateAjaxView.as_view(), name='template_section_update'),
