@@ -1,15 +1,35 @@
 <div class="profile-header-container">
 
-    <!-- FOTO A LA IZQUIERDA -->
-    <div class="profile-avatar-wrapper-small">
-        {% if person.photo %}
-            <img src="{{ person.photo.url }}" class="profile-avatar-img-small">
-        {% else %}
-            <div class="profile-avatar-img-small bg-light d-flex align-items-center justify-content-center">
+    <form id="detailPhotoForm" action="{% url 'person:person_photo_update' person.id %}" method="post" enctype="multipart/form-data" class="profile-photo-form">
+        {% csrf_token %}
+        <label id="detailPhotoPreviewWrapper"
+             for="detailPhotoInput"
+             class="profile-avatar-wrapper-small profile-avatar-trigger"
+             role="button"
+             tabindex="0"
+             title="Clic para cambiar la foto">
+            <img v-if="detailPhotoPreviewUrl" :src="detailPhotoPreviewUrl" class="profile-avatar-img-small">
+            <div v-else class="profile-avatar-img-small bg-light d-flex align-items-center justify-content-center">
                 <i class="fa-solid fa-user fa-3x text-secondary"></i>
             </div>
-        {% endif %}
-    </div>
+        </label>
+
+        <input id="detailPhotoInput"
+               type="file"
+               name="photo"
+               accept="image/*"
+               class="hidden"
+               @change="handleDetailPhotoChange">
+
+        <button type="button"
+                class="btn btn-save"
+                v-if="detailPhotoHasFile"
+                @click="submitDetailPhotoUpdate"
+                :disabled="isPhotoSaving">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span class="ms-2">[[ isPhotoSaving ? 'Actualizando...' : 'Actualizar Foto' ]]</span>
+        </button>
+    </form>
 
     <!-- INFORMACIÓN A LA DERECHA -->
     <div class="profile-text-content">

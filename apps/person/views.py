@@ -1,7 +1,9 @@
 # apps/person/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
@@ -11,12 +13,16 @@ from django.views.generic import ListView, CreateView, UpdateView, TemplateView
 from django.db.models import Q, Value, CharField
 from django.db.models.functions import Concat
 
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+
 from budget.models import BudgetLine
 from core.models import CatalogItem
 from employee.models import Employee, InstitutionalData
 from institution.models import AdministrativeUnit
-from .models import Person
+from .models import Person, PersonAuditLog
 from .forms import PersonForm
+from .utils import log_person_audit, PERSON_AUDIT_SECTIONS
 
 
 class EmployeeReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
@@ -537,6 +543,12 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
             if form.is_valid():
                 form.save()
+                log_person_audit(
+                    request,
+                    self.object,
+                    PersonAuditLog.Action.UPDATE,
+                    PERSON_AUDIT_SECTIONS['personal']
+                )
                 return JsonResponse({'success': True, 'message': 'Datos actualizados correctamente.'})
             else:
                 # Log de errores para debugging
@@ -546,6 +558,42 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             # Log del error real
             import traceback
             print("Error en PersonUpdateView:", str(e))
+            traceback.print_exc()
+            return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
+
+
+@method_decorator(require_POST, name='dispatch')
+class PersonPhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+
+    def post(self, request, *args, **kwargs):
+        try:
+            person = get_object_or_404(Person, pk=kwargs['pk'])
+            photo = request.FILES.get('photo')
+
+            if not photo:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar una foto.'}, status=400)
+
+            if hasattr(photo, 'size') and photo.size > 1 * 1024 * 1024:
+                return JsonResponse({'success': False, 'message': 'La imagen es muy pesada. Máximo 1MB.'}, status=400)
+
+            person.photo = photo
+            person.save(update_fields=['photo'])
+            log_person_audit(
+                request,
+                person,
+                PersonAuditLog.Action.PHOTO,
+                PERSON_AUDIT_SECTIONS['photo']
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Foto actualizada correctamente.',
+                'photo_url': person.photo.url if person.photo else None,
+            })
+        except Exception as e:
+            import traceback
+            print('Error en PersonPhotoUpdateView:', str(e))
             traceback.print_exc()
             return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
@@ -589,6 +637,101 @@ def person_detail_json(request, pk):
         'emergency_contact_relationship': p.emergency_contact_relationship_id,
     }
     return JsonResponse({'success': True, 'data': data})
+
+
+@login_required
+@require_POST
+def person_audit_log_api(request, pk):
+    person = get_object_or_404(Person, pk=pk)
+    action = (request.POST.get('action') or '').strip().upper()
+    section = (request.POST.get('section') or '').strip()
+    details = (request.POST.get('details') or '').strip()
+
+    valid_actions = {choice[0] for choice in PersonAuditLog.Action.choices}
+    if action not in valid_actions:
+        return JsonResponse({'success': False, 'message': 'Acción inválida.'}, status=400)
+
+    log = log_person_audit(request, person, action, section, details)
+    return JsonResponse({
+        'success': True,
+        'message': 'Movimiento registrado correctamente.',
+        'data': {
+            'id': log.id,
+            'movement_label': log.movement_label,
+            'created_at': log.created_at.strftime('%d/%m/%Y %H:%M'),
+        }
+    })
+
+
+@login_required
+def person_audit_history_partial(request, pk):
+    person = get_object_or_404(Person, pk=pk)
+    query = (request.GET.get('q') or '').strip()
+    page_number = request.GET.get('page') or 1
+    export_excel = (request.GET.get('export') or '').strip() == '1'
+
+    logs_queryset = PersonAuditLog.objects.filter(person=person).select_related('user')
+    if query:
+        logs_queryset = logs_queryset.filter(
+            Q(user__first_name__icontains=query)
+            | Q(user__last_name__icontains=query)
+            | Q(user__username__icontains=query)
+            | Q(section__icontains=query)
+            | Q(details__icontains=query)
+            | Q(action__icontains=query)
+        )
+
+    logs_queryset = logs_queryset.order_by('-created_at')
+
+    if export_excel:
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = 'Auditoria Persona'
+        worksheet.append(['Fecha y hora', 'Usuario', 'Movimiento', 'Sección', 'Detalle', 'IP'])
+
+        header_fill = PatternFill(start_color='1F2937', end_color='1F2937', fill_type='solid')
+        header_font = Font(color='FFFFFF', bold=True)
+        for cell in worksheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+
+        for log in logs_queryset:
+            worksheet.append([
+                log.created_at.strftime('%d/%m/%Y %H:%M'),
+                getattr(log.user, 'get_full_name', lambda: '')() or log.user.username,
+                log.get_action_display(),
+                log.section or '',
+                log.details or '',
+                log.ip_address or '',
+            ])
+
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    max_length = max(max_length, len(str(cell.value or '')))
+                except Exception:
+                    pass
+            worksheet.column_dimensions[column_letter].width = min(max_length + 2, 45)
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="auditoria_persona_{person.id}.xlsx"'
+        workbook.save(response)
+        return response
+
+    paginator = Paginator(logs_queryset, 10)
+    logs_page = paginator.get_page(page_number)
+    html = render_to_string('person/partials/partial_person_audit_table.html', {
+        'person': person,
+        'audit_logs': logs_page.object_list,
+        'page_obj': logs_page,
+        'audit_query': query,
+    }, request=request)
+    return HttpResponse(html)
 
 
 def person_quick_view_partial(request, pk):

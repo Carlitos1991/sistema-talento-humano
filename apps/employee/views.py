@@ -15,6 +15,8 @@ from django.utils import timezone
 
 from core.models import CatalogItem, Location
 from person.models import Person
+from person.models import PersonAuditLog
+from person.utils import log_person_audit, PERSON_AUDIT_SECTIONS
 from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
 from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData
 from budget.models import BudgetLine
@@ -104,6 +106,12 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_person = getattr(self.request.user, 'person', None)
+        log_person_audit(
+            self.request,
+            self.object,
+            PersonAuditLog.Action.VIEW,
+            PERSON_AUDIT_SECTIONS['personal']
+        )
         context['can_generate_self_permit'] = bool(
             context.get('person') and getattr(context['person'], 'employee_profile', None) and (
                 self.request.user.has_perm('permitrequest.add_permitrequest') or
@@ -503,6 +511,13 @@ def add_bank_account(request, person_id):
             bank_acc = form.save(commit=False)
             bank_acc.economic_data = economic_data
             bank_acc.save()
+            log_person_audit(
+                request,
+                person,
+                PersonAuditLog.Action.UPDATE,
+                PERSON_AUDIT_SECTIONS['economic'],
+                'Actualizó cuenta bancaria'
+            )
             return JsonResponse({'success': True, 'message': 'Cuenta bancaria registrada con éxito.'})
 
         # Debug: log errors and return posted data to help trace client-side issues
@@ -670,6 +685,13 @@ def update_payroll_info(request, person_id):
         payroll = form.save(commit=False)
         payroll.economic_data = economic_data
         payroll.save()
+        log_person_audit(
+            request,
+            person,
+            PersonAuditLog.Action.UPDATE,
+            PERSON_AUDIT_SECTIONS['economic'],
+            'Actualizó información de nómina'
+        )
         return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
 
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
@@ -699,6 +721,13 @@ def upload_cv_api(request, person_id):
         # Guardar el archivo
         curriculum.pdf_file = pdf_file
         curriculum.save()
+        log_person_audit(
+            request,
+            person,
+            PersonAuditLog.Action.UPDATE,
+            PERSON_AUDIT_SECTIONS['curriculum'],
+            'Actualizó el archivo de hoja de vida'
+        )
 
         return JsonResponse({
             'success': True,
@@ -1013,6 +1042,12 @@ def save_institutional_data_api(request, person_id):
             inst_data.entry_date = entry_date if entry_date else None
 
             inst_data.save()
+            log_person_audit(
+                request,
+                person,
+                PersonAuditLog.Action.UPDATE,
+                PERSON_AUDIT_SECTIONS['institutional']
+            )
 
             return JsonResponse({'success': True, 'message': 'Datos institucionales actualizados correctamente'})
         except Exception as e:

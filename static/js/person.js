@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!container) return;
 
                 container.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.btn-quick-view');
+                    const btn = e.target.closest('.btn-quick-view, .btn-views-action');
                     if (btn) {
                         e.preventDefault();
                         const personId = btn.dataset.id;

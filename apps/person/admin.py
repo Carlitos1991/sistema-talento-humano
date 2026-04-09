@@ -1,3 +1,3 @@
 from django.contrib import admin
 
-# Register your models here.
+# Admin vacío a propósito: este módulo se administra solo desde la interfaz propia.

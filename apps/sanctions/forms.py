@@ -154,6 +154,7 @@ class SanctionNotificationForm(forms.ModelForm):
         self.fields['minutes_late'].required = False
         self.fields['regs_without_mark'].required = False
         self.fields['authority_2'].required = False
+        self.fields['observations'].required = False
 
         if not self.initial.get('year'):
             from django.utils import timezone
@@ -197,7 +198,7 @@ class SanctionForm(forms.ModelForm):
             'legal_basis': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Base legal de la sanción'
+                'placeholder': 'Documento que genera la Sanción'
             }),
             'incident_date': forms.DateInput(attrs={
                 'type': 'date',

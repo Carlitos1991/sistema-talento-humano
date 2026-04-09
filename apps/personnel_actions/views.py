@@ -401,7 +401,7 @@ class ActionDetailView(LoginRequiredMixin, View):
             request=request
         )
 
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'html': html})
 
         from django.http import HttpResponse

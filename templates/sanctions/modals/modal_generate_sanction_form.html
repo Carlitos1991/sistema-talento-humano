@@ -75,17 +75,16 @@
                     <i class="fas fa-file-alt text-primary"></i> DESCRIPCIÓN DE LA FALTA
                 </h4>
                 <div class="form-group">
+                    <label class="form-label font-weight-700">Documento que genera la accion</label>
+                    {{ form.legal_basis }}
+                    <div class="invalid-feedback"></div>
+                    <p class="form-hint">Documento que genera la acción, informes técnicos, memorandos o artículos o normativa aplicable según LOSEP.</p>
+                </div>
+                <div class="form-group">
                     <label class="form-label font-weight-700">Descripción <span class="text-danger">*</span></label>
                     {{ form.description }}
                     <div class="invalid-feedback"></div>
-                    <p class="form-hint">Describa detalladamente la falta cometida.</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Base Legal</label>
-                    {{ form.legal_basis }}
-                    <div class="invalid-feedback"></div>
-                    <p class="form-hint">Artículos o normativa aplicable según LOSEP.</p>
+                    <p class="form-hint">Describa detalladamente la falta cometida incluyendo base legal correspondiente</p>
                 </div>
             </div>
 
@@ -96,12 +95,12 @@
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha del Incidente <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Fecha de Elaboración <span class="text-danger">*</span></label>
                         {{ form.incident_date }}
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de la Sanción <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Fecha de Vigencia <span class="text-danger">*</span></label>
                         {{ form.sanction_date }}
                         <div class="invalid-feedback"></div>
                     </div>

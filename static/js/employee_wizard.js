@@ -35,15 +35,44 @@ const app = createApp({
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
         // Forzar que al entrar en el detalle el tab inicial sea 'personal'
         const activeTab = ref('personal');
+        const appElement = document.getElementById('employeeWizardApp');
+        const detailPhotoPreviewUrl = ref(appElement && appElement.dataset.photoUrl ? appElement.dataset.photoUrl : '');
+        const detailPhotoHasFile = ref(false);
         
         // Watch for changes and save to localStorage (se mantiene por si el usuario navega internamente)
-        Vue.watch(activeTab, (newTab) => {
+        Vue.watch(activeTab, (newTab, oldTab) => {
             localStorage.setItem('wizardActiveTab', newTab);
+            if (oldTab && newTab !== oldTab) {
+                const sectionMap = {
+                    personal: 'Datos personales',
+                    institutional: 'Datos institucionales',
+                    economic: 'Datos económicos',
+                    budget: 'Partida presupuestaria',
+                    contracts: 'Historia laboral',
+                    permissions: 'Permisos',
+                    actions: 'Acciones de personal',
+                    sanctions: 'Sanciones',
+                    vacations: 'Vacaciones',
+                    payments: 'Roles de pago',
+                    curriculum: 'Curriculum',
+                };
+                void fetch(`/person/audit-log/${personId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': window.getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        action: 'VIEW',
+                        section: sectionMap[newTab] || newTab
+                    })
+                }).catch((error) => console.error('No se pudo registrar la auditoría:', error));
+            }
         });
 
         const isSaving = ref(false);
+        const isPhotoSaving = ref(false);
         const loadingList = ref(false);
-        const appElement = document.getElementById('employeeWizardApp');
 
         // Atributos de datos inyectados por Django
         const personId = appElement ? appElement.dataset.personId : null;
@@ -430,6 +459,143 @@ const app = createApp({
                 };
                 reader.readAsDataURL(file);
             }
+        };
+
+        const handleDetailPhotoChange = (event) => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            detailPhotoHasFile.value = true;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                detailPhotoPreviewUrl.value = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        const submitDetailPhotoUpdate = async () => {
+            if (isPhotoSaving.value) return;
+
+            const form = document.getElementById('detailPhotoForm');
+            const input = document.getElementById('detailPhotoInput');
+
+            if (!form || !input || !input.files || !input.files[0]) {
+                window.Toast.fire({icon: 'warning', title: 'Seleccione una foto primero.'});
+                return;
+            }
+
+            isPhotoSaving.value = true;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': window.getCookie('csrftoken')}
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    window.Toast.fire({icon: 'success', title: result.message || 'Foto actualizada correctamente.'});
+                    setTimeout(() => location.reload(), 700);
+                    return;
+                }
+
+                window.Toast.fire({icon: 'error', title: result.message || 'No se pudo actualizar la foto.'});
+            } catch (e) {
+                console.error('Error actualizando foto:', e);
+                window.Toast.fire({icon: 'error', title: 'Error de comunicación con el servidor.'});
+            } finally {
+                isPhotoSaving.value = false;
+            }
+        };
+
+        const getAuditQueryValue = () => {
+            return (document.getElementById('personAuditSearchInput')?.value || '').trim();
+        };
+
+        const loadAuditHistory = async (page = 1) => {
+            const results = document.getElementById('personAuditResults');
+            if (!results) return;
+
+            const query = getAuditQueryValue();
+            results.innerHTML = '<div class="py-4 text-center text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Cargando movimientos...</div>';
+
+            try {
+                const params = new URLSearchParams();
+                params.set('page', String(page));
+                if (query) params.set('q', query);
+
+                const response = await fetch(`/person/audit-history/${personId}/?${params.toString()}`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                results.innerHTML = await response.text();
+            } catch (error) {
+                console.error('Error cargando auditoría:', error);
+                results.innerHTML = '<div class="py-4 text-center text-danger">No se pudo cargar la auditoría.</div>';
+            }
+        };
+
+        const openAuditModal = async (pId) => {
+            const modal = document.getElementById('personAuditOverlay');
+            const results = document.getElementById('personAuditResults');
+            if (!modal || !results) return;
+
+            modal.classList.remove('hidden');
+            document.body.classList.add('no-scroll');
+
+            if (!modal.dataset.auditBound) {
+                document.getElementById('personAuditSearchBtn')?.addEventListener('click', () => loadAuditHistory(1));
+                document.getElementById('personAuditResetBtn')?.addEventListener('click', () => {
+                    const input = document.getElementById('personAuditSearchInput');
+                    if (input) input.value = '';
+                    loadAuditHistory(1);
+                });
+                document.getElementById('personAuditSearchInput')?.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        loadAuditHistory(1);
+                    }
+                });
+                document.getElementById('personAuditExportBtn')?.addEventListener('click', async () => {
+                    const query = getAuditQueryValue();
+                    const params = new URLSearchParams();
+                    if (query) params.set('q', query);
+                    params.set('export', '1');
+
+                    try {
+                        const response = await fetch(`/person/audit-history/${personId}/?${params.toString()}`, {
+                            headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `auditoria_persona_${personId}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.error('Error exportando auditoría:', error);
+                    }
+                });
+
+                results.addEventListener('click', (event) => {
+                    const button = event.target.closest('.js-audit-page');
+                    if (!button || button.disabled) return;
+                    loadAuditHistory(Number(button.dataset.page || 1));
+                });
+                modal.dataset.auditBound = '1';
+            }
+
+            await loadAuditHistory(1);
+        };
+
+        const closeAuditModal = () => {
+            const modal = document.getElementById('personAuditOverlay');
+            if (modal) modal.classList.add('hidden');
+            document.body.classList.remove('no-scroll');
         };
 
         const closeEditModal = () => {
@@ -1073,6 +1239,8 @@ const app = createApp({
 
             // Métodos Persona
             openEditPersonModal, closeEditModal, submitPersonEdit, handlePhotoChange,
+            openAuditModal, closeAuditModal,
+            handleDetailPhotoChange, submitDetailPhotoUpdate,
 
             // Métodos CV
             handlePdfUpload, closeModal, closeListModal, handleEditCvItem, handleDeleteCvItem,

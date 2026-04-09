@@ -126,3 +126,44 @@ class Person(models.Model):
             return today.year - self.birth_date.year - (
                     (today.month, today.day) < (self.birth_date.month, self.birth_date.day))
         return None
+
+
+class PersonAuditLog(models.Model):
+    class Action(models.TextChoices):
+        VIEW = 'VIEW', 'Revisó'
+        UPDATE = 'UPDATE', 'Actualizó'
+        PHOTO = 'PHOTO', 'Cambió Foto'
+
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name='audit_logs',
+        verbose_name='Persona'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='person_audit_logs',
+        verbose_name='Usuario'
+    )
+    action = models.CharField(max_length=20, choices=Action.choices, verbose_name='Acción')
+    section = models.CharField(max_length=120, blank=True, null=True, verbose_name='Sección')
+    details = models.TextField(blank=True, null=True, verbose_name='Detalle')
+    ip_address = models.CharField(max_length=64, blank=True, null=True, verbose_name='IP')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha')
+
+    class Meta:
+        verbose_name = 'Auditoría de Persona'
+        verbose_name_plural = 'Auditorías de Persona'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.person.full_name} - {self.movement_label}'
+
+    @property
+    def movement_label(self):
+        if self.action == self.Action.PHOTO:
+            return 'Cambió Foto'
+        if self.section:
+            return f'{self.get_action_display()} {self.section}'
+        return self.get_action_display()

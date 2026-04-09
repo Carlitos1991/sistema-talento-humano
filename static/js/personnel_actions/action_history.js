@@ -3,8 +3,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- REFERENCIAS ---
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
-    const csrfToken = document.getElementById('csrf-token').value;
-    const urlList = document.getElementById('url-list').value;
+    const csrfInput = document.getElementById('csrf-token');
+    const urlListInput = document.getElementById('url-list');
+    const csrfToken = csrfInput ? csrfInput.value : '';
+    const urlList = urlListInput ? urlListInput.value : '';
+
+    // Salir silenciosamente cuando el script se carga fuera de su vista objetivo.
+    if (!tableContainer || !urlList) {
+        return;
+    }
 
     // Referencias Modal
     const detailModal = document.getElementById('actionDetailModal');
@@ -157,12 +164,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function openDetailModal(url) {
+        if (!detailModal || !detailContent) {
+            console.error('Modal de detalle no disponible en el DOM.');
+            return;
+        }
+
         fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
-            .then(res => res.json())
-            .then(data => {
-                detailContent.innerHTML = data.html;
+            .then(async (res) => {
+                const contentType = (res.headers.get('content-type') || '').toLowerCase();
+                if (contentType.includes('application/json')) {
+                    const data = await res.json();
+                    return data && data.html ? data.html : '';
+                }
+                return await res.text();
+            })
+            .then((html) => {
+                detailContent.innerHTML = html || '<div class="modal-body">No se pudo cargar el detalle.</div>';
                 detailModal.classList.remove('hidden');
                 document.body.classList.add('modal-open');
             })
@@ -175,6 +194,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeDetailModal() {
+        if (!detailModal || !detailContent) {
+            return;
+        }
+
         detailModal.classList.add('hidden');
         detailContent.innerHTML = '';
         document.body.classList.remove('modal-open');
