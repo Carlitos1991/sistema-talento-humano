@@ -122,30 +122,42 @@ document.addEventListener('DOMContentLoaded', function () {
         const items = Array.from(dataSource.querySelectorAll('.template-data-item')).map((item) => ({
             templateId: item.dataset.templateId,
             editUrl: item.dataset.editUrl,
+            createUrl: item.dataset.createUrl,
+            hasTemplate: item.dataset.hasTemplate === '1',
             regimeCode: item.dataset.regimeCode,
             regimeName: item.dataset.regimeName,
-            isActive: item.dataset.isActive === '1'
+            regimeId: item.dataset.regimeId
         }));
 
         const rowsHtml = items.length
             ? items.map((item) => `
-                <div class="template-list-row js-template-row" data-edit-url="${item.editUrl}">
+                <div class="template-list-row js-template-row" data-edit-url="${item.editUrl || ''}" data-create-url="${item.createUrl || ''}">
                     <div class="template-list-main">
                         <span class="template-regime-code">${escapeHtml(item.regimeCode || '')}</span>
                         <span class="template-regime-name">${escapeHtml(item.regimeName || '')}</span>
-                        <span class="status-badge ${item.isActive ? 'active' : 'inactive'}">${item.isActive ? 'Activo' : 'Inactivo'}</span>
+                        ${item.hasTemplate
+                            ? '<span class="status-badge active">Plantilla creada</span>'
+                            : '<span class="status-badge inactive">Sin plantilla</span>'}
                     </div>
                     <div class="template-list-actions">
-                        <a href="${item.editUrl}" class="btn-views-action" title="Editar plantilla">
-                            <i class="fa-solid fa-pen"></i>
-                        </a>
-                        <a href="${item.editUrl}" target="_blank" rel="noopener" class="btn-detail-action" title="Abrir en nueva pestaña">
-                            <i class="fa-solid fa-up-right-from-square"></i>
-                        </a>
+                        ${item.hasTemplate
+                            ? `
+                                <a href="${item.editUrl}" class="btn-views-action" title="Editar plantilla" style="text-decoration: none;">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <a href="${item.editUrl}" target="_blank" rel="noopener" class="btn-detail-action" title="Abrir en nueva pestaña" style="text-decoration: none;">
+                                    <i class="fa-solid fa-up-right-from-square"></i>
+                                </a>
+                            `
+                            : `
+                                <a href="${item.createUrl}" class="btn-create-action" title="Crear plantilla" style="text-decoration: none;">
+                                    <i class="fa-solid fa-plus"></i> 
+                                </a>
+                            `}
                     </div>
                 </div>
             `).join('')
-            : '<div class="template-list-empty">No hay templates dinámicos asociados.</div>';
+            : '<div class="template-list-empty">No hay regímenes asociados a este tipo de notificación.</div>';
 
         modalContentContainer.innerHTML = `
             <div class="modal-box templates-modal-box">
@@ -155,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="modal-body templates-modal-body">
                     <div class="template-list-header">
-                        <span>${items.length} template(s) disponible(s)</span>
-                        <small>Haz clic en una fila para editar</small>
+                        <span>${items.length} régimen(es) seleccionado(s)</span>
+                        <small>Si no existe plantilla, puedes crearla desde aquí</small>
                     </div>
                     <div class="template-list-container">
                         ${rowsHtml}

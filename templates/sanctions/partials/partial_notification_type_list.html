@@ -33,16 +33,18 @@
                             title="Ver templates dinámicos"
                             data-type-id="{{ type.id }}"
                             data-type-name="{{ type.name|escape }}">
-                        {{ type.dynamic_templates.count }}
+                        {{ type.template_regime_items|length }}
                     </button>
                     <div id="template-data-{{ type.id }}" hidden>
-                        {% for template in type.dynamic_templates.all %}
+                        {% for item in type.template_regime_items %}
                             <div class="template-data-item"
-                                 data-template-id="{{ template.id }}"
-                                 data-edit-url="{% url 'sanctions:template_editor_detail' template.id %}"
-                                 data-regime-code="{{ template.labor_regime.code|escape }}"
-                                 data-regime-name="{{ template.labor_regime.name|escape }}"
-                                 data-is-active="{{ template.is_active|yesno:'1,0' }}"></div>
+                                 data-regime-id="{{ item.regime_id }}"
+                                 data-regime-code="{{ item.regime_code|escape }}"
+                                 data-regime-name="{{ item.regime_name|escape }}"
+                                 data-has-template="{{ item.has_template|yesno:'1,0' }}"
+                                 data-template-id="{{ item.template_id }}"
+                                 data-edit-url="{{ item.edit_url }}"
+                                 data-create-url="{{ item.create_url }}"></div>
                         {% endfor %}
                     </div>
                 </td>

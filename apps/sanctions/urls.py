@@ -39,6 +39,7 @@ urlpatterns = [
     path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
 
     # --- Template Editor (Dynamic Templates) ---
+    path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(), name='template_editor_create'),
     path('templates/editor/<int:pk>/', views.TemplateEditorDetailView.as_view(), name='template_editor_detail'),
     path('templates/<int:template_id>/sections/create/', views.TemplateSectionCreateAjaxView.as_view(), name='template_section_create'),
     path('templates/sections/<int:section_id>/update/', views.TemplateSectionUpdateAjaxView.as_view(), name='template_section_update'),

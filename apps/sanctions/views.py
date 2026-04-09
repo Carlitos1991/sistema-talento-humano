@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -424,6 +424,30 @@ class SanctionNotificationTypeListView(LoginRequiredMixin, PermissionRequiredMix
                 | Q(regime_templates__labor_regime__code__icontains=query)
             ).distinct()
         return queryset.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        for notification_type in context.get('types', []):
+            templates_by_regime = {
+                template.labor_regime_id: template
+                for template in notification_type.dynamic_templates.all()
+            }
+            notification_type.template_regime_items = []
+
+            for link in notification_type.regime_templates.all():
+                template = templates_by_regime.get(link.labor_regime_id)
+                notification_type.template_regime_items.append({
+                    'regime_id': link.labor_regime_id,
+                    'regime_code': link.labor_regime.code,
+                    'regime_name': link.labor_regime.name,
+                    'has_template': template is not None,
+                    'template_id': template.id if template else '',
+                    'edit_url': reverse('sanctions:template_editor_detail', args=[template.id]) if template else '',
+                    'create_url': reverse('sanctions:template_editor_create', args=[notification_type.id, link.labor_regime_id]),
+                })
+
+        return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -937,6 +961,38 @@ class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['location'] = 'Loja'
         context['date_format'] = '[today]'
         return context
+
+
+class TemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.add_notificationtemplate'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear templates.'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, type_id, regime_id):
+        notification_type = get_object_or_404(SanctionNotificationType, pk=type_id)
+        labor_regime = get_object_or_404(LaborRegime, pk=regime_id)
+
+        template, _ = NotificationTemplate.objects.get_or_create(
+            notification_type=notification_type,
+            labor_regime=labor_regime,
+            defaults={
+                'created_by': request.user,
+                'updated_by': request.user,
+            },
+        )
+
+        if template.created_by is None:
+            template.created_by = request.user
+        template.updated_by = request.user
+        template.save(update_fields=['created_by', 'updated_by', 'updated_at'])
+
+        return redirect('sanctions:template_editor_detail', pk=template.pk)
 
 
 class TemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
