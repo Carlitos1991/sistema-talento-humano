@@ -55,6 +55,7 @@
 
     /* Botones de tabla */
     --table-btn-size: 40px;
+    --table-btn-icon-size: 1.15rem;
     --table-btn-radius: 50%;
     --table-btn-shadow: 0 6px 14px rgba(2, 6, 23, 0.06);
     --table-btn-transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
@@ -311,6 +312,11 @@ h1, h2, h3, h4, h5, h6 {
     padding-left: 50px;
     font-size: 0.9em;
     color: #cbd5e1;
+}
+
+.sidebar-menu .submenu li a i {
+    width: 22px;
+    margin-right: 8px;
 }
 
 .sidebar-menu .submenu li a:hover {
@@ -2361,7 +2367,7 @@ input:checked + .toggle-slider:before {
 .btn-create-action svg, .btn-success-action svg, .btn-views-action svg,
 .btn-restore-action svg, .btn-delete-action svg, .btn-list-action svg, .btn-info-action svg {
     color: #ffffff;
-    font-size: 1.15rem;
+    font-size: var(--table-btn-icon-size);
     line-height: 1;
 }
 
@@ -2507,9 +2513,55 @@ table {
     margin-bottom: 1rem;
 }
 
+.table-container-has-scroll-helper {
+    padding-right: 3.15rem;
+}
+
+.table-scroll-helper-group {
+    position: absolute;
+    right: 0.45rem;
+    top: 3.15rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    z-index: 30;
+}
+
+.table-scroll-nav-button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+    color: #fff;
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.24);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.table-scroll-nav-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.28);
+}
+
+.table-scroll-nav-button i {
+    font-size: 0.9rem;
+    line-height: 1;
+    margin: 0;
+    display: block;
+}
+
+.table-scroll-nav-start,
+.table-scroll-nav-end {
+    display: none;
+}
+
 .table-container table {
     width: 100%;
-    min-width: 1100px;
+    min-width: 980px;
     border-collapse: collapse;
 }
 
@@ -2521,19 +2573,19 @@ table {
 }
 
 .table-container thead tr {
-    height: 36px;
-    min-height: 36px;
-    max-height: 36px;
-    font-size: 0.72rem;
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.07em;
 }
 
 .table-container thead th {
     color: rgba(255, 255, 255, 0.75);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    padding: 0.65rem 1rem;
+    padding: 0.45rem 0.75rem;
     border-bottom: none;
     white-space: nowrap;
     text-align: left;
@@ -2555,24 +2607,24 @@ table {
 }
 
 .table-container td {
-    padding: 0.4rem 1rem;
+    padding: 0.32rem 0.75rem;
     vertical-align: middle;
     text-align: left;
     border-bottom: 1px solid #eef2f5;
     color: #374151;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     transition: background 0.18s ease;
 }
 
 .table-container table tr,
 .table-container table td,
 .table-container table th {
-    height: 45px;
-    min-height: 45px;
-    max-height: 45px;
-    padding: 0 14px !important;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    padding: 0 10px !important;
     vertical-align: middle;
-    font-size: 15px;
+    font-size: 14px;
     font-family: 'Inter', 'Roboto', sans-serif;
     box-sizing: border-box;
 }
@@ -2610,7 +2662,8 @@ table {
     vertical-align: middle;
     white-space: nowrap;
     width: 1%;
-    padding: 0.5rem;
+    min-width: 78px;
+    padding: 0.25rem 0.3rem;
 }
 
 .table-container tbody td.actions .actions-wrapper,
@@ -2621,7 +2674,7 @@ table {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 /* Tabla de controles */
@@ -2683,14 +2736,16 @@ th.sorted-desc .sort-arrow {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex-wrap: nowrap;
 }
 
 .actions-wrapper .btn-icon {
-    padding: 6px 8px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border-radius: 52px;
-    font-size: 1rem;
+    font-size: 0.82rem;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -2700,8 +2755,11 @@ th.sorted-desc .sort-arrow {
 
 .actions-wrapper .btn-icon i,
 .actions-wrapper .btn-icon svg {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     font-weight: 800;
+    line-height: 1;
+    display: block;
+    margin: 0;
 }
 
 .actions-wrapper .btn-icon:hover {
@@ -2812,7 +2870,7 @@ th.sorted-desc .sort-arrow {
 }
 
 .col-actions, .col-width-actions {
-    width: 110px;
+    width: 92px;
     text-align: center;
 }
 
@@ -2823,8 +2881,56 @@ th.sorted-desc .sort-arrow {
 .actions-wrapper-center {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
+}
+
+@media (max-width: 1440px) {
+    .table-container table {
+        min-width: 860px;
+    }
+
+    .table-container thead th {
+        padding: 0.4rem 0.65rem;
+    }
+
+    .table-container td {
+        padding: 0.28rem 0.65rem;
+        font-size: 0.84rem;
+    }
+
+    .table-container tbody td.actions,
+    .table-container tbody td:last-child {
+        min-width: 72px;
+        padding: 0.2rem 0.25rem;
+    }
+
+    .actions-wrapper .btn-icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .actions-wrapper .btn-icon i,
+    .actions-wrapper .btn-icon svg {
+        font-size: 0.9rem;
+    }
+
+    .table-container-has-scroll-helper {
+        padding-right: 3.35rem;
+    }
+
+    .table-scroll-helper-group {
+        top: 3rem;
+    }
+
+    .table-scroll-nav-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .table-scroll-nav-button i {
+        font-size: 0.82rem;
+    }
 }
 
 .loader-spinner {
@@ -5571,8 +5677,8 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     .btn-create-action, .btn-success-action, .btn-views-action,
     .btn-detail-action, .btn-delete-action, .btn-restore-action,
     .btn-list-action, .btn-info-action {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         font-size: 0.95rem;
     }
 

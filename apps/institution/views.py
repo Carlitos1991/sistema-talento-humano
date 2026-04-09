@@ -423,12 +423,6 @@ def unit_partial_table(request):
         .annotate(code_len=Length('code'))\
         .order_by('level__level_order', 'code_len', 'code', 'name')
 
-    # If parent_id provided, show children of that parent; else default to level 1
-    if parent_id:
-        qs = qs.filter(parent_id=parent_id)
-    else:
-        qs = qs.filter(level__level_order=1)
-
     # Active/inactive filter
     if show_inactive == 'true':
         qs = qs.filter(is_active=False)
@@ -437,7 +431,12 @@ def unit_partial_table(request):
 
     # Optional text search
     if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q))
+        qs = qs.filter(Q(name__icontains=q))
+    elif parent_id:
+        # Solo aplica navegación por dependencia cuando no hay búsqueda activa.
+        qs = qs.filter(parent_id=parent_id)
+    else:
+        qs = qs.filter(level__level_order=1)
 
     context = get_units_context(units_queryset=qs)
     html = render_to_string(

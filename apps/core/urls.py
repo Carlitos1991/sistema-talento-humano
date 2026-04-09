@@ -48,4 +48,7 @@ urlpatterns = [
     path('settings/authorities/detail/<int:pk>/', views.authority_detail, name='authority_detail'),
     path('settings/authorities/update/<int:pk>/', views.AuthorityUpdateView.as_view(), name='authority_update'),
     path('settings/authorities/toggle/<int:pk>/', views.authority_toggle_status, name='authority_toggle'),
+
+    # --- System Configuration ---
+    path('settings/letterhead/', views.SystemLetterheadView.as_view(), name='system_letterhead'),
 ]

@@ -1,0 +1,95 @@
+.letterhead-page .letterhead-hero {
+    background: linear-gradient(135deg, #0f766e 0%, #155e75 100%);
+    color: #fff;
+}
+
+.letterhead-page .letterhead-hero p {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.letterhead-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.letterhead-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.letterhead-card {
+    background: #fff;
+    border: 1px solid #dbe3ea;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 8px 22px rgba(2, 6, 23, 0.05);
+}
+
+.letterhead-card h3 {
+    margin: 0 0 0.8rem 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+}
+
+.letterhead-preview-frame {
+    border: 1px dashed #94a3b8;
+    background: #f8fafc;
+    border-radius: 10px;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem;
+}
+
+.letterhead-preview-frame img,
+.letterhead-preview-upload img {
+    width: 100%;
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.letterhead-empty {
+    text-align: center;
+    color: #64748b;
+}
+
+.letterhead-empty i {
+    font-size: 2rem;
+    margin-bottom: 0.4rem;
+}
+
+.letterhead-form .form-hint {
+    display: block;
+    margin-top: 0.35rem;
+    color: #64748b;
+}
+
+.letterhead-preview-upload {
+    margin-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.8rem;
+}
+
+.preview-title {
+    margin-bottom: 0.5rem;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.letterhead-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+    .letterhead-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,15 +1,36 @@
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Q
-from django.http import JsonResponse, HttpResponse
+from django.db import transaction
+from django.db.models import Q, Exists, OuterRef
+from django.http import FileResponse, JsonResponse, HttpResponse
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_http_methods
+from django.utils.html import escape
+import re
+import html
+import json
+import base64
+import mimetypes
+from pathlib import Path
+from django.utils import timezone
+from django.core.files import File
 
-from .models import SanctionType, Sanction
-from .forms import SanctionTypeForm, SanctionForm
+from core.models import Authority
+from core.models import SystemConfiguration
+from contract.models import LaborRegime
+from contract.models import ManagementPeriod
+from employee.models import Employee
+from types import SimpleNamespace
+
+from .models import NotificationTemplate, SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
+from .forms import SanctionNotificationForm, SanctionNotificationMappingForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
+from .services import build_notification_replacements, build_replacements_from_global_mappings, extract_docx_preview
 from employee.models import Employee
 from budget.models import BudgetLine
 from personnel_actions.models import PersonnelAction, ActionType, ActionMovement
@@ -27,6 +48,1233 @@ class JSONResponseMixin:
             html = render_to_string(self.partial_template_name, context, request=self.request)
             return JsonResponse({'html': html})
         return super().render_to_response(context, **response_kwargs)
+
+
+def _notification_type_modal_context(notification_type=None, form=None):
+    active_regimes = list(LaborRegime.objects.filter(is_active=True).order_by('name'))
+    links = {}
+    if notification_type and notification_type.pk:
+        notification_type = SanctionNotificationType.objects.prefetch_related(
+            'regime_templates__labor_regime'
+        ).get(pk=notification_type.pk)
+        links = {link.labor_regime_id: link for link in notification_type.regime_templates.all()}
+
+    regime_rows = []
+    for regime in active_regimes:
+        regime_rows.append({
+            'regime': regime,
+            'link': links.get(regime.id),
+            'selected': regime.id in links,
+        })
+
+    return {
+        'form': form or SanctionNotificationTypeForm(instance=notification_type),
+        'notification_type': notification_type,
+        'regime_rows': regime_rows,
+        'selected_regime_ids': [row['regime'].id for row in regime_rows if row['selected']],
+    }
+
+
+def _parse_regime_ids(raw_regime_ids):
+    parsed_ids = []
+    for regime_id in raw_regime_ids:
+        try:
+            parsed_ids.append(int(regime_id))
+        except (TypeError, ValueError):
+            continue
+    return parsed_ids
+
+
+def _sync_notification_type_regimes(notification_type, selected_regime_ids):
+    active_links = {link.labor_regime_id: link for link in notification_type.regime_templates.all()}
+    selected_ids = set(_parse_regime_ids(selected_regime_ids))
+
+    for regime_id in selected_ids:
+        link = active_links.pop(regime_id, None)
+
+        if link is None:
+            SanctionNotificationTypeRegime.objects.create(
+                notification_type=notification_type,
+                labor_regime_id=regime_id,
+            )
+
+    for link in active_links.values():
+        link.delete()
+
+
+def _get_employee_current_regime_context(employee):
+    period = ManagementPeriod.objects.select_related(
+        'contract_type__labor_regime',
+        'budget_line__regime_item',
+        'budget_line__position_item',
+        'administrative_unit',
+    ).filter(employee=employee).order_by('-is_active', '-end_date', '-start_date', '-created_at').first()
+
+    regime = None
+    position_name = ''
+    unit_name = ''
+
+    if period and period.contract_type and period.contract_type.labor_regime:
+        regime = period.contract_type.labor_regime
+        if period.budget_line and period.budget_line.position_item:
+            position_name = period.budget_line.position_item.name
+        elif period.manual_position:
+            position_name = period.manual_position
+        if period.administrative_unit:
+            unit_name = period.administrative_unit.name
+
+    if regime is None:
+        budget_line = employee.current_budget_line.select_related('regime_item', 'position_item').first()
+        if budget_line:
+            regime = budget_line.regime_item
+            if budget_line.position_item:
+                position_name = budget_line.position_item.name
+        if not unit_name and employee.area:
+            unit_name = employee.area.name
+
+    return {
+        'regime': regime,
+        'position_name': position_name,
+        'unit_name': unit_name,
+    }
+
+
+def _get_compatible_notification_types(regime):
+    if not regime:
+        return SanctionNotificationType.objects.none()
+    return SanctionNotificationType.objects.filter(
+        is_active=True,
+        regime_templates__labor_regime=regime,
+    ).prefetch_related('regime_templates__labor_regime').distinct().order_by('name')
+
+
+def _get_next_notification_sequence():
+    last_sequence = SanctionNotification.objects.order_by('-sequence_number').values_list('sequence_number', flat=True).first() or 0
+    return last_sequence + 1
+
+
+def _build_user_code(user):
+    person = getattr(user, 'person', None)
+    first_name = ''
+    last_name = ''
+
+    if person:
+        first_name = person.first_name or ''
+        last_name = person.last_name or ''
+    else:
+        full_name = user.get_full_name() or user.username or ''
+        parts = full_name.split()
+        if parts:
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else parts[0]
+
+    first_code = ''.join(char for char in first_name if char.isalpha())[:2].upper()
+    last_code = ''.join(char for char in last_name if char.isalpha())[:2].upper()
+    return f'{first_code}{last_code}'
+
+
+def _can_generate_notification(user):
+    return user.has_perm('sanctions.add_sanctionnotification') or user.has_perm('sanctions.add_sanction')
+
+
+def _build_notification_data_context(employee, regime_context, notification_type, form):
+    person = employee.person
+    person_context = SimpleNamespace(
+        first_name=person.first_name or '',
+        last_name=person.last_name or '',
+        name=person.first_name or '',
+        lastname=person.last_name or '',
+        full_name=person.full_name or '',
+        document_number=person.document_number or '',
+    )
+
+    return {
+        'employee': employee,
+        'person': person_context,
+        'regime': SimpleNamespace(
+            code=regime_context['regime'].code if regime_context['regime'] else '',
+            name=regime_context['regime'].name if regime_context['regime'] else '',
+        ),
+        'employee_full_name': person.full_name or '',
+        'employee_first_name': person.first_name or '',
+        'employee_last_name': person.last_name or '',
+        'employee_document_number': person.document_number or '',
+        'employee_position': regime_context['position_name'] or 'Sin cargo asignado',
+        'employee_unit': regime_context['unit_name'] or 'Sin unidad asignada',
+        'regime_code': regime_context['regime'].code if regime_context['regime'] else '',
+        'regime_name': regime_context['regime'].name if regime_context['regime'] else '',
+        'notification_name': notification_type.name,
+        'sequence_number': form.initial.get('sequence_number', 0),
+        'sequence_code': form.initial.get('sequence_code', '0000'),
+        'user_code': form.initial.get('user_code', ''),
+        'month_name': dict(form.fields['month'].choices).get(int(form.cleaned_data['month']), ''),
+        'month_number': form.cleaned_data['month'],
+        'year': form.cleaned_data['year'],
+        'registration_date': form.cleaned_data['registration_date'].strftime('%d/%m/%Y'),
+        'authority_1_name': form.cleaned_data['authority_1'].name,
+        'authority_1_position': form.cleaned_data['authority_1'].position,
+        'authority_2_name': form.cleaned_data['authority_2'].name if form.cleaned_data.get('authority_2') else '',
+        'authority_2_position': form.cleaned_data['authority_2'].position if form.cleaned_data.get('authority_2') else '',
+        'authority_1': form.cleaned_data['authority_1'],
+        'authority_2': form.cleaned_data.get('authority_2'),
+        'minutes_late': form.cleaned_data.get('minutes_late') or 0,
+        'regs_without_mark': form.cleaned_data.get('regs_without_mark') or 0,
+        'observations': form.cleaned_data.get('observations') or '',
+    }
+
+
+def _get_notification_city():
+    current = SystemConfiguration.get_current()
+    return (current.city if current and current.city else 'Loja').strip()
+
+
+def _render_inline_formatting(content):
+    """
+    Render básico de texto enriquecido seguro:
+    - **texto** => negrita
+    - *texto* => cursiva
+    - __texto__ => subrayado
+    - saltos de línea => <br>
+    """
+    raw_text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
+    safe_text = html.escape(raw_text)
+
+    # Preserva tabulaciones y secuencias de espacios para firmas y bloques manuales.
+    safe_text = safe_text.replace('\t', '&nbsp;' * 4)
+    safe_text = re.sub(r' {2,}', lambda m: '&nbsp;' * len(m.group(0)), safe_text)
+
+    safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
+    return safe_text.replace('\n', '<br>')
+
+
+def _get_letterhead_resource(request):
+    configuration = SystemConfiguration.get_current()
+    if configuration is None:
+        configuration = SystemConfiguration.objects.filter(letterhead__isnull=False).exclude(letterhead='').order_by('-effective_date').first()
+
+    if not configuration or not configuration.letterhead:
+        return ''
+
+    try:
+        file_path = Path(configuration.letterhead.path)
+        if file_path.exists():
+            raw_bytes = file_path.read_bytes()
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            mime_type = mime_type or 'image/png'
+            encoded = base64.b64encode(raw_bytes).decode('ascii')
+            return f'data:{mime_type};base64,{encoded}'
+    except Exception:
+        pass
+
+    try:
+        return request.build_absolute_uri(configuration.letterhead.url)
+    except Exception:
+        return ''
+
+
+def _build_notification_render_context(employee, regime_context, notification_type, form, request, sequence_number=None, user_code=None):
+    sequence_number = sequence_number or _get_next_notification_sequence()
+    user_code = user_code or _build_user_code(request.user)
+
+    form.initial['sequence_number'] = sequence_number
+    form.initial['sequence_code'] = f'{sequence_number:04d}'
+    form.initial['user_code'] = user_code
+
+    city = _get_notification_city()
+    base_context = _build_notification_data_context(employee, regime_context, notification_type, form)
+    base_context['location'] = city
+
+    dynamic_template = NotificationTemplate.objects.filter(
+        notification_type=notification_type,
+        labor_regime=regime_context['regime'],
+        is_active=True,
+    ).first()
+
+    global_mappings = SanctionNotificationMapping.objects.filter(is_active=True).order_by('order', 'label')
+    replacements = build_replacements_from_global_mappings(base_context, global_mappings)
+    replacements.update(build_notification_replacements(base_context))
+
+    sections = []
+    if dynamic_template:
+        for section in dynamic_template.sections.filter(is_active=True).order_by('order'):
+            content = section.content or ''
+            for placeholder, replacement in replacements.items():
+                content = content.replace(placeholder, str(replacement or ''))
+            sections.append({
+                'type': section.section_type,
+                'content': content,
+                'content_html': _render_inline_formatting(content),
+            })
+
+    full_code = f'{sequence_number:04d}-{(regime_context["regime"].code or "").upper()}-{form.cleaned_data["year"]}-{user_code}'
+
+    return {
+        'header_code': full_code,
+        'city': city,
+        'registration_date': form.cleaned_data['registration_date'].strftime('%d/%m/%Y'),
+        'sections': sections,
+        'letterhead_path': _get_letterhead_resource(request),
+        'has_dynamic_template': bool(dynamic_template and sections),
+    }
+
+
+def _build_notification_form_like_object(notification):
+    return SimpleNamespace(
+        cleaned_data={
+            'month': notification.month,
+            'year': notification.year,
+            'registration_date': notification.registration_date,
+            'authority_1': notification.authority_1,
+            'authority_2': notification.authority_2,
+            'minutes_late': notification.minutes_late or 0,
+            'regs_without_mark': notification.regs_without_mark or 0,
+            'observations': notification.observations or '',
+        },
+        initial={
+            'sequence_number': notification.sequence_number,
+            'sequence_code': notification.sequential_code,
+            'user_code': notification.user_code,
+        },
+        fields={
+            'month': SimpleNamespace(choices=MONTH_CHOICES),
+        },
+    )
+
+
+def _build_notification_render_context_from_record(notification, request):
+    regime_context = _get_employee_current_regime_context(notification.employee)
+    regime_context['regime'] = notification.labor_regime
+    fake_form = _build_notification_form_like_object(notification)
+    return _build_notification_render_context(
+        notification.employee,
+        regime_context,
+        notification.notification_type,
+        fake_form,
+        request,
+        sequence_number=notification.sequence_number,
+        user_code=notification.user_code,
+    )
+
+
+class SanctionNotificationTypeListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
+    model = SanctionNotificationType
+    template_name = 'sanctions/notification_type_list.html'
+    partial_template_name = 'sanctions/partials/partial_notification_type_list.html'
+    context_object_name = 'types'
+    permission_required = 'sanctions.view_sanctionnotificationtype'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = SanctionNotificationType.objects.prefetch_related(
+            'regime_templates__labor_regime',
+            'dynamic_templates__labor_regime'
+        )
+        query = self.request.GET.get('q', '')
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query)
+                | Q(description__icontains=query)
+                | Q(regime_templates__labor_regime__name__icontains=query)
+                | Q(regime_templates__labor_regime__code__icontains=query)
+            ).distinct()
+        return queryset.order_by('name')
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            page_obj = context.get('page_obj')
+            if page_obj:
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+            else:
+                pagination_data = {
+                    'start_index': 0,
+                    'end_index': 0,
+                    'total_count': 0,
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'has_previous': False,
+                    'has_next': False,
+                }
+            return JsonResponse({'html': html, 'pagination': pagination_data})
+        return super().render_to_response(context, **response_kwargs)
+
+
+class SanctionNotificationTypeCreateView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.add_sanctionnotificationtype'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear tipos de notificación'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        context = _notification_type_modal_context()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string('sanctions/modals/modal_notification_type_form.html', context, request=request)
+            return HttpResponse(html)
+        return JsonResponse({'success': False, 'message': 'Solicitud inválida'}, status=400)
+
+    def post(self, request, *args, **kwargs):
+        form = SanctionNotificationTypeForm(request.POST)
+        selected_regime_ids = _parse_regime_ids(request.POST.getlist('regime_ids', []))
+        active_regime_ids = set(LaborRegime.objects.filter(is_active=True).values_list('id', flat=True))
+
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+        if not selected_regime_ids:
+            return JsonResponse({'success': False, 'errors': {'regime_ids': ['Debe seleccionar al menos un régimen laboral.']}}, status=400)
+
+        invalid_ids = [regime_id for regime_id in selected_regime_ids if regime_id not in active_regime_ids]
+        if invalid_ids:
+            return JsonResponse({'success': False, 'errors': {'regime_ids': ['Uno o más regímenes seleccionados no están activos.']}}, status=400)
+
+        with transaction.atomic():
+            notification_type = form.save(commit=False)
+            notification_type.created_by = request.user
+            notification_type.updated_by = request.user
+            notification_type.save()
+            _sync_notification_type_regimes(notification_type, selected_regime_ids)
+
+        return JsonResponse({'success': True, 'message': 'Tipo de notificación creado correctamente.'})
+
+
+class SanctionNotificationTypeUpdateView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.change_sanctionnotificationtype'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para modificar tipos de notificación'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, pk):
+        return get_object_or_404(SanctionNotificationType, pk=pk)
+
+    def get(self, request, pk, *args, **kwargs):
+        notification_type = self.get_object(pk)
+        context = _notification_type_modal_context(notification_type=notification_type)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string('sanctions/modals/modal_notification_type_form.html', context, request=request)
+            return HttpResponse(html)
+        return JsonResponse({'success': False, 'message': 'Solicitud inválida'}, status=400)
+
+    def post(self, request, pk, *args, **kwargs):
+        notification_type = self.get_object(pk)
+        form = SanctionNotificationTypeForm(request.POST, instance=notification_type)
+        selected_regime_ids = _parse_regime_ids(request.POST.getlist('regime_ids', []))
+        active_regime_ids = set(LaborRegime.objects.filter(is_active=True).values_list('id', flat=True))
+
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+        if not selected_regime_ids:
+            return JsonResponse({'success': False, 'errors': {'regime_ids': ['Debe seleccionar al menos un régimen laboral.']}}, status=400)
+
+        invalid_ids = [regime_id for regime_id in selected_regime_ids if regime_id not in active_regime_ids]
+        if invalid_ids:
+            return JsonResponse({'success': False, 'errors': {'regime_ids': ['Uno o más regímenes seleccionados no están activos.']}}, status=400)
+
+        with transaction.atomic():
+            notification_type = form.save(commit=False)
+            notification_type.updated_by = request.user
+            notification_type.save()
+            _sync_notification_type_regimes(notification_type, selected_regime_ids)
+
+        return JsonResponse({'success': True, 'message': 'Tipo de notificación actualizado correctamente.'})
+
+
+class SanctionNotificationTypeToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.change_sanctionnotificationtype'
+
+    def post(self, request, pk):
+        notification_type = get_object_or_404(SanctionNotificationType, pk=pk)
+        notification_type.toggle_status()
+        status = 'activado' if notification_type.is_active else 'desactivado'
+        return JsonResponse({
+            'success': True,
+            'message': f'Tipo de notificación {status} correctamente.',
+            'is_active': notification_type.is_active,
+        })
+
+
+class GenerateSanctionNotificationView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.add_sanctionnotification'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _can_generate_notification(request.user):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para generar notificaciones'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        from core.models import Authority
+
+        employee_id = request.GET.get('employee_id')
+        notification_id = request.GET.get('notification_id')
+        notification = None
+
+        if notification_id:
+            notification = get_object_or_404(
+                SanctionNotification.objects.select_related('employee__person', 'notification_type', 'labor_regime', 'authority_1', 'authority_2'),
+                pk=notification_id,
+            )
+            employee = notification.employee
+        else:
+            employee = get_object_or_404(Employee, pk=employee_id)
+
+        regime_context = _get_employee_current_regime_context(employee)
+        compatible_notification_types = _get_compatible_notification_types(regime_context['regime'])
+        if notification and notification.notification_type_id:
+            compatible_ids = list(compatible_notification_types.values_list('pk', flat=True))
+            if notification.notification_type_id not in compatible_ids:
+                compatible_ids.append(notification.notification_type_id)
+            compatible_notification_types = SanctionNotificationType.objects.filter(pk__in=compatible_ids).order_by('name')
+        authorities = Authority.objects.filter(is_active=True).order_by('name')
+
+        next_sequence = _get_next_notification_sequence()
+        default_notification_type = compatible_notification_types.first()
+        default_authority = authorities.first()
+
+        if notification:
+            form = SanctionNotificationForm(
+                instance=notification,
+                notification_types=compatible_notification_types,
+                authorities=authorities,
+                initial={
+                    'sequence_number': notification.sequence_number,
+                    'sequence_code': notification.sequential_code,
+                    'user_code': notification.user_code,
+                },
+            )
+        else:
+            form = SanctionNotificationForm(
+                notification_types=compatible_notification_types,
+                authorities=authorities,
+                initial={
+                    'registration_date': timezone.now().date(),
+                    'year': timezone.now().year,
+                    'month': timezone.now().month,
+                    'sequence_number': next_sequence,
+                    'sequence_code': f'{next_sequence:04d}',
+                    'user_code': _build_user_code(request.user),
+                    'notification_type': default_notification_type.pk if default_notification_type else None,
+                    'authority_1': default_authority.pk if default_authority else None,
+                },
+            )
+
+        context = {
+            'form': form,
+            'employee': employee,
+            'regime_context': regime_context,
+            'notification_types': compatible_notification_types,
+            'authorities': authorities,
+            'month_name': dict(form.fields['month'].choices).get(form.initial.get('month') or timezone.now().month, ''),
+            'notification': notification,
+            'is_edit': notification is not None,
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_generate_notification_form.html',
+            context,
+            request=request,
+        )
+        return HttpResponse(html)
+
+    def post(self, request):
+        employee_id = request.POST.get('employee_id')
+        notification_id = request.POST.get('notification_id')
+        notification = None
+
+        if notification_id:
+            notification = get_object_or_404(SanctionNotification, pk=notification_id)
+            employee = notification.employee
+        else:
+            employee = get_object_or_404(Employee, pk=employee_id)
+
+        regime_context = _get_employee_current_regime_context(employee)
+        if not regime_context['regime']:
+            return JsonResponse({
+                'success': False,
+                'errors': {'employee_id': ['No se pudo detectar un régimen laboral vigente para este empleado.']},
+            }, status=400)
+        compatible_notification_types = _get_compatible_notification_types(regime_context['regime'])
+        authorities = Authority.objects.filter(is_active=True).order_by('name')
+
+        form = SanctionNotificationForm(
+            request.POST,
+            instance=notification,
+            notification_types=compatible_notification_types,
+            authorities=authorities,
+        )
+
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+        notification_type = form.cleaned_data['notification_type']
+        regime_template = notification_type.regime_templates.filter(labor_regime=regime_context['regime']).select_related('labor_regime').first()
+        if not regime_template:
+            regime_template = SanctionNotificationTypeRegime.objects.create(
+                notification_type=notification_type,
+                labor_regime=regime_context['regime'],
+            )
+
+        dynamic_template = NotificationTemplate.objects.filter(
+            notification_type=notification_type,
+            labor_regime=regime_context['regime'],
+            is_active=True,
+        ).first()
+
+        city = _get_notification_city()
+
+        has_dynamic_template = bool(dynamic_template and dynamic_template.sections.filter(is_active=True).exists())
+
+        if not has_dynamic_template:
+            return JsonResponse({
+                'success': False,
+                'errors': {'notification_type': ['No existe template dinámico con secciones activas para el régimen actual.']}
+            }, status=400)
+
+        if notification is None:
+            next_sequence = _get_next_notification_sequence()
+            user_code = _build_user_code(request.user)
+            notification = SanctionNotification(
+                employee=employee,
+                sequence_number=next_sequence,
+                user_code=user_code,
+                created_by=request.user,
+            )
+
+        notification.employee = employee
+        notification.notification_type = notification_type
+        notification.regime_template = regime_template
+        notification.labor_regime = regime_context['regime']
+        notification.month = form.cleaned_data['month']
+        notification.year = form.cleaned_data['year']
+        notification.registration_date = form.cleaned_data['registration_date']
+        notification.authority_1 = form.cleaned_data['authority_1']
+        notification.authority_2 = form.cleaned_data.get('authority_2') or None
+        notification.minutes_late = form.cleaned_data.get('minutes_late') or 0
+        notification.regs_without_mark = form.cleaned_data.get('regs_without_mark') or 0
+        notification.observations = form.cleaned_data.get('observations') or ''
+        notification.updated_by = request.user
+        notification.save()
+
+        message = 'Notificación actualizada correctamente.' if notification_id else 'Notificación registrada correctamente. La vista previa queda disponible en pantalla.'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+        })
+
+
+class SanctionNotificationPreviewView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.add_sanctionnotification'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _can_generate_notification(request.user):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para generar notificaciones'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        from core.models import Authority
+
+        employee_id = request.GET.get('employee_id')
+        employee = get_object_or_404(Employee, pk=employee_id)
+        regime_context = _get_employee_current_regime_context(employee)
+        compatible_notification_types = _get_compatible_notification_types(regime_context['regime'])
+        authorities = Authority.objects.filter(is_active=True).order_by('name')
+
+        next_sequence = _get_next_notification_sequence()
+        default_notification_type = compatible_notification_types.first()
+        default_authority = authorities.first()
+
+        query_data = request.GET.copy()
+
+        form = SanctionNotificationForm(
+            query_data,
+            notification_types=compatible_notification_types,
+            authorities=authorities,
+            initial={
+                'registration_date': timezone.now().date(),
+                'year': timezone.now().year,
+                'month': timezone.now().month,
+                'sequence_number': next_sequence,
+                'sequence_code': f'{next_sequence:04d}',
+                'user_code': _build_user_code(request.user),
+                'notification_type': default_notification_type.pk if default_notification_type else None,
+                'authority_1': default_authority.pk if default_authority else None,
+            },
+        )
+
+        context = {
+            'employee': employee,
+            'regime_context': regime_context,
+            'form': form,
+            'is_ready': form.is_valid() and bool(regime_context['regime']) and bool(form.cleaned_data.get('notification_type')),
+        }
+
+        if context['is_ready']:
+            render_context = _build_notification_render_context(
+                employee,
+                regime_context,
+                form.cleaned_data['notification_type'],
+                form,
+                request,
+                sequence_number=next_sequence,
+                user_code=form.initial.get('user_code') or _build_user_code(request.user),
+            )
+            context.update(render_context)
+
+        html = render_to_string('sanctions/preview/notification_preview.html', context, request=request)
+        return HttpResponse(html)
+
+
+class SanctionNotificationListView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.view_sanctionnotification'
+
+    def has_permission(self):
+        return self.request.user.has_perm('sanctions.view_sanctionnotification') or _can_generate_notification(self.request.user)
+
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.has_perm('sanctions.view_sanctionnotification') or _can_generate_notification(request.user)):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para ver notificaciones'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        employee_id = request.GET.get('employee_id')
+        notifications = SanctionNotification.objects.select_related(
+            'employee__person',
+            'notification_type',
+            'labor_regime',
+            'authority_1',
+            'authority_2',
+            'created_by',
+        )
+
+        filtered_employee = None
+        if employee_id:
+            notifications = notifications.filter(employee_id=employee_id)
+            filtered_employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
+
+        notifications = notifications.order_by('-sequence_number', '-created_at')[:30]
+
+        context = {
+            'notifications': notifications,
+            'filtered_employee': filtered_employee,
+        }
+        html = render_to_string('sanctions/modals/modal_notification_list.html', context, request=request)
+        return HttpResponse(html)
+
+
+class SanctionNotificationPdfView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.view_sanctionnotification'
+
+    def get(self, request, pk):
+        notification = get_object_or_404(
+            SanctionNotification.objects.select_related(
+                'employee__person',
+                'notification_type',
+                'labor_regime',
+                'authority_1',
+                'authority_2',
+            ),
+            pk=pk,
+        )
+
+        try:
+            from weasyprint import HTML
+            pdf_context = _build_notification_render_context_from_record(notification, request)
+            html_string = render_to_string('sanctions/pdf/notification_document.html', pdf_context, request=request)
+            pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f'Notificacion_{notification.sequential_code}_{notification.employee.person.full_name.replace(" ", "_")}.pdf'
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception:
+            return HttpResponse('Error al generar el PDF', status=500)
+
+
+class SanctionNotificationTypeTemplateDownloadView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.view_sanctionnotificationtype'
+
+    def get(self, request, link_id):
+        link = get_object_or_404(
+            SanctionNotificationTypeRegime.objects.select_related('notification_type', 'labor_regime'),
+            pk=link_id,
+        )
+
+        if not link.template_file:
+            return JsonResponse({'success': False, 'message': 'Este régimen no tiene formato cargado.'}, status=404)
+
+        filename = link.template_file.name.rsplit('/', 1)[-1]
+        response = FileResponse(link.template_file.open('rb'), as_attachment=True, filename=filename)
+        return response
+
+
+class SanctionNotificationTypeHelpView(LoginRequiredMixin, View):
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.has_perm('sanctions.view_sanctionnotificationmapping') or request.user.has_perm('sanctions.view_sanctionnotificationtype')):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para ver la guía'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        mappings = SanctionNotificationMapping.objects.filter(is_active=True).order_by('order', 'label')
+        context = {
+            'mappings': mappings,
+        }
+        html = render_to_string('sanctions/modals/modal_notification_type_help.html', context, request=request)
+        return HttpResponse(html)
+
+
+class SanctionNotificationTypePreviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.view_sanctionnotificationtype'
+
+    def get(self, request, pk):
+        notification_type = get_object_or_404(
+            SanctionNotificationType.objects.prefetch_related('regime_templates__labor_regime'),
+            pk=pk,
+        )
+
+        preview_rows = []
+        for link in notification_type.regime_templates.all():
+            blocks = []
+            if link.template_file:
+                try:
+                    if Path(link.template_file.path).exists():
+                        blocks = extract_docx_preview(link.template_file.path)
+                except Exception:
+                    blocks = []
+
+            preview_rows.append({
+                'link': link,
+                'blocks': blocks,
+            })
+
+        context = {
+            'notification_type': notification_type,
+            'preview_rows': preview_rows,
+        }
+
+        html = render_to_string('sanctions/modals/modal_notification_type_preview.html', context, request=request)
+        return HttpResponse(html)
+
+
+class SanctionNotificationMappingListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
+    model = SanctionNotificationMapping
+    template_name = 'sanctions/mapping_list.html'
+    partial_template_name = 'sanctions/partials/partial_mapping_list.html'
+    context_object_name = 'mappings'
+    permission_required = 'sanctions.view_sanctionnotificationmapping'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = SanctionNotificationMapping.objects.all()
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(
+                Q(placeholder__icontains=query)
+                | Q(label__icontains=query)
+                | Q(expression__icontains=query)
+                | Q(description__icontains=query)
+            )
+        return queryset.order_by('order', 'label')
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            page_obj = context.get('page_obj')
+            pagination_data = {
+                'start_index': page_obj.start_index() if page_obj else 0,
+                'end_index': page_obj.end_index() if page_obj else 0,
+                'total_count': page_obj.paginator.count if page_obj else 0,
+                'current_page': page_obj.number if page_obj else 1,
+                'total_pages': page_obj.paginator.num_pages if page_obj else 1,
+                'has_previous': page_obj.has_previous() if page_obj else False,
+                'has_next': page_obj.has_next() if page_obj else False,
+            }
+            return JsonResponse({'html': html, 'pagination': pagination_data})
+        return super().render_to_response(context, **response_kwargs)
+
+
+class SanctionNotificationMappingCreateView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.add_sanctionnotificationmapping'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear mapeos'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        form = SanctionNotificationMappingForm()
+        html = render_to_string('sanctions/modals/modal_mapping_form.html', {'form': form}, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, *args, **kwargs):
+        form = SanctionNotificationMappingForm(request.POST)
+        if form.is_valid():
+            mapping = form.save(commit=False)
+            mapping.created_by = request.user
+            mapping.updated_by = request.user
+            mapping.save()
+            return JsonResponse({'success': True, 'message': 'Mapeo creado correctamente.'})
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class SanctionNotificationMappingUpdateView(LoginRequiredMixin, View):
+    permission_required = 'sanctions.change_sanctionnotificationmapping'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para modificar mapeos'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, pk):
+        return get_object_or_404(SanctionNotificationMapping, pk=pk)
+
+    def get(self, request, pk, *args, **kwargs):
+        mapping = self.get_object(pk)
+        form = SanctionNotificationMappingForm(instance=mapping)
+        html = render_to_string('sanctions/modals/modal_mapping_form.html', {'form': form, 'mapping': mapping}, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, pk, *args, **kwargs):
+        mapping = self.get_object(pk)
+        form = SanctionNotificationMappingForm(request.POST, instance=mapping)
+        if form.is_valid():
+            mapping = form.save(commit=False)
+            mapping.updated_by = request.user
+            mapping.save()
+            return JsonResponse({'success': True, 'message': 'Mapeo actualizado correctamente.'})
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class SanctionNotificationMappingToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.change_sanctionnotificationmapping'
+
+    def post(self, request, pk):
+        mapping = get_object_or_404(SanctionNotificationMapping, pk=pk)
+        mapping.toggle_status()
+        status = 'activado' if mapping.is_active else 'desactivado'
+        return JsonResponse({'success': True, 'message': f'Mapeo {status} correctamente.', 'is_active': mapping.is_active})
+
+
+def _template_editor_render_inline_formatting(content):
+    raw_text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
+    safe_text = escape(raw_text)
+    safe_text = safe_text.replace('\t', '&nbsp;' * 4)
+    safe_text = re.sub(r' {2,}', lambda match: '&nbsp;' * len(match.group(0)), safe_text)
+    safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
+    return safe_text.replace('\n', '<br>')
+
+
+class TemplateEditorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = NotificationTemplate
+    template_name = 'sanctions/template_editor/template_list.html'
+    context_object_name = 'templates'
+    permission_required = 'sanctions.change_notificationtemplate'
+    paginate_by = 20
+
+    def get_queryset(self):
+        notification_types = SanctionNotificationType.objects.filter(is_active=True).prefetch_related('regime_templates__labor_regime')
+        for notification_type in notification_types:
+            for link in notification_type.regime_templates.select_related('labor_regime').all():
+                NotificationTemplate.objects.get_or_create(
+                    notification_type=notification_type,
+                    labor_regime=link.labor_regime,
+                    defaults={'is_active': True},
+                )
+
+        queryset = NotificationTemplate.objects.select_related('notification_type', 'labor_regime').order_by('labor_regime__code', 'notification_type__name')
+
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            queryset = queryset.filter(
+                Q(notification_type__name__icontains=query)
+                | Q(labor_regime__name__icontains=query)
+                | Q(labor_regime__code__icontains=query)
+            )
+
+        month = self.request.GET.get('month')
+        year = self.request.GET.get('year')
+        if month or year:
+            notifications = SanctionNotification.objects.filter(
+                notification_type=OuterRef('notification_type'),
+                labor_regime=OuterRef('labor_regime'),
+            )
+
+            try:
+                month_int = int(month) if month else None
+            except (TypeError, ValueError):
+                month_int = None
+
+            try:
+                year_int = int(year) if year else None
+            except (TypeError, ValueError):
+                year_int = None
+
+            if month_int is not None:
+                notifications = notifications.filter(month=month_int)
+            if year_int is not None:
+                notifications = notifications.filter(year=year_int)
+
+            queryset = queryset.annotate(has_matching_notifications=Exists(notifications)).filter(has_matching_notifications=True)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['notification_types'] = SanctionNotificationType.objects.filter(is_active=True)
+        context['labor_regimes'] = LaborRegime.objects.filter(is_active=True)
+        context['month_choices'] = MONTH_CHOICES[1:]
+        context['search_query'] = self.request.GET.get('q', '').strip()
+        context['selected_month'] = self.request.GET.get('month', '')
+        context['selected_year'] = self.request.GET.get('year', '')
+        return context
+
+
+class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = NotificationTemplate
+    template_name = 'sanctions/template_editor/template_editor.html'
+    permission_required = 'sanctions.change_notificationtemplate'
+    context_object_name = 'template'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        template = self.object
+        context['available_mappings'] = SanctionNotificationMapping.objects.filter(is_active=True)
+        context['header_format'] = f'NOTIFICACIÓN Nº [SECUENCIA]-{template.labor_regime.code}-[AÑO]-[CODIGO_USUARIO]'
+        context['location'] = 'Loja'
+        context['date_format'] = '[today]'
+        return context
+
+
+class TemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.add_templatesection'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, template_id):
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+
+        try:
+            data = json.loads(request.body)
+            section_type = data.get('section_type')
+            content = data.get('content', '').strip()
+            order = data.get('order', 0)
+
+            if not content:
+                return JsonResponse({'error': 'El contenido no puede estar vacío'}, status=400)
+
+            if section_type not in ['PARAGRAPH', 'TITLE']:
+                return JsonResponse({'error': 'Tipo de sección inválido'}, status=400)
+
+            section = TemplateSection.objects.create(
+                template=template,
+                section_type=section_type,
+                content=content,
+                order=order,
+                created_by=request.user,
+            )
+
+            return JsonResponse({
+                'success': True,
+                'section': {
+                    'id': section.id,
+                    'section_type': section.get_section_type_display(),
+                    'section_type_code': section.section_type,
+                    'content': section.content,
+                    'order': section.order,
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class TemplateSectionUpdateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.change_templatesection'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, section_id):
+        section = get_object_or_404(TemplateSection, id=section_id)
+
+        try:
+            data = json.loads(request.body)
+            section.content = data.get('content', section.content).strip()
+            section.section_type = data.get('section_type', section.section_type)
+            section.order = data.get('order', section.order)
+            section.updated_by = request.user
+            section.save()
+
+            return JsonResponse({
+                'success': True,
+                'section': {
+                    'id': section.id,
+                    'section_type': section.get_section_type_display(),
+                    'section_type_code': section.section_type,
+                    'content': section.content,
+                    'order': section.order,
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class TemplateSectionDeleteAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.delete_templatesection'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, section_id):
+        section = get_object_or_404(TemplateSection, id=section_id)
+        deleted_id = section.id
+
+        try:
+            section.delete()
+            return JsonResponse({'success': True, 'deleted_id': deleted_id})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class TemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'sanctions.change_templatesection'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, template_id):
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+
+        try:
+            data = json.loads(request.body)
+            sections_data = data.get('sections', [])
+
+            for item in sections_data:
+                section = TemplateSection.objects.get(id=item['id'], template=template)
+                section.order = item['order']
+                section.updated_by = request.user
+                section.save()
+
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class TemplatePreviewAjaxView(LoginRequiredMixin, View):
+    def get(self, request, template_id):
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+        employee_id = request.GET.get('employee_id')
+
+        if not employee_id:
+            employee = Employee.objects.first()
+            if not employee:
+                return JsonResponse({'preview': '<p>No hay empleados registrados</p>'})
+        else:
+            employee = get_object_or_404(Employee, id=employee_id)
+
+        try:
+            data = {
+                'employee': employee,
+                'person': employee.person if hasattr(employee, 'person') else SimpleNamespace(
+                    first_name='Juan',
+                    last_name='Pérez',
+                    document_number='1234567890'
+                ),
+                'labor_regime': template.labor_regime,
+                'sequence_code': '0001',
+                'sequence_number': '0001',
+                'year': datetime.now().year,
+                'registration_date': datetime.now().strftime('%d/%m/%Y'),
+                'today': datetime.now().strftime('%d/%m/%Y'),
+                'location': 'Loja',
+                'user_code': 'JUPE',
+                'created_by': SimpleNamespace(person=SimpleNamespace(
+                    first_name='Juan', last_name='Pérez'
+                ))
+            }
+
+            replacements = build_notification_replacements(data)
+            regime_code = template.labor_regime.code
+            header = f'NOTIFICACIÓN Nº {replacements.get("[SECUENCIA]", "0001")}-{regime_code}-{replacements.get("[AÑO]", datetime.now().year)}-{replacements.get("[CODIGO_USUARIO]", "XXXX")}';
+            location_date = f'{replacements.get("[LOCALIDAD]", "Loja")}, {replacements.get("[today]", datetime.now().strftime("%d/%m/%Y"))}'
+
+            sections_html = ''
+            for section in template.sections.filter(is_active=True).order_by('order'):
+                content = section.content
+                for placeholder, replacement in replacements.items():
+                    content = content.replace(placeholder, replacement)
+
+                if section.section_type == 'PARAGRAPH':
+                    sections_html += f'<p style="text-align: justify; margin-bottom: 0.6rem; line-height: 1.42; font-size: 0.95rem;">{_template_editor_render_inline_formatting(content)}</p>'
+                else:
+                    sections_html += f'<h4 style="text-align: left; margin-top: 0.9rem; margin-bottom: 0.35rem; font-size: 1rem;">{_template_editor_render_inline_formatting(content)}</h4>'
+
+            preview_html = f'''
+            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
+                <div style="text-align: center; font-weight: bold; margin-bottom: 1.2rem; font-size: 1.08rem;">
+                    {header}
+                </div>
+                <div style="text-align: left; margin-bottom: 1.1rem; font-size: 0.92rem;">
+                    {location_date}
+                </div>
+                <div class="template-sections">
+                    {sections_html}
+                </div>
+            </div>
+            '''
+
+            return JsonResponse({'preview': preview_html})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
 # ==========================================
@@ -243,18 +1491,67 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
             })
         
         context['employees_data'] = employees_with_budget
+        selected_notifications_month = self.request.GET.get('notifications_month', '').strip()
+        selected_notifications_year = self.request.GET.get('notifications_year', '').strip()
+
+        latest_notifications_queryset = SanctionNotification.objects.select_related(
+            'employee__person',
+            'notification_type',
+            'labor_regime',
+            'authority_1',
+            'authority_2',
+            'created_by',
+        ).order_by('-sequence_number', '-created_at')
+
+        latest_notification = SanctionNotification.objects.order_by('-registration_date', '-created_at').first()
+        if latest_notification and not selected_notifications_month and not selected_notifications_year:
+            selected_notifications_month = str(latest_notification.month or '')
+            selected_notifications_year = str(latest_notification.year or '')
+
+        if selected_notifications_month:
+            try:
+                latest_notifications_queryset = latest_notifications_queryset.filter(month=int(selected_notifications_month))
+            except (TypeError, ValueError):
+                selected_notifications_month = ''
+
+        if selected_notifications_year:
+            try:
+                latest_notifications_queryset = latest_notifications_queryset.filter(year=int(selected_notifications_year))
+            except (TypeError, ValueError):
+                selected_notifications_year = ''
+
+        # Paginate notifications (10 per page)
+        notifications_page = self.request.GET.get('notifications_page', 1)
+        paginator = Paginator(latest_notifications_queryset, 10)
+        try:
+            latest_notifications_page_obj = paginator.page(notifications_page)
+        except (EmptyPage, PageNotAnInteger):
+            latest_notifications_page_obj = paginator.page(1)
+
+        context['latest_notifications_page_obj'] = latest_notifications_page_obj
+        context['notification_month_choices'] = MONTH_CHOICES[1:]
+        context['selected_notifications_month'] = selected_notifications_month
+        context['selected_notifications_year'] = selected_notifications_year
         return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(
-                'sanctions/partials/partial_employee_list.html',
-                context,
-                request=self.request
-            )
-            
-            # Pagination information
-            page_obj = context.get('page_obj')
+            section = self.request.GET.get('section')
+            if section == 'notifications':
+                html = render_to_string(
+                    'sanctions/partials/partial_latest_notification_list.html',
+                    context,
+                    request=self.request
+                )
+                page_obj = context.get('latest_notifications_page_obj')
+            else:
+                html = render_to_string(
+                    'sanctions/partials/partial_employee_list.html',
+                    context,
+                    request=self.request
+                )
+                page_obj = context.get('page_obj')
+
             if page_obj:
                 pagination_data = {
                     'start_index': page_obj.start_index(),

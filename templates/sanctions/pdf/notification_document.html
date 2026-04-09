@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        {% if letterhead_path %}
+            background-image: url('{{ letterhead_path }}');
+            background-repeat: no-repeat;
+            background-size: 210mm 297mm;
+            background-position: center center;
+        {% endif %}
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10.5pt;
+            color: #111827;
+            line-height: 1.42;
+            margin: 0;
+            position: relative;
+            background: transparent;
+        }
+
+        .letterhead {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 210mm;
+            height: 297mm;
+            z-index: 0;
+            opacity: 1;
+        }
+
+        .letterhead img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+
+        .document-content {
+            position: relative;
+            z-index: 1;
+            padding: 3.1cm 2.2cm 1.8cm 2.2cm;
+        }
+
+        .header-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 12.5pt;
+            margin-bottom: 0.65cm;
+        }
+
+        .header-date {
+            text-align: right;
+            margin-bottom: 0.9cm;
+            font-size: 10pt;
+        }
+
+        .paragraph {
+            text-align: justify;
+            margin: 0 0 0.3cm 0;
+        }
+
+        .section-title {
+            text-align: left;
+            margin: 0.35cm 0 0.15cm 0;
+        }
+    </style>
+</head>
+<body>
+{% if letterhead_path %}
+    <div class="letterhead">
+        <img src="{{ letterhead_path }}" alt="Membretada">
+    </div>
+{% endif %}
+
+<div class="document-content">
+    <div class="header-title">NOTIFICACIÓN Nº {{ header_code }}</div>
+    <div class="header-date">{{ city }}, {{ registration_date }}</div>
+
+    {% for section in sections %}
+        {% if section.type == 'TITLE' %}
+            <div class="section-title">{{ section.content_html|safe }}</div>
+        {% else %}
+            <div class="paragraph">{{ section.content_html|safe }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
+</body>
+</html>

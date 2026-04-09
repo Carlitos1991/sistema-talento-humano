@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ template.notification_type.name }} - {{ template.labor_regime.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper template-editor-page">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="header-card template-editor-header-card">
+                <div>
+                    <h1 class="h2">
+                        <i class="fas fa-edit"></i> {{ template.notification_type.name }}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Régimen: <strong>{{ template.labor_regime.name }}</strong> 
+                        <code class="ms-2">{{ template.labor_regime.code }}</code>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'sanctions:template_editor_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Panel de Editor (Izquierda) -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm template-editor-panel">
+                <div class="card-header template-editor-panel-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pencil-alt"></i> Editor de Secciones
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Ayuda sobre variables -->
+                    <div class="alert alert-light border mb-3 template-variables-box">
+                        <p class="small mb-2">
+                            <strong>Variables disponibles:</strong>
+                        </p>
+                        <div class="row g-2">
+                            {% for mapping in available_mappings %}
+                            <div class="col-6">
+                                <small>
+                                    <code class="text-danger">{{ mapping.placeholder }}</code>
+                                    <br>
+                                    <span class="text-muted">{{ mapping.label }}</span>
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Formulario para agregar sección -->
+                    <form id="addSectionForm" class="mb-4">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="sectionType" class="form-label">Tipo de Sección</label>
+                            <select id="sectionType" class="form-select" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="PARAGRAPH">Párrafo (Justificado)</option>
+                                <option value="TITLE">Título (Alineado izquierda)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="sectionContent" class="form-label">Contenido</label>
+                            <div class="btn-toolbar mb-2" role="toolbar" aria-label="Herramientas de formato">
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionContent" data-prefix="**" data-suffix="**" title="Negrita">
+                                    <i class="fas fa-bold"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionContent" data-prefix="*" data-suffix="*" title="Cursiva">
+                                    <i class="fas fa-italic"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionContent" data-prefix="__" data-suffix="__" title="Subrayado">
+                                    <i class="fas fa-underline"></i>
+                                </button>
+                            </div>
+                            <textarea 
+                                id="sectionContent" 
+                                class="form-control" 
+                                rows="4" 
+                                placeholder="Ingresa el contenido. Usa [VARIABLE] para incluir datos."
+                                required
+                            ></textarea>
+                            <small class="text-muted d-block mt-2">
+                                Ejemplo: "El trabajador [FULL_NAME] fue notificado el [today] respecto a...".
+                                Usa **texto** (negrita), *texto* (cursiva) y __texto__ (subrayado).
+                                Puedes usar Enter para saltos de línea y Tab para tabulaciones.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100" id="addSectionBtn">
+                            <i class="fas fa-plus"></i> Agregar Sección
+                        </button>
+                    </form>
+
+                    <hr>
+
+                    <!-- Lista de secciones -->
+                    <h6 class="mb-3">Secciones del Template</h6>
+                    <div id="sectionsList" class="sortable-list template-section-list">
+                        {% for section in template.sections.all %}
+                        <div class="section-item card mb-2" data-section-id="{{ section.id }}" data-section-type="{{ section.section_type }}" data-section-content="{{ section.content|escapejs }}" draggable="true">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="flex-grow-1">
+                                        <span class="badge bg-info mb-2">
+                                            {{ section.get_section_type_display }}
+                                        </span>
+                                        <p class="mb-0 small text-muted">
+                                            <small class="js-section-order">Orden: {{ section.order }}</small>
+                                        </p>
+                                    </div>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-edit" data-section-id="{{ section.id }}" title="Editar">
+                                            <i class="fas fa-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-delete" data-section-id="{{ section.id }}" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="mb-0 small text-break">{{ section.content }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div id="emptyState" class="alert alert-warning{% if template.sections.count > 0 %} d-none{% endif %}">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            No hay secciones. Agrega la primera sección arriba.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Vista Previa (Derecha) -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm sticky-top template-editor-panel" style="top: 20px;">
+                <div class="card-header template-preview-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> Vista Previa
+                    </h5>
+                </div>
+                <div class="card-body template-preview-body" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="alert alert-info mb-3">
+                        <small>
+                            <strong>Encabezado:</strong><br>
+                            <code>{{ header_format }}</code><br><br>
+                            <strong>Localidad y Fecha:</strong><br>
+                            <code>{{ location }}, {{ date_format }}</code>
+                        </small>
+                    </div>
+
+                    <div id="preview" class="template-preview-box" style="min-height: 400px; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
+                        <p class="text-muted text-center">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando vista previa...
+                        </p>
+                    </div>
+
+                    <div class="mt-3">
+                        <button id="refreshPreview" class="btn btn-sm btn-info w-100">
+                            <i class="fas fa-sync-alt"></i> Actualizar Previa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar sección -->
+<div class="modal fade" id="editSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Sección</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editSectionForm">
+                    <div class="mb-3">
+                        <label for="editSectionType" class="form-label">Tipo de Sección</label>
+                        <select id="editSectionType" class="form-select">
+                            <option value="PARAGRAPH">Párrafo (Justificado)</option>
+                            <option value="TITLE">Título (Alineado izquierda)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSectionContent" class="form-label">Contenido</label>
+                        <div class="btn-toolbar mb-2" role="toolbar" aria-label="Herramientas de formato">
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="editSectionContent" data-prefix="**" data-suffix="**" title="Negrita">
+                                <i class="fas fa-bold"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="editSectionContent" data-prefix="*" data-suffix="*" title="Cursiva">
+                                <i class="fas fa-italic"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="editSectionContent" data-prefix="__" data-suffix="__" title="Subrayado">
+                                <i class="fas fa-underline"></i>
+                            </button>
+                        </div>
+                        <textarea 
+                            id="editSectionContent" 
+                            class="form-control" 
+                            rows="6"
+                        ></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sanctions/template_editor.js' %}"></script>
+<script>
+    // Inicializar editor
+    document.addEventListener('DOMContentLoaded', function() {
+        const templateId = Number('{{ template.id }}');
+        const templateEditor = new NotificationTemplateEditor(templateId);
+        templateEditor.init();
+    });
+</script>
+{% endblock %}

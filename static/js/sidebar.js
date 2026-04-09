@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltip.style.left = `${left}px`;
     }
 
-    function truncateWithSingleDot(textElement) {
+    function truncateWithEllipsis(textElement) {
         const fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
         textElement.dataset.fullLabel = fullLabel;
 
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        const dot = '.';
+        const dot = '...';
         let right = fullLabel.length - 1;
         let best = dot;
 
@@ -117,10 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
             textElement.dataset.fullLabel = fullLabel;
 
-            const isInsideSubmenu = !!link.closest('.submenu, .inner-submenu');
             const isOpenCollapsedTrigger = !!link.closest('.has-submenu.collapsed-open');
 
-            if (isInsideSubmenu || isOpenCollapsedTrigger) {
+            if (isOpenCollapsedTrigger) {
                 link.classList.remove('has-tooltip');
                 link.dataset.tooltip = '';
                 textElement.textContent = fullLabel;
@@ -134,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const wasTruncated = truncateWithSingleDot(textElement);
+            const wasTruncated = truncateWithEllipsis(textElement);
             link.classList.toggle('has-tooltip', wasTruncated);
             link.dataset.tooltip = wasTruncated ? fullLabel : '';
         });
@@ -210,6 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     innerOpen.classList.remove('is-open');
                 }
             }
+
+            // Recalcula truncado/tooltip cuando cambia visibilidad de submenús.
+            window.setTimeout(syncMenuLabels, 0);
         });
     });
 
@@ -222,6 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             parent.classList.toggle('is-open');
+
+            // Recalcula truncado/tooltip cuando cambia visibilidad de submenús internos.
+            window.setTimeout(syncMenuLabels, 0);
         });
     });
 
@@ -231,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (link.closest('.submenu, .inner-submenu, .has-submenu.collapsed-open')) {
+        if (link.closest('.has-submenu.collapsed-open')) {
             hideTooltip();
             return;
         }
@@ -262,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (link.closest('.submenu, .inner-submenu, .has-submenu.collapsed-open')) {
+        if (link.closest('.has-submenu.collapsed-open')) {
             hideTooltip();
             return;
         }

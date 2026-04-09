@@ -1,0 +1,92 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 5%;">N°</th>
+            <th style="width: 18%;">Código</th>
+            <th style="width: 32%;">Empleado</th>
+            <th style="width: 14%;">Mes Notificación</th>
+            <th style="width: 16%;">Fecha Registro</th>
+            <th class="text-center actions" style="width: 15%;">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for notification in latest_notifications_page_obj.object_list %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                    <strong>{{ notification.sequential_code }}</strong>
+                </td>
+                <td>
+                    {{ notification.employee.person.full_name }}<br>
+                    <small class="text-muted">{{ notification.employee.person.document_number }}</small>
+                </td>
+                <td>{{ notification.month_label }}</td>
+                <td>{{ notification.registration_date|date:"j \d\e F \d\e Y" }}</td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        {% if perms.sanctions.change_sanctionnotification or perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
+                            <button type="button"
+                                    class="btn-views-action js-edit-notification"
+                                    data-employee-id="{{ notification.employee_id }}"
+                                    data-notification-id="{{ notification.pk }}"
+                                    title="Editar Notificación">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        {% endif %}
+
+                        {% if perms.sanctions.view_sanctionnotification %}
+                            <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
+                               class="btn-detail-action"
+                               target="_blank"
+                               rel="noopener"
+                               title="Imprimir PDF">
+                                <i class="fa-solid fa-print"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay notificaciones registradas</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if latest_notifications_page_obj.paginator.num_pages > 1 %}
+<div class="page-buttons-wrapper">
+    <ul class="page-buttons">
+        <li>
+            <button id="notifications-btn-first" class="page-btn btn-secondary" {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+        </li>
+        <li>
+            <button id="notifications-btn-prev" class="page-btn btn-secondary" {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </li>
+        <li>
+            <div class="page-input-wrapper">
+                <input type="number" id="notifications-page-input" class="page-input" min="1" max="{{ latest_notifications_page_obj.paginator.num_pages }}" value="{{ latest_notifications_page_obj.number }}">
+                <span class="total-pages-badge">de {{ latest_notifications_page_obj.paginator.num_pages }}</span>
+            </div>
+        </li>
+        <li>
+            <button id="notifications-btn-next" class="page-btn btn-secondary" {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Siguiente">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </li>
+        <li>
+            <button id="notifications-btn-last" class="page-btn btn-secondary" {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Última">
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </li>
+    </ul>
+</div>
+{% endif %}

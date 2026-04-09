@@ -1,0 +1,83 @@
+<div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Regímenes</th>
+            <th class="text-center">Templates</th>
+            <th class="text-center">Estado</th>
+            <th class="actions">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for type in types %}
+            <tr>
+                <td style="font-weight: 500;">
+                    {{ type.name }}
+                    {% if type.description %}
+                        <div class="text-muted" style="font-size: .82rem;">{{ type.description|truncatewords:12 }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="display:flex; gap: .35rem; flex-wrap: wrap;">
+                        {% for link in type.regime_templates.all %}
+                            <span class="status-badge active">{{ link.labor_regime.code }}</span>
+                        {% empty %}
+                            <span class="status-badge inactive">Sin regímenes</span>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td class="text-center" style="vertical-align: middle;">
+                    <button class="btn-list-action js-open-template-list templates-counter-btn"
+                            type="button"
+                            title="Ver templates dinámicos"
+                            data-type-id="{{ type.id }}"
+                            data-type-name="{{ type.name|escape }}">
+                        {{ type.dynamic_templates.count }}
+                    </button>
+                    <div id="template-data-{{ type.id }}" hidden>
+                        {% for template in type.dynamic_templates.all %}
+                            <div class="template-data-item"
+                                 data-template-id="{{ template.id }}"
+                                 data-edit-url="{% url 'sanctions:template_editor_detail' template.id %}"
+                                 data-regime-code="{{ template.labor_regime.code|escape }}"
+                                 data-regime-name="{{ template.labor_regime.name|escape }}"
+                                 data-is-active="{{ template.is_active|yesno:'1,0' }}"></div>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td class="text-center">
+                    {% if type.is_active %}
+                        <span class="status-badge active">Activo</span>
+                    {% else %}
+                        <span class="status-badge inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        {% if perms.sanctions.change_sanctionnotificationtype %}
+                            <button class="btn-views-action js-edit"
+                                    data-url="{% url 'sanctions:notification_type_update' type.pk %}"
+                                    title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="{% if type.is_active %}btn-delete-action{% else %}btn-create-action{% endif %} js-toggle"
+                                    data-url="{% url 'sanctions:notification_type_toggle' type.pk %}"
+                                    title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
+                                <i class="fa-solid {% if type.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 2rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p style="margin-top: 1rem; color: #666;">No hay tipos de notificaciones registrados</p>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

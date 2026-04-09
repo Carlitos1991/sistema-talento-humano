@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Administrar Mapeos{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'sanctions:notification_mapping_list' %}">
+
+        <div class="header-card">
+            <div>
+                <h1>Administrar Mapeos</h1>
+                <p>Define marcadores globales y expresiones reutilizables para cualquier template dinámico.</p>
+            </div>
+            <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                <button id="btn-guide" type="button" data-url="{% url 'sanctions:notification_type_help' %}" class="btn btn-secondary">
+                    <i class="fas fa-circle-info"></i> Guía de Campos
+                </button>
+            </div>
+        </div>
+
+        <div id="table-app">
+            <div class="content-table">
+                <div class="alert alert-info mb-3">
+                    Esta lista es solo informativa. Los mapeos globales no se crean ni se editan desde esta pantalla.
+                </div>
+                <div class="table-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="table-search" class="input-field" placeholder="Buscar marcador, etiqueta o expresión">
+                    </div>
+                </div>
+                <div id="table-content-wrapper">
+                    {% include 'sanctions/partials/partial_mapping_list.html' %}
+                </div>
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
+                    <ul class="pagination-list">
+                        <li><button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button></li>
+                        <li><span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span></li>
+                        <li><button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div id="customModal" class="modal-overlay hidden">
+        <div id="modal-dynamic-content"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/sanctions/mapping.js' %}"></script>
+{% endblock %}

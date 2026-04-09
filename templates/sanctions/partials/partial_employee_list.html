@@ -2,32 +2,17 @@
     <table>
         <thead>
         <tr>
-            <th style="width: 5%;">Foto</th>
-            <th style="width: 22%;">Nombres y Apellidos</th>
-            <th style="width: 20%;">Cargo</th>
-            <th style="width: 12%;">Tipo</th>
-            <th style="width: 18%;">Área</th>
-            <th class="text-center actions" style="width: 13%;">Acciones</th>
+            <th style="width: 27%;">Nombres y Apellidos</th>
+            <th style="width: 24%;">Cargo</th>
+            <th style="width: 14%;">Tipo</th>
+            <th style="width: 17%;">Área</th>
+            <th class="text-center" style="width: 10%;">Notificación</th>
+            <th class="text-center actions" style="width: 8%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for item in employees_data %}
             <tr>
-                <!-- Foto -->
-                <td class="text-center" style="padding: 10px 15px;">
-                    {% if item.employee.person.photo %}
-                        <img src="{{ item.employee.person.photo.url }}"
-                             alt="{{ item.employee.person.get_full_name }}"
-                             class="employee-avatar"
-                             style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover;">
-                    {% else %}
-                        <div class="employee-avatar-placeholder"
-                             style="width: 42px; height: 42px; border-radius: 50%; background: #e0e7ff; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <i class="fas fa-user" style="color: #6366f1; font-size: 1.1rem;"></i>
-                        </div>
-                    {% endif %}
-                </td>
-
                 <!-- Nombres y Apellidos -->
                 <td style="font-weight: 500; padding-left: 8px;">
                     {{ item.employee.person.full_name }}<br><small>{{ item.employee.person.document_number }}</small>
@@ -58,12 +43,34 @@
                     {% endif %}
                 </td>
 
+                <!-- Notificación -->
+                <td class="text-center" style="padding: 12px 15px;">
+                    {% if perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
+                        <div class="notification-buttons-wrapper">
+                            <button type="button" class="btn-restore-action js-generate-notification"
+                                    data-employee-id="{{ item.employee.pk }}"
+                                    data-employee-name="{{ item.employee.person.get_full_name }}"
+                                    title="Generar Notificación">
+                                <i class="fa-solid fa-bell"></i>
+                            </button>
+                            <button type="button" class="btn-list-action js-open-notification-list"
+                                    data-url="{% url 'sanctions:notification_list' %}"
+                                    data-employee-id="{{ item.employee.pk }}"
+                                    title="Listado de Notificaciones">
+                                <i class="fa-solid fa-list-ul"></i>
+                            </button>
+                        </div>
+                    {% else %}
+                        <span style="color: #999;">-</span>
+                    {% endif %}
+                </td>
+
                 <!-- Acciones -->
                 <td class="actions">
                     <div class="actions-wrapper">
                         <!-- Generar Sanción -->
                         {% if perms.sanctions.add_sanction %}
-                            <button class="btn-create-action js-generate-sanction"
+                            <button type="button" class="btn-create-action js-generate-sanction"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Generar Sanción">
@@ -73,7 +80,7 @@
 
                         <!-- Ver Historial -->
                         {% if perms.sanctions.view_sanction %}
-                            <button class="btn-list-action js-view-history"
+                            <button type="button" class="btn-list-action js-view-history"
                                     data-employee-id="{{ item.employee.pk }}"
                                     title="Ver Historial de Sanciones">
                                 <i class="fa-solid fa-list-ul"></i>

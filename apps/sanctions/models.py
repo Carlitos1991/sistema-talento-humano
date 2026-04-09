@@ -1,6 +1,9 @@
 from django.db import models
 from django.conf import settings
 
+from core.models import BaseModel
+from contract.models import LaborRegime
+from core.models import Authority
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction
 
@@ -21,6 +24,340 @@ class SanctionType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SanctionNotificationType(BaseModel):
+    """
+    Define un tipo de notificación de sanción con plantillas por régimen laboral.
+    """
+    name = models.CharField(verbose_name='Tipo de notificación', max_length=120)
+    description = models.TextField(verbose_name='Descripción', blank=True, null=True)
+    labor_regimes = models.ManyToManyField(
+        LaborRegime,
+        through='SanctionNotificationTypeRegime',
+        related_name='sanction_notification_types',
+        blank=True,
+        verbose_name='Regímenes laborales',
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Tipo de Notificación'
+        verbose_name_plural = 'Tipos de Notificaciones'
+
+    def __str__(self):
+        return self.name
+
+
+class SanctionNotificationTypeMapping(models.Model):
+    """
+    Define un mapeo reutilizable entre un marcador del Word y una fuente de datos.
+    """
+    SOURCE_CHOICES = [
+        ('employee_full_name', 'Nombre completo del empleado'),
+        ('employee_first_name', 'Nombres del empleado'),
+        ('employee_last_name', 'Apellidos del empleado'),
+        ('employee_document_number', 'Documento del empleado'),
+        ('employee_position', 'Cargo del empleado'),
+        ('employee_unit', 'Unidad / área del empleado'),
+        ('regime_code', 'Código del régimen'),
+        ('regime_name', 'Nombre del régimen'),
+        ('notification_name', 'Nombre del tipo de notificación'),
+        ('month_name', 'Nombre del mes'),
+        ('month_number', 'Número del mes'),
+        ('year', 'Año'),
+        ('registration_date', 'Fecha de registro'),
+        ('authority_1_name', 'Nombre de la autoridad 1'),
+        ('authority_1_position', 'Cargo de la autoridad 1'),
+        ('authority_2_name', 'Nombre de la autoridad 2'),
+        ('authority_2_position', 'Cargo de la autoridad 2'),
+        ('minutes_late', 'Minutos de atraso'),
+        ('regs_without_mark', 'Registros sin marcar'),
+        ('observations', 'Observaciones'),
+    ]
+
+    notification_type = models.ForeignKey(
+        SanctionNotificationType,
+        on_delete=models.CASCADE,
+        related_name='template_mappings',
+        verbose_name='Tipo de notificación',
+    )
+    placeholder = models.CharField(verbose_name='Marcador', max_length=80)
+    label = models.CharField(verbose_name='Nombre visible', max_length=120)
+    source_key = models.CharField(verbose_name='Fuente de datos', max_length=60, choices=SOURCE_CHOICES)
+    description = models.TextField(verbose_name='Descripción', blank=True, null=True)
+    is_active = models.BooleanField(verbose_name='Activo', default=True)
+    order = models.PositiveSmallIntegerField(verbose_name='Orden', default=0)
+
+    class Meta:
+        ordering = ['order', 'label']
+        verbose_name = 'Mapeo de marcador'
+        verbose_name_plural = 'Mapeos de marcadores'
+        unique_together = [['notification_type', 'placeholder']]
+
+    def __str__(self):
+        return f'{self.notification_type.name} - {self.placeholder}'
+
+
+class SanctionNotificationMapping(BaseModel):
+    """
+    Mapeo global reutilizable para todas las plantillas de notificación.
+    """
+    placeholder = models.CharField(verbose_name='Marcador', max_length=80, unique=True)
+    label = models.CharField(verbose_name='Nombre visible', max_length=120)
+    expression = models.CharField(
+        verbose_name='Expresión',
+        max_length=255,
+        help_text='Ej.: person.first_name + " " + person.last_name o today',
+    )
+    description = models.TextField(verbose_name='Descripción', blank=True, null=True)
+    is_active = models.BooleanField(verbose_name='Activo', default=True)
+    order = models.PositiveSmallIntegerField(verbose_name='Orden', default=0)
+
+    class Meta:
+        ordering = ['order', 'label']
+        verbose_name = 'Mapeo global'
+        verbose_name_plural = 'Mapeos globales'
+
+    def __str__(self):
+        return f'{self.placeholder} -> {self.expression}'
+
+
+class SanctionNotificationTypeRegime(models.Model):
+    """
+    Plantilla Word específica de un tipo de notificación para un régimen laboral.
+    """
+    notification_type = models.ForeignKey(
+        SanctionNotificationType,
+        on_delete=models.CASCADE,
+        related_name='regime_templates',
+        verbose_name='Tipo de notificación',
+    )
+    labor_regime = models.ForeignKey(
+        LaborRegime,
+        on_delete=models.PROTECT,
+        related_name='notification_templates',
+        verbose_name='Régimen laboral',
+    )
+    template_file = models.FileField(
+        upload_to='documents/sanction_notifications/%Y/%m/',
+        verbose_name='Formato Word',
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ['labor_regime__name']
+        verbose_name = 'Formato de notificación por régimen'
+        verbose_name_plural = 'Formatos de notificación por régimen'
+        unique_together = [['notification_type', 'labor_regime']]
+
+    def __str__(self):
+        return f'{self.notification_type.name} - {self.labor_regime.name}'
+
+
+class NotificationTemplate(BaseModel):
+    """
+    Template dinámico de notificación: encabezado fijo por régimen + secciones editables.
+    Una plantilla por combinación de SanctionNotificationType + LaborRegime.
+    """
+    notification_type = models.ForeignKey(
+        SanctionNotificationType,
+        on_delete=models.CASCADE,
+        related_name='dynamic_templates',
+        verbose_name='Tipo de notificación',
+    )
+    labor_regime = models.ForeignKey(
+        LaborRegime,
+        on_delete=models.PROTECT,
+        related_name='dynamic_notification_templates',
+        verbose_name='Régimen laboral',
+    )
+    is_active = models.BooleanField(verbose_name='Activo', default=True)
+
+    class Meta:
+        ordering = ['labor_regime__code', 'notification_type__name']
+        verbose_name = 'Template dinámico'
+        verbose_name_plural = 'Templates dinámicos'
+        unique_together = [['notification_type', 'labor_regime']]
+
+    def __str__(self):
+        return f'{self.notification_type.name} - {self.labor_regime.name}'
+
+
+class TemplateSection(BaseModel):
+    """
+    Sección dentro de un template dinámico: párrafo o título.
+    """
+    SECTION_TYPE_CHOICES = [
+        ('PARAGRAPH', 'Párrafo (justificado)'),
+        ('TITLE', 'Título (izquierda)'),
+    ]
+
+    template = models.ForeignKey(
+        NotificationTemplate,
+        on_delete=models.CASCADE,
+        related_name='sections',
+        verbose_name='Template',
+    )
+    section_type = models.CharField(
+        verbose_name='Tipo de sección',
+        max_length=20,
+        choices=SECTION_TYPE_CHOICES,
+        default='PARAGRAPH',
+    )
+    content = models.TextField(
+        verbose_name='Contenido',
+        help_text='Puede incluir variables: [FULL_NAME], [POSITION], [today], etc.',
+    )
+    order = models.PositiveSmallIntegerField(verbose_name='Orden', default=0)
+    is_active = models.BooleanField(verbose_name='Activo', default=True)
+
+    class Meta:
+        ordering = ['template', 'order']
+        verbose_name = 'Sección de template'
+        verbose_name_plural = 'Secciones de template'
+
+    def __str__(self):
+        return f'{self.template.notification_type.name} - [{self.get_section_type_display()}] Orden {self.order}'
+
+
+class SanctionNotification(BaseModel):
+    """
+    Registro de una notificación generada desde una plantilla Word.
+    """
+    MONTH_LABELS = {
+        1: 'ENERO',
+        2: 'FEBRERO',
+        3: 'MARZO',
+        4: 'ABRIL',
+        5: 'MAYO',
+        6: 'JUNIO',
+        7: 'JULIO',
+        8: 'AGOSTO',
+        9: 'SEPTIEMBRE',
+        10: 'OCTUBRE',
+        11: 'NOVIEMBRE',
+        12: 'DICIEMBRE',
+    }
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.PROTECT,
+        related_name='sanction_notifications',
+        verbose_name='Empleado',
+    )
+    notification_type = models.ForeignKey(
+        SanctionNotificationType,
+        on_delete=models.PROTECT,
+        related_name='notifications',
+        verbose_name='Tipo de notificación',
+    )
+    regime_template = models.ForeignKey(
+        SanctionNotificationTypeRegime,
+        on_delete=models.PROTECT,
+        related_name='notifications',
+        verbose_name='Formato por régimen',
+    )
+    labor_regime = models.ForeignKey(
+        LaborRegime,
+        on_delete=models.PROTECT,
+        related_name='sanction_notifications',
+        verbose_name='Régimen laboral',
+    )
+    month = models.PositiveSmallIntegerField(verbose_name='Mes')
+    year = models.PositiveSmallIntegerField(verbose_name='Año')
+    registration_date = models.DateField(verbose_name='Fecha de registro')
+    authority_1 = models.ForeignKey(
+        Authority,
+        on_delete=models.PROTECT,
+        related_name='sanction_notifications_authority_1',
+        verbose_name='Firma 1',
+    )
+    authority_2 = models.ForeignKey(
+        Authority,
+        on_delete=models.PROTECT,
+        related_name='sanction_notifications_authority_2',
+        verbose_name='Firma 2',
+        blank=True,
+        null=True,
+    )
+    minutes_late = models.PositiveIntegerField(
+        verbose_name='Minutos de atraso',
+        default=0,
+        blank=True,
+        null=True,
+    )
+    regs_without_mark = models.PositiveIntegerField(
+        verbose_name='Regs. sin marcar',
+        default=0,
+        blank=True,
+        null=True,
+    )
+    observations = models.TextField(verbose_name='Observaciones', blank=True, null=True)
+    sequence_number = models.PositiveIntegerField(
+        verbose_name='Secuencia',
+        default=0,
+        editable=False,
+    )
+    user_code = models.CharField(
+        verbose_name='Código de usuario',
+        max_length=12,
+        blank=True,
+        default='',
+        editable=False,
+    )
+    generated_docx = models.FileField(
+        upload_to='documents/sanction_notifications/generated/%Y/%m/',
+        verbose_name='Documento Word generado',
+        blank=True,
+        null=True,
+    )
+    generated_pdf = models.FileField(
+        upload_to='documents/sanction_notifications/generated/%Y/%m/',
+        verbose_name='Documento PDF generado',
+        blank=True,
+        null=True,
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.sequence_number:
+            last_sequence = self.__class__.objects.order_by('-sequence_number').values_list('sequence_number', flat=True).first() or 0
+            self.sequence_number = last_sequence + 1
+
+        if self.created_by and not self.user_code:
+            first_name = ''
+            last_name = ''
+            person = getattr(self.created_by, 'person', None)
+            if person:
+                first_name = person.first_name or ''
+                last_name = person.last_name or ''
+            else:
+                full_name = self.created_by.get_full_name() or self.created_by.username or ''
+                name_parts = full_name.split()
+                if name_parts:
+                    first_name = name_parts[0]
+                    last_name = name_parts[1] if len(name_parts) > 1 else name_parts[0]
+
+            self.user_code = f'{first_name[:2].upper()}{last_name[:2].upper()}'.strip()
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-registration_date', '-created_at']
+        verbose_name = 'Notificación de Sanción'
+        verbose_name_plural = 'Notificaciones de Sanción'
+
+    @property
+    def sequential_code(self):
+        return f'{self.sequence_number:04d}' if self.sequence_number else '0000'
+
+    @property
+    def month_label(self):
+        return self.MONTH_LABELS.get(self.month, str(self.month or ''))
+
+    def __str__(self):
+        return f'{self.notification_type.name} - {self.employee}'
 
 
 class Sanction(models.Model):

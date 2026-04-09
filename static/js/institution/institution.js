@@ -236,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const unitModalEl = document.getElementById('unit-modal-app');
+    const searchInput = document.querySelector('.table-search-input');
     if (unitModalEl && !unitModalEl.__vue_app__) {
         const app = createApp({
             delimiters: ['[[', ']]'],
@@ -440,6 +441,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         unitModalEl.__vue_app__ = app.mount('#unit-modal-app');
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') {
+                return;
+            }
+
+            e.preventDefault();
+            const toggleEl = document.getElementById('toggleInactiveUnits');
+            const showInactive = toggleEl && toggleEl.checked;
+            const q = searchInput.value.trim();
+            loadUnitsPartial({parentId: null, showInactive: showInactive, q: q});
+        });
     }
 
     // Vincular botón principal

@@ -1,5 +1,5 @@
 from django import forms
-from .models import User, Catalog, CatalogItem, Location, Authority
+from .models import User, Catalog, CatalogItem, Location, Authority, SystemConfiguration
 
 
 class BaseFormMixin:
@@ -161,4 +161,16 @@ class AuthorityForm(forms.ModelForm):
                 'placeholder': 'Ej: Director General'
             }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class SystemLetterheadForm(forms.ModelForm):
+    class Meta:
+        model = SystemConfiguration
+        fields = ['letterhead']
+        widgets = {
+            'letterhead': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.png,.jpg,.jpeg,.webp',
+            }),
         }

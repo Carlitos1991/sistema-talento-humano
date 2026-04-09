@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hoja Membretada{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/core/letterhead.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper letterhead-page">
+    <div class="header-card letterhead-hero">
+        <div>
+            <h1>Hoja Membretada</h1>
+            <p>Sube o reemplaza la imagen base que se dibuja de fondo en todos los reportes PDF.</p>
+        </div>
+        <div class="letterhead-meta">
+            {% if configuration %}
+                <span class="status-badge active">Vigencia: {{ configuration.effective_date }}</span>
+                <span class="status-badge active">Ciudad: {{ configuration.city }}</span>
+            {% else %}
+                <span class="status-badge inactive">Sin configuración vigente</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="letterhead-grid">
+        <div class="letterhead-card">
+            <h3>Vista previa actual</h3>
+            <div class="letterhead-preview-frame">
+                {% if configuration and configuration.letterhead %}
+                    <img id="currentLetterheadImage" src="{{ configuration.letterhead.url }}" alt="Hoja membretada actual">
+                {% else %}
+                    <div class="letterhead-empty">
+                        <i class="fa-solid fa-file-image"></i>
+                        <p>No hay una hoja membretada cargada.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="letterhead-card">
+            <h3>Actualizar imagen</h3>
+            <form method="post" enctype="multipart/form-data" class="letterhead-form">
+                {% csrf_token %}
+                <label class="form-label" for="{{ form.letterhead.id_for_label }}">Seleccionar imagen (A4 recomendado)</label>
+                {{ form.letterhead }}
+                {% if form.letterhead.errors %}
+                    <div class="invalid-feedback d-block">{{ form.letterhead.errors|join:', ' }}</div>
+                {% endif %}
+                <small class="form-hint">Formatos permitidos: PNG, JPG, JPEG, WEBP.</small>
+
+                <div class="letterhead-preview-upload" id="uploadPreviewContainer" style="display:none;">
+                    <p class="preview-title">Vista previa de nueva imagen</p>
+                    <img id="uploadPreview" src="" alt="Preview de nueva membretada">
+                </div>
+
+                <div class="letterhead-actions">
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Membretada
+                    </button>
+                    <a href="{% url 'sanctions:template_editor_list' %}" class="btn-cancel">
+                        <i class="fa-solid fa-pen-to-square"></i> Ir a Templates
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/core/letterhead.js' %}"></script>
+{% endblock %}

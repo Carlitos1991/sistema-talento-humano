@@ -10,9 +10,9 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
-from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm
+from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm, SystemLetterheadForm
 from .forms import UserProfileForm
-from .models import Catalog, CatalogItem, Location, Authority
+from .models import Catalog, CatalogItem, Location, Authority, SystemConfiguration
 from .models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
@@ -1109,6 +1109,46 @@ class ChangePasswordView(LoginRequiredMixin, View):
                 'success': False,
                 'message': f'Ocurrió un error: {str(e)}'
             })
+
+
+class SystemLetterheadView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'core.view_systemconfiguration'
+    template_name = 'core/system_letterhead.html'
+
+    def get_configuration(self):
+        return SystemConfiguration.get_current() or SystemConfiguration.objects.order_by('-effective_date').first()
+
+    def get(self, request):
+        configuration = self.get_configuration()
+        form = SystemLetterheadForm(instance=configuration)
+        return render(request, self.template_name, {
+            'form': form,
+            'configuration': configuration,
+        })
+
+    def post(self, request):
+        if not request.user.has_perm('core.change_systemconfiguration'):
+            messages.error(request, 'No tiene permisos para modificar la hoja membretada.')
+            return redirect('core:system_letterhead')
+
+        configuration = self.get_configuration()
+
+        if configuration is None:
+            messages.error(request, 'No existe una configuración del sistema. Cree una configuración general primero.')
+            return redirect('core:system_letterhead')
+
+        form = SystemLetterheadForm(request.POST, request.FILES, instance=configuration)
+        if form.is_valid():
+            config = form.save(commit=False)
+            config.updated_by = request.user
+            config.save()
+            messages.success(request, 'Hoja membretada actualizada correctamente.')
+            return redirect('core:system_letterhead')
+
+        return render(request, self.template_name, {
+            'form': form,
+            'configuration': configuration,
+        })
 
 
 def custom_page_not_found(request, exception=None):

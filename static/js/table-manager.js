@@ -43,7 +43,89 @@ class TableManager {
             this.render();
         }
 
+        this.initHorizontalScrollHelper();
+
         this.table._tableManager = this;
+    }
+
+    initHorizontalScrollHelper() {
+        this.scrollContainer = this.table.closest('.table-container');
+        if (!this.scrollContainer) {
+            return;
+        }
+
+        this.scrollContainer.classList.add('table-container-has-scroll-helper');
+
+        let helperGroup = this.scrollContainer.querySelector('.table-scroll-helper-group');
+        if (!helperGroup) {
+            helperGroup = document.createElement('div');
+            helperGroup.className = 'table-scroll-helper-group';
+
+            const startButton = document.createElement('button');
+            startButton.type = 'button';
+            startButton.className = 'table-scroll-nav-button table-scroll-nav-start';
+            startButton.setAttribute('aria-label', 'Ir al inicio de la tabla');
+            startButton.title = 'Ir al inicio de la tabla';
+            startButton.innerHTML = '<i class="fas fa-angles-left"></i>';
+
+            const endButton = document.createElement('button');
+            endButton.type = 'button';
+            endButton.className = 'table-scroll-nav-button table-scroll-nav-end';
+            endButton.setAttribute('aria-label', 'Ir al final de la tabla');
+            endButton.title = 'Ir al final de la tabla';
+            endButton.innerHTML = '<i class="fas fa-angles-right"></i>';
+
+            helperGroup.appendChild(startButton);
+            helperGroup.appendChild(endButton);
+            this.scrollContainer.appendChild(helperGroup);
+        }
+
+        const startButton = this.scrollContainer.querySelector('.table-scroll-nav-start');
+        const endButton = this.scrollContainer.querySelector('.table-scroll-nav-end');
+
+        if (startButton && !startButton.dataset.bound) {
+            startButton.addEventListener('click', () => {
+                this.scrollContainer.scrollTo({left: 0, behavior: 'smooth'});
+            });
+            startButton.dataset.bound = '1';
+        }
+
+        if (endButton && !endButton.dataset.bound) {
+            endButton.addEventListener('click', () => {
+                this.scrollContainer.scrollTo({
+                    left: this.scrollContainer.scrollWidth,
+                    behavior: 'smooth'
+                });
+            });
+            endButton.dataset.bound = '1';
+        }
+
+        const syncHelperVisibility = () => {
+            const needsScroll = this.scrollContainer.scrollWidth > this.scrollContainer.clientWidth + 8;
+            const maxScrollLeft = Math.max(0, this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth);
+            const currentScrollLeft = this.scrollContainer.scrollLeft;
+
+            if (helperGroup) {
+                helperGroup.style.display = needsScroll ? 'flex' : 'none';
+            }
+
+            if (startButton) {
+                startButton.style.display = needsScroll && currentScrollLeft > 8 ? 'inline-flex' : 'none';
+            }
+
+            if (endButton) {
+                endButton.style.display = needsScroll && currentScrollLeft < maxScrollLeft - 8 ? 'inline-flex' : 'none';
+            }
+        };
+
+        syncHelperVisibility();
+        this.scrollContainer.addEventListener('scroll', syncHelperVisibility, {passive: true});
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const resizeObserver = new ResizeObserver(syncHelperVisibility);
+            resizeObserver.observe(this.scrollContainer);
+            resizeObserver.observe(this.table);
+        }
     }
 
     // ─── BÚSQUEDA ────────────────────────────────────────────────────────────

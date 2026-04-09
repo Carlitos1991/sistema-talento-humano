@@ -400,7 +400,7 @@
                                 <a href="{% url 'sanctions:sanction_employee_list' %}"
                                    class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_employee_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-plus-circle"></i>
-                                    <span class="menu-text">Generar Sanción</span>
+                                    <span class="menu-text">Sanciones y Notificaciones</span>
                                 </a>
                             </li>
                         {% endif %}
@@ -415,6 +415,38 @@
                                 </a>
                             </li>
                         {% endif %}
+
+                        {% if perms.sanctions.view_sanctionnotificationtype %}
+                            <li>
+                                <a href="{% url 'sanctions:notification_type_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'notification_type_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-bell"></i>
+                                    <span class="menu-text">Tipos de Notificaciones</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% if perms.sanctions.view_sanctionnotificationmapping %}
+                            <li>
+                                <a href="{% url 'sanctions:notification_mapping_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'notification_mapping_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-diagram-project"></i>
+                                    <span class="menu-text">Administrar Mapeos</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% if perms.sanctions.change_notificationtemplate %}
+                            <li>
+                                <a href="{% url 'sanctions:template_editor_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'template_editor_list' or request.resolver_match.url_name == 'template_editor_detail' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span class="menu-text">Editor de Templates</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+
                     </ul>
                 </li>
             {% endif %}
@@ -615,14 +647,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.auth.view_user %}
-                            <li>
-                                <a href="{% url 'security:user_control_list' %}">
-                                    <i class="fa-solid fa-users-gear"></i>
-                                    <span class="menu-text">Control de Usuarios</span>
-                                </a>
-                            </li>
-                        {% endif %}
+
                         {% if perms.core.view_catalog %}
                             <li>
                                 <a href="{% url 'core:catalog_list' %}">
@@ -631,14 +656,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.core.view_authority %}
-                            <li>
-                                <a href="{% url 'core:authority_list' %}">
-                                    <i class="fa-solid fa-user-tie"></i>
-                                    <span class="menu-text">Autoridades</span>
-                                </a>
-                            </li>
-                        {% endif %}
+
                         {% if perms.core.view_location %}
                             <li>
                                 <a href="{% url 'core:location_list' %}">
@@ -647,7 +665,31 @@
                                 </a>
                             </li>
                         {% endif %}
+                        {% if perms.core.change_systemconfiguration or perms.core.view_systemconfiguration %}
+                            <li>
+                                <a href="{% url 'core:system_letterhead' %}">
+                                    <i class="fa-solid fa-file-image"></i>
+                                    <span class="menu-text">Hoja Membretada</span>
+                                </a>
+                            </li>
+                        {% endif %}
                     </ul>
+                </li>
+            {% endif %}
+            {% if perms.core.view_authority %}
+                <li>
+                    <a href="{% url 'core:authority_list' %}">
+                        <i class="fa-solid fa-user-tie"></i>
+                        <span class="menu-text">Autoridades</span>
+                    </a>
+                </li>
+            {% endif %}
+            {% if perms.auth.view_user %}
+                <li>
+                    <a href="{% url 'security:user_control_list' %}">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span class="menu-text">Control de Usuarios</span>
+                    </a>
                 </li>
             {% endif %}
             <li>
@@ -660,7 +702,8 @@
 
     </div>
     <div class="sidebar-footer">
-        <a href="{% url 'security:help_message_list' %}" class="sidebar-footer-action" id="sidebarMessagesBtn" title="Mensajes">
+        <a href="{% url 'security:help_message_list' %}" class="sidebar-footer-action" id="sidebarMessagesBtn"
+           title="Mensajes">
             <i class="fa-solid fa-message"></i>
             <span class="menu-text">Mensajes</span>
             {% if help_messages_show_notifications %}

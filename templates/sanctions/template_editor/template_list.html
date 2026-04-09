@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editor de Templates Dinámicos{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="fas fa-file-contract"></i> Editor de Templates Dinámicos
+            </h1>
+            <p class="text-muted">Construye notificaciones personalizadas con párrafos y títulos dinámicos</p>
+        </div>
+    </div>
+
+    <form method="get" class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="filter-search">Buscar</label>
+                    <input type="text" id="filter-search" name="q" class="form-control" value="{{ search_query }}" placeholder="Tipo, régimen o código">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="filter-month">Mes</label>
+                    <select id="filter-month" name="month" class="form-select">
+                        <option value="">Todos</option>
+                        {% for value, label in month_choices %}
+                            <option value="{{ value }}" {% if selected_month == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="filter-year">Año</label>
+                    <input type="number" id="filter-year" name="year" class="form-control" min="2000" max="2100" value="{{ selected_year }}" placeholder="Ej. 2026">
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-filter"></i> Filtrar
+                    </button>
+                    <a href="{% url 'sanctions:template_editor_list' %}" class="btn btn-outline-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if templates %}
+        <div class="row">
+            {% for template in templates %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-cubes text-primary"></i>
+                                {{ template.notification_type.name }}
+                            </h5>
+                            <p class="card-text text-muted small">
+                                <strong>Régimen:</strong> {{ template.labor_regime.name }}
+                                <br>
+                                <strong>Código:</strong> <code>{{ template.labor_regime.code }}</code>
+                            </p>
+                            <p class="card-text">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-list"></i>
+                                    {{ template.sections.count }} secciones
+                                </span>
+                                {% if template.is_active %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'sanctions:template_editor_detail' template.id %}" class="btn btn-sm btn-primary w-100">
+                                Editar plantilla
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+            <div class="pagination-container" id="js-pagination" style="margin-top:25px; display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap;">
+                <span class="pagination-info" id="page-info">
+                    Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+                </span>
+                <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+                    <li>
+                        <a class="page-btn btn-secondary" href="?page=1&q={{ search_query|urlencode }}&month={{ selected_month|urlencode }}&year={{ selected_year|urlencode }}" title="Primera">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="page-btn btn-secondary" href="?page={{ page_obj.previous_page_number }}&q={{ search_query|urlencode }}&month={{ selected_month|urlencode }}&year={{ selected_year|urlencode }}" title="Anterior">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <div class="page-input-wrapper">
+                            <input type="number" id="page-input" class="page-input" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}">
+                            <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="page-btn btn-secondary" href="?page={{ page_obj.next_page_number }}&q={{ search_query|urlencode }}&month={{ selected_month|urlencode }}&year={{ selected_year|urlencode }}" title="Siguiente">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="page-btn btn-secondary" href="?page={{ page_obj.paginator.num_pages }}&q={{ search_query|urlencode }}&month={{ selected_month|urlencode }}&year={{ selected_year|urlencode }}" title="Última">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle"></i>
+            <strong>Sin templates</strong> - No hay templates dinámicos para editar.
+            Crea uno a través del Django admin primero.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sanctions/template_editor.js' %}"></script>
+{% endblock %}

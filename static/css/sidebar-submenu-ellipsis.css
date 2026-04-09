@@ -1,0 +1,15 @@
+/* Truncado de texto en submenú del sidebar */
+
+.sidebar-menu .submenu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.sidebar-menu .submenu li a .menu-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
