@@ -21,89 +21,10 @@
             {% else %}
                 <span class="status-badge inactive">Sin configuración vigente</span>
             {% endif %}
+            <button type="button" id="btn-open-config-modal" class="btn-save btn-open-config-modal">
+                <i class="fa-solid fa-gear"></i> Actualizar Configuración General
+            </button>
         </div>
-    </div>
-
-    <div class="letterhead-card" style="margin-bottom: 1rem;">
-        <h3>Configuración general del sistema</h3>
-        <form method="post" enctype="multipart/form-data" class="letterhead-form">
-            {% csrf_token %}
-            <input type="hidden" name="action_type" value="setup">
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.institution_name.id_for_label }}">Institución</label>
-                    {{ config_form.institution_name }}
-                    {% if config_form.institution_name.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_name.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="{{ config_form.city.id_for_label }}">Ciudad</label>
-                    {{ config_form.city }}
-                    {% if config_form.city.errors %}<div class="invalid-feedback d-block">{{ config_form.city.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="{{ config_form.effective_date.id_for_label }}">Vigencia</label>
-                    {{ config_form.effective_date }}
-                    {% if config_form.effective_date.errors %}<div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC</label>
-                    {{ config_form.institution_ruc }}
-                    {% if config_form.institution_ruc.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_ruc.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="{{ config_form.institution_phone.id_for_label }}">Teléfono</label>
-                    {{ config_form.institution_phone }}
-                    {% if config_form.institution_phone.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_phone.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="{{ config_form.institution_email.id_for_label }}">Correo</label>
-                    {{ config_form.institution_email }}
-                    {% if config_form.institution_email.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_email.errors|join:', ' }}</div>{% endif %}
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label" for="{{ config_form.institution_address.id_for_label }}">Dirección</label>
-                    {{ config_form.institution_address }}
-                    {% if config_form.institution_address.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_address.errors|join:', ' }}</div>{% endif %}
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.max_authority_name.id_for_label }}">Máxima autoridad</label>
-                    {{ config_form.max_authority_name }}
-                    {% if config_form.max_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_name.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.max_authority_position.id_for_label }}">Cargo máxima autoridad</label>
-                    {{ config_form.max_authority_position }}
-                    {% if config_form.max_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_position.errors|join:', ' }}</div>{% endif %}
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.talento_humano_authority_name.id_for_label }}">Autoridad TTHH (opcional)</label>
-                    {{ config_form.talento_humano_authority_name }}
-                    {% if config_form.talento_humano_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_name.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.talento_humano_authority_position.id_for_label }}">Cargo autoridad TTHH (opcional)</label>
-                    {{ config_form.talento_humano_authority_position }}
-                    {% if config_form.talento_humano_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_position.errors|join:', ' }}</div>{% endif %}
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label" for="{{ config_form.logo.id_for_label }}">Logo institucional (opcional)</label>
-                    {{ config_form.logo }}
-                    {% if config_form.logo.errors %}<div class="invalid-feedback d-block">{{ config_form.logo.errors|join:', ' }}</div>{% endif %}
-                </div>
-            </div>
-
-            <div class="letterhead-actions" style="margin-top: 1rem;">
-                <button type="submit" class="btn-save">
-                    <i class="fa-solid fa-gear"></i> Guardar Configuración General
-                </button>
-            </div>
-        </form>
     </div>
 
     <div class="letterhead-grid">
@@ -148,6 +69,107 @@
                 </div>
             </form>
         </div>
+    </div>
+</div>
+
+<div id="configGeneralModal" class="letterhead-modal-overlay {% if not config_form.errors %}hidden{% endif %}" data-open-on-load="{% if config_form.errors %}1{% else %}0{% endif %}">
+    <div class="letterhead-modal-box">
+        <button type="button" class="btn-close-modal js-close-config-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-gear"></i>
+                </div>
+                <h2 class="header-title-main">Actualizar Configuración General</h2>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="letterhead-form">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="setup">
+
+            <div class="modal-body-scrolled">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.institution_name.id_for_label }}">Institución</label>
+                        {{ config_form.institution_name }}
+                        {% if config_form.institution_name.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_name.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="{{ config_form.city.id_for_label }}">Ciudad</label>
+                        {{ config_form.city }}
+                        {% if config_form.city.errors %}<div class="invalid-feedback d-block">{{ config_form.city.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="{{ config_form.effective_date.id_for_label }}">Vigencia</label>
+                        {{ config_form.effective_date }}
+                        {% if config_form.effective_date.errors %}<div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC</label>
+                        {{ config_form.institution_ruc }}
+                        {% if config_form.institution_ruc.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_ruc.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ config_form.institution_phone.id_for_label }}">Teléfono</label>
+                        {{ config_form.institution_phone }}
+                        {% if config_form.institution_phone.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_phone.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ config_form.institution_email.id_for_label }}">Correo</label>
+                        {{ config_form.institution_email }}
+                        {% if config_form.institution_email.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_email.errors|join:', ' }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" for="{{ config_form.institution_address.id_for_label }}">Dirección</label>
+                        {{ config_form.institution_address }}
+                        {% if config_form.institution_address.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_address.errors|join:', ' }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.max_authority_name.id_for_label }}">Máxima autoridad</label>
+                        {{ config_form.max_authority_name }}
+                        {% if config_form.max_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_name.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.max_authority_position.id_for_label }}">Cargo máxima autoridad</label>
+                        {{ config_form.max_authority_position }}
+                        {% if config_form.max_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_position.errors|join:', ' }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.talento_humano_authority_name.id_for_label }}">Autoridad TTHH (opcional)</label>
+                        {{ config_form.talento_humano_authority_name }}
+                        {% if config_form.talento_humano_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_name.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.talento_humano_authority_position.id_for_label }}">Cargo autoridad TTHH (opcional)</label>
+                        {{ config_form.talento_humano_authority_position }}
+                        {% if config_form.talento_humano_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_position.errors|join:', ' }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ config_form.logo.id_for_label }}">Logo institucional (opcional)</label>
+                        {{ config_form.logo }}
+                        {% if config_form.logo.errors %}<div class="invalid-feedback d-block">{{ config_form.logo.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-refined">
+                <button type="button" class="btn-cancel js-close-config-modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-gear"></i> Guardar Configuración General
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
