@@ -9,7 +9,7 @@
             background: #eef2f7;
             font-family: Arial, sans-serif;
             color: #111827;
-            font-size: 10px;
+            font-size: 12px;
             line-height: 1.42;
         }
 
@@ -78,14 +78,14 @@
         .header-title {
             text-align: center;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 12px;
             margin-bottom: 0.65cm;
         }
 
         .header-date {
-            text-align: left;
+            text-align: right;
             margin-bottom: 0.9cm;
-            font-size: 10px;
+            font-size: 12px;
         }
 
         .paragraph {
@@ -119,45 +119,45 @@
     </style>
 </head>
 <body>
-    <div class="preview-toolbar">
-        <div class="preview-chip">
-            Vista previa en vivo
-        </div>
-        <div class="preview-url">{{ request.get_full_path }}</div>
+<div class="preview-toolbar">
+    <div class="preview-chip">
+        Vista previa en vivo
     </div>
+    <div class="preview-url">{{ request.get_full_path }}</div>
+</div>
 
-    <div class="preview-wrapper">
-        {% if is_ready %}
-            <div class="preview-page">
-                {% if letterhead_path %}
-                    <div class="letterhead">
-                        <img src="{{ letterhead_path }}" alt="Membretada">
-                    </div>
-                {% endif %}
-
-                <div class="document-content">
-                    <div class="header-title">NOTIFICACIÓN Nº {{ header_code }}</div>
-                    <div class="header-date">{{ city }}, {{ registration_date }}</div>
-
-                    {% for section in sections %}
-                        {% if section.type == 'TITLE' %}
-                            <div class="section-title">{{ section.content_html|safe }}</div>
-                        {% else %}
-                            <div class="paragraph">{{ section.content_html|safe }}</div>
-                        {% endif %}
-                    {% endfor %}
+<div class="preview-wrapper">
+    {% if is_ready %}
+        <div class="preview-page">
+            {% if letterhead_path %}
+                <div class="letterhead">
+                    <img src="{{ letterhead_path }}" alt="Membretada">
                 </div>
+            {% endif %}
+
+            <div class="document-content">
+                <div class="header-title">NOTIFICACIÓN Nº {{ header_code }}</div>
+                <div class="header-date">{{ city }}, {{ registration_date }}</div>
+
+                {% for section in sections %}
+                    {% if section.type == 'TITLE' %}
+                        <div class="section-title">{{ section.content_html|safe }}</div>
+                    {% else %}
+                        <div class="paragraph">{{ section.content_html|safe }}</div>
+                    {% endif %}
+                {% endfor %}
             </div>
-        {% else %}
-            <div class="preview-empty">
-                <h3>No hay vista previa disponible todavía</h3>
-                {% if not regime_context.regime %}
-                    <p>No se detectó un régimen laboral vigente para este empleado.</p>
-                {% else %}
-                    <p>Selecciona un tipo de notificación y la firma principal para generar la vista previa.</p>
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
+        </div>
+    {% else %}
+        <div class="preview-empty">
+            <h3>No hay vista previa disponible todavía</h3>
+            {% if not regime_context.regime %}
+                <p>No se detectó un régimen laboral vigente para este empleado.</p>
+            {% else %}
+                <p>Selecciona un tipo de notificación y la firma principal para generar la vista previa.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
 </body>
 </html>
