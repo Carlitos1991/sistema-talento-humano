@@ -10,7 +10,7 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
-from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm, SystemLetterheadForm
+from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm, SystemLetterheadForm, SystemConfigurationSetupForm
 from .forms import UserProfileForm
 from .models import Catalog, CatalogItem, Location, Authority, SystemConfiguration
 from .models import User
@@ -1121,8 +1121,10 @@ class SystemLetterheadView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def get(self, request):
         configuration = self.get_configuration()
         form = SystemLetterheadForm(instance=configuration)
+        config_form = SystemConfigurationSetupForm(instance=configuration)
         return render(request, self.template_name, {
             'form': form,
+            'config_form': config_form,
             'configuration': configuration,
         })
 
@@ -1132,10 +1134,36 @@ class SystemLetterheadView(LoginRequiredMixin, PermissionRequiredMixin, View):
             return redirect('core:system_letterhead')
 
         configuration = self.get_configuration()
+        action_type = request.POST.get('action_type', 'letterhead')
+
+        if action_type == 'setup':
+            config_form = SystemConfigurationSetupForm(request.POST, request.FILES, instance=configuration)
+            form = SystemLetterheadForm(instance=configuration)
+
+            if config_form.is_valid():
+                config = config_form.save(commit=False)
+                if configuration is None:
+                    config.created_by = request.user
+                config.updated_by = request.user
+                config.save()
+                messages.success(request, 'Configuración general guardada correctamente.')
+                return redirect('core:system_letterhead')
+
+            return render(request, self.template_name, {
+                'form': form,
+                'config_form': config_form,
+                'configuration': configuration,
+            })
 
         if configuration is None:
-            messages.error(request, 'No existe una configuración del sistema. Cree una configuración general primero.')
-            return redirect('core:system_letterhead')
+            messages.error(request, 'Debe registrar primero la configuración general del sistema.')
+            form = SystemLetterheadForm()
+            config_form = SystemConfigurationSetupForm(request.POST, request.FILES)
+            return render(request, self.template_name, {
+                'form': form,
+                'config_form': config_form,
+                'configuration': configuration,
+            })
 
         form = SystemLetterheadForm(request.POST, request.FILES, instance=configuration)
         if form.is_valid():
@@ -1145,8 +1173,10 @@ class SystemLetterheadView(LoginRequiredMixin, PermissionRequiredMixin, View):
             messages.success(request, 'Hoja membretada actualizada correctamente.')
             return redirect('core:system_letterhead')
 
+        config_form = SystemConfigurationSetupForm(instance=configuration)
         return render(request, self.template_name, {
             'form': form,
+            'config_form': config_form,
             'configuration': configuration,
         })
 

@@ -174,3 +174,36 @@ class SystemLetterheadForm(forms.ModelForm):
                 'accept': '.png,.jpg,.jpeg,.webp',
             }),
         }
+
+
+class SystemConfigurationSetupForm(forms.ModelForm):
+    class Meta:
+        model = SystemConfiguration
+        fields = [
+            'institution_name',
+            'city',
+            'institution_ruc',
+            'institution_address',
+            'institution_phone',
+            'institution_email',
+            'max_authority_name',
+            'max_authority_position',
+            'talento_humano_authority_name',
+            'talento_humano_authority_position',
+            'effective_date',
+            'logo',
+        ]
+        widgets = {
+            'institution_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la institución'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ciudad'}),
+            'institution_ruc': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RUC institucional'}),
+            'institution_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección institucional'}),
+            'institution_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono institucional'}),
+            'institution_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Correo institucional'}),
+            'max_authority_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de máxima autoridad'}),
+            'max_authority_position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cargo de máxima autoridad'}),
+            'talento_humano_authority_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre autoridad TTHH (opcional)'}),
+            'talento_humano_authority_position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cargo autoridad TTHH (opcional)'}),
+            'effective_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.webp'}),
+        }

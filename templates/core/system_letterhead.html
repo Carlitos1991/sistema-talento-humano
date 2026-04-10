@@ -12,7 +12,7 @@
     <div class="header-card letterhead-hero">
         <div>
             <h1>Hoja Membretada</h1>
-            <p>Sube o reemplaza la imagen base que se dibuja de fondo en todos los reportes PDF.</p>
+            <p>Configura la información general del sistema y sube la imagen base que se dibuja en los reportes PDF.</p>
         </div>
         <div class="letterhead-meta">
             {% if configuration %}
@@ -22,6 +22,88 @@
                 <span class="status-badge inactive">Sin configuración vigente</span>
             {% endif %}
         </div>
+    </div>
+
+    <div class="letterhead-card" style="margin-bottom: 1rem;">
+        <h3>Configuración general del sistema</h3>
+        <form method="post" enctype="multipart/form-data" class="letterhead-form">
+            {% csrf_token %}
+            <input type="hidden" name="action_type" value="setup">
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.institution_name.id_for_label }}">Institución</label>
+                    {{ config_form.institution_name }}
+                    {% if config_form.institution_name.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_name.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ config_form.city.id_for_label }}">Ciudad</label>
+                    {{ config_form.city }}
+                    {% if config_form.city.errors %}<div class="invalid-feedback d-block">{{ config_form.city.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="{{ config_form.effective_date.id_for_label }}">Vigencia</label>
+                    {{ config_form.effective_date }}
+                    {% if config_form.effective_date.errors %}<div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC</label>
+                    {{ config_form.institution_ruc }}
+                    {% if config_form.institution_ruc.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_ruc.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ config_form.institution_phone.id_for_label }}">Teléfono</label>
+                    {{ config_form.institution_phone }}
+                    {% if config_form.institution_phone.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_phone.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ config_form.institution_email.id_for_label }}">Correo</label>
+                    {{ config_form.institution_email }}
+                    {% if config_form.institution_email.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_email.errors|join:', ' }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="{{ config_form.institution_address.id_for_label }}">Dirección</label>
+                    {{ config_form.institution_address }}
+                    {% if config_form.institution_address.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_address.errors|join:', ' }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.max_authority_name.id_for_label }}">Máxima autoridad</label>
+                    {{ config_form.max_authority_name }}
+                    {% if config_form.max_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_name.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.max_authority_position.id_for_label }}">Cargo máxima autoridad</label>
+                    {{ config_form.max_authority_position }}
+                    {% if config_form.max_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_position.errors|join:', ' }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.talento_humano_authority_name.id_for_label }}">Autoridad TTHH (opcional)</label>
+                    {{ config_form.talento_humano_authority_name }}
+                    {% if config_form.talento_humano_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_name.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.talento_humano_authority_position.id_for_label }}">Cargo autoridad TTHH (opcional)</label>
+                    {{ config_form.talento_humano_authority_position }}
+                    {% if config_form.talento_humano_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_position.errors|join:', ' }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ config_form.logo.id_for_label }}">Logo institucional (opcional)</label>
+                    {{ config_form.logo }}
+                    {% if config_form.logo.errors %}<div class="invalid-feedback d-block">{{ config_form.logo.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="letterhead-actions" style="margin-top: 1rem;">
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-gear"></i> Guardar Configuración General
+                </button>
+            </div>
+        </form>
     </div>
 
     <div class="letterhead-grid">
@@ -43,6 +125,7 @@
             <h3>Actualizar imagen</h3>
             <form method="post" enctype="multipart/form-data" class="letterhead-form">
                 {% csrf_token %}
+                <input type="hidden" name="action_type" value="letterhead">
                 <label class="form-label" for="{{ form.letterhead.id_for_label }}">Seleccionar imagen (A4 recomendado)</label>
                 {{ form.letterhead }}
                 {% if form.letterhead.errors %}
