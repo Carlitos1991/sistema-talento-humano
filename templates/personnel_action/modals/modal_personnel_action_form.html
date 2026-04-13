@@ -1,6 +1,7 @@
 {% load static %}
+<link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
 
-<form method="post" action="{% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}" id="form-create-action">
+<form method="post" action="{% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}" id="form-create-action" novalidate>
     {% csrf_token %}
     
     <!-- HEADER -->
@@ -13,7 +14,7 @@
     </div>
 
     <!-- BODY -->
-    <div class="modal-body-custom">
+    <div class="modal-body-custom" style="max-height: 65vh; overflow-y: auto;">
         
         <!-- 1. INFORMACIÓN DEL EMPLEADO -->
         {% if employee_id %}
@@ -101,7 +102,54 @@
             </div>
         </div>
 
-        <!-- 4. FIRMAS AUTORIZADAS -->
+        <!-- 4. ACORDEÓN: OPCIONES DE MOVIMIENTO -->
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-arrows-alt"></i> OPCIONES DE MOVIMIENTO
+            </h5>
+            
+            <!-- ACORDEÓN REUBICAR -->
+            <div class="accordion-item" data-accordion="reubicar">
+                <button type="button" class="accordion-header" onclick="toggleAccordion('reubicar', this)">
+                    <i class="fa-solid fa-sitemap"></i> Reubicar - Unidad Administrativa
+                    <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="accordion-content">
+                    <div id="reubicar-combos-wrapper">
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Seleccione la nueva unidad administrativa del empleado en cascada.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACORDEÓN CAMBIAR PARTIDA -->
+            <div class="accordion-item" data-accordion="partida">
+                <button type="button" class="accordion-header" onclick="toggleAccordion('partida', this)">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Cambiar Partida - Presupuestaria
+                    <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+                </button>
+                <div class="accordion-content">
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.25rem;">
+                        <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Busque y seleccione una partida presupuestaria disponible (estado LIBRE).
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Partida Presupuestaria</label>
+                        <select id="id_new_budget_line" class="input-field form-control" style="width: 100%;">
+                            <option value="">-- Seleccione una partida --</option>
+                        </select>
+                        <div id="budget-info" class="budget-info-box">
+                            <div><strong>Código:</strong> <span id="budget-code">-</span></div>
+                            <div><strong>Cargo:</strong> <span id="budget-position">-</span></div>
+                            <div><strong>RMU:</strong> <span id="budget-remuneration">-</span></div>
+                            <div><strong>Programa:</strong> <span id="budget-program">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. FIRMAS AUTORIZADAS -->
         <div class="form-section-card mt-3">
             <h5 class="section-title">
                 <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
@@ -150,3 +198,6 @@
         </button>
     </div>
 </form>
+
+<!-- Script para inicializar acordeones y cascadas -->
+<script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>

@@ -8,10 +8,93 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponse
+from datetime import timedelta
 
-from budget.models import BudgetLine
+from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetModificationHistory
+from core.models import CatalogItem
 from .models import PersonnelAction, ActionMovement, ActionType
 from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
+
+
+def _flatten_unit_descendants(unit, depth=0):
+    descendants = []
+    if not unit:
+        return descendants
+
+    children = unit.children.filter(is_active=True).select_related('level').order_by('level__level_order', 'name')
+    for child in children:
+        descendants.append({
+            'depth': depth,
+            'name': child.name,
+            'path': child.get_full_path(),
+        })
+        descendants.extend(_flatten_unit_descendants(child, depth + 1))
+
+    return descendants
+
+
+def _budget_snapshot(budget_line):
+    if not budget_line:
+        return None
+
+    program_name = ''
+    try:
+        program_name = budget_line.activity.project.subprogram.program.name
+    except Exception:
+        program_name = ''
+
+    return {
+        'code': budget_line.number_individual or budget_line.code or 'N/A',
+        'position': budget_line.position_item.name if budget_line.position_item else 'N/A',
+        'group': budget_line.group_item.name if budget_line.group_item else 'N/A',
+        'grade': budget_line.grade_item.name if budget_line.grade_item else 'N/A',
+        'rmu': budget_line.remuneration,
+        'program': program_name or 'N/A',
+    }
+
+
+def _unit_snapshot(unit):
+    if not unit:
+        return {
+            'unit': None,
+            'path': 'N/A',
+            'descendants': [],
+        }
+
+    return {
+        'unit': unit,
+        'path': unit.get_full_path(),
+        'descendants': _flatten_unit_descendants(unit),
+    }
+
+
+def _spanish_date_without_year(date_value):
+    if not date_value:
+        return ''
+
+    months = {
+        1: 'enero',
+        2: 'febrero',
+        3: 'marzo',
+        4: 'abril',
+        5: 'mayo',
+        6: 'junio',
+        7: 'julio',
+        8: 'agosto',
+        9: 'septiembre',
+        10: 'octubre',
+        11: 'noviembre',
+        12: 'diciembre',
+    }
+
+    return f"{date_value.day} de {months.get(date_value.month, '')}"
+
+
+def _movement_reason(action):
+    action_name = (action.action_type.name or '').strip().lower()
+    if not action_name:
+        action_name = 'acción de personal'
+    return f"{action_name} a partir del {_spanish_date_without_year(action.date_effective)}"
 
 
 class PersonnelActionListView(LoginRequiredMixin, ListView):
@@ -114,11 +197,39 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
 
             self.object.save()
 
-            # Crear detalle vacío o procesar segundo form aquí si se envía junto
-            ActionMovement.objects.create(
-                personnel_action=self.object,
-                previous_remuneration=0  # Aquí podrías buscar datos actuales del empleado
-            )
+            current_budget = self.object.employee.current_budget_line.first()
+            current_unit = self.object.employee.area
+
+            # Crear detalle con datos del modal si están disponibles
+            movement_data = {
+                'personnel_action': self.object,
+                'previous_unit': current_unit,
+                'previous_budget_line': current_budget,
+                'previous_position': current_budget.position_item if current_budget else None,
+                'previous_remuneration': current_budget.remuneration if current_budget else 0,
+            }
+
+            # Procesar datos del modal (Reubicar y Cambiar Partida)
+            new_unit_id = self.request.POST.get('movement_new_unit')
+            new_budget_line_id = self.request.POST.get('movement_new_budget_line')
+
+            if new_unit_id:
+                from institution.models import AdministrativeUnit
+                try:
+                    movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id)
+                except AdministrativeUnit.DoesNotExist:
+                    pass
+
+            if new_budget_line_id:
+                try:
+                    new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
+                    movement_data['new_budget_line'] = new_budget_line
+                    movement_data['new_position'] = new_budget_line.position_item
+                    movement_data['new_remuneration'] = new_budget_line.remuneration
+                except BudgetLine.DoesNotExist:
+                    pass
+
+            ActionMovement.objects.create(**movement_data)
 
         # Responder con JSON si es AJAX
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -478,7 +589,10 @@ class ActionRegisterView(LoginRequiredMixin, View):
     """Vista para registrar una acción (cambiar is_registered a True)"""
 
     def post(self, request, pk):
-        action = get_object_or_404(PersonnelAction, pk=pk)
+        action = get_object_or_404(
+            PersonnelAction.objects.select_related('employee__area', 'action_type'),
+            pk=pk
+        )
 
         if action.is_registered:
             return JsonResponse({
@@ -486,8 +600,104 @@ class ActionRegisterView(LoginRequiredMixin, View):
                 'message': 'Esta acción ya está registrada'
             }, status=400)
 
-        action.is_registered = True
-        action.save()
+        try:
+            with transaction.atomic():
+                movement = ActionMovement.objects.select_related(
+                    'previous_unit', 'previous_budget_line', 'new_unit', 'new_budget_line'
+                ).filter(personnel_action=action).first()
+
+                effective_date = action.date_effective
+                reason = _movement_reason(action)
+                previous_budget_line = movement.previous_budget_line if movement and movement.previous_budget_line else action.employee.current_budget_line.first()
+                new_budget_line = movement.new_budget_line if movement and movement.new_budget_line else None
+
+                if new_budget_line and previous_budget_line and previous_budget_line.pk != new_budget_line.pk:
+                    previous_history = BudgetAssignmentHistory.objects.filter(
+                        budget_line=previous_budget_line,
+                        employee=action.employee,
+                        is_current=True
+                    ).first()
+
+                    if previous_history:
+                        release_date = effective_date - timedelta(days=1)
+                        if previous_history.start_date and release_date < previous_history.start_date:
+                            raise ValueError('La fecha efectiva de la acción no permite liberar la partida antes de su inicio.')
+
+                if movement and movement.new_unit:
+                    action.employee.area = movement.new_unit
+                    action.employee.save(update_fields=['area'])
+
+                if new_budget_line:
+                    libre_status = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+                    occupied_status = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
+
+                    if previous_budget_line and previous_budget_line.pk != new_budget_line.pk:
+                        release_date = effective_date - timedelta(days=1)
+                        previous_history = BudgetAssignmentHistory.objects.filter(
+                            budget_line=previous_budget_line,
+                            employee=action.employee,
+                            is_current=True
+                        ).first()
+
+                        if previous_history:
+                            previous_history.end_date = release_date
+                            previous_history.is_current = False
+                            previous_history.observation = reason
+                            previous_history.save()
+
+                        previous_budget_line.current_employee = None
+                        previous_budget_line.status_item = libre_status
+                        previous_budget_line.save(modified_by=request.user)
+
+                        BudgetModificationHistory.objects.create(
+                            budget_line=previous_budget_line,
+                            modified_by=request.user,
+                            modification_type='RELEASE',
+                            field_name='Estado y Ocupante',
+                            old_value=f'Ocupada por {action.employee.person.full_name}',
+                            new_value='Libre',
+                            reason=reason,
+                        )
+
+                    if previous_budget_line is None or previous_budget_line.pk != new_budget_line.pk:
+                        new_budget_line.current_employee = action.employee
+                        new_budget_line.status_item = occupied_status
+                        new_budget_line.save(modified_by=request.user)
+
+                        new_history = BudgetAssignmentHistory.objects.filter(
+                            budget_line=new_budget_line,
+                            is_current=True
+                        ).first()
+                        if new_history:
+                            new_history.is_current = False
+                            new_history.end_date = effective_date - timedelta(days=1)
+                            new_history.save()
+
+                        BudgetAssignmentHistory.objects.create(
+                            budget_line=new_budget_line,
+                            employee=action.employee,
+                            start_date=effective_date,
+                            is_current=True,
+                            observation=reason,
+                        )
+
+                        BudgetModificationHistory.objects.create(
+                            budget_line=new_budget_line,
+                            modified_by=request.user,
+                            modification_type='ASSIGNMENT',
+                            field_name='Estado y Ocupante',
+                            old_value='Libre',
+                            new_value=f'Ocupada por {action.employee.person.full_name}',
+                            reason=reason,
+                        )
+
+                action.is_registered = True
+                action.save(update_fields=['is_registered'])
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'No se pudo registrar la acción: {str(e)}'
+            }, status=400)
 
         return JsonResponse({
             'success': True,
@@ -500,24 +710,79 @@ class ActionPDFView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         action = get_object_or_404(
-            PersonnelAction.objects.select_related('employee__person', 'action_type'),
+            PersonnelAction.objects.select_related('employee__person', 'action_type', 'employee__area'),
             pk=pk
         )
-        budget = None
+
+        movement = action.movement.select_related(
+            'previous_unit', 'previous_unit__parent', 'previous_budget_line', 'previous_budget_line__position_item',
+            'previous_budget_line__group_item', 'previous_budget_line__grade_item', 'previous_budget_line__activity',
+            'previous_budget_line__activity__project__subprogram__program',
+            'new_unit', 'new_unit__parent', 'new_budget_line', 'new_budget_line__position_item',
+            'new_budget_line__group_item', 'new_budget_line__grade_item', 'new_budget_line__activity',
+            'new_budget_line__activity__project__subprogram__program'
+        ).first()
+
+        current_unit = movement.previous_unit if movement and movement.previous_unit else action.employee.area
+        proposed_unit = movement.new_unit if movement and movement.new_unit else current_unit
+
+        current_budget = None
+        proposed_budget = None
+
         management_period = getattr(action, 'management_period', None)
-        if management_period and management_period.budget_line:
-            budget = management_period.budget_line
+        if movement and movement.previous_budget_line:
+            current_budget = movement.previous_budget_line
+        elif management_period and management_period.budget_line:
+            current_budget = management_period.budget_line
         else:
-            budget = BudgetLine.objects.filter(current_employee_id=action.employee.pk).select_related(
-                'position_item', 'group_item', 'grade_item'
-            ).first()
+            current_budget = BudgetLine.objects.select_related(
+                'position_item', 'group_item', 'grade_item', 'activity__project__subprogram__program'
+            ).filter(current_employee_id=action.employee.pk).first()
+
+        if movement and movement.new_budget_line:
+            proposed_budget = movement.new_budget_line
+        else:
+            proposed_budget = current_budget
 
         try:
             from weasyprint import HTML
 
+            current_unit_snapshot = _unit_snapshot(current_unit)
+            proposed_unit_snapshot = _unit_snapshot(proposed_unit)
+
             html = render_to_string(
                 'personnel_action/pdf/action_pdf.html',
-                {'action': action, 'budget': budget},
+                {
+                    'action': action,
+                    'movement': movement,
+                    'current_unit': current_unit,
+                    'proposed_unit': proposed_unit,
+                    'current_unit_snapshot': current_unit_snapshot,
+                    'proposed_unit_snapshot': proposed_unit_snapshot,
+                    'current_budget': _budget_snapshot(current_budget),
+                    'proposed_budget': _budget_snapshot(proposed_budget),
+                    'standard_action_types': [
+                        'INGRESO',
+                        'TRASPASO',
+                        'INCREMENTO DE RMU',
+                        'REVISIÓN CLAS. PUEST.',
+                        'REINGRESO',
+                        'CAMBIO ADMINISTRATIVO',
+                        'SUBROGACION',
+                        'RESTITUCION',
+                        'INTERC. VOLUNTARIO',
+                        'ENCARGO',
+                        'REINTEGRO',
+                        'LICENCIA',
+                        'CESACIÓN DE FUNCIONES',
+                        'ASCENSO',
+                        'COMISIÓN DE SERVICIOS',
+                        'DESTITUCIÓN',
+                        'TRASLADO',
+                        'SANCIONES',
+                        'VACACIONES',
+                    ],
+                },
                 request=request
             )
             pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
@@ -527,3 +792,97 @@ class ActionPDFView(LoginRequiredMixin, View):
             return response
         except Exception:
             return HttpResponse('Error al generar el PDF de la acción', status=500)
+
+# ==========================================
+# APIs PARA MODAL DE ACCIONES DE PERSONAL
+# ==========================================
+
+class AdministrativeUnitChildrenJsonView(LoginRequiredMixin, View):
+    """API para obtener unidades administrativas en cascada (Para Reubicar)"""
+
+    def get(self, request):
+        parent_id = request.GET.get('parent_id')
+
+        if not parent_id:
+            # Nivel raíz: unidades sin padre (nivel 1)
+            from institution.models import AdministrativeUnit
+            units = AdministrativeUnit.objects.filter(
+                is_active=True,
+                parent__isnull=True
+            ).values('id', 'name').order_by('name')
+        else:
+            # Unidades que dependen de parent_id
+            from institution.models import AdministrativeUnit
+            units = AdministrativeUnit.objects.filter(
+                is_active=True,
+                parent_id=parent_id
+            ).values('id', 'name').order_by('name')
+
+        # Convertir a lista y agregar información de si tienen hijos
+        result = []
+        for unit in units:
+            from institution.models import AdministrativeUnit
+            has_children = AdministrativeUnit.objects.filter(
+                parent_id=unit['id'],
+                is_active=True
+            ).exists()
+            result.append({
+                'id': unit['id'],
+                'name': unit['name'],
+                'has_children': has_children
+            })
+
+        return JsonResponse({
+            'success': True,
+            'units': result
+        })
+
+
+class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
+    """API para buscar partidas presupuestarias con estado LIBRE"""
+
+    def get(self, request):
+        search_term = request.GET.get('term', '').strip()
+        
+        # Base queryset: partidas con estado LIBRE
+        qs = BudgetLine.objects.filter(
+            status_item__code='LIBRE'
+        ).select_related(
+            'activity__project__subprogram__program',
+            'position_item',
+            'current_employee__person'
+        ).only(
+            'id', 'code', 'number_individual', 'remuneration',
+            'activity__project__subprogram__program__name',
+            'position_item__name',
+            'current_employee__person__first_name',
+            'current_employee__person__last_name'
+        )
+
+        # Filtrar por búsqueda si existe
+        if search_term:
+            qs = qs.filter(
+                Q(code__icontains=search_term) |
+                Q(number_individual__icontains=search_term) |
+                Q(position_item__name__icontains=search_term)
+            )
+
+        # Limitar los resultados
+        qs = qs[:20]
+
+        # Formato de respuesta para Select2
+        results = []
+        for line in qs:
+            program_name = line.activity.project.subprogram.program.name if line.activity else ''
+            position_name = line.position_item.name if line.position_item else ''
+            
+            results.append({
+                'id': line.id,
+                'text': f"{line.code} - {position_name} - RMU: ${line.remuneration:.2f}",
+                'code': line.code,
+                'position': position_name,
+                'remuneration': str(line.remuneration),
+                'program': program_name
+            })
+
+        return JsonResponse({'results': results})

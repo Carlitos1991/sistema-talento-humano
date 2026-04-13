@@ -142,9 +142,14 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        if (window.PersonnelActionModal && typeof window.PersonnelActionModal.init === 'function') {
+            window.PersonnelActionModal.init();
+        }
+
         // Inicializar el manejo del formulario
         const form = modalContentContainer.querySelector('form');
         if (form) {
+            clearFormErrors(form);
             form.addEventListener('submit', handleFormSubmit);
         }
 
@@ -159,6 +164,8 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault();
         const form = e.target;
         const formData = new FormData(form);
+
+        clearFormErrors(form);
 
         fetch(form.action, {
             method: 'POST',
@@ -183,25 +190,55 @@ document.addEventListener('DOMContentLoaded', function () {
                     fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + searchQuery : ''}`);
                 });
             } else if (data.errors) {
-                // Mostrar errores del formulario
-                let errorHtml = '<ul style="text-align: left;">';
-                for (const [field, errors] of Object.entries(data.errors)) {
-                    errorHtml += `<li>${errors.join(', ')}</li>`;
-                }
-                errorHtml += '</ul>';
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Errores en el formulario',
-                    html: errorHtml
-                });
+                showFormErrors(form, data.errors);
             } else {
-                Swal.fire('Error', data.message || 'Error al guardar', 'error');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Error', data.message || 'Error al guardar', 'error');
+                }
             }
         })
         .catch(err => {
             console.error('Error al enviar formulario:', err);
-            Swal.fire('Error', 'Ocurrió un error al procesar la solicitud', 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', 'Ocurrió un error al procesar la solicitud', 'error');
+            }
+        });
+    }
+
+    function clearFormErrors(form) {
+        const invalidFields = form.querySelectorAll('.is-invalid');
+        invalidFields.forEach((field) => field.classList.remove('is-invalid'));
+
+        const errorBoxes = form.querySelectorAll('.invalid-feedback');
+        errorBoxes.forEach((box) => {
+            box.textContent = '';
+            box.classList.remove('show');
+        });
+
+        const errorGroups = form.querySelectorAll('.form-group.has-error');
+        errorGroups.forEach((group) => group.classList.remove('has-error'));
+    }
+
+    function showFormErrors(form, errors) {
+        Object.entries(errors).forEach(([fieldName, messages]) => {
+            const messageText = Array.isArray(messages) ? messages.join(' ') : String(messages);
+
+            const field = form.querySelector(`[name="${fieldName}"]`);
+            const feedback = field ? field.parentElement.querySelector('.invalid-feedback') : null;
+            const group = field ? field.closest('.form-group') : null;
+
+            if (field) {
+                field.classList.add('is-invalid');
+            }
+
+            if (feedback) {
+                feedback.textContent = messageText;
+                feedback.classList.add('show');
+            }
+
+            if (group) {
+                group.classList.add('has-error');
+            }
         });
     }
 

@@ -3,6 +3,21 @@
 
 {% block title %}Generar Acción de Personal{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+    <style>
+        #modal-body-content {
+            overflow: hidden;
+            max-height: 95vh;
+            padding: 0;
+        }
+
+        #modal-create-action .modal-container-medium {
+            overflow: hidden;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
     <div class="content-wrapper">
         <!-- Configuración oculta -->
@@ -18,6 +33,7 @@
         </div>
 
         <!-- Tabla de empleados -->
+        <script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
@@ -93,5 +109,6 @@
         };
         {% endif %}
     </script>
+    <script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>
     <script src="{% static 'js/personnel_actions/employee_action.js' %}"></script>
 {% endblock %}

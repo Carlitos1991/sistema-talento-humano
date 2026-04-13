@@ -36,10 +36,11 @@ class ActionMovementForm(forms.ModelForm):
     class Meta:
         model = ActionMovement
         fields = ['previous_remuneration', 'new_remuneration',
-                  'new_unit', 'new_position', 'location_text']
+                  'new_unit', 'new_position', 'new_budget_line', 'location_text']
         widgets = {
             'new_unit': forms.Select(attrs={'class': 'form-select select2'}),
             'new_position': forms.Select(attrs={'class': 'form-select select2'}),
+            'new_budget_line': forms.Select(attrs={'class': 'form-select select2'}),
             'previous_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
             'new_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
             'location_text': forms.TextInput(attrs={'class': 'form-control'}),

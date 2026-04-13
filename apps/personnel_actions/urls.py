@@ -29,4 +29,8 @@ urlpatterns = [
     path('types/api/detail/<int:pk>/', views.ActionTypeDetailJsonView.as_view(), name='action_type_detail'),
     path('types/api/delete/<int:pk>/', views.ActionTypeDeleteView.as_view(), name='action_type_delete'),
     path('types/api/toggle/<int:pk>/', views.ActionTypeToggleStatusView.as_view(), name='type_toggle'),
+
+    # --- APIs para Modal de Acciones de Personal ---
+    path('api/unit-children/', views.AdministrativeUnitChildrenJsonView.as_view(), name='api_unit_children'),
+    path('api/search-budget-lines/', views.SearchBudgetLinesJsonView.as_view(), name='api_search_budget_lines'),
 ]

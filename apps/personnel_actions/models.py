@@ -3,6 +3,7 @@ from django.db import models
 from core.models import User, Authority, CatalogItem
 from employee.models import Employee
 from institution.models import AdministrativeUnit
+from budget.models import BudgetLine
 
 
 class ActionType(models.Model):
@@ -86,6 +87,8 @@ class ActionMovement(models.Model):
     previous_position = models.ForeignKey(CatalogItem, verbose_name='Puesto Anterior', on_delete=models.PROTECT,
                                           related_name='movements_from_pos', null=True, blank=True)
     previous_remuneration = models.DecimalField(verbose_name='RMU Anterior', max_digits=10, decimal_places=2, default=0)
+    previous_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Anterior', on_delete=models.SET_NULL,
+                                             related_name='movements_from_budget', null=True, blank=True)
 
     # --- SITUACIÓN PROPUESTA ---
     new_unit = models.ForeignKey(AdministrativeUnit, verbose_name='Unidad Nueva', on_delete=models.PROTECT,
@@ -93,6 +96,8 @@ class ActionMovement(models.Model):
     new_position = models.ForeignKey(CatalogItem, verbose_name='Puesto Nuevo', on_delete=models.PROTECT,
                                      related_name='movements_to_pos', null=True, blank=True)
     new_remuneration = models.DecimalField(verbose_name='RMU Nuevo', max_digits=10, decimal_places=2, default=0)
+    new_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Presupuestaria Nueva', on_delete=models.SET_NULL,
+                                        related_name='movements_to_budget', null=True, blank=True)
 
     # Ubicación Física
     location_text = models.CharField(verbose_name='Lugar de Trabajo', max_length=200, blank=True, null=True)

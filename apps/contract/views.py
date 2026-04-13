@@ -1202,6 +1202,8 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 'message': 'La fecha fin de gestión no puede ser menor a la fecha de inicio.'
             }, status=400)
 
+        release_concept = 'Finalizacion de gestion laboral'
+
         try:
             with transaction.atomic():
                 # 1. Obtener estados
@@ -1250,7 +1252,7 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                         }, status=400)
                     assignment_history.end_date = end_date
                     assignment_history.is_current = False
-                    assignment_history.observation = reason
+                    assignment_history.observation = release_concept
                     assignment_history.save()
 
                 budget_line.status_item = libre_status
@@ -1274,7 +1276,7 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                     field_name='Estado y Ocupante',
                     old_value=f"Ocupada por {period.employee.person.full_name}",
                     new_value="LIBRE / VACANTE",
-                    reason=f"Terminación de contrato ({end_date}). Motivo: {reason}"
+                    reason=release_concept
                 )
 
             return JsonResponse({

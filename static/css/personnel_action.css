@@ -1,162 +1,145 @@
 /* =====================================================================
-   personnel_action.css
-   Estilos para el modal de Detalle de Acción de Personal
+   PERSONNEL_ACTION.CSS - Estilos para Acciones de Personal
    ===================================================================== */
 
-/* --- OVERLAY --- */
-/* Un overlay dedicado que siempre centra el card, sin lógica extra en JS */
-.action-detail-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    padding: 24px;
+/* =====================================================================
+   BODY MODAL - SCROLL ÚNICO
+   ===================================================================== */
+
+.modal-body-custom {
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
-/* --- CARD CONTENEDOR --- */
-.action-detail-card {
-    width: min(860px, 100%);
-    max-height: 90vh;
+/* =====================================================================
+   ACORDEONES PARA OPCIONES DE MOVIMIENTO
+   ===================================================================== */
+
+.accordion-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
     background: #ffffff;
-    border-radius: 0.75rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    animation: slideUp 0.28s ease-out;
 }
 
-/* --- HEADER --- */
-.action-detail-header {
-    background: linear-gradient(to right, #1e293b, #334155);
-    padding: 1.1rem 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
+.accordion-item:last-child {
+    margin-bottom: 0;
 }
 
-.action-detail-header-title {
-    color: #ffffff;
-    font-size: 1rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.action-detail-close {
-    background: none;
+.accordion-header {
+    width: 100%;
+    padding: 14px 16px;
+    background: #f9fafb;
     border: none;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 1.5rem;
-    line-height: 1;
     cursor: pointer;
-    padding: 0 4px;
-    transition: color 150ms ease;
-}
-
-.action-detail-close:hover {
-    color: #ffffff;
-}
-
-/* --- BODY --- */
-.action-detail-body {
-    background-color: #f8fafc;
-    padding: 1.25rem 1.5rem;
-    flex: 1;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-}
-
-/* --- FILA EMPLEADO --- */
-.action-detail-employee-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: #eff6ff;
-    border: 1px solid #dbeafe;
-    border-radius: 10px;
-    padding: 12px 16px;
-}
-
-.action-detail-photo {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.action-detail-avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: #4a90e2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.action-detail-avatar i {
-    color: #ffffff;
-    font-size: 1.2rem;
-}
-
-.action-detail-name {
     font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.25s ease;
+    text-align: left;
     font-size: 0.95rem;
-    color: #1e293b;
-    margin: 0;
 }
 
-.action-detail-ci {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin: 0;
+.accordion-header:hover {
+    background: #f3f4f6;
+    color: #1f2937;
 }
 
-/* --- CAMPOS DE DATO --- */
-/* Párrafo de valor sin margen (reemplaza style="margin:0") */
-.action-detail-val {
-    margin: 0;
-}
-
-/* Valor en negrita (número de acción) */
-.action-detail-val--bold {
-    margin: 0;
-    font-weight: 600;
-}
-
-/* Texto con saltos de línea preservados (explicación) */
-.action-detail-val--pre {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
-/* Estado: Registrada */
-.status-badge--registered {
-    background: #e0f2fe;
+.accordion-header.active {
+    background: #eff6ff;
     color: #0369a1;
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.8rem;
+}
+
+.accordion-header i:first-child {
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+}
+
+.accordion-arrow {
+    transition: transform 0.25s ease;
+    display: inline-flex;
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+.accordion-header.active .accordion-arrow {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: #ffffff;
+}
+
+.accordion-content.show {
+    max-height: 1000px;
+    padding: 16px;
+}
+
+/* Select y campos dentro de acordeones */
+.accordion-content .input-field,
+.accordion-content .form-control,
+.accordion-content select {
+    width: 100%;
+    border-radius: 6px;
+}
+
+/* Info box de partida presupuestaria */
+.budget-info-box {
+    background: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin-top: 12px;
+    display: none;
+}
+
+.budget-info-box.show {
+    display: block;
+}
+
+.budget-info-box div {
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.budget-info-box div:last-child {
+    margin-bottom: 0;
+}
+
+.budget-info-box strong {
+    color: #1e293b;
     font-weight: 600;
 }
 
-/* --- FOOTER --- */
-.action-detail-footer {
-    background: #ffffff;
-    border-top: 1px solid #e2e8f0;
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: center;
-    flex-shrink: 0;
+/* Validation inline errors */
+.invalid-feedback {
+    display: none;
+    margin-top: 0.35rem;
+    color: #dc2626;
+    font-size: 0.85rem;
+    line-height: 1.35;
 }
+
+.invalid-feedback.show {
+    display: block;
+}
+
+.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12) !important;
+}
+
+.form-group.has-error {
+    margin-bottom: 1rem;
+}
+

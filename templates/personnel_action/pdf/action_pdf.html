@@ -213,8 +213,13 @@
                     <tr>
                         <td>[{% if action.action_type.name == 'VACACIONES' %}X{% else %}&nbsp;{% endif %}] VACACIONES
                         </td>
-
-                        <td colspan="5">[ ] OTRO (_________________________________________________________)</td>
+                        <td colspan="5">
+                            {% if action.action_type.name in standard_action_types %}
+                                [ ] OTRO (_________________________________________________________)
+                            {% else %}
+                                [X] OTRO (&nbsp;<span style="display:inline-block; min-width: 240px; text-align: center; border-bottom: 1px dotted #000; line-height: 1; padding: 0 6px;">{{ action.action_type.name }}</span>&nbsp;)
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td colspan="6"><b>* PRESENTÓ LA DECLARACIÓN JURADA (número 2 del art. 3 RLOSEP):</b> SI [&nbsp;&nbsp;
@@ -243,28 +248,15 @@
         </tr>
         <tr>
             <td colspan="6">
-                <b>PROCESO INSTITUCIONAL:</b>
-                {% if action.employee.area.level_id is 1 %}
-                    {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 2 %}
-                    {{ action.employee.area.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 3 %}
-                    {{ action.employee.area.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 4 %}
-                    {{ action.employee.area.parent.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 5 %}
-                    {{ action.employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% else %}
-                    {{ action.employee.area.parent.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br>
-                <b>NIVEL DE GESTIÓN:</b> {% if action.employee.area.level_id is 1 %}
-                {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 2 %}
-                {{ action.employee.area.name|default:"N/A" }}{% elif action.employee.area.level_id is 3 %}
-                {{ action.employee.area.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 4 %}
-                {{ action.employee.area.parent.parent.name|default:"N/A" }}{% elif action.employee.area.level_id is 5 %}
-                {{ action.employee.area.parent.parent.parent.name|default:"N/A" }}{% else %}
-                {{ action.employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br>
-                <b>UNIDAD ADMINISTRATIVA:</b> {{ action.employee.area.name }}<br>
-                {% if budget %}
-                    <b>PUESTO:</b> {{ budget.position_item.name }}<br>
-                    <b>GRUPO:</b> {{ budget.group_item.name }}<br>
-                    <b>GRADO:</b> {{ budget.grade_item.name }}<br>
-                    <b>RMU:</b> {{ budget.remuneration }}<br>
-                    <b>PARTIDA:</b> {{ budget.number_individual }}
+                <b>PROCESO INSTITUCIONAL:</b> {{ current_unit_snapshot.path|default:"N/A" }}<br>
+                <b>NIVEL DE GESTIÓN:</b> {{ current_unit.parent.name|default:"N/A" }}<br>
+                <b>UNIDAD ADMINISTRATIVA:</b> {{ current_unit.name|default:"N/A" }}<br>
+                {% if current_budget %}
+                    <b>PUESTO:</b> {{ current_budget.position|default:"N/A" }}<br>
+                    <b>GRUPO:</b> {{ current_budget.group|default:"N/A" }}<br>
+                    <b>GRADO:</b> {{ current_budget.grade|default:"N/A" }}<br>
+                    <b>RMU:</b> {{ current_budget.rmu|default:"N/A" }}<br>
+                    <b>PARTIDA:</b> {{ current_budget.code|default:"N/A" }}
                 {% else %}
                     <b>PUESTO:</b> N/A<br>
                     <b>GRUPO:</b> N/A<br>
@@ -273,7 +265,24 @@
                     <b>PARTIDA:</b> N/A
                 {% endif %}
             </td>
-            <td colspan="6" class="text-center">Sin cambios en la situación actual</td>
+            <td colspan="6">
+                <b>PROCESO INSTITUCIONAL:</b> {{ proposed_unit_snapshot.path|default:"N/A" }}<br>
+                <b>NIVEL DE GESTIÓN:</b> {{ proposed_unit.parent.name|default:"N/A" }}<br>
+                <b>UNIDAD ADMINISTRATIVA:</b> {{ proposed_unit.name|default:"N/A" }}<br>
+                {% if proposed_budget %}
+                    <b>PUESTO:</b> {{ proposed_budget.position|default:"N/A" }}<br>
+                    <b>GRUPO:</b> {{ proposed_budget.group|default:"N/A" }}<br>
+                    <b>GRADO:</b> {{ proposed_budget.grade|default:"N/A" }}<br>
+                    <b>RMU:</b> {{ proposed_budget.rmu|default:"N/A" }}<br>
+                    <b>PARTIDA:</b> {{ proposed_budget.code|default:"N/A" }}
+                {% else %}
+                    <b>PUESTO:</b> N/A<br>
+                    <b>GRUPO:</b> N/A<br>
+                    <b>GRADO:</b> N/A<br>
+                    <b>RMU:</b> N/A<br>
+                    <b>PARTIDA:</b> N/A
+                {% endif %}
+            </td>
         </tr>
     </table>
 
