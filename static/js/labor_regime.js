@@ -283,6 +283,15 @@ const regimeApp = createApp({
             }
         },
 
+        openContractTemplateEditor(type) {
+            if (!type || !type.id) return;
+            window.open(`/contract/templates/create/${type.id}/`, '_blank');
+        },
+
+        handleOpenContractTemplateEditor(type) {
+            this.openContractTemplateEditor(type);
+        },
+
         // --- UTILITARIOS ---
         filterByStatus(status) {
             this.filters.is_active = status;
@@ -324,6 +333,11 @@ const regimeApp = createApp({
 
 // Exposición global para los botones onclick del Partial Table
 window.regimeInstance = regimeApp.mount('#regime-app');
+window.openContractTemplateEditorFromRegime = function (type) {
+    if (window.regimeInstance && typeof window.regimeInstance.openContractTemplateEditor === 'function') {
+        window.regimeInstance.openContractTemplateEditor(type);
+    }
+};
 
 function getCookie(name) {
     let cookieValue = null;

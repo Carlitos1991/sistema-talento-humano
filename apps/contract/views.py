@@ -1,24 +1,155 @@
+import base64
+import json
+import mimetypes
 import os
+import re
+from pathlib import Path
 from datetime import datetime, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Count, Prefetch
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
+from django.urls import reverse
 from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, View
 
 from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
 from core.models import CatalogItem
+from core.models import SystemConfiguration
 from employee.models import Employee
 from person.models import Person
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
+from personnel_actions.models import Authority, ActionType, PersonnelAction
 from .forms import LaborRegimeForm, ContractTypeForm
-from .models import LaborRegime, ContractType, ManagementPeriod, History
+from .models import (
+    LaborRegime,
+    ContractType,
+    ManagementPeriod,
+    History,
+    ContractTemplate,
+    ContractTemplateSection,
+)
+
+
+def _normalize_contract_template_content(content):
+    return (content or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+
+
+def _render_contract_inline_formatting(content):
+    raw_text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
+    safe_text = escape(raw_text)
+    safe_text = safe_text.replace('\t', '&nbsp;' * 4)
+    safe_text = re.sub(r' {2,}', lambda match: '&nbsp;' * len(match.group(0)), safe_text)
+    safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[SIZE_DOWN\](.+?)\[/SIZE_DOWN\]', r'<span style="font-size:0.9em;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[SIZE_UP\](.+?)\[/SIZE_UP\]', r'<span style="font-size:1.1em;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]', r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]', r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]', r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
+    return safe_text.replace('\n', '<br>')
+
+
+def _is_action_template(contract_type):
+    if not contract_type:
+        return False
+
+    category = (getattr(contract_type, 'contract_type_category', '') or '').upper().strip()
+    if category == ContractType.TYPE_ACCION_PERSONAL:
+        return True
+
+    haystack = f"{getattr(contract_type, 'code', '') or ''} {getattr(contract_type, 'name', '') or ''}".upper()
+    action_tokens = [
+        'NOMBR',
+        'ACCION DE PERSONAL',
+        'ACCION_PERSONAL',
+        'ASCENSO',
+        'ENCARGO',
+        'TRASPASO',
+        'SUBROGACION',
+        'REASIGN',
+    ]
+    return any(token in haystack for token in action_tokens)
+
+
+def _get_contract_today_date():
+    return timezone.now().date()
+
+
+def _build_contract_user_full_name(user):
+    if not user:
+        return ''
+
+    try:
+        person = getattr(user, 'person', None)
+        if person:
+            full_name = (person.full_name or '').strip()
+            if full_name:
+                return full_name.upper()
+    except Exception:
+        pass
+
+    full_name = (user.get_full_name() or '').strip()
+    if full_name:
+        return full_name.upper()
+
+    return (user.username or '').strip().upper()
+
+
+def _get_contract_letterhead_resource(request):
+    configuration = SystemConfiguration.get_current()
+    if configuration is None:
+        configuration = SystemConfiguration.objects.filter(letterhead__isnull=False).exclude(letterhead='').order_by('-effective_date').first()
+
+    if not configuration or not configuration.letterhead:
+        return ''
+
+    try:
+        file_path = Path(configuration.letterhead.path)
+        if file_path.exists():
+            raw_bytes = file_path.read_bytes()
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            mime_type = mime_type or 'image/png'
+            encoded = base64.b64encode(raw_bytes).decode('ascii')
+            return f'data:{mime_type};base64,{encoded}'
+    except Exception:
+        pass
+
+    try:
+        return request.build_absolute_uri(configuration.letterhead.url)
+    except Exception:
+        return ''
+
+
+def _get_action_types_for_template():
+    action_types = ActionType.objects.filter(is_active=True).order_by('name')
+    if action_types.exists():
+        return action_types
+    return ActionType.objects.order_by('name')
+
+
+def _get_authorities_for_template():
+    authorities = Authority.objects.filter(is_active=True).order_by('name')
+    if authorities.exists():
+        return authorities
+
+    legacy_authorities = Authority.objects.filter(status=True).order_by('name')
+    if legacy_authorities.exists():
+        return legacy_authorities
+
+    return Authority.objects.order_by('name')
 
 
 class LaborRegimeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -244,6 +375,530 @@ class ContractTypeUpdateView(LoginRequiredMixin, View):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+class ContractTemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    def _seed_action_template_sections(self, template, user):
+        existing_sections = list(template.sections.filter(is_active=True).order_by('order'))
+        if len(existing_sections) >= 6:
+            return
+
+        for index in range(len(existing_sections), 6):
+            ContractTemplateSection.objects.create(
+                template=template,
+                section_type='PARAGRAPH',
+                content='',
+                order=index,
+                created_by=user,
+                updated_by=user,
+            )
+
+    def get(self, request, contract_type_id):
+        contract_type = get_object_or_404(ContractType, pk=contract_type_id)
+        template, _ = ContractTemplate.objects.get_or_create(
+            contract_type=contract_type,
+            defaults={
+                'created_by': request.user,
+                'updated_by': request.user,
+            },
+        )
+
+        if template.created_by is None:
+            template.created_by = request.user
+        template.updated_by = request.user
+        template.save(update_fields=['created_by', 'updated_by', 'updated_at'])
+
+        if _is_action_template(contract_type):
+            self._seed_action_template_sections(template, request.user)
+
+        return redirect('contract:template_editor_detail', pk=template.pk)
+
+
+class ContractTemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    def get(self, request, pk):
+        template = get_object_or_404(
+            ContractTemplate.objects.select_related('contract_type__labor_regime'),
+            pk=pk,
+        )
+        is_action_template = _is_action_template(template.contract_type)
+        action_template_fields = []
+
+        if is_action_template:
+            if template.sections.filter(is_active=True).count() < 6:
+                existing_sections = list(template.sections.filter(is_active=True).order_by('order'))
+                for index in range(len(existing_sections), 6):
+                    ContractTemplateSection.objects.create(
+                        template=template,
+                        section_type='PARAGRAPH',
+                        content='',
+                        order=index,
+                        created_by=request.user,
+                        updated_by=request.user,
+                    )
+
+            sections = list(template.sections.filter(is_active=True).order_by('order'))[:6]
+            field_specs = [
+                ('action_type', 'Tipo de Acción'),
+                ('authority_1', 'Autoridad 1'),
+                ('authority_2', 'Autoridad 2'),
+                ('reviewer', 'Revisado Por'),
+                ('elaboration', 'Elaborado Por'),
+                ('register', 'Registrado Por'),
+            ]
+            action_template_fields = [
+                {
+                    'id': sections[index].id if len(sections) > index else None,
+                    'key': key,
+                    'label': label,
+                    'value': sections[index].content if len(sections) > index else '',
+                    'original': sections[index].content if len(sections) > index else '',
+                    'type': 'select2',
+                }
+                for index, (key, label) in enumerate(field_specs)
+            ]
+
+        available_mappings = [
+            {'placeholder': '[FULL_NAME]', 'label': 'Nombre completo de la persona'},
+            {'placeholder': '[DOCUMENT_NUMBER]', 'label': 'Cédula / documento de identidad'},
+            {'placeholder': '[DOC_NUMBER]', 'label': 'Número del contrato/acción de personal'},
+            {'placeholder': '[CONTRACT_TYPE]', 'label': 'Nombre de la modalidad'},
+            {'placeholder': '[DOCUMENT_CATEGORY]', 'label': 'Etiqueta Contrato o Acción de Personal'},
+            {'placeholder': '[LABOR_REGIME]', 'label': 'Régimen laboral'},
+            {'placeholder': '[POSITION]', 'label': 'Cargo'},
+            {'placeholder': '[REMUNERATION]', 'label': 'Remuneración'},
+            {'placeholder': '[UNIT]', 'label': 'Unidad administrativa'},
+            {'placeholder': '[WORKPLACE]', 'label': 'Lugar de trabajo'},
+            {'placeholder': '[SCHEDULE]', 'label': 'Horario'},
+            {'placeholder': '[START_DATE]', 'label': 'Fecha de inicio (dd/mm/aaaa)'},
+            {'placeholder': '[END_DATE]', 'label': 'Fecha de fin (dd/mm/aaaa o INDEFINIDO)'},
+            {'placeholder': '[today]', 'label': 'Fecha actual en español'},
+            {'placeholder': '[YEAR]', 'label': 'Año actual'},
+            {'placeholder': '[ACTION_ISSUE_DATE]', 'label': 'Fecha de elaboración de acción'},
+            {'placeholder': '[ACTION_EFFECTIVE_FROM]', 'label': 'Fecha rige desde'},
+            {'placeholder': '[ACTION_EFFECTIVE_TO]', 'label': 'Fecha rige hasta'},
+            {'placeholder': '[MOTIVATION]', 'label': 'Motivación de la acción'},
+            {'placeholder': '[EXPLANATION]', 'label': 'Explicación de la acción'},
+            {'placeholder': '[ACTION_EXPLANATION_HEADER]', 'label': 'Encabezado de explicación de acción'},
+            {'placeholder': '[PREPARED_BY]', 'label': 'Usuario que elaboró el documento'},
+            {'placeholder': '[AUTHORITY_1]', 'label': 'Máxima autoridad'},
+        ]
+
+        context = {
+            'template': template,
+            'available_mappings': available_mappings,
+            'is_action_template': is_action_template,
+            'action_template_fields': action_template_fields,
+            'action_types': [
+                {
+                    'id': item.id,
+                    'name': item.name,
+                }
+                for item in _get_action_types_for_template()
+            ],
+            'authorities': [
+                {
+                    'id': item.id,
+                    'name': item.name,
+                    'position': item.position,
+                }
+                for item in _get_authorities_for_template()
+            ],
+        }
+        template_name = 'contract/template_editor/action_template_editor.html' if is_action_template else 'contract/template_editor/template_editor.html'
+        return render(request, template_name, context)
+
+
+class ContractTemplateEditorOptionsAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    def get(self, request):
+        action_types = [
+            {
+                'id': item.id,
+                'name': item.name,
+            }
+            for item in _get_action_types_for_template()
+        ]
+        authorities = [
+            {
+                'id': item.id,
+                'name': item.name,
+                'position': item.position,
+            }
+            for item in _get_authorities_for_template()
+        ]
+        return JsonResponse({
+            'success': True,
+            'action_types': action_types,
+            'authorities': authorities,
+        })
+
+
+def _build_contract_replacements(period):
+    today = _get_contract_today_date()
+    person = period.employee.person
+    category_label = 'ACCIÓN DE PERSONAL' if period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL else 'CONTRATO'
+    elaboration_date = period.elaboration_date.strftime('%d/%m/%Y') if getattr(period, 'elaboration_date', None) else '-'
+
+    return {
+        '[FULL_NAME]': person.full_name or '-',
+        '[DOCUMENT_NUMBER]': person.document_number or '-',
+        '[DOC_NUMBER]': period.document_number or '-',
+        '[CONTRACT_TYPE]': period.contract_type.name or '-',
+        '[DOCUMENT_CATEGORY]': category_label,
+        '[LABOR_REGIME]': period.contract_type.labor_regime.name or '-',
+        '[POSITION]': period.display_position or '-',
+        '[REMUNERATION]': str(period.display_remuneration) if period.display_remuneration is not None else '-',
+        '[UNIT]': period.administrative_unit.name if period.administrative_unit else '-',
+        '[WORKPLACE]': period.workplace or '-',
+        '[SCHEDULE]': period.schedule.name if period.schedule else '-',
+        '[START_DATE]': period.start_date.strftime('%d/%m/%Y') if period.start_date else '-',
+        '[END_DATE]': period.end_date.strftime('%d/%m/%Y') if period.end_date else 'INDEFINIDO',
+        '[today]': today.strftime('%d/%m/%Y'),
+        '[YEAR]': str(today.year),
+        '[ACTION_ISSUE_DATE]': elaboration_date,
+        '[ACTION_EFFECTIVE_FROM]': period.start_date.strftime('%d/%m/%Y') if period.start_date else '-',
+        '[ACTION_EFFECTIVE_TO]': period.end_date.strftime('%d/%m/%Y') if period.end_date else '-',
+        '[MOTIVATION]': period.action_motivation or '-',
+        '[EXPLANATION]': period.action_explanation or '-',
+        '[ACTION_EXPLANATION_HEADER]': 'Se hace constar la siguiente acción de personal:',
+        '[PREPARED_BY]': _build_contract_user_full_name(period.created_by),
+        '[AUTHORITY_1]': (getattr(SystemConfiguration.get_current(), 'max_authority_name', '') or '').strip().upper(),
+        '[EMPLOYEE_FULL_NAME]': person.full_name or '-',
+    }
+
+
+def _render_contract_sections_html(template, replacements):
+    rows = []
+    sections = template.sections.filter(is_active=True).order_by('order')
+    for section in sections:
+        content = section.content or ''
+        for placeholder, replacement in replacements.items():
+            content = content.replace(placeholder, replacement)
+
+        rendered = _render_contract_inline_formatting(content)
+        if section.section_type == 'TITLE':
+            rows.append(f'<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">{rendered}</h4>')
+        else:
+            rows.append(f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{rendered}</p>')
+
+    return ''.join(rows)
+
+
+class ContractTemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para agregar secciones.'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, template_id):
+        template = get_object_or_404(ContractTemplate, pk=template_id)
+        try:
+            data = json.loads(request.body)
+            content = _normalize_contract_template_content(data.get('content', ''))
+            section_type = data.get('section_type', 'PARAGRAPH')
+            order = data.get('order', 0)
+
+            if not content:
+                return JsonResponse({'error': 'El contenido no puede estar vacío'}, status=400)
+            if section_type not in ['PARAGRAPH', 'TITLE']:
+                return JsonResponse({'error': 'Tipo de sección inválido'}, status=400)
+
+            section = ContractTemplateSection.objects.create(
+                template=template,
+                section_type=section_type,
+                content=content,
+                order=order,
+                created_by=request.user,
+                updated_by=request.user,
+            )
+
+            return JsonResponse({
+                'success': True,
+                'section': {
+                    'id': section.id,
+                    'section_type': section.get_section_type_display(),
+                    'section_type_code': section.section_type,
+                    'content': section.content,
+                    'order': section.order,
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as exc:
+            return JsonResponse({'error': str(exc)}, status=500)
+
+
+class ContractTemplateSectionUpdateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para editar secciones.'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, section_id):
+        section = get_object_or_404(ContractTemplateSection, pk=section_id)
+        try:
+            data = json.loads(request.body)
+            section.content = _normalize_contract_template_content(data.get('content', section.content))
+            section.section_type = data.get('section_type', section.section_type)
+            section.order = data.get('order', section.order)
+            section.updated_by = request.user
+            section.save()
+
+            return JsonResponse({
+                'success': True,
+                'section': {
+                    'id': section.id,
+                    'section_type': section.get_section_type_display(),
+                    'section_type_code': section.section_type,
+                    'content': section.content,
+                    'order': section.order,
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as exc:
+            return JsonResponse({'error': str(exc)}, status=500)
+
+
+class ContractTemplateSectionDeleteAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para eliminar secciones.'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, section_id):
+        section = get_object_or_404(ContractTemplateSection, pk=section_id)
+        deleted_id = section.id
+        section.delete()
+        return JsonResponse({'success': True, 'deleted_id': deleted_id})
+
+
+class ContractTemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm(self.permission_required):
+            return JsonResponse({'success': False, 'error': 'No tiene permisos para reordenar secciones.'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, template_id):
+        template = get_object_or_404(ContractTemplate, pk=template_id)
+        try:
+            data = json.loads(request.body)
+            for item in data.get('sections', []):
+                section = ContractTemplateSection.objects.get(pk=item['id'], template=template)
+                section.order = item['order']
+                section.updated_by = request.user
+                section.save(update_fields=['order', 'updated_by', 'updated_at'])
+            return JsonResponse({'success': True})
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as exc:
+            return JsonResponse({'error': str(exc)}, status=500)
+
+
+class ContractTemplatePreviewAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
+
+    def get(self, request, template_id):
+        try:
+            template = get_object_or_404(
+                ContractTemplate.objects.select_related('contract_type__labor_regime'),
+                pk=template_id,
+            )
+            is_action_template = _is_action_template(template.contract_type)
+
+            if is_action_template:
+                sections = list(template.sections.filter(is_active=True).order_by('order'))
+                selected_action_type = ActionType.objects.filter(
+                    pk=(sections[0].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 0 else None
+                selected_authority_1 = Authority.objects.filter(
+                    pk=(sections[1].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 1 else None
+                selected_authority_2 = Authority.objects.filter(
+                    pk=(sections[2].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 2 else None
+                selected_reviewer = Authority.objects.filter(
+                    pk=(sections[3].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 3 else None
+                selected_elaboration = Authority.objects.filter(
+                    pk=(sections[4].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 4 else None
+                selected_register = Authority.objects.filter(
+                    pk=(sections[5].content or '').strip(),
+                    is_active=True,
+                ).first() if len(sections) > 5 else None
+
+                preview_html = f'''
+                <div style="max-width: 800px; margin: 1rem auto; padding: 2rem; border: 1px solid #ddd; background: white;">
+                    <div style="text-align:center; font-weight:bold; margin-bottom:1rem; font-size:1.05rem;">ACCIÓN DE PERSONAL</div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1rem;">
+                        <div><strong>Tipo de Acción:</strong><br>{(selected_action_type.name if selected_action_type else 'Pendiente')}</div>
+                        <div><strong>Autoridad 1:</strong><br>{(selected_authority_1.name if selected_authority_1 else 'Pendiente')}</div>
+                        <div><strong>Autoridad 2:</strong><br>{(selected_authority_2.name if selected_authority_2 else 'Pendiente')}</div>
+                        <div><strong>Revisado Por:</strong><br>{(selected_reviewer.name if selected_reviewer else 'Pendiente')}</div>
+                        <div><strong>Elaborado Por:</strong><br>{(selected_elaboration.name if selected_elaboration else 'Pendiente')}</div>
+                        <div><strong>Registrado Por:</strong><br>{(selected_register.name if selected_register else 'Pendiente')}</div>
+                    </div>
+                    <p style="margin:0; color:#6b7280; font-size:0.9rem;">Esta plantilla se complementa con los datos que se registran en el paso 3 del inicio de gestión.</p>
+                </div>
+                '''
+                return JsonResponse({'preview': preview_html})
+
+            period = ManagementPeriod.objects.select_related(
+                'employee__person',
+                'contract_type__labor_regime',
+                'administrative_unit',
+                'schedule',
+                'budget_line__position_item',
+            ).filter(contract_type=template.contract_type).order_by('-created_at').first()
+
+            if not period:
+                replacements = {
+                    '[DOC_NUMBER]': 'PENDIENTE',
+                    '[today]': _get_contract_today_date().strftime('%d/%m/%Y'),
+                }
+            else:
+                replacements = _build_contract_replacements(period)
+
+            sections_html = _render_contract_sections_html(template, replacements)
+            doc_number = replacements.get('[DOC_NUMBER]', 'PENDIENTE')
+
+            if not sections_html:
+                sections_html = '<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">Agregue párrafos en el editor para visualizar el cuerpo del contrato.</p>'
+
+            preview_html = f'''
+            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
+                <div style="text-align:center; font-weight:bold; margin-bottom:1.2rem; font-size:1.08rem;">CONTRATO NRO. {doc_number}</div>
+                <div style="text-align:left; margin-bottom:1.1rem; font-size:0.92rem;">Loja, {replacements.get('[today]', '')}</div>
+                <div class="template-sections">{sections_html}</div>
+            </div>
+            '''
+
+            return JsonResponse({'preview': preview_html})
+        except Exception:
+            fallback_html = f'''
+            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
+                <div style="text-align:center; font-weight:bold; margin-bottom:1.2rem; font-size:1.08rem;">CONTRATO NRO. PENDIENTE</div>
+                <div style="text-align:left; margin-bottom:1.1rem; font-size:0.92rem;">Loja, {_get_contract_today_date().strftime('%d/%m/%Y')}</div>
+                <div class="template-sections">
+                    <p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">No fue posible cargar todos los datos de la vista previa. Puede continuar editando la plantilla.</p>
+                </div>
+            </div>
+            '''
+            return JsonResponse({'preview': fallback_html})
+
+
+class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.view_managementperiod'
+
+    def get(self, request, pk):
+        period = get_object_or_404(
+            ManagementPeriod.objects.select_related(
+                'employee__person',
+                'contract_type__labor_regime',
+                'administrative_unit',
+                'schedule',
+                'budget_line__position_item',
+                'created_by',
+                'personnel_action',
+            ),
+            pk=pk,
+        )
+
+        if period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL and period.personnel_action_id:
+            return redirect('personnel_actions:action_pdf', pk=period.personnel_action_id)
+
+        template = ContractTemplate.objects.filter(contract_type=period.contract_type, is_active=True).first()
+        replacements = _build_contract_replacements(period)
+        is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
+        document_label = 'ACCIÓN DE PERSONAL' if is_action_document else 'CONTRATO'
+
+        if template:
+            body_html = _render_contract_sections_html(template, replacements)
+        elif is_action_document:
+            body_html = ''.join([
+                f'<p style="margin-bottom:0.4rem;"><strong>FECHA DE ELABORACIÓN:</strong> {replacements.get("[ACTION_ISSUE_DATE]", "-")}</p>',
+                f'<p style="margin-bottom:0.4rem;"><strong>RIGE DESDE:</strong> {replacements.get("[ACTION_EFFECTIVE_FROM]", "-")} &nbsp;&nbsp; <strong>HASTA:</strong> {replacements.get("[ACTION_EFFECTIVE_TO]", "-")}</p>',
+                '<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">MOTIVACIÓN Y EXPLICACIÓN</h4>',
+                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;"><strong>MOTIVACIÓN:</strong> {replacements.get("[MOTIVATION]", "-")}</p>',
+                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{replacements.get("[EXPLANATION]", "-")}</p>',
+            ])
+        else:
+            body_html = _render_contract_inline_formatting(
+                f"Se certifica que {replacements['[FULL_NAME]']} con documento {replacements['[DOCUMENT_NUMBER]']} "
+                f"mantiene un vínculo bajo la modalidad {replacements['[CONTRACT_TYPE]']} "
+                f"en el régimen {replacements['[LABOR_REGIME]']}, desde {replacements['[START_DATE]']} "
+                f"hasta {replacements['[END_DATE]']}."
+            )
+            body_html = f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{body_html}</p>'
+
+        configuration = SystemConfiguration.get_current()
+        authority_name = ''
+        authority_position = ''
+        city = 'Loja'
+        if configuration:
+            authority_name = (configuration.max_authority_name or '').strip().upper()
+            authority_position = (configuration.max_authority_position or '').strip().upper()
+            city = (configuration.city or 'Loja').strip()
+
+        employee_person = getattr(period.employee, 'person', None)
+        employee_full_name = (employee_person.full_name or '').strip().upper() if employee_person else ''
+        prepared_by = _build_contract_user_full_name(period.created_by)
+
+        context = {
+            'document_label': document_label,
+            'document_number': replacements.get('[DOC_NUMBER]', '-'),
+            'today': replacements.get('[today]', _get_contract_today_date().strftime('%d/%m/%Y')),
+            'city': city,
+            'letterhead_path': _get_contract_letterhead_resource(request),
+            'authority_name': authority_name,
+            'authority_position': authority_position,
+            'employee_full_name': employee_full_name,
+            'prepared_by': prepared_by,
+            'is_pdf': True,
+            'body_html': mark_safe(body_html),
+        }
+
+        try:
+            from weasyprint import HTML
+
+            html_string = render_to_string(
+                'contract/reports/printable_management_document.html',
+                context,
+                request=request,
+            )
+            pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            safe_doc = str(replacements.get('[DOC_NUMBER]', period.pk)).replace(' ', '_').replace('/', '-')
+            file_prefix = 'AccionPersonal' if is_action_document else 'Contrato'
+            response['Content-Disposition'] = f'inline; filename="{file_prefix}_{safe_doc}.pdf"'
+            return response
+        except Exception:
+            return HttpResponse('Error al generar el PDF del contrato', status=500)
+
+
+
 class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ManagementPeriod
     template_name = 'contract/management_period_list.html'
@@ -347,14 +1002,16 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
             contract_type_id = request.GET.get('contract_type_id')
             contract_type = ContractType.objects.filter(pk=contract_type_id).first() if contract_type_id else None
             contract_code = (contract_type.code if contract_type else '').upper()
+            contract_category = (contract_type.contract_type_category if contract_type else '').upper()
             is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
+            is_action_document = contract_category == ContractType.TYPE_ACCION_PERSONAL
 
-            # 1. Buscar la persona activa
-            person = Person.objects.filter(document_number=doc_number, is_active=True).first()
+            # 1. Buscar la persona por cédula (incluye ex empleados con persona inactiva)
+            person = Person.objects.filter(document_number=doc_number).first()
             if not person:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Cédula no registrada o persona inactiva.'
+                    'message': 'Cédula no registrada.'
                 })
 
             # 2. Si existe un empleado activo relacionado, bloquear (no debe ser empleado activo)
@@ -384,7 +1041,7 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     'message': 'Bloqueo: La persona no tiene un registro de empleado para generar gestión laboral.'
                 })
 
-            if not is_professional_service and (not employee_with_line or not budget_line):
+            if not is_action_document and not is_professional_service and (not employee_with_line or not budget_line):
                 return JsonResponse({
                     'success': False,
                     'message': 'Bloqueo: La persona no tiene una partida presupuestaria asignada. Asigne una partida antes de continuar.'
@@ -412,6 +1069,7 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                         'number': budget_line.number_individual or budget_line.code,
                         'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
                     } if budget_line else None),
+                    'contract_type_category': contract_category or ContractType.TYPE_CONTRATO,
                     'requires_manual_compensation': is_professional_service
                 },
             })
@@ -642,10 +1300,11 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 employee = get_object_or_404(Employee, pk=data.get('employee'))
                 contract_type = get_object_or_404(ContractType, pk=data.get('contract_type'))
                 is_professional_service = (contract_type.code or '').upper() == 'SERVICIOS_PROFESIONALES'
+                is_action_document = contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
 
                 budget_line = None if is_professional_service else employee.current_budget_line.first()
 
-                if not is_professional_service and not budget_line:
+                if not is_action_document and not is_professional_service and not budget_line:
                     return JsonResponse({
                         'success': False,
                         'message': 'La persona no tiene una partida presupuestaria asignada para este tipo de contrato.'
@@ -653,6 +1312,15 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
 
                 manual_position = data.get('manual_position', '').strip().upper()
                 manual_remuneration = data.get('manual_remuneration')
+                elaboration_date = data.get('elaboration_date') or None
+                action_motivation = data.get('action_motivation', '').strip().upper()
+                action_explanation = data.get('action_explanation', '').strip()
+
+                if is_action_document and (not elaboration_date or not data.get('start_date') or not data.get('end_date') or not action_motivation or not action_explanation):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde/hasta, motivación y explicación.'
+                    }, status=400)
 
                 if is_professional_service and (not manual_position or not manual_remuneration):
                     return JsonResponse({
@@ -660,24 +1328,34 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                         'message': 'Para SERVICIOS_PROFESIONALES debe ingresar cargo y remuneración manual.'
                     }, status=400)
 
+                administrative_unit_id = data.get('administrative_unit') if not is_action_document else (employee.area_id if employee.area_id else None)
+                schedule_id = data.get('schedule') if not is_action_document else None
+                workplace = data.get('workplace', '').strip().upper() if not is_action_document else None
+                job_functions = data.get('job_functions', '').strip() if not is_action_document else ''
+                institutional_need_memo = data.get('institutional_need_memo', '').strip().upper() if not is_action_document else None
+                budget_certification = data.get('budget_certification', '').strip().upper() if not is_action_document else None
+
                 # Creamos la instancia SIN document_number (el save() lo pondrá)
                 period = ManagementPeriod(
                     employee=employee,
                     budget_line=budget_line,
                     contract_type=contract_type,
-                    administrative_unit_id=data.get('administrative_unit'),
-                    schedule_id=data.get('schedule'),
+                    administrative_unit_id=administrative_unit_id,
+                    schedule_id=schedule_id,
                     status=status_initial,
                     manual_position=manual_position or None,
                     manual_remuneration=manual_remuneration or None,
 
                     # Estos campos se mantienen manuales
-                    institutional_need_memo=data.get('institutional_need_memo', '').strip().upper(),
-                    budget_certification=data.get('budget_certification', '').strip().upper(),
-                    workplace=data.get('workplace', '').strip().upper(),
-                    job_functions=data.get('job_functions', '').strip(),
+                    institutional_need_memo=institutional_need_memo,
+                    budget_certification=budget_certification,
+                    workplace=workplace,
+                    job_functions=job_functions,
+                    elaboration_date=elaboration_date or None,
                     start_date=data.get('start_date'),
                     end_date=data.get('end_date') if data.get('end_date') else None,
+                    action_motivation=action_motivation or None,
+                    action_explanation=action_explanation or None,
                     created_by=request.user
                 )
 
@@ -801,18 +1479,28 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
                 'budget_line_number': (p.budget_line.number_individual or p.budget_line.code) if p.budget_line else 'SIN PARTIDA',
                 'position_name': p.display_position,
                 'remuneration': str(p.display_remuneration) if p.display_remuneration is not None else '-',
-                'unit_name': p.administrative_unit.name,
-                'institutional_need_memo': p.institutional_need_memo,
-                'budget_certification': p.budget_certification,
-                'start_date': p.start_date.isoformat(),  # Formato YYYY-MM-DD para el input date
-                'start_date_formatted': p.start_date.strftime('%d/%m/%Y'),
+                'unit_name': p.administrative_unit.name if p.administrative_unit else '',
+                'institutional_need_memo': p.institutional_need_memo or '',
+                'budget_certification': p.budget_certification or '',
+                'elaboration_date': p.elaboration_date.isoformat() if p.elaboration_date else '',
+                'elaboration_date_formatted': p.elaboration_date.strftime('%d/%m/%Y') if p.elaboration_date else '',
+                'start_date': p.start_date.isoformat() if p.start_date else '',  # Formato YYYY-MM-DD para el input date
+                'start_date_formatted': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
                 'end_date': p.end_date.isoformat() if p.end_date else '',
                 'end_date_formatted': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'INDEFINIDO',
-                'schedule_id': p.schedule.id,
-                'schedule_name': p.schedule.name,
-                'workplace': p.workplace,
+                'schedule_id': p.schedule.id if p.schedule else '',
+                'schedule_name': p.schedule.name if p.schedule else '',
+                'workplace': p.workplace or '',
                 'contract_type_name': p.contract_type.name,
-                'job_functions': p.job_functions,
+                'contract_type_category': p.contract_type.contract_type_category,
+                'personnel_action_id': p.personnel_action_id,
+                'personnel_action_pdf_url': (
+                    reverse('personnel_actions:action_pdf', args=[p.personnel_action_id])
+                    if p.personnel_action_id else ''
+                ),
+                'job_functions': p.job_functions or '',
+                'action_motivation': p.action_motivation or '',
+                'action_explanation': p.action_explanation or '',
             }
         })
 

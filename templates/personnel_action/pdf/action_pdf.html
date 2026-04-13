@@ -259,11 +259,19 @@
                 {{ action.employee.area.parent.parent.parent.name|default:"N/A" }}{% else %}
                 {{ action.employee.area.parent.parent.parent.parent.name|default:"N/A" }}{% endif %}<br>
                 <b>UNIDAD ADMINISTRATIVA:</b> {{ action.employee.area.name }}<br>
-                <b>PUESTO:</b> {{ budget.position_item.name }}<br>
-                <b>GRUPO:</b> {{ budget.group_item.name }}<br>
-                <b>GRADO:</b> {{ budget.grade_item.name }}<br>
-                <b>RMU:</b> {{ budget.remuneration }}<br>
-                <b>PARTIDA:</b> {{ budget.number_individual }}
+                {% if budget %}
+                    <b>PUESTO:</b> {{ budget.position_item.name }}<br>
+                    <b>GRUPO:</b> {{ budget.group_item.name }}<br>
+                    <b>GRADO:</b> {{ budget.grade_item.name }}<br>
+                    <b>RMU:</b> {{ budget.remuneration }}<br>
+                    <b>PARTIDA:</b> {{ budget.number_individual }}
+                {% else %}
+                    <b>PUESTO:</b> N/A<br>
+                    <b>GRUPO:</b> N/A<br>
+                    <b>GRADO:</b> N/A<br>
+                    <b>RMU:</b> N/A<br>
+                    <b>PARTIDA:</b> N/A
+                {% endif %}
             </td>
             <td colspan="6" class="text-center">Sin cambios en la situación actual</td>
         </tr>

@@ -35,11 +35,14 @@
                 </td>
                 <td>
                     <div class="font-weight-700 text-primary">{{ period.display_position }}</div>
-                    <small class="text-muted">Partida: {% if period.budget_line %}{% if period.budget_line.number_individual %}
-                        {{ period.budget_line.number_individual }}{% else %}
-                        {{ period.budget_line.code }}{% endif %}{% else %}Sin partida presupuestaria{% endif %}</small>
+                    <small class="text-muted">Partida:
+                        {% if period.budget_line %}{% if period.budget_line.number_individual %}
+                            {{ period.budget_line.number_individual }}{% else %}
+                            {{ period.budget_line.code }}{% endif %}{% else %}Sin partida
+                            presupuestaria{% endif %}</small>
                     <br>
-                    <small class="text-muted">Remuneración: {% if period.display_remuneration is not None %}${{ period.display_remuneration }}{% else %}-{% endif %}</small>
+                    <small class="text-muted">Remuneración: {% if period.display_remuneration is not None %}$
+                        {{ period.display_remuneration }}{% else %}-{% endif %}</small>
                 </td>
                 <td><span class="small font-weight-600">{{ period.administrative_unit.name }}</span></td>
                 <td>
@@ -60,10 +63,17 @@
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper">
-                        {% if period.status.code == 'FIRMADO' and not period.signed_document %}
-                            <button class="btn-create-action" data-id="{{ period.id }}" data-action="upload"
-                                    title="Subir PDF Legalizado" style="background: #0ea5e9;">
-                                <i class="fas fa-file-upload"></i>
+                        {% if period.contract_type.contract_type_category == 'CONTRATO' %}
+                            <button class="btn-success-action " data-id="{{ period.id }}" data-action="print"
+                                    title="Imprimir Contrato">
+                                <i class="fas fa-print"></i>
+                                <span class="ml-1"></span>
+                            </button>
+                        {% else %}
+                            <button class="btn-success-action" data-id="{{ period.id }}" data-action="print"
+                                    title="Imprimir Acción de Personal">
+                                <i class="fas fa-print"></i>
+                                <span class="ml-1"></span>
                             </button>
                         {% endif %}
                         {% if period.status.code == 'SIN_FIRMAR' %}

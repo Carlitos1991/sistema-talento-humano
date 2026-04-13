@@ -106,8 +106,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         # 3. LOGICA: Campos Obligatorios Manuales
         mandatory = [
             'document_type', 'document_number', 'first_name', 'last_name',
-            'email', 'birth_date', 'gender', 'marital_status',
-            'blood_type', 'country', 'province', 'canton', 'parish', 'address_reference'
+            'birth_date'
         ]
         for field in mandatory:
             if field in self.fields:

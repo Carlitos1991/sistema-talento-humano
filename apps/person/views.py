@@ -316,25 +316,30 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # Búsqueda rápida
         if q:
-            qs = qs.filter(
-                Q(first_name__icontains=q) |
-                Q(last_name__icontains=q) |
-                Q(document_number__icontains=q) |
-                Q(email__icontains=q) |
-                Q(full_name_str__icontains=q)
-            )
+            # Soporta búsquedas por términos no contiguos, ej: "carlos chacha".
+            terms = [t.strip() for t in q.split() if t.strip()]
+            for term in terms:
+                qs = qs.filter(
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term) |
+                    Q(document_number__icontains=term) |
+                    Q(email__icontains=term) |
+                    Q(full_name_str__icontains=term)
+                )
 
         # Aplicamos filtros avanzados si existen
         if cedula:
             qs = qs.filter(document_number__icontains=cedula)
 
         if nombres:
-            # Busca en nombre, apellido O la concatenación de ambos
-            qs = qs.filter(
-                Q(first_name__icontains=nombres) |
-                Q(last_name__icontains=nombres) |
-                Q(full_name_str__icontains=nombres)
-            )
+            # Busca por términos para soportar combinaciones nombre+apellido no contiguas.
+            terms = [t.strip() for t in nombres.split() if t.strip()]
+            for term in terms:
+                qs = qs.filter(
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term) |
+                    Q(full_name_str__icontains=term)
+                )
 
         if area_id:
             qs = qs.filter(employee_profile__area_id=area_id)

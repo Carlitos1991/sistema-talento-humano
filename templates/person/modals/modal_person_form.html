@@ -45,27 +45,19 @@
                                 <div class="form-group">
                                     <label class="form-label">Tipo Documento <span class="text-danger">*</span></label>
                                     {{ form.document_type }}
-                                    <span class="text-error" v-if="errors.document_type"
-                                          v-text="errors.document_type[0]"></span>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Número Documento <span
                                             class="text-danger">*</span></label>
                                     {{ form.document_number }}
-                                    <span class="text-error" v-if="errors.document_number"
-                                          v-text="errors.document_number[0]"></span>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Nombres <span class="text-danger">*</span></label>
                                     {{ form.first_name }}
-                                    <span class="text-error" v-if="errors.first_name"
-                                          v-text="errors.first_name[0]"></span>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Apellidos <span class="text-danger">*</span></label>
                                     {{ form.last_name }}
-                                    <span class="text-error" v-if="errors.last_name"
-                                          v-text="errors.last_name[0]"></span>
                                 </div>
                             </div>
                         </div>
@@ -79,7 +71,6 @@
                         <div class="form-group">
                             <label class="form-label">Fecha Nacimiento <span class="text-danger">*</span></label>
                             {{ form.birth_date }}
-                            <span class="text-error" v-if="errors.birth_date" v-text="errors.birth_date[0]"></span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Género</label>
@@ -92,7 +83,6 @@
                         <div class="form-group">
                             <label class="form-label">Email Personal</label>
                             {{ form.email }}
-                            <span class="text-error" v-if="errors.email" v-text="errors.email[0]"></span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Teléfono / Celular</label>

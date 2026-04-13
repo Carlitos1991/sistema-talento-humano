@@ -18,6 +18,22 @@ urlpatterns = [
     path('contract-types/toggle-status/<int:pk>/', views.ContractTypeToggleStatusView.as_view(),
          name='contract_type_toggle_status'),
     path('contract-types/update/<int:pk>/', views.ContractTypeUpdateView.as_view(), name='contract_type_update'),
+    path('templates/create/<int:contract_type_id>/', views.ContractTemplateEditorCreateView.as_view(),
+         name='template_editor_create'),
+    path('templates/editor/<int:pk>/', views.ContractTemplateEditorDetailView.as_view(),
+         name='template_editor_detail'),
+    path('templates/<int:template_id>/sections/create/', views.ContractTemplateSectionCreateAjaxView.as_view(),
+         name='template_section_create'),
+    path('templates/sections/<int:section_id>/update/', views.ContractTemplateSectionUpdateAjaxView.as_view(),
+         name='template_section_update'),
+    path('templates/sections/<int:section_id>/delete/', views.ContractTemplateSectionDeleteAjaxView.as_view(),
+         name='template_section_delete'),
+    path('templates/<int:template_id>/sections/reorder/', views.ContractTemplateSectionReorderAjaxView.as_view(),
+         name='template_section_reorder'),
+    path('templates/<int:template_id>/preview/', views.ContractTemplatePreviewAjaxView.as_view(),
+         name='template_preview'),
+    path('templates/action-editor/options/', views.ContractTemplateEditorOptionsAPIView.as_view(),
+         name='template_action_editor_options'),
 
     # Inicios de Gestión
     path('periods/', views.ManagementPeriodListView.as_view(), name='period_list'),
@@ -36,4 +52,5 @@ urlpatterns = [
          name='period_update_partial'),
     path('periods/upload-doc/<int:pk>/', views.ManagementPeriodUploadDocView.as_view(), name='period_upload_doc'),
     path('periods/delete-doc/<int:pk>/', views.ManagementPeriodDeleteDocView.as_view(), name='period_delete_doc'),
+     path('periods/print/<int:pk>/', views.ManagementPeriodPrintView.as_view(), name='period_print'),
 ]

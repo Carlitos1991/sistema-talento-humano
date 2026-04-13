@@ -47,7 +47,7 @@ const periodApp = createApp({
 
             // --- SELECCIÓN Y DATOS ---
             searchDoc: '',
-            selectedContractType: {id: null, name: '', code: ''},
+            selectedContractType: {id: null, name: '', code: '', category: ''},
             selectedEmployee: {id: null, full_name: '', photo: '', budget_line: null},
             selectedPeriod: {},
 
@@ -56,7 +56,8 @@ const periodApp = createApp({
                 id: null, administrative_unit: '', budget_line: '', schedule: '',
                 workplace: '', start_date: '', end_date: '', document_number: '',
                 job_functions: '', institutional_need_memo: '', budget_certification: '',
-                manual_position: '', manual_remuneration: ''
+                manual_position: '', manual_remuneration: '',
+                elaboration_date: '', action_motivation: '', action_explanation: ''
             },
                 is_boss: false,
 
@@ -112,6 +113,7 @@ const periodApp = createApp({
                     if (action === 'view') this.viewPeriodDetails(id);
                     if (action === 'terminate') this.terminatePeriod(id);
                     if (action === 'upload') this.uploadContractFile(id);
+                    if (action === 'print') this.printPeriodDocument(id);
 
                     // CORRECCIÓN: Llamar al nuevo nombre del método
                     if (action === 'advanced-search-empty') this.openSearchModal();
@@ -258,6 +260,16 @@ const periodApp = createApp({
                     this.showToast('error', 'Error al eliminar archivo');
                 }
             }
+        },
+
+        printPeriodDocument(id) {
+            if (!id) return;
+            const period = this.selectedPeriod || {};
+            if (period.personnel_action_pdf_url) {
+                window.open(period.personnel_action_pdf_url, '_blank');
+                return;
+            }
+            window.open(`/contract/periods/print/${id}/`, '_blank');
         },
 
 
@@ -596,19 +608,20 @@ const periodApp = createApp({
         resetWizard() {
             this.searchDoc = '';
             this.unitLevels = []; // Limpiar niveles
-            this.selectedContractType = {id: null, name: '', code: ''};
+            this.selectedContractType = {id: null, name: '', code: '', category: ''};
             this.selectedEmployee = {id: null, full_name: '', photo: '', budget_line: null};
             this.form = {
                 administrative_unit: '', budget_line: '', schedule: '', workplace: '',
                 start_date: '', end_date: '', document_number: '', job_functions: '',
                 institutional_need_memo: '', budget_certification: '',
                 manual_position: '', manual_remuneration: '',
+                elaboration_date: '', action_motivation: '', action_explanation: '',
                 is_boss: false
             };
         },
 
-        selectContractType(id, name, code) { // <-- MÉTODO REQUERIDO
-            this.selectedContractType = {id, name, code};
+        selectContractType(id, name, code, category) { // <-- MÉTODO REQUERIDO
+            this.selectedContractType = {id, name, code, category};
             this.step = 2;
         },
 
@@ -621,6 +634,9 @@ const periodApp = createApp({
                 if (data.success) {
                     this.selectedEmployee = data.employee;
                     this.form.budget_line = data.employee.budget_line ? data.employee.budget_line.id : '';
+                    if (data.employee.contract_type_category) {
+                        this.selectedContractType.category = data.employee.contract_type_category;
+                    }
                     this.step = 3;
                     this.$nextTick(() => this.initSelect2());
                 } else {
@@ -657,9 +673,16 @@ const periodApp = createApp({
 
         async saveManagementPeriod() {
             const f = this.form;
-            if (!f.administrative_unit || !f.schedule || !f.start_date) {
-                CustomSwal.fire('Validación', 'Complete los campos obligatorios (*).', 'warning');
-                return;
+            if (this.selectedContractType.category === 'ACCION_PERSONAL') {
+                if (!f.elaboration_date || !f.start_date || !f.end_date || !f.action_motivation || !f.action_explanation) {
+                    CustomSwal.fire('Validación', 'Complete la fecha de elaboración, rige desde/hasta, motivación y explicación.', 'warning');
+                    return;
+                }
+            } else {
+                if (!f.administrative_unit || !f.schedule || !f.start_date) {
+                    CustomSwal.fire('Validación', 'Complete los campos obligatorios (*).', 'warning');
+                    return;
+                }
             }
 
             if (this.selectedContractType.code === 'SERVICIOS_PROFESIONALES') {

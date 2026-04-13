@@ -75,6 +75,12 @@
                             </td>
                             <td class="actions">
                                 <div class="actions-wrapper">
+                                    <button class="btn-list-action"
+                                            @click="handleOpenContractTemplateEditor(type)"
+                                            :title="type.category === 'CONTRATO' ? 'Crear Plantilla de Contrato' : 'Crear Plantilla de Acción de Personal'">
+                                        <i class="fas fa-file-signature"></i>
+
+                                    </button>
                                     <button class="btn-views-action" @click="editContractType(type)" title="Editar">
                                         <i class="fas fa-pen-to-square"></i>
                                     </button>

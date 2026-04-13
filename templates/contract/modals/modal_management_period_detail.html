@@ -74,27 +74,18 @@
             </div>
 
             <div class="section-card-standard mt-3">
-                <h6 class="section-title"><i class="fas fa-file-pdf text-danger"></i> Documento Legalizado</h6>
-
-                <!-- Caso A: El documento existe -->
-                <div v-if="selectedPeriod.signed_document_url"
-                     class="d-flex align-items-center justify-content-between p-2 bg-light rounded">
-                    <a :href="selectedPeriod.signed_document_url" target="_blank"
-                       class="link d-flex align-items-center">
-                        <i class="fas fa-file-lines me-2" style="font-size: 1.5rem;"></i>
-                        <span>Ver Contrato Legalizado (PDF)</span>
-                    </a>
-                    <button class="btn-icon text-danger"
-                            @click="deleteContractFile(selectedPeriod.id)"
-                            title="Eliminar Archivo">
-                        <i class="fas fa-trash-can"></i>
+                <h6 class="section-title"><i class="fas fa-print text-primary"></i> Documento para Impresión</h6>
+                <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded">
+                    <div class="small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        El documento legalizado se gestiona en Archivo Digital.
+                    </div>
+                    <button class="btn-save"
+                            @click="printPeriodDocument(selectedPeriod.id)"
+                            :title="selectedPeriod.contract_type_category === 'CONTRATO' ? 'Imprimir Contrato' : 'Imprimir Acción de Personal'">
+                        <i class="fas fa-print"></i>
+                        [[ selectedPeriod.contract_type_category === 'CONTRATO' ? 'Imprimir Contrato' : 'Imprimir Acción' ]]
                     </button>
-                </div>
-                <div v-else class="empty-state-container"
-                     style="padding: 1rem !important; text-align: left !important;">
-                    <p class="small text-muted italic mb-0">
-                        <i class="fas fa-info-circle me-1"></i> No se ha cargado el documento escaneado.
-                    </p>
                 </div>
             </div>
 

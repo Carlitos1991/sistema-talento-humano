@@ -40,7 +40,8 @@
         </thead>
         <tbody id="table-body">
         {% for person in people %}
-            <tr class="location-row" id="row-{{ person.id }}">
+            <tr class="location-row" id="row-{{ person.id }}"
+                data-search-text="{{ person.last_name|default:''|lower }} {{ person.first_name|default:''|lower }} {{ person.document_number|default:''|lower }} {{ person.email|default:''|lower }} {{ person.phone_number|default:''|lower }} {{ person.employee_profile.area.name|default:''|lower }} {{ person.employee_profile.employment_status.name|default:''|lower }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
                     <div class="person-info">

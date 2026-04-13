@@ -296,3 +296,38 @@
     align-items: center;
     gap: 4px;
 }
+
+/* ========================================
+   VALIDACION MODAL PERSONA
+   ======================================== */
+#modalPersonOverlay .form-group {
+    position: relative;
+}
+
+#modalPersonOverlay .form-group .field-error-msg {
+    min-height: 18px;
+    margin-top: 4px;
+    color: #dc2626;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+#modalPersonOverlay .form-group .field-error-msg:not(.has-message) {
+    color: transparent;
+}
+
+#modalPersonOverlay input.is-invalid,
+#modalPersonOverlay select.is-invalid,
+#modalPersonOverlay textarea.is-invalid,
+#modalPersonOverlay .input-field.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+    background-color: #fffafa;
+}
+
+#modalPersonOverlay .select2-container .select2-selection.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+    background-color: #fffafa !important;
+}

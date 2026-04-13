@@ -7,6 +7,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
+from django.http import HttpResponse
 
 from budget.models import BudgetLine
 from .models import PersonnelAction, ActionMovement, ActionType
@@ -502,13 +503,27 @@ class ActionPDFView(LoginRequiredMixin, View):
             PersonnelAction.objects.select_related('employee__person', 'action_type'),
             pk=pk
         )
-        budget = BudgetLine.objects.get(current_employee_id=action.employee.pk)
+        budget = None
+        management_period = getattr(action, 'management_period', None)
+        if management_period and management_period.budget_line:
+            budget = management_period.budget_line
+        else:
+            budget = BudgetLine.objects.filter(current_employee_id=action.employee.pk).select_related(
+                'position_item', 'group_item', 'grade_item'
+            ).first()
 
-        html = render_to_string(
-            'personnel_action/pdf/action_pdf.html',
-            {'action': action, 'budget': budget},
-            request=request
-        )
+        try:
+            from weasyprint import HTML
 
-        from django.http import HttpResponse
-        return HttpResponse(html)
+            html = render_to_string(
+                'personnel_action/pdf/action_pdf.html',
+                {'action': action, 'budget': budget},
+                request=request
+            )
+            pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f'Accion_{action.number.replace("/", "-")}.pdf'
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception:
+            return HttpResponse('Error al generar el PDF de la acción', status=500)

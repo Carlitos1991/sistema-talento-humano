@@ -256,9 +256,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.getElementById('searchInput');
                 if (!input) return;
 
+                const normalizeSearchText = (value) => {
+                    return (value || '')
+                        .toString()
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+                };
+
+                const filterVisibleRows = () => {
+                    const terms = normalizeSearchText(input.value)
+                        .split(/\s+/)
+                        .filter(Boolean);
+
+                    const tableContainer = document.getElementById('tableContainer');
+                    if (!tableContainer) return;
+
+                    const dataRows = Array.from(tableContainer.querySelectorAll('tbody tr[data-search-text]'));
+                    let visibleRows = 0;
+
+                    dataRows.forEach((row) => {
+                        const rowText = normalizeSearchText(row.dataset.searchText || row.textContent || '');
+                        const matches = terms.length === 0 || terms.every((term) => rowText.includes(term));
+                        row.style.display = matches ? '' : 'none';
+                        if (matches) visibleRows += 1;
+                    });
+
+                    const noResultsRow = tableContainer.querySelector('#client-no-results');
+                    if (noResultsRow) {
+                        noResultsRow.style.display = dataRows.length > 0 && visibleRows === 0 ? '' : 'none';
+                    }
+                };
+
+                // Exponer para reutilizar después de renderizados AJAX.
+                window.applyPersonClientSearchFilter = filterVisibleRows;
+
                 // Debounce para búsqueda mientras escribe
                 let searchTimeout;
                 input.addEventListener('input', (e) => {
+                    filterVisibleRows();
                     clearTimeout(searchTimeout);
                     searchTimeout = setTimeout(() => {
                         const term = e.target.value.trim();
@@ -273,6 +310,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         fetchPeople(1);
                     }, 500);
                 });
+
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const term = input.value.trim();
+                        const current = Object.assign({}, activeFilters.value || {});
+                        if (term) {
+                            current.q = term;
+                        } else {
+                            delete current.q;
+                        }
+                        activeFilters.value = current;
+                        fetchPeople(1);
+                    }
+                });
+
+                // Aplicar al cargar por primera vez.
+                filterVisibleRows();
             };
 
             // ----------------------------------------------------
@@ -358,6 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Reinsertar botones Excel/PDF sobre la nueva tabla
                             if (typeof addExportButtonsToTables === 'function') {
                                 addExportButtonsToTables();
+                            }
+
+                            if (typeof window.applyPersonClientSearchFilter === 'function') {
+                                window.applyPersonClientSearchFilter();
                             }
                         }
                     }
@@ -472,8 +531,118 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+            const getFirstErrorMessage = (value) => {
+                if (Array.isArray(value)) return value[0] || '';
+                if (typeof value === 'string') return value;
+                return 'Campo inválido.';
+            };
+
+            const clearPersonFormValidationUI = () => {
+                const formEl = document.getElementById('personFormHtml');
+                if (!formEl) return;
+
+                formEl.querySelectorAll('input.is-invalid, select.is-invalid, textarea.is-invalid').forEach((el) => {
+                    el.classList.remove('is-invalid');
+                });
+
+                formEl.querySelectorAll('.field-error-msg').forEach((msgEl) => {
+                    msgEl.textContent = '';
+                    msgEl.classList.remove('has-message');
+                });
+
+                formEl.querySelectorAll('.form-group').forEach((group) => {
+                    group.classList.remove('has-error');
+                });
+
+                formEl.querySelectorAll('.select2-container .select2-selection.is-invalid').forEach((el) => {
+                    el.classList.remove('is-invalid');
+                });
+            };
+
+            const applyPersonFormErrors = (errorMap) => {
+                clearPersonFormValidationUI();
+
+                const formEl = document.getElementById('personFormHtml');
+                if (!formEl || !errorMap || typeof errorMap !== 'object') return;
+
+                Object.entries(errorMap).forEach(([fieldName, fieldErrors]) => {
+                    if (fieldName === '__all__') return;
+
+                    const field = formEl.querySelector(`[name="${fieldName}"]`);
+                    if (!field) return;
+
+                    const message = getFirstErrorMessage(fieldErrors);
+                    const group = field.closest('.form-group');
+
+                    field.classList.add('is-invalid');
+
+                    // Si es Select2, marcar también el control visual renderizado.
+                    if (field.classList.contains('select2-hidden-accessible')) {
+                        const select2Selection = field.nextElementSibling?.querySelector('.select2-selection');
+                        if (select2Selection) {
+                            select2Selection.classList.add('is-invalid');
+                        }
+                    }
+
+                    if (group) {
+                        group.classList.add('has-error');
+                        let errorEl = group.querySelector('.field-error-msg');
+                        if (!errorEl) {
+                            errorEl = document.createElement('div');
+                            errorEl.className = 'field-error-msg';
+                            group.appendChild(errorEl);
+                        }
+                        errorEl.textContent = message;
+                        errorEl.classList.add('has-message');
+                    }
+                });
+            };
+
+            const bindPersonFormValidationListeners = () => {
+                const formEl = document.getElementById('personFormHtml');
+                if (!formEl || formEl.dataset.validationBound === '1') return;
+
+                formEl.dataset.validationBound = '1';
+
+                const clearFieldError = (target) => {
+                    if (!target || !target.name) return;
+
+                    target.classList.remove('is-invalid');
+
+                    if (target.classList.contains('select2-hidden-accessible')) {
+                        const select2Selection = target.nextElementSibling?.querySelector('.select2-selection');
+                        if (select2Selection) {
+                            select2Selection.classList.remove('is-invalid');
+                        }
+                    }
+
+                    const group = target.closest('.form-group');
+                    if (group) {
+                        const errorEl = group.querySelector('.field-error-msg');
+                        if (errorEl) {
+                            errorEl.textContent = '';
+                            errorEl.classList.remove('has-message');
+                        }
+                        group.classList.remove('has-error');
+                    }
+
+                    if (errors.value && Object.prototype.hasOwnProperty.call(errors.value, target.name)) {
+                        delete errors.value[target.name];
+                    }
+                };
+
+                formEl.addEventListener('input', (event) => {
+                    clearFieldError(event.target);
+                });
+
+                formEl.addEventListener('change', (event) => {
+                    clearFieldError(event.target);
+                });
+            };
+
             const submitPersonForm = async () => {
                 errors.value = {};
+                clearPersonFormValidationUI();
                 const formData = new FormData(document.getElementById('personFormHtml'));
                 const url = isEditing.value ? urls.update.replace('0', currentId.value) : urls.create;
 
@@ -491,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fetchPeople(1);
                     } else {
                         errors.value = data.errors;
+                        applyPersonFormErrors(data.errors);
                         if (window.Toast) window.Toast.fire({icon: 'warning', title: 'Revise el formulario'});
                     }
                 } catch (e) {
@@ -642,6 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formEl = document.getElementById('personFormHtml');
                 if (formEl) formEl.reset();
 
+                clearPersonFormValidationUI();
+
                 showModal(document.getElementById('modalPersonOverlay'));
 
                 await nextTick();
@@ -652,12 +824,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 $('#id_parish').empty().append('<option value="">-- Seleccione --</option>');
 
                 initModalSelect2();
+
+                // Asegurar valor por defecto en creación: Tipo de documento = CEDULA
+                const documentTypeSelect = document.getElementById('id_document_type');
+                if (documentTypeSelect) {
+                    const cedulaOption = Array.from(documentTypeSelect.options || []).find((opt) => {
+                        const label = (opt.text || '').trim().toUpperCase();
+                        return label.includes('CEDULA') || label.includes('CÉDULA');
+                    });
+
+                    if (cedulaOption) {
+                        documentTypeSelect.value = cedulaOption.value;
+                        $(documentTypeSelect).trigger('change.select2');
+                        form.value.document_type = cedulaOption.value;
+                    }
+                }
             };
 
             const openEditModal = async (id) => {
                 isEditing.value = true;
                 currentId.value = id;
                 errors.value = {};
+                clearPersonFormValidationUI();
 
                 try {
                     const res = await fetch(urls.detail.replace('0', id));
@@ -813,6 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
             onMounted(() => {
                 initQuickSearch();
                 initTableListeners();
+                bindPersonFormValidationListeners();
                 if (typeof addExportButtonsToTables === 'function') {
                     addExportButtonsToTables();
                 }

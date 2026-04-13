@@ -42,7 +42,7 @@
                                 <div class="contract-cards-grid">
                                     {% for type in regime.active_contract_types %}
                                         <div class="contract-type-card"
-                                             @click="selectContractType({{ type.id }}, '{{ type.name }}', '{{ type.code }}')">
+                                            @click="selectContractType({{ type.id }}, '{{ type.name }}', '{{ type.code }}', '{{ type.contract_type_category }}')">
                                             <i class="fas {% if type.contract_type_category == 'CONTRATO' %}fa-file-contract{% else %}fa-user-check{% endif %}"></i>
                                             <span>{{ type.name }}</span>
                                         </div>
@@ -61,7 +61,9 @@
                         <p class="text-muted mb-4">
                             [[ selectedContractType.code === 'SERVICIOS_PROFESIONALES'
                                 ? 'Ingrese la cédula para validar al empleado.'
-                                : 'Ingrese la cédula para heredar la partida presupuestaria.' ]]
+                                : (selectedContractType.category === 'ACCION_PERSONAL'
+                                    ? 'Ingrese la cédula para continuar con la Acción de Personal.'
+                                    : 'Ingrese la cédula para heredar la partida presupuestaria.') ]]
                         </p>
                         <div class="search-box mx-auto" style="max-width: 450px;">
                             <i class="fas fa-search search-icon"></i>
@@ -99,7 +101,7 @@
                         </div>
                     </div>
 
-                    <div class="form-section-card mt-4" v-if="selectedContractType.code === 'SERVICIOS_PROFESIONALES'">
+                    <div class="form-section-card mt-4" v-if="selectedContractType.code === 'SERVICIOS_PROFESIONALES' && selectedContractType.category !== 'ACCION_PERSONAL'">
                         <h6 class="section-title"><i class="fas fa-pen"></i> Cargo y Remuneración (Manual)</h6>
                         <div class="grid-2-cols">
                             <div class="form-group">
@@ -113,86 +115,125 @@
                         </div>
                     </div>
 
-                    <!-- SECCIÓN: UNIDAD ADMINISTRATIVA POR NIVELES -->
-                    <div class="form-section-card mt-4">
-                        <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Organizacional</h6>
-                        <div class="unit-dynamic-grid">
-                            <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
-                                <label>
-                                    [[ index === 0 ? 'Dirección / Unidad Raíz' : 'Sub-dependencia Nivel ' + (index + 1)]]
+                    <template v-if="selectedContractType.category === 'ACCION_PERSONAL'">
+                        <div class="form-section-card mt-4">
+                            <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Fechas de la Acción</h6>
+                            <div class="grid-3-cols">
+                                <div class="form-group">
+                                    <label class="form-label">Fecha de Elaboración</label>
+                                    <input type="date" v-model="form.elaboration_date" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Rige Desde</label>
+                                    <input type="date" v-model="form.start_date" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Rige Hasta</label>
+                                    <input type="date" v-model="form.end_date" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section-card mt-3">
+                            <h5 class="section-title">
+                                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+                            </h5>
+                            <div class="form-group">
+                                <label class="form-label">Motivación</label>
+                                <input type="text" v-model="form.action_motivation" class="input-field uppercase-input" placeholder="Ej: NOMBRA A...">
+                                <p class="form-hint">Breve motivo de la acción de personal.</p>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label class="form-label">Explicación</label>
+                                <textarea v-model="form.action_explanation" class="input-field" rows="5"
+                                          placeholder="Descripción detallada de la acción de personal"></textarea>
+                                <p class="form-hint">Descripción detallada de la acción.</p>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <!-- SECCIÓN: UNIDAD ADMINISTRATIVA POR NIVELES -->
+                        <div class="form-section-card mt-4">
+                            <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Organizacional</h6>
+                            <div class="unit-dynamic-grid">
+                                <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
+                                    <label>
+                                        [[ index === 0 ? 'Dirección / Unidad Raíz' : 'Sub-dependencia Nivel ' + (index + 1)]]
+                                    </label>
+                                    <select v-model="level.selectedId"
+                                            @change="handleUnitChange(index)"
+                                            class="input-field">
+                                        <option :value="null">-- Seleccione una opción --</option>
+                                        <option v-for="opt in level.options" :key="opt.id" :value="opt.id">
+                                            [[ opt.name.toUpperCase() ]]
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label class="form-label d-flex align-items-center">
+                                    <input type="checkbox" v-model="form.is_boss" class="me-2">
+                                    Marcar como jefe inmediato de la unidad seleccionada
                                 </label>
-                                <select v-model="level.selectedId"
-                                        @change="handleUnitChange(index)"
-                                        class="input-field">
-                                    <option :value="null">-- Seleccione una opción --</option>
-                                    <option v-for="opt in level.options" :key="opt.id" :value="opt.id">
-                                        [[ opt.name.toUpperCase() ]]
-                                    </option>
-                                </select>
+                                <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de la unidad seleccionada.</small>
+                            </div>
+                            <div class="grid-2-cols mt-4">
+                                <div class="form-group">
+                                    <label class="form-label">Memo Necesidad</label>
+                                    <input type="text" v-model="form.institutional_need_memo"
+                                           class="input-field uppercase-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Certificación Presup.</label>
+                                    <input type="text" v-model="form.budget_certification"
+                                           class="input-field uppercase-input">
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group mt-3">
-                            <label class="form-label d-flex align-items-center">
-                                <input type="checkbox" v-model="form.is_boss" class="me-2">
-                                Marcar como jefe inmediato de la unidad seleccionada
-                            </label>
-                            <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de la unidad seleccionada.</small>
-                        </div>
-                        <div class="grid-2-cols mt-4">
-                            <div class="form-group">
-                                <label class="form-label">Memo Necesidad</label>
-                                <input type="text" v-model="form.institutional_need_memo"
-                                       class="input-field uppercase-input">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Certificación Presup.</label>
-                                <input type="text" v-model="form.budget_certification"
-                                       class="input-field uppercase-input">
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- SECCIÓN: VIGENCIA Y JORNADA -->
-                    <div class="form-section-card">
-                        <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Vigencia y Jornada</h6>
-                        <div class="grid-3-cols">
-                            <div class="form-group">
-                                <label class="form-label">Fecha Inicio</label>
-                                <input type="date" v-model="form.start_date" class="form-control">
+                        <!-- SECCIÓN: VIGENCIA Y JORNADA -->
+                        <div class="form-section-card">
+                            <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Vigencia y Jornada</h6>
+                            <div class="grid-3-cols">
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Inicio</label>
+                                    <input type="date" v-model="form.start_date" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Fin (Opcional)</label>
+                                    <input type="date" v-model="form.end_date" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Horario Institucional</label>
+                                    <select v-model="form.schedule" class="input-field">
+                                        <option value="">Seleccione...</option>
+                                        {% for sch in schedules %}
+                                            <option value="{{ sch.id }}">{{ sch.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Fecha Fin (Opcional)</label>
-                                <input type="date" v-model="form.end_date" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Horario Institucional</label>
-                                <select v-model="form.schedule" class="input-field">
-                                    <option value="">Seleccione...</option>
-                                    {% for sch in schedules %}
-                                        <option value="{{ sch.id }}">{{ sch.name }}</option>
-                                    {% endfor %}
-                                </select>
+                            <div class="grid-2-cols mt-3">
+                                <div class="form-group">
+                                    <label class="form-label">Lugar de Trabajo</label>
+                                    <input type="text" v-model="form.workplace" class="input-field uppercase-input"
+                                           placeholder="Ej: Piso 2">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Número de Documento / Acción</label>
+                                    <input type="text" value="ML-DTH-AAAA-00012026" class="input-field bg-readonly" readonly>
+                                    <small class="form-hint">El código secuencial se generará al guardar.</small>
+                                </div>
                             </div>
                         </div>
-                        <div class="grid-2-cols mt-3">
-                            <div class="form-group">
-                                <label class="form-label">Lugar de Trabajo</label>
-                                <input type="text" v-model="form.workplace" class="input-field uppercase-input"
-                                       placeholder="Ej: Piso 2">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Número de Documento / Acción</label>
-                                <input type="text" value="ML-DTH-AAAA-TIPO-0001" class="input-field bg-readonly" readonly>
-                                <small class="form-hint">El código secuencial se generará al guardar.</small>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="form-section-card">
-                        <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
-                        <textarea v-model="form.job_functions" class="input-field" rows="2"
-                                  placeholder="Describa las actividades..."></textarea>
-                    </div>
+                        <div class="form-section-card">
+                            <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
+                            <textarea v-model="form.job_functions" class="input-field" rows="2"
+                                      placeholder="Describa las actividades..."></textarea>
+                        </div>
+                    </template>
                 </div>
             </div>
 
