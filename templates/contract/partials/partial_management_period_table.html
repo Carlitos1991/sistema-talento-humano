@@ -78,7 +78,8 @@
                         {% endif %}
                         {% if period.status.code == 'SIN_FIRMAR' %}
                             <button class="btn-create-action" data-id="{{ period.id }}" data-action="sign"
-                                    title="Legalizar">
+                                    data-contract-category="{{ period.contract_type.contract_type_category }}"
+                                    title="{% if period.contract_type.contract_type_category == 'ACCION_PERSONAL' %}Legalizar Acción{% else %}Legalizar Contrato{% endif %}">
                                 <i class="fas fa-file-signature"></i>
                             </button>
                         {% endif %}

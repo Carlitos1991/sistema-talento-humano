@@ -108,8 +108,9 @@ const periodApp = createApp({
 
                     const action = btn.dataset.action;
                     const id = btn.dataset.id;
+                    const contractCategory = btn.dataset.contractCategory;
 
-                    if (action === 'sign') this.signPeriod(id);
+                    if (action === 'sign') this.signPeriod(id, contractCategory);
                     if (action === 'view') this.viewPeriodDetails(id);
                     if (action === 'terminate') this.terminatePeriod(id);
                     if (action === 'upload') this.uploadContractFile(id);
@@ -632,6 +633,22 @@ const periodApp = createApp({
                 const response = await fetch(`/contract/api/validate-employee/${this.searchDoc}/?contract_type_id=${this.selectedContractType.id}`);
                 const data = await response.json();
                 if (data.success) {
+                    const isProfessionalService = (this.selectedContractType.code || '').toUpperCase() === 'SERVICIOS_PROFESIONALES';
+                    const hasBudgetLine = !!(data.employee && data.employee.budget_line && data.employee.budget_line.id);
+
+                    if (!isProfessionalService && !hasBudgetLine) {
+                        Swal.fire({
+                            title: 'Atención',
+                            text: 'La persona no tiene una partida presupuestaria asignada. Debe asignarle una partida antes de pasar al tercer paso.',
+                            icon: 'warning',
+                            confirmButtonText: 'Aceptar',
+                            customClass: {
+                                confirmButton: 'btn-save'
+                            }
+                        });
+                        return;
+                    }
+
                     this.selectedEmployee = data.employee;
                     this.form.budget_line = data.employee.budget_line ? data.employee.budget_line.id : '';
                     if (data.employee.contract_type_category) {
@@ -674,20 +691,20 @@ const periodApp = createApp({
         async saveManagementPeriod() {
             const f = this.form;
             if (this.selectedContractType.category === 'ACCION_PERSONAL') {
-                if (!f.elaboration_date || !f.start_date || !f.end_date || !f.action_motivation || !f.action_explanation) {
-                    CustomSwal.fire('Validación', 'Complete la fecha de elaboración, rige desde/hasta, motivación y explicación.', 'warning');
+                if (!f.administrative_unit || !f.elaboration_date || !f.start_date || !f.action_motivation || !f.action_explanation) {
+                    Swal.fire('Validación', 'Complete la unidad administrativa de destino, fecha de elaboración, rige desde, motivación y explicación.', 'warning');
                     return;
                 }
             } else {
                 if (!f.administrative_unit || !f.schedule || !f.start_date) {
-                    CustomSwal.fire('Validación', 'Complete los campos obligatorios (*).', 'warning');
+                    Swal.fire('Validación', 'Complete los campos obligatorios (*).', 'warning');
                     return;
                 }
             }
 
             if (this.selectedContractType.code === 'SERVICIOS_PROFESIONALES') {
                 if (!f.manual_position || !f.manual_remuneration) {
-                    CustomSwal.fire('Validación', 'Para Servicios Profesionales debe registrar cargo y remuneración manual.', 'warning');
+                    Swal.fire('Validación', 'Para Servicios Profesionales debe registrar cargo y remuneración manual.', 'warning');
                     return;
                 }
             }
@@ -769,9 +786,11 @@ const periodApp = createApp({
             document.body.classList.remove('no-scroll');
         },
 
-        async signPeriod(id) {
+        async signPeriod(id, contractCategory = '') {
+            const isActionDocument = (contractCategory || '').toUpperCase() === 'ACCION_PERSONAL';
+            const legalizeLabel = isActionDocument ? 'Acción' : 'Contrato';
             const {isConfirmed} = await Swal.fire({
-                title: '¿Legalizar Contrato?',
+                title: `¿Legalizar ${legalizeLabel}?`,
                 text: 'El estado cambiará a FIRMADO.',
                 icon: 'info',
                 showCancelButton: true,

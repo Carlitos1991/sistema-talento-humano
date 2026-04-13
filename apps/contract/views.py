@@ -1004,7 +1004,6 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
             contract_code = (contract_type.code if contract_type else '').upper()
             contract_category = (contract_type.contract_type_category if contract_type else '').upper()
             is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
-            is_action_document = contract_category == ContractType.TYPE_ACCION_PERSONAL
 
             # 1. Buscar la persona por cédula (incluye ex empleados con persona inactiva)
             person = Person.objects.filter(document_number=doc_number).first()
@@ -1041,7 +1040,7 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     'message': 'Bloqueo: La persona no tiene un registro de empleado para generar gestión laboral.'
                 })
 
-            if not is_action_document and not is_professional_service and (not employee_with_line or not budget_line):
+            if not is_professional_service and (not employee_with_line or not budget_line):
                 return JsonResponse({
                     'success': False,
                     'message': 'Bloqueo: La persona no tiene una partida presupuestaria asignada. Asigne una partida antes de continuar.'
@@ -1306,10 +1305,10 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
 
                 budget_line = None if is_professional_service else employee.current_budget_line.first()
 
-                if not is_action_document and not is_professional_service and not budget_line:
+                if not is_professional_service and not budget_line:
                     return JsonResponse({
                         'success': False,
-                        'message': 'La persona no tiene una partida presupuestaria asignada para este tipo de contrato.'
+                        'message': 'La persona no tiene una partida presupuestaria asignada. Debe asignarle una partida antes de pasar al tercer paso.'
                     }, status=400)
 
                 manual_position = data.get('manual_position', '').strip().upper()
@@ -1318,10 +1317,10 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 action_motivation = data.get('action_motivation', '').strip().upper()
                 action_explanation = data.get('action_explanation', '').strip()
 
-                if is_action_document and (not elaboration_date or not data.get('start_date') or not data.get('end_date') or not action_motivation or not action_explanation):
+                if is_action_document and (not elaboration_date or not data.get('start_date') or not action_motivation or not action_explanation):
                     return JsonResponse({
                         'success': False,
-                        'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde/hasta, motivación y explicación.'
+                        'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde, motivación y explicación.'
                     }, status=400)
 
                 if is_professional_service and (not manual_position or not manual_remuneration):
@@ -1330,12 +1329,18 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                         'message': 'Para SERVICIOS_PROFESIONALES debe ingresar cargo y remuneración manual.'
                     }, status=400)
 
-                administrative_unit_id = data.get('administrative_unit') if not is_action_document else (employee.area_id if employee.area_id else None)
+                administrative_unit_id = data.get('administrative_unit')
                 schedule_id = data.get('schedule') if not is_action_document else None
                 workplace = data.get('workplace', '').strip().upper() if not is_action_document else None
                 job_functions = data.get('job_functions', '').strip() if not is_action_document else ''
                 institutional_need_memo = data.get('institutional_need_memo', '').strip().upper() if not is_action_document else None
                 budget_certification = data.get('budget_certification', '').strip().upper() if not is_action_document else None
+
+                if is_action_document and not administrative_unit_id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Para ACCIÓN DE PERSONAL debe seleccionar la unidad administrativa de destino.'
+                    }, status=400)
 
                 # Creamos la instancia SIN document_number (el save() lo pondrá)
                 period = ManagementPeriod(
@@ -1402,7 +1407,10 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
     permission_required = 'contract.change_managementperiod'
 
     def post(self, request, pk):
-        period = get_object_or_404(ManagementPeriod, pk=pk)
+        period = get_object_or_404(
+            ManagementPeriod.objects.select_related('contract_type', 'personnel_action', 'employee__person'),
+            pk=pk
+        )
         try:
             with transaction.atomic():
                 status_signed = CatalogItem.objects.get(
@@ -1435,29 +1443,35 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     print(f"No se pudo activar employee tras firma (id={getattr(period.employee,'id',None)}): {e}")
 
                 # --- REGISTRO EN HISTORIAL DE CONTRATO ---
+                is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
                 History.objects.create(
                     employee=period.employee,
                     contract=period,
                     user_register=request.user.get_full_name() or request.user.username,
                     type='FIRMA',
-                    reason='CONTRATO FIRMADO'
+                    reason='ACCIÓN LEGALIZADA' if is_action_document else 'CONTRATO FIRMADO'
                 )
 
                 # --- REGISTRO EN HISTORIAL DE HORARIOS ---
-                from schedule.models import EmployeeScheduleHistory
-                EmployeeScheduleHistory.objects.create(
-                    employee=period.employee,
-                    schedule=period.schedule,
-                    start_date=period.start_date,
-                    end_date=period.end_date,
-                    reason='Asignación de Horario',
-                    is_current=True,
-                    created_by=request.user
-                )
+                if period.schedule_id:
+                    from schedule.models import EmployeeScheduleHistory
+                    EmployeeScheduleHistory.objects.create(
+                        employee=period.employee,
+                        schedule=period.schedule,
+                        start_date=period.start_date,
+                        end_date=period.end_date,
+                        reason='Asignación de Horario',
+                        is_current=True,
+                        created_by=request.user
+                    )
+
+                if is_action_document and period.personnel_action_id and not period.personnel_action.is_registered:
+                    period.personnel_action.is_registered = True
+                    period.personnel_action.save(update_fields=['is_registered'])
 
             return JsonResponse({
                 'success': True,
-                'message': 'El contrato ha sido legalizado y registrado en el historial.'
+                'message': 'La acción ha sido legalizada y registrada.' if is_action_document else 'El contrato ha sido legalizado y registrado en el historial.'
             })
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)

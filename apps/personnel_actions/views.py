@@ -730,6 +730,11 @@ class ActionPDFView(LoginRequiredMixin, View):
         proposed_budget = None
 
         management_period = getattr(action, 'management_period', None)
+        show_without_current_situation = bool(
+            management_period
+            and getattr(getattr(management_period, 'contract_type', None), 'contract_type_category', '') == 'ACCION_PERSONAL'
+        )
+
         if movement and movement.previous_budget_line:
             current_budget = movement.previous_budget_line
         elif management_period and management_period.budget_line:
@@ -743,6 +748,12 @@ class ActionPDFView(LoginRequiredMixin, View):
             proposed_budget = movement.new_budget_line
         else:
             proposed_budget = current_budget
+
+        if show_without_current_situation:
+            current_unit = None
+            current_budget = None
+            proposed_unit = movement.new_unit if movement and movement.new_unit else management_period.administrative_unit
+            proposed_budget = movement.new_budget_line if movement and movement.new_budget_line else management_period.budget_line
 
         try:
             from weasyprint import HTML
@@ -761,6 +772,7 @@ class ActionPDFView(LoginRequiredMixin, View):
                     'proposed_unit_snapshot': proposed_unit_snapshot,
                     'current_budget': _budget_snapshot(current_budget),
                     'proposed_budget': _budget_snapshot(proposed_budget),
+                    'show_without_current_situation': show_without_current_situation,
                     'standard_action_types': [
                         'INGRESO',
                         'TRASPASO',

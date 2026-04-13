@@ -248,21 +248,25 @@
         </tr>
         <tr>
             <td colspan="6">
-                <b>PROCESO INSTITUCIONAL:</b> {{ current_unit_snapshot.path|default:"N/A" }}<br>
-                <b>NIVEL DE GESTIÓN:</b> {{ current_unit.parent.name|default:"N/A" }}<br>
-                <b>UNIDAD ADMINISTRATIVA:</b> {{ current_unit.name|default:"N/A" }}<br>
-                {% if current_budget %}
-                    <b>PUESTO:</b> {{ current_budget.position|default:"N/A" }}<br>
-                    <b>GRUPO:</b> {{ current_budget.group|default:"N/A" }}<br>
-                    <b>GRADO:</b> {{ current_budget.grade|default:"N/A" }}<br>
-                    <b>RMU:</b> {{ current_budget.rmu|default:"N/A" }}<br>
-                    <b>PARTIDA:</b> {{ current_budget.code|default:"N/A" }}
+                {% if show_without_current_situation %}
+                    <b>SITUACIÓN ACTUAL:</b> SIN SITUACIÓN ACTUAL
                 {% else %}
-                    <b>PUESTO:</b> N/A<br>
-                    <b>GRUPO:</b> N/A<br>
-                    <b>GRADO:</b> N/A<br>
-                    <b>RMU:</b> N/A<br>
-                    <b>PARTIDA:</b> N/A
+                    <b>PROCESO INSTITUCIONAL:</b> {{ current_unit_snapshot.path|default:"N/A" }}<br>
+                    <b>NIVEL DE GESTIÓN:</b> {{ current_unit.parent.name|default:"N/A" }}<br>
+                    <b>UNIDAD ADMINISTRATIVA:</b> {{ current_unit.name|default:"N/A" }}<br>
+                    {% if current_budget %}
+                        <b>PUESTO:</b> {{ current_budget.position|default:"N/A" }}<br>
+                        <b>GRUPO:</b> {{ current_budget.group|default:"N/A" }}<br>
+                        <b>GRADO:</b> {{ current_budget.grade|default:"N/A" }}<br>
+                        <b>RMU:</b> {{ current_budget.rmu|default:"N/A" }}<br>
+                        <b>PARTIDA:</b> {{ current_budget.code|default:"N/A" }}
+                    {% else %}
+                        <b>PUESTO:</b> N/A<br>
+                        <b>GRUPO:</b> N/A<br>
+                        <b>GRADO:</b> N/A<br>
+                        <b>RMU:</b> N/A<br>
+                        <b>PARTIDA:</b> N/A
+                    {% endif %}
                 {% endif %}
             </td>
             <td colspan="6">

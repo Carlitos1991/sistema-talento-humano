@@ -243,12 +243,12 @@ class ManagementPeriod(BaseModel):
                 errors['elaboration_date'] = 'La fecha de elaboración es obligatoria para acciones de personal.'
             if not self.start_date:
                 errors['start_date'] = 'La fecha rige desde es obligatoria para acciones de personal.'
-            if not self.end_date:
-                errors['end_date'] = 'La fecha rige hasta es obligatoria para acciones de personal.'
             if not self.action_motivation:
                 errors['action_motivation'] = 'La motivación es obligatoria para acciones de personal.'
             if not self.action_explanation:
                 errors['action_explanation'] = 'La explicación es obligatoria para acciones de personal.'
+            if not self.administrative_unit_id:
+                errors['administrative_unit'] = 'La unidad administrativa de destino es obligatoria para acciones de personal.'
             if errors:
                 raise ValidationError(errors)
         elif is_professional_service:
@@ -395,12 +395,14 @@ class ManagementPeriod(BaseModel):
 
         ActionMovement.objects.create(
             personnel_action=action,
-            previous_unit=self.administrative_unit,
-            previous_position=self.budget_line.position_item if self.budget_line and self.budget_line.position_item else None,
-            previous_remuneration=self.display_remuneration or 0,
+            previous_unit=None,
+            previous_position=None,
+            previous_remuneration=0,
+            previous_budget_line=None,
             new_unit=self.administrative_unit,
             new_position=self.budget_line.position_item if self.budget_line and self.budget_line.position_item else None,
             new_remuneration=self.display_remuneration or 0,
+            new_budget_line=self.budget_line if self.budget_line else None,
             location_text=self.workplace or '',
         )
 
