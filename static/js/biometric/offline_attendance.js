@@ -21,6 +21,7 @@
     const dbName = 'sigeth_offline_attendance';
     const dbVersion = 1;
     const storeName = 'attendance_queue';
+    const isStandaloneMode = appNode.id === 'offline-app';
 
     const pendingCountNode = byId('pending-count');
     const recordListNode = byId('record-list');
@@ -92,6 +93,23 @@
         pinMessageNode.style.background = 'rgba(20, 184, 166, 0.11)';
         pinMessageNode.style.borderColor = 'rgba(20, 184, 166, 0.30)';
         pinMessageNode.style.color = '#99f6e4';
+    }
+
+    function showAlert(icon, title, text) {
+        if (window.Swal && typeof window.Swal.fire === 'function') {
+            return window.Swal.fire({
+                icon,
+                title,
+                text,
+                confirmButtonText: 'Aceptar',
+                customClass: {
+                    confirmButton: 'btn-swal-confirm-green-centered'
+                },
+                buttonsStyling: false
+            });
+        }
+
+        return Promise.resolve();
     }
 
     function setElementEnabled(element, enabled) {
@@ -203,6 +221,10 @@
         accessUnlocked = unlocked;
         setActionsEnabled(unlocked);
 
+        if (isStandaloneMode) {
+            appNode.classList.toggle('is-locked', !unlocked);
+        }
+
         if (pinUnlockBox) {
             pinUnlockBox.style.opacity = unlocked ? '0.72' : '1';
         }
@@ -275,6 +297,7 @@
         markSessionUnlocked(true);
         refreshAuthUi();
         setPinMessage('PIN guardado correctamente.', 'success');
+        await showAlert('success', 'PIN guardado correctamente', 'Tu acceso local quedó activado en este dispositivo.');
     }
 
     async function unlockWithPin() {
@@ -293,6 +316,7 @@
         const hash = await hashPin(pin, profile.pinSalt);
         if (hash !== profile.pinHash) {
             setPinMessage('PIN incorrecto.', 'error');
+            await showAlert('error', 'PIN incorrecto', 'Verifica el PIN local e inténtalo de nuevo.');
             return;
         }
 
@@ -301,6 +325,7 @@
         }
         markSessionUnlocked(true);
         refreshAuthUi();
+        await showAlert('success', 'Bitácora desbloqueada', 'Ahora puedes registrar ingreso y salida.');
     }
 
     async function registerBiometricCredential() {
@@ -353,8 +378,10 @@
 
             refreshAuthUi();
             setPinMessage('Huella vinculada correctamente para desbloqueo local.', 'success');
+            await showAlert('success', 'Huella vinculada', 'Este dispositivo ya puede usar desbloqueo biométrico local.');
         } catch (error) {
             setPinMessage('No se pudo vincular huella en este dispositivo.', 'error');
+            await showAlert('error', 'No se pudo vincular la huella', 'Intenta de nuevo o usa PIN local.');
         }
     }
 
@@ -388,8 +415,10 @@
             markSessionUnlocked(true);
             refreshAuthUi();
             setPinMessage('Desbloqueo con huella exitoso.', 'success');
+            await showAlert('success', 'Desbloqueo exitoso', 'La bitácora quedó desbloqueada con tu huella.');
         } catch (error) {
             setPinMessage('No se pudo validar huella. Intenta con PIN.', 'error');
+            await showAlert('error', 'No se pudo validar la huella', 'Usa el PIN local para continuar.');
         }
     }
 
@@ -756,6 +785,9 @@
     async function bootstrap() {
         await requestPersistentStorage();
         await registerServiceWorker();
+        if (isStandaloneMode) {
+            appNode.classList.add('is-locked');
+        }
         refreshAuthUi();
         updateConnectionState();
         await refreshSummary();

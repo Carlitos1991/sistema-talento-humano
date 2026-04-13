@@ -9,6 +9,7 @@
     <link rel="manifest" href="{{ offline_manifest_url }}">
     <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <link rel="stylesheet" href="{% static 'css/biometric_offline_attendance.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <main class="offline-shell" id="offline-app"
@@ -19,6 +20,19 @@
           data-employee-name="{{ offline_employee_name|escape }}"
           data-employee-document="{{ offline_employee_document|escape }}"
           data-can-sync="{% if offline_can_sync %}true{% else %}false{% endif %}">
+        <section class="panel guide-panel">
+            <header class="panel-header">
+                <h2>Guía rápida</h2>
+            </header>
+            <ol class="guide-list">
+                <li>Configura tu PIN local en este dispositivo.</li>
+                <li>Si tu teléfono lo permite, vincula huella para desbloqueo rápido.</li>
+                <li>Desbloquea la bitácora con PIN o huella.</li>
+                <li>Registra ingreso o salida con GPS activo.</li>
+                <li>Cuando vuelvas a tener internet, sincroniza la cola.</li>
+            </ol>
+        </section>
+
         <section class="hero-card">
             <div class="hero-copy">
                 <span class="eyebrow">Marcación segura</span>
@@ -46,7 +60,7 @@
             </div>
         </section>
 
-        <section class="action-grid">
+        <section class="action-grid protected-content">
             <button type="button" class="action-button action-in" id="btn-income">
                 Registrar ingreso
             </button>
@@ -89,7 +103,7 @@
             <div class="pin-message" id="pin-message">Debes desbloquear con PIN para registrar marcaciones.</div>
         </section>
 
-        <section class="panel">
+        <section class="panel protected-content">
             <header class="panel-header">
                 <h2>Últimas marcaciones locales</h2>
                 <button type="button" class="link-button" id="btn-sync">
@@ -102,7 +116,7 @@
             <div class="record-list" id="record-list"></div>
         </section>
 
-        <section class="info-grid">
+        <section class="info-grid protected-content">
             <article class="info-card">
                 <h3>Cómo funciona</h3>
                 <p>IndexedDB conserva las marcas localmente, incluso si cierras el navegador.</p>
