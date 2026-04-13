@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Plantilla de Acción - {{ template.contract_type.name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper template-editor-page">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="header-card template-editor-header-card">
+                    <div>
+                        <h1 class="h2">
+                            <i class="fas fa-file-signature"></i> {{ template.contract_type.name }}
+                        </h1>
+                        <p class="text-muted mb-0">
+                            Régimen: <strong>{{ template.contract_type.labor_regime.name }}</strong>
+                            <code class="ms-2">{{ template.contract_type.labor_regime.code }}</code>
+                        </p>
+                        <p class="text-muted small mb-0 mt-2">
+                            Plantilla base de Acción de Personal. Cada campo ya está predefinido para edición.
+                        </p>
+                    </div>
+                    <div class="template-editor-header-actions">
+                        <button type="button" class="btn btn-create" id="btn-save-action-template">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                        <a href="{% url 'contract:regime_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12 mb-4">
+                <div class="card shadow-sm template-editor-panel">
+                    <div class="card-body">
+                        <h6 class="mb-3">Campos de la Acción de Personal</h6>
+                        <div class="row g-3 template-action-fields">
+                            {% for field in action_template_fields %}
+                                <div class="col-lg-4 col-md-6 col-12">
+                                    <div class="form-group h-100 mb-0">
+                                        <label class="form-label">{{ field.label }}</label>
+                                        <select class="form-control action-template-field action-template-select2"
+                                                id="action-template-{{ field.key }}"
+                                                data-section-id="{{ field.id }}"
+                                                data-field-key="{{ field.key }}"
+                                                name="{{ field.key }}"
+                                                data-original="{{ field.value }}"> ...
+                                        </select>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ action_types|json_script:"actionTemplateTypesData" }}
+    {{ authorities|json_script:"actionTemplateAuthoritiesData" }}
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/contract/action_template_editor.js' %}?v=20260413p"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const templateId = Number('{{ template.id }}');
+            const editor = new ActionTemplateEditor(templateId);
+            editor.init();
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document_label|default:'CONTRATO' }} NRO. {{ document_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        {% if letterhead_path %}
+            background-image: url('{{ letterhead_path }}');
+            background-repeat: no-repeat;
+            background-size: 210mm 297mm;
+            background-position: center center;
+        {% endif %}
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111827;
+            line-height: 1.42;
+            margin: 0;
+            position: relative;
+        {% if is_pdf %}
+            background: transparent;
+        {% else %}
+            background: #eef1f4;
+        {% endif %}
+        }
+
+        .document-page {
+            position: relative;
+            width: 210mm;
+            min-height: 297mm;
+        {% if is_pdf %}
+            margin: 0;
+            box-shadow: none;
+        {% else %}
+            margin: 14px auto;
+            box-shadow: 0 2px 16px rgba(17, 24, 39, 0.18);
+        {% endif %}
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .letterhead {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 210mm;
+            height: 297mm;
+            z-index: 0;
+            opacity: 1;
+        }
+
+        .letterhead img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+
+        .document-content {
+            position: relative;
+            z-index: 1;
+            padding: 3.1cm 2.2cm 1.8cm 2.2cm;
+        }
+
+        .title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 0.65cm;
+            text-transform: uppercase;
+        }
+
+        .meta {
+            text-align: right;
+            font-size: 12px;
+            margin-bottom: 0.9cm;
+        }
+
+        .content {
+            font-size: 12px;
+            text-align: justify;
+        }
+
+        .signatures {
+            margin-top: 44px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 36px;
+        }
+
+        .sign-box {
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .sign-line {
+            border-top: 1px solid #1f2937;
+            margin-top: 48px;
+            padding-top: 0;
+        }
+
+        .sign-name {
+            margin-top: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sign-role {
+            margin-top: 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .prepared-by {
+            margin-top: 26px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        @media print {
+            .print-tools {
+                display: none !important;
+            }
+            body {
+                background: transparent;
+            }
+            .document-page {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0;
+                box-shadow: none;
+            }
+            .document-content {
+                padding: 3.1cm 2.2cm 1.8cm 2.2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+{% if not is_pdf %}
+<div class="print-tools" style="padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 10px;">
+    <button onclick="window.print()">Imprimir</button>
+    <button onclick="window.close()">Cerrar</button>
+</div>
+{% endif %}
+
+<div class="document-page">
+    {% if letterhead_path %}
+    <div class="letterhead">
+        <img src="{{ letterhead_path }}" alt="Membretada">
+    </div>
+    {% endif %}
+
+    <div class="document-content">
+        <div class="title">{{ document_label|default:'CONTRATO' }} NRO. {{ document_number }}</div>
+
+        <div class="content">{{ body_html }}</div>
+
+        <div class="signatures">
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-name">{{ authority_name|default:'MÁXIMA AUTORIDAD' }}</div>
+                <div class="sign-role">{{ authority_position|default:'CARGO NO CONFIGURADO' }}</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-name">{{ employee_full_name|default:'SERVIDOR/A' }}</div>
+                <div class="sign-role">SERVIDOR/A</div>
+            </div>
+        </div>
+
+        <div class="prepared-by">
+            Elaborado por: {{ prepared_by|default:'USUARIO DEL SISTEMA' }}
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
