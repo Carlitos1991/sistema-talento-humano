@@ -7,6 +7,7 @@ app_name = 'biometric'
 urlpatterns = [
     # --- Vistas del Sistema (Front-end) ---
     path('list/', views.BiometricListView.as_view(), name='biometric_list'),
+    path('offline-access/', views.OfflineAttendanceAccessView.as_view(), name='offline_attendance_access'),
     path('offline-attendance/', views.OfflineAttendanceView.as_view(), name='offline_attendance'),
     path('offline-attendance/manifest.webmanifest', views.offline_attendance_manifest, name='offline_attendance_manifest'),
     path('offline-attendance/sw.js', views.offline_attendance_service_worker, name='offline_attendance_sw'),

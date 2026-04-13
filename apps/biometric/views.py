@@ -72,6 +72,25 @@ class OfflineAttendanceView(TemplateView):
             'offline_manifest_url': '/biometric/offline-attendance/manifest.webmanifest',
             'offline_sw_url': '/biometric/offline-attendance/sw.js',
             'offline_page_url': '/biometric/offline-attendance/',
+            'offline_access_url': '/biometric/offline-access/',
+            'offline_can_sync': bool(employee),
+        })
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class OfflineAttendanceAccessView(TemplateView):
+    template_name = 'biometric/offline_access.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        employee = _resolve_user_employee(self.request.user)
+        context.update({
+            'offline_employee': employee,
+            'offline_employee_name': employee.person.full_name if employee and getattr(employee, 'person', None) else self.request.user.get_full_name() or self.request.user.username,
+            'offline_employee_document': employee.person.document_number if employee and getattr(employee, 'person', None) else '',
+            'offline_redirect_url': '/biometric/offline-attendance/',
             'offline_can_sync': bool(employee),
         })
         return context

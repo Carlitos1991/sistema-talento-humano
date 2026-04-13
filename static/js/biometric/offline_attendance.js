@@ -1,5 +1,5 @@
 (function () {
-    const appNode = document.getElementById('offline-app') || document.getElementById('offline-app-embedded');
+    const appNode = document.getElementById('offline-app') || document.getElementById('offline-app-embedded') || document.getElementById('offline-app-auth');
 
     if (!appNode) {
         return;
@@ -13,6 +13,8 @@
         syncUrl: appNode.dataset.syncUrl || '/biometric/offline-attendance/sync/',
         swUrl: appNode.dataset.swUrl || '/biometric/offline-attendance/sw.js',
         pageUrl: appNode.dataset.pageUrl || '/biometric/offline-attendance/',
+        redirectUrl: appNode.dataset.redirectUrl || '/biometric/offline-attendance/',
+        authOnly: appNode.dataset.authOnly === 'true',
         employeeName: appNode.dataset.employeeName || '',
         employeeDocument: appNode.dataset.employeeDocument || '',
         canSync: appNode.dataset.canSync === 'true'
@@ -96,6 +98,8 @@
     }
 
     function showAlert(icon, title, text) {
+        showLocalToast(icon, title, text);
+
         if (window.Swal && typeof window.Swal.fire === 'function') {
             return window.Swal.fire({
                 icon,
@@ -110,6 +114,38 @@
         }
 
         return Promise.resolve();
+    }
+
+    function showLocalToast(type, title, text) {
+        const containerId = 'sigeth-local-toast-container';
+        let container = document.getElementById(containerId);
+
+        if (!container) {
+            container = document.createElement('div');
+            container.id = containerId;
+            container.className = 'local-toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `local-toast ${type || 'info'}`;
+        toast.innerHTML = `
+            <div class="local-toast-title">${escapeHtml(title || '')}</div>
+            <div class="local-toast-text">${escapeHtml(text || '')}</div>
+        `;
+
+        container.appendChild(toast);
+
+        window.setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-8px)';
+            toast.style.transition = 'opacity 180ms ease, transform 180ms ease';
+            window.setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 200);
+        }, 2800);
     }
 
     function setElementEnabled(element, enabled) {
@@ -326,6 +362,7 @@
         markSessionUnlocked(true);
         refreshAuthUi();
         await showAlert('success', 'Bitácora desbloqueada', 'Ahora puedes registrar ingreso y salida.');
+        redirectIfAuthOnly();
     }
 
     async function registerBiometricCredential() {
@@ -416,6 +453,7 @@
             refreshAuthUi();
             setPinMessage('Desbloqueo con huella exitoso.', 'success');
             await showAlert('success', 'Desbloqueo exitoso', 'La bitácora quedó desbloqueada con tu huella.');
+            redirectIfAuthOnly();
         } catch (error) {
             setPinMessage('No se pudo validar huella. Intenta con PIN.', 'error');
             await showAlert('error', 'No se pudo validar la huella', 'Usa el PIN local para continuar.');
@@ -427,7 +465,21 @@
         refreshAuthUi();
     }
 
+    function redirectIfAuthOnly() {
+        if (!config.authOnly) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            window.location.href = config.redirectUrl;
+        }, 220);
+    }
+
     function canUseActions() {
+        if (config.authOnly) {
+            return true;
+        }
+
         if (!accessUnlocked) {
             setPinMessage('Bitácora bloqueada. Ingresa PIN o usa huella.', 'error');
             return false;
@@ -619,23 +671,62 @@
         }
     }
 
-    function getCurrentPosition() {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('El navegador no soporta geolocalización.'));
-                return;
-            }
+    function geolocationErrorToMessage(error) {
+        if (!error) {
+            return 'No se pudo obtener ubicación.';
+        }
 
-            navigator.geolocation.getCurrentPosition(
-                resolve,
-                reject,
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 0
-                }
-            );
+        if (error.code === 1) {
+            return 'Permiso de ubicación denegado. Debes permitir el acceso al GPS para marcar.';
+        }
+
+        if (error.code === 2) {
+            return 'No hay señal de ubicación disponible. Revisa GPS/datos y vuelve a intentar.';
+        }
+
+        if (error.code === 3) {
+            return 'La ubicación tardó demasiado. Intenta nuevamente en un lugar con mejor señal.';
+        }
+
+        return error.message || 'No se pudo obtener ubicación.';
+    }
+
+    function requestPosition(options) {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, options);
         });
+    }
+
+    async function getCurrentPosition() {
+        if (!navigator.geolocation) {
+            throw new Error('El navegador no soporta geolocalización.');
+        }
+
+        if (!window.isSecureContext) {
+            throw new Error('La geolocalización requiere HTTPS en producción.');
+        }
+
+        try {
+            // Intento 1: alta precisión
+            return await requestPosition({
+                enableHighAccuracy: true,
+                timeout: 18000,
+                maximumAge: 0
+            });
+        } catch (firstError) {
+            // Intento 2: fallback menos estricto usando ubicación reciente
+            try {
+                return await requestPosition({
+                    enableHighAccuracy: false,
+                    timeout: 20000,
+                    maximumAge: 300000
+                });
+            } catch (secondError) {
+                const enriched = new Error(geolocationErrorToMessage(secondError || firstError));
+                enriched.code = (secondError && secondError.code) || (firstError && firstError.code);
+                throw enriched;
+            }
+        }
     }
 
     async function captureAttendance(punchType) {
@@ -671,13 +762,19 @@
                 await syncPendingRecords();
             }
         } catch (error) {
-            if (error && (error.code === 1 || error.code === 2 || error.code === 3)) {
-                showGpsWarning('Activa el GPS y concede permiso de ubicación para registrar la marcación.');
-                setStatus('No se pudo obtener ubicación precisa. Vuelve a intentar con GPS activo.', 'offline');
+            if (error && error.code === 1) {
+                showGpsWarning('Debes habilitar permisos de ubicación para esta página.');
+                setStatus('Permiso de ubicación denegado. Sin GPS no se puede marcar.', 'offline');
                 return;
             }
 
-            showGpsWarning(error.message || 'No se pudo obtener la ubicación.');
+            if (error && error.message && error.message.includes('HTTPS')) {
+                showGpsWarning('Debes abrir el sistema por HTTPS para que el navegador entregue la ubicación.');
+                setStatus('Ubicación bloqueada por conexión insegura (HTTP).', 'offline');
+                return;
+            }
+
+            showGpsWarning(error.message || 'No se pudo obtener la ubicación en este momento.');
             setStatus('No fue posible capturar la marcación.', 'offline');
         }
     }
@@ -790,10 +887,16 @@
         }
         refreshAuthUi();
         updateConnectionState();
-        await refreshSummary();
+        if (!config.authOnly) {
+            await refreshSummary();
+        }
 
-        if (navigator.onLine && accessUnlocked) {
+        if (!config.authOnly && navigator.onLine && accessUnlocked) {
             await syncPendingRecords();
+        }
+
+        if (config.authOnly && accessUnlocked) {
+            redirectIfAuthOnly();
         }
     }
 
