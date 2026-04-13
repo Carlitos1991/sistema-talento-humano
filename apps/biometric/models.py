@@ -1,3 +1,7 @@
+import uuid
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from core.models import BaseModel
 from employee.models import Employee
@@ -48,6 +52,125 @@ class AttendanceRegistry(BaseModel):
         verbose_name = "Registro de Asistencia"
         verbose_name_plural = "Registros de Asistencia"
         ordering = ['-registry_date']
+
+
+class OfflineAttendanceRegistry(BaseModel):
+    """Bitácora de marcaciones capturadas en PWA/IndexedDB y sincronizadas después."""
+
+    class PunchType(models.TextChoices):
+        INCOME = 'INCOME', 'Ingreso'
+        EXIT = 'EXIT', 'Salida'
+
+    class SyncStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pendiente'
+        SYNCED = 'SYNCED', 'Sincronizado'
+        ERROR = 'ERROR', 'Error'
+
+    class SourceType(models.TextChoices):
+        PWA = 'PWA', 'PWA'
+        WEB = 'WEB', 'Web'
+        MOBILE = 'MOBILE', 'Móvil'
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.PROTECT,
+        related_name='offline_attendance_records',
+        verbose_name='Empleado',
+    )
+    punch_type = models.CharField(
+        max_length=20,
+        choices=PunchType.choices,
+        verbose_name='Tipo de Marcación',
+    )
+    offline_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        verbose_name='UUID Offline',
+    )
+    captured_at = models.DateTimeField(verbose_name='Fecha/Hora Capturada')
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        verbose_name='Latitud',
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        verbose_name='Longitud',
+    )
+    accuracy_m = models.FloatField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        verbose_name='Precisión GPS (m)',
+    )
+    location_text = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='Ubicación Referencial',
+    )
+    sync_status = models.CharField(
+        max_length=20,
+        choices=SyncStatus.choices,
+        default=SyncStatus.PENDING,
+        verbose_name='Estado de Sincronización',
+    )
+    synced_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Fecha de Sincronización',
+    )
+    sync_error = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Error de Sincronización',
+    )
+    source = models.CharField(
+        max_length=20,
+        choices=SourceType.choices,
+        default=SourceType.PWA,
+        verbose_name='Origen',
+    )
+
+    class Meta:
+        db_table = 'biometric_offline_attendance'
+        verbose_name = 'Marcación Offline'
+        verbose_name_plural = 'Marcaciones Offline'
+        ordering = ['-captured_at']
+        indexes = [
+            models.Index(fields=['sync_status', 'captured_at']),
+            models.Index(fields=['employee', 'captured_at']),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+
+        if self.latitude is None:
+            errors['latitude'] = 'La latitud es obligatoria.'
+        if self.longitude is None:
+            errors['longitude'] = 'La longitud es obligatoria.'
+        if self.captured_at is None:
+            errors['captured_at'] = 'La fecha y hora de captura son obligatorias.'
+        if self.accuracy_m is not None and self.accuracy_m < 0:
+            errors['accuracy_m'] = 'La precisión GPS no puede ser negativa.'
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.location_text:
+            self.location_text = self.location_text.strip()
+        if self.sync_error:
+            self.sync_error = self.sync_error.strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.employee_id} - {self.get_punch_type_display()} - {self.captured_at}'
 
 
 class BiometricCommand(BaseModel):

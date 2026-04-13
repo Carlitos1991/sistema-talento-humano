@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistencia Offline | SIGETH</title>
+    <meta name="theme-color" content="#0f766e">
+    <link rel="manifest" href="{{ offline_manifest_url }}">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/biometric_offline_attendance.css' %}">
+</head>
+<body>
+    <main class="offline-shell" id="offline-app"
+          data-sync-url="{{ offline_sync_url }}"
+          data-manifest-url="{{ offline_manifest_url }}"
+          data-sw-url="{{ offline_sw_url }}"
+          data-page-url="{{ offline_page_url }}"
+          data-employee-name="{{ offline_employee_name|escape }}"
+          data-employee-document="{{ offline_employee_document|escape }}"
+          data-can-sync="{% if offline_can_sync %}true{% else %}false{% endif %}">
+        <section class="hero-card">
+            <div class="hero-copy">
+                <span class="eyebrow">Marcación segura</span>
+                <h1>Asistencia Offline con GPS</h1>
+                <p>
+                    Registra ingreso y salida aunque no tengas internet. La marcación se guarda en tu dispositivo
+                    y se sincroniza automáticamente cuando vuelva la conexión.
+                </p>
+                <div class="employee-chip">
+                    <strong>Usuario:</strong>
+                    <span>{{ offline_employee_name }}</span>
+                    {% if offline_employee_document %}
+                        <span class="separator">·</span>
+                        <span>{{ offline_employee_document }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="hero-status">
+                <div class="status-pill" id="connection-pill">Verificando conexión</div>
+                <div class="status-note" id="status-note">Preparando almacenamiento local.</div>
+                <div class="queue-box">
+                    <span class="queue-label">Pendientes en este dispositivo</span>
+                    <strong id="pending-count">0</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="action-grid">
+            <button type="button" class="action-button action-in" id="btn-income">
+                Registrar ingreso
+            </button>
+            <button type="button" class="action-button action-out" id="btn-exit">
+                Registrar salida
+            </button>
+        </section>
+
+        <section class="panel security-panel">
+            <header class="panel-header">
+                <h2>Acceso local</h2>
+            </header>
+            <div class="pin-grid">
+                <div class="pin-card" id="pin-setup-box">
+                    <h3>Configurar PIN</h3>
+                    <p>Define un PIN local para desbloquear la bitácora cuando no tengas internet.</p>
+                    <div class="pin-inputs">
+                        <input type="password" id="pin-new" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Nuevo PIN (4-8 dígitos)">
+                        <input type="password" id="pin-confirm" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Confirmar PIN">
+                    </div>
+                    <div class="pin-actions">
+                        <button type="button" class="link-button" id="pin-set-btn">Guardar PIN</button>
+                        <button type="button" class="link-button link-button-ghost" id="biometric-setup-btn">Vincular huella</button>
+                    </div>
+                </div>
+
+                <div class="pin-card" id="pin-unlock-box">
+                    <h3>Desbloquear bitácora</h3>
+                    <p>Ingresa tu PIN local. Si vinculaste huella, también puedes usarla.</p>
+                    <div class="pin-inputs">
+                        <input type="password" id="pin-input" class="pin-field" inputmode="numeric" maxlength="8" placeholder="PIN local">
+                    </div>
+                    <div class="pin-actions">
+                        <button type="button" class="link-button" id="pin-unlock-btn">Desbloquear</button>
+                        <button type="button" class="link-button link-button-ghost" id="biometric-unlock-btn">Usar huella</button>
+                        <button type="button" class="link-button link-button-danger" id="pin-reset-btn">Cerrar sesión local</button>
+                    </div>
+                </div>
+            </div>
+            <div class="pin-message" id="pin-message">Debes desbloquear con PIN para registrar marcaciones.</div>
+        </section>
+
+        <section class="panel">
+            <header class="panel-header">
+                <h2>Últimas marcaciones locales</h2>
+                <button type="button" class="link-button" id="btn-sync">
+                    Sincronizar ahora
+                </button>
+            </header>
+            <div class="gps-warning" id="gps-warning" hidden>
+                Activa el GPS y concede permiso de ubicación para registrar la marcación.
+            </div>
+            <div class="record-list" id="record-list"></div>
+        </section>
+
+        <section class="info-grid">
+            <article class="info-card">
+                <h3>Cómo funciona</h3>
+                <p>IndexedDB conserva las marcas localmente, incluso si cierras el navegador.</p>
+            </article>
+            <article class="info-card">
+                <h3>Sincronización</h3>
+                <p>Cuando detecte internet, el módulo enviará las marcaciones al servidor automáticamente.</p>
+            </article>
+            <article class="info-card">
+                <h3>GPS obligatorio</h3>
+                <p>Sin ubicación válida no se registra el evento.</p>
+            </article>
+        </section>
+
+        <noscript>Debes habilitar JavaScript para usar esta pantalla de asistencia.</noscript>
+    </main>
+
+    <script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
+</body>
+</html>

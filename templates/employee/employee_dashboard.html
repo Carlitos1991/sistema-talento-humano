@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
 <link rel="stylesheet" href="{% static 'css/permission.css' %}">
 <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+<link rel="stylesheet" href="{% static 'css/biometric_offline_attendance.css' %}">
 <style>
     .employee-standalone-wrapper {
         padding: 24px;
@@ -103,6 +104,10 @@
                 {% include 'employee/partials/wizard/tab_payment_roles.html' %}
             </div>
 
+            <div v-if="activeTab === 'bitacora'">
+                {% include 'employee/partials/wizard/tab_bitacora.html' %}
+            </div>
+
             <div v-if="activeTab === 'vacations'">
                 {% include 'employee/partials/wizard/tab_vacations_data.html' %}
             </div>
@@ -140,4 +145,5 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
 <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+<script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
 {% endblock %}

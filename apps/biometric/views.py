@@ -1,20 +1,281 @@
 import calendar
+import json
 import logging
 from datetime import datetime
-from django.views.generic import ListView, View
+from decimal import Decimal
+from uuid import UUID
+
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string, get_template
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_http_methods
+from django.views.generic import ListView, TemplateView, View
 from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 
 from xhtml2pdf import pisa
-from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand
+from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand, OfflineAttendanceRegistry
 from .utils import test_connection, BiometricConnection
 from employee.models import InstitutionalData
+from employee.models import Employee
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_user_employee(user):
+    if not user or not user.is_authenticated:
+        return None
+
+    user_person = getattr(user, 'person', None)
+    if user_person:
+        user_employee = getattr(user_person, 'employee_profile', None)
+        if user_employee:
+            return user_employee
+
+    if user.email:
+        user_employee = Employee.objects.filter(
+            person__email__iexact=user.email,
+            is_active=True,
+        ).first()
+        if user_employee:
+            return user_employee
+
+    if user.username:
+        return Employee.objects.filter(
+            person__document_number=user.username,
+            is_active=True,
+        ).first()
+
+    return None
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class OfflineAttendanceView(TemplateView):
+    template_name = 'biometric/offline_attendance.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        employee = _resolve_user_employee(self.request.user)
+        inst_data = InstitutionalData.objects.filter(employee=employee).select_related('employee__person').first() if employee else None
+        context.update({
+            'offline_employee': employee,
+            'offline_institutional_data': inst_data,
+            'offline_employee_name': employee.person.full_name if employee and getattr(employee, 'person', None) else self.request.user.get_full_name() or self.request.user.username,
+            'offline_employee_document': employee.person.document_number if employee and getattr(employee, 'person', None) else '',
+            'offline_sync_url': '/biometric/offline-attendance/sync/',
+            'offline_manifest_url': '/biometric/offline-attendance/manifest.webmanifest',
+            'offline_sw_url': '/biometric/offline-attendance/sw.js',
+            'offline_page_url': '/biometric/offline-attendance/',
+            'offline_can_sync': bool(employee),
+        })
+        return context
+
+
+@login_required
+@require_GET
+def offline_attendance_manifest(request):
+    return JsonResponse({
+        'name': 'Asistencia Offline',
+        'short_name': 'Asistencia',
+        'start_url': '/biometric/offline-attendance/',
+        'scope': '/biometric/offline-attendance/',
+        'display': 'standalone',
+        'background_color': '#08121f',
+        'theme_color': '#0f766e',
+        'description': 'Marcación de ingreso y salida con GPS y sincronización offline.',
+        'icons': [
+            {
+                'src': '/static/img/logo.png',
+                'sizes': '192x192',
+                'type': 'image/png',
+                'purpose': 'any maskable'
+            },
+            {
+                'src': '/static/img/favicon.png',
+                'sizes': '512x512',
+                'type': 'image/png',
+                'purpose': 'any maskable'
+            }
+        ]
+    })
+
+
+@login_required
+@require_GET
+def offline_attendance_service_worker(request):
+    script = """
+const CACHE_NAME = 'sigeth-offline-attendance-v1';
+const PRECACHE_URLS = [
+  '/biometric/offline-attendance/',
+  '/biometric/offline-attendance/manifest.webmanifest',
+    '/static/js/biometric/offline_attendance.js',
+    '/static/css/biometric_offline_attendance.css',
+  '/static/img/logo.png',
+  '/static/img/favicon.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(
+      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+    ))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/biometric/offline-attendance/', clone));
+          return response;
+        })
+        .catch(() => caches.match('/biometric/offline-attendance/'))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) {
+        return cached;
+      }
+
+      return fetch(request).then((response) => {
+        if (request.url.startsWith(self.location.origin)) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      });
+    })
+  );
+});
+""".strip()
+    return HttpResponse(script, content_type='application/javascript')
+
+
+@login_required
+@require_http_methods(["POST"])
+def offline_attendance_sync(request):
+    employee = _resolve_user_employee(request.user)
+    if not employee:
+        return JsonResponse({'status': 'error', 'message': 'No se pudo identificar al empleado asociado al usuario.'}, status=400)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
+
+    records = payload.get('records') if isinstance(payload, dict) else None
+    if not isinstance(records, list) or not records:
+        return JsonResponse({'status': 'error', 'message': 'No hay marcaciones para sincronizar.'}, status=400)
+
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+    synced_uuids = []
+    failed_records = []
+
+    with transaction.atomic():
+        for item in records:
+            try:
+                offline_uuid_raw = item.get('offline_uuid')
+                punch_type = (item.get('punch_type') or '').upper().strip()
+                captured_at_raw = item.get('captured_at')
+                latitude_raw = item.get('latitude')
+                longitude_raw = item.get('longitude')
+                accuracy_raw = item.get('accuracy_m')
+                location_text = (item.get('location_text') or '').strip() or None
+                source = (item.get('source') or OfflineAttendanceRegistry.SourceType.PWA).upper().strip()
+
+                if not offline_uuid_raw or not captured_at_raw:
+                    skipped_count += 1
+                    continue
+
+                try:
+                    offline_uuid = UUID(str(offline_uuid_raw))
+                except ValueError:
+                    skipped_count += 1
+                    continue
+
+                if punch_type not in OfflineAttendanceRegistry.PunchType.values:
+                    skipped_count += 1
+                    continue
+
+                captured_at = parse_datetime(str(captured_at_raw))
+                if captured_at is None:
+                    skipped_count += 1
+                    continue
+                if timezone.is_aware(captured_at):
+                    captured_at = captured_at.replace(tzinfo=None)
+
+                latitude = Decimal(str(latitude_raw))
+                longitude = Decimal(str(longitude_raw))
+                accuracy = None if accuracy_raw in (None, '') else float(accuracy_raw)
+
+                defaults = {
+                    'employee': employee,
+                    'punch_type': punch_type,
+                    'captured_at': captured_at,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'accuracy_m': accuracy,
+                    'location_text': location_text,
+                    'sync_status': OfflineAttendanceRegistry.SyncStatus.SYNCED,
+                    'synced_at': timezone.now(),
+                    'sync_error': '',
+                    'source': source if source in OfflineAttendanceRegistry.SourceType.values else OfflineAttendanceRegistry.SourceType.PWA,
+                    'updated_by': request.user,
+                }
+
+                obj, created = OfflineAttendanceRegistry.objects.update_or_create(
+                    offline_uuid=offline_uuid,
+                    defaults=defaults,
+                )
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+                synced_uuids.append(str(offline_uuid))
+            except Exception as exc:
+                failed_records.append({
+                    'offline_uuid': str(item.get('offline_uuid') or ''),
+                    'error': str(exc),
+                })
+
+    status = 'success' if not failed_records else 'partial'
+    http_status = 200 if not failed_records else 207
+    return JsonResponse({
+        'status': status,
+        'message': 'Sincronización procesada.',
+        'created': created_count,
+        'updated': updated_count,
+        'skipped': skipped_count,
+        'synced_uuids': synced_uuids,
+        'failed_records': failed_records[:10],
+    }, status=http_status)
 
 
 class BiometricListView(ListView):

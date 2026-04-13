@@ -55,6 +55,7 @@ const app = createApp({
                     vacations: 'Vacaciones',
                     payments: 'Roles de pago',
                     curriculum: 'Curriculum',
+                    bitacora: 'Bitácora',
                 };
                 void fetch(`/person/audit-log/${personId}/`, {
                     method: 'POST',
@@ -321,6 +322,12 @@ const app = createApp({
                 name: 'Roles de pago',
                 icon: 'fa-solid fa-money-bill',
                 class: 'employee-detail-button-payments'
+            },
+            {
+                id: 'bitacora',
+                name: 'Bitácora',
+                icon: 'fa-solid fa-fingerprint',
+                class: 'employee-detail-button-bitacora'
             },
         ];
 

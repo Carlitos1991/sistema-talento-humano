@@ -12,9 +12,14 @@
                 <h1>Gestión de Biométricos</h1>
                 <p>Administra los dispositivos biométricos del sistema.</p>
             </div>
-            <button type="button" @click="openModalCreate" class="btn-create">
-                <i class="fa-solid fa-plus"></i> Nuevo Biométrico
-            </button>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <a href="{% url 'biometric:offline_attendance' %}" class="btn-create" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-fingerprint"></i> Asistencia Offline
+                </a>
+                <button type="button" @click="openModalCreate" class="btn-create">
+                    <i class="fa-solid fa-plus"></i> Nuevo Biométrico
+                </button>
+            </div>
         </div>
         <!-- 2. Estadísticas -->
         <div class="stats-row">

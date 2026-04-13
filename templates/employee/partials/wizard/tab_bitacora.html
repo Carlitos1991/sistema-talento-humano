@@ -1,0 +1,107 @@
+<div class="offline-shell offline-shell-embedded" id="offline-app-embedded"
+     data-sync-url="/biometric/offline-attendance/sync/"
+     data-manifest-url="/biometric/offline-attendance/manifest.webmanifest"
+     data-sw-url="/biometric/offline-attendance/sw.js"
+     data-page-url="/biometric/offline-attendance/"
+     data-employee-name="{{ person.full_name|escape }}"
+     data-employee-document="{{ person.document_number|escape }}"
+     data-can-sync="true">
+    <section class="hero-card hero-card-compact">
+        <div class="hero-copy">
+            <span class="eyebrow">Bitácora de asistencia</span>
+            <h1>Marcación rápida con GPS</h1>
+            <p>
+                Usa esta bitácora para registrar ingreso o salida incluso sin internet. Las marcaciones se guardan
+                de forma local y se sincronizan cuando la conexión vuelve.
+            </p>
+            <div class="employee-chip">
+                <strong>Empleado:</strong>
+                <span>{{ person.full_name }}</span>
+                <span class="separator">·</span>
+                <span>{{ person.document_number }}</span>
+            </div>
+        </div>
+        <div class="hero-status">
+            <div class="status-pill" id="connection-pill-embedded">Verificando conexión</div>
+            <div class="status-note" id="status-note-embedded">Preparando almacenamiento local.</div>
+            <div class="queue-box">
+                <span class="queue-label">Pendientes en este dispositivo</span>
+                <strong id="pending-count-embedded">0</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="action-grid action-grid-compact">
+        <button type="button" class="action-button action-in" id="btn-income-embedded">
+            Registrar ingreso
+        </button>
+        <button type="button" class="action-button action-out" id="btn-exit-embedded">
+            Registrar salida
+        </button>
+    </section>
+
+    <section class="panel panel-compact security-panel">
+        <header class="panel-header">
+            <h2>Acceso local</h2>
+        </header>
+        <div class="pin-grid">
+            <div class="pin-card" id="pin-setup-box-embedded">
+                <h3>Configurar PIN</h3>
+                <p>Define un PIN local para desbloquear la bitácora cuando no tengas internet.</p>
+                <div class="pin-inputs">
+                    <input type="password" id="pin-new-embedded" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Nuevo PIN (4-8 dígitos)">
+                    <input type="password" id="pin-confirm-embedded" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Confirmar PIN">
+                </div>
+                <div class="pin-actions">
+                    <button type="button" class="link-button" id="pin-set-btn-embedded">Guardar PIN</button>
+                    <button type="button" class="link-button link-button-ghost" id="biometric-setup-btn-embedded">Vincular huella</button>
+                </div>
+            </div>
+
+            <div class="pin-card" id="pin-unlock-box-embedded">
+                <h3>Desbloquear bitácora</h3>
+                <p>Ingresa tu PIN local. Si vinculaste huella, también puedes usarla.</p>
+                <div class="pin-inputs">
+                    <input type="password" id="pin-input-embedded" class="pin-field" inputmode="numeric" maxlength="8" placeholder="PIN local">
+                </div>
+                <div class="pin-actions">
+                    <button type="button" class="link-button" id="pin-unlock-btn-embedded">Desbloquear</button>
+                    <button type="button" class="link-button link-button-ghost" id="biometric-unlock-btn-embedded">Usar huella</button>
+                    <button type="button" class="link-button link-button-danger" id="pin-reset-btn-embedded">Cerrar sesión local</button>
+                </div>
+            </div>
+        </div>
+        <div class="pin-message" id="pin-message-embedded">Debes desbloquear con PIN para registrar marcaciones.</div>
+    </section>
+
+    <section class="panel panel-compact">
+        <header class="panel-header">
+            <h2>Marcaciones locales</h2>
+            <div class="panel-actions-inline">
+                <button type="button" class="link-button" id="btn-sync-embedded">Sincronizar ahora</button>
+                <a class="link-button link-button-ghost" href="/biometric/offline-attendance/" target="_blank" rel="noopener noreferrer">
+                    Abrir modo independiente
+                </a>
+            </div>
+        </header>
+        <div class="gps-warning" id="gps-warning-embedded" hidden>
+            Activa el GPS y concede permiso de ubicación para registrar la marcación.
+        </div>
+        <div class="record-list" id="record-list-embedded"></div>
+    </section>
+
+    <section class="info-grid info-grid-compact">
+        <article class="info-card">
+            <h3>Persistencia local</h3>
+            <p>IndexedDB conserva las marcas aunque cierres el navegador.</p>
+        </article>
+        <article class="info-card">
+            <h3>Sincronización automática</h3>
+            <p>Cuando vuelva internet, el sistema enviará la cola al servidor.</p>
+        </article>
+        <article class="info-card">
+            <h3>GPS obligatorio</h3>
+            <p>La marcación no se guarda si el dispositivo no entrega ubicación válida.</p>
+        </article>
+    </section>
+</div>

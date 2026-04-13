@@ -7,6 +7,10 @@ app_name = 'biometric'
 urlpatterns = [
     # --- Vistas del Sistema (Front-end) ---
     path('list/', views.BiometricListView.as_view(), name='biometric_list'),
+    path('offline-attendance/', views.OfflineAttendanceView.as_view(), name='offline_attendance'),
+    path('offline-attendance/manifest.webmanifest', views.offline_attendance_manifest, name='offline_attendance_manifest'),
+    path('offline-attendance/sw.js', views.offline_attendance_service_worker, name='offline_attendance_sw'),
+    path('offline-attendance/sync/', views.offline_attendance_sync, name='offline_attendance_sync'),
     path('save-ajax/', views.save_biometric_ajax, name='biometric_save_ajax'),
     path('get-data/<int:pk>/', views.get_biometric_data, name='get_biometric_data'),
     path('test-connection/<int:pk>/', views.test_connection_ajax, name='test_connection'),
