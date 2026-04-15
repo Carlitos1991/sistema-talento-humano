@@ -21,7 +21,7 @@ from pathlib import Path
 from django.utils import timezone
 from django.core.files import File
 
-from core.models import Authority
+from core.models import User
 from core.models import SystemConfiguration
 from contract.models import LaborRegime
 from contract.models import ManagementPeriod
@@ -595,8 +595,6 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
-        from core.models import Authority
-
         employee_id = request.GET.get('employee_id')
         notification_id = request.GET.get('notification_id')
         notification = None
@@ -617,7 +615,7 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
             if notification.notification_type_id not in compatible_ids:
                 compatible_ids.append(notification.notification_type_id)
             compatible_notification_types = SanctionNotificationType.objects.filter(pk__in=compatible_ids).order_by('name')
-        authorities = Authority.objects.filter(is_active=True).order_by('name')
+        authorities = User.objects.filter(is_active=True).order_by('username')
 
         next_sequence = _get_next_notification_sequence()
         default_notification_type = compatible_notification_types.first()
@@ -686,7 +684,7 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
                 'errors': {'employee_id': ['No se pudo detectar un régimen laboral vigente para este empleado.']},
             }, status=400)
         compatible_notification_types = _get_compatible_notification_types(regime_context['regime'])
-        authorities = Authority.objects.filter(is_active=True).order_by('name')
+        authorities = User.objects.filter(is_active=True).order_by('username')
 
         form = SanctionNotificationForm(
             request.POST,
@@ -767,13 +765,11 @@ class SanctionNotificationPreviewView(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
-        from core.models import Authority
-
         employee_id = request.GET.get('employee_id')
         employee = get_object_or_404(Employee, pk=employee_id)
         regime_context = _get_employee_current_regime_context(employee)
         compatible_notification_types = _get_compatible_notification_types(regime_context['regime'])
-        authorities = Authority.objects.filter(is_active=True).order_by('name')
+        authorities = User.objects.filter(is_active=True).order_by('username')
 
         next_sequence = _get_next_notification_sequence()
         default_notification_type = compatible_notification_types.first()
@@ -1514,13 +1510,11 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
     """View to generate a sanction for a specific employee"""
 
     def get(self, request):
-        from core.models import Authority
-        
         employee_id = request.GET.get('employee_id')
         employee = get_object_or_404(Employee, pk=employee_id)
         
         form = SanctionForm(initial={'employee': employee})
-        authorities = Authority.objects.filter(is_active=True)
+        authorities = User.objects.filter(is_active=True).order_by('username')
         
         context = {
             'form': form,
@@ -1582,7 +1576,7 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
                 authority_1_id=request.POST.get('authority_1') or None,
                 authority_2_id=request.POST.get('authority_2') or None,
                 reviewer_id=request.POST.get('reviewer') or None,
-                elaboration_id=request.POST.get('elaboration') or None,
+                elaboration=request.user,
                 register_id=request.POST.get('register') or None,
                 created_by=request.user
             )
@@ -1777,8 +1771,6 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'sanctions.change_sanction'
 
     def get(self, request, pk):
-        from core.models import Authority
-        
         sanction = get_object_or_404(
             Sanction.objects.select_related('employee__person', 'personnel_action'),
             pk=pk
@@ -1795,7 +1787,7 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
             )
         
         form = SanctionForm(instance=sanction)
-        authorities = Authority.objects.filter(is_active=True)
+        authorities = User.objects.filter(is_active=True).order_by('username')
         
         # Get current authorities from PersonnelAction
         selected_authorities = {}
@@ -1859,16 +1851,14 @@ class EditSanctionView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 register_id = request.POST.get('register')
                 
                 if authority_1_id:
-                    from core.models import Authority
-                    personnel_action.authority_1 = Authority.objects.get(pk=authority_1_id)
+                    personnel_action.authority_1 = User.objects.get(pk=authority_1_id)
                 if authority_2_id:
-                    personnel_action.authority_2 = Authority.objects.get(pk=authority_2_id)
+                    personnel_action.authority_2 = User.objects.get(pk=authority_2_id)
                 if reviewer_id:
-                    personnel_action.reviewer = Authority.objects.get(pk=reviewer_id)
-                if elaboration_id:
-                    personnel_action.elaboration = Authority.objects.get(pk=elaboration_id)
+                    personnel_action.reviewer = User.objects.get(pk=reviewer_id)
+                personnel_action.elaboration = personnel_action.elaboration or request.user
                 if register_id:
-                    personnel_action.register = Authority.objects.get(pk=register_id)
+                    personnel_action.register = User.objects.get(pk=register_id)
                 
                 personnel_action.save()
             

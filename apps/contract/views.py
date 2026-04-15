@@ -30,7 +30,8 @@ from employee.models import Employee
 from person.models import Person
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
-from personnel_actions.models import Authority, ActionType, PersonnelAction
+from core.models import User
+from personnel_actions.models import ActionType, PersonnelAction
 from .forms import LaborRegimeForm, ContractTypeForm
 from .models import (
     LaborRegime,
@@ -141,15 +142,7 @@ def _get_action_types_for_template():
 
 
 def _get_authorities_for_template():
-    authorities = Authority.objects.filter(is_active=True).order_by('name')
-    if authorities.exists():
-        return authorities
-
-    legacy_authorities = Authority.objects.filter(status=True).order_by('name')
-    if legacy_authorities.exists():
-        return legacy_authorities
-
-    return Authority.objects.order_by('name')
+    return User.objects.filter(is_active=True).order_by('username')
 
 
 class LaborRegimeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -727,23 +720,23 @@ class ContractTemplatePreviewAjaxView(LoginRequiredMixin, PermissionRequiredMixi
                     pk=(sections[0].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 0 else None
-                selected_authority_1 = Authority.objects.filter(
+                selected_authority_1 = User.objects.filter(
                     pk=(sections[1].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 1 else None
-                selected_authority_2 = Authority.objects.filter(
+                selected_authority_2 = User.objects.filter(
                     pk=(sections[2].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 2 else None
-                selected_reviewer = Authority.objects.filter(
+                selected_reviewer = User.objects.filter(
                     pk=(sections[3].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 3 else None
-                selected_elaboration = Authority.objects.filter(
+                selected_elaboration = User.objects.filter(
                     pk=(sections[4].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 4 else None
-                selected_register = Authority.objects.filter(
+                selected_register = User.objects.filter(
                     pk=(sections[5].content or '').strip(),
                     is_active=True,
                 ).first() if len(sections) > 5 else None

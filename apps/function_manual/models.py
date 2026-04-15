@@ -1,6 +1,6 @@
 from django.db import models
 
-from core.models import BaseModel, Authority
+from core.models import BaseModel, User
 from employee.models import Employee
 from institution.models import AdministrativeUnit
 
@@ -160,9 +160,9 @@ class JobProfile(BaseModel):
 
     competencies = models.ManyToManyField('Competency', through='ProfileCompetency')
 
-    prepared_by = models.ForeignKey(Authority, related_name='prepared_profiles', on_delete=models.PROTECT, null=True)
-    reviewed_by = models.ForeignKey(Authority, related_name='reviewed_profiles', on_delete=models.PROTECT, null=True)
-    approved_by = models.ForeignKey(Authority, related_name='approved_profiles', on_delete=models.PROTECT, null=True)
+    prepared_by = models.ForeignKey(User, related_name='prepared_profiles', on_delete=models.PROTECT, null=True)
+    reviewed_by = models.ForeignKey(User, related_name='reviewed_profiles', on_delete=models.PROTECT, null=True)
+    approved_by = models.ForeignKey(User, related_name='approved_profiles', on_delete=models.PROTECT, null=True)
 
     legalized_document = models.FileField(upload_to='profiles/legalized/', null=True, blank=True)
 

@@ -1,5 +1,4 @@
 from django import forms
-from core.models import Authority
 from .models import SanctionNotificationType, SanctionNotification, SanctionNotificationMapping, SanctionNotificationTypeMapping, SanctionType, Sanction
 from employee.models import Employee
 
@@ -147,10 +146,13 @@ class SanctionNotificationForm(forms.ModelForm):
         if authorities is not None:
             self.fields['authority_1'].queryset = authorities
             self.fields['authority_2'].queryset = authorities
+            self.fields['authority_1'].label_from_instance = lambda obj: f"{obj.signature_name} - {obj.signature_position}"
+            self.fields['authority_2'].label_from_instance = lambda obj: f"{obj.signature_name} - {obj.signature_position}"
 
         self.fields['notification_type'].empty_label = 'Seleccione...'
         self.fields['authority_1'].empty_label = 'Seleccione...'
         self.fields['authority_2'].empty_label = 'Seleccione...'
+        self.fields['authority_1'].required = True
         self.fields['minutes_late'].required = False
         self.fields['regs_without_mark'].required = False
         self.fields['authority_2'].required = False

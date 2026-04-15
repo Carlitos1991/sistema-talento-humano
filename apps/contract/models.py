@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 import re
-from core.models import BaseModel, CatalogItem, Authority
+from core.models import BaseModel, CatalogItem, User
 from employee.models import Employee
 from budget.models import BudgetLine
 from institution.models import AdministrativeUnit
@@ -329,11 +329,11 @@ class ManagementPeriod(BaseModel):
         return f'{max_sequence + 1:04d}-{year}'
 
     def _get_personnel_action_authorities(self):
-        authorities = list(Authority.objects.filter(is_active=True).order_by('id')[:2])
-        if not authorities:
-            raise ValidationError({'personnel_action': 'Debe existir al menos una autoridad activa para generar la acción de personal.'})
-        primary = authorities[0]
-        secondary = authorities[1] if len(authorities) > 1 else None
+        users = list(User.objects.filter(is_active=True).order_by('username')[:2])
+        if not users:
+            raise ValidationError({'personnel_action': 'Debe existir al menos un usuario activo para generar la acción de personal.'})
+        primary = users[0]
+        secondary = users[1] if len(users) > 1 else None
         return primary, secondary
 
     def _get_action_template_sections(self):
@@ -348,8 +348,8 @@ class ManagementPeriod(BaseModel):
         raw_value = (sections[index].content or '').strip()
         if not raw_value:
             return fallback
-        authority = Authority.objects.filter(pk=raw_value, is_active=True).first()
-        return authority or fallback
+        signer = User.objects.filter(pk=raw_value, is_active=True).first()
+        return signer or fallback
 
     def _create_linked_personnel_action(self):
         if self.personnel_action_id:

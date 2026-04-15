@@ -175,6 +175,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
         with transaction.atomic():
             self.object = form.save(commit=False)
             self.object.created_by = self.request.user
+            self.object.elaboration = self.request.user
 
             # Generar número automáticamente si está vacío
             if not self.object.number or self.object.number.strip() == '':
@@ -567,7 +568,10 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
         })
 
     def form_valid(self, form):
-        self.object = form.save()
+        self.object = form.save(commit=False)
+        if not self.object.elaboration:
+            self.object.elaboration = self.object.created_by or self.request.user
+        self.object.save()
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({

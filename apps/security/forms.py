@@ -149,6 +149,22 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
         initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+    custom_name = forms.CharField(
+        label='Nombre personalizado',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'input-field',
+            'placeholder': 'Ej: ING. CARLOS CHACHA GUAMÁN'
+        })
+    )
+    custom_position = forms.CharField(
+        label='Cargo personalizado',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'input-field',
+            'placeholder': 'Ej: DIRECTOR DE TALENTO HUMANO (E)'
+        })
+    )
 
     def __init__(self, person_id=None, *args, **kwargs):
         self.person_id = person_id
@@ -208,6 +224,8 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
             user.is_active = data['is_active']
             user.is_staff = data['is_staff']
             user.email = person.email
+            user.custom_name = (data.get('custom_name') or '').strip() or user.get_default_signature_name()
+            user.custom_position = (data.get('custom_position') or '').strip() or user.get_default_signature_position()
             user.save()
 
             # Actualizar Rol
@@ -223,8 +241,17 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
                 first_name=person.first_name,
                 last_name=person.last_name,
                 is_active=data['is_active'],
-                is_staff=data['is_staff']
+                is_staff=data['is_staff'],
+                custom_name=(data.get('custom_name') or '').strip(),
+                custom_position=(data.get('custom_position') or '').strip(),
             )
+
+            if not user.custom_name:
+                user.custom_name = user.get_default_signature_name()
+            if not user.custom_position:
+                user.custom_position = user.get_default_signature_position()
+            user.save(update_fields=['custom_name', 'custom_position'])
+
             if data['role']:
                 user.groups.add(data['role'])
 

@@ -14,18 +14,18 @@
         <!-- Body -->
         <div style="padding: 25px;">
             <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px;">
-                Seleccione la autoridad que autorizará este reporte de actividades.
+                Seleccione el usuario que autorizará este reporte de actividades.
             </p>
 
             <form id="form-report-pdf" style="margin: 0;">
                 <div style="margin-bottom: 20px;">
                     <label for="authority-select" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">
-                        Autoridad que Autoriza:
+                        Usuario que Autoriza:
                     </label>
                     <select id="authority-select" class="select2" style="width: 100%;">
-                        <option value="">-- Seleccione una autoridad --</option>
+                        <option value="">-- Seleccione un usuario --</option>
                         {% for authority in authorities %}
-                            <option value="{{ authority.id }}">{{ authority.name }} - {{ authority.position }}</option>
+                            <option value="{{ authority.id }}">{{ authority.signature_name }} - {{ authority.signature_position }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -57,7 +57,7 @@
         const selectElement = document.getElementById('authority-select');
         if (selectElement && window.$ && $.fn.select2) {
             $(selectElement).select2({
-                placeholder: 'Seleccione una autoridad',
+                placeholder: 'Seleccione un usuario',
                 allowClear: true,
                 language: 'es'
             });
@@ -83,7 +83,7 @@
             Swal.fire({
                 icon: 'warning',
                 title: 'Selección Requerida',
-                text: 'Por favor, seleccione una autoridad antes de continuar.'
+                text: 'Por favor, seleccione un usuario antes de continuar.'
             });
             return;
         }

@@ -3,6 +3,37 @@ from django.utils import timezone
 from datetime import timedelta
 
 
+def system_branding(request):
+    """Expone la configuración institucional activa para usar branding en el layout."""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {
+            'current_system_configuration': None,
+            'sidebar_logo_url': None,
+        }
+
+    try:
+        from core.models import SystemConfiguration
+
+        current_config = SystemConfiguration.get_current()
+        logo_url = None
+
+        if current_config and getattr(current_config, 'logo', None):
+            try:
+                logo_url = current_config.logo.url
+            except Exception:
+                logo_url = None
+
+        return {
+            'current_system_configuration': current_config,
+            'sidebar_logo_url': logo_url,
+        }
+    except Exception:
+        return {
+            'current_system_configuration': None,
+            'sidebar_logo_url': None,
+        }
+
+
 def navbar_notifications(request):
     """Retorna el conteo de solicitudes de permiso pendientes para la campanita del navbar."""
     if not getattr(request, 'user', None) or not request.user.is_authenticated:

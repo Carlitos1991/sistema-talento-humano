@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 password: '',
                 confirm_password: '',
                 is_active: true,
-                is_staff: false
+                is_staff: false,
+                custom_name: '',
+                custom_position: ''
             });
 
             // --- FUNCIONES AUXILIARES ---
@@ -48,6 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         creds_form.role = formData.role || '';
                         creds_form.is_active = formData.is_active;
                         creds_form.is_staff = formData.is_staff;
+                        creds_form.custom_name = formData.custom_name || '';
+                        creds_form.custom_position = formData.custom_position || '';
 
                         // Limpiar passwords siempre
                         creds_form.password = '';
@@ -91,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 creds_form.confirm_password = '';
                 creds_form.is_active = true;
                 creds_form.is_staff = false;
+                creds_form.custom_name = '';
+                creds_form.custom_position = '';
 
                 if (typeof $ !== 'undefined') {
                     $('#id_input_role').val(null).trigger('change');

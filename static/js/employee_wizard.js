@@ -323,12 +323,6 @@ const app = createApp({
                 icon: 'fa-solid fa-money-bill',
                 class: 'employee-detail-button-payments'
             },
-            {
-                id: 'bitacora',
-                name: 'Bitácora',
-                icon: 'fa-solid fa-fingerprint',
-                class: 'employee-detail-button-bitacora'
-            },
         ];
 
         const tabs = tabsBase.filter(tab => !hiddenTabIds.has(tab.id));

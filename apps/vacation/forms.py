@@ -154,14 +154,20 @@ class VacationLiquidationForm(forms.Form):
         self.available_days = kwargs.pop('available_days', 0)
         super().__init__(*args, **kwargs)
         
-        # Cargar autoridades activas
-        from core.models import Authority
-        active_authorities = Authority.objects.filter(is_active=True).order_by('name')
-        self.fields['nominating_authority'].queryset = active_authorities
-        self.fields['human_resources_responsible'].queryset = active_authorities
-        self.fields['registration_responsible'].queryset = active_authorities
-        self.fields['review_responsible'].queryset = active_authorities
-        self.fields['elaborated_by'].queryset = active_authorities
+        # Cargar usuarios activos para firmas
+        from core.models import User
+        active_users = User.objects.filter(is_active=True).order_by('username')
+        self.fields['nominating_authority'].queryset = active_users
+        self.fields['human_resources_responsible'].queryset = active_users
+        self.fields['registration_responsible'].queryset = active_users
+        self.fields['review_responsible'].queryset = active_users
+        self.fields['elaborated_by'].queryset = active_users
+        label_builder = lambda obj: f"{obj.signature_name} - {obj.signature_position}"
+        self.fields['nominating_authority'].label_from_instance = label_builder
+        self.fields['human_resources_responsible'].label_from_instance = label_builder
+        self.fields['registration_responsible'].label_from_instance = label_builder
+        self.fields['review_responsible'].label_from_instance = label_builder
+        self.fields['elaborated_by'].label_from_instance = label_builder
     
     def clean(self):
         cleaned_data = super().clean()

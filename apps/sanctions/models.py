@@ -3,7 +3,7 @@ from django.conf import settings
 
 from core.models import BaseModel
 from contract.models import LaborRegime
-from core.models import Authority
+from core.models import User
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction
 
@@ -263,13 +263,15 @@ class SanctionNotification(BaseModel):
     year = models.PositiveSmallIntegerField(verbose_name='Año')
     registration_date = models.DateField(verbose_name='Fecha de registro')
     authority_1 = models.ForeignKey(
-        Authority,
+        User,
         on_delete=models.PROTECT,
         related_name='sanction_notifications_authority_1',
         verbose_name='Firma 1',
+        blank=True,
+        null=True,
     )
     authority_2 = models.ForeignKey(
-        Authority,
+        User,
         on_delete=models.PROTECT,
         related_name='sanction_notifications_authority_2',
         verbose_name='Firma 2',

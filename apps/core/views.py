@@ -18,12 +18,34 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 from django.views.generic import View
 from django.contrib.auth.decorators import permission_required
+from django.contrib.sessions.models import Session
+from django.utils import timezone
 
 
 # --- 1. LOGIN & AUTH ---
 class CustomLoginView(LoginView):
     template_name = 'core/login.html'
     redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        current_session_key = self.request.session.session_key
+        user_id = str(self.request.user.id)
+
+        # Mantiene la sesión actual y elimina cualquier otra sesión activa del mismo usuario.
+        active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
+        sessions_to_delete = []
+
+        for session in active_sessions:
+            data = session.get_decoded()
+            if data.get('_auth_user_id') == user_id and session.session_key != current_session_key:
+                sessions_to_delete.append(session.session_key)
+
+        if sessions_to_delete:
+            Session.objects.filter(session_key__in=sessions_to_delete).delete()
+
+        return response
 
     def get_success_url(self):
         return reverse_lazy('core:dashboard')

@@ -6,7 +6,11 @@
         }
     </script>
     <div class="sidebar-header">
-        <img src="{% static 'img/logo.png' %}" alt="Logo" class="sidebar-logo-img">
+        {% if sidebar_logo_url %}
+            <img src="{{ sidebar_logo_url }}?v={{ current_system_configuration.updated_at|date:'U' }}" alt="Logo institucional" class="sidebar-logo-img">
+        {% else %}
+            <img src="{% static 'img/logo.png' %}" alt="Logo institucional" class="sidebar-logo-img">
+        {% endif %}
         <span class="sidebar-brand-text">SIGETH</span>
     </div>
 
@@ -653,14 +657,6 @@
                             </li>
                         {% endif %}
                     </ul>
-                </li>
-            {% endif %}
-            {% if perms.core.view_authority %}
-                <li>
-                    <a href="{% url 'core:authority_list' %}">
-                        <i class="fa-solid fa-user-tie"></i>
-                        <span class="menu-text">Autoridades</span>
-                    </a>
                 </li>
             {% endif %}
             {% if perms.auth.view_user %}

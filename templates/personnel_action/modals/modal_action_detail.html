@@ -95,34 +95,34 @@
                 <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
             </h5>
             <div class="grid-2-cols">
-                {% if action.elaborated %}
+                {% if action.elaboration_signature_name %}
                 <div>
                     <label class="form-label">Elaborado Por:</label>
-                    <p class="action-detail-val">{{ action.elaborated }}</p>
+                    <p class="action-detail-val">{{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} - {{ action.elaboration_signature_position }}{% endif %}</p>
                 </div>
                 {% endif %}
-                {% if action.reviewed %}
+                {% if action.reviewer %}
                 <div>
                     <label class="form-label">Revisado Por:</label>
-                    <p class="action-detail-val">{{ action.reviewed }}</p>
+                    <p class="action-detail-val">{{ action.reviewer.name }}{% if action.reviewer.position %} - {{ action.reviewer.position }}{% endif %}</p>
                 </div>
                 {% endif %}
-                {% if action.approved %}
+                {% if action.authority_1 %}
                 <div>
                     <label class="form-label">Aprobado Por:</label>
-                    <p class="action-detail-val">{{ action.approved }}</p>
+                    <p class="action-detail-val">{{ action.authority_1.name }}{% if action.authority_1.position %} - {{ action.authority_1.position }}{% endif %}</p>
                 </div>
                 {% endif %}
-                {% if action.authorized %}
+                {% if action.authority_2 %}
                 <div>
                     <label class="form-label">Autorizado Por:</label>
-                    <p class="action-detail-val">{{ action.authorized }}</p>
+                    <p class="action-detail-val">{{ action.authority_2.name }}{% if action.authority_2.position %} - {{ action.authority_2.position }}{% endif %}</p>
                 </div>
                 {% endif %}
                 {% if action.register %}
                 <div>
                     <label class="form-label">Registrado Por:</label>
-                    <p class="action-detail-val">{{ action.register }}</p>
+                    <p class="action-detail-val">{{ action.register.name }}{% if action.register.position %} - {{ action.register.position }}{% endif %}</p>
                 </div>
                 {% endif %}
             </div>

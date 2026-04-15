@@ -1,6 +1,6 @@
 from django.db import models
 
-from core.models import User, Authority, CatalogItem
+from core.models import User, CatalogItem
 from employee.models import Employee
 from institution.models import AdministrativeUnit
 from budget.models import BudgetLine
@@ -45,18 +45,18 @@ class PersonnelAction(models.Model):
     date_registered = models.DateField(verbose_name='Fecha de Registro', blank=True, null=True)
 
     # Firmas (Relaciones optimizadas)
-    authority_1 = models.ForeignKey(Authority, verbose_name='Primera Autoridad', on_delete=models.PROTECT,
+    authority_1 = models.ForeignKey(User, verbose_name='Primera Autoridad', on_delete=models.PROTECT,
                                     related_name='actions_signed_auth1', limit_choices_to={'is_active': True})
-    authority_2 = models.ForeignKey(Authority, verbose_name='Segunda Autoridad', on_delete=models.PROTECT,
+    authority_2 = models.ForeignKey(User, verbose_name='Segunda Autoridad', on_delete=models.PROTECT,
                                     related_name='actions_signed_auth2', limit_choices_to={'is_active': True}, null=True,
                                     blank=True)
-    reviewer = models.ForeignKey(Authority, verbose_name='Revisado por', on_delete=models.PROTECT,
+    reviewer = models.ForeignKey(User, verbose_name='Revisado por', on_delete=models.PROTECT,
                                  related_name='actions_reviewed', limit_choices_to={'is_active': True}, null=True,
                                  blank=True)
-    elaboration = models.ForeignKey(Authority, verbose_name='Elaborado por', on_delete=models.PROTECT,
+    elaboration = models.ForeignKey(User, verbose_name='Elaborado por', on_delete=models.PROTECT,
                                  related_name='actions_elaboration', limit_choices_to={'is_active': True}, null=True,
                                  blank=True)
-    register = models.ForeignKey(Authority, verbose_name='Registrado   por', on_delete=models.PROTECT,
+    register = models.ForeignKey(User, verbose_name='Registrado   por', on_delete=models.PROTECT,
                                     related_name='actions_register', limit_choices_to={'is_active': True}, null=True,
                                     blank=True)
 
@@ -72,6 +72,48 @@ class PersonnelAction(models.Model):
 
     def __str__(self):
         return f"{self.number} - {self.employee}"
+
+    @property
+    def elaboration_signature_name(self):
+        user = self.elaboration or self.created_by
+        return user.signature_name if user else ''
+
+    @property
+    def elaboration_signature_position(self):
+        user = self.elaboration or self.created_by
+        return user.signature_position if user else ''
+
+    @property
+    def authority_1_signature_name(self):
+        return self.authority_1.signature_name if self.authority_1 else ''
+
+    @property
+    def authority_1_signature_position(self):
+        return self.authority_1.signature_position if self.authority_1 else ''
+
+    @property
+    def authority_2_signature_name(self):
+        return self.authority_2.signature_name if self.authority_2 else ''
+
+    @property
+    def authority_2_signature_position(self):
+        return self.authority_2.signature_position if self.authority_2 else ''
+
+    @property
+    def reviewer_signature_name(self):
+        return self.reviewer.signature_name if self.reviewer else ''
+
+    @property
+    def reviewer_signature_position(self):
+        return self.reviewer.signature_position if self.reviewer else ''
+
+    @property
+    def register_signature_name(self):
+        return self.register.signature_name if self.register else ''
+
+    @property
+    def register_signature_position(self):
+        return self.register.signature_position if self.register else ''
 
 
 class ActionMovement(models.Model):

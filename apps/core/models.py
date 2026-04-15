@@ -45,6 +45,60 @@ class User(AbstractUser):
     Modelo de Usuario técnico.
     Se encarga SOLO de la autenticación (username, password, permisos).
     """
+    custom_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='Nombre personalizado'
+    )
+    custom_position = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='Cargo personalizado'
+    )
+
+    def get_default_signature_name(self):
+        person = getattr(self, 'person', None)
+        if person:
+            return person.full_name.upper()
+        full_name = self.get_full_name().strip()
+        if full_name:
+            return full_name.upper()
+        return (self.username or '').upper()
+
+    def get_default_signature_position(self):
+        person = getattr(self, 'person', None)
+        employee = getattr(person, 'employee_profile', None) if person else None
+        if not employee:
+            return ''
+
+        budget_line = employee.current_budget_line.select_related('position_item').first()
+        if not budget_line or not budget_line.position_item:
+            return ''
+
+        return (budget_line.position_item.name or '').upper()
+
+    @property
+    def signature_name(self):
+        return (self.custom_name or '').strip() or self.get_default_signature_name()
+
+    @property
+    def signature_position(self):
+        return (self.custom_position or '').strip() or self.get_default_signature_position()
+
+    # Alias de compatibilidad para plantillas/flujos legados que esperan Authority.
+    @property
+    def name(self):
+        return self.signature_name
+
+    @property
+    def position(self):
+        return self.signature_position
+
+    @property
+    def charge(self):
+        return self.signature_position
 
     class Meta:
         verbose_name = 'Usuario'

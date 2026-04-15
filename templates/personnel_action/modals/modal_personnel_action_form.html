@@ -170,8 +170,11 @@
 
                 <div class="form-group">
                     <label class="form-label">Elaborado Por</label>
-                    {{ form.elaboration }}
-                    <div class="invalid-feedback"></div>
+                    <input type="text"
+                           class="input-field"
+                           value="{{ request.user.signature_name }}{% if request.user.signature_position %} - {{ request.user.signature_position }}{% endif %}"
+                           readonly>
+                    <p class="form-hint">Se registra automáticamente con el usuario que crea la acción.</p>
                 </div>
 
                 <div class="form-group">

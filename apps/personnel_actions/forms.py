@@ -7,7 +7,7 @@ class PersonnelActionForm(forms.ModelForm):
         model = PersonnelAction
         fields = ['employee', 'action_type', 'number', 'motivation',
                   'date_issue', 'date_effective', 'explanation',
-                  'authority_1', 'authority_2', 'reviewer', 'elaboration', 'register']
+                  'authority_1', 'authority_2', 'reviewer', 'register']
         widgets = {
             'employee': forms.Select(attrs={'class': 'input-field-select select2'}),
             'action_type': forms.Select(attrs={'class': 'input-field-select select2'}),
@@ -18,7 +18,6 @@ class PersonnelActionForm(forms.ModelForm):
             'authority_1': forms.Select(attrs={'class': 'input-field-select select2'}),
             'authority_2': forms.Select(attrs={'class': 'input-field-select select2'}),
             'reviewer': forms.Select(attrs={'class': 'input-field-select select2'}),
-            'elaboration': forms.Select(attrs={'class': 'input-field-select select2'}),
             'register': forms.Select(attrs={'class': 'input-field-select select2'}),
             'number': forms.TextInput(attrs={'class': 'input-field'}),
         }
@@ -30,6 +29,12 @@ class PersonnelActionForm(forms.ModelForm):
         # Asegurar que los campos de fecha usen el formato correcto
         self.fields['date_issue'].input_formats = ['%Y-%m-%d']
         self.fields['date_effective'].input_formats = ['%Y-%m-%d']
+
+        for signer_field in ['authority_1', 'authority_2', 'reviewer', 'register']:
+            self.fields[signer_field].queryset = self.fields[signer_field].queryset.filter(is_active=True).order_by('username')
+            self.fields[signer_field].label_from_instance = (
+                lambda user: f"{user.signature_name} - {user.signature_position}" if user.signature_position else user.signature_name
+            )
 
 
 class ActionMovementForm(forms.ModelForm):

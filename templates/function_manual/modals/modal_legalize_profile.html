@@ -24,7 +24,7 @@
                         <option value="">--- Seleccione ---</option>
                         {% for auth in authorities %}
                             <option value="{{ auth.id }}" {% if profile.prepared_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.name }} - {{ auth.charge }}
+                                {{ auth.signature_name }} - {{ auth.signature_position }}
                             </option>
                         {% endfor %}
                     </select>
@@ -37,7 +37,7 @@
                         <option value="">--- Seleccione ---</option>
                         {% for auth in authorities %}
                             <option value="{{ auth.id }}" {% if profile.reviewed_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.name }} - {{ auth.charge }}
+                                {{ auth.signature_name }} - {{ auth.signature_position }}
                             </option>
                         {% endfor %}
                     </select>
@@ -50,7 +50,7 @@
                         <option value="">--- Seleccione ---</option>
                         {% for auth in authorities %}
                             <option value="{{ auth.id }}" {% if profile.approved_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.name }} - {{ auth.charge }}
+                                {{ auth.signature_name }} - {{ auth.signature_position }}
                             </option>
                         {% endfor %}
                     </select>

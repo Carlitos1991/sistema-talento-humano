@@ -29,7 +29,7 @@ from institution.models import AdministrativeUnit
 from .models import Competency, JobProfile, ManualCatalog, OccupationalMatrix, ManualCatalogItem, ValuationNode, \
     JobActivity, ProfileCompetency
 from .forms import ManualCatalogForm, ManualCatalogItemForm
-from core.models import BaseModel, Authority
+from core.models import BaseModel, User
 
 
 # ============================================================================
@@ -1547,7 +1547,7 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile, pk=pk)
-        authorities = Authority.objects.filter(is_active=True)
+        authorities = User.objects.filter(is_active=True).order_by('username')
         return render(request, 'function_manual/modals/modal_legalize_profile.html', {
             'profile': profile,
             'authorities': authorities
@@ -1822,7 +1822,7 @@ class GetReportPdfModalView(LoginRequiredMixin, View):
             return JsonResponse(
                 {'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
 
-        authorities = Authority.objects.filter(is_active=True).order_by('name')
+        authorities = User.objects.filter(is_active=True).order_by('username')
 
         return render(request, 'function_manual/modals/modal_report_pdf.html', {
             'profile': profile,
@@ -1855,7 +1855,7 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         try:
             profile = get_object_or_404(
                 JobProfile.objects.select_related('administrative_unit', 'occupational_classification'), pk=profile_id)
-            authority = get_object_or_404(Authority, pk=authority_id)
+            authority = get_object_or_404(User, pk=authority_id)
         except:
             return JsonResponse({'success': False, 'message': 'Perfil o Autoridad no encontrados'}, status=404)
 
@@ -2049,11 +2049,11 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
         canvas.setFont("Helvetica", 9)
         auth_x = 4.5 * inch
         canvas.drawString(auth_x, y_pos + 0.6 * inch, "Autorizado por:")
-        canvas.drawString(auth_x, y_pos + 0.45 * inch, authority.position)
+        canvas.drawString(auth_x, y_pos + 0.45 * inch, authority.signature_position)
         # Línea más larga para firma
         canvas.line(auth_x, y_pos + 0.25 * inch, auth_x + 3.0 * inch, y_pos + 0.25 * inch)
         canvas.setFont("Helvetica", 8)
-        canvas.drawString(auth_x, y_pos + 0.05 * inch, authority.name)
+        canvas.drawString(auth_x, y_pos + 0.05 * inch, authority.signature_name)
         canvas.drawString(auth_x, y_pos - 0.10 * inch, "Fecha: ______________")
 
         canvas.restoreState()

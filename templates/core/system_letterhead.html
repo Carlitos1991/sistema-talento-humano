@@ -40,6 +40,20 @@
                     </div>
                 {% endif %}
             </div>
+
+            <div class="logo-preview-block">
+                <p class="preview-title">Logo institucional actual</p>
+                <div class="logo-preview-frame">
+                    {% if configuration and configuration.logo %}
+                        <img src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" alt="Logo institucional actual">
+                    {% else %}
+                        <div class="logo-preview-empty">
+                            <i class="fa-solid fa-image"></i>
+                            <p>No hay logo institucional cargado.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
         <div class="letterhead-card">
@@ -157,6 +171,19 @@
                         <label class="form-label" for="{{ config_form.logo.id_for_label }}">Logo institucional (opcional)</label>
                         {{ config_form.logo }}
                         {% if config_form.logo.errors %}<div class="invalid-feedback d-block">{{ config_form.logo.errors|join:', ' }}</div>{% endif %}
+
+                        <div class="logo-preview-upload logo-config-preview" id="logoPreviewContainer">
+                            <p class="preview-title">Vista previa del logo</p>
+                            {% if configuration and configuration.logo %}
+                                <img id="logoPreview" src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" data-original-src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" alt="Vista previa del logo">
+                            {% else %}
+                                <div class="logo-preview-empty" id="logoPreviewEmpty">
+                                    <i class="fa-solid fa-image"></i>
+                                    <p>No hay logo institucional cargado.</p>
+                                </div>
+                                <img id="logoPreview" src="" data-original-src="" alt="Vista previa del logo" style="display:none;">
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

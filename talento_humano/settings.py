@@ -25,6 +25,7 @@ ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '*').s
 # Cuando estamos detrás de Nginx/Traefik/Caddy, Django debe confiar en X-Forwarded-Proto.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 if os.environ.get('ENABLE_HTTPS_SECURITY', 'False') == 'True':
     SESSION_COOKIE_SECURE = True
@@ -105,6 +106,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.navbar_notifications',
+                'core.context_processors.system_branding',
                 'core.context_processors.employee_archive_notifications',
                 'core.context_processors.contract_notifications',
                 'security.context_processors.help_messages_notifications',

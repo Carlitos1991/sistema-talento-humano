@@ -74,6 +74,7 @@ class SIGETHSecurityMiddleware:
         public_paths = [
             login_url_resolved,  # La página de login
             '/admin/',  # El admin de Django (tiene su propio login)
+            '/favicon.ico',  # Permitir favicon sin autenticación
             '/static/',  # Archivos CSS/JS
             '/media/',  # Archivos subidos
             '/biometric/adms/',  # Tu ruta antigua (opcional)
