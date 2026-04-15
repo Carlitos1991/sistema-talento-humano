@@ -31,6 +31,10 @@ from vacation.models import EmployeeVacationBalance
 from decimal import Decimal
 from datetime import datetime, time
 from django.urls import reverse
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_related(instance, attr_name, default=None):
@@ -498,7 +502,55 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
         return user_person
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        try:
+            context = super().get_context_data(**kwargs)
+        except Exception:
+            logger.exception('Error en self_dashboard para user_id=%s', self.request.user.id)
+            person = self.get_object()
+            curriculum, _ = Curriculum.objects.get_or_create(person=person)
+            context = {
+                'person': person,
+                'employee_profile': _safe_related(person, 'employee_profile', None),
+                'curriculum_obj': curriculum,
+                'curriculum_titles_count': 0,
+                'curriculum_experiences_count': 0,
+                'curriculum_courses_count': 0,
+                'employee_area_name': 'SIN AREA ASIGNADA',
+                'can_generate_self_permit': False,
+                'can_insist_rejected_permits': False,
+                'education_levels': CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS', is_active=True),
+                'banks_list': CatalogItem.objects.filter(catalog__code='BANCO', is_active=True),
+                'account_types_list': CatalogItem.objects.filter(catalog__code='ACCOUNT_TYPES', is_active=True),
+                'gender_list': CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True),
+                'country_list': Location.objects.filter(level=1, is_active=True),
+                'marital_status_list': CatalogItem.objects.filter(catalog__code='MARITAL_STATUSES', is_active=True),
+                'blood_type_list': CatalogItem.objects.filter(catalog__code='BLOOD_TYPES', is_active=True),
+                'disability_types': CatalogItem.objects.filter(catalog__code='DISABILITY_TYPES', is_active=True),
+                'relationships': CatalogItem.objects.filter(catalog__code='RELATIONSHIPS', is_active=True),
+                'hierarchy_list': [],
+                'current_partida': None,
+                'partida_history': [],
+                'current_contract': None,
+                'contract_history': [],
+                'current_permission': None,
+                'permissions_history': [],
+                'permission_filter_types': [],
+                'permissions_month_label': '',
+                'actions_list': [],
+                'payment_roles_history': [],
+                'sanctions_history': [],
+                'vacation_balances': [],
+                'vacation_chart': {'total_capacity': 0, 'permits': 0, 'vacations': 0, 'saldo': 0},
+                'economic_data': _safe_related(person, 'economic_data', None),
+                'bank_account': None,
+                'payroll_info': None,
+                'institutional_data': None,
+            }
+
+            context['curriculum_titles_count'] = curriculum.academic_titles.count()
+            context['curriculum_experiences_count'] = curriculum.work_experiences.count()
+            context['curriculum_courses_count'] = curriculum.trainings.count()
+
         context['restricted_tab_ids'] = 'budget,contracts,actions,sanctions'
         context['can_view_restricted_tabs'] = False
         return context
