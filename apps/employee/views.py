@@ -19,7 +19,7 @@ from person.models import Person
 from person.models import PersonAuditLog
 from person.utils import log_person_audit, PERSON_AUDIT_SECTIONS
 from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
-from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData
+from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData
 from budget.models import BudgetLine
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
@@ -119,14 +119,24 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_person = _safe_related(self.request.user, 'person', None)
-        curriculum = _safe_related(self.object, 'curriculum', None)
         employee = _safe_related(self.object, 'employee_profile', None)
+
+        curriculum, _ = Curriculum.objects.get_or_create(person=self.object)
+        economic_data, _ = EconomicData.objects.get_or_create(person=self.object)
+        institutional_data = None
+        if employee:
+            institutional_data, _ = InstitutionalData.objects.get_or_create(employee=employee)
 
         context['curriculum_titles_count'] = 0
         context['curriculum_experiences_count'] = 0
         context['curriculum_courses_count'] = 0
         context['employee_area_name'] = 'SIN AREA ASIGNADA'
+        context['employee_profile'] = employee
         context['curriculum_obj'] = curriculum
+        context['economic_data'] = economic_data
+        context['bank_account'] = _safe_related(economic_data, 'bank_account', None)
+        context['payroll_info'] = _safe_related(economic_data, 'payroll_info', None)
+        context['institutional_data'] = institutional_data
         if curriculum:
             try:
                 context['curriculum_titles_count'] = curriculum.academic_titles.count()

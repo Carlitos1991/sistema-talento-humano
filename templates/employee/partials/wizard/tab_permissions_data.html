@@ -34,7 +34,7 @@
         <div class="header-actions" style="justify-content:flex-end;align-items:center;">
             {% if can_generate_self_permit %}
                 <button type="button" class="btn btn-create js-generate-permit-self"
-                        data-employee-id="{{ person.employee_profile.id }}"
+                        data-employee-id="{{ employee_profile.id|default:'' }}"
                         data-employee-name="{{ person.full_name }}"
                         style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;white-space:nowrap;">
                     <i class="fa-solid fa-plus"></i> Generar Permiso

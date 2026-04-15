@@ -27,7 +27,7 @@
                             data-balance-id="{{ vacation_balances.0.id }}">
                         <i class="fa-solid fa-list-ul"></i> Ver listado
                     </button>
-                {% elif person.employee_profile %}
+                {% elif employee_profile %}
                     <span class="text-muted small">Sin períodos registrados</span>
                 {% else %}
                     <span class="text-muted small">Sin empleado</span>
@@ -58,7 +58,7 @@
                             onclick="openVacationHistoryModal({{ vacation_balances.0.id }})">
                         <i class="fa-solid fa-file-lines"></i> Ver detalle
                     </button>
-                {% elif person.employee_profile %}
+                {% elif employee_profile %}
                     <span class="text-muted small">Sin períodos registrados</span>
                 {% else %}
                     <span class="text-muted small">Sin empleado</span>
