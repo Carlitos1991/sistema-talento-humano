@@ -20,6 +20,19 @@ from django.views.generic import View
 from django.contrib.auth.decorators import permission_required
 from django.contrib.sessions.models import Session
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
+
+
+def _safe_related(instance, attr_name, default=None):
+    """Acceso seguro a relaciones opcionales para evitar 500 por registros faltantes."""
+    if instance is None:
+        return default
+    try:
+        return getattr(instance, attr_name)
+    except ObjectDoesNotExist:
+        return default
+    except Exception:
+        return default
 
 
 # --- 1. LOGIN & AUTH ---
@@ -433,8 +446,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 from permitrequest.models import PermitRequest
                 from person.models import Person
 
-                user_person = getattr(self.request.user, 'person', None)
-                employee_profile = getattr(user_person, 'employee_profile', None) if user_person else None
+                user_person = _safe_related(self.request.user, 'person', None)
+                employee_profile = _safe_related(user_person, 'employee_profile', None) if user_person else None
 
                 # Fallback 1: buscar persona por cédula (username suele ser la cédula)
                 if not employee_profile:
@@ -461,7 +474,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     ).select_related('level').order_by('level__level_order', 'name').first()
 
                     # Fallback 3: buscar unidad por cédula del jefe asignado
-                    if not managed_unit and getattr(employee_profile, 'person', None):
+                    if not managed_unit and _safe_related(employee_profile, 'person', None):
                         managed_unit = AdministrativeUnit.objects.filter(
                             boss__person__document_number=employee_profile.person.document_number,
                             is_active=True

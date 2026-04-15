@@ -12,6 +12,7 @@ from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 
 from core.models import CatalogItem, Location
 from person.models import Person
@@ -30,6 +31,18 @@ from vacation.models import EmployeeVacationBalance
 from decimal import Decimal
 from datetime import datetime, time
 from django.urls import reverse
+
+
+def _safe_related(instance, attr_name, default=None):
+    """Acceso seguro a relaciones OneToOne/ForeignKey opcionales."""
+    if instance is None:
+        return default
+    try:
+        return getattr(instance, attr_name)
+    except ObjectDoesNotExist:
+        return default
+    except Exception:
+        return default
 
 
 @login_required
@@ -105,7 +118,27 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user_person = getattr(self.request.user, 'person', None)
+        user_person = _safe_related(self.request.user, 'person', None)
+        curriculum = _safe_related(self.object, 'curriculum', None)
+        employee = _safe_related(self.object, 'employee_profile', None)
+
+        context['curriculum_titles_count'] = 0
+        context['curriculum_experiences_count'] = 0
+        context['curriculum_courses_count'] = 0
+        context['employee_area_name'] = 'SIN AREA ASIGNADA'
+        context['curriculum_obj'] = curriculum
+        if curriculum:
+            try:
+                context['curriculum_titles_count'] = curriculum.academic_titles.count()
+                context['curriculum_experiences_count'] = curriculum.work_experiences.count()
+                context['curriculum_courses_count'] = curriculum.trainings.count()
+            except Exception:
+                context['curriculum_titles_count'] = 0
+                context['curriculum_experiences_count'] = 0
+                context['curriculum_courses_count'] = 0
+        if employee and getattr(employee, 'area', None):
+            context['employee_area_name'] = employee.area.name or 'SIN AREA ASIGNADA'
+
         log_person_audit(
             self.request,
             self.object,
@@ -137,7 +170,6 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['relationships'] = CatalogItem.objects.filter(catalog__code='RELATIONSHIPS', is_active=True)
 
         # Jerarquía Institucional
-        employee = getattr(self.object, 'employee_profile', None)
         hierarchy_list = []
         if employee and employee.area:
             unit = employee.area
@@ -450,7 +482,7 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
     permission_required = ()
 
     def get_object(self, queryset=None):
-        user_person = getattr(self.request.user, 'person', None)
+        user_person = _safe_related(self.request.user, 'person', None)
         if not user_person:
             raise Http404("El usuario no tiene persona asociada.")
         return user_person

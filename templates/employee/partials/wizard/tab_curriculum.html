@@ -11,9 +11,9 @@
         <input type="file" id="pdfInput" class="hidden" accept=".pdf"
                @change="handlePdfUpload($event, {{ person.id }})">
 
-        {% if person.curriculum.pdf_file %}
+        {% if curriculum_obj and curriculum_obj.pdf_file %}
             <!-- BOTÓN VER: Abre en pestaña nueva -->
-            <a href="{{ person.curriculum.pdf_file.url }}" target="_blank"
+            <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
                class="btn-header-premium" style="background: #3b82f6; color: white;">
                 <i class="fa-solid fa-eye"></i> VER DOCUMENTO
             </a>

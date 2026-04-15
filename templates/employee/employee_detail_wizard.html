@@ -58,9 +58,9 @@
          v-cloak
          data-person-id="{{ person.id }}"
             {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
-         data-titles="{{ person.curriculum.academic_titles.count|default:0 }}"
-         data-experiences="{{ person.curriculum.work_experiences.count|default:0 }}"
-         data-courses="{{ person.curriculum.trainings.count|default:0 }}">
+            data-titles="{{ curriculum_titles_count|default:0 }}"
+            data-experiences="{{ curriculum_experiences_count|default:0 }}"
+            data-courses="{{ curriculum_courses_count|default:0 }}">
 
         <!-- 1. BANNER -->
         <div class="banner-employee-detail">
@@ -74,7 +74,7 @@
                     </span>
                     <span class="banner-badge-info">
                         <i class="fa-solid fa-briefcase"></i>
-                        {{ person.employee_profile.area.name|default:"SIN ÁREA ASIGNADA" }}
+                        {{ employee_area_name|default:"SIN ÁREA ASIGNADA" }}
                     </span>
                 </div>
             </div>
