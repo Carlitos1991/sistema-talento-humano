@@ -4,108 +4,117 @@
 {% block title %}Mi Dashboard | SIGETH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
-<link rel="stylesheet" href="{% static 'css/vacations.css' %}">
-<link rel="stylesheet" href="{% static 'css/permission.css' %}">
-<link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
-<link rel="stylesheet" href="{% static 'css/biometric_offline_attendance.css' %}">
-<style>
-    .employee-standalone-wrapper {
-        padding: 24px;
-    }
-
-    @media (max-width: 768px) {
+    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+    <!-- Removed: biometric_offline_attendance.css (applies global body background/padding) -->
+    <style>
         .employee-standalone-wrapper {
-            padding: 12px;
+            padding: 24px;
         }
-    }
-</style>
+
+        @media (max-width: 768px) {
+            .employee-standalone-wrapper {
+                padding: 12px;
+            }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<script>
-    document.body.classList.add('employee-dashboard-page');
-</script>
+    <script>
+        document.body.classList.add('employee-dashboard-page');
+    </script>
 
-<div class="employee-standalone-wrapper">
-    <div id="employeeWizardApp"
-         v-cloak
-         data-person-id="{{ person.id }}"
-            data-titles="{{ curriculum_titles_count|default:0 }}"
-            data-experiences="{{ curriculum_experiences_count|default:0 }}"
-            data-courses="{{ curriculum_courses_count|default:0 }}"
-         data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
+    <div class="employee-standalone-wrapper container-custom">
+        <div id="employeeWizardApp"
+             v-cloak
+             data-person-id="{{ person.id }}"
+             data-titles="{{ curriculum_titles_count|default:0 }}"
+             data-experiences="{{ curriculum_experiences_count|default:0 }}"
+             data-courses="{{ curriculum_courses_count|default:0 }}"
+             data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
 
-        <div class="banner-employee-detail">
-            <div class="banner-info-employee-detail">
-                <span class="banner-label-top">Expediente Digital</span>
-                <h1>{{ person.full_name }}</h1>
-                <div class="banner-badges-group">
+            <!-- Banner informativo (mantener diseño previo bajo la cabecera) -->
+            <div class="banner-employee-detail">
+                <div class="banner-info-employee-detail">
+                    <span class="banner-label-top">Expediente Digital</span>
+                    <h1>{{ person.full_name }}</h1>
+                    <div class="banner-badges-group">
                     <span class="banner-badge-info">
                         <i class="fa-solid fa-id-card"></i>
                         {{ person.document_number }}
                     </span>
-                    <span class="banner-badge-info">
+                        <span class="banner-badge-info">
                         <i class="fa-solid fa-briefcase"></i>
                         {{ employee_area_name|default:"SIN AREA ASIGNADA" }}
                     </span>
-                </div>
-            </div>
-            <div class="header-actions-wrapper">
-                {% if can_view_restricted_tabs %}
-                <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
-                        style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
-                    <i class="fa-solid fa-user-pen"></i> Editar Perfil
-                </button>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="employee-detail-buttons-container">
-            <h3 class="buttons-section-title">
-                <i class="fa fa-th-large"></i>
-                Acciones y Modulos
-            </h3>
-            <div class="module-grid-premium">
-                <div v-for="tab in tabs"
-                     :key="tab.id"
-                     @click="activeTab = tab.id"
-                     :class="['employee-detail-button', tab.class, { active: activeTab === tab.id }]">
-                    <div class="employee-detail-button-icon">
-                        <i :class="tab.icon"></i>
                     </div>
-                    <span class="employee-detail-button-label">[[ tab.name ]]</span>
+                </div>
+                <div class="header-actions-wrapper">
+                    <!-- botón duplicado en la cabecera superior para mayor accesibilidad -->
+                    {% if can_view_restricted_tabs %}
+                        <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
+                                style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
+                            <i class="fa-solid fa-user-pen"></i> Editar Perfil
+                        </button>
+                    {% endif %}
                 </div>
             </div>
-        </div>
 
-        <div class="animate__animated animate__fadeIn mt-4">
-            <div v-if="activeTab === 'personal'">
-                {% include 'employee/partials/wizard/tab_personal_data.html' %}
+            <div class="employee-detail-buttons-container">
+                <h3 class="buttons-section-title">
+                    <i class="fa fa-th-large"></i>
+                    Acciones y Modulos
+                </h3>
+                <div class="module-grid-premium">
+                    <div v-for="tab in tabs"
+                         :key="tab.id"
+                         @click="activeTab = tab.id"
+                         :class="['employee-detail-button', tab.class, { active: activeTab === tab.id }]">
+                        <div class="employee-detail-button-icon">
+                            <i :class="tab.icon"></i>
+                        </div>
+                        <span class="employee-detail-button-label">[[ tab.name ]]</span>
+                    </div>
+                </div>
             </div>
 
-            <div v-if="activeTab === 'curriculum'" id="curriculum-tab-container" class="animate__animated animate__fadeIn">
-                {% include 'employee/partials/wizard/tab_curriculum.html' %}
-            </div>
+            <div id="table-app">
+                <div class="content-table">
+                    <div class="animate__animated animate__fadeIn mt-4">
+                        <div v-if="activeTab === 'personal'">
+                            {% include 'employee/partials/wizard/tab_personal_data.html' %}
+                        </div>
 
-            <div v-if="activeTab === 'economic'">
-                {% include 'employee/partials/wizard/tab_economic_data.html' %}
-            </div>
+                        <div v-if="activeTab === 'curriculum'" id="curriculum-tab-container"
+                             class="animate__animated animate__fadeIn">
+                            {% include 'employee/partials/wizard/tab_curriculum.html' %}
+                        </div>
 
-            <div v-if="activeTab === 'institutional'">
-                {% include 'employee/partials/wizard/tab_institutional_data.html' %}
-            </div>
+                        <div v-if="activeTab === 'economic'">
+                            {% include 'employee/partials/wizard/tab_economic_data.html' %}
+                        </div>
 
-            <div v-if="activeTab === 'permissions'">
-                {% include 'employee/partials/wizard/tab_permissions_data.html' %}
-            </div>
+                        <div v-if="activeTab === 'institutional'">
+                            {% include 'employee/partials/wizard/tab_institutional_data.html' %}
+                        </div>
 
-            <div v-if="activeTab === 'payments'">
-                {% include 'employee/partials/wizard/tab_payment_roles.html' %}
-            </div>
+                        <div v-if="activeTab === 'permissions'">
+                            {% include 'employee/partials/wizard/tab_permissions_data.html' %}
+                        </div>
 
-            <div v-if="activeTab === 'vacations'">
-                {% include 'employee/partials/wizard/tab_vacations_data.html' %}
+                        <div v-if="activeTab === 'payments'">
+                            {% include 'employee/partials/wizard/tab_payment_roles.html' %}
+                        </div>
+
+                        <div v-if="activeTab === 'vacations'">
+                            {% include 'employee/partials/wizard/tab_vacations_data.html' %}
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
 
@@ -130,16 +139,16 @@
     <div id="vacationHistoryModalContainer"></div>
     <div id="permitHistoryModalContainer"></div>
     <div id="permitReportModalContainer"></div>
-</div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
-<script src="{% static 'js/employee_wizard.js' %}"></script>
-<script src="{% static 'js/employee_period_modal_init.js' %}"></script>
-<script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="{% static 'js/employee_vacation_chart.js' %}"></script>
-<script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
-<script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
+    <script src="{% static 'js/employee_wizard.js' %}"></script>
+    <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
+    <script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
+    <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+    <script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
 {% endblock %}
