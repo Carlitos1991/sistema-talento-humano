@@ -56,6 +56,26 @@ def migrate_personnel_action_signers(apps, schema_editor):
         created_by_id__isnull=False,
     ).update(authority_1_id=models.F('created_by_id'))
 
+    # Respaldo final ante datos heredados inconsistentes (authority_1 y created_by nulos).
+    if PersonnelAction.objects.filter(authority_1_id__isnull=True).exists():
+        fallback_user = User.objects.order_by('id').only('id', 'username', 'first_name', 'last_name').first()
+        if fallback_user:
+            if not Authority.objects.filter(id=fallback_user.id).exists():
+                full_name = f"{(fallback_user.first_name or '').strip()} {(fallback_user.last_name or '').strip()}".strip()
+                display_name = full_name or fallback_user.username or f"USUARIO {fallback_user.id}"
+                now = timezone.now()
+                Authority.objects.create(
+                    id=fallback_user.id,
+                    name=display_name,
+                    position='REGISTRO MIGRADO',
+                    status=True,
+                    is_active=True,
+                    created_at=now,
+                    updated_at=now,
+                )
+
+            PersonnelAction.objects.filter(authority_1_id__isnull=True).update(authority_1_id=fallback_user.id)
+
     # 3) Limpiar campos opcionales antes del cambio de FKs.
     PersonnelAction.objects.filter(~Q(authority_2_id=None) | ~Q(reviewer_id=None) | ~Q(register_id=None)).update(
         authority_2_id=None,
