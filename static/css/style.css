@@ -175,8 +175,11 @@ h1, h2, h3, h4, h5, h6 {
     padding-bottom: 3rem;
     flex: 1 1 auto;
     width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
+    /* Quitar el max-width y el centrado automático para evitar
+       que el contenido se quede 'centrado' dejando un gran espacio
+       junto al sidebar. */
+    max-width: none;
+    margin: 0;
     overflow-y: auto;
     overflow-x: auto;
     scroll-behavior: smooth;
