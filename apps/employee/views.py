@@ -156,7 +156,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             PERSON_AUDIT_SECTIONS['personal']
         )
         context['can_generate_self_permit'] = bool(
-            context.get('person') and getattr(context['person'], 'employee_profile', None) and (
+            context.get('person') and employee and (
                 self.request.user.has_perm('permitrequest.add_permitrequest') or
                 (user_person and user_person.id == self.object.id)
             )
