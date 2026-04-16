@@ -282,6 +282,59 @@
     font-size: 14px;
 }
 
+/* Alineación y tamaños específicos para tablas compactas (lista de permisos) */
+.custom-table td {
+    vertical-align: middle;
+}
+
+.custom-table .person-avatar,
+.custom-table .person-avatar-placeholder {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+    font-size: 0.9rem !important;
+}
+
+.custom-table .actions-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.custom-table td .btn-create-action,
+.custom-table td .btn-list-action,
+.custom-table td .btn-views-action {
+    padding: 6px 8px;
+}
+
+/* Forzar centrado de botones dentro de las celdas de Bitácoras y Acciones */
+.custom-table td.text-center .actions-wrapper,
+.custom-table td.actions .actions-wrapper {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 0 auto !important;
+}
+
+/* Asegurar alineación vertical en la celda */
+.custom-table td {
+    vertical-align: middle !important;
+}
+
+/* Centrar únicamente los encabezados 'Foto' (1), 'Bitácoras' (4) y 'Acciones' (5) en la tabla compacta */
+.custom-table thead tr th:nth-child(1),
+.custom-table thead tr th:nth-child(4),
+.custom-table thead tr th:nth-child(5) {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+
 /* File upload icon-only style for bitácora modal */
 .file-upload-box {
     display: flex;
@@ -315,14 +368,14 @@
 }
 
 .file-upload-icon {
-    font-size: 36px;
+    font-size: 40px;
     color: #b91c1c; /* rojo PDF */
     line-height: 1;
 }
 
 /* Regla más específica para forzar tamaño del icono Font Awesome si hay conflicto */
 .file-upload-label .file-upload-icon i {
-    font-size: 36px !important;
+    font-size: 40px !important;
     line-height: 1 !important;
 }
 
@@ -333,6 +386,19 @@
 
 .file-upload-label.file-selected .file-upload-icon {
     color: #059669;
+}
+
+/* Right column alignment: colocar el uploader verticalmente alineado al final
+   para que su nota "Max: 2MB" coincida con la nota de la izquierda */
+.file-column { display: flex; flex-direction: column; position: relative; }
+.file-column .file-upload-box { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
+.file-column .form-text { margin-bottom: 0; text-align: center; }
+
+/* Centrar el título/label del campo Documento PDF en la columna del uploader */
+.file-column > .form-label {
+    text-align: center;
+    display: block;
+    width: 100%;
 }
 
 /* ocultar texto del uploader para mostrar solo el icono */
