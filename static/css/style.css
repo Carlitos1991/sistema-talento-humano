@@ -5876,3 +5876,26 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     margin: 5px 0 0 0;
     font-size: 0.9rem;
 }
+
+/* Forzar tamaño y espaciado iguales en botones de acciones dentro de tablas */
+.table-container td .btn-views-action,
+.table-container td .btn-delete-action {
+    box-sizing: border-box;
+    width: var(--table-btn-size) !important;
+    height: var(--table-btn-size) !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
+    margin: 0 6px !important;
+}
+
+.table-container td .btn-views-action i,
+.table-container td .btn-delete-action i {
+    font-size: var(--table-btn-icon-size) !important;
+    line-height: 1 !important;
+}
+
+/* Asegurar separación mínima entre botones (primero sin margen izquierdo extra) */
+.table-container td .btn-views-action:first-child { margin-left: 4px !important; }
