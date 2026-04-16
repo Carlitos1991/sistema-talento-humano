@@ -250,3 +250,65 @@
 .text-end {
     text-align: right;
 }
+
+/* Compact table styles for tighter list spacing */
+.compact-table th, .compact-table td {
+    padding: 8px 10px;
+    font-size: 0.92rem;
+}
+
+.compact-table td.actions .actions-wrapper button {
+    padding: 6px 8px;
+}
+
+.employee-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.employee-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* File upload icon-only style for bitácora modal */
+.file-upload-box {
+    display: flex;
+    align-items: center;
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+.file-upload-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    cursor: pointer;
+    border: 1px dashed transparent;
+}
+
+.file-upload-label:hover {
+    border-color: #d1d5db;
+}
+
+.file-upload-icon {
+    font-size: 20px;
+    color: #b91c1c; /* rojo PDF */
+}
+
+/* ocultar texto del uploader para mostrar solo el icono */
+.file-upload-text, .file-upload-subtext {
+    display: none;
+}
