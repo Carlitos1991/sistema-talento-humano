@@ -37,6 +37,7 @@ urlpatterns = [
     # --- Bitácoras ---
     path('bitacora/register/<int:employee_id>/', views.BitacoraRegisterView.as_view(), name='bitacora_register'),
     path('bitacora/list/<int:employee_id>/', views.BitacoraListView.as_view(), name='bitacora_list'),
+    path('bitacora/history/<int:employee_id>/', views.BitacoraHistoryView.as_view(), name='bitacora_history'),
     path('bitacora/approve/', views.BitacoraApproveView.as_view(), name='bitacora_approve'),
     path('bitacora/delete/', views.BitacoraDeleteView.as_view(), name='bitacora_delete'),
 ]

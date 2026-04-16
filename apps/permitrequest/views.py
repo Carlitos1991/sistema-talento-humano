@@ -1126,6 +1126,49 @@ class BitacoraListView(LoginRequiredMixin, PermissionRequiredMixin, View):
         })
 
 
+class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para mostrar modal con historial de bitácoras aprobadas"""
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def get(self, request, employee_id):
+        employee = get_object_or_404(Employee, pk=employee_id)
+
+        bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
+        approved = []
+        if bitacora_type:
+            qs = PermitRequest.objects.filter(
+                employee=employee,
+                permit_type=bitacora_type,
+                status='APPROVED'
+            ).select_related('response_by', 'created_by').order_by('-start_date', '-start_time')
+
+            for b in qs:
+                approved.append({
+                    'id': b.id,
+                    'start_date': b.start_date,
+                    'start_time': b.start_time,
+                    'end_time': b.end_time,
+                    'status': b.status,
+                    'response_note': b.response_note,
+                    'justification_file': b.justification_file.name if b.justification_file else None,
+                    'created_by': f"{b.created_by.first_name} {b.created_by.last_name}" if b.created_by else 'Sistema',
+                    'created_at': b.created_at,
+                    'response_by': f"{b.response_by.first_name} {b.response_by.last_name}" if b.response_by else '',
+                    'response_date': b.response_date,
+                })
+
+        html = render_to_string(
+            'permissions/modals/modal_bitacora_history.html',
+            {
+                'bitacoras': approved,
+                'employee_name': employee.person.full_name,
+            },
+            request=request
+        )
+
+        return HttpResponse(html)
+
+
 class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Vista para aprobar bitácoras seleccionadas"""
     permission_required = 'permitrequest.change_permitrequest'

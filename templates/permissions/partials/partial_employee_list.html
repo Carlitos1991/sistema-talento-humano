@@ -58,6 +58,14 @@
                                     title="Listar Bitácoras">
                                 <i class="fas fa-list-ul"></i>
                             </button>
+                        {% if perms.permitrequest.view_permitrequest %}
+                            <button class="btn-info-action js-approved-bitacoras"
+                                    data-employee-id="{{ item.employee.pk }}"
+                                    data-employee-name="{{ item.employee.person.get_full_name }}"
+                                    title="Historial Bitácoras Aprobadas">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        {% endif %}
                         {% endif %}
                     </div>
                 </td>

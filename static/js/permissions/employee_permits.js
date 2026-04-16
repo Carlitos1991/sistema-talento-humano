@@ -213,6 +213,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 return;
             }
+
+            // C. Historial Bitácoras Aprobadas
+            const approvedHistoryBtn = e.target.closest('.js-approved-bitacoras');
+            if (approvedHistoryBtn) {
+                e.preventDefault();
+                const employeeId = approvedHistoryBtn.dataset.employeeId;
+                if (!employeeId) return;
+
+                const url = `/permitrequest/bitacora/history/${employeeId}/`;
+                fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                    .then(res => {
+                        if (!res.ok) throw new Error('Error al obtener historial');
+                        return res.text();
+                    })
+                    .then(html => {
+                        modalContentContainer.innerHTML = html;
+                        modalOverlay.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                        // Inicializar lógica del modal de historial de bitácoras aprobadas
+                        if (typeof initBitacoraHistoryModal === 'function') {
+                            initBitacoraHistoryModal();
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error al cargar historial aprobado:', err);
+                        Swal.fire('Error', 'No se pudo cargar el historial de bitácoras aprobadas', 'error');
+                    });
+                return;
+            }
         });
     }
 
@@ -356,6 +385,71 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
+
+    // Inicializador para modal de historial de bitácoras aprobadas
+    window.initBitacoraHistoryModal = function () {
+        const searchInput = document.getElementById('bitacora-history-search');
+        const table = modalContentContainer.querySelector('.custom-table');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const pageInfo = document.getElementById('bitacora-history-info');
+        const prevBtn = document.getElementById('bitacora-history-prev');
+        const nextBtn = document.getElementById('bitacora-history-next');
+        const currentDisplay = document.getElementById('bitacora-history-current');
+        const pageSizeSelect = document.getElementById('bitacora-history-pagesize-select');
+
+        let currentPage = 1;
+        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 10);
+
+        function render() {
+            const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const filtered = rows.filter(r => {
+                if (term === '') return true;
+                return r.textContent.toLowerCase().includes(term);
+            });
+
+            const total = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+
+            rows.forEach(r => r.style.display = 'none');
+            filtered.slice(start, end).forEach(r => r.style.display = 'table-row');
+
+            const startIndex = total === 0 ? 0 : start + 1;
+            const endIndex = Math.min(end, total);
+            if (pageInfo) pageInfo.textContent = `Mostrando ${startIndex} a ${endIndex} de ${total}`;
+            if (currentDisplay) currentDisplay.textContent = currentPage;
+
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+        }
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', (e) => { pageSize = parseInt(e.target.value); currentPage = 1; render(); });
+        }
+        if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); } });
+        if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; render(); });
+
+        // Reemplazar texto 'APPROVED' por 'APROBADAS' en la columna de estado (por si vino sin traducir)
+        rows.forEach(r => {
+            const badge = r.querySelector('.badge');
+            if (badge && badge.textContent.trim() === 'APPROVED') badge.textContent = 'APROBADAS';
+        });
+
+        render();
+
+        // Asegurar que los botones cerrar del modal funcionen (delegación existente ya maneja .btn-close-modal y .js-close-modal)
+        modalContentContainer.querySelectorAll('.js-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+        modalContentContainer.querySelectorAll('.btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+    };
 
     // ========================================================
     // LÓGICA DEL FORMULARIO DE GENERACIÓN DE PERMISOS

@@ -65,6 +65,43 @@
     border-bottom: 2px solid #eee;
 }
 
+/* Encabezados estilo oscuro específico para la tabla de permisos (fondo solicitado) */
+.custom-table thead {
+    background: linear-gradient(90deg, #0f1724 0%, #111827 100%);
+}
+.custom-table thead th {
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Regla más específica para asegurar que los th del thead respeten el fondo oscuro */
+.table-wrapper .custom-table thead th {
+    /* Encabezados en tono oscuro con texto blanco */
+    background: linear-gradient(90deg, #0f1724 0%, #0b1220 100%) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Las dos últimas columnas: azul oscuro ligeramente más claro que el encabezado */
+.table-wrapper .custom-table thead th:nth-last-child(1),
+.table-wrapper .custom-table thead th:nth-last-child(2) {
+    background: linear-gradient(90deg, #142534 0%, #0e1b2a 100%) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Aplicar también en modales que usen .custom-table dentro de modal-body-scrolled */
+.modal-body-scrolled .custom-table thead th {
+    /* Encabezados en modales: mismo tono oscuro con texto blanco */
+    background: linear-gradient(90deg, #0f1724 0%, #0b1220 100%) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+.modal-body-scrolled .custom-table thead th:nth-last-child(1),
+.modal-body-scrolled .custom-table thead th:nth-last-child(2) {
+    background: linear-gradient(90deg, #142534 0%, #0e1b2a 100%) !important;
+}
+
 .custom-table td {
     padding: 12px 15px;
     border-bottom: 1px solid #eee;

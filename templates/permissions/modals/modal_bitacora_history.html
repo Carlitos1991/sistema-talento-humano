@@ -1,0 +1,92 @@
+{% load static %}
+
+<div class="modal-container-medium shadow-card">
+    <!-- Botón de Cerrar (mismo que modal registro) -->
+    <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera Compacta (igual que modal registro) -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h2 class="header-title-main">Historial Bitácoras Aprobadas</h2>
+        </div>
+        <p class="header-subtitle" id="employee-name-bitacora" style="margin-top: 8px; font-size: 14px;">
+            <i class="fas fa-user text-primary"></i> {{ employee_name }}
+        </p>
+    </div>
+
+    <div class="modal-body-scrolled">
+        <div class="table-controls">
+            <div class="search-box" style="max-width:360px; margin-right: 8px;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="bitacora-history-search" class="input-field" placeholder="Buscar...">
+            </div>
+            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                <label class="form-label" style="margin:0; font-size:0.9rem;">Mostrar:</label>
+                <select id="bitacora-history-pagesize-select" class="std-input">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="custom-table compact-table">
+                <thead>
+                <tr>
+                    <th style="width:4%;">N°</th>
+                    <th style="width:14%;">Fecha Bitácora</th>
+                    <th style="width:8%;">Inicio</th>
+                    <th style="width:8%;">Fin</th>
+                    <th style="width:12%;">Estado</th>
+                    <th style="width:18%;">Registrado por</th>
+                    <th style="width:18%;">Fecha de Registro</th>
+                    <th style="width:18%;">Aprobado por</th>
+                    <th style="width:18%;">Fecha Aprobación</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for b in bitacoras %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td>{{ b.start_date }}</td>
+                        <td class="text-center">{{ b.start_time|default:"--:--" }}</td>
+                        <td class="text-center">{{ b.end_time|default:"--:--" }}</td>
+                        <td class="text-center"><span class="badge badge-info">{% if b.status == 'APPROVED' %}APROBADAS{% else %}{{ b.status }}{% endif %}</span></td>
+                        <td>{{ b.created_by }}</td>
+                        <td>{{ b.created_at }}</td>
+                        <td>{{ b.response_by }}</td>
+                        <td>{{ b.response_date }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- PAGINACIÓN CLIENTE -->
+        <div class="pagination-container mt-3" id="bitacora-history-paginator">
+            <span class="pagination-info" id="bitacora-history-info">Mostrando 0 a 0 de 0</span>
+            <div class="pagination-controls">
+                <button class="page-btn" id="bitacora-history-prev">Anterior</button>
+                <input type="number" class="page-input" id="bitacora-history-current" value="1" min="1">
+                <span class="total-pages-badge" id="bitacora-history-total">de 1</span>
+                <button class="page-btn" id="bitacora-history-next">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer fijo similar al modal de registro -->
+    <div class="modal-footer-fixed">
+        <button type="button" class="btn-cancel js-close-bitacora-modal">
+            <i class="fas fa-times-circle"></i> CERRAR
+        </button>
+    </div>
+</div>
