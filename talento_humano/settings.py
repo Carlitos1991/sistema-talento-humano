@@ -31,11 +31,7 @@ if os.environ.get('ENABLE_HTTPS_SECURITY', 'False') == 'True':
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = ['https://rrhh.loja.gob.ec']
 
 # Application definition
 

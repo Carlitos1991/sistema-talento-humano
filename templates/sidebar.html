@@ -320,7 +320,7 @@
                     <ul class="submenu">
 
                         <!-- 1. Administrar Permisos (Listado General) -->
-                        {% if perms.permitrequest.view_permitrequest %}
+                        {% if perms.permitrequest.change_permitrequest %}
                             <li>
                                 <a href="{% url 'permissions:permit_admin' %}"
                                    class="{% if request.resolver_match.url_name == 'permit_admin' %}active-child{% endif %}">
