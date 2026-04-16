@@ -18,27 +18,22 @@
             <div class="modal-body-content modal-body-custom"
                  style="display: flex; flex-direction: column; height: 100%;">
 
-                <!-- Información del empleado -->
-                <div class="mb-3 p-3" style="background: #f3f4f6; border-radius: 8px;">
-                    <p class="mb-1"><strong>Empleado:</strong> [[ employeeName ]]</p>
-                    <p class="mb-0"><strong>Cédula:</strong> [[ employeeIdentification ]]</p>
-                </div>
-
-                <!-- CONTROLES -->
-                <div class="table-controls mb-3">
-                    <div class="search-box flex-grow-1" style="max-width: 300px;">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" v-model="searchQuery" class="input-field" 
-                               placeholder="Buscar bitácoras..."
-                               @input="currentPage = 1">
+                <!-- CONTROLES: rango de fechas -->
+                <div class="table-controls mb-3" style="align-items:center; gap:12px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <label style="font-weight:600; color:#334155;">Desde:</label>
+                        <input type="date" v-model="fromDate" class="input-field" @change="currentPage=1">
+                        <label style="font-weight:600; color:#334155;">Hasta:</label>
+                        <input type="date" v-model="toDate" class="input-field" @change="currentPage=1">
+                        <button type="button" class="btn-pill-action" @click="clearDates()">Limpiar</button>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn-success-action" @click="approveSelected" 
+                    <div style="display: flex; gap: 10px; align-items: center; margin-left:auto;">
+                        <button class="btn-success-action" @click="approveSelected"
                                 v-if="selectedBitacoras.length > 0"
                                 title="Aprobar Seleccionadas">
                             <i class="fas fa-check"></i>
                         </button>
-                        <button class="btn-delete-action" @click="deleteSelected" 
+                        <button class="btn-delete-action" @click="deleteSelected"
                                 v-if="selectedBitacoras.length > 0"
                                 title="Eliminar Seleccionadas">
                             <i class="fas fa-trash"></i>
@@ -51,9 +46,11 @@
                     <table class="w-100">
                         <thead>
                         <tr>
-                            <th style="width: 4%;">
-                                <input type="checkbox" @change="toggleAll" v-model="selectAll">
-                            </th>
+                            {% if perms.permitrequest.change_permitrequest %}
+                                <th style="width: 4%;">
+                                    <input type="checkbox" @change="toggleAll" v-model="selectAll">
+                                </th>
+                            {% endif %}
                             <th style="width: 4%;">N°</th>
                             <th style="width: 10%;">Fecha</th>
                             <th style="width: 8%;">Inicio</th>
@@ -63,13 +60,16 @@
                             <th style="width: 10%;">Documento</th>
                             <th style="width: 13%;">Registrado por</th>
                             <th style="width: 10%;">Fecha Registro</th>
+                            <th style="width: 8%; text-align:center;">Acciones</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr v-for="(bitacora, index) in paginatedBitacoras" :key="bitacora.id">
-                            <td class="text-center">
-                                <input type="checkbox" :value="bitacora.id" v-model="selectedBitacoras">
-                            </td>
+                            {% if perms.permitrequest.change_permitrequest %}
+                                <td class="text-center">
+                                    <input type="checkbox" :value="bitacora.id" v-model="selectedBitacoras">
+                                </td>
+                            {% endif %}
                             <td class="text-center">[[ (currentPage - 1) * perPage + index + 1 ]]</td>
                             <td>[[ formatDate(bitacora.start_date) ]]</td>
                             <td class="text-center">[[ formatTime(bitacora.start_time) ]]</td>
@@ -86,17 +86,26 @@
                                 <span v-else style="color: #999;">Sin justificación</span>
                             </td>
                             <td class="text-center">
-                                <a v-if="bitacora.justification_file" 
-                                   :href="'/media/' + bitacora.justification_file" 
+                                <a v-if="bitacora.justification_file"
+                                   :href="'/media/' + bitacora.justification_file"
                                    target="_blank"
                                    class="btn-pdf-link"
                                    title="Ver documento PDF">
-                                    <i class="fas fa-file-pdf"></i> Ver PDF
+                                    <span class="pdf-badge"><i class="fas fa-file-pdf"></i> PDF</span>
                                 </a>
                                 <span v-else style="color: #999; font-size: 12px;">Sin PDF</span>
                             </td>
-                            <td style="font-size: 12px;">[[ bitacora.created_by__full_name || 'Sistema' ]]</td>
+                            <td class="registrado-por" style="font-size: 12px; white-space: normal;">[[
+                                bitacora.created_by__full_name || 'Sistema' ]]
+                            </td>
                             <td style="font-size: 12px;">[[ formatDateShort(bitacora.created_at) ]]</td>
+                            <td class="text-center">
+                                <button type="button" class="btn-views-action"
+                                        @click="openEdit(bitacora)"
+                                        title="Editar bitácora"><i class="fas fa-pen"></i></button>
+                                <button type="button" class="btn-delete-action" @click="deleteSingle(bitacora.id)"
+                                        title="Eliminar bitácora"><i class="fas fa-trash"></i></button>
+                            </td>
                         </tr>
                         </tbody>
                     </table>

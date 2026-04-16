@@ -6,6 +6,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.getElementById('csrf-token').value;
     const urlList = document.getElementById('url-list').value;
 
+    // Intento robusto de evitar autocompletado del navegador (algunas implementaciones ignoran autocomplete)
+    if (searchInput) {
+        try {
+            searchInput.setAttribute('autocomplete', 'off');
+            searchInput.setAttribute('autocorrect', 'off');
+            searchInput.setAttribute('autocapitalize', 'off');
+            searchInput.setAttribute('spellcheck', 'false');
+            // Cambiar el nombre del input para evitar que el navegador relacione valores previos
+            searchInput.setAttribute('name', 'no_autocomplete_search_' + Date.now());
+            // Truco: marcar readonly inicialmente para bloquear el autofill/auto-suggest en algunos navegadores
+            searchInput.readOnly = true;
+            searchInput.addEventListener('focus', function () {
+                this.readOnly = false;
+                // opcional: seleccionar texto al focus
+                this.select();
+            });
+        } catch (err) {
+            console.warn('No fue posible aplicar bloqueo de autocompletado en buscador', err);
+        }
+    }
+
     // Referencias Modal
     const modalOverlay = document.getElementById('customModal');
     const modalContentContainer = document.getElementById('modal-dynamic-content');
@@ -824,18 +845,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     bitacoras: [],
                     selectedBitacoras: [],
                     selectAll: false,
-                    searchQuery: '',
+                    fromDate: '',
+                    toDate: '',
                     currentPage: 1,
                     perPage: 10
                 }
             },
             computed: {
                 filteredBitacoras() {
-                    const term = this.searchQuery.toLowerCase().trim();
-                    if (!term) return this.bitacoras;
-                    return this.bitacoras.filter(b =>
-                        b.start_date.toLowerCase().includes(term)
-                    );
+                    // Filtrar por rango de fechas (start_date)
+                    if (!this.fromDate && !this.toDate) return this.bitacoras;
+                    const from = this.fromDate ? new Date(this.fromDate) : null;
+                    const to = this.toDate ? new Date(this.toDate) : null;
+                    // Normalize to compare dates only
+                    return this.bitacoras.filter(b => {
+                        if (!b.start_date) return false;
+                        const d = new Date(b.start_date);
+                        if (from && d < from) return false;
+                        if (to) {
+                            // include entire 'to' day
+                            const toEnd = new Date(to);
+                            toEnd.setHours(23,59,59,999);
+                            if (d > toEnd) return false;
+                        }
+                        return true;
+                    });
                 },
                 totalPages() {
                     return Math.ceil(this.filteredBitacoras.length / this.perPage) || 1;
@@ -855,12 +889,18 @@ document.addEventListener('DOMContentLoaded', function () {
             methods: {
                 async open(employeeId) {
                     this.employeeId = employeeId;
-                    this.searchQuery = '';
+                    this.fromDate = '';
+                    this.toDate = '';
                     this.currentPage = 1;
                     this.selectedBitacoras = [];
                     this.selectAll = false;
                     await this.fetchBitacoras();
                     this.isVisible = true;
+                },
+                clearDates() {
+                    this.fromDate = '';
+                    this.toDate = '';
+                    this.currentPage = 1;
                 },
                 closeModal() {
                     this.isVisible = false;
@@ -960,6 +1000,83 @@ document.addEventListener('DOMContentLoaded', function () {
                                 await this.fetchBitacoras();
                             } else {
                                 Swal.fire('Error', data.message, 'error');
+                            }
+                        } catch (err) {
+                            Swal.fire('Error', 'Error de comunicación', 'error');
+                        }
+                    }
+                },
+                async deleteSingle(id) {
+                    // Reuse same confirmation as bulk delete
+                    const result = await Swal.fire({
+                        title: '¿Eliminar bitácora? ',
+                        text: `Se eliminará la bitácora seleccionada. Esta acción es irreversible.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    if (!result.isConfirmed) return;
+                    try {
+                        const res = await fetch('/permitrequest/bitacora/delete/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({ids: [id]})
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            Swal.fire('Éxito', data.message, 'success');
+                            await this.fetchBitacoras();
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('Error', 'Error de comunicación', 'error');
+                    }
+                },
+
+                async openEdit(bitacora) {
+                    // Preload start/end times into SweetAlert inputs
+                    const {value: formValues} = await Swal.fire({
+                        title: 'Editar hora (Inicio / Fin)',
+                        html:
+                            `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
+                                <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
+                                <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
+                            </div>`,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const start = document.getElementById('swal-start').value;
+                            const end = document.getElementById('swal-end').value;
+                            if (!start && !end) {
+                                Swal.showValidationMessage('Debe ingresar al menos una hora');
+                                return false;
+                            }
+                            return {start, end};
+                        }
+                    });
+
+                    if (formValues) {
+                        try {
+                            const res = await fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                Swal.fire('Éxito', data.message, 'success');
+                                await this.fetchBitacoras();
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo actualizar', 'error');
                             }
                         } catch (err) {
                             Swal.fire('Error', 'Error de comunicación', 'error');

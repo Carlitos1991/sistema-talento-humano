@@ -30,10 +30,10 @@
             <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
             <input type="hidden" id="url-list" value="{% url 'permissions:permit_employee_list' %}">
             <div class="content-table">
-                <div class="table-controls">
+                <div class="table-controls" data-manual-export="true">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field" placeholder="Buscar por cédula o nombre...">
+                        <input type="text" id="table-search" class="input-field" placeholder="Buscar por cédula o nombre..." autocomplete="off" spellcheck="false">
                     </div>
                 </div>
 

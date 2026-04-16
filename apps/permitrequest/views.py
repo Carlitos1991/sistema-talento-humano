@@ -72,28 +72,6 @@ class PermitTypeListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespon
                 Q(description__icontains=q)
             )
         return queryset.order_by('name')
-
-    def get(self, request, *args, **kwargs):
-        self.object = None
-        form = self.get_form()
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            # Renderizar solo el contenido del modal con contexto completo
-            context = self.get_context_data(form=form)
-            html = render_to_string(self.template_name, context, request=request)
-            return HttpResponse(html)
-        return self.render_to_response(self.get_context_data(form=form))
-
-    def form_valid(self, form):
-        self.object = form.save()
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Tipo de permiso creado correctamente.'})
-        return super().form_valid(form)
-
-    def form_invalid(self, form):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        return super().form_invalid(form)
-
     def get_initial(self):
         initial = super().get_initial()
         # Si venimos de "Crear Sub-item", pre-llenamos el padre
@@ -210,14 +188,14 @@ class EmployeePermitListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
             'employment_status'
         )
         
-        # Búsqueda por nombres, apellidos o cédula
+        # Búsqueda por nombres, apellidos o cédula (tokenizada)
         query = self.request.GET.get('q', '').strip()
         if query:
-            queryset = queryset.filter(
-                Q(person__first_name__icontains=query) |
-                Q(person__last_name__icontains=query) |
-                Q(person__document_number__icontains=query)
-            )
+            tokens = [t for t in query.split() if t]
+            # Para cada token, requerimos que aparezca en first_name, last_name o document_number
+            for tok in tokens:
+                tok_q = Q(person__first_name__icontains=tok) | Q(person__last_name__icontains=tok) | Q(person__document_number__icontains=tok)
+                queryset = queryset.filter(tok_q)
         
         return queryset.order_by('person__last_name', 'person__first_name')
     
@@ -1080,13 +1058,12 @@ class BitacoraListView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 'response_note', 'justification_file'
             ).order_by('-start_date', '-start_time')
             
-            # Construir full_name del created_by
+            # Construir full_name del created_by (nombre + apellidos)
             for bitacora in bitacoras:
-                first_name = bitacora.pop('created_by__first_name', '')
-                last_name = bitacora.pop('created_by__last_name', '')
-                bitacora['created_by__full_name'] = f"{first_name} {last_name}".strip() if first_name or last_name else 'Sistema'
-                last_name = bitacora.pop('created_by__last_name', '')
-                bitacora['created_by__full_name'] = f"{first_name} {last_name}".strip() if first_name or last_name else 'Sistema'
+                first_name = bitacora.pop('created_by__first_name', '') or ''
+                last_name = bitacora.pop('created_by__last_name', '') or ''
+                full_name = f"{first_name} {last_name}".strip()
+                bitacora['created_by__full_name'] = full_name if full_name else 'Sistema'
         else:
             bitacoras = []
         
@@ -1234,3 +1211,33 @@ class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 'success': False,
                 'message': f'Error: {str(e)}'
             }, status=400)
+
+
+class BitacoraEditView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para editar horas de una bitácora (solo inicio/fin)"""
+    permission_required = 'permitrequest.change_permitrequest'
+
+    def post(self, request, pk):
+        import json
+        try:
+            if not request.user.has_perm('permitrequest.change_permitrequest'):
+                return JsonResponse({'success': False, 'message': 'No tiene permisos'}, status=403)
+
+            payload = json.loads(request.body)
+            start_time = payload.get('start_time')
+            end_time = payload.get('end_time')
+
+            pr = PermitRequest.objects.filter(pk=pk, status='REQUESTED').first()
+            if not pr:
+                return JsonResponse({'success': False, 'message': 'Bitácora no encontrada o ya procesada'}, status=404)
+
+            if start_time is not None:
+                pr.start_time = start_time or None
+            if end_time is not None:
+                pr.end_time = end_time or None
+            pr.updated_by = request.user
+            pr.save(update_fields=['start_time', 'end_time', 'updated_by', 'updated_at'])
+
+            return JsonResponse({'success': True, 'message': 'Bitácora actualizada correctamente'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)

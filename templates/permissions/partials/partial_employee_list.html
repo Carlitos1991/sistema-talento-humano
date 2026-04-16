@@ -25,7 +25,7 @@
         <tbody id="table-body">
         {% for item in employees_data %}
             <tr class="location-row" id="row-{{ item.employee.id }}"
-                data-search-text="{{ item.employee.person.last_name|default:''|lower }} {{ item.employee.person.first_name|default:''|lower }} {{ item.employee.person.document_number|default:''|lower }} {{ item.employee.person.email|default:''|lower }} {{ item.employee.person.phone_number|default:''|lower }} {{ item.employee.area.name|default:''|lower }}">
+                data-search-text="{{ item.employee.person.full_name|default:''|lower }} {{ item.employee.person.first_name|default:''|lower }} {{ item.employee.person.last_name|default:''|lower }} {{ item.employee.person.document_number|default:''|lower }} {{ item.employee.person.email|default:''|lower }} {{ item.employee.person.phone_number|default:''|lower }} {{ item.employee.area.name|default:''|lower }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
                 <td class="text-center" style="width:6%;">
                     {% if item.employee.person.photo %}
@@ -94,9 +94,9 @@
         {% empty %}
             <tr>
                 {% if perms.permitrequest.change_permitrequest %}
-                    <td colspan="5">
+                    <td colspan="6">
                 {% else %}
-                    <td colspan="4">
+                    <td colspan="5">
                 {% endif %}
                     <div class="empty-state-container">
                         <i class="fas fa-users empty-state-icon"></i>
@@ -108,9 +108,9 @@
 
         <tr id="client-no-results" style="display: none;">
             {% if perms.permitrequest.change_permitrequest %}
-                <td colspan="5">
+                <td colspan="6">
             {% else %}
-                <td colspan="4">
+                <td colspan="5">
             {% endif %}
                 <div class="empty-state-container">
                     <i class="fas fa-search empty-state-icon"></i>

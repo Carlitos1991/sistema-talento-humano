@@ -2564,6 +2564,7 @@ table {
 .table-container-has-scroll-helper {
     padding-right: 0 !important;
 }
+
 .table-scroll-helper-group {
     display: none !important;
 }
@@ -3980,6 +3981,54 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     outline: none;
     border-color: #059669;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1), 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+/* Botones de acción circulares y coloridos (estilo badges circulares) */
+.btn-edit-action, .btn-delete-action, .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    font-size: 1.05rem;
+    color: #fff;
+    border: none;
+}
+
+/* Colores: verde (editar), amarillo (lista/otro), morado (acción principal) */
+.btn-edit-action {
+    background: linear-gradient(180deg, #16a34a, #059669);
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.18);
+}
+
+.btn-action-yellow {
+    background: linear-gradient(180deg, #f59e0b, #d97706);
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.14);
+}
+
+.btn-edit-action:hover, .btn-action-yellow:hover, .btn-action-purple:hover {
+    transform: translateY(-3px) scale(1.02);
+    opacity: 0.98;
+}
+
+/* Icon sizing inside circular buttons */
+.btn-edit-action i, .btn-action i {
+    font-size: 0.95rem;
+}
+
+/* Ajustes específicos para modal de bitácoras */
+#bitacora-list-app .btn-edit-action, #bitacora-list-app {
+    margin: 0 6px;
+}
+
+/* Fallback para botones con clase btn-icon (mantener compatibilidad) */
+.btn-icon {
+    background: transparent;
+    border: none;
 }
 
 
