@@ -11,6 +11,8 @@ from django.http import Http404
 from django.utils import timezone
 from io import BytesIO
 import base64
+from django.core.paginator import Paginator, EmptyPage
+from types import SimpleNamespace
 
 from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
@@ -63,80 +65,13 @@ class PermitTypeListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespon
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        query = self.request.GET.get('q')
-        parent_id = self.request.GET.get('parent_id')  # Nuevo parámetro
-
-        if query:
-            queryset = queryset.filter(Q(name__icontains=query))
-
-        # Filtro para navegar sub-items
-        if parent_id:
-            queryset = queryset.filter(parent_id=parent_id)
-        else:
-            if not query:  # Si hay busqueda, buscamos en todo, si no, solo padres
-                queryset = queryset.filter(parent__isnull=True)
-
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Pasamos el padre actual para poner un botón de "Volver" si es necesario
-        parent_id = self.request.GET.get('parent_id')
-        if parent_id:
-            try:
-                context['current_parent'] = PermitType.objects.get(pk=parent_id)
-            except PermitType.DoesNotExist:
-                context['current_parent'] = None
-        return context
-
-    def render_to_response(self, context, **response_kwargs):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.partial_template_name, context, request=self.request)
-            
-            # Obtener información de paginación
-            page_obj = context.get('page_obj')
-            if page_obj:
-                pagination_data = {
-                    'start_index': page_obj.start_index(),
-                    'end_index': page_obj.end_index(),
-                    'total_count': page_obj.paginator.count,
-                    'current_page': page_obj.number,
-                    'total_pages': page_obj.paginator.num_pages,
-                    'has_previous': page_obj.has_previous(),
-                    'has_next': page_obj.has_next(),
-                }
-            else:
-                pagination_data = {
-                    'start_index': 0,
-                    'end_index': 0,
-                    'total_count': 0,
-                    'current_page': 1,
-                    'total_pages': 1,
-                    'has_previous': False,
-                    'has_next': False,
-                }
-            
-            return JsonResponse({
-                'html': html,
-                'pagination': pagination_data
-            })
-        return super().render_to_response(context, **response_kwargs)
-
-
-class PermitTypeCreateView(LoginRequiredMixin, CreateView):
-    model = PermitType
-    form_class = PermitTypeForm
-    template_name = 'permissions/modals/modal_permissions_type_form.html'
-    success_url = reverse_lazy('permissions:permit_type_list')
-
-    def dispatch(self, request, *args, **kwargs):
-        # Verificar permisos manualmente para mejor control de respuesta AJAX
-        if not request.user.has_perm('permitrequest.add_permittype'):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear tipos de permiso'}, status=403)
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(name__icontains=q) |
+                Q(description__icontains=q)
+            )
+        return queryset.order_by('name')
 
     def get(self, request, *args, **kwargs):
         self.object = None
@@ -166,6 +101,42 @@ class PermitTypeCreateView(LoginRequiredMixin, CreateView):
         if parent_id:
             initial['parent'] = parent_id
         return initial
+
+
+class PermitTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = PermitType
+    form_class = PermitTypeForm
+    template_name = 'permissions/modals/modal_permissions_type_form.html'
+    success_url = reverse_lazy('permissions:permit_type_list')
+    permission_required = 'permitrequest.add_permittype'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm('permitrequest.add_permittype'):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear tipos de permiso'}, status=403)
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            context = self.get_context_data(form=form)
+            html = render_to_string(self.template_name, context, request=request)
+            return HttpResponse(html)
+        return self.render_to_response(self.get_context_data(form=form))
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Tipo de permiso creado correctamente.'})
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        return super().form_invalid(form)
 
 
 class PermitTypeUpdateView(LoginRequiredMixin, UpdateView):
@@ -311,6 +282,7 @@ class EmployeePermitListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
                 }
             
             return JsonResponse({
+                'success': True,
                 'html': html,
                 'pagination': pagination_data
             })
@@ -1132,40 +1104,74 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def get(self, request, employee_id):
         employee = get_object_or_404(Employee, pk=employee_id)
-
         bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
-        approved = []
+
+        qs = PermitRequest.objects.none()
         if bitacora_type:
             qs = PermitRequest.objects.filter(
                 employee=employee,
                 permit_type=bitacora_type,
                 status='APPROVED'
-            ).select_related('response_by', 'created_by').order_by('-start_date', '-start_time')
+            ).select_related('response_by', 'created_by')
 
-            for b in qs:
-                approved.append({
-                    'id': b.id,
-                    'start_date': b.start_date,
-                    'start_time': b.start_time,
-                    'end_time': b.end_time,
-                    'status': b.status,
-                    'response_note': b.response_note,
-                    'justification_file': b.justification_file.name if b.justification_file else None,
-                    'created_by': f"{b.created_by.first_name} {b.created_by.last_name}" if b.created_by else 'Sistema',
-                    'created_at': b.created_at,
-                    'response_by': f"{b.response_by.first_name} {b.response_by.last_name}" if b.response_by else '',
-                    'response_date': b.response_date,
-                })
+        # Filtering (search)
+        q = request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(response_note__icontains=q) |
+                Q(created_by__first_name__icontains=q) |
+                Q(created_by__last_name__icontains=q) |
+                Q(response_by__first_name__icontains=q) |
+                Q(response_by__last_name__icontains=q)
+            )
 
-        html = render_to_string(
-            'permissions/modals/modal_bitacora_history.html',
-            {
-                'bitacoras': approved,
-                'employee_name': employee.person.full_name,
-            },
-            request=request
-        )
+        # Sorting
+        sort = request.GET.get('sort', '-start_date')
+        # basic whitelist
+        allowed_sorts = ['start_date', '-start_date', 'start_time', '-start_time', 'end_time', '-end_time', 'created_at', '-created_at']
+        if sort not in allowed_sorts:
+            sort = '-start_date'
+        qs = qs.order_by(sort)
 
+        # Pagination
+        try:
+            page = int(request.GET.get('page', 1))
+        except ValueError:
+            page = 1
+        try:
+            page_size = int(request.GET.get('page_size', 10))
+        except ValueError:
+            page_size = 10
+
+        paginator = Paginator(qs, page_size)
+
+        # Manejar caso sin resultados para evitar paginator.page(0)
+        if paginator.count == 0:
+            page_obj = SimpleNamespace(
+                object_list=[],
+                number=1,
+                has_previous=False,
+                has_next=False,
+                start_index=lambda: 0,
+                end_index=lambda: 0
+            )
+        else:
+            try:
+                page_obj = paginator.page(page)
+            except EmptyPage:
+                page_obj = paginator.page(paginator.num_pages)
+
+        context = {
+            'bitacoras': page_obj.object_list,
+            'employee_name': employee.person.full_name,
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'q': q,
+            'sort': sort,
+            'page_size': page_size,
+        }
+
+        html = render_to_string('permissions/modals/modal_bitacora_history.html', context, request=request)
         return HttpResponse(html)
 
 

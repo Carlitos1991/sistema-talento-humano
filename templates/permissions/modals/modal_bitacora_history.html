@@ -1,6 +1,10 @@
 {% load static %}
 
-<div class="modal-container-medium shadow-card">
+<div class="modal-container-medium shadow-card" id="bitacora-history-container"
+    data-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
+    data-total="{% if paginator %}{{ paginator.num_pages }}{% else %}1{% endif %}"
+    data-sort="{{ sort|default:'-start_date' }}"
+    data-q="{{ q|default:'' }}">
     <!-- Botón de Cerrar (mismo que modal registro) -->
     <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
         <i class="fas fa-times"></i>
@@ -39,19 +43,19 @@
             <table class="custom-table compact-table">
                 <thead>
                 <tr>
-                    <th style="width:4%;">N°</th>
-                    <th style="width:14%;">Fecha Bitácora</th>
-                    <th style="width:8%;">Inicio</th>
-                    <th style="width:8%;">Fin</th>
-                    <th style="width:12%;">Estado</th>
-                    <th style="width:18%;">Registrado por</th>
-                    <th style="width:18%;">Fecha de Registro</th>
-                    <th style="width:18%;">Aprobado por</th>
-                    <th style="width:18%;">Fecha Aprobación</th>
+                            <th class="col-number">N°</th>
+                            <th data-sort="start_date">Fecha Bitácora <span class="sort-arrow">⇅</span></th>
+                            <th data-sort="start_time">Inicio <span class="sort-arrow">⇅</span></th>
+                            <th data-sort="end_time">Fin <span class="sort-arrow">⇅</span></th>
+                            <th>Estado</th>
+                            <th>Registrado por</th>
+                            <th data-sort="created_at">Fecha de Registro <span class="sort-arrow">⇅</span></th>
+                            <th>Aprobado por</th>
+                            <th>Fecha Aprobación</th>
                 </tr>
                 </thead>
                 <tbody>
-                {% for b in bitacoras %}
+                        {% for b in bitacoras %}
                     <tr>
                         <td class="text-center">{{ forloop.counter }}</td>
                         <td>{{ b.start_date }}</td>
@@ -59,7 +63,7 @@
                         <td class="text-center">{{ b.end_time|default:"--:--" }}</td>
                         <td class="text-center"><span class="badge badge-info">{% if b.status == 'APPROVED' %}APROBADAS{% else %}{{ b.status }}{% endif %}</span></td>
                         <td>{{ b.created_by }}</td>
-                        <td>{{ b.created_at }}</td>
+                                <td>{{ b.created_at }}</td>
                         <td>{{ b.response_by }}</td>
                         <td>{{ b.response_date }}</td>
                     </tr>
@@ -71,14 +75,16 @@
                 </tbody>
             </table>
         </div>
-        <!-- PAGINACIÓN CLIENTE -->
+        <!-- PAGINACIÓN SERVER-SIDE -->
         <div class="pagination-container mt-3" id="bitacora-history-paginator">
-            <span class="pagination-info" id="bitacora-history-info">Mostrando 0 a 0 de 0</span>
+            <span class="pagination-info" id="bitacora-history-info">
+                Mostrando {{ page_obj.start_index|default:0 }} a {{ page_obj.end_index|default:0 }} de {{ paginator.count|default:0 }}
+            </span>
             <div class="pagination-controls">
-                <button class="page-btn" id="bitacora-history-prev">Anterior</button>
-                <input type="number" class="page-input" id="bitacora-history-current" value="1" min="1">
-                <span class="total-pages-badge" id="bitacora-history-total">de 1</span>
-                <button class="page-btn" id="bitacora-history-next">Siguiente</button>
+                <button class="page-btn" id="bitacora-history-prev" {% if not page_obj.has_previous %}disabled{% endif %}>Anterior</button>
+                <input type="number" class="page-input" id="bitacora-history-current" value="{{ page_obj.number|default:1 }}" min="1" max="{{ paginator.num_pages|default:1 }}">
+                <span class="total-pages-badge" id="bitacora-history-total">de {{ paginator.num_pages|default:1 }}</span>
+                <button class="page-btn" id="bitacora-history-next" {% if not page_obj.has_next %}disabled{% endif %}>Siguiente</button>
             </div>
         </div>
     </div>

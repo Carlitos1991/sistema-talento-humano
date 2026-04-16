@@ -2557,6 +2557,17 @@ table {
     display: block;
 }
 
+/* Override: evitar que el helper de scroll cambie el layout en listados compactos
+   deshabilitamos la aparición visual del helper y anulamos el padding adicional.
+   Esto evita que después de unos segundos el layout se desplace y la columna
+   de acciones quede recortada. Si se requiere, se puede reactivar por vista. */
+.table-container-has-scroll-helper {
+    padding-right: 0 !important;
+}
+.table-scroll-helper-group {
+    display: none !important;
+}
+
 .table-scroll-nav-start,
 .table-scroll-nav-end {
     display: none;
@@ -2656,6 +2667,15 @@ table {
 .table-container th:last-child {
     z-index: 11;
     background: linear-gradient(180deg, #046f9f 0%, #034d75 100%);
+}
+
+/* Asegurar que cualquier encabezado marcado como 'actions' use el mismo
+   estilo visual que la última columna (Acciones). Centrado y fondo azul. */
+.table-container thead th.actions {
+    z-index: 11;
+    background: linear-gradient(180deg, #046f9f 0%, #034d75 100%);
+    color: #ffffff;
+    text-align: center;
 }
 
 .table-container tbody td.actions,

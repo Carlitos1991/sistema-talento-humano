@@ -1,82 +1,78 @@
-<div class="table-wrapper">
-    <table class="custom-table compact-table">
+<div class="table-container">
+    <table class="managed-table exportable-table"
+           data-title="Reporte Empleados"
+           data-filename="Reporte_empleados"
+           data-external-pagination="true"
+           data-external-search="true">
         <thead>
         <tr>
-            <th class="text-center" style="width: 5%;">Foto</th>
-            <th style="width: 40%;">Nombres y Apellidos</th>
-            <th style="width: 15%;">Cédula</th>
-            <th class="text-center" style="width: 15%;">Bitácoras</th>
+            <th><i class="fa-solid fa-list-ol"></i></th>
+            <th style="width:6%"><i class="fas fa-image"></i> Foto</th>
+            <th data-field="full_name_str" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-user"></i>&nbsp;Empleado
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-id-card"></i>&nbsp;Cédula
+                <span class="sort-arrow">⇅</span>
+            </th>
+            <th class="text-center actions"><i class="fas fa-book"></i>&nbsp;Bitácoras</th>
             {% if perms.permitrequest.change_permitrequest %}
-                <th class="text-center actions" style="width: 10%;">Acciones</th>
+                <th class="text-center actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
             {% endif %}
         </tr>
         </thead>
-        <tbody>
+        <tbody id="table-body">
         {% for item in employees_data %}
-            <tr>
-                <!-- Foto -->
-                <td class="text-center">
+            <tr class="location-row" id="row-{{ item.employee.id }}"
+                data-search-text="{{ item.employee.person.last_name|default:''|lower }} {{ item.employee.person.first_name|default:''|lower }} {{ item.employee.person.document_number|default:''|lower }} {{ item.employee.person.email|default:''|lower }} {{ item.employee.person.phone_number|default:''|lower }} {{ item.employee.area.name|default:''|lower }}">
+                <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                <td class="text-center" style="width:6%;">
                     {% if item.employee.person.photo %}
-                        <img src="{{ item.employee.person.photo.url }}"
-                             alt="{{ item.employee.person.get_full_name }}"
-                             class="person-avatar">
+                        <img src="{{ item.employee.person.photo.url }}" alt="{{ item.employee.person.first_name }}" class="person-avatar">
                     {% else %}
-                        <div class="person-avatar-placeholder">
-                            {{ item.employee.person.first_name|default:''|first }}{{ item.employee.person.last_name|default:''|first }}
-                        </div>
+                        <div class="person-avatar-placeholder">{{ item.employee.person.first_name|first }}{{ item.employee.person.last_name|first }}</div>
                     {% endif %}
                 </td>
-
-                <!-- Nombres y Apellidos -->
-                <td style="font-weight: 500;">
-                    {{ item.employee.person.full_name }}
+                <td>
+                    <div class="person-details">
+                        <h4>{{ item.employee.person.full_name }}</h4>
+                    </div>
                 </td>
-
-                <!-- Cédula -->
-                <td>{{ item.employee.person.document_number }}</td>
-
-                <!-- (Cargo y Área ocultos por diseño compacto) -->
-
-                <!-- Bitácoras -->
+                <td>{{ item.employee.person.document_number|default:"--" }}</td>
                 <td class="text-center">
                     <div class="actions-wrapper" style="justify-content: center;">
-                        <!-- Ingresar Bitácora -->
                         {% if perms.permitrequest.add_permitrequest %}
-                            <button class="btn-create-action js-register-bitacora"
+                            <button type="button" class="btn-create-action js-register-bitacora"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Ingresar Bitácora">
-                                <i class="fas fa-lock"></i>
+                                <i class="fa-solid fa-file-circle-plus"></i>
                             </button>
                         {% endif %}
 
-                        <!-- Listar Bitácoras -->
                         {% if perms.permitrequest.view_permitrequest %}
-                            <button class="btn-views-action js-list-bitacoras"
+                            <button type="button" class="btn-views-action js-list-bitacoras"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Listar Bitácoras">
                                 <i class="fas fa-list-ul"></i>
                             </button>
-                        {% if perms.permitrequest.view_permitrequest %}
-                            <button class="btn-info-action js-approved-bitacoras"
+                            <button type="button" class="btn-info-action js-approved-bitacoras"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Historial Bitácoras Aprobadas">
                                 <i class="fas fa-history"></i>
                             </button>
                         {% endif %}
-                        {% endif %}
                     </div>
                 </td>
 
-                <!-- Acciones -->
                 {% if perms.permitrequest.change_permitrequest %}
-                    <td class="actions">
+                    <td>
                         <div class="actions-wrapper">
-                            <!-- Generar Permiso -->
                             {% if perms.permitrequest.add_permitrequest %}
-                                <button class="btn-create-action js-generate-permit"
+                                <button type="button" class="btn-create-action js-generate-permit"
                                         data-employee-id="{{ item.employee.pk }}"
                                         data-employee-name="{{ item.employee.person.get_full_name }}"
                                         title="Generar Permiso">
@@ -84,9 +80,8 @@
                                 </button>
                             {% endif %}
 
-                            <!-- Ver Historial -->
                             {% if perms.permitrequest.view_permitrequest %}
-                                <button class="btn-list-action js-view-history"
+                                <button type="button" class="btn-list-action js-view-history"
                                         data-employee-id="{{ item.employee.pk }}"
                                         title="Ver Historial de Permisos">
                                     <i class="fa-solid fa-list"></i>
@@ -98,12 +93,56 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="{% if perms.permitrequest.change_permitrequest %}5{% else %}4{% endif %}" class="text-center py-5">
-                    <i class="fas fa-users" style="font-size: 3rem; color: #ccc;"></i>
-                    <p class="mt-3 text-muted">No se encontraron empleados activos</p>
+                {% if perms.permitrequest.change_permitrequest %}
+                    <td colspan="5">
+                {% else %}
+                    <td colspan="4">
+                {% endif %}
+                    <div class="empty-state-container">
+                        <i class="fas fa-users empty-state-icon"></i>
+                        <p class="empty-state-text">No se encontraron empleados activos</p>
+                    </div>
                 </td>
             </tr>
         {% endfor %}
+
+        <tr id="client-no-results" style="display: none;">
+            {% if perms.permitrequest.change_permitrequest %}
+                <td colspan="5">
+            {% else %}
+                <td colspan="4">
+            {% endif %}
+                <div class="empty-state-container">
+                    <i class="fas fa-search empty-state-icon"></i>
+                    <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
+                </div>
+            </td>
+        </tr>
         </tbody>
     </table>
+</div>
+
+<!-- PAGINACIÓN (server-side) -->
+<div class="pagination-container">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+    </span>
+    <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+        <button class="page-btn" title="Primera" {% if not page_obj.has_previous %}disabled{% endif %} onclick="changePage(1)">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button class="page-btn" title="Anterior" {% if not page_obj.has_previous %}disabled{% endif %} onclick="changePage({% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+            <i class="fas fa-angle-left"></i>
+        </button>
+        <div class="page-input-wrapper">
+            <input type="number" class="page-input" value="{{ page_obj.number }}" min="1" max="{{ paginator.num_pages }}" onchange="changePage(parseInt(this.value)||1)" onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
+            <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+        </div>
+        <button class="page-btn" title="Siguiente" {% if not page_obj.has_next %}disabled{% endif %} onclick="changePage({% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
+            <i class="fas fa-angle-right"></i>
+        </button>
+        <button class="page-btn" title="Última" {% if not page_obj.has_next %}disabled{% endif %} onclick="changePage({{ paginator.num_pages }})">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    </div>
 </div>

@@ -8,12 +8,16 @@
 {% endblock %}
 
 {% block content %}
-    <div class="content-wrapper">
-        <!-- Configuración oculta -->
-        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'permissions:permit_employee_list' %}">
+    <div id="personApp" data-urls='{
+        "list": "{% url 'permissions:permit_employee_list' %}",
+        "create": "#",
+        "update": "#",
+        "detail": "#",
+        "locations": "#",
+        "createCredentials": "#",
+        "administrative_units": "#"
+    }'>
 
-        <!-- Encabezado -->
         <div class="header-card">
             <div>
                 <h1>Generar Permisos</h1>
@@ -21,51 +25,24 @@
             </div>
         </div>
 
-        <!-- Buscador -->
         <div id="table-app">
+            <!-- Configuración oculta requerida por employee_permits.js -->
+            <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+            <input type="hidden" id="url-list" value="{% url 'permissions:permit_employee_list' %}">
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por nombre, apellido o cédula">
+                        <input type="text" id="table-search" class="input-field" placeholder="Buscar por cédula o nombre...">
                     </div>
                 </div>
 
-                <!-- Zona de recarga AJAX -->
                 <div id="table-content-wrapper">
                     {% include 'permissions/partials/partial_employee_list.html' %}
                 </div>
-
-                <!-- Paginación -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">
-                        {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
-                        {% else %}
-                            Mostrando 0 a 0 registros de 0 registros
-                        {% endif %}
-                    </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
-                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
-                            </span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </div>
+
     </div>
 {% endblock %}
 
@@ -90,8 +67,10 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/person.js' %}"></script>
+    <script src="{% static 'js/permissions/employee_permits.js' %}"></script>
     <script>
-        // Inicializar paginación desde el servidor
+        // Inicializar paginación desde el servidor para compatibilidad inicial
         {% if page_obj %}
         window.initialPagination = {
             current_page: {{ page_obj.number }},
@@ -101,5 +80,4 @@
         };
         {% endif %}
     </script>
-    <script src="{% static 'js/permissions/employee_permits.js' %}"></script>
 {% endblock %}

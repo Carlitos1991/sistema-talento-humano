@@ -224,11 +224,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 const url = `/permitrequest/bitacora/history/${employeeId}/`;
                 fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                     .then(res => {
-                        if (!res.ok) throw new Error('Error al obtener historial');
-                        return res.text();
+                            if (!res.ok) {
+                                return res.text().then(text => { throw new Error(text || 'Error al obtener historial'); });
+                            }
+                            return res.text();
                     })
                     .then(html => {
-                        modalContentContainer.innerHTML = html;
+                            modalContentContainer.innerHTML = html;
+                            // guardar URL base para futuras consultas (paginación/orden/búsqueda)
+                            modalContentContainer.dataset.historyUrl = url;
                         modalOverlay.classList.remove('hidden');
                         document.body.style.overflow = 'hidden';
                         // Inicializar lógica del modal de historial de bitácoras aprobadas
@@ -388,66 +392,91 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Inicializador para modal de historial de bitácoras aprobadas
     window.initBitacoraHistoryModal = function () {
+        const baseUrl = modalContentContainer.dataset.historyUrl || null;
         const searchInput = document.getElementById('bitacora-history-search');
-        const table = modalContentContainer.querySelector('.custom-table');
-        if (!table) return;
-
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        const pageInfo = document.getElementById('bitacora-history-info');
+        const pageInput = document.getElementById('bitacora-history-current');
+        const pageSizeSelect = document.getElementById('bitacora-history-pagesize-select');
         const prevBtn = document.getElementById('bitacora-history-prev');
         const nextBtn = document.getElementById('bitacora-history-next');
-        const currentDisplay = document.getElementById('bitacora-history-current');
-        const pageSizeSelect = document.getElementById('bitacora-history-pagesize-select');
+        const totalBadge = document.getElementById('bitacora-history-total');
 
-        let currentPage = 1;
-        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 10);
+        let currentPage = parseInt(pageInput ? pageInput.value : 1) || 1;
+        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 10) || 10;
+        let sort = modalContentContainer.dataset.sort || '-start_date';
 
-        function render() {
-            const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
-            const filtered = rows.filter(r => {
-                if (term === '') return true;
-                return r.textContent.toLowerCase().includes(term);
-            });
+        function fetchAndRender(params = {}) {
+            if (!baseUrl) return;
+            const qs = new URLSearchParams();
+            qs.set('page', params.page || currentPage);
+            qs.set('page_size', params.page_size || pageSize);
+            if (params.q !== undefined) qs.set('q', params.q);
+            else if (searchInput && searchInput.value) qs.set('q', searchInput.value);
+            if (params.sort) qs.set('sort', params.sort);
 
-            const total = filtered.length;
-            const totalPages = Math.max(1, Math.ceil(total / pageSize));
-            if (currentPage > totalPages) currentPage = totalPages;
-
-            const start = (currentPage - 1) * pageSize;
-            const end = start + pageSize;
-
-            rows.forEach(r => r.style.display = 'none');
-            filtered.slice(start, end).forEach(r => r.style.display = 'table-row');
-
-            const startIndex = total === 0 ? 0 : start + 1;
-            const endIndex = Math.min(end, total);
-            if (pageInfo) pageInfo.textContent = `Mostrando ${startIndex} a ${endIndex} de ${total}`;
-            if (currentDisplay) currentDisplay.textContent = currentPage;
-
-            prevBtn.disabled = currentPage <= 1;
-            nextBtn.disabled = currentPage >= totalPages;
+            const url = `${baseUrl}?${qs.toString()}`;
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(res => res.text())
+                .then(html => {
+                    modalContentContainer.innerHTML = html;
+                    modalContentContainer.dataset.historyUrl = baseUrl;
+                    // re-init modal handlers
+                    initBitacoraHistoryModal();
+                })
+                .catch(err => console.error('Error cargando historial:', err));
         }
 
+        // Debounce search
+        let searchTimer = null;
         if (searchInput) {
-            searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+            searchInput.addEventListener('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    currentPage = 1;
+                    fetchAndRender({page: 1, q: searchInput.value});
+                }, 300);
+            });
         }
-        if (pageSizeSelect) {
-            pageSizeSelect.addEventListener('change', (e) => { pageSize = parseInt(e.target.value); currentPage = 1; render(); });
-        }
-        if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); } });
-        if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; render(); });
 
-        // Reemplazar texto 'APPROVED' por 'APROBADAS' en la columna de estado (por si vino sin traducir)
-        rows.forEach(r => {
-            const badge = r.querySelector('.badge');
-            if (badge && badge.textContent.trim() === 'APPROVED') badge.textContent = 'APROBADAS';
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', function (e) {
+                pageSize = parseInt(e.target.value);
+                currentPage = 1;
+                fetchAndRender({page: 1, page_size: pageSize});
+            });
+        }
+
+        if (prevBtn) prevBtn.addEventListener('click', function () {
+            const p = Math.max(1, currentPage - 1);
+            currentPage = p;
+            fetchAndRender({page: p});
+        });
+        if (nextBtn) nextBtn.addEventListener('click', function () {
+            const p = (parseInt(pageInput ? pageInput.max || 1 : 1) || currentPage) + 1;
+            currentPage = p;
+            fetchAndRender({page: p});
         });
 
-        render();
+        if (pageInput) {
+            pageInput.addEventListener('change', function () {
+                let p = parseInt(this.value) || 1;
+                currentPage = p;
+                fetchAndRender({page: p});
+            });
+        }
 
-        // Asegurar que los botones cerrar del modal funcionen (delegación existente ya maneja .btn-close-modal y .js-close-modal)
-        modalContentContainer.querySelectorAll('.js-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+        // Sort headers: delegación por clicks en th con data-sort
+        modalContentContainer.querySelectorAll('th[data-sort]').forEach(th => {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', function () {
+                const s = th.dataset.sort;
+                // toggle direction
+                sort = (sort === s) ? `-${s}` : s;
+                fetchAndRender({page: 1, sort: sort});
+            });
+        });
+
+        // Ensure close buttons work
+        modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel').forEach(btn => btn.addEventListener('click', closeModal));
         modalContentContainer.querySelectorAll('.btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
     };
 
@@ -632,11 +661,25 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Event delegation para botones de bitácora
     document.addEventListener('click', function(e) {
+        // DEBUG: registrar clicks relevantes para diagnosticar por qué no responden
+        try {
+            const btn = e.target.closest('button, a');
+            if (btn) {
+                console.debug('employee_permits: click on', btn.className, 'dataset=', btn.dataset);
+            } else {
+                // pequeños logs para clicks no sobre botones
+                // console.debug('employee_permits: click target', e.target);
+            }
+        } catch (err) {
+            console.warn('employee_permits: debug log failed', err);
+        }
+
         // Botón: Registrar Bitácora
         if (e.target.closest('.js-register-bitacora')) {
             const btn = e.target.closest('.js-register-bitacora');
             const employeeId = btn.dataset.employeeId;
             const employeeName = btn.dataset.employeeName;
+            console.debug('employee_permits: register-bitacora clicked', employeeId, employeeName);
             openBitacoraModal(employeeId, employeeName);
         }
         
@@ -644,6 +687,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.closest('.js-list-bitacoras')) {
             const btn = e.target.closest('.js-list-bitacoras');
             const employeeId = btn.dataset.employeeId;
+            console.debug('employee_permits: list-bitacoras clicked', employeeId);
             openBitacoraList(employeeId);
         }
         

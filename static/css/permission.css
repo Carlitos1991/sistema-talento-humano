@@ -92,14 +92,14 @@
 
 /* Aplicar también en modales que usen .custom-table dentro de modal-body-scrolled */
 .modal-body-scrolled .custom-table thead th {
-    /* Encabezados en modales: mismo tono oscuro con texto blanco */
-    background: linear-gradient(90deg, #0f1724 0%, #0b1220 100%) !important;
-    color: #ffffff !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    /* Encabezados en modales: usar el mismo estilo que person_list (gradiente claro azul) */
+    background: linear-gradient(90deg, #eef2ff 0%, #f4f9ff 100%) !important;
+    color: #1e3a8a !important;
+    border-bottom: 1px solid rgba(30,58,138,0.08) !important;
 }
 .modal-body-scrolled .custom-table thead th:nth-last-child(1),
 .modal-body-scrolled .custom-table thead th:nth-last-child(2) {
-    background: linear-gradient(90deg, #142534 0%, #0e1b2a 100%) !important;
+    background: linear-gradient(90deg, #eef6ff 0%, #f4f9ff 100%) !important;
 }
 
 .custom-table td {
