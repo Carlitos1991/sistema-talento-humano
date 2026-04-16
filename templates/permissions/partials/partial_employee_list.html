@@ -2,7 +2,7 @@
     <table class="custom-table compact-table">
         <thead>
         <tr>
-            <th style="width: 60px;">Foto</th>
+            <th style="width: 5%;">Foto</th>
             <th style="width: 40%;">Nombres y Apellidos</th>
             <th style="width: 15%;">Cédula</th>
             <th class="text-center" style="width: 15%;">Bitácoras</th>
@@ -19,12 +19,10 @@
                     {% if item.employee.person.photo %}
                         <img src="{{ item.employee.person.photo.url }}"
                              alt="{{ item.employee.person.get_full_name }}"
-                             class="employee-avatar"
-                             style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                             class="employee-avatar">
                     {% else %}
-                        <div class="employee-avatar-placeholder"
-                             style="width: 32px; height: 32px; border-radius: 50%; background: #e0e7ff; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <i class="fas fa-user" style="color: #6366f1;"></i>
+                        <div class="employee-avatar-placeholder">
+                            <i class="fas fa-user avatar-icon"></i>
                         </div>
                     {% endif %}
                 </td>

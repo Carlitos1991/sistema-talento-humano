@@ -163,13 +163,14 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label font-weight-700">Documento PDF <span class="text-danger">*</span></label>
                         <div class="file-upload-box">
-                            <input type="file" 
-                                   name="attachment" 
-                                   id="attachment" 
-                                   class="file-input-hidden" 
-                                   accept=".pdf">
-                            <label for="attachment" class="file-upload-label" title="Adjuntar PDF">
-                                <div class="file-upload-icon">
+                            <input type="file"
+                                   name="attachment"
+                                   id="attachment"
+                                   class="file-input-hidden"
+                                   accept=".pdf"
+                                   style="position:absolute;left:-9999px;">
+                            <label for="attachment" id="attachment-label" class="file-upload-label" title="Adjuntar PDF">
+                                <div class="file-upload-icon" aria-hidden="true">
                                     <i class="fas fa-file-pdf"></i>
                                 </div>
                             </label>
@@ -216,32 +217,49 @@
 </div>
 
 <script>
-    // Mostrar nombre del archivo seleccionado
+    // Mostrar nombre del archivo seleccionado y marcar icono
     document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('attachment');
         const fileNameDisplay = document.getElementById('file-name-display');
-        
+        const attachmentLabel = document.getElementById('attachment-label');
+
         if (fileInput) {
             fileInput.addEventListener('change', function() {
                 if (this.files && this.files.length > 0) {
                     const file = this.files[0];
                     const fileName = file.name;
                     const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
-                    
+
                     // Validar tamaño
                     if (file.size > 2 * 1024 * 1024) {
-                        fileNameDisplay.textContent = 'Archivo muy grande';
-                        fileNameDisplay.style.color = '#ef4444';
+                        if (fileNameDisplay) {
+                            fileNameDisplay.textContent = 'Archivo muy grande';
+                            fileNameDisplay.style.color = '#ef4444';
+                        }
                         this.value = ''; // Limpiar selección
                         alert('El archivo no debe superar los 2MB');
                         return;
                     }
-                    
-                    fileNameDisplay.textContent = `${fileName} (${fileSize}MB)`;
-                    fileNameDisplay.style.color = '#10b981';
+
+                    // marcar label como seleccionado y poner tooltip con nombre
+                    if (attachmentLabel) {
+                        attachmentLabel.classList.add('file-selected');
+                        attachmentLabel.setAttribute('title', fileName + ' (' + fileSize + 'MB)');
+                    }
+
+                    if (fileNameDisplay) {
+                        fileNameDisplay.textContent = `${fileName} (${fileSize}MB)`;
+                        fileNameDisplay.style.color = '#10b981';
+                    }
                 } else {
-                    fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-                    fileNameDisplay.style.color = '#6b7280';
+                    if (attachmentLabel) {
+                        attachmentLabel.classList.remove('file-selected');
+                        attachmentLabel.setAttribute('title', 'Adjuntar PDF');
+                    }
+                    if (fileNameDisplay) {
+                        fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+                        fileNameDisplay.style.color = '#6b7280';
+                    }
                 }
             });
         }

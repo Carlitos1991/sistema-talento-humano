@@ -262,19 +262,24 @@
 }
 
 .employee-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     object-fit: cover;
 }
 
 .employee-avatar-placeholder {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.avatar-icon {
+    color: #6366f1;
+    font-size: 14px;
 }
 
 /* File upload icon-only style for bitácora modal */
@@ -284,19 +289,25 @@
 }
 
 .file-input-hidden {
-    display: none;
+    /* hide input reliably across browsers but keep it focusable */
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
 }
 
 .file-upload-label {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 8px;
+    width: 96px !important;
+    height: 96px !important;
+    border-radius: 10px;
     background: #f3f4f6;
     cursor: pointer;
     border: 1px dashed transparent;
+    box-shadow: 0 2px 6px rgba(2,6,23,0.04);
 }
 
 .file-upload-label:hover {
@@ -304,8 +315,24 @@
 }
 
 .file-upload-icon {
-    font-size: 20px;
+    font-size: 36px;
     color: #b91c1c; /* rojo PDF */
+    line-height: 1;
+}
+
+/* Regla más específica para forzar tamaño del icono Font Awesome si hay conflicto */
+.file-upload-label .file-upload-icon i {
+    font-size: 36px !important;
+    line-height: 1 !important;
+}
+
+.file-upload-label.file-selected {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+.file-upload-label.file-selected .file-upload-icon {
+    color: #059669;
 }
 
 /* ocultar texto del uploader para mostrar solo el icono */
