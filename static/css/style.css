@@ -3431,6 +3431,13 @@ th.sorted-desc .sort-arrow {
     padding: 1.25rem 2rem !important;
 }
 
+/* Ajustes específicos para modales que contienen tablas y paginadores (evita solapamientos) */
+.modal-body-scrolled { padding-bottom: 110px !important; }
+.modal-body-scrolled .table-controls { display:flex; justify-content: center; align-items: center; gap: 12px; }
+.modal-body-scrolled .table-container { margin-bottom: 0; }
+.modal-body-scrolled .pagination-container { position: relative; z-index: 2; width: 100%; display:flex; justify-content: space-between; align-items:center; }
+.modal-body-scrolled .pagination-container .pagination-controls { justify-content: flex-end; gap: 6px; }
+
 .modal-content {
     padding: 2rem;
     overflow-y: auto;

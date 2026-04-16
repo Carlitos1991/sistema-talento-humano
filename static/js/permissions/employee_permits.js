@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalOverlay = document.getElementById('customModal');
     const modalContentContainer = document.getElementById('modal-dynamic-content');
 
+    // (debug submit handler removed)
+
+    // Interceptar llamadas programáticas a form.submit() dentro del modal
+    // (debug overrides removed)
+
     // Referencias de paginación
     const pageInfo = document.getElementById('page-info');
     const btnPrev = document.getElementById('btn-prev');
@@ -55,8 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.querySelector(HISTORY_MOUNT)) {
         const {createApp} = Vue;
         const appHistory = createApp({
-            delimiters: ['[[', ']]'],
-            data() {
+            delimiters: ['[[', ']]'], data() {
                 return {
                     isVisible: false,
                     employeeId: null,
@@ -67,53 +71,42 @@ document.addEventListener('DOMContentLoaded', function () {
                     currentPage: 1,
                     pageSize: 10
                 }
-            },
-            computed: {
+            }, computed: {
                 filteredPermits() {
                     const term = this.searchQuery.toLowerCase().trim();
                     if (!term) return this.permits;
-                    return this.permits.filter(permit =>
-                        permit.permit_type__name.toLowerCase().includes(term) ||
-                        (permit.reason && permit.reason.toLowerCase().includes(term))
-                    );
-                },
-                totalPages() {
+                    return this.permits.filter(permit => permit.permit_type__name.toLowerCase().includes(term) || (permit.reason && permit.reason.toLowerCase().includes(term)));
+                }, totalPages() {
                     return Math.ceil(this.filteredPermits.length / this.pageSize) || 1;
-                },
-                paginatedPermits() {
+                }, paginatedPermits() {
                     const start = (this.currentPage - 1) * this.pageSize;
                     const end = start + this.pageSize;
                     return this.filteredPermits.slice(start, end);
-                },
-                startIndex() {
+                }, startIndex() {
                     return this.filteredPermits.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
-                },
-                endIndex() {
+                }, endIndex() {
                     return Math.min(this.currentPage * this.pageSize, this.filteredPermits.length);
                 }
-            },
-            methods: {
+            }, methods: {
                 async open(employeeId) {
                     this.employeeId = employeeId;
                     this.searchQuery = '';
                     this.currentPage = 1;
                     await this.fetchHistory();
                     this.isVisible = true;
-                },
-                closeModal() {
+                }, closeModal() {
                     this.isVisible = false;
                     this.permits = [];
-                },
-                async fetchHistory() {
+                }, async fetchHistory() {
                     if (!this.employeeId) return;
                     try {
                         const url = `/permitrequest/employees/${this.employeeId}/history/`;
                         const res = await fetch(url);
-                        
+
                         if (!res.ok) {
                             throw new Error(`HTTP error! status: ${res.status}`);
                         }
-                        
+
                         const data = await res.json();
                         if (data.success) {
                             this.employeeName = data.employee_name;
@@ -126,17 +119,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error('Error al cargar historial:', e);
                         Swal.fire('Error', 'No se pudo cargar el historial de permisos', 'error');
                     }
-                },
-                formatDate(dateString) {
+                }, formatDate(dateString) {
                     if (!dateString) return '-';
                     const date = new Date(dateString + 'T00:00:00');
                     return date.toLocaleDateString('es-EC', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
+                        year: 'numeric', month: '2-digit', day: '2-digit'
                     });
-                },
-                getStatusLabel(status) {
+                }, getStatusLabel(status) {
                     const labels = {
                         'REQUESTED': 'Pendiente',
                         'PENDING': 'Pendiente',
@@ -145,8 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         'CANCELLED': 'Cancelado'
                     };
                     return labels[status] || status;
-                },
-                getStatusClass(status) {
+                }, getStatusClass(status) {
                     const classes = {
                         'REQUESTED': 'inactive',
                         'PENDING': 'inactive',
@@ -245,20 +233,194 @@ document.addEventListener('DOMContentLoaded', function () {
                 const url = `/permitrequest/bitacora/history/${employeeId}/`;
                 fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                     .then(res => {
-                            if (!res.ok) {
-                                return res.text().then(text => { throw new Error(text || 'Error al obtener historial'); });
-                            }
-                            return res.text();
+                        if (!res.ok) {
+                            return res.text().then(text => {
+                                throw new Error(text || 'Error al obtener historial');
+                            });
+                        }
+                        return res.text();
                     })
                     .then(html => {
-                            modalContentContainer.innerHTML = html;
-                            // guardar URL base para futuras consultas (paginación/orden/búsqueda)
-                            modalContentContainer.dataset.historyUrl = url;
+                        modalContentContainer.innerHTML = html;
+                        // guardar URL base para futuras consultas (paginación/orden/búsqueda)
+                        modalContentContainer.dataset.historyUrl = url;
                         modalOverlay.classList.remove('hidden');
                         document.body.style.overflow = 'hidden';
+                        // Asegurar que los botones de cierre dentro del modal inyectado cierren correctamente
+                        modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel, .btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+                        // Delegated handler as fallback (avoid duplicate handlers)
+                        if (modalContentContainer._bitacoraCloseHandler) {
+                            modalContentContainer.removeEventListener('click', modalContentContainer._bitacoraCloseHandler);
+                        }
+                        modalContentContainer._bitacoraCloseHandler = function (ev) {
+                            if (ev.target.closest('.js-close-modal') || ev.target.closest('.js-close-bitacora-modal') || ev.target.closest('.btn-close-modal') || ev.target.closest('.btn-cancel')) {
+                                ev.preventDefault();
+                                closeModal();
+                            }
+                        };
+                        modalContentContainer.addEventListener('click', modalContentContainer._bitacoraCloseHandler);
                         // Inicializar lógica del modal de historial de bitácoras aprobadas
-                        if (typeof initBitacoraHistoryModal === 'function') {
-                            initBitacoraHistoryModal();
+                        // Si Vue está disponible montaremos una app ligera; si no, usamos el inicializador clásico
+                        if (typeof Vue === 'undefined') {
+                            if (typeof initBitacoraHistoryModal === 'function') {
+                                initBitacoraHistoryModal();
+                            }
+                        }
+                        // También montar un pequeño app que use fetch JSON (comportamiento similar al modal de bitácora list)
+                        try {
+                            const empId = employeeId;
+                            // expose for modal functions
+                            modalContentContainer.dataset.employeeId = empId;
+                            const mountEl = document.getElementById('bitacora-history-container');
+                            if (mountEl && typeof Vue !== 'undefined') {
+                                const {createApp} = Vue;
+                                const historyApp = createApp({
+                                    delimiters: ['[[', ']]'],
+                                    data() {
+                                        return {
+                                            employeeId: empId,
+                                            bitacoras: [],
+                                            from: '',
+                                            to: '',
+                                            page: 1,
+                                            page_size: 10,
+                                            total_pages: 1,
+                                            total_count: 0
+                                        };
+                                    },
+                                    computed: {
+                                        startIndex() {
+                                            return this.total_count === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
+                                        },
+                                        endIndex() {
+                                            return Math.min(this.total_count, this.page * this.page_size);
+                                        }
+                                    },
+                                    methods: {
+                                        formatDate(dateString) {
+                                            if (!dateString) return '';
+                                            try {
+                                                const d = new Date(dateString);
+                                                return d.toLocaleDateString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit'});
+                                            } catch (e) {
+                                                return dateString;
+                                            }
+                                        },
+                                        formatDateTimeShort(dateTime) {
+                                            if (!dateTime) return '';
+                                            try {
+                                                const d = new Date(dateTime);
+                                                return d.toLocaleString('es-EC');
+                                            } catch (e) {
+                                                return dateTime;
+                                            }
+                                        },
+                                        async fetchData() {
+                                            try {
+                                                const qs = new URLSearchParams();
+                                                qs.set('page', this.page || 1);
+                                                qs.set('page_size', this.page_size || 10);
+                                                if (this.from) qs.set('from', this.from);
+                                                if (this.to) qs.set('to', this.to);
+                                                const resp = await fetch(`/permitrequest/bitacora/history/${this.employeeId}/?format=json&${qs.toString()}`);
+                                                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                                                const data = await resp.json();
+
+                                                this.bitacoras = data.bitacoras || [];
+                                                this.page = data.page || this.page;
+                                                this.total_count = data.total_count || 0;
+                                                this.total_pages = data.total_pages || 1;
+
+                                                // render rows into tbody (kept for non-Vue fallback usage)
+                                                const tbody = document.getElementById('bitacora-history-tbody');
+                                                if (tbody) {
+                                                    if (!this.bitacoras || this.bitacoras.length === 0) {
+                                                        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
+                                                    } else {
+                                                        const startIndex = ((this.page || 1) - 1) * this.page_size;
+                                                        tbody.innerHTML = this.bitacoras.map((b, idx) => `
+                                                            <tr>
+                                                                <td class="text-center">${startIndex + idx + 1}</td>
+                                                                <td>${b.start_date || ''}</td>
+                                                                <td class="text-center">${b.start_time || '--:--'}</td>
+                                                                <td class="text-center">${b.end_time || '--:--'}</td>
+                                                                <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
+                                                                <td>${b.created_by_full_name || ''}</td>
+                                                                <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC') : ''}</td>
+                                                                <td>${b.response_by_full_name || ''}</td>
+                                                                <td>${b.response_date ? new Date(b.response_date).toLocaleString('es-EC') : ''}</td>
+                                                            </tr>
+                                                        `).join('');
+                                                    }
+                                                }
+
+                                                // update pagination controls
+                                                const info = document.getElementById('bitacora-history-info');
+                                                if (info) {
+                                                    const start = this.total_count === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
+                                                    const end = Math.min(this.total_count, this.page * this.page_size);
+                                                    info.textContent = `Mostrando ${start} a ${end} de ${this.total_count}`;
+                                                }
+
+                                                const pageInput = document.getElementById('bitacora-history-current');
+                                                const totalBadge = document.getElementById('bitacora-history-total');
+                                                const prevBtn = document.getElementById('bitacora-history-prev');
+                                                const nextBtn = document.getElementById('bitacora-history-next');
+                                                const firstBtn = document.getElementById('bitacora-history-first');
+                                                const lastBtn = document.getElementById('bitacora-history-last');
+
+                                                if (pageInput) pageInput.value = this.page;
+                                                if (totalBadge) totalBadge.textContent = `de ${this.total_pages}`;
+                                                if (prevBtn) prevBtn.disabled = !(this.page > 1);
+                                                if (firstBtn) firstBtn.disabled = !(this.page > 1);
+                                                if (nextBtn) nextBtn.disabled = !(this.page < this.total_pages);
+                                                if (lastBtn) lastBtn.disabled = !(this.page < this.total_pages);
+
+                                            } catch (err) {
+                                                console.error('Error fetching history JSON', err);
+                                                throw err;
+                                            }
+                                        },
+                                        goTo(page) {
+                                            const p = Math.max(1, Math.min(page, this.total_pages || 1));
+                                            this.page = p;
+                                            this.fetchData();
+                                        },
+                                        prev() { this.goTo(this.page - 1); },
+                                        next() { this.goTo(this.page + 1); },
+                                        first() { this.goTo(1); },
+                                        last() { this.goTo(this.total_pages); },
+                                        clearDates() { this.from = ''; this.to = ''; document.getElementById('bitacora-history-from').value=''; document.getElementById('bitacora-history-to').value=''; this.page=1; this.fetchData(); }
+                                    }
+                                }).mount('#bitacora-history-container');
+
+                                // expose globally
+                                window.appBitacoraHistory = historyApp;
+
+                                // Wire inputs and buttons
+                                const fromInputEl = document.getElementById('bitacora-history-from');
+                                const toInputEl = document.getElementById('bitacora-history-to');
+                                const clearBtnEl = document.getElementById('bitacora-history-clear');
+                                const prevBtnEl = document.getElementById('bitacora-history-prev');
+                                const nextBtnEl = document.getElementById('bitacora-history-next');
+                                const firstBtnEl = document.getElementById('bitacora-history-first');
+                                const lastBtnEl = document.getElementById('bitacora-history-last');
+                                const pageInputEl = document.getElementById('bitacora-history-current');
+
+                                if (fromInputEl) fromInputEl.addEventListener('change', function () { historyApp.from = this.value; historyApp.page = 1; historyApp.fetchData(); });
+                                if (toInputEl) toInputEl.addEventListener('change', function () { historyApp.to = this.value; historyApp.page = 1; historyApp.fetchData(); });
+                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () { historyApp.clearDates(); });
+                                if (prevBtnEl) prevBtnEl.addEventListener('click', function () { historyApp.prev(); });
+                                if (nextBtnEl) nextBtnEl.addEventListener('click', function () { historyApp.next(); });
+                                if (firstBtnEl) firstBtnEl.addEventListener('click', function () { historyApp.first(); });
+                                if (lastBtnEl) lastBtnEl.addEventListener('click', function () { historyApp.last(); });
+                                if (pageInputEl) pageInputEl.addEventListener('change', function () { const p = parseInt(this.value) || 1; historyApp.goTo(p); });
+
+                                // initial fetch
+                                historyApp.fetchData();
+                            }
+                        } catch (err) {
+                            console.warn('No se pudo inicializar history Vue app', err);
                         }
                     })
                     .catch(err => {
@@ -274,18 +436,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openGeneratePermitModal(employeeId, employeeName) {
         const url = `/permitrequest/requests/generate/?employee=${employeeId}`;
-        
+
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
                 modalContentContainer.innerHTML = html;
                 modalOverlay.classList.remove('hidden');
-                
+
                 // Bloquear scroll del body
                 document.body.style.overflow = 'hidden';
 
                 initModalPlugins();
-                
+
                 // Inicializar la lógica del formulario de permisos
                 initPermitForm();
 
@@ -301,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function closeModal() {
         modalOverlay.classList.add('hidden');
         modalContentContainer.innerHTML = '';
-        
+
         // Restaurar scroll del body
         document.body.style.overflow = '';
     }
@@ -309,8 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initModalPlugins() {
         if (typeof $ !== 'undefined' && $.fn.select2) {
             $('.select2').select2({
-                width: '100%',
-                dropdownParent: modalOverlay
+                width: '100%', dropdownParent: modalOverlay
             });
         }
     }
@@ -325,18 +486,16 @@ document.addEventListener('DOMContentLoaded', function () {
         form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
         fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
+            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(async res => {
                 const contentType = res.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     throw new Error('Respuesta no válida del servidor');
                 }
-                
+
                 const data = await res.json();
-                
+
                 if (res.ok) {
                     closeModal();
                     Swal.fire({
@@ -370,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 tableContainer.innerHTML = data.html;
-                
+
                 if (data.pagination) {
                     updatePagination(data.pagination);
                 }
@@ -414,7 +573,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Inicializador para modal de historial de bitácoras aprobadas
     window.initBitacoraHistoryModal = function () {
         const baseUrl = modalContentContainer.dataset.historyUrl || null;
-        const searchInput = document.getElementById('bitacora-history-search');
+        const fromInput = document.getElementById('bitacora-history-from');
+        const toInput = document.getElementById('bitacora-history-to');
+        const clearBtn = document.getElementById('bitacora-history-clear');
         const pageInput = document.getElementById('bitacora-history-current');
         const pageSizeSelect = document.getElementById('bitacora-history-pagesize-select');
         const prevBtn = document.getElementById('bitacora-history-prev');
@@ -430,9 +591,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const qs = new URLSearchParams();
             qs.set('page', params.page || currentPage);
             qs.set('page_size', params.page_size || pageSize);
-            if (params.q !== undefined) qs.set('q', params.q);
-            else if (searchInput && searchInput.value) qs.set('q', searchInput.value);
-            if (params.sort) qs.set('sort', params.sort);
+            // Date range filter
+            if (params.from !== undefined) qs.set('from', params.from); else if (fromInput && fromInput.value) qs.set('from', fromInput.value);
+            if (params.to !== undefined) qs.set('to', params.to); else if (toInput && toInput.value) qs.set('to', toInput.value);
 
             const url = `${baseUrl}?${qs.toString()}`;
             fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
@@ -446,16 +607,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(err => console.error('Error cargando historial:', err));
         }
 
-        // Debounce search
-        let searchTimer = null;
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(searchTimer);
-                searchTimer = setTimeout(() => {
-                    currentPage = 1;
-                    fetchAndRender({page: 1, q: searchInput.value});
-                }, 300);
-            });
+
+        // Date range listeners
+        if (fromInput) {
+            fromInput.addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // Bloquea otros scripts (como JQuery)
+                currentPage = 1;
+                fetchAndRender({page: 1});
+                return false;
+            }, true); // El 'true' usa la fase de captura para actuar antes que nadie
+        }
+
+        if (toInput) {
+            toInput.addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                currentPage = 1;
+                fetchAndRender({page: 1});
+                return false;
+            }, true);
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (fromInput) fromInput.value = '';
+                if (toInput) toInput.value = '';
+                currentPage = 1;
+                fetchAndRender({page: 1, from: '', to: ''});
+            }, true);
         }
 
         if (pageSizeSelect) {
@@ -465,6 +647,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 fetchAndRender({page: 1, page_size: pageSize});
             });
         }
+
+        // Prevent accidental form submission from inputs inside the modal (some browsers/forms auto-submit on enter)
+        modalContentContainer.querySelectorAll('form').forEach(f => {
+            f.addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                // if form should be handled via AJAX, developer can wire it explicitly
+                console.debug('Prevented native submit in bitacora history modal form');
+            });
+        });
 
         if (prevBtn) prevBtn.addEventListener('click', function () {
             const p = Math.max(1, currentPage - 1);
@@ -485,16 +677,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Sort headers: delegación por clicks en th con data-sort
-        modalContentContainer.querySelectorAll('th[data-sort]').forEach(th => {
-            th.style.cursor = 'pointer';
-            th.addEventListener('click', function () {
-                const s = th.dataset.sort;
-                // toggle direction
-                sort = (sort === s) ? `-${s}` : s;
-                fetchAndRender({page: 1, sort: sort});
-            });
-        });
+        // No client-side sorting for historial; server-side pagination only (no headers clickable)
 
         // Ensure close buttons work
         modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel').forEach(btn => btn.addEventListener('click', closeModal));
@@ -512,12 +695,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const reasonTextarea = document.getElementById('id_reason');
         const attachmentSection = document.getElementById('attachment-section');
         const attachmentInput = document.getElementById('id_justification_file');
-        
+
         if (!parentSelect || !subtypeContainer || !subtypeSelect) {
             console.error('ERROR: No se encontraron elementos del formulario de permisos');
             return;
         }
-        
+
         const startDateInput = document.getElementById('id_start_date');
         const startTimeInput = document.getElementById('id_start_time');
         const daysInput = document.getElementById('id_days');
@@ -528,14 +711,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const endTimeHidden = document.getElementById('id_end_time');
 
         // Cambio de tipo padre - Cargar subtipos dinámicamente
-        parentSelect.addEventListener('change', async function() {
+        parentSelect.addEventListener('change', async function () {
             const parentId = this.value;
             const selectedOption = this.options[this.selectedIndex];
             const needsJustification = selectedOption.dataset.needsJustification === 'true';
             const requiresAttachment = selectedOption.dataset.requiresAttachment === 'true';
-            
+
             subtypeSelect.innerHTML = '<option value="">-- Cargando... --</option>';
-            
+
             if (!parentId) {
                 subtypeSelect.innerHTML = '<option value="">-- Primero seleccione tipo principal --</option>';
                 subtypeContainer.style.display = 'none';
@@ -543,13 +726,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 attachmentSection.style.display = 'none';
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`);
                 const data = await response.json();
-                
+
                 subtypeSelect.innerHTML = '<option value="">-- Seleccione --</option>';
-                
+
                 if (data.success && data.subtypes && data.subtypes.length > 0) {
                     data.subtypes.forEach(subtype => {
                         const option = document.createElement('option');
@@ -559,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         option.dataset.requiresAttachment = subtype.requires_attachment;
                         subtypeSelect.appendChild(option);
                     });
-                    
+
                     subtypeContainer.style.display = 'block';
                     subtypeSelect.required = true;
                     reasonSection.style.display = 'none';
@@ -570,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     subtypeContainer.style.display = 'none';
                     subtypeSelect.required = false;
                     subtypeSelect.innerHTML = '<option value="' + parentId + '" selected style="display:none;"></option>';
-                    
+
                     if (needsJustification) {
                         reasonSection.style.display = 'block';
                         reasonTextarea.required = true;
@@ -578,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         reasonSection.style.display = 'none';
                         reasonTextarea.required = false;
                     }
-                    
+
                     if (requiresAttachment) {
                         attachmentSection.style.display = 'block';
                         attachmentInput.required = true;
@@ -595,13 +778,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Cambio de subtipo
-        subtypeSelect.addEventListener('change', function() {
+        subtypeSelect.addEventListener('change', function () {
             const selectedOption = this.options[this.selectedIndex];
             if (!selectedOption || !selectedOption.value) return;
-            
+
             const needsJustification = selectedOption.dataset.needsJustification === 'true';
             const requiresAttachment = selectedOption.dataset.requiresAttachment === 'true';
-            
+
             if (needsJustification) {
                 reasonSection.style.display = 'block';
                 reasonTextarea.required = true;
@@ -609,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 reasonSection.style.display = 'none';
                 reasonTextarea.required = false;
             }
-            
+
             if (requiresAttachment) {
                 attachmentSection.style.display = 'block';
                 attachmentInput.required = true;
@@ -638,14 +821,10 @@ document.addEventListener('DOMContentLoaded', function () {
             startDateTime.setMinutes(startDateTime.getMinutes() + minutes);
 
             const endDateStr = startDateTime.toLocaleDateString('es-EC', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
+                year: 'numeric', month: '2-digit', day: '2-digit'
             });
             const endTimeStr = startDateTime.toLocaleTimeString('es-EC', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
+                hour: '2-digit', minute: '2-digit', hour12: false
             });
 
             calculatedEndSpan.textContent = `${endDateStr} ${endTimeStr}`;
@@ -672,52 +851,41 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // BIT\u00c1CORAS: REGISTRAR E LISTAR
     // =========================================================
-    
+
     // Referencias modales bitácora
     const bitacoraModal = document.getElementById('bitacoraModal');
     const bitacoraModalContent = document.getElementById('bitacora-modal-content');
-    
+
     // Referencias modales listado
     const bitacoraListModal = document.getElementById('bitacoraListModal');
-    
+
     // Event delegation para botones de bitácora
-    document.addEventListener('click', function(e) {
-        // DEBUG: registrar clicks relevantes para diagnosticar por qué no responden
-        try {
-            const btn = e.target.closest('button, a');
-            if (btn) {
-                console.debug('employee_permits: click on', btn.className, 'dataset=', btn.dataset);
-            } else {
-                // pequeños logs para clicks no sobre botones
-                // console.debug('employee_permits: click target', e.target);
-            }
-        } catch (err) {
-            console.warn('employee_permits: debug log failed', err);
-        }
+    document.addEventListener('click', function (e) {
+        // Event clicks handled below
 
         // Botón: Registrar Bitácora
         if (e.target.closest('.js-register-bitacora')) {
             const btn = e.target.closest('.js-register-bitacora');
             const employeeId = btn.dataset.employeeId;
             const employeeName = btn.dataset.employeeName;
-            console.debug('employee_permits: register-bitacora clicked', employeeId, employeeName);
+            // abrir modal de registro de bitácora
             openBitacoraModal(employeeId, employeeName);
         }
-        
+
         // Botón: Listar Bitácoras
         if (e.target.closest('.js-list-bitacoras')) {
             const btn = e.target.closest('.js-list-bitacoras');
             const employeeId = btn.dataset.employeeId;
-            console.debug('employee_permits: list-bitacoras clicked', employeeId);
+            // abrir listado de bitácoras
             openBitacoraList(employeeId);
         }
-        
+
         // Cerrar modal bitácora
         if (e.target.closest('.js-close-bitacora-modal')) {
             closeBitacoraModal();
         }
     });
-    
+
     // Abrir listado de bitácoras
     function openBitacoraList(employeeId) {
         if (window.appBitacoraList) {
@@ -726,18 +894,18 @@ document.addEventListener('DOMContentLoaded', function () {
             window.appBitacoraList.open(employeeId);
         }
     }
-    
+
     // Abrir modal de registro de bitácora
     function openBitacoraModal(employeeId, employeeName) {
         const url = `/permitrequest/bitacora/register/${employeeId}/`;
-        
+
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
                 bitacoraModalContent.innerHTML = html;
                 bitacoraModal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
-                
+
                 // Agregar event listener al formulario
                 const form = document.getElementById('bitacoraRegisterForm');
                 if (form) {
@@ -749,61 +917,58 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
             });
     }
-    
+
     // Cerrar modal bitácora
     function closeBitacoraModal() {
         bitacoraModal.classList.add('hidden');
         bitacoraModalContent.innerHTML = '';
         document.body.style.overflow = '';
     }
-    
+
     // Manejar submit del formulario de bitácora
     function handleBitacoraSubmit(e) {
         e.preventDefault();
         const form = e.target;
-        
+
         // Validar que al menos una jornada esté completa
         const firstStart = form.querySelector('#first_start').value;
         const firstEnd = form.querySelector('#first_end').value;
         const secondStart = form.querySelector('#second_start').value;
         const secondEnd = form.querySelector('#second_end').value;
-        
+
         const hasFirst = firstStart && firstEnd;
         const hasSecond = secondStart && secondEnd;
-        
+
         if (!hasFirst && !hasSecond) {
             Swal.fire('Error', 'Debe ingresar al menos una jornada completa (entrada y salida)', 'error');
             return;
         }
-        
+
         // Validar archivo PDF
         const fileInput = form.querySelector('#attachment');
         if (!fileInput.files || fileInput.files.length === 0) {
             Swal.fire('Error', 'Debe adjuntar un documento PDF', 'error');
             return;
         }
-        
+
         const file = fileInput.files[0];
         if (file.size > 2 * 1024 * 1024) {
             Swal.fire('Error', 'El archivo no debe superar los 2MB', 'error');
             return;
         }
-        
+
         if (!file.name.toLowerCase().endsWith('.pdf')) {
             Swal.fire('Error', 'Solo se permiten archivos PDF', 'error');
             return;
         }
-        
+
         const formData = new FormData(form);
         const employeeId = formData.get('employee_id');
         const url = `/permitrequest/bitacora/register/${employeeId}/`;
-        
+
         fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrfToken
+            method: 'POST', body: formData, headers: {
+                'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken
             }
         })
             .then(res => res.json())
@@ -811,11 +976,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     closeBitacoraModal();
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Éxito',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
+                        icon: 'success', title: 'Éxito', text: data.message, timer: 2000, showConfirmButton: false
                     });
                 } else {
                     Swal.fire('Error', data.message || 'Ocurrió un error', 'error');
@@ -826,17 +987,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
             });
     }
-    
+
     // =========================================================
     // MODAL VUE: LISTADO DE BIT\u00c1CORAS
     // =========================================================
     const BITACORA_LIST_MOUNT = '#bitacora-list-app';
-    
+
     if (document.querySelector(BITACORA_LIST_MOUNT)) {
         const {createApp} = Vue;
         window.appBitacoraList = createApp({
-            delimiters: ['[[', ']]'],
-            data() {
+            delimiters: ['[[', ']]'], data() {
                 return {
                     isVisible: false,
                     employeeId: null,
@@ -850,8 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     currentPage: 1,
                     perPage: 10
                 }
-            },
-            computed: {
+            }, computed: {
                 filteredBitacoras() {
                     // Filtrar por rango de fechas (start_date)
                     if (!this.fromDate && !this.toDate) return this.bitacoras;
@@ -865,28 +1024,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (to) {
                             // include entire 'to' day
                             const toEnd = new Date(to);
-                            toEnd.setHours(23,59,59,999);
+                            toEnd.setHours(23, 59, 59, 999);
                             if (d > toEnd) return false;
                         }
                         return true;
                     });
-                },
-                totalPages() {
+                }, totalPages() {
                     return Math.ceil(this.filteredBitacoras.length / this.perPage) || 1;
-                },
-                paginatedBitacoras() {
+                }, paginatedBitacoras() {
                     const start = (this.currentPage - 1) * this.perPage;
                     const end = start + this.perPage;
                     return this.filteredBitacoras.slice(start, end);
-                },
-                startIndex() {
+                }, startIndex() {
                     return this.filteredBitacoras.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
-                },
-                endIndex() {
+                }, endIndex() {
                     return Math.min(this.currentPage * this.perPage, this.filteredBitacoras.length);
                 }
-            },
-            methods: {
+            }, methods: {
                 async open(employeeId) {
                     this.employeeId = employeeId;
                     this.fromDate = '';
@@ -896,13 +1050,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     this.selectAll = false;
                     await this.fetchBitacoras();
                     this.isVisible = true;
-                },
-                clearDates() {
+                }, clearDates() {
                     this.fromDate = '';
                     this.toDate = '';
                     this.currentPage = 1;
-                },
-                closeModal() {
+                }, closeModal() {
                     this.isVisible = false;
                     this.bitacoras = [];
                     this.selectedBitacoras = [];
@@ -911,8 +1063,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         bitacoraListModal.classList.add('hidden');
                         document.body.style.overflow = '';
                     }
-                },
-                async fetchBitacoras() {
+                }, async fetchBitacoras() {
                     try {
                         const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
                         const res = await fetch(url);
@@ -925,17 +1076,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     } catch (err) {
                         console.error('Error:', err);
                     }
-                },
-                toggleAll() {
+                }, toggleAll() {
                     if (this.selectAll) {
                         this.selectedBitacoras = this.paginatedBitacoras.map(b => b.id);
                     } else {
                         this.selectedBitacoras = [];
                     }
-                },
-                async approveSelected() {
+                }, async approveSelected() {
                     if (this.selectedBitacoras.length === 0) return;
-                    
+
                     const result = await Swal.fire({
                         title: '¿Aprobar bitácoras?',
                         text: `Se aprobarán ${this.selectedBitacoras.length} bitácora(s)`,
@@ -944,16 +1093,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         confirmButtonText: 'Sí, aprobar',
                         cancelButtonText: 'Cancelar'
                     });
-                    
+
                     if (result.isConfirmed) {
                         try {
                             const res = await fetch('/permitrequest/bitacora/approve/', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
-                                },
-                                body: JSON.stringify({ids: this.selectedBitacoras})
+                                method: 'POST', headers: {
+                                    'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                }, body: JSON.stringify({ids: this.selectedBitacoras})
                             });
                             const data = await res.json();
                             if (data.success) {
@@ -968,10 +1114,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
                     }
-                },
-                async deleteSelected() {
+                }, async deleteSelected() {
                     if (this.selectedBitacoras.length === 0) return;
-                    
+
                     const result = await Swal.fire({
                         title: '¿Eliminar bitácoras?',
                         text: `Se eliminarán ${this.selectedBitacoras.length} bitácora(s)`,
@@ -981,16 +1126,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#ef4444'
                     });
-                    
+
                     if (result.isConfirmed) {
                         try {
                             const res = await fetch('/permitrequest/bitacora/delete/', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
-                                },
-                                body: JSON.stringify({ids: this.selectedBitacoras})
+                                method: 'POST', headers: {
+                                    'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                }, body: JSON.stringify({ids: this.selectedBitacoras})
                             });
                             const data = await res.json();
                             if (data.success) {
@@ -1005,8 +1147,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
                     }
-                },
-                async deleteSingle(id) {
+                }, async deleteSingle(id) {
                     // Reuse same confirmation as bulk delete
                     const result = await Swal.fire({
                         title: '¿Eliminar bitácora? ',
@@ -1020,12 +1161,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (!result.isConfirmed) return;
                     try {
                         const res = await fetch('/permitrequest/bitacora/delete/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': csrfToken
-                            },
-                            body: JSON.stringify({ids: [id]})
+                            method: 'POST', headers: {
+                                'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                            }, body: JSON.stringify({ids: [id]})
                         });
                         const data = await res.json();
                         if (data.success) {
@@ -1042,15 +1180,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 async openEdit(bitacora) {
                     // Preload start/end times into SweetAlert inputs
                     const {value: formValues} = await Swal.fire({
-                        title: 'Editar hora (Inicio / Fin)',
-                        html:
-                            `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
+                        title: 'Editar hora (Inicio / Fin)', html: `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
                                 <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
                                 <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
-                            </div>`,
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        preConfirm: () => {
+                            </div>`, focusConfirm: false, showCancelButton: true, preConfirm: () => {
                             const start = document.getElementById('swal-start').value;
                             const end = document.getElementById('swal-end').value;
                             if (!start && !end) {
@@ -1064,12 +1197,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (formValues) {
                         try {
                             const res = await fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
-                                },
-                                body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
+                                method: 'POST', headers: {
+                                    'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                }, body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
                             });
                             const data = await res.json();
                             if (data.success) {
@@ -1082,61 +1212,55 @@ document.addEventListener('DOMContentLoaded', function () {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
                     }
-                },
-                formatDate(dateStr) {
+                }, formatDate(dateStr) {
                     if (!dateStr) return '--';
                     const date = new Date(dateStr + 'T00:00:00');
                     return date.toLocaleDateString('es-EC', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
+                        year: 'numeric', month: '2-digit', day: '2-digit'
                     });
-                },
-                formatDateShort(dateTimeStr) {
+                }, formatDateShort(dateTimeStr) {
                     if (!dateTimeStr) return '--';
                     const date = new Date(dateTimeStr);
                     return date.toLocaleDateString('es-EC', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: '2-digit'
+                        month: '2-digit', day: '2-digit', year: '2-digit'
                     });
-                },
-                formatTime(timeStr) {
+                }, formatTime(timeStr) {
                     return timeStr || '--:--';
-                },
-                formatDateTime(dateTimeStr) {
+                }, formatDateTime(dateTimeStr) {
                     if (!dateTimeStr) return '--';
                     const date = new Date(dateTimeStr);
                     return date.toLocaleString('es-EC', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                     });
-                },
-                truncateText(text, maxLength) {
+                }, truncateText(text, maxLength) {
                     if (!text) return '';
                     if (text.length <= maxLength) return text;
                     return text.substring(0, maxLength) + '...';
-                },
-                getStatusLabel(status) {
+                }, getStatusLabel(status) {
                     const labels = {
-                        'REQUESTED': 'Pendiente',
-                        'APPROVED': 'Aprobado',
-                        'REJECTED': 'Rechazado'
+                        'REQUESTED': 'Pendiente', 'APPROVED': 'Aprobado', 'REJECTED': 'Rechazado'
                     };
                     return labels[status] || status;
-                },
-                getStatusClass(status) {
+                }, getStatusClass(status) {
                     const classes = {
-                        'REQUESTED': 'inactive',
-                        'APPROVED': 'active',
-                        'REJECTED': 'inactive'
+                        'REQUESTED': 'inactive', 'APPROVED': 'active', 'REJECTED': 'inactive'
                     };
                     return classes[status] || '';
                 }
             }
         }).mount(BITACORA_LIST_MOUNT);
+    }
+});
+
+// --- PREVENCIÓN GLOBAL DE RECARGAS EN MODALES ---
+$(document).on('submit', '#bitacora-history-container form, #bitacora-list-app form', function (e) {
+    e.preventDefault();
+    return false;
+});
+
+$(document).on('click', '#bitacora-history-container button', function (e) {
+    // Permitir que solo el botón de cerrar funcione normalmente si es necesario
+    if (!this.classList.contains('js-close-bitacora-modal')) {
+        e.preventDefault();
     }
 });

@@ -13,6 +13,9 @@ from io import BytesIO
 import base64
 from django.core.paginator import Paginator, EmptyPage
 from types import SimpleNamespace
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
@@ -280,6 +283,10 @@ class EmployeePermitHistoryView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         
         try:
             employee = get_object_or_404(Employee, pk=employee_id)
+            # Accesos seguros a datos de la persona relacionada (evitar AttributeError si no existe)
+            emp_person = getattr(employee, 'person', None)
+            employee_name = getattr(emp_person, 'full_name', '') if emp_person else (getattr(employee, 'get_full_name', lambda: '')() or '')
+            employee_identification = getattr(emp_person, 'document_number', '') if emp_person else ''
             permits = PermitRequest.objects.filter(
                 employee=employee
             ).select_related('permit_type').order_by('-created_at')
@@ -1080,76 +1087,148 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'permitrequest.view_permitrequest'
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee, pk=employee_id)
-        bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
-
-        qs = PermitRequest.objects.none()
-        if bitacora_type:
-            qs = PermitRequest.objects.filter(
-                employee=employee,
-                permit_type=bitacora_type,
-                status='APPROVED'
-            ).select_related('response_by', 'created_by')
-
-        # Filtering (search)
-        q = request.GET.get('q', '').strip()
-        if q:
-            qs = qs.filter(
-                Q(response_note__icontains=q) |
-                Q(created_by__first_name__icontains=q) |
-                Q(created_by__last_name__icontains=q) |
-                Q(response_by__first_name__icontains=q) |
-                Q(response_by__last_name__icontains=q)
-            )
-
-        # Sorting
-        sort = request.GET.get('sort', '-start_date')
-        # basic whitelist
-        allowed_sorts = ['start_date', '-start_date', 'start_time', '-start_time', 'end_time', '-end_time', 'created_at', '-created_at']
-        if sort not in allowed_sorts:
-            sort = '-start_date'
-        qs = qs.order_by(sort)
-
-        # Pagination
         try:
-            page = int(request.GET.get('page', 1))
-        except ValueError:
-            page = 1
-        try:
-            page_size = int(request.GET.get('page_size', 10))
-        except ValueError:
-            page_size = 10
+            employee = get_object_or_404(Employee, pk=employee_id)
+            bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
+            # Valores seguros para evitar NameError si faltan datos relacionados
+            emp_person = getattr(employee, 'person', None)
+            employee_name = getattr(emp_person, 'full_name', '') if emp_person else (getattr(employee, 'get_full_name', lambda: '')() or '')
+            employee_identification = getattr(emp_person, 'document_number', '') if emp_person else ''
 
-        paginator = Paginator(qs, page_size)
+            qs = PermitRequest.objects.none()
+            if bitacora_type:
+                qs = PermitRequest.objects.filter(
+                    employee=employee,
+                    permit_type=bitacora_type,
+                    status='APPROVED'
+                ).select_related('response_by', 'created_by')
 
-        # Manejar caso sin resultados para evitar paginator.page(0)
-        if paginator.count == 0:
-            page_obj = SimpleNamespace(
-                object_list=[],
-                number=1,
-                has_previous=False,
-                has_next=False,
-                start_index=lambda: 0,
-                end_index=lambda: 0
-            )
-        else:
+            # Filtering (search)
+            q = request.GET.get('q', '').strip()
+            if q:
+                qs = qs.filter(
+                    Q(response_note__icontains=q) |
+                    Q(created_by__first_name__icontains=q) |
+                    Q(created_by__last_name__icontains=q) |
+                    Q(response_by__first_name__icontains=q) |
+                    Q(response_by__last_name__icontains=q)
+                )
+
+            # Date range filter (start_date)
+            date_from = request.GET.get('from', '').strip()
+            date_to = request.GET.get('to', '').strip()
+            if date_from:
+                try:
+                    qs = qs.filter(start_date__gte=date_from)
+                except Exception:
+                    pass
+            if date_to:
+                try:
+                    qs = qs.filter(start_date__lte=date_to)
+                except Exception:
+                    pass
+
+            # Sorting
+            sort = request.GET.get('sort', '-start_date')
+            # basic whitelist
+            allowed_sorts = ['start_date', '-start_date', 'start_time', '-start_time', 'end_time', '-end_time', 'created_at', '-created_at']
+            if sort not in allowed_sorts:
+                sort = '-start_date'
+            qs = qs.order_by(sort)
+
+            # Pagination
             try:
-                page_obj = paginator.page(page)
-            except EmptyPage:
-                page_obj = paginator.page(paginator.num_pages)
+                page = int(request.GET.get('page', 1))
+            except ValueError:
+                page = 1
+            try:
+                page_size = int(request.GET.get('page_size', 10))
+            except ValueError:
+                page_size = 10
 
-        context = {
-            'bitacoras': page_obj.object_list,
-            'employee_name': employee.person.full_name,
-            'page_obj': page_obj,
-            'paginator': paginator,
-            'q': q,
-            'sort': sort,
-            'page_size': page_size,
-        }
+            paginator = Paginator(qs, page_size)
 
-        html = render_to_string('permissions/modals/modal_bitacora_history.html', context, request=request)
-        return HttpResponse(html)
+            # Manejar caso sin resultados para evitar paginator.page(0)
+            if paginator.count == 0:
+                page_obj = SimpleNamespace(
+                    object_list=[],
+                    number=1,
+                    has_previous=False,
+                    has_next=False,
+                    start_index=lambda: 0,
+                    end_index=lambda: 0
+                )
+            else:
+                try:
+                    page_obj = paginator.page(page)
+                except EmptyPage:
+                    page_obj = paginator.page(paginator.num_pages)
+
+            context = {
+                'bitacoras': page_obj.object_list,
+                'employee_name': employee_name,
+                'page_obj': page_obj,
+                'paginator': paginator,
+                'q': q,
+                'sort': sort,
+                'page_size': page_size,
+            }
+
+            # Si se solicita JSON (para render dinámico por JS/Vue), devolver datos en JSON
+            if request.GET.get('format') == 'json' or request.headers.get('Accept', '').startswith('application/json'):
+                try:
+                    # Construir lista serializable
+                    bitacoras_list = []
+                    for b in page_obj.object_list:
+                        # Serializar campos y convertir FieldFile a URL/nombre si aplica
+                        jf = getattr(b, 'justification_file', None)
+                        jf_val = ''
+                        try:
+                            if jf:
+                                jf_val = jf.url if hasattr(jf, 'url') else (jf.name if hasattr(jf, 'name') else str(jf))
+                        except Exception:
+                            jf_val = ''
+
+                        bit = {
+                            'id': b.id,
+                            'start_date': b.start_date.isoformat() if getattr(b, 'start_date', None) else None,
+                            'start_time': (b.start_time.strftime('%H:%M') if getattr(b, 'start_time', None) else None),
+                            'end_time': (b.end_time.strftime('%H:%M') if getattr(b, 'end_time', None) else None),
+                            'status': b.status,
+                            'created_at': b.created_at.isoformat() if getattr(b, 'created_at', None) else None,
+                            'created_by_full_name': getattr(b.created_by, 'get_full_name', lambda: '')() if b.created_by else '',
+                            'response_by_full_name': getattr(b.response_by, 'get_full_name', lambda: '')() if b.response_by else '',
+                            'response_date': b.response_date.isoformat() if getattr(b, 'response_date', None) else None,
+                            'response_note': getattr(b, 'response_note', '') or '',
+                            'justification_file': jf_val
+                        }
+                        bitacoras_list.append(bit)
+
+                    return JsonResponse({
+                        'success': True,
+                        'bitacoras': bitacoras_list,
+                        'employee_name': employee_name,
+                        'page': page_obj.number,
+                        'total_pages': paginator.num_pages,
+                        'total_count': paginator.count
+                    })
+                except Exception as e:
+                    import traceback
+                    logger.exception('Error serializing bitacoras for JSON response')
+                    # Registrar excepción en servidor, devolver mensaje genérico al cliente
+                    logger.exception('Error serializing bitacoras for JSON response')
+                    return JsonResponse({'success': False, 'message': 'Error interno al generar el historial'}, status=500)
+
+            # render HTML solo si no se pidió JSON
+            html = render_to_string('permissions/modals/modal_bitacora_history.html', context, request=request)
+            return HttpResponse(html)
+        except Exception as e:
+            import traceback
+            logger.exception('Unhandled error in BitacoraHistoryView.get')
+            if request.GET.get('format') == 'json' or request.headers.get('Accept', '').startswith('application/json'):
+                logger.exception('Unhandled error in BitacoraHistoryView.get')
+                return JsonResponse({'success': False, 'message': 'Error interno al generar el historial'}, status=500)
+            raise
 
 
 class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):

@@ -1,98 +1,80 @@
 {% load static %}
 
-<div class="modal-container-medium shadow-card" id="bitacora-history-container"
-    data-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
-    data-total="{% if paginator %}{{ paginator.num_pages }}{% else %}1{% endif %}"
-    data-sort="{{ sort|default:'-start_date' }}"
-    data-q="{{ q|default:'' }}">
-    <!-- Botón de Cerrar (mismo que modal registro) -->
-    <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
+<div id="bitacora-history-container" class="modal-container-medium animate-scale-in">
 
-    <!-- Cabecera Compacta (igual que modal registro) -->
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-clipboard-list"></i>
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-clipboard-list me-2"></i> Historial Bitácoras Aprobadas: [[ employee_name || '' ]]
+                </h3>
+                <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <h2 class="header-title-main">Historial Bitácoras Aprobadas</h2>
-        </div>
-        <p class="header-subtitle" id="employee-name-bitacora" style="margin-top: 8px; font-size: 14px;">
-            <i class="fas fa-user text-primary"></i> {{ employee_name }}
-        </p>
-    </div>
 
-    <div class="modal-body-scrolled">
-        <div class="table-controls">
-            <div class="search-box" style="max-width:360px; margin-right: 8px;">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="bitacora-history-search" class="input-field" placeholder="Buscar...">
-            </div>
-            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                <label class="form-label" style="margin:0; font-size:0.9rem;">Mostrar:</label>
-                <select id="bitacora-history-pagesize-select" class="std-input">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                </select>
-            </div>
-        </div>
+            <div class="modal-body-content modal-body-custom" style="display:flex; flex-direction:column; height:100%;">
+                <div class="table-controls mb-3" style="align-items:center; gap:12px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <label style="font-weight:600; color:#334155;">Desde:</label>
+                        <input type="date" id="bitacora-history-from" class="input-field" />
+                        <label style="font-weight:600; color:#334155;">Hasta:</label>
+                        <input type="date" id="bitacora-history-to" class="input-field" />
+                        <button type="button" class="btn-pill-action" id="bitacora-history-clear">Limpiar</button>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+                        <!-- acciones si se requieren -->
+                    </div>
+                </div>
 
-        <div class="table-container">
-            <table class="custom-table compact-table">
-                <thead>
-                <tr>
-                            <th class="col-number">N°</th>
-                            <th data-sort="start_date">Fecha Bitácora <span class="sort-arrow">⇅</span></th>
-                            <th data-sort="start_time">Inicio <span class="sort-arrow">⇅</span></th>
-                            <th data-sort="end_time">Fin <span class="sort-arrow">⇅</span></th>
-                            <th>Estado</th>
-                            <th>Registrado por</th>
-                            <th data-sort="created_at">Fecha de Registro <span class="sort-arrow">⇅</span></th>
-                            <th>Aprobado por</th>
-                            <th>Fecha Aprobación</th>
-                </tr>
-                </thead>
-                <tbody>
-                        {% for b in bitacoras %}
-                    <tr>
-                        <td class="text-center">{{ forloop.counter }}</td>
-                        <td>{{ b.start_date }}</td>
-                        <td class="text-center">{{ b.start_time|default:"--:--" }}</td>
-                        <td class="text-center">{{ b.end_time|default:"--:--" }}</td>
-                        <td class="text-center"><span class="badge badge-info">{% if b.status == 'APPROVED' %}APROBADAS{% else %}{{ b.status }}{% endif %}</span></td>
-                        <td>{{ b.created_by }}</td>
-                                <td>{{ b.created_at }}</td>
-                        <td>{{ b.response_by }}</td>
-                        <td>{{ b.response_date }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <!-- PAGINACIÓN SERVER-SIDE -->
-        <div class="pagination-container mt-3" id="bitacora-history-paginator">
-            <span class="pagination-info" id="bitacora-history-info">
-                Mostrando {{ page_obj.start_index|default:0 }} a {{ page_obj.end_index|default:0 }} de {{ paginator.count|default:0 }}
-            </span>
-            <div class="pagination-controls">
-                <button class="page-btn" id="bitacora-history-prev" {% if not page_obj.has_previous %}disabled{% endif %}>Anterior</button>
-                <input type="number" class="page-input" id="bitacora-history-current" value="{{ page_obj.number|default:1 }}" min="1" max="{{ paginator.num_pages|default:1 }}">
-                <span class="total-pages-badge" id="bitacora-history-total">de {{ paginator.num_pages|default:1 }}</span>
-                <button class="page-btn" id="bitacora-history-next" {% if not page_obj.has_next %}disabled{% endif %}>Siguiente</button>
+                <div class="table-container flex-grow-1" style="overflow-y:auto; min-height:300px;">
+                    <table class="managed-table w-100">
+                        <thead>
+                        <tr>
+                            <th style="width:4%;">N°</th>
+                            <th style="width:12%;">Fecha</th>
+                            <th style="width:8%;">Inicio</th>
+                            <th style="width:8%;">Fin</th>
+                            <th style="width:8%;">Estado</th>
+                            <th style="width:20%;">Registrado por</th>
+                            <th style="width:12%;">Fecha Registro</th>
+                            <th style="width:18%;">Aprobado por</th>
+                            <th style="width:10%;">Fecha Aprobación</th>
+                        </tr>
+                        </thead>
+                        <tbody id="bitacora-history-tbody">
+                        <tr v-if="bitacoras.length === 0">
+                            <td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td>
+                        </tr>
+                        <tr v-for="(b, idx) in bitacoras" :key="b.id">
+                            <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
+                            <td>[[ formatDate(b.start_date) ]]</td>
+                            <td class="text-center">[[ b.start_time || '--:--' ]]</td>
+                            <td class="text-center">[[ b.end_time || '--:--' ]]</td>
+                            <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span></td>
+                            <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>
+                            <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
+                            <td style="font-size:12px;">[[ b.response_by_full_name || '' ]]</td>
+                            <td style="font-size:12px;">[[ formatDateTimeShort(b.response_date) ]]</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-container mt-3" v-if="total_pages > 1">
+                    <span id="bitacora-history-info" class="pagination-info">Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ total_count ]]</span>
+                    <ul class="pagination-list">
+                        <li><button type="button" class="page-btn" id="bitacora-history-first">&laquo;</button></li>
+                        <li><button type="button" class="page-btn" id="bitacora-history-prev">&lsaquo;</button></li>
+                        <li>
+                            <input type="number" id="bitacora-history-current" :value="page" min="1" style="width:60px; text-align:center;">
+                            <span id="bitacora-history-total" style="margin-left:6px;">de [[ total_pages ]]</span>
+                        </li>
+                        <li><button type="button" class="page-btn" id="bitacora-history-next">&rsaquo;</button></li>
+                        <li><button type="button" class="page-btn" id="bitacora-history-last">&raquo;</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-cancel js-close-bitacora-modal">Cerrar</button>
             </div>
         </div>
-    </div>
-
-    <!-- Footer fijo similar al modal de registro -->
-    <div class="modal-footer-fixed">
-        <button type="button" class="btn-cancel js-close-bitacora-modal">
-            <i class="fas fa-times-circle"></i> CERRAR
-        </button>
-    </div>
-</div>
