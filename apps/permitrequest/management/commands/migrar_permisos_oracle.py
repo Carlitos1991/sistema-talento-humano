@@ -52,10 +52,43 @@ class Command(BaseCommand):
         try:
             self.stdout.write(self.style.WARNING(f"Conectando a Oracle ({dsn})..."))
 
-            # 1. INICIALIZAR CLIENTE THICK PARA ORACLE 11g
+            # 1. INICIALIZAR CLIENTE THICK PARA ORACLE (thick mode)
+            # Para servidores antiguos python-oracledb necesita el Instant Client (thick mode).
+            # Intentamos inicializar desde una variable de entorno o rutas comunes en Linux/Windows.
             try:
-                # ⚠️ REEMPLAZA ESTA RUTA por la tuya
-                oracledb.init_oracle_client(lib_dir=r"D:\oracle\instantclient_23_0")
+                instant_dir = None
+                try:
+                    import os
+                    instant_dir = os.environ.get('ORACLE_INSTANTCLIENT_DIR')
+                except Exception:
+                    instant_dir = None
+
+                candidates = []
+                if instant_dir:
+                    candidates.append(instant_dir)
+                # rutas comunes en Linux
+                candidates.extend([
+                    '/opt/oracle/instantclient_23_0',
+                    '/opt/oracle/instantclient_21_3',
+                    '/usr/lib/oracle/21/client64/lib'
+                ])
+                # ruta común en Windows (por si se ejecuta localmente)
+                candidates.append(r"D:\oracle\instantclient_23_0")
+
+                initialized = False
+                for path in candidates:
+                    try:
+                        if path:
+                            oracledb.init_oracle_client(lib_dir=path)
+                            self.stdout.write(self.style.SUCCESS(f"Inicializado Oracle Instant Client desde: {path}"))
+                            initialized = True
+                            break
+                    except Exception:
+                        continue
+
+                if not initialized:
+                    # no pudo inicializar thick client; seguirá en thin y quizá falle con DPY-3010
+                    self.stdout.write(self.style.WARNING('No se pudo inicializar Oracle Instant Client (thick mode). Se intentará conectar en thin mode).'))
             except Exception:
                 pass
 
