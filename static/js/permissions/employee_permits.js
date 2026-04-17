@@ -242,17 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                             } catch (err) {
                                                 console.error('Error fetching history JSON', err);
-                                                // Render empty state in tbody to avoid blank modal
-                                                const tbody = document.getElementById('bitacora-history-tbody');
-                                                if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
-                                                // update pagination/info elements to 0
-                                                const info = document.getElementById('bitacora-history-info');
-                                                if (info) info.textContent = `Mostrando 0 a 0 de 0`;
-                                                const pageInput = document.getElementById('bitacora-history-current');
-                                                const totalBadge = document.getElementById('bitacora-history-total');
-                                                if (pageInput) pageInput.value = 1;
-                                                if (totalBadge) totalBadge.textContent = `de 1`;
-                                                // don't rethrow to keep UI responsive
+                                                throw err;
                                             }
                                         },
                                         goTo(page) {
@@ -266,22 +256,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                         last() { this.goTo(this.total_pages); },
                                         clearDates() { this.from = ''; this.to = ''; document.getElementById('bitacora-history-from').value=''; document.getElementById('bitacora-history-to').value=''; this.page=1; this.fetchData(); }
                                     }
-                                });
+                                }).mount('#bitacora-history-container');
 
-                                // Safe mount: unmount previous instance if any, then mount new app
-                                try {
-                                    if (window._bitacoraHistoryApp) {
-                                        try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
-                                        window._bitacoraHistoryApp = null;
-                                    }
-                                    // mount and keep the proxy returned by mount()
-                                    const historyProxy = historyApp.mount('#bitacora-history-container');
-                                    window._bitacoraHistoryApp = historyProxy;
-                                    // expose proxy for compatibility
-                                    window.appBitacoraHistory = historyProxy;
-                                } catch (mountErr) {
-                                    console.error('Error mounting bitacora history app', mountErr);
-                                }
+                                // expose globally
+                                window.appBitacoraHistory = historyApp;
 
                                 // Delegated handler para botones de acción (evita interferir con el render de Vue)
                                 function showReviewDialog(bitacoraId) {
@@ -345,46 +323,17 @@ document.addEventListener('DOMContentLoaded', function () {
                                 const lastBtnEl = document.getElementById('bitacora-history-last');
                                 const pageInputEl = document.getElementById('bitacora-history-current');
 
-                                if (fromInputEl) fromInputEl.addEventListener('change', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.fetchData === 'function') {
-                                        proxy.from = this.value;
-                                        proxy.page = 1;
-                                        proxy.fetchData();
-                                    } else {
-                                        console.warn('history proxy not ready (from change)');
-                                    }
-                                });
-                                if (toInputEl) toInputEl.addEventListener('change', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.fetchData === 'function') {
-                                        proxy.to = this.value;
-                                        proxy.page = 1;
-                                        proxy.fetchData();
-                                    } else {
-                                        console.warn('history proxy not ready (to change)');
-                                    }
-                                });
-                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.clearDates === 'function') {
-                                        proxy.clearDates();
-                                    } else {
-                                        console.warn('history proxy not ready (clear)');
-                                    }
-                                });
+                                if (fromInputEl) fromInputEl.addEventListener('change', function () { historyApp.from = this.value; historyApp.page = 1; historyApp.fetchData(); });
+                                if (toInputEl) toInputEl.addEventListener('change', function () { historyApp.to = this.value; historyApp.page = 1; historyApp.fetchData(); });
+                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () { historyApp.clearDates(); });
                                 if (prevBtnEl) prevBtnEl.addEventListener('click', function () { historyApp.prev(); });
                                 if (nextBtnEl) nextBtnEl.addEventListener('click', function () { historyApp.next(); });
                                 if (firstBtnEl) firstBtnEl.addEventListener('click', function () { historyApp.first(); });
                                 if (lastBtnEl) lastBtnEl.addEventListener('click', function () { historyApp.last(); });
                                 if (pageInputEl) pageInputEl.addEventListener('change', function () { const p = parseInt(this.value) || 1; historyApp.goTo(p); });
 
-                                // initial fetch using mounted proxy
-                                if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
-                                    window._bitacoraHistoryApp.fetchData();
-                                } else {
-                                    console.warn('history proxy not available for initial fetch');
-                                }
+                                // initial fetch
+                                historyApp.fetchData();
                             }
                         } catch (err) {
                             console.warn('No se pudo inicializar history Vue app', err);
@@ -429,16 +378,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
-        // Si hay una instancia Vue montada para el modal, desmontarla antes de limpiar el HTML
-        try {
-            if (window._bitacoraHistoryApp) {
-                try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
-                window._bitacoraHistoryApp = null;
-            }
-        } catch (e) {
-            console.warn('Error al desmontar app de bitácora:', e);
-        }
-
         modalContentContainer.innerHTML = '';
 
         // Restaurar scroll del body
@@ -865,22 +804,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Abrir listado de bitácoras
     function openBitacoraList(employeeId) {
-        console.debug('openBitacoraList called for employeeId=', employeeId, 'appBitacoraList=', !!window.appBitacoraList);
         if (window.appBitacoraList) {
             bitacoraListModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            try {
-                window.appBitacoraList.open(employeeId);
-            } catch (err) {
-                console.error('Error calling appBitacoraList.open', err);
-            }
-        } else {
-            console.warn('appBitacoraList not initialized');
-            // Try to show modal with included HTML fallback
-            if (bitacoraListModal) {
-                bitacoraListModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
+            window.appBitacoraList.open(employeeId);
         }
     }
 
@@ -912,23 +839,6 @@ document.addEventListener('DOMContentLoaded', function () {
         bitacoraModal.classList.add('hidden');
         bitacoraModalContent.innerHTML = '';
         document.body.style.overflow = '';
-        try { ensureUnmountBitacoraList(); } catch (e) { /* ignore */ }
-    }
-
-    // Ensure we unmount the list app when the list modal is closed to avoid Vue trying
-    // to patch a DOM node that was removed (insertBefore null errors).
-    function ensureUnmountBitacoraList() {
-        try {
-            if (window._bitacoraListAppInstance) {
-                try { window._bitacoraListAppInstance.unmount(); } catch (e) { /* ignore */ }
-                window._bitacoraListAppInstance = null;
-            }
-            if (window.appBitacoraList) {
-                try { window.appBitacoraList = null; } catch (e) { /* ignore */ }
-            }
-        } catch (e) {
-            console.warn('Error during unmounting bitacora list app', e);
-        }
     }
 
     // Manejar submit del formulario de bitácora
@@ -1000,13 +910,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const BITACORA_LIST_MOUNT = '#bitacora-list-app';
 
     if (document.querySelector(BITACORA_LIST_MOUNT)) {
-        // Avoid creating multiple app instances if already initialized (protect against duplicate bundles)
-        if (window._bitacoraListAppInstance) {
-            console.debug('bitacora list app already initialized, skipping createApp');
-        } else {
-            const {createApp} = Vue;
-            // create the app instance and keep a reference for unmounting later
-            const _bitacoraListApp = createApp({
+        const {createApp} = Vue;
+        window.appBitacoraList = createApp({
             delimiters: ['[[', ']]'], data() {
                 return {
                     isVisible: false,
@@ -1074,34 +979,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         bitacoraListModal.classList.add('hidden');
                         document.body.style.overflow = '';
                     }
-                    // Unmount the Vue instance to avoid later DOM patch errors
-                    try { ensureUnmountBitacoraList(); } catch (e) { /* ignore */ }
                 }, async fetchBitacoras() {
                     try {
                         const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
-                        console.debug('fetchBitacoras ->', url);
-                        const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
-                        const text = await res.text();
-                        let data = null;
-                        try { data = JSON.parse(text); } catch (e) { console.warn('fetchBitacoras: response not JSON', text); }
-
-                        if (data && data.success) {
-                            // Ensure the root element still exists before updating reactive state
-                            const rootEl = document.getElementById('bitacora-list-app');
-                            if (!rootEl) {
-                                console.warn('bitacora root element removed; skipping state update');
-                                return;
-                            }
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (data.success) {
                             this.employeeName = data.employee_name;
                             this.employeeIdentification = data.employee_identification;
-                            this.bitacoras = data.bitacoras || [];
-                        } else {
-                            console.warn('fetchBitacoras: no success', data);
-                            this.bitacoras = [];
+                            this.bitacoras = data.bitacoras;
                         }
                     } catch (err) {
-                        console.error('fetchBitacoras error:', err);
-                        this.bitacoras = [];
+                        console.error('Error:', err);
                     }
                 }, toggleAll() {
                     if (this.selectAll) {
@@ -1442,18 +1331,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return this.escapeHtml(truncated);
                 }
             }
-        });
-
-            try {
-                const proxy = _bitacoraListApp.mount(BITACORA_LIST_MOUNT);
-                // store both the app instance and the proxy so we can unmount safely later
-                window._bitacoraListAppInstance = _bitacoraListApp;
-                window.appBitacoraList = proxy;
-                console.debug('bitacora list app mounted');
-            } catch (mountErr) {
-                console.error('Error mounting bitacora list app', mountErr);
-            }
-        }
+        }).mount(BITACORA_LIST_MOUNT);
     }
 });
 
@@ -1469,27 +1347,3 @@ $(document).on('click', '#bitacora-history-container button', function (e) {
         e.preventDefault();
     }
 });
-
-/* Global helper used by server-side paginator in modal_bitacora_history.html */
-function bitacoraHistoryChangePage(page) {
-    try {
-        if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.goTo === 'function') {
-            window._bitacoraHistoryApp.goTo(page);
-            return;
-        }
-        // fallback: fetch JSON via dataset historyUrl if available
-        const container = document.getElementById('modal-dynamic-content') || document.getElementById('modalContentContainer');
-        const baseUrl = container && container.dataset && container.dataset.historyUrl ? container.dataset.historyUrl : null;
-        if (baseUrl) {
-            const url = new URL(baseUrl, window.location.origin);
-            url.searchParams.set('page', page);
-            fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(res => res.text())
-                .then(html => {
-                    if (container) container.innerHTML = html;
-                }).catch(err => console.error('Error fetching page:', err));
-        }
-    } catch (e) {
-        console.error('bitacoraHistoryChangePage error', e);
-    }
-}
