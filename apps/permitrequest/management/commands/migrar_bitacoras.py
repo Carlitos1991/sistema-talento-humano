@@ -10,7 +10,7 @@ from django.db.models import Q
 
 
 class Command(BaseCommand):
-    help = 'Migración de Bitácoras con mapeo de Response y auditoría original'
+    help = 'Migración de Bitácoras con justificación simplificada y auditoría completa'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=str, default='2026', help='Año a migrar')
@@ -24,14 +24,13 @@ class Command(BaseCommand):
         migrados, total = 0, 0
 
         try:
-            self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración segura para el año {anio}..."))
+            self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración para el año {anio}..."))
             conn = psycopg2.connect(
                 dbname=db_config['NAME'], user=db_config['USER'],
                 password=db_config['PASSWORD'], host=db_config['HOST'], port=db_config['PORT']
             )
 
             with conn.cursor() as cursor:
-                # Traemos la data completa incluyendo edit_date (updated_at) y edit_by (updated_by)
                 sql = """
                       SELECT per.cedula, \
                              p.registered_by, \
@@ -67,7 +66,7 @@ class Command(BaseCommand):
                             empleado = Employee.objects.filter(person__document_number=cedula).first()
                             if not id_tipo or not empleado: continue
 
-                            # 1. BÚSQUEDA DIRECTA DE USUARIOS (Volvemos a lo que funcionaba)
+                            # Búsqueda directa de usuarios para asegurar precisión
                             def buscar_usuario_real(texto):
                                 if not texto: return None
                                 nombre = texto.split()[0]
@@ -78,15 +77,11 @@ class Command(BaseCommand):
                             u_creador = buscar_usuario_real(reg_by)
                             u_editor = buscar_usuario_real(edit_by)
 
-                            # 2. DETERMINACIÓN DEL ESTADO
-                            if estado == 'INACTIVO':
-                                estado_sigeth2 = 'INACTIVE'
-                            elif estado == 'APROBADO':
-                                estado_sigeth2 = 'APPROVED'
-                            else:
-                                estado_sigeth2 = 'REQUESTED'
+                            # Mapeo de Estados
+                            estado_sigeth2 = 'INACTIVE' if estado == 'INACTIVO' else (
+                                'APPROVED' if estado == 'APROBADO' else 'REQUESTED')
 
-                            # 3. CREACIÓN CON MAPEO A RESPONSE Y ACTUALIZACIÓN
+                            # Inserción con texto de justificación limpio
                             PermitRequest.objects.get_or_create(
                                 employee=empleado,
                                 start_date=f_ini,
@@ -103,15 +98,16 @@ class Command(BaseCommand):
                                     'created_at': f_reg or datetime.datetime.now(),
                                     'created_by': u_creador,
 
-                                    # Mapeo solicitado a campos de Response
+                                    # Mapeo de Response
                                     'response_date': edit_date,
                                     'response_by': u_editor,
 
-                                    # Auditoría de Actualización
+                                    # Auditoría de Sistema
                                     'updated_at': edit_date or f_reg,
                                     'updated_by': u_editor,
 
-                                    'response_note': f"Migración Consolidada. Orig: {reg_by} | Edit: {edit_by}"
+                                    # Texto solicitado: Solo "Migración"
+                                    'response_note': "Migración"
                                 }
                             )
                             migrados += 1
@@ -119,7 +115,7 @@ class Command(BaseCommand):
                         self.stdout.write(f"⏳ Procesando... {total} revisados | {migrados} migrados", ending='\r')
 
             conn.close()
-            self.stdout.write(self.style.SUCCESS(f"\n✅ Migración año {anio} completada con éxito."))
+            self.stdout.write(self.style.SUCCESS(f"\n✅ Año {anio} terminado. Registros: {migrados}"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Error: {e}"))

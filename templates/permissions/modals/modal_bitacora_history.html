@@ -53,7 +53,7 @@
                             <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span></td>
                             <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>
                             <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
-                            <td style="font-size:12px;">[[ b.approved_by_full_name ? (b.approved_by_full_name + (b.approved_by_id ? ' (ID:' + b.approved_by_id + ')' : '')) : '' ]]</td>
+                            <td style="font-size:12px;">[[ b.approved_by_full_name || '' ]]</td>
                             <td style="font-size:12px;">[[ formatDateTimeShort(b.approved_at) ]]</td>
                             <td class="text-center">
                                 <button class="btn-pill-action" v-if="can_edit" data-id="[[ b.id ]]" data-action="review">Revisar Permiso</button>

@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             if (!dateTime) return '';
                                             try {
                                                 const d = new Date(dateTime);
-                                                return d.toLocaleString('es-EC');
+                                                return d.toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
                                             } catch (e) {
                                                 return dateTime;
                                             }
@@ -213,9 +213,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                                                 <td class="text-center">${b.end_time || '--:--'}</td>
                                                                 <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
                                                                 <td>${b.created_by_full_name || ''}</td>
-                                                                <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC') : ''}</td>
-                                                                <td>${b.approved_by_full_name ? (b.approved_by_full_name + (b.approved_by_id ? ' (ID:' + b.approved_by_id + ')' : '')) : ''}</td>
-                                                                <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC') : ''}</td>
+                                                                <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) : ''}</td>
+                                                                <td>${b.approved_by_full_name || ''}</td>
+                                                                <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) : ''}</td>
                                                                 <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
                                                             </tr>
                                                         `).join('');
