@@ -1,6 +1,14 @@
 {% load static %}
 
 <div id="bitacora-list-app" v-cloak>
+    <style>
+        .note-label { font-weight: 700; margin-right: 6px; }
+        .note-label.note-reject { color: #dc2626; }
+        .note-label.note-justifica { color: #16a34a; }
+        .note-label.note-modifica { color: #2563eb; }
+        .note-label.note-creation { color: #0f172a; }
+        .note-text { color: #111827; }
+    </style>
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
 
         <!-- Modal container -->
@@ -34,6 +42,11 @@
                                 v-if="selectedBitacoras.length > 0"
                                 title="Aprobar Seleccionadas">
                             <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn-reject-action" @click="rejectSelected"
+                                v-if="selectedBitacoras.length > 0"
+                                title="Rechazar Seleccionadas">
+                            <i class="fas fa-ban"></i>
                         </button>
                         <button class="btn-delete-action" @click="deleteSelected"
                                 v-if="selectedBitacoras.length > 0"
@@ -82,9 +95,7 @@
                                 </span>
                             </td>
                             <td style="font-size: 12px;">
-                                <span v-if="bitacora.response_note" :title="bitacora.response_note">
-                                    [[ truncateText(bitacora.response_note, 60) ]]
-                                </span>
+                                <span v-if="bitacora.response_note" :title="stripHtml(bitacora.response_note)" v-html="joinHtmlSegments(bitacora.response_note)"></span>
                                 <span v-else style="color: #999;">Sin justificación</span>
                             </td>
                             <td class="text-center">
@@ -103,8 +114,8 @@
                             <td style="font-size: 12px;">[[ formatDateShort(bitacora.created_at) ]]</td>
                             <td class="text-center">
                                 <button type="button" class="btn-views-action"
-                                        @click="openEdit(bitacora)"
-                                        title="Editar bitácora"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    @click="openEditSwal(bitacora)"
+                                    title="Editar bitácora"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button type="button" class="btn-delete-action" @click="deleteSingle(bitacora.id)"
                                         title="Eliminar bitácora"><i class="fa-solid fa-trash-can"></i></button>
                             </td>

@@ -687,11 +687,16 @@ class PermitResponseView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 'message': 'Acción no válida'
             }, status=400)
 
-        history_entry = f"{action_label} ({now.strftime('%d/%m/%Y %H:%M')}) por {user_full_name}: {response_note}"
-        if permit.response_note:
-            permit.response_note = f"{permit.response_note}\n\n{history_entry}"
+        # Formatear nota HTML y PREPEND al historial (nuevo primero)
+        from django.utils.html import escape
+        if action == 'approve':
+            entry_html = f"<span class=\"note-label note-justifica\" style=\"color:#16a34a\">Aprobación: {escape(response_note)}</span>"
         else:
-            permit.response_note = history_entry
+            entry_html = f"<span class=\"note-label note-reject\" style=\"color:#dc2626\">Rechazo: {escape(response_note)}</span>"
+        if permit.response_note:
+            permit.response_note = entry_html + (f"\n\n{permit.response_note}" if permit.response_note else '')
+        else:
+            permit.response_note = entry_html
         permit.response_date = timezone.now()
         permit.response_by = request.user
         permit.updated_by = request.user
@@ -991,7 +996,65 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     else:
                         permit_start_date = current_date
                         permit_end_date = current_date
-                    
+
+                    # Comprobar solapamiento con bitácoras aprobadas
+                    from datetime import datetime, time as dtime
+
+                    def to_dt(d, t):
+                        if t is None or t == '':
+                            return datetime.combine(d, dtime.min)
+                        if isinstance(t, str):
+                            try:
+                                hhmm = datetime.strptime(t, '%H:%M').time()
+                            except Exception:
+                                hhmm = datetime.strptime(t, '%H:%M:%S').time()
+                            return datetime.combine(d, hhmm)
+                        return datetime.combine(d, t)
+
+                    new_start_dt = to_dt(permit_start_date, first_start)
+                    new_end_dt = to_dt(permit_end_date, first_end)
+
+                    existing_qs = PermitRequest.objects.filter(
+                        employee=employee,
+                        permit_type=bitacora_type,
+                        status='APPROVED',
+                        start_date__lte=permit_end_date,
+                        end_date__gte=permit_start_date
+                    )
+                    conflict = None
+                    for ex in existing_qs:
+                        ex_start = to_dt(ex.start_date, ex.start_time)
+                        ex_end = to_dt(ex.end_date or ex.start_date, ex.end_time)
+                        if new_start_dt < ex_end and ex_start < new_end_dt:
+                            conflict = ex
+                            break
+
+                    if conflict:
+                        # Formatear fecha y hora en español para el mensaje
+                        meses = {1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio', 7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'}
+                        def fmt_date(d):
+                            return f"{d.day} de {meses.get(d.month, '')} de {d.year}"
+                        def fmt_timeobj(t):
+                            if not t:
+                                return ''
+                            if isinstance(t, str):
+                                try:
+                                    tt = datetime.strptime(t, '%H:%M').time()
+                                except Exception:
+                                    tt = datetime.strptime(t, '%H:%M:%S').time()
+                                return tt.strftime('%H:%M')
+                            return t.strftime('%H:%M')
+
+                        msg = f"No se puede crear la bitácora: existe una bitácora aprobada con {fmt_date(conflict.start_date)} desde las {fmt_timeobj(conflict.start_time)}"
+                        return JsonResponse({
+                            'success': False,
+                            'message': msg
+                        }, status=400)
+
+                    # Formatear respuesta inicial como "Creación"
+                    from django.utils.html import escape
+                    creation_html = f"<span class=\"note-label note-creation\" style=\"color:#0f172a\">Creación: {escape(justification)}</span>"
+
                     PermitRequest.objects.create(
                         employee=employee,
                         permit_type=bitacora_type,
@@ -1000,7 +1063,7 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         start_time=first_start,
                         end_time=first_end,
                         justification_file=saved_path,
-                        response_note=justification,  # Guardar justificación en response_note
+                        response_note=creation_html,  # Guardar justificación en response_note (HTML)
                         status='REQUESTED',
                         created_by=request.user,
                         updated_by=request.user
@@ -1016,7 +1079,64 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     else:
                         permit_start_date = current_date
                         permit_end_date = current_date
-                    
+
+                    # Comprobar solapamiento con bitácoras aprobadas (segunda jornada)
+                    from datetime import datetime, time as dtime
+
+                    def to_dt2(d, t):
+                        if t is None or t == '':
+                            return datetime.combine(d, dtime.min)
+                        if isinstance(t, str):
+                            try:
+                                hhmm = datetime.strptime(t, '%H:%M').time()
+                            except Exception:
+                                hhmm = datetime.strptime(t, '%H:%M:%S').time()
+                            return datetime.combine(d, hhmm)
+                        return datetime.combine(d, t)
+
+                    new_start_dt = to_dt2(permit_start_date, second_start)
+                    new_end_dt = to_dt2(permit_end_date, second_end)
+
+                    existing_qs = PermitRequest.objects.filter(
+                        employee=employee,
+                        permit_type=bitacora_type,
+                        status='APPROVED',
+                        start_date__lte=permit_end_date,
+                        end_date__gte=permit_start_date
+                    )
+                    conflict = None
+                    for ex in existing_qs:
+                        ex_start = to_dt2(ex.start_date, ex.start_time)
+                        ex_end = to_dt2(ex.end_date or ex.start_date, ex.end_time)
+                        if new_start_dt < ex_end and ex_start < new_end_dt:
+                            conflict = ex
+                            break
+
+                    if conflict:
+                        meses = {1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio', 7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'}
+                        def fmt_date2(d):
+                            return f"{d.day} de {meses.get(d.month, '')} de {d.year}"
+                        def fmt_timeobj2(t):
+                            if not t:
+                                return ''
+                            if isinstance(t, str):
+                                try:
+                                    tt = datetime.strptime(t, '%H:%M').time()
+                                except Exception:
+                                    tt = datetime.strptime(t, '%H:%M:%S').time()
+                                return tt.strftime('%H:%M')
+                            return t.strftime('%H:%M')
+
+                        msg = f"No se puede crear la bitácora: existe una bitácora aprobada con {fmt_date2(conflict.start_date)} desde las {fmt_timeobj2(conflict.start_time)}"
+                        return JsonResponse({
+                            'success': False,
+                            'message': msg
+                        }, status=400)
+
+                    # Formatear respuesta inicial como "Creación" para segunda jornada
+                    from django.utils.html import escape
+                    creation_html2 = f"<span class=\"note-label note-creation\" style=\"color:#0f172a\">Creación: {escape(justification)}</span>"
+
                     PermitRequest.objects.create(
                         employee=employee,
                         permit_type=bitacora_type,
@@ -1025,7 +1145,7 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         start_time=second_start,
                         end_time=second_end,
                         justification_file=saved_path,
-                        response_note=justification,  # Guardar justificación en response_note
+                        response_note=creation_html2,  # Guardar justificación en response_note (HTML)
                         status='REQUESTED',
                         created_by=request.user,
                         updated_by=request.user
@@ -1058,7 +1178,7 @@ class BitacoraListView(LoginRequiredMixin, PermissionRequiredMixin, View):
             bitacoras = PermitRequest.objects.filter(
                 employee=employee,
                 permit_type=bitacora_type,
-                status='REQUESTED'
+                status__in=['REQUESTED', 'REJECTED']
             ).select_related('created_by').values(
                 'id', 'start_date', 'end_date', 'start_time', 'end_time',
                 'status', 'created_at', 'created_by__first_name', 'created_by__last_name',
@@ -1210,23 +1330,19 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         'employee_name': employee_name,
                         'page': page_obj.number,
                         'total_pages': paginator.num_pages,
-                        'total_count': paginator.count
+                        'total_count': paginator.count,
+                        'can_edit': request.user.has_perm('permitrequest.can_edit')
                     })
-                except Exception as e:
-                    import traceback
-                    logger.exception('Error serializing bitacoras for JSON response')
-                    # Registrar excepción en servidor, devolver mensaje genérico al cliente
+                except Exception:
                     logger.exception('Error serializing bitacoras for JSON response')
                     return JsonResponse({'success': False, 'message': 'Error interno al generar el historial'}, status=500)
 
             # render HTML solo si no se pidió JSON
             html = render_to_string('permissions/modals/modal_bitacora_history.html', context, request=request)
             return HttpResponse(html)
-        except Exception as e:
-            import traceback
+        except Exception:
             logger.exception('Unhandled error in BitacoraHistoryView.get')
             if request.GET.get('format') == 'json' or request.headers.get('Accept', '').startswith('application/json'):
-                logger.exception('Unhandled error in BitacoraHistoryView.get')
                 return JsonResponse({'success': False, 'message': 'Error interno al generar el historial'}, status=500)
             raise
 
@@ -1238,6 +1354,47 @@ class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request):
         from django.utils import timezone
         import json
+        
+
+class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista que permite a usuarios con permiso `can_edit` marcar una bitácora como PENDIENTE (REQUESTED)
+    y añadir una entrada 'Modifica: ...' al historial.
+    """
+    permission_required = 'permitrequest.can_edit'
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.utils.html import escape
+        import json
+
+        try:
+            if not request.user.has_perm('permitrequest.can_edit'):
+                return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+
+            # intentar leer JSON del body primero
+            payload = {}
+            try:
+                if request.body:
+                    payload = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                payload = request.POST
+
+            reason = (payload.get('reason') if isinstance(payload, dict) else None) or request.POST.get('reason')
+            if not reason:
+                return JsonResponse({'success': False, 'message': 'Se requiere el motivo'}, status=400)
+
+            pr = get_object_or_404(PermitRequest, pk=pk)
+
+            new_note_html = f"<span class=\"note-label note-modifica\" style=\"color:#2563eb\">Modifica: {escape(reason)}</span>"
+            existing = pr.response_note or ''
+            pr.response_note = new_note_html + '\n\n' + existing if existing else new_note_html
+            pr.status = 'REQUESTED'
+            pr.save(update_fields=['response_note', 'status'])
+
+            return JsonResponse({'success': True, 'message': 'Motivo añadido. Bitácora marcada como PENDIENTE.', 'response_note': pr.response_note})
+        except Exception:
+            logger.exception('Error in BitacoraReviewView.post')
+            return JsonResponse({'success': False, 'message': 'Error interno'}, status=500)
         
         try:
             data = json.loads(request.body)
@@ -1265,6 +1422,45 @@ class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
             }, status=400)
 
 
+class BitacoraRejectView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Vista para rechazar bitácoras seleccionadas con motivo"""
+    permission_required = 'permitrequest.change_permitrequest'
+
+    def post(self, request):
+        import json
+        from django.utils import timezone
+
+        try:
+            data = json.loads(request.body)
+            bitacora_ids = data.get('ids', [])
+            reason = data.get('reason', '') or data.get('reason_text', '')
+
+            if not bitacora_ids:
+                return JsonResponse({'success': False, 'message': 'No se especificaron bitácoras'}, status=400)
+
+            # Actualizar las bitácoras a REJECTED y agregar la nota de respuesta
+            now = timezone.now()
+            updated = 0
+            qs = PermitRequest.objects.filter(id__in=bitacora_ids, status='REQUESTED')
+            for pr in qs:
+                old_note = pr.response_note or ''
+                pr.status = 'REJECTED'
+                pr.response_by = request.user
+                pr.response_date = now
+                # Formatear nota con etiqueta HTML en rojo (etiqueta + mensaje coloreados)
+                from django.utils.html import escape
+                note_html = f"<span class=\"note-label note-reject\" style=\"color:#dc2626\">Rechazo: {escape(reason)}</span>"
+                pr.response_note = note_html + (f"\n\n{old_note}" if old_note else '')
+                pr.updated_by = request.user
+                pr.save(update_fields=['status', 'response_by', 'response_date', 'response_note', 'updated_by', 'updated_at'])
+                updated += 1
+
+            return JsonResponse({'success': True, 'message': f'Se marcaron {updated} bitácora(s) como rechazadas'})
+        except Exception as e:
+            logger.exception('Error rejecting bitacoras')
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+
+
 class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Vista para eliminar bitácoras seleccionadas"""
     permission_required = 'permitrequest.delete_permitrequest'
@@ -1273,13 +1469,33 @@ class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
         import json
         
         try:
-            data = json.loads(request.body)
-            bitacora_ids = data.get('ids', [])
-            
-            deleted_count, _ = PermitRequest.objects.filter(
-                id__in=bitacora_ids,
-                status='REQUESTED'
-            ).delete()
+            bitacora_ids = []
+            # intentar leer JSON desde body
+            try:
+                if request.body:
+                    data = json.loads(request.body.decode('utf-8'))
+                    bitacora_ids = data.get('ids', []) if isinstance(data, dict) else []
+            except Exception:
+                bitacora_ids = []
+
+            # soporte para form-data (arrays 'ids[]')
+            if not bitacora_ids:
+                try:
+                    bitacora_ids = request.POST.getlist('ids[]') or request.POST.getlist('ids') or []
+                except Exception:
+                    bitacora_ids = []
+
+            # normalizar a enteros
+            try:
+                bitacora_ids = [int(x) for x in bitacora_ids if x != '' and x is not None]
+            except Exception:
+                bitacora_ids = []
+
+            # permitir eliminar REQUESTED y REJECTED (no eliminar APPROVED por seguridad)
+            qs = PermitRequest.objects.filter(id__in=bitacora_ids, status__in=['REQUESTED', 'REJECTED'])
+            deleted_count = qs.count()
+            if deleted_count:
+                qs.delete()
             
             return JsonResponse({
                 'success': True,
@@ -1297,26 +1513,132 @@ class BitacoraEditView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'permitrequest.change_permitrequest'
 
     def post(self, request, pk):
-        import json
         try:
             if not request.user.has_perm('permitrequest.change_permitrequest'):
                 return JsonResponse({'success': False, 'message': 'No tiene permisos'}, status=403)
 
-            payload = json.loads(request.body)
-            start_time = payload.get('start_time')
-            end_time = payload.get('end_time')
-
-            pr = PermitRequest.objects.filter(pk=pk, status='REQUESTED').first()
+            pr = PermitRequest.objects.filter(pk=pk, status__in=['REQUESTED', 'REJECTED']).first()
             if not pr:
                 return JsonResponse({'success': False, 'message': 'Bitácora no encontrada o ya procesada'}, status=404)
 
-            if start_time is not None:
-                pr.start_time = start_time or None
-            if end_time is not None:
-                pr.end_time = end_time or None
-            pr.updated_by = request.user
-            pr.save(update_fields=['start_time', 'end_time', 'updated_by', 'updated_at'])
+            # Si la bitácora estaba REJECTED y se está reeditando, devolver a REQUESTED
+            was_rejected = (pr.status == 'REJECTED')
 
-            return JsonResponse({'success': True, 'message': 'Bitácora actualizada correctamente'})
+            # Soportar tanto JSON (tiempos) como multipart/form-data (archivo + nota + tiempos)
+            content_type = request.META.get('CONTENT_TYPE', '')
+            if content_type.startswith('multipart/form-data') or request.FILES:
+                # FormData submission
+                start_time = request.POST.get('start_time')
+                end_time = request.POST.get('end_time')
+                response_note = request.POST.get('response_note')
+                file = request.FILES.get('justification_file')
+
+                if start_time is not None:
+                    pr.start_time = start_time or None
+                if end_time is not None:
+                    pr.end_time = end_time or None
+                if response_note is not None:
+                    # Formatear la nota según contexto: si venía REJECTED -> 'Justifica' (verde), si no -> 'Edición' (azul)
+                    from django.utils.html import escape
+                    if was_rejected:
+                        new_note_html = f"<span class=\"note-label note-justifica\" style=\"color:#16a34a\">Justifica: {escape(response_note)}</span>"
+                    else:
+                        new_note_html = f"<span class=\"note-label note-modifica\" style=\"color:#2563eb\">Modifica: {escape(response_note)}</span>"
+                    old_note = pr.response_note or ''
+                    pr.response_note = new_note_html + (f"\n\n{old_note}" if old_note else '')
+                if file:
+                    pr.justification_file = file
+
+                # Inicializar campos a guardar
+                save_fields = ['updated_by', 'updated_at']
+
+                # Si venía REJECTED, al re-editar revertimos estado a REQUESTED
+                # Comprobar solapamiento con bitácoras aprobadas antes de guardar cambios
+                from datetime import datetime, time as dtime
+
+                def to_dt_edit(d, t):
+                    if t is None or t == '':
+                        return datetime.combine(d, dtime.min)
+                    if isinstance(t, str):
+                        try:
+                            hhmm = datetime.strptime(t, '%H:%M').time()
+                        except Exception:
+                            hhmm = datetime.strptime(t, '%H:%M:%S').time()
+                        return datetime.combine(d, hhmm)
+                    return datetime.combine(d, t)
+
+                candidate_start = to_dt_edit(pr.start_date, pr.start_time)
+                candidate_end = to_dt_edit(pr.end_date or pr.start_date, pr.end_time)
+
+                # Si el usuario envió nuevos tiempos, recomponer con ellos
+                if start_time is not None:
+                    candidate_start = to_dt_edit(pr.start_date, start_time)
+                if end_time is not None:
+                    candidate_end = to_dt_edit(pr.end_date or pr.start_date, end_time)
+
+                existing_qs = PermitRequest.objects.filter(
+                    employee=pr.employee,
+                    permit_type=pr.permit_type,
+                    status='APPROVED'
+                ).exclude(pk=pr.pk).filter(
+                    start_date__lte=pr.end_date or pr.start_date,
+                    end_date__gte=pr.start_date
+                )
+                for ex in existing_qs:
+                    ex_start = to_dt_edit(ex.start_date, ex.start_time)
+                    ex_end = to_dt_edit(ex.end_date or ex.start_date, ex.end_time)
+                    if candidate_start < ex_end and ex_start < candidate_end:
+                        meses = {1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio', 7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'}
+                        def fmt_date_edit(d):
+                            return f"{d.day} de {meses.get(d.month, '')} de {d.year}"
+                        def fmt_time_edit(t):
+                            if not t:
+                                return ''
+                            if isinstance(t, str):
+                                try:
+                                    tt = datetime.strptime(t, '%H:%M').time()
+                                except Exception:
+                                    tt = datetime.strptime(t, '%H:%M:%S').time()
+                                return tt.strftime('%H:%M')
+                            return t.strftime('%H:%M')
+
+                        msg = f"No se puede actualizar la bitácora: existe una bitácora aprobada con {fmt_date_edit(ex.start_date)} desde las {fmt_time_edit(ex.start_time)}"
+                        return JsonResponse({
+                            'success': False,
+                            'message': msg
+                        }, status=400)
+
+                # Si venía REJECTED, al re-editar revertimos estado a REQUESTED
+                if was_rejected:
+                    pr.status = 'REQUESTED'
+                    pr.response_by = None
+                    pr.response_date = None
+                    save_fields.extend(['status', 'response_by', 'response_date'])
+                if start_time is not None:
+                    save_fields.append('start_time')
+                if end_time is not None:
+                    save_fields.append('end_time')
+                if response_note is not None:
+                    save_fields.append('response_note')
+                if file:
+                    save_fields.append('justification_file')
+
+                pr.save(update_fields=save_fields)
+                return JsonResponse({'success': True, 'message': 'Bitácora actualizada correctamente'})
+            else:
+                # JSON body (legacy behaviour: only tiempos)
+                import json
+                payload = json.loads(request.body or '{}')
+                start_time = payload.get('start_time')
+                end_time = payload.get('end_time')
+
+                if start_time is not None:
+                    pr.start_time = start_time or None
+                if end_time is not None:
+                    pr.end_time = end_time or None
+                pr.updated_by = request.user
+                pr.save(update_fields=['start_time', 'end_time', 'updated_by', 'updated_at'])
+                return JsonResponse({'success': True, 'message': 'Bitácora actualizada correctamente'})
         except Exception as e:
+            logger.exception('Error in BitacoraEditView.post')
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)

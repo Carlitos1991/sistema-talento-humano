@@ -1,165 +1,26 @@
 document.addEventListener('DOMContentLoaded', function () {
-
-    // --- REFERENCIAS ---
+    // Referencias importantes para búsqueda y paginación
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
-    const csrfToken = document.getElementById('csrf-token').value;
-    const urlList = document.getElementById('url-list').value;
+    const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
+    const urlList = document.getElementById('url-list') ? document.getElementById('url-list').value : '';
+    const modalOverlay = document.getElementById('customModal') || document.getElementById('modal-dynamic-content') || document.getElementById('bitacoraModal') || document.getElementById('bitacoraListModal') || null;
+    const modalContentContainer = document.getElementById('modal-dynamic-content') || document.getElementById('modalContentContainer') || null;
+    const pageInfo = document.querySelector('.pagination-info');
+    const currentPageDisplay = document.querySelector('.page-input') || null;
+    const btnPrev = document.querySelector('.pagination-controls .page-btn[title="Anterior"]') || null;
+    const btnNext = document.querySelector('.pagination-controls .page-btn[title="Siguiente"]') || null;
 
-    // Intento robusto de evitar autocompletado del navegador (algunas implementaciones ignoran autocomplete)
-    if (searchInput) {
-        try {
-            searchInput.setAttribute('autocomplete', 'off');
-            searchInput.setAttribute('autocorrect', 'off');
-            searchInput.setAttribute('autocapitalize', 'off');
-            searchInput.setAttribute('spellcheck', 'false');
-            // Cambiar el nombre del input para evitar que el navegador relacione valores previos
-            searchInput.setAttribute('name', 'no_autocomplete_search_' + Date.now());
-            // Truco: marcar readonly inicialmente para bloquear el autofill/auto-suggest en algunos navegadores
-            searchInput.readOnly = true;
-            searchInput.addEventListener('focus', function () {
-                this.readOnly = false;
-                // opcional: seleccionar texto al focus
-                this.select();
-            });
-        } catch (err) {
-            console.warn('No fue posible aplicar bloqueo de autocompletado en buscador', err);
-        }
-    }
+    let currentPage = (window.initialPagination && window.initialPagination.current_page) ? window.initialPagination.current_page : 1;
+    let totalPages = (window.initialPagination && window.initialPagination.total_pages) ? window.initialPagination.total_pages : 1;
 
-    // Referencias Modal
-    const modalOverlay = document.getElementById('customModal');
-    const modalContentContainer = document.getElementById('modal-dynamic-content');
-
-    // (debug submit handler removed)
-
-    // Interceptar llamadas programáticas a form.submit() dentro del modal
-    // (debug overrides removed)
-
-    // Referencias de paginación
-    const pageInfo = document.getElementById('page-info');
-    const btnPrev = document.getElementById('btn-prev');
-    const btnNext = document.getElementById('btn-next');
-    const currentPageDisplay = document.getElementById('current-page-display');
-
-    // Estado de paginación
-    let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
-    let totalPages = window.initialPagination ? window.initialPagination.total_pages : 1;
-
-    // Inicializar botones de paginación con datos del servidor
-    if (window.initialPagination) {
-        if (btnPrev) btnPrev.disabled = !window.initialPagination.has_previous;
-        if (btnNext) btnNext.disabled = !window.initialPagination.has_next;
-    }
-
-    // =========================================================
-    // MODAL VUE: HISTORIAL DE PERMISOS
-    // =========================================================
-    const HISTORY_MOUNT = '#permit-history-app';
-
-    if (document.querySelector(HISTORY_MOUNT)) {
-        const {createApp} = Vue;
-        const appHistory = createApp({
-            delimiters: ['[[', ']]'], data() {
-                return {
-                    isVisible: false,
-                    employeeId: null,
-                    employeeName: '',
-                    employeeIdentification: '',
-                    permits: [],
-                    searchQuery: '',
-                    currentPage: 1,
-                    pageSize: 10
-                }
-            }, computed: {
-                filteredPermits() {
-                    const term = this.searchQuery.toLowerCase().trim();
-                    if (!term) return this.permits;
-                    return this.permits.filter(permit => permit.permit_type__name.toLowerCase().includes(term) || (permit.reason && permit.reason.toLowerCase().includes(term)));
-                }, totalPages() {
-                    return Math.ceil(this.filteredPermits.length / this.pageSize) || 1;
-                }, paginatedPermits() {
-                    const start = (this.currentPage - 1) * this.pageSize;
-                    const end = start + this.pageSize;
-                    return this.filteredPermits.slice(start, end);
-                }, startIndex() {
-                    return this.filteredPermits.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
-                }, endIndex() {
-                    return Math.min(this.currentPage * this.pageSize, this.filteredPermits.length);
-                }
-            }, methods: {
-                async open(employeeId) {
-                    this.employeeId = employeeId;
-                    this.searchQuery = '';
-                    this.currentPage = 1;
-                    await this.fetchHistory();
-                    this.isVisible = true;
-                }, closeModal() {
-                    this.isVisible = false;
-                    this.permits = [];
-                }, async fetchHistory() {
-                    if (!this.employeeId) return;
-                    try {
-                        const url = `/permitrequest/employees/${this.employeeId}/history/`;
-                        const res = await fetch(url);
-
-                        if (!res.ok) {
-                            throw new Error(`HTTP error! status: ${res.status}`);
-                        }
-
-                        const data = await res.json();
-                        if (data.success) {
-                            this.employeeName = data.employee_name;
-                            this.employeeIdentification = data.employee_identification;
-                            this.permits = data.permits;
-                        } else {
-                            Swal.fire('Error', data.message || 'No se pudo cargar el historial', 'error');
-                        }
-                    } catch (e) {
-                        console.error('Error al cargar historial:', e);
-                        Swal.fire('Error', 'No se pudo cargar el historial de permisos', 'error');
-                    }
-                }, formatDate(dateString) {
-                    if (!dateString) return '-';
-                    const date = new Date(dateString + 'T00:00:00');
-                    return date.toLocaleDateString('es-EC', {
-                        year: 'numeric', month: '2-digit', day: '2-digit'
-                    });
-                }, getStatusLabel(status) {
-                    const labels = {
-                        'REQUESTED': 'Pendiente',
-                        'PENDING': 'Pendiente',
-                        'APPROVED': 'Aprobado',
-                        'REJECTED': 'Rechazado',
-                        'CANCELLED': 'Cancelado'
-                    };
-                    return labels[status] || status;
-                }, getStatusClass(status) {
-                    const classes = {
-                        'REQUESTED': 'inactive',
-                        'PENDING': 'inactive',
-                        'APPROVED': 'active',
-                        'REJECTED': 'inactive',
-                        'CANCELLED': 'inactive'
-                    };
-                    return classes[status] || '';
-                }
-            }
-        });
-
-        window.vmPermitHistory = appHistory.mount(HISTORY_MOUNT);
-    }
-
-    // --- EVENTOS ---
-
-    // 1. Buscador
     let timeout = null;
     if (searchInput) {
         searchInput.addEventListener('keyup', (e) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 currentPage = 1;
-                fetchTableData(urlList + `?q=${e.target.value}&page=1`);
+                fetchTableData(urlList + `?q=${encodeURIComponent(e.target.value)}&page=1`);
             }, 300);
         });
     }
@@ -169,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btnPrev.addEventListener('click', () => {
             if (currentPage > 1) {
                 const searchQuery = searchInput ? searchInput.value : '';
-                const url = urlList + `?page=${currentPage - 1}${searchQuery ? '&q=' + searchQuery : ''}`;
+                const url = urlList + `?page=${currentPage - 1}${searchQuery ? '&q=' + encodeURIComponent(searchQuery) : ''}`;
                 fetchTableData(url);
             }
         });
@@ -179,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btnNext.addEventListener('click', () => {
             if (currentPage < totalPages) {
                 const searchQuery = searchInput ? searchInput.value : '';
-                const url = urlList + `?page=${currentPage + 1}${searchQuery ? '&q=' + searchQuery : ''}`;
+                const url = urlList + `?page=${currentPage + 1}${searchQuery ? '&q=' + encodeURIComponent(searchQuery) : ''}`;
                 fetchTableData(url);
             }
         });
@@ -279,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     data() {
                                         return {
                                             employeeId: empId,
+                                            can_edit: false,
                                             bitacoras: [],
                                             from: '',
                                             to: '',
@@ -327,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                                 const data = await resp.json();
 
                                                 this.bitacoras = data.bitacoras || [];
+                                                this.can_edit = !!data.can_edit;
                                                 this.page = data.page || this.page;
                                                 this.total_count = data.total_count || 0;
                                                 this.total_pages = data.total_pages || 1;
@@ -349,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                                                 <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC') : ''}</td>
                                                                 <td>${b.response_by_full_name || ''}</td>
                                                                 <td>${b.response_date ? new Date(b.response_date).toLocaleString('es-EC') : ''}</td>
+                                                                <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
                                                             </tr>
                                                         `).join('');
                                                     }
@@ -396,6 +260,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                 // expose globally
                                 window.appBitacoraHistory = historyApp;
+
+                                // Delegated handler para botones de acción (evita interferir con el render de Vue)
+                                function showReviewDialog(bitacoraId) {
+                                    return Swal.fire({
+                                        title: 'Revisar Permiso',
+                                        input: 'textarea',
+                                        inputLabel: 'Motivo de la modificación',
+                                        inputPlaceholder: 'Escriba el motivo...',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Enviar',
+                                        cancelButtonText: 'Cancelar',
+                                        inputValidator: (val) => { if (!val || !val.trim()) return 'El motivo es obligatorio'; }
+                                    });
+                                }
+
+                                async function sendReview(bitacoraId, reason) {
+                                    try {
+                                        const resp = await fetch(`/permitrequest/bitacora/review/${bitacoraId}/`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRFToken': csrfToken,
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            },
+                                            body: JSON.stringify({reason: reason.trim()})
+                                        });
+                                        const data = await resp.json();
+                                        if (!resp.ok) {
+                                            Swal.fire('Error', data.message || 'No fue posible enviar el motivo', 'error');
+                                            return false;
+                                        }
+                                        Swal.fire('Enviado', data.message || 'Motivo registrado', 'success');
+                                        return true;
+                                    } catch (err) {
+                                        console.error('Error al enviar revisión', err);
+                                        Swal.fire('Error', 'Error de comunicación', 'error');
+                                        return false;
+                                    }
+                                }
+
+                                modalContentContainer.addEventListener('click', async function (ev) {
+                                    const btn = ev.target.closest('button[data-action="review"]');
+                                    if (!btn) return;
+                                    ev.preventDefault();
+                                    const bitId = btn.dataset.id;
+                                    const result = await showReviewDialog(bitId);
+                                    if (!result || !result.value) return;
+                                    const ok = await sendReview(bitId, result.value);
+                                    if (ok && window.appBitacoraHistory && typeof window.appBitacoraHistory.fetchData === 'function') {
+                                        try { window.appBitacoraHistory.fetchData(); } catch (err) { console.warn('No se pudo refrescar la lista', err); }
+                                    }
+                                });
 
                                 // Wire inputs and buttons
                                 const fromInputEl = document.getElementById('bitacora-history-from');
@@ -507,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                     // Recargar tabla
                     const searchQuery = searchInput ? searchInput.value : '';
-                    fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + searchQuery : ''}`);
+                    fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + encodeURIComponent(searchQuery) : ''}`);
                 } else {
                     if (res.status === 403) {
                         Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');
@@ -1114,6 +1030,40 @@ document.addEventListener('DOMContentLoaded', function () {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
                     }
+                }, async rejectSelected() {
+                    if (this.selectedBitacoras.length === 0) return;
+
+                    const {value: reason} = await Swal.fire({
+                        title: 'Rechazar bitácoras',
+                        input: 'textarea',
+                        inputLabel: `Ingrese motivo de rechazo para ${this.selectedBitacoras.length} bitácora(s)`,
+                        inputPlaceholder: 'Motivo de rechazo...',
+                        showCancelButton: true,
+                        confirmButtonText: 'Rechazar',
+                        cancelButtonText: 'Cancelar',
+                        inputAttributes: {maxlength: 1000},
+                    });
+
+                    if (!reason) return;
+
+                    try {
+                        const res = await fetch('/permitrequest/bitacora/reject/', {
+                            method: 'POST', headers: {
+                                'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                            }, body: JSON.stringify({ids: this.selectedBitacoras, reason})
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            Swal.fire('Éxito', data.message, 'success');
+                            this.selectedBitacoras = [];
+                            this.selectAll = false;
+                            await this.fetchBitacoras();
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('Error', 'Error de comunicación', 'error');
+                    }
                 }, async deleteSelected() {
                     if (this.selectedBitacoras.length === 0) return;
 
@@ -1212,6 +1162,79 @@ document.addEventListener('DOMContentLoaded', function () {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
                     }
+                }, async openEditSwal(bitacora) {
+                    const { value: response } = await Swal.fire({
+                        title: 'Editar bitácora',
+                        html: `
+                            <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:8px;">
+                                <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
+                                <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
+                            </div>
+                            <div style="text-align:left;margin-bottom:8px;">
+                                <label style="font-weight:600;">Agregar mensaje (se añadirá al historial)</label>
+                                <textarea id="swal-note" class="swal2-textarea" rows="3" placeholder="Ingrese el nuevo mensaje..."></textarea>
+                            </div>
+                            <div style="text-align:left;">
+                                <label style="font-weight:600;">Adjuntar PDF (opcional, máximo 2MB)</label>
+                                <div id="swal-upload" style="border:1px dashed #cbd5e1;border-radius:6px;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;background:#f8fafc;">
+                                    <i class="fas fa-file-pdf" style="font-size:26px;color:#dc2626"></i>
+                                    <div style="display:flex;flex-direction:column;">
+                                        <span style="font-weight:600;color:#0f172a">Seleccionar archivo PDF</span>
+                                        <span style="font-size:12px;color:#6b7280">Haz click para elegir un archivo</span>
+                                    </div>
+                                    <span id="swal-file-name" style="margin-left:auto;font-size:12px;color:#374151"></span>
+                                    <input id="swal-file" type="file" accept="application/pdf" style="display:none" onchange="(function(el){ const n = document.getElementById('swal-file-name'); n.textContent = el.files && el.files[0] ? el.files[0].name : ''; })(this)" />
+                                </div>
+                            </div>
+                        `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        showLoaderOnConfirm: true,
+                        didOpen: () => {
+                            const up = document.getElementById('swal-upload');
+                            const fileEl = document.getElementById('swal-file');
+                            if (up && fileEl) up.addEventListener('click', () => fileEl.click());
+                        },
+                        preConfirm: () => {
+                            const start = document.getElementById('swal-start').value;
+                            const end = document.getElementById('swal-end').value;
+                            const note = document.getElementById('swal-note').value.trim();
+                            const fileEl = document.getElementById('swal-file');
+                            const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+
+                            if (file) {
+                                if (!file.name.toLowerCase().endsWith('.pdf')) {
+                                    Swal.showValidationMessage('Solo se permiten archivos PDF');
+                                    return false;
+                                }
+                                if (file.size > 2 * 1024 * 1024) {
+                                    Swal.showValidationMessage('El archivo no debe superar los 2MB');
+                                    return false;
+                                }
+                            }
+
+                            // Concatenar mensaje nuevo al historial existente, sin precargarlo en el textarea
+                            // Send only the new note; server will format and prepend to history
+                            const formData = new FormData();
+                            formData.append('start_time', start || '');
+                            formData.append('end_time', end || '');
+                            formData.append('response_note', note || '');
+                            if (file) formData.append('justification_file', file);
+
+                            return fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
+                                method: 'POST', headers: {'X-CSRFToken': csrfToken}, body: formData
+                            }).then(res => res.json()).catch(() => { Swal.showValidationMessage('Error de comunicación'); });
+                        }
+                    });
+
+                    if (response) {
+                        if (response.success) {
+                            Swal.fire('Éxito', response.message, 'success');
+                            await this.fetchBitacoras();
+                        } else {
+                            Swal.fire('Error', response.message || 'No se pudo actualizar', 'error');
+                        }
+                    }
                 }, formatDate(dateStr) {
                     if (!dateStr) return '--';
                     const date = new Date(dateStr + 'T00:00:00');
@@ -1243,9 +1266,69 @@ document.addEventListener('DOMContentLoaded', function () {
                     return labels[status] || status;
                 }, getStatusClass(status) {
                     const classes = {
-                        'REQUESTED': 'inactive', 'APPROVED': 'active', 'REJECTED': 'inactive'
+                        'REQUESTED': 'badge-secondary', 'APPROVED': 'badge-success', 'REJECTED': 'badge-danger'
                     };
                     return classes[status] || '';
+                }, // Rich note helpers
+                getFirstSegmentHtml(html) {
+                    if (!html) return '';
+                    const parts = html.split('\n\n');
+                    return parts[0] || '';
+                },
+                stripHtml(html) {
+                    if (!html) return '';
+                    const d = document.createElement('div');
+                    d.innerHTML = html;
+                    return d.textContent || d.innerText || '';
+                },
+                joinHtmlSegments(html) {
+                    if (!html) return '';
+                    const parts = html.split('\n\n').map(p => p.trim()).filter(Boolean);
+                    if (parts.length === 0) return '';
+                    const mapped = parts.map(p => {
+                        // If segment already contains an HTML span label, keep as is
+                        if (/\<span[^>]*class=["']?note-label/.test(p)) {
+                            return p;
+                        }
+                        // otherwise escape and wrap
+                        return `<span class="note-text">${this.escapeHtml(p)}</span>`;
+                    });
+                    return mapped.join(' ');
+                },
+                escapeHtml(text) {
+                    if (!text) return '';
+                    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                },
+                truncateHtmlFirst(html, maxLength) {
+                    const seg = this.getFirstSegmentHtml(html);
+                    if (!seg) return '';
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = seg;
+                    const labelEl = wrapper.querySelector('.note-label');
+                    // Caso: todo el texto está dentro del label (ej. <span class="note-label">Rechazo: texto</span>)
+                    if (labelEl) {
+                        const full = (labelEl.textContent || '').trim();
+                        const idx = full.indexOf(':');
+                        if (idx !== -1) {
+                            const labelText = full.substring(0, idx + 1);
+                            const msg = full.substring(idx + 1).trim();
+                            let truncatedMsg = msg;
+                            if (msg.length > maxLength) truncatedMsg = msg.substring(0, maxLength) + '...';
+                            const cls = this.escapeHtml(labelEl.getAttribute('class') || 'note-label');
+                            return `<span class="${cls}">${this.escapeHtml(labelText)} ${this.escapeHtml(truncatedMsg)}</span>`;
+                        }
+                        // Si no se puede separar, devolver el outerHTML truncado
+                        const labelHtml = labelEl.outerHTML;
+                        // remove label to get any extra text (rare)
+                        labelEl.remove();
+                        const msgText = (wrapper.textContent || '').trim();
+                        const truncated = msgText.length > maxLength ? msgText.substring(0, maxLength) + '...' : msgText;
+                        return labelHtml + ' ' + this.escapeHtml(truncated);
+                    }
+                    // Si no hay label, devolver texto truncado
+                    const textOnly = (wrapper.textContent || '').trim();
+                    const truncated = textOnly.length > maxLength ? textOnly.substring(0, maxLength) + '...' : textOnly;
+                    return this.escapeHtml(truncated);
                 }
             }
         }).mount(BITACORA_LIST_MOUNT);

@@ -605,7 +605,7 @@
             {% endif %}
             <li class="sidebar-section-title">Configuracion</li>
             <!--  Ajustes -->
-            {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location or request.user.is_authenticated %}
+            {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location or perms.core.change_systemconfiguration or perms.core.view_systemconfiguration %}
                 <li class="has-submenu">
                     <a href="#">
                         <i class="fa-solid fa-gear"></i>

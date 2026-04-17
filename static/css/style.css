@@ -2347,6 +2347,7 @@ input:checked + .toggle-slider:before {
 .btn-views-action,
 .btn-detail-action,
 .btn-delete-action,
+.btn-reject-action,
 .btn-restore-action,
 .btn-list-action,
 .btn-info-action {
@@ -2366,9 +2367,9 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-create-action i, .btn-success-action i, .btn-views-action i,
-.btn-delete-action i, .btn-restore-action i, .btn-list-action i, .btn-info-action i,
+.btn-delete-action i, .btn-reject-action i, .btn-restore-action i, .btn-list-action i, .btn-info-action i,
 .btn-create-action svg, .btn-success-action svg, .btn-views-action svg,
-.btn-restore-action svg, .btn-delete-action svg, .btn-list-action svg, .btn-info-action svg {
+.btn-restore-action svg, .btn-delete-action svg, .btn-reject-action svg, .btn-list-action svg, .btn-info-action svg {
     color: #ffffff;
     font-size: var(--table-btn-icon-size);
     line-height: 1;
@@ -2384,6 +2385,10 @@ input:checked + .toggle-slider:before {
 
 .btn-views-action {
     background: linear-gradient(to right, #fbbf24, #f59e0b);
+}
+
+.btn-reject-action {
+    background: linear-gradient(to right, #fb923c, #f97316);
 }
 
 .btn-detail-action {

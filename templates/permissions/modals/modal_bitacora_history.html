@@ -30,7 +30,7 @@
                         <thead>
                         <tr>
                             <th style="width:4%;">N°</th>
-                            <th style="width:12%;">Fecha</th>
+                            <th style="width:12%;">Fecha Bit.</th>
                             <th style="width:8%;">Inicio</th>
                             <th style="width:8%;">Fin</th>
                             <th style="width:8%;">Estado</th>
@@ -38,11 +38,12 @@
                             <th style="width:12%;">Fecha Registro</th>
                             <th style="width:18%;">Aprobado por</th>
                             <th style="width:10%;">Fecha Aprobación</th>
+                            <th style="width:10%;">Acciones</th>
                         </tr>
                         </thead>
                         <tbody id="bitacora-history-tbody">
                         <tr v-if="bitacoras.length === 0">
-                            <td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td>
+                            <td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td>
                         </tr>
                         <tr v-for="(b, idx) in bitacoras" :key="b.id">
                             <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
@@ -54,6 +55,9 @@
                             <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
                             <td style="font-size:12px;">[[ b.response_by_full_name || '' ]]</td>
                             <td style="font-size:12px;">[[ formatDateTimeShort(b.response_date) ]]</td>
+                            <td class="text-center">
+                                <button class="btn-pill-action" v-if="can_edit" data-id="[[ b.id ]]" data-action="review">Revisar Permiso</button>
+                            </td>
                         </tr>
                         </tbody>
                     </table>

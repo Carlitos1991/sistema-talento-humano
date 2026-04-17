@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Generar Permisos | SIGETH{% endblock %}
+{% block title %}{% if perms.permitrequest.change_permitrequest %}Generar Permisos{% else %}Generar Bitácora{% endif %} | SIGETH{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/permission.css' %}">
@@ -20,8 +20,13 @@
 
         <div class="header-card">
             <div>
-                <h1>Generar Permisos</h1>
-                <p>Seleccione un empleado para generar o consultar permisos.</p>
+                {% if perms.permitrequest.change_permitrequest %}
+                    <h1>Generar Permisos</h1>
+                    <p>Seleccione un empleado para generar o consultar permisos.</p>
+                {% else %}
+                    <h1>Generar Bitácora</h1>
+                    <p>Seleccione un empleado para generar o consultar bitácoras.</p>
+                {% endif %}
             </div>
         </div>
 
@@ -33,7 +38,7 @@
                 <div class="table-controls" data-manual-export="true">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field" placeholder="Buscar por cédula o nombre..." autocomplete="off" spellcheck="false">
+                        <input type="text" id="table-search" name="table_search" class="input-field" placeholder="Buscar por cédula o nombre..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                     </div>
                 </div>
 

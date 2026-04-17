@@ -47,11 +47,11 @@
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search-input"
+                           <i class="fas fa-search search-icon"></i>
+                           <input type="text" id="table-search-input" name="contract_search"
                                class="form-control with-icon"
                                placeholder="Buscar por cédula o nombre..."
-                               v-model="searchTerm">
+                               v-model="searchTerm" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                     </div>
                     <button type="button" class="btn-search btn-secondary-search ms-2" @click="openSearchModal">
                         <i class="fas fa-filter"></i> Búsqueda Avanzada
