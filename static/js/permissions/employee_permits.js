@@ -161,7 +161,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                     watch: {
                                         page(newVal, oldVal) {
                                             if (newVal === oldVal) return;
-                                            try { this.fetchData(); } catch (e) { console.warn('watch page fetchData error', e); }
+                                            try {
+                                                this.fetchData();
+                                            } catch (e) {
+                                                console.warn('watch page fetchData error', e);
+                                            }
                                         }
                                     },
                                     methods: {
@@ -182,7 +186,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                             if (!dateTime) return '';
                                             try {
                                                 const d = new Date(dateTime);
-                                                return d.toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+                                                return d.toLocaleString('es-EC', {
+                                                    year: 'numeric', month: '2-digit', day: '2-digit',
+                                                    hour: '2-digit', minute: '2-digit', hour12: false
+                                                });
                                             } catch (e) {
                                                 return dateTime;
                                             }
@@ -212,19 +219,33 @@ document.addEventListener('DOMContentLoaded', function () {
                                                     } else {
                                                         const startIndex = ((this.page || 1) - 1) * this.page_size;
                                                         tbody.innerHTML = this.bitacoras.map((b, idx) => `
-                                                            <tr>
-                                                                <td class="text-center">${startIndex + idx + 1}</td>
-                                                                <td>${b.start_date || ''}</td>
-                                                                <td class="text-center">${b.start_time || '--:--'}</td>
-                                                                <td class="text-center">${b.end_time || '--:--'}</td>
-                                                                <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
-                                                                <td>${b.created_by_full_name || ''}</td>
-                                                                <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) : ''}</td>
-                                                                <td>${b.approved_by_full_name || ''}</td>
-                                                                <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) : ''}</td>
-                                                                <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
-                                                            </tr>
-                                                        `).join('');
+                                                                <tr>
+                                                                    <td class="text-center">${startIndex + idx + 1}</td>
+                                                                    <td>${b.start_date || ''}</td>
+                                                                    <td class="text-center">${b.start_time || '--:--'}</td>
+                                                                    <td class="text-center">${b.end_time || '--:--'}</td>
+                                                                    <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
+                                                                    <td>${b.created_by_full_name || ''}</td>
+                                                                    <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC', {
+                                                            year: 'numeric',
+                                                            month: '2-digit',
+                                                            day: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            hour12: false
+                                                        }) : ''}</td>
+                                                                    <td>${b.approved_by_full_name || ''}</td>
+                                                                    <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC', {
+                                                            year: 'numeric',
+                                                            month: '2-digit',
+                                                            day: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            hour12: false
+                                                        }) : ''}</td>
+                                                                    <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
+                                                                </tr>
+                                                            `).join('');
                                                     }
                                                 }
 
@@ -960,10 +981,8 @@ document.addEventListener('DOMContentLoaded', function () {
         bitacoraModal.classList.add('hidden');
         bitacoraModalContent.innerHTML = '';
         document.body.style.overflow = '';
-        try {
-            ensureUnmountBitacoraList();
-        } catch (e) { /* ignore */
-        }
+        // No desmontar la instancia Vue del listado para permitir reaperturas rápidas
+        // (evita que `appBitacoraList` quede null y provoque fallback en la segunda apertura)
     }
 
     // Ensure we unmount the list app when the list modal is closed to avoid Vue trying
@@ -1306,9 +1325,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         // Preload start/end times into SweetAlert inputs
                         const {value: formValues} = await Swal.fire({
                             title: 'Editar hora (Inicio / Fin)', html: `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
-                                <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
-                                <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
-                            </div>`, focusConfirm: false, showCancelButton: true, preConfirm: () => {
+                                    <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
+                                    <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
+                                </div>`, focusConfirm: false, showCancelButton: true, preConfirm: () => {
                                 const start = document.getElementById('swal-start').value;
                                 const end = document.getElementById('swal-end').value;
                                 if (!start && !end) {
@@ -1341,27 +1360,27 @@ document.addEventListener('DOMContentLoaded', function () {
                         const {value: response} = await Swal.fire({
                             title: 'Editar bitácora',
                             html: `
-                            <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:8px;">
-                                <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
-                                <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
-                            </div>
-                            <div style="text-align:left;margin-bottom:8px;">
-                                <label style="font-weight:600;">Agregar mensaje (se añadirá al historial)</label>
-                                <textarea id="swal-note" class="swal2-textarea" rows="3" placeholder="Ingrese el nuevo mensaje..."></textarea>
-                            </div>
-                            <div style="text-align:left;">
-                                <label style="font-weight:600;">Adjuntar PDF (opcional, máximo 2MB)</label>
-                                <div id="swal-upload" style="border:1px dashed #cbd5e1;border-radius:6px;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;background:#f8fafc;">
-                                    <i class="fas fa-file-pdf" style="font-size:26px;color:#dc2626"></i>
-                                    <div style="display:flex;flex-direction:column;">
-                                        <span style="font-weight:600;color:#0f172a">Seleccionar archivo PDF</span>
-                                        <span style="font-size:12px;color:#6b7280">Haz click para elegir un archivo</span>
-                                    </div>
-                                    <span id="swal-file-name" style="margin-left:auto;font-size:12px;color:#374151"></span>
-                                    <input id="swal-file" type="file" accept="application/pdf" style="display:none" onchange="(function(el){ const n = document.getElementById('swal-file-name'); n.textContent = el.files && el.files[0] ? el.files[0].name : ''; })(this)" />
+                                <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:8px;">
+                                    <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
+                                    <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
                                 </div>
-                            </div>
-                        `,
+                                <div style="text-align:left;margin-bottom:8px;">
+                                    <label style="font-weight:600;">Agregar mensaje (se añadirá al historial)</label>
+                                    <textarea id="swal-note" class="swal2-textarea" rows="3" placeholder="Ingrese el nuevo mensaje..."></textarea>
+                                </div>
+                                <div style="text-align:left;">
+                                    <label style="font-weight:600;">Adjuntar PDF (opcional, máximo 2MB)</label>
+                                    <div id="swal-upload" style="border:1px dashed #cbd5e1;border-radius:6px;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;background:#f8fafc;">
+                                        <i class="fas fa-file-pdf" style="font-size:26px;color:#dc2626"></i>
+                                        <div style="display:flex;flex-direction:column;">
+                                            <span style="font-weight:600;color:#0f172a">Seleccionar archivo PDF</span>
+                                            <span style="font-size:12px;color:#6b7280">Haz click para elegir un archivo</span>
+                                        </div>
+                                        <span id="swal-file-name" style="margin-left:auto;font-size:12px;color:#374151"></span>
+                                        <input id="swal-file" type="file" accept="application/pdf" style="display:none" onchange="(function(el){ const n = document.getElementById('swal-file-name'); n.textContent = el.files && el.files[0] ? el.files[0].name : ''; })(this)" />
+                                    </div>
+                                </div>
+                            `,
                             focusConfirm: false,
                             showCancelButton: true,
                             showLoaderOnConfirm: true,
