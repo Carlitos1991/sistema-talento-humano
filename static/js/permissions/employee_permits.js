@@ -184,20 +184,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalContentContainer && modalContentContainer.querySelector && !modalContentContainer.querySelector('#bitacora-history-container')) {
                 // Contenido dinámico: sí podemos limpiar (Vue no está montado aquí)
                 if (window._bitacoraHistoryApp) {
-                    try {
-                        window._bitacoraHistoryApp.unmount();
-                    } catch (e) { /* ignore */
-                    }
+                    try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
                     window._bitacoraHistoryApp = null;
                 }
                 modalContentContainer.innerHTML = '';
             }
             // Si #bitacora-history-container está presente: solo ocultar, NO desmontar Vue
         } catch (e) {
-            try {
-                modalContentContainer.innerHTML = '';
-            } catch (ee) { /* ignore */
-            }
+            try { modalContentContainer.innerHTML = ''; } catch (ee) { /* ignore */ }
         }
 
         // Restaurar scroll del body
@@ -1457,12 +1451,11 @@ $(document).on('submit', '#bitacora-history-container form, #bitacora-list-app f
     return false;
 });
 
-$(document).on('click', '#bitacora-history-container button', function (e) {
-    // Permitir que solo el botón de cerrar funcione normalmente si es necesario
-    if (!this.classList.contains('js-close-bitacora-modal')) {
-        e.preventDefault();
-    }
-});
+// NOTE: removed a global click handler that prevented clicks on
+// buttons inside #bitacora-history-container. That handler called
+// e.preventDefault() on all buttons (except close), which blocked
+// Vue-managed controls (like pagination). Buttons are now handled
+// by their respective components/handlers.
 
 /* Global helper used by server-side paginator in modal_bitacora_history.html */
 function bitacoraHistoryChangePage(page) {
