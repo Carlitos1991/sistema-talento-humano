@@ -80,6 +80,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
                     'add': perms.filter(codename__startswith='add_').first(),
                     'change': perms.filter(codename__startswith='change_').first(),
                     'delete': perms.filter(codename__startswith='delete_').first(),
+                    'admin': perms.filter(codename='can_admin').first(),
                 }
                 visible_perms = {key: perm for key, perm in visible_perms.items() if can_manage_permission(perm)}
                 if not visible_perms:

@@ -159,9 +159,16 @@
 
                                                         <!-- Checkbox Admin (todos) -->
                                                         <td class="text-center">
+                                                            {% if model.perms.admin %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                value="{{ model.perms.admin.id }}"
+                                                                class="custom-checkbox perm-check perm-admin-all"
+                                                                @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                            {% else %}
                                                             <input type="checkbox" 
-                                                                   class="custom-checkbox perm-check perm-admin-all"
-                                                                   @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                                class="custom-checkbox perm-check perm-admin-all"
+                                                                @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                            {% endif %}
                                                         </td>
                                                         </td>
                                                     </tr>

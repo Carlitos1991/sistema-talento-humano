@@ -81,6 +81,7 @@ class PermitRequest(models.Model):
         verbose_name_plural = 'Solicitudes de Permisos'
         permissions = [
             ('can_edit', 'Puede editar y revisar bitácoras de permisos'),
+            ('can_admin', 'Puede administrar Permisos y Bitácoras'),
         ]
         indexes = [
             models.Index(fields=['employee', 'status']),

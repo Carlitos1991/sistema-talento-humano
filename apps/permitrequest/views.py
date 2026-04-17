@@ -67,7 +67,8 @@ class PermitTypeListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespon
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        # Mostrar únicamente tipos padre (sin parent) en el listado principal
+        queryset = super().get_queryset().filter(parent__isnull=True)
         q = self.request.GET.get('q', '').strip()
         if q:
             queryset = queryset.filter(
