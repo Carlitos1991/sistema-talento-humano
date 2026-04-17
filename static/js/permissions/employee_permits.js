@@ -256,10 +256,22 @@ document.addEventListener('DOMContentLoaded', function () {
                                         last() { this.goTo(this.total_pages); },
                                         clearDates() { this.from = ''; this.to = ''; document.getElementById('bitacora-history-from').value=''; document.getElementById('bitacora-history-to').value=''; this.page=1; this.fetchData(); }
                                     }
-                                }).mount('#bitacora-history-container');
+                                });
 
-                                // expose globally
-                                window.appBitacoraHistory = historyApp;
+                                // Safe mount: unmount previous instance if any, then mount new app
+                                try {
+                                    if (window._bitacoraHistoryApp) {
+                                        try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
+                                        window._bitacoraHistoryApp = null;
+                                    }
+                                    // mount and keep the proxy returned by mount()
+                                    const historyProxy = historyApp.mount('#bitacora-history-container');
+                                    window._bitacoraHistoryApp = historyProxy;
+                                    // expose proxy for compatibility
+                                    window.appBitacoraHistory = historyProxy;
+                                } catch (mountErr) {
+                                    console.error('Error mounting bitacora history app', mountErr);
+                                }
 
                                 // Delegated handler para botones de acción (evita interferir con el render de Vue)
                                 function showReviewDialog(bitacoraId) {
@@ -378,6 +390,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
+        // Si hay una instancia Vue montada para el modal, desmontarla antes de limpiar el HTML
+        try {
+            if (window._bitacoraHistoryApp) {
+                try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
+                window._bitacoraHistoryApp = null;
+            }
+        } catch (e) {
+            console.warn('Error al desmontar app de bitácora:', e);
+        }
+
         modalContentContainer.innerHTML = '';
 
         // Restaurar scroll del body
@@ -1347,3 +1369,27 @@ $(document).on('click', '#bitacora-history-container button', function (e) {
         e.preventDefault();
     }
 });
+
+/* Global helper used by server-side paginator in modal_bitacora_history.html */
+function bitacoraHistoryChangePage(page) {
+    try {
+        if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.goTo === 'function') {
+            window._bitacoraHistoryApp.goTo(page);
+            return;
+        }
+        // fallback: fetch JSON via dataset historyUrl if available
+        const container = document.getElementById('modal-dynamic-content') || document.getElementById('modalContentContainer');
+        const baseUrl = container && container.dataset && container.dataset.historyUrl ? container.dataset.historyUrl : null;
+        if (baseUrl) {
+            const url = new URL(baseUrl, window.location.origin);
+            url.searchParams.set('page', page);
+            fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(res => res.text())
+                .then(html => {
+                    if (container) container.innerHTML = html;
+                }).catch(err => console.error('Error fetching page:', err));
+        }
+    } catch (e) {
+        console.error('bitacoraHistoryChangePage error', e);
+    }
+}
