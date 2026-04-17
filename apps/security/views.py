@@ -248,6 +248,17 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             perm_ids = request.POST.getlist('permissions[]')
             # Agregar permisos can_admin automáticamente
             perm_ids_with_admin = self._add_can_admin_permissions(perm_ids)
+
+            # Preservar permisos can_admin que ya existían en el rol
+            try:
+                existing_can_admin_ids = list(self.object.permissions.filter(codename='can_admin').values_list('id', flat=True))
+            except Exception:
+                existing_can_admin_ids = []
+
+            for cid in existing_can_admin_ids:
+                if cid not in perm_ids_with_admin:
+                    perm_ids_with_admin.append(cid)
+
             role.permissions.set([int(pid) for pid in perm_ids_with_admin])
 
             # Guardar tipo de dashboard como permiso especializado
