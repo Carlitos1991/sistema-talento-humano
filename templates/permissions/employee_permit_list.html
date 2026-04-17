@@ -65,6 +65,11 @@
         <div id="bitacora-modal-content"></div>
     </div>
     
+    <!-- Modal para Historial Bitácoras Aprobadas (incluir estático para evitar inyección desde JS) -->
+    <div id="modalContentContainer" class="hidden">
+        {% include 'permissions/modals/modal_bitacora_history.html' %}
+    </div>
+
     <!-- Modal para listar bitácoras -->
     <div id="bitacoraListModal" class="modal-overlay hidden">
         {% include 'permissions/modals/modal_bitacora_list.html' %}
