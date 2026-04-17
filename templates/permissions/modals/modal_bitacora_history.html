@@ -63,27 +63,27 @@
                     </table>
                 </div>
 
-                <div class="pagination-container mt-3">
-                    <span class="pagination-info">
-                        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-                    </span>
-                    <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-                        <button class="page-btn" title="Primera" {% if not page_obj.has_previous %}disabled{% endif %} onclick="bitacoraHistoryChangePage(1)">
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                        <button class="page-btn" title="Anterior" {% if not page_obj.has_previous %}disabled{% endif %} onclick="bitacoraHistoryChangePage({% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
-                            <i class="fas fa-angle-left"></i>
-                        </button>
+                <div class="pagination-container mt-3" v-if="total_pages > 1">
+                    <span id="bitacora-history-info" class="pagination-info">Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ total_count ]]</span>
+                    <div class="pagination-controls">
+                        <button type="button" class="page-btn" title="Primera"
+                                :disabled="page === 1"
+                                @click="page = 1">&laquo;</button>
+                        <button type="button" class="page-btn" title="Anterior"
+                                :disabled="page === 1"
+                                @click="page = Math.max(1, page - 1)">&lsaquo;</button>
+
                         <div class="page-input-wrapper">
-                            <input type="number" class="page-input" value="{{ page_obj.number }}" min="1" max="{{ paginator.num_pages }}" onchange="bitacoraHistoryChangePage(parseInt(this.value)||1)" onkeypress="if(event.key==='Enter') bitacoraHistoryChangePage(parseInt(this.value)||1)">
-                            <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+                            <input type="number" id="bitacora-history-current" v-model.number="page" min="1" :max="total_pages" class="page-input" style="width:80px; text-align:center;">
+                            <span id="bitacora-history-total" class="total-pages-badge">de [[ total_pages ]]</span>
                         </div>
-                        <button class="page-btn" title="Siguiente" {% if not page_obj.has_next %}disabled{% endif %} onclick="bitacoraHistoryChangePage({% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button class="page-btn" title="Última" {% if not page_obj.has_next %}disabled{% endif %} onclick="bitacoraHistoryChangePage({{ paginator.num_pages }})">
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
+
+                        <button type="button" class="page-btn" title="Siguiente"
+                                :disabled="page === total_pages"
+                                @click="page = Math.min(total_pages, page + 1)">&rsaquo;</button>
+                        <button type="button" class="page-btn" title="Última"
+                                :disabled="page === total_pages"
+                                @click="page = total_pages">&raquo;</button>
                     </div>
                 </div>
             </div>

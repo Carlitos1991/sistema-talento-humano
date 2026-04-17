@@ -58,7 +58,7 @@
 
                 <!-- TABLA -->
                 <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
-                    <table class="managed-table w-100">
+                    <table class="w-100">
                         <thead>
                         <tr>
                             {% if perms.permitrequest.change_permitrequest %}
@@ -120,14 +120,14 @@
                                         title="Eliminar bitácora"><i class="fa-solid fa-trash-can"></i></button>
                             </td>
                         </tr>
-                        <tr v-if="filteredBitacoras.length === 0">
-                            <td colspan="11" class="text-center py-5">
-                                <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                                <p class="mt-3 text-muted">No hay bitácoras registradas</p>
-                            </td>
-                        </tr>
                         </tbody>
                     </table>
+
+                    <!-- EMPTY STATE -->
+                    <div v-if="filteredBitacoras.length === 0" class="text-center py-5">
+                        <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="mt-3 text-muted">No hay bitácoras registradas</p>
+                    </div>
                 </div>
 
                 <!-- PAGINACIÓN -->
@@ -135,21 +135,38 @@
                     <span class="pagination-info">
                         Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ filteredBitacoras.length ]] registros
                     </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button class="page-btn" @click="currentPage--" :disabled="currentPage === 1">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span style="padding: 0 10px; font-weight: bold;">[[ currentPage ]]</span>
-                        </li>
-                        <li>
-                            <button class="page-btn" @click="currentPage++" :disabled="currentPage === totalPages">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
+                    <div class="pagination-controls">
+                        <button class="page-btn" title="Primera"
+                                :disabled="currentPage === 1"
+                                @click="currentPage = 1">
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button class="page-btn" title="Anterior"
+                                :disabled="currentPage === 1"
+                                @click="currentPage = Math.max(1, currentPage - 1)">
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+
+                        <div class="page-input-wrapper">
+                            <input type="number" class="page-input"
+                                   v-model.number="currentPage"
+                                   :min="1" :max="totalPages"
+                                   @change="currentPage = Math.min(Math.max(1, currentPage), totalPages)"
+                                   @keypress.enter="currentPage = Math.min(Math.max(1, currentPage), totalPages)">
+                            <span class="total-pages-badge">de [[ totalPages ]]</span>
+                        </div>
+
+                        <button class="page-btn" title="Siguiente"
+                                :disabled="currentPage === totalPages"
+                                @click="currentPage = Math.min(totalPages, currentPage + 1)">
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button class="page-btn" title="Última"
+                                :disabled="currentPage === totalPages"
+                                @click="currentPage = totalPages">
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
