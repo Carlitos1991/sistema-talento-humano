@@ -158,6 +158,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                             return Math.min(this.total_count, this.page * this.page_size);
                                         }
                                     },
+                                    watch: {
+                                        page(newVal, oldVal) {
+                                            if (newVal === oldVal) return;
+                                            try { this.fetchData(); } catch (e) { console.warn('watch page fetchData error', e); }
+                                        }
+                                    },
                                     methods: {
                                         formatDate(dateString) {
                                             if (!dateString) return '';
