@@ -210,8 +210,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                                                 <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
                                                                 <td>${b.created_by_full_name || ''}</td>
                                                                 <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC') : ''}</td>
-                                                                <td>${b.response_by_full_name || ''}</td>
-                                                                <td>${b.response_date ? new Date(b.response_date).toLocaleString('es-EC') : ''}</td>
+                                                                <td>${b.approved_by_full_name ? (b.approved_by_full_name + (b.approved_by_id ? ' (ID:' + b.approved_by_id + ')' : '')) : ''}</td>
+                                                                <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC') : ''}</td>
                                                                 <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
                                                             </tr>
                                                         `).join('');
@@ -1068,11 +1068,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (this.selectedBitacoras.length === 0) return;
 
                     const result = await Swal.fire({
-                        title: '¿Eliminar bitácoras?',
-                        text: `Se eliminarán ${this.selectedBitacoras.length} bitácora(s)`,
+                        title: '¿Marcar bitácoras como inactivas?',
+                        text: `Se marcarán como inactivas ${this.selectedBitacoras.length} bitácora(s)`,
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Sí, eliminar',
+                        confirmButtonText: 'Sí, marcar inactivas',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#ef4444'
                     });

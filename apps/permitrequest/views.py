@@ -1308,6 +1308,11 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                             'status': b.status,
                             'created_at': b.created_at.isoformat() if getattr(b, 'created_at', None) else None,
                             'created_by_full_name': getattr(b.created_by, 'get_full_name', lambda: '')() if b.created_by else '',
+                            # Aprobación: usar campos de auditoría (updated_by / updated_at)
+                            'approved_by_id': getattr(b, 'updated_by_id', None),
+                            'approved_by_full_name': getattr(b.updated_by, 'get_full_name', lambda: '')() if getattr(b, 'updated_by', None) else '',
+                            'approved_at': b.updated_at.isoformat() if getattr(b, 'updated_at', None) else None,
+                            # Mantener response info si existe (nota/fecha de respuesta específica)
                             'response_by_full_name': getattr(b.response_by, 'get_full_name', lambda: '')() if b.response_by else '',
                             'response_date': b.response_date.isoformat() if getattr(b, 'response_date', None) else None,
                             'response_note': getattr(b, 'response_note', '') or '',
@@ -1485,6 +1490,7 @@ class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def post(self, request):
         import json
+        from django.utils import timezone
         
         try:
             bitacora_ids = []
@@ -1509,15 +1515,20 @@ class BitacoraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
             except Exception:
                 bitacora_ids = []
 
-            # permitir eliminar REQUESTED y REJECTED (no eliminar APPROVED por seguridad)
+            # En lugar de borrar realmente, marcar como CANCELED (INACTIVO lógico)
+            # Solo permitir cancelar REQUESTED y REJECTED (no APPROVED por seguridad)
             qs = PermitRequest.objects.filter(id__in=bitacora_ids, status__in=['REQUESTED', 'REJECTED'])
-            deleted_count = qs.count()
-            if deleted_count:
-                qs.delete()
-            
+            to_process = list(qs.values_list('id', flat=True))
+            updated_count = 0
+            if to_process:
+                now = timezone.now()
+                # Usar update para eficiencia; establecer updated_at explícitamente
+                qs.update(status='CANCELED', updated_by_id=request.user.id, updated_at=now)
+                updated_count = len(to_process)
+
             return JsonResponse({
                 'success': True,
-                'message': f'Se eliminaron {deleted_count} bitácora(s) correctamente'
+                'message': f'Se marcaron {updated_count} bitácora(s) como inactivas'
             })
         except Exception as e:
             return JsonResponse({
