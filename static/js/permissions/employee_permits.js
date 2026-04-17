@@ -92,6 +92,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!employeeId) return;
 
                 const url = `/permitrequest/bitacora/history/${employeeId}/`;
+
+                // Si el template ya está incluido en la página, mostrarlo y montarlo.
+                if (modalContentContainer && document.getElementById('bitacora-history-container')) {
+                    modalContentContainer.dataset.historyUrl = url;
+                    modalContentContainer.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+
+                    // Asegurar que los botones de cierre dentro del modal funcionen
+                    modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel, .btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+
+                    // Montar la app Vue si está disponible, o inicializar el manejador clásico
+                    try {
+                        if (typeof Vue !== 'undefined' && typeof mountBitacoraHistory === 'function') {
+                            mountBitacoraHistory(employeeId);
+                        } else if (typeof initBitacoraHistoryModal === 'function') {
+                            initBitacoraHistoryModal();
+                        }
+                    } catch (err) {
+                        console.warn('No se pudo inicializar history Vue app desde template incluido', err);
+                    }
+
+                    return;
+                }
+
+                // Fallback: solicitar HTML al servidor (comportamiento previo)
                 fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                     .then(res => {
                         if (!res.ok) {
@@ -103,358 +128,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     })
                     .then(html => {
                         modalContentContainer.innerHTML = html;
-                        // guardar URL base para futuras consultas (paginación/orden/búsqueda)
                         modalContentContainer.dataset.historyUrl = url;
                         modalOverlay.classList.remove('hidden');
                         document.body.style.overflow = 'hidden';
-                        // Asegurar que los botones de cierre dentro del modal inyectado cierren correctamente
                         modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel, .btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
-                        // Delegated handler as fallback (avoid duplicate handlers)
-                        if (modalContentContainer._bitacoraCloseHandler) {
-                            modalContentContainer.removeEventListener('click', modalContentContainer._bitacoraCloseHandler);
-                        }
-                        modalContentContainer._bitacoraCloseHandler = function (ev) {
-                            if (ev.target.closest('.js-close-modal') || ev.target.closest('.js-close-bitacora-modal') || ev.target.closest('.btn-close-modal') || ev.target.closest('.btn-cancel')) {
-                                ev.preventDefault();
-                                closeModal();
-                            }
-                        };
-                        modalContentContainer.addEventListener('click', modalContentContainer._bitacoraCloseHandler);
-                        // Inicializar lógica del modal de historial de bitácoras aprobadas
-                        // Si Vue está disponible montaremos una app ligera; si no, usamos el inicializador clásico
-                        if (typeof Vue === 'undefined') {
-                            if (typeof initBitacoraHistoryModal === 'function') {
-                                initBitacoraHistoryModal();
-                            }
-                        }
-                        // También montar un pequeño app que use fetch JSON (comportamiento similar al modal de bitácora list)
-                        try {
-                            const empId = employeeId;
-                            // expose for modal functions
-                            modalContentContainer.dataset.employeeId = empId;
-                            const mountEl = document.getElementById('bitacora-history-container');
-                            if (mountEl && typeof Vue !== 'undefined') {
-                                const {createApp} = Vue;
-                                const historyApp = createApp({
-                                    delimiters: ['[[', ']]'],
-                                    data() {
-                                        return {
-                                            employeeId: empId,
-                                            can_edit: (mountEl && mountEl.dataset && mountEl.dataset.canEdit === '1') ? true : false,
-                                            bitacoras: [],
-                                            from: '',
-                                            to: '',
-                                            page: 1,
-                                            page_size: 10,
-                                            total_pages: 1,
-                                            total_count: 0
-                                        };
-                                    },
-                                    computed: {
-                                        startIndex() {
-                                            return this.total_count === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
-                                        },
-                                        endIndex() {
-                                            return Math.min(this.total_count, this.page * this.page_size);
-                                        }
-                                    },
-                                    watch: {
-                                        page(newVal, oldVal) {
-                                            if (newVal === oldVal) return;
-                                            try {
-                                                this.fetchData();
-                                            } catch (e) {
-                                                console.warn('watch page fetchData error', e);
-                                            }
-                                        }
-                                    },
-                                    methods: {
-                                        formatDate(dateString) {
-                                            if (!dateString) return '';
-                                            try {
-                                                const d = new Date(dateString);
-                                                return d.toLocaleDateString('es-EC', {
-                                                    year: 'numeric',
-                                                    month: '2-digit',
-                                                    day: '2-digit'
-                                                });
-                                            } catch (e) {
-                                                return dateString;
-                                            }
-                                        },
-                                        formatDateTimeShort(dateTime) {
-                                            if (!dateTime) return '';
-                                            try {
-                                                const d = new Date(dateTime);
-                                                return d.toLocaleString('es-EC', {
-                                                    year: 'numeric', month: '2-digit', day: '2-digit',
-                                                    hour: '2-digit', minute: '2-digit', hour12: false
-                                                });
-                                            } catch (e) {
-                                                return dateTime;
-                                            }
-                                        },
-                                        async fetchData() {
-                                            try {
-                                                const qs = new URLSearchParams();
-                                                qs.set('page', this.page || 1);
-                                                qs.set('page_size', this.page_size || 10);
-                                                if (this.from) qs.set('from', this.from);
-                                                if (this.to) qs.set('to', this.to);
-                                                const resp = await fetch(`/permitrequest/bitacora/history/${this.employeeId}/?format=json&${qs.toString()}`);
-                                                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                                                const data = await resp.json();
-
-                                                this.bitacoras = data.bitacoras || [];
-                                                this.can_edit = !!data.can_edit;
-                                                this.page = data.page || this.page;
-                                                this.total_count = data.total_count || 0;
-                                                this.total_pages = data.total_pages || 1;
-
-                                                // render rows into tbody (kept for non-Vue fallback usage)
-                                                const tbody = document.getElementById('bitacora-history-tbody');
-                                                if (tbody) {
-                                                    if (!this.bitacoras || this.bitacoras.length === 0) {
-                                                        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
-                                                    } else {
-                                                        const startIndex = ((this.page || 1) - 1) * this.page_size;
-                                                        tbody.innerHTML = this.bitacoras.map((b, idx) => `
-                                                                <tr>
-                                                                    <td class="text-center">${startIndex + idx + 1}</td>
-                                                                    <td>${b.start_date || ''}</td>
-                                                                    <td class="text-center">${b.start_time || '--:--'}</td>
-                                                                    <td class="text-center">${b.end_time || '--:--'}</td>
-                                                                    <td class="text-center"><span class="badge badge-info">${b.status === 'APPROVED' ? 'APROBADAS' : b.status}</span></td>
-                                                                    <td>${b.created_by_full_name || ''}</td>
-                                                                    <td>${b.created_at ? new Date(b.created_at).toLocaleString('es-EC', {
-                                                            year: 'numeric',
-                                                            month: '2-digit',
-                                                            day: '2-digit',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                            hour12: false
-                                                        }) : ''}</td>
-                                                                    <td>${b.approved_by_full_name || ''}</td>
-                                                                    <td>${b.approved_at ? new Date(b.approved_at).toLocaleString('es-EC', {
-                                                            year: 'numeric',
-                                                            month: '2-digit',
-                                                            day: '2-digit',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                            hour12: false
-                                                        }) : ''}</td>
-                                                                    <td class="text-center">${this.can_edit ? `<button class="btn-pill-action" data-id="${b.id}" data-action="review">Revisar Permiso</button>` : ''}</td>
-                                                                </tr>
-                                                            `).join('');
-                                                    }
-                                                }
-
-                                                // update pagination controls
-                                                const info = document.getElementById('bitacora-history-info');
-                                                if (info) {
-                                                    const start = this.total_count === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
-                                                    const end = Math.min(this.total_count, this.page * this.page_size);
-                                                    info.textContent = `Mostrando ${start} a ${end} de ${this.total_count}`;
-                                                }
-
-                                                const pageInput = document.getElementById('bitacora-history-current');
-                                                const totalBadge = document.getElementById('bitacora-history-total');
-                                                const prevBtn = document.getElementById('bitacora-history-prev');
-                                                const nextBtn = document.getElementById('bitacora-history-next');
-                                                const firstBtn = document.getElementById('bitacora-history-first');
-                                                const lastBtn = document.getElementById('bitacora-history-last');
-
-                                                if (pageInput) pageInput.value = this.page;
-                                                if (totalBadge) totalBadge.textContent = `de ${this.total_pages}`;
-                                                if (prevBtn) prevBtn.disabled = !(this.page > 1);
-                                                if (firstBtn) firstBtn.disabled = !(this.page > 1);
-                                                if (nextBtn) nextBtn.disabled = !(this.page < this.total_pages);
-                                                if (lastBtn) lastBtn.disabled = !(this.page < this.total_pages);
-
-                                            } catch (err) {
-                                                console.error('Error fetching history JSON', err);
-                                                // Render empty state in tbody to avoid blank modal
-                                                const tbody = document.getElementById('bitacora-history-tbody');
-                                                if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
-                                                // update pagination/info elements to 0
-                                                const info = document.getElementById('bitacora-history-info');
-                                                if (info) info.textContent = `Mostrando 0 a 0 de 0`;
-                                                const pageInput = document.getElementById('bitacora-history-current');
-                                                const totalBadge = document.getElementById('bitacora-history-total');
-                                                if (pageInput) pageInput.value = 1;
-                                                if (totalBadge) totalBadge.textContent = `de 1`;
-                                                // don't rethrow to keep UI responsive
-                                            }
-                                        },
-                                        goTo(page) {
-                                            const p = Math.max(1, Math.min(page, this.total_pages || 1));
-                                            this.page = p;
-                                            this.fetchData();
-                                        },
-                                        prev() {
-                                            this.goTo(this.page - 1);
-                                        },
-                                        next() {
-                                            this.goTo(this.page + 1);
-                                        },
-                                        first() {
-                                            this.goTo(1);
-                                        },
-                                        last() {
-                                            this.goTo(this.total_pages);
-                                        },
-                                        clearDates() {
-                                            this.from = '';
-                                            this.to = '';
-                                            document.getElementById('bitacora-history-from').value = '';
-                                            document.getElementById('bitacora-history-to').value = '';
-                                            this.page = 1;
-                                            this.fetchData();
-                                        }
-                                    }
-                                });
-
-                                // Safe mount: unmount previous instance if any, then mount new app
-                                try {
-                                    if (window._bitacoraHistoryApp) {
-                                        try {
-                                            window._bitacoraHistoryApp.unmount();
-                                        } catch (e) { /* ignore */
-                                        }
-                                        window._bitacoraHistoryApp = null;
-                                    }
-                                    // mount and keep the proxy returned by mount()
-                                    const historyProxy = historyApp.mount('#bitacora-history-container');
-                                    window._bitacoraHistoryApp = historyProxy;
-                                    // expose proxy for compatibility
-                                    window.appBitacoraHistory = historyProxy;
-                                } catch (mountErr) {
-                                    console.error('Error mounting bitacora history app', mountErr);
-                                }
-
-                                // Delegated handler para botones de acción (evita interferir con el render de Vue)
-                                function showReviewDialog(bitacoraId) {
-                                    return Swal.fire({
-                                        title: 'Revisar Permiso',
-                                        input: 'textarea',
-                                        inputLabel: 'Motivo de la modificación',
-                                        inputPlaceholder: 'Escriba el motivo...',
-                                        showCancelButton: true,
-                                        confirmButtonText: 'Enviar',
-                                        cancelButtonText: 'Cancelar',
-                                        inputValidator: (val) => {
-                                            if (!val || !val.trim()) return 'El motivo es obligatorio';
-                                        }
-                                    });
-                                }
-
-                                async function sendReview(bitacoraId, reason) {
-                                    try {
-                                        const resp = await fetch(`/permitrequest/bitacora/review/${bitacoraId}/`, {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRFToken': csrfToken,
-                                                'X-Requested-With': 'XMLHttpRequest'
-                                            },
-                                            body: JSON.stringify({reason: reason.trim()})
-                                        });
-                                        const data = await resp.json();
-                                        if (!resp.ok) {
-                                            Swal.fire('Error', data.message || 'No fue posible enviar el motivo', 'error');
-                                            return false;
-                                        }
-                                        Swal.fire('Enviado', data.message || 'Motivo registrado', 'success');
-                                        return true;
-                                    } catch (err) {
-                                        console.error('Error al enviar revisión', err);
-                                        Swal.fire('Error', 'Error de comunicación', 'error');
-                                        return false;
-                                    }
-                                }
-
-                                modalContentContainer.addEventListener('click', async function (ev) {
-                                    const btn = ev.target.closest('button[data-action="review"]');
-                                    if (!btn) return;
-                                    ev.preventDefault();
-                                    const bitId = btn.dataset.id;
-                                    const result = await showReviewDialog(bitId);
-                                    if (!result || !result.value) return;
-                                    const ok = await sendReview(bitId, result.value);
-                                    if (ok && window.appBitacoraHistory && typeof window.appBitacoraHistory.fetchData === 'function') {
-                                        try {
-                                            window.appBitacoraHistory.fetchData();
-                                        } catch (err) {
-                                            console.warn('No se pudo refrescar la lista', err);
-                                        }
-                                    }
-                                });
-
-                                // Wire inputs and buttons
-                                const fromInputEl = document.getElementById('bitacora-history-from');
-                                const toInputEl = document.getElementById('bitacora-history-to');
-                                const clearBtnEl = document.getElementById('bitacora-history-clear');
-                                const prevBtnEl = document.getElementById('bitacora-history-prev');
-                                const nextBtnEl = document.getElementById('bitacora-history-next');
-                                const firstBtnEl = document.getElementById('bitacora-history-first');
-                                const lastBtnEl = document.getElementById('bitacora-history-last');
-                                const pageInputEl = document.getElementById('bitacora-history-current');
-
-                                if (fromInputEl) fromInputEl.addEventListener('change', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.fetchData === 'function') {
-                                        proxy.from = this.value;
-                                        proxy.page = 1;
-                                        proxy.fetchData();
-                                    } else {
-                                        console.warn('history proxy not ready (from change)');
-                                    }
-                                });
-                                if (toInputEl) toInputEl.addEventListener('change', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.fetchData === 'function') {
-                                        proxy.to = this.value;
-                                        proxy.page = 1;
-                                        proxy.fetchData();
-                                    } else {
-                                        console.warn('history proxy not ready (to change)');
-                                    }
-                                });
-                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () {
-                                    const proxy = window._bitacoraHistoryApp;
-                                    if (proxy && typeof proxy.clearDates === 'function') {
-                                        proxy.clearDates();
-                                    } else {
-                                        console.warn('history proxy not ready (clear)');
-                                    }
-                                });
-                                if (prevBtnEl) prevBtnEl.addEventListener('click', function () {
-                                    historyApp.prev();
-                                });
-                                if (nextBtnEl) nextBtnEl.addEventListener('click', function () {
-                                    historyApp.next();
-                                });
-                                if (firstBtnEl) firstBtnEl.addEventListener('click', function () {
-                                    historyApp.first();
-                                });
-                                if (lastBtnEl) lastBtnEl.addEventListener('click', function () {
-                                    historyApp.last();
-                                });
-                                if (pageInputEl) pageInputEl.addEventListener('change', function () {
-                                    const p = parseInt(this.value) || 1;
-                                    historyApp.goTo(p);
-                                });
-
-                                // initial fetch using mounted proxy
-                                if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
-                                    window._bitacoraHistoryApp.fetchData();
-                                } else {
-                                    console.warn('history proxy not available for initial fetch');
-                                }
-                            }
-                        } catch (err) {
-                            console.warn('No se pudo inicializar history Vue app', err);
-                        }
+                        if (typeof initBitacoraHistoryModal === 'function') initBitacoraHistoryModal();
+                        if (typeof Vue !== 'undefined' && typeof mountBitacoraHistory === 'function') mountBitacoraHistory(employeeId);
                     })
                     .catch(err => {
                         console.error('Error al cargar historial aprobado:', err);
@@ -494,21 +173,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeModal() {
-        modalOverlay.classList.add('hidden');
-        // Si hay una instancia Vue montada para el modal, desmontarla antes de limpiar el HTML
+        if (modalOverlay && modalOverlay.classList) modalOverlay.classList.add('hidden');
+        if (modalContentContainer && modalContentContainer.classList) modalContentContainer.classList.add('hidden');
+        // NO desmontar la app Vue de historial: Vue 3 deja nodos internos (comentarios)
+        // al desmontar y un remontaje posterior falla con "Cannot read properties of null
+        // (reading 'nextSibling')". Si el nodo #bitacora-history-container persiste en el
+        // DOM, la instancia se reutiliza en la próxima apertura vía mountBitacoraHistory.
+        // Solo limpiamos innerHTML cuando el contenido fue cargado dinámicamente (sin ese nodo).
         try {
-            if (window._bitacoraHistoryApp) {
-                try {
-                    window._bitacoraHistoryApp.unmount();
-                } catch (e) { /* ignore */
+            if (modalContentContainer && modalContentContainer.querySelector && !modalContentContainer.querySelector('#bitacora-history-container')) {
+                // Contenido dinámico: sí podemos limpiar (Vue no está montado aquí)
+                if (window._bitacoraHistoryApp) {
+                    try {
+                        window._bitacoraHistoryApp.unmount();
+                    } catch (e) { /* ignore */
+                    }
+                    window._bitacoraHistoryApp = null;
                 }
-                window._bitacoraHistoryApp = null;
+                modalContentContainer.innerHTML = '';
             }
+            // Si #bitacora-history-container está presente: solo ocultar, NO desmontar Vue
         } catch (e) {
-            console.warn('Error al desmontar app de bitácora:', e);
+            try {
+                modalContentContainer.innerHTML = '';
+            } catch (ee) { /* ignore */
+            }
         }
-
-        modalContentContainer.innerHTML = '';
 
         // Restaurar scroll del body
         document.body.style.overflow = '';
@@ -730,6 +420,168 @@ document.addEventListener('DOMContentLoaded', function () {
         modalContentContainer.querySelectorAll('.btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
     };
 
+    // Montar app Vue para historial de bitácoras (separado para reutilizar cuando
+    // el modal ya esté incluido en el template del servidor)
+    function mountBitacoraHistory(empId) {
+        try {
+            const emp = empId || (modalContentContainer && modalContentContainer.dataset && modalContentContainer.dataset.employeeId) || null;
+            if (!emp) return;
+            const mountEl = document.getElementById('bitacora-history-container');
+            if (!mountEl || typeof Vue === 'undefined') return;
+
+            const canEditFlag = (mountEl && mountEl.dataset && mountEl.dataset.canEdit === '1') ? true : false;
+
+            // ── REUTILIZAR instancia existente ──────────────────────────────
+            // Si Vue ya está montado sobre este nodo, NO desmontar ni remontar:
+            // hacerlo causa "Cannot read properties of null (reading 'nextSibling')"
+            // porque Vue deja nodos de comentario internos al desmontar.
+            // Simplemente actualizamos los datos reactivos y pedimos los datos nuevos.
+            if (window._bitacoraHistoryApp) {
+                try {
+                    window._bitacoraHistoryApp.employeeId = emp;
+                    window._bitacoraHistoryApp.can_edit = canEditFlag;
+                    window._bitacoraHistoryApp.page = 1;
+                    window._bitacoraHistoryApp.from = '';
+                    window._bitacoraHistoryApp.to = '';
+                    window._bitacoraHistoryApp.fetchData();
+                } catch (e) {
+                    console.warn('mountBitacoraHistory: error reutilizando app existente', e);
+                }
+                return;
+            }
+
+            const {createApp} = Vue;
+            const historyApp = createApp({
+                delimiters: ['[[', ']]'],
+                data() {
+                    return {
+                        employeeId: emp,
+                        can_edit: canEditFlag,
+                        bitacoras: [],
+                        from: '',
+                        to: '',
+                        page: 1,
+                        page_size: 10,
+                        total_pages: 1,
+                        total_count: 0
+                    };
+                },
+                computed: {
+                    startIndex() {
+                        return this.total_count === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
+                    },
+                    endIndex() {
+                        return Math.min(this.total_count, this.page * this.page_size);
+                    }
+                },
+                watch: {
+                    page(newVal, oldVal) {
+                        if (newVal !== oldVal) this.fetchData();
+                    }
+                },
+                methods: {
+                    formatDate(s) {
+                        if (!s) return '';
+                        try {
+                            const d = new Date(s);
+                            return d.toLocaleDateString('es-EC');
+                        } catch (e) {
+                            return s;
+                        }
+                    },
+                    formatDateTimeShort(dt) {
+                        if (!dt) return '';
+                        try {
+                            const d = new Date(dt);
+                            return d.toLocaleString('es-EC');
+                        } catch (e) {
+                            return dt;
+                        }
+                    },
+                    async fetchData() {
+                        try {
+                            const qs = new URLSearchParams();
+                            qs.set('page', this.page || 1);
+                            qs.set('page_size', this.page_size || 10);
+                            if (this.from) qs.set('from', this.from);
+                            if (this.to) qs.set('to', this.to);
+                            const resp = await fetch(`/permitrequest/bitacora/history/${this.employeeId}/?format=json&${qs.toString()}`);
+                            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                            const data = await resp.json();
+                            this.bitacoras = data.bitacoras || [];
+                            this.can_edit = !!data.can_edit;
+                            this.page = data.page || this.page;
+                            this.total_count = data.total_count || 0;
+                            this.total_pages = data.total_pages || 1;
+                        } catch (err) {
+                            console.error('Error fetching history JSON', err);
+                            this.bitacoras = [];
+                            this.page = 1;
+                            this.total_pages = 1;
+                            this.total_count = 0;
+                        }
+                    },
+                    goTo(p) {
+                        this.page = Math.max(1, Math.min(p, this.total_pages || 1));
+                    },
+                    prev() {
+                        this.goTo(this.page - 1);
+                    }, next() {
+                        this.goTo(this.page + 1);
+                    }, first() {
+                        this.goTo(1);
+                    }, last() {
+                        this.goTo(this.total_pages);
+                    },
+                    clearDates() {
+                        this.from = '';
+                        this.to = '';
+                        document.getElementById('bitacora-history-from').value = '';
+                        document.getElementById('bitacora-history-to').value = '';
+                        this.page = 1;
+                        this.fetchData();
+                    }
+                }
+            });
+
+            // Ensure the mount element is connected; if not, retry a few times
+            const mountElConnected = mountEl.isConnected;
+            if (!mountElConnected) {
+                const retries = parseInt((modalContentContainer && modalContentContainer.dataset && modalContentContainer.dataset.mountRetry) || '0');
+                if (retries >= 5) {
+                    console.warn('mountBitacoraHistory: mount element not connected after retries');
+                    return;
+                }
+                if (modalContentContainer && modalContentContainer.dataset) modalContentContainer.dataset.mountRetry = String(retries + 1);
+                setTimeout(() => mountBitacoraHistory(empId), 60);
+                return;
+            }
+
+            try {
+                const proxy = historyApp.mount(mountEl);
+                window._bitacoraHistoryApp = proxy;
+                window.appBitacoraHistory = proxy;
+
+                // inicial fetch
+                if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
+                    window._bitacoraHistoryApp.fetchData();
+                }
+            } catch (mountErr) {
+                console.warn('mountBitacoraHistory: Vue mount failed, falling back to initBitacoraHistoryModal', mountErr);
+                if (typeof initBitacoraHistoryModal === 'function') {
+                    try {
+                        initBitacoraHistoryModal();
+                    } catch (e) {
+                        console.error('Fallback initBitacoraHistoryModal failed', e);
+                    }
+                }
+            }
+
+        } catch (err) {
+            console.warn('mountBitacoraHistory error', err);
+        }
+    }
+
     // ========================================================
     // LÓGICA DEL FORMULARIO DE GENERACIÓN DE PERMISOS
     // ========================================================
@@ -944,12 +796,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Error calling appBitacoraList.open', err);
             }
         } else {
-            console.warn('appBitacoraList not initialized');
-            // Try to show modal with included HTML fallback
-            if (bitacoraListModal) {
-                bitacoraListModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
+            console.warn('appBitacoraList not initialized — attempting to initialize');
+            tryInitBitacoraListApp().then((ok) => {
+                if (window.appBitacoraList) {
+                    try {
+                        bitacoraListModal.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                        window.appBitacoraList.open(employeeId);
+                        return;
+                    } catch (err) {
+                        console.error('Error calling appBitacoraList.open after init', err);
+                    }
+                }
+                // Fallback: show modal with included HTML
+                if (bitacoraListModal) {
+                    bitacoraListModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                }
+            }).catch(() => {
+                if (bitacoraListModal) {
+                    bitacoraListModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                }
+            });
         }
     }
 
@@ -992,16 +861,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (window._bitacoraListAppInstance) {
                 try {
                     window._bitacoraListAppInstance.unmount();
-                } catch (e) { /* ignore */
+                } catch (e) {
                 }
                 window._bitacoraListAppInstance = null;
             }
-            if (window.appBitacoraList) {
-                try {
-                    window.appBitacoraList = null;
-                } catch (e) { /* ignore */
-                }
-            }
+            window.appBitacoraList = null;
+            window._bitacoraListInitPromise = null;  // ← LÍNEA CRÍTICA
         } catch (e) {
             console.warn('Error during unmounting bitacora list app', e);
         }
@@ -1075,11 +940,30 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     const BITACORA_LIST_MOUNT = '#bitacora-list-app';
 
-    if (document.querySelector(BITACORA_LIST_MOUNT)) {
-        // Avoid creating multiple app instances if already initialized (protect against duplicate bundles)
-        if (window._bitacoraListAppInstance) {
-            console.debug('bitacora list app already initialized, skipping createApp');
-        } else {
+    function tryInitBitacoraListApp() {
+        // Return existing promise if initialization already in progress
+        if (window._bitacoraListAppInstance && window.appBitacoraList) {
+            return Promise.resolve(true);
+        }
+        if (window._bitacoraListInitPromise) return window._bitacoraListInitPromise;
+
+        window._bitacoraListInitPromise = new Promise((resolve, reject) => {
+            if (!document.querySelector(BITACORA_LIST_MOUNT)) {
+                console.warn('Bitacora mount element not present');
+                resolve(false);
+                return;
+            }
+            // Avoid creating multiple app instances if already initialized (protect against duplicate bundles)
+            if (window._bitacoraListAppInstance) {
+                console.debug('bitacora list app already initialized, skipping createApp');
+                resolve(true);
+                return;
+            }
+            if (typeof Vue === 'undefined') {
+                console.warn('Vue not available, cannot mount bitacora list app');
+                resolve(false);
+                return;
+            }
             const {createApp} = Vue;
             // create the app instance and keep a reference for unmounting later
             const _bitacoraListApp = createApp({
@@ -1145,17 +1029,20 @@ document.addEventListener('DOMContentLoaded', function () {
                         this.isVisible = false;
                         this.bitacoras = [];
                         this.selectedBitacoras = [];
-                        // Cerrar overlay padre
+                        this.selectAll = false;
                         if (bitacoraListModal) {
                             bitacoraListModal.classList.add('hidden');
                             document.body.style.overflow = '';
                         }
-                        // Unmount the Vue instance to avoid later DOM patch errors
-                        try {
-                            ensureUnmountBitacoraList();
-                        } catch (e) { /* ignore */
-                        }
+                        // NO desmontar Vue: el nodo #bitacora-list-app persiste en el DOM
+                        // y un remontaje posterior falla con "Cannot read properties of null
+                        // (reading 'nextSibling')". La instancia se reutiliza en open().
                     }, async fetchBitacoras() {
+                        if (this._loading) {
+                            console.debug('fetchBitacoras: already loading, skipping concurrent call');
+                            return;
+                        }
+                        this._loading = true;
                         try {
                             const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
                             console.debug('fetchBitacoras ->', url);
@@ -1185,6 +1072,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         } catch (err) {
                             console.error('fetchBitacoras error:', err);
                             this.bitacoras = [];
+                        } finally {
+                            this._loading = false;
                         }
                     }, toggleAll() {
                         if (this.selectAll) {
@@ -1540,11 +1429,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 window._bitacoraListAppInstance = _bitacoraListApp;
                 window.appBitacoraList = proxy;
                 console.debug('bitacora list app mounted');
+                resolve(true);
             } catch (mountErr) {
                 console.error('Error mounting bitacora list app', mountErr);
+                resolve(false);
             }
-        }
+
+            // safety timeout: resolve false after 2s if nothing happened
+            setTimeout(() => {
+                if (!window.appBitacoraList) {
+                    console.warn('tryInitBitacoraListApp: timing out');
+                    resolve(false);
+                }
+            }, 2000);
+        });
+
+        return window._bitacoraListInitPromise;
     }
+
+    // Intentar inicializar la app de bitácoras al cargar el DOM
+    tryInitBitacoraListApp();
 });
 
 // --- PREVENCIÓN GLOBAL DE RECARGAS EN MODALES ---
