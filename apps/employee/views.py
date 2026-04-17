@@ -551,7 +551,8 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
             context['curriculum_experiences_count'] = curriculum.work_experiences.count()
             context['curriculum_courses_count'] = curriculum.trainings.count()
 
-        context['restricted_tab_ids'] = 'budget,contracts,actions,sanctions'
+        # Ocultar temporalmente pestañas sensibles en el self-dashboard
+        context['restricted_tab_ids'] = 'budget,contracts,actions,sanctions,permissions,vacations,payments'
         context['can_view_restricted_tabs'] = False
         return context
 

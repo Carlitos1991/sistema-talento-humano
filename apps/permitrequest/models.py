@@ -79,6 +79,9 @@ class PermitRequest(models.Model):
         ordering = ['-start_date']
         verbose_name = 'Solicitud de Permiso'
         verbose_name_plural = 'Solicitudes de Permisos'
+        permissions = [
+            ('can_edit', 'Puede editar y revisar bitácoras de permisos'),
+        ]
         indexes = [
             models.Index(fields=['employee', 'status']),
             models.Index(fields=['start_date']),

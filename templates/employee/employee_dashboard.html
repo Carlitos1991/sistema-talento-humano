@@ -28,13 +28,14 @@
     </script>
 
     <div class="employee-standalone-wrapper container-custom">
-        <div id="employeeWizardApp"
-             v-cloak
-             data-person-id="{{ person.id }}"
-             data-titles="{{ curriculum_titles_count|default:0 }}"
-             data-experiences="{{ curriculum_experiences_count|default:0 }}"
-             data-courses="{{ curriculum_courses_count|default:0 }}"
-             data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
+           <div id="employeeWizardApp"
+               v-cloak
+               data-person-id="{{ person.id }}"
+               data-photo-url="{{ person.photo.url if person.photo else '' }}"
+               data-titles="{{ curriculum_titles_count|default:0 }}"
+               data-experiences="{{ curriculum_experiences_count|default:0 }}"
+               data-courses="{{ curriculum_courses_count|default:0 }}"
+               data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
 
             <!-- Banner informativo (mantener diseño previo bajo la cabecera) -->
             <div class="banner-employee-detail">
