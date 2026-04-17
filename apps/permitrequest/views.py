@@ -1343,7 +1343,57 @@ class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request):
         from django.utils import timezone
         import json
-        
+
+        try:
+            # intentar leer JSON del body primero
+            payload = {}
+            try:
+                if request.body:
+                    payload = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                payload = request.POST
+
+            bitacora_ids = payload.get('ids') if isinstance(payload, dict) else request.POST.getlist('ids')
+            if not bitacora_ids:
+                return JsonResponse({'success': False, 'message': 'No se especificaron bitácoras'}, status=400)
+
+            # Asegurar que sea una lista de enteros
+            if isinstance(bitacora_ids, str):
+                # aceptar JSON-stringified or comma-separated
+                try:
+                    import ast
+                    parsed = ast.literal_eval(bitacora_ids)
+                    if isinstance(parsed, (list, tuple)):
+                        bitacora_ids = list(parsed)
+                except Exception:
+                    bitacora_ids = [int(x) for x in bitacora_ids.split(',') if x.strip().isdigit()]
+
+            # Convertir elementos a enteros (silenciar no convertibles)
+            clean_ids = []
+            for i in bitacora_ids:
+                try:
+                    clean_ids.append(int(i))
+                except Exception:
+                    continue
+
+            if not clean_ids:
+                return JsonResponse({'success': False, 'message': 'IDs inválidos'}, status=400)
+
+            updated = PermitRequest.objects.filter(
+                id__in=clean_ids,
+                status='REQUESTED'
+            ).update(
+                status='APPROVED',
+                response_by=request.user,
+                response_date=timezone.now(),
+                response_note='Aprobado masivamente',
+                updated_by=request.user
+            )
+
+            return JsonResponse({'success': True, 'message': f'Se aprobaron {updated} bitácora(s) correctamente'})
+        except Exception as e:
+            logger.exception('Error in BitacoraApproveView.post')
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=500)
 
 class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Vista que permite a usuarios con permiso `can_edit` marcar una bitácora como PENDIENTE (REQUESTED)
@@ -1385,30 +1435,7 @@ class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
             logger.exception('Error in BitacoraReviewView.post')
             return JsonResponse({'success': False, 'message': 'Error interno'}, status=500)
         
-        try:
-            data = json.loads(request.body)
-            bitacora_ids = data.get('ids', [])
-            
-            updated = PermitRequest.objects.filter(
-                id__in=bitacora_ids,
-                status='REQUESTED'
-            ).update(
-                status='APPROVED',
-                response_by=request.user,
-                response_date=timezone.now(),
-                response_note='Aprobado masivamente',
-                updated_by=request.user
-            )
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Se aprobaron {updated} bitácora(s) correctamente'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Error: {str(e)}'
-            }, status=400)
+        
 
 
 class BitacoraRejectView(LoginRequiredMixin, PermissionRequiredMixin, View):
