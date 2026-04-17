@@ -242,7 +242,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                             } catch (err) {
                                                 console.error('Error fetching history JSON', err);
-                                                throw err;
+                                                // Render empty state in tbody to avoid blank modal
+                                                const tbody = document.getElementById('bitacora-history-tbody');
+                                                if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
+                                                // update pagination/info elements to 0
+                                                const info = document.getElementById('bitacora-history-info');
+                                                if (info) info.textContent = `Mostrando 0 a 0 de 0`;
+                                                const pageInput = document.getElementById('bitacora-history-current');
+                                                const totalBadge = document.getElementById('bitacora-history-total');
+                                                if (pageInput) pageInput.value = 1;
+                                                if (totalBadge) totalBadge.textContent = `de 1`;
+                                                // don't rethrow to keep UI responsive
                                             }
                                         },
                                         goTo(page) {
