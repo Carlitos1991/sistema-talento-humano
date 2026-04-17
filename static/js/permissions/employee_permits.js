@@ -345,17 +345,46 @@ document.addEventListener('DOMContentLoaded', function () {
                                 const lastBtnEl = document.getElementById('bitacora-history-last');
                                 const pageInputEl = document.getElementById('bitacora-history-current');
 
-                                if (fromInputEl) fromInputEl.addEventListener('change', function () { historyApp.from = this.value; historyApp.page = 1; historyApp.fetchData(); });
-                                if (toInputEl) toInputEl.addEventListener('change', function () { historyApp.to = this.value; historyApp.page = 1; historyApp.fetchData(); });
-                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () { historyApp.clearDates(); });
+                                if (fromInputEl) fromInputEl.addEventListener('change', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.fetchData === 'function') {
+                                        proxy.from = this.value;
+                                        proxy.page = 1;
+                                        proxy.fetchData();
+                                    } else {
+                                        console.warn('history proxy not ready (from change)');
+                                    }
+                                });
+                                if (toInputEl) toInputEl.addEventListener('change', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.fetchData === 'function') {
+                                        proxy.to = this.value;
+                                        proxy.page = 1;
+                                        proxy.fetchData();
+                                    } else {
+                                        console.warn('history proxy not ready (to change)');
+                                    }
+                                });
+                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.clearDates === 'function') {
+                                        proxy.clearDates();
+                                    } else {
+                                        console.warn('history proxy not ready (clear)');
+                                    }
+                                });
                                 if (prevBtnEl) prevBtnEl.addEventListener('click', function () { historyApp.prev(); });
                                 if (nextBtnEl) nextBtnEl.addEventListener('click', function () { historyApp.next(); });
                                 if (firstBtnEl) firstBtnEl.addEventListener('click', function () { historyApp.first(); });
                                 if (lastBtnEl) lastBtnEl.addEventListener('click', function () { historyApp.last(); });
                                 if (pageInputEl) pageInputEl.addEventListener('change', function () { const p = parseInt(this.value) || 1; historyApp.goTo(p); });
 
-                                // initial fetch
-                                historyApp.fetchData();
+                                // initial fetch using mounted proxy
+                                if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
+                                    window._bitacoraHistoryApp.fetchData();
+                                } else {
+                                    console.warn('history proxy not available for initial fetch');
+                                }
                             }
                         } catch (err) {
                             console.warn('No se pudo inicializar history Vue app', err);
@@ -883,6 +912,23 @@ document.addEventListener('DOMContentLoaded', function () {
         bitacoraModal.classList.add('hidden');
         bitacoraModalContent.innerHTML = '';
         document.body.style.overflow = '';
+        try { ensureUnmountBitacoraList(); } catch (e) { /* ignore */ }
+    }
+
+    // Ensure we unmount the list app when the list modal is closed to avoid Vue trying
+    // to patch a DOM node that was removed (insertBefore null errors).
+    function ensureUnmountBitacoraList() {
+        try {
+            if (window._bitacoraListAppInstance) {
+                try { window._bitacoraListAppInstance.unmount(); } catch (e) { /* ignore */ }
+                window._bitacoraListAppInstance = null;
+            }
+            if (window.appBitacoraList) {
+                try { window.appBitacoraList = null; } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            console.warn('Error during unmounting bitacora list app', e);
+        }
     }
 
     // Manejar submit del formulario de bitácora
@@ -954,8 +1000,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const BITACORA_LIST_MOUNT = '#bitacora-list-app';
 
     if (document.querySelector(BITACORA_LIST_MOUNT)) {
-        const {createApp} = Vue;
-        window.appBitacoraList = createApp({
+        // Avoid creating multiple app instances if already initialized (protect against duplicate bundles)
+        if (window._bitacoraListAppInstance) {
+            console.debug('bitacora list app already initialized, skipping createApp');
+        } else {
+            const {createApp} = Vue;
+            // create the app instance and keep a reference for unmounting later
+            const _bitacoraListApp = createApp({
             delimiters: ['[[', ']]'], data() {
                 return {
                     isVisible: false,
@@ -1023,6 +1074,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         bitacoraListModal.classList.add('hidden');
                         document.body.style.overflow = '';
                     }
+                    // Unmount the Vue instance to avoid later DOM patch errors
+                    try { ensureUnmountBitacoraList(); } catch (e) { /* ignore */ }
                 }, async fetchBitacoras() {
                     try {
                         const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
@@ -1389,7 +1442,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     return this.escapeHtml(truncated);
                 }
             }
-        }).mount(BITACORA_LIST_MOUNT);
+        });
+
+            try {
+                const proxy = _bitacoraListApp.mount(BITACORA_LIST_MOUNT);
+                // store both the app instance and the proxy so we can unmount safely later
+                window._bitacoraListAppInstance = _bitacoraListApp;
+                window.appBitacoraList = proxy;
+                console.debug('bitacora list app mounted');
+            } catch (mountErr) {
+                console.error('Error mounting bitacora list app', mountErr);
+            }
+        }
     }
 });
 
