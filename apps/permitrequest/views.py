@@ -913,26 +913,15 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
         employee = get_object_or_404(Employee, pk=employee_id)
         
         try:
-            # Validar archivo PDF
+            # Validar archivo PDF (centralizado en forms)
             attachment = request.FILES.get('attachment')
             if not attachment:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Debe adjuntar un documento PDF'
-                }, status=400)
-            
-            if not attachment.name.lower().endswith('.pdf'):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Solo se permiten archivos PDF'
-                }, status=400)
-            
-            # Validar tamaño (2MB máximo)
-            if attachment.size > 2 * 1024 * 1024:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'El archivo no debe superar los 2MB'
-                }, status=400)
+                return JsonResponse({'success': False, 'message': 'Debe adjuntar un documento PDF'}, status=400)
+            try:
+                from .forms import validate_justification_file
+                validate_justification_file(attachment)
+            except Exception as exc:
+                return JsonResponse({'success': False, 'message': str(exc)}, status=400)
             
             # Obtener tipo de permiso "Bitácora"
             bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
@@ -1547,6 +1536,11 @@ class BitacoraEditView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     old_note = pr.response_note or ''
                     pr.response_note = new_note_html + (f"\n\n{old_note}" if old_note else '')
                 if file:
+                    try:
+                        from .forms import validate_justification_file
+                        validate_justification_file(file)
+                    except Exception as exc:
+                        return JsonResponse({'success': False, 'message': str(exc)}, status=400)
                     pr.justification_file = file
 
                 # Inicializar campos a guardar

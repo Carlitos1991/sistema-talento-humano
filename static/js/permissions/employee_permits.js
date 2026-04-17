@@ -868,8 +868,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const file = fileInput.files[0];
-        if (file.size > 2 * 1024 * 1024) {
-            Swal.fire('Error', 'El archivo no debe superar los 2MB', 'error');
+        if (file.size > 500 * 1024) {
+            Swal.fire('Error', 'El archivo no debe superar los 500 KB', 'error');
             return;
         }
 
@@ -1207,8 +1207,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     Swal.showValidationMessage('Solo se permiten archivos PDF');
                                     return false;
                                 }
-                                if (file.size > 2 * 1024 * 1024) {
-                                    Swal.showValidationMessage('El archivo no debe superar los 2MB');
+                                if (file.size > 500 * 1024) {
+                                    Swal.showValidationMessage('El archivo no debe superar los 500 KB');
                                     return false;
                                 }
                             }

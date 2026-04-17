@@ -1,6 +1,7 @@
 from django import forms
 from .models import PermitType, PermitRequest
 from employee.models import Employee
+from django.core.exceptions import ValidationError
 
 
 class PermitTypeForm(forms.ModelForm):
@@ -68,3 +69,28 @@ class PermitRequestForm(forms.ModelForm):
             self.add_error('end_date', 'La fecha de fin no puede ser anterior a la de inicio.')
 
         return cleaned_data
+
+    def clean_justification_file(self):
+        file = self.cleaned_data.get('justification_file')
+        if not file:
+            return file
+        # extensión
+        if not file.name.lower().endswith('.pdf'):
+            raise ValidationError('Solo se permiten archivos PDF')
+        # tamaño 500 KB
+        if file.size > 500 * 1024:
+            raise ValidationError('El archivo no debe superar los 500 KB')
+        return file
+
+
+def validate_justification_file(file):
+    """Helper reutilizable: valida que el archivo sea PDF y <= 500KB.
+
+    Lanza `django.core.exceptions.ValidationError` en caso de fallo.
+    """
+    if not file:
+        return
+    if not file.name.lower().endswith('.pdf'):
+        raise ValidationError('Solo se permiten archivos PDF')
+    if file.size > 500 * 1024:
+        raise ValidationError('El archivo no debe superar los 500 KB')

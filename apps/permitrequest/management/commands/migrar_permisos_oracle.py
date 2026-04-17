@@ -58,10 +58,13 @@ class Command(BaseCommand):
             try:
                 instant_dir = None
                 try:
-                    import os
-                    instant_dir = os.environ.get('ORACLE_INSTANTCLIENT_DIR')
-                except Exception:
-                    instant_dir = None
+                    # Esta es la ruta exacta que definimos en el volumen del docker-compose.yml
+                    lib_path = "/opt/oracle/instantclient"
+                    oracledb.init_oracle_client(lib_dir=lib_path)
+                    self.stdout.write(self.style.SUCCESS(f"✅ Oracle Thick Mode activado desde: {lib_path}"))
+                except Exception as e:
+                    self.stdout.write(
+                        self.style.WARNING(f"Aviso: No se pudo iniciar Thick Mode, intentando Thin Mode... Error: {e}"))
 
                 candidates = []
                 if instant_dir:

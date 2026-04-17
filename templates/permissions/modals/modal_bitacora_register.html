@@ -179,7 +179,7 @@
                             </div>
                         </div>
                         <small class="form-text text-muted" style="margin-top: 0.5rem;">
-                            <i class="fas fa-paperclip"></i> Max: 2MB
+                            <i class="fas fa-paperclip"></i> Max: 500 KB
                         </small>
                     </div>
                 </div>
@@ -230,14 +230,14 @@
                     const fileName = file.name;
                     const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
 
-                    // Validar tamaño
-                    if (file.size > 2 * 1024 * 1024) {
+                    // Validar tamaño (500 KB)
+                    if (file.size > 500 * 1024) {
                         if (fileNameDisplay) {
                             fileNameDisplay.textContent = 'Archivo muy grande';
                             fileNameDisplay.style.color = '#ef4444';
                         }
                         this.value = ''; // Limpiar selección
-                        alert('El archivo no debe superar los 2MB');
+                        alert('El archivo no debe superar los 500 KB');
                         return;
                     }
 
