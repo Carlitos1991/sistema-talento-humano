@@ -58,7 +58,7 @@
 
                 <!-- TABLA -->
                 <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
-                    <table class="w-100">
+                    <table class="managed-table w-100">
                         <thead>
                         <tr>
                             {% if perms.permitrequest.change_permitrequest %}
@@ -111,7 +111,7 @@
                             <td class="registrado-por" style="font-size: 12px; white-space: normal;">[[
                                 bitacora.created_by__full_name || 'Sistema' ]]
                             </td>
-                            <td style="font-size: 12px;">[[ formatDateShort(bitacora.created_at) ]]</td>
+                            <td style="font-size: 12px;">[[ formatDateTime(bitacora.created_at) ]]</td>
                             <td class="text-center">
                                 <button type="button" class="btn-views-action"
                                     @click="openEditSwal(bitacora)"

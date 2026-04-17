@@ -1211,7 +1211,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     employee=employee,
                     permit_type=bitacora_type,
                     status='APPROVED'
-                ).select_related('response_by', 'created_by')
+                ).select_related('response_by', 'created_by', 'updated_by')
 
             # Filtering (search)
             q = request.GET.get('q', '').strip()
@@ -1394,7 +1394,8 @@ class BitacoraApproveView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 response_by=request.user,
                 response_date=timezone.now(),
                 response_note='Aprobado masivamente',
-                updated_by=request.user
+                updated_by=request.user,
+                updated_at=timezone.now()
             )
 
             return JsonResponse({'success': True, 'message': f'Se aprobaron {updated} bitácora(s) correctamente'})

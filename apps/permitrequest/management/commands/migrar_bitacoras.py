@@ -9,7 +9,7 @@ from permitrequest.models import PermitRequest, PermitType
 
 
 class Command(BaseCommand):
-    help = 'Migración estricta de Bitácoras con mapeo manual y gestión de estados inactivos'
+    help = 'Migración optimizada con mapeo a campos de Response y auditoría'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=str, default='2026', help='Año a migrar')
@@ -18,9 +18,6 @@ class Command(BaseCommand):
         User = get_user_model()
         anio = options['anio']
 
-        # ==========================================================
-        # 1. MAPEO MANUAL: Aquí asocias el nombre de Oracle con el ID de SIGETH2
-        # ==========================================================
         mapeo_manual = {
             "Bitacora": 3,
             "Cargo a vacaciones": 2,
@@ -28,11 +25,13 @@ class Command(BaseCommand):
             "Calamidad Doméstica": 7,
         }
 
-        self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración manual del año {anio}..."))
+        # OPTIMIZACIÓN: Cargamos usuarios en un diccionario para evitar miles de consultas a la BD
+        self.stdout.write("🚀 Precargando usuarios para velocidad...")
+        usuarios_cache = {u.first_name.upper() if u.first_name else "": u for u in User.objects.all()}
+        admin_fallback = User.objects.filter(is_superuser=True).first()
 
         db_config = settings.DATABASES['old_db']
-        migrados, saltados_tipo, saltados_empleado = 0, 0, 0
-        tipos_no_mapeados = set()
+        migrados, total_procesados = 0, 0
 
         try:
             conn = psycopg2.connect(
@@ -41,7 +40,7 @@ class Command(BaseCommand):
             )
 
             with conn.cursor() as cursor:
-                # 2. SELECCIÓN DE DATOS (Incluyendo edit_by y edit_date de SIGETH1)
+                # Traemos edit_date y edit_by (updated_at/by en la tabla de origen)
                 sql = """
                       SELECT per.cedula, \
                              p.registered_by, \
@@ -66,50 +65,33 @@ class Command(BaseCommand):
 
                 with transaction.atomic():
                     while True:
-                        rows = cursor.fetchmany(1000)
+                        rows = cursor.fetchmany(500)
                         if not rows: break
 
-                        for cedula, reg_by, f_ini, h_ini, h_fin, n_h, n_m, estado, f_reg, archivo, cargo_permiso, edit_date, edit_by in rows:
+                        for row in rows:
+                            total_procesados += 1
+                            cedula, reg_by, f_ini, h_ini, h_fin, n_h, n_m, estado, f_reg, archivo, cargo_permiso, edit_date, edit_by = row
 
-                            # A. Verificar Mapeo Manual
                             id_tipo_mapeado = mapeo_manual.get(cargo_permiso)
-                            if not id_tipo_mapeado:
-                                tipos_no_mapeados.add(cargo_permiso)
-                                saltados_tipo += 1
-                                continue
+                            if not id_tipo_mapeado: continue
 
-                            # B. Verificar Empleado por Cédula
                             empleado = Employee.objects.filter(person__document_number=cedula).first()
-                            if not empleado:
-                                saltados_empleado += 1
-                                continue
+                            if not empleado: continue
 
-                            # C. Obtener Tipo de Permiso (se migra aunque esté inactivo en SIGETH2)
                             tipo_obj = PermitType.objects.get(id=id_tipo_mapeado)
 
-                            # D. Mapeo de Usuarios (Creador y Editor)
-                            nombre_creador = reg_by.split()[0] if reg_by else "ADMIN"
-                            usuario_creador = User.objects.filter(first_name__icontains=nombre_creador).first()
+                            # Búsqueda rápida en caché de usuarios
+                            nombre_reg = reg_by.split()[0].upper() if reg_by else ""
+                            nombre_edit = edit_by.split()[0].upper() if edit_by else ""
 
-                            nombre_editor = edit_by.split()[0] if edit_by else nombre_creador
-                            usuario_editor = User.objects.filter(first_name__icontains=nombre_editor).first()
+                            u_creador = usuarios_cache.get(nombre_reg, admin_fallback)
+                            u_editor = usuarios_cache.get(nombre_edit, u_creador)
 
-                            # Si no se encuentra el usuario, usar el primer superusuario disponible
-                            admin_fallback = User.objects.filter(is_superuser=True).first()
-                            if not usuario_creador: usuario_creador = admin_fallback
-                            if not usuario_editor: usuario_editor = admin_fallback
+                            # Definición de Estado
+                            estado_sigeth2 = 'INACTIVE' if estado == 'INACTIVO' else (
+                                'APPROVED' if estado == 'APROBADO' else 'REQUESTED')
 
-                            # E. Determinación del Estado (Ajustado según tu solicitud)
-                            # Si el estado es 'INACTIVO' en Oracle, se guarda como 'INACTIVE' en SIGETH2
-                            # Si es 'APROBADO', se guarda como 'APPROVED', de lo contrario 'REQUESTED'
-                            if estado == 'INACTIVO':
-                                estado_sigeth2 = 'CANCELED'
-                            elif estado == 'APROBADO':
-                                estado_sigeth2 = 'APPROVED'
-                            else:
-                                estado_sigeth2 = 'REQUESTED'
-
-                            # F. Creación/Actualización del Registro
+                            # Creación del Registro con el nuevo mapeo solicitado
                             PermitRequest.objects.get_or_create(
                                 employee=empleado,
                                 start_date=f_ini,
@@ -122,29 +104,30 @@ class Command(BaseCommand):
                                     'hours': n_h or 0,
                                     'minutes': n_m or 0,
                                     'justification_file': archivo,
+
+                                    # Auditoría de Creación
                                     'created_at': f_reg if f_reg else datetime.datetime.now(),
-                                    'created_by': usuario_creador,
-                                    # Mapeo de campos de auditoría de edición
-                                    'updated_by': usuario_editor,
+                                    'created_by': u_creador,
+
+                                    # MAPEO SOLICITADO A CAMPOS DE RESPONSE
+                                    'response_date': edit_date,  # edit_date (updated_at de origen) -> response_date
+                                    'response_by': u_editor,  # edit_by (updated_by de origen) -> response_by
+
+                                    # Auditoría de Sistema (updated_at/by se llenan automáticamente o igualamos)
                                     'updated_at': edit_date if edit_date else (
                                         f_reg if f_reg else datetime.datetime.now()),
-                                    'response_note': f"Migración Consolidada SIGETH1. Orig: {reg_by} | Cargo: {cargo_permiso}"
+                                    'updated_by': u_editor,
+
+                                    'response_note': f"Migrado. Creado por: {reg_by} | Gestionado por: {edit_by}"
                                 }
                             )
                             migrados += 1
 
-                        self.stdout.write(f"⏳ Procesando... Migrados: {migrados}", ending='\r')
+                        self.stdout.write(f"⏳ Procesando... {total_procesados} revisados | {migrados} migrados",
+                                          ending='\r')
 
             conn.close()
-
-            # --- REPORTE FINAL ---
-            self.stdout.write("\n" + "=" * 50)
-            self.stdout.write(self.style.SUCCESS(f"✅ MIGRACIÓN {anio} FINALIZADA"))
-            if tipos_no_mapeados:
-                self.stdout.write(self.style.ERROR(f"❌ TIPOS NO MAPEADOS: {tipos_no_mapeados}"))
-            self.stdout.write(f"✨ Registros nuevos: {migrados}")
-            self.stdout.write(f"❌ Sin empleado:     {saltados_empleado}")
-            self.stdout.write("=" * 50)
+            self.stdout.write(self.style.SUCCESS(f"\n✅ Año {anio} terminado satisfactoriamente."))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"\n❌ Error Crítico: {e}"))
+            self.stdout.write(self.style.ERROR(f"\n❌ Error: {e}"))
