@@ -1,6 +1,6 @@
 {% load static %}
 
-<div id="bitacora-history-container" class="modal-container-medium animate-scale-in">
+<div id="bitacora-history-container" class="modal-container-medium animate-scale-in" data-can-edit="{{ can_edit|yesno:'1,0' }}">
 
             <div class="modal-header-medium modal-header-gradient">
                 <h3 class="modal-title text-white">

@@ -1281,6 +1281,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 'q': q,
                 'sort': sort,
                 'page_size': page_size,
+                'can_edit': request.user.has_perm('permitrequest.can_edit') or request.user.has_perm('permitrequest.change_permitrequest')
             }
 
             # Si se solicita JSON (para render dinámico por JS/Vue), devolver datos en JSON
@@ -1320,7 +1321,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         'page': page_obj.number,
                         'total_pages': paginator.num_pages,
                         'total_count': paginator.count,
-                        'can_edit': request.user.has_perm('permitrequest.can_edit')
+                        'can_edit': request.user.has_perm('permitrequest.can_edit') or request.user.has_perm('permitrequest.change_permitrequest')
                     })
                 except Exception:
                     logger.exception('Error serializing bitacoras for JSON response')

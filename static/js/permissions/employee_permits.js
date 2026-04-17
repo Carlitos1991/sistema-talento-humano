@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     data() {
                                         return {
                                             employeeId: empId,
-                                            can_edit: false,
+                                            can_edit: (mountEl && mountEl.dataset && mountEl.dataset.canEdit === '1') ? true : false,
                                             bitacoras: [],
                                             from: '',
                                             to: '',
