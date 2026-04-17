@@ -416,7 +416,8 @@ class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View)
                 'custom_position': user.custom_position or user.get_default_signature_position(),
             }
         else:
-            username_suggestion = f"{person.first_name.split()[0]}{person.last_name.split()[0]}".lower()
+            # Sugerir la cédula como nombre de usuario para nuevos usuarios
+            username_suggestion = (person.document_number or '').strip()
             data['form_data']['username'] = username_suggestion
             data['form_data']['custom_name'] = person.full_name.upper()
 
