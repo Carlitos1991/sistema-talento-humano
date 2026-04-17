@@ -163,7 +163,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                             if (!dateString) return '';
                                             try {
                                                 const d = new Date(dateString);
-                                                return d.toLocaleDateString('es-EC', {year: 'numeric', month: '2-digit', day: '2-digit'});
+                                                return d.toLocaleDateString('es-EC', {
+                                                    year: 'numeric',
+                                                    month: '2-digit',
+                                                    day: '2-digit'
+                                                });
                                             } catch (e) {
                                                 return dateString;
                                             }
@@ -242,7 +246,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                             } catch (err) {
                                                 console.error('Error fetching history JSON', err);
-                                                throw err;
+                                                // Render empty state in tbody to avoid blank modal
+                                                const tbody = document.getElementById('bitacora-history-tbody');
+                                                if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td></tr>`;
+                                                // update pagination/info elements to 0
+                                                const info = document.getElementById('bitacora-history-info');
+                                                if (info) info.textContent = `Mostrando 0 a 0 de 0`;
+                                                const pageInput = document.getElementById('bitacora-history-current');
+                                                const totalBadge = document.getElementById('bitacora-history-total');
+                                                if (pageInput) pageInput.value = 1;
+                                                if (totalBadge) totalBadge.textContent = `de 1`;
+                                                // don't rethrow to keep UI responsive
                                             }
                                         },
                                         goTo(page) {
@@ -250,16 +264,46 @@ document.addEventListener('DOMContentLoaded', function () {
                                             this.page = p;
                                             this.fetchData();
                                         },
-                                        prev() { this.goTo(this.page - 1); },
-                                        next() { this.goTo(this.page + 1); },
-                                        first() { this.goTo(1); },
-                                        last() { this.goTo(this.total_pages); },
-                                        clearDates() { this.from = ''; this.to = ''; document.getElementById('bitacora-history-from').value=''; document.getElementById('bitacora-history-to').value=''; this.page=1; this.fetchData(); }
+                                        prev() {
+                                            this.goTo(this.page - 1);
+                                        },
+                                        next() {
+                                            this.goTo(this.page + 1);
+                                        },
+                                        first() {
+                                            this.goTo(1);
+                                        },
+                                        last() {
+                                            this.goTo(this.total_pages);
+                                        },
+                                        clearDates() {
+                                            this.from = '';
+                                            this.to = '';
+                                            document.getElementById('bitacora-history-from').value = '';
+                                            document.getElementById('bitacora-history-to').value = '';
+                                            this.page = 1;
+                                            this.fetchData();
+                                        }
                                     }
-                                }).mount('#bitacora-history-container');
+                                });
 
-                                // expose globally
-                                window.appBitacoraHistory = historyApp;
+                                // Safe mount: unmount previous instance if any, then mount new app
+                                try {
+                                    if (window._bitacoraHistoryApp) {
+                                        try {
+                                            window._bitacoraHistoryApp.unmount();
+                                        } catch (e) { /* ignore */
+                                        }
+                                        window._bitacoraHistoryApp = null;
+                                    }
+                                    // mount and keep the proxy returned by mount()
+                                    const historyProxy = historyApp.mount('#bitacora-history-container');
+                                    window._bitacoraHistoryApp = historyProxy;
+                                    // expose proxy for compatibility
+                                    window.appBitacoraHistory = historyProxy;
+                                } catch (mountErr) {
+                                    console.error('Error mounting bitacora history app', mountErr);
+                                }
 
                                 // Delegated handler para botones de acción (evita interferir con el render de Vue)
                                 function showReviewDialog(bitacoraId) {
@@ -271,7 +315,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                         showCancelButton: true,
                                         confirmButtonText: 'Enviar',
                                         cancelButtonText: 'Cancelar',
-                                        inputValidator: (val) => { if (!val || !val.trim()) return 'El motivo es obligatorio'; }
+                                        inputValidator: (val) => {
+                                            if (!val || !val.trim()) return 'El motivo es obligatorio';
+                                        }
                                     });
                                 }
 
@@ -309,7 +355,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                     if (!result || !result.value) return;
                                     const ok = await sendReview(bitId, result.value);
                                     if (ok && window.appBitacoraHistory && typeof window.appBitacoraHistory.fetchData === 'function') {
-                                        try { window.appBitacoraHistory.fetchData(); } catch (err) { console.warn('No se pudo refrescar la lista', err); }
+                                        try {
+                                            window.appBitacoraHistory.fetchData();
+                                        } catch (err) {
+                                            console.warn('No se pudo refrescar la lista', err);
+                                        }
                                     }
                                 });
 
@@ -323,17 +373,57 @@ document.addEventListener('DOMContentLoaded', function () {
                                 const lastBtnEl = document.getElementById('bitacora-history-last');
                                 const pageInputEl = document.getElementById('bitacora-history-current');
 
-                                if (fromInputEl) fromInputEl.addEventListener('change', function () { historyApp.from = this.value; historyApp.page = 1; historyApp.fetchData(); });
-                                if (toInputEl) toInputEl.addEventListener('change', function () { historyApp.to = this.value; historyApp.page = 1; historyApp.fetchData(); });
-                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () { historyApp.clearDates(); });
-                                if (prevBtnEl) prevBtnEl.addEventListener('click', function () { historyApp.prev(); });
-                                if (nextBtnEl) nextBtnEl.addEventListener('click', function () { historyApp.next(); });
-                                if (firstBtnEl) firstBtnEl.addEventListener('click', function () { historyApp.first(); });
-                                if (lastBtnEl) lastBtnEl.addEventListener('click', function () { historyApp.last(); });
-                                if (pageInputEl) pageInputEl.addEventListener('change', function () { const p = parseInt(this.value) || 1; historyApp.goTo(p); });
+                                if (fromInputEl) fromInputEl.addEventListener('change', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.fetchData === 'function') {
+                                        proxy.from = this.value;
+                                        proxy.page = 1;
+                                        proxy.fetchData();
+                                    } else {
+                                        console.warn('history proxy not ready (from change)');
+                                    }
+                                });
+                                if (toInputEl) toInputEl.addEventListener('change', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.fetchData === 'function') {
+                                        proxy.to = this.value;
+                                        proxy.page = 1;
+                                        proxy.fetchData();
+                                    } else {
+                                        console.warn('history proxy not ready (to change)');
+                                    }
+                                });
+                                if (clearBtnEl) clearBtnEl.addEventListener('click', function () {
+                                    const proxy = window._bitacoraHistoryApp;
+                                    if (proxy && typeof proxy.clearDates === 'function') {
+                                        proxy.clearDates();
+                                    } else {
+                                        console.warn('history proxy not ready (clear)');
+                                    }
+                                });
+                                if (prevBtnEl) prevBtnEl.addEventListener('click', function () {
+                                    historyApp.prev();
+                                });
+                                if (nextBtnEl) nextBtnEl.addEventListener('click', function () {
+                                    historyApp.next();
+                                });
+                                if (firstBtnEl) firstBtnEl.addEventListener('click', function () {
+                                    historyApp.first();
+                                });
+                                if (lastBtnEl) lastBtnEl.addEventListener('click', function () {
+                                    historyApp.last();
+                                });
+                                if (pageInputEl) pageInputEl.addEventListener('change', function () {
+                                    const p = parseInt(this.value) || 1;
+                                    historyApp.goTo(p);
+                                });
 
-                                // initial fetch
-                                historyApp.fetchData();
+                                // initial fetch using mounted proxy
+                                if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
+                                    window._bitacoraHistoryApp.fetchData();
+                                } else {
+                                    console.warn('history proxy not available for initial fetch');
+                                }
                             }
                         } catch (err) {
                             console.warn('No se pudo inicializar history Vue app', err);
@@ -378,6 +468,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
+        // Si hay una instancia Vue montada para el modal, desmontarla antes de limpiar el HTML
+        try {
+            if (window._bitacoraHistoryApp) {
+                try {
+                    window._bitacoraHistoryApp.unmount();
+                } catch (e) { /* ignore */
+                }
+                window._bitacoraHistoryApp = null;
+            }
+        } catch (e) {
+            console.warn('Error al desmontar app de bitácora:', e);
+        }
+
         modalContentContainer.innerHTML = '';
 
         // Restaurar scroll del body
@@ -804,10 +907,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Abrir listado de bitácoras
     function openBitacoraList(employeeId) {
+        console.debug('openBitacoraList called for employeeId=', employeeId, 'appBitacoraList=', !!window.appBitacoraList);
         if (window.appBitacoraList) {
             bitacoraListModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            window.appBitacoraList.open(employeeId);
+            try {
+                window.appBitacoraList.open(employeeId);
+            } catch (err) {
+                console.error('Error calling appBitacoraList.open', err);
+            }
+        } else {
+            console.warn('appBitacoraList not initialized');
+            // Try to show modal with included HTML fallback
+            if (bitacoraListModal) {
+                bitacoraListModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
         }
     }
 
@@ -839,6 +954,32 @@ document.addEventListener('DOMContentLoaded', function () {
         bitacoraModal.classList.add('hidden');
         bitacoraModalContent.innerHTML = '';
         document.body.style.overflow = '';
+        try {
+            ensureUnmountBitacoraList();
+        } catch (e) { /* ignore */
+        }
+    }
+
+    // Ensure we unmount the list app when the list modal is closed to avoid Vue trying
+    // to patch a DOM node that was removed (insertBefore null errors).
+    function ensureUnmountBitacoraList() {
+        try {
+            if (window._bitacoraListAppInstance) {
+                try {
+                    window._bitacoraListAppInstance.unmount();
+                } catch (e) { /* ignore */
+                }
+                window._bitacoraListAppInstance = null;
+            }
+            if (window.appBitacoraList) {
+                try {
+                    window.appBitacoraList = null;
+                } catch (e) { /* ignore */
+                }
+            }
+        } catch (e) {
+            console.warn('Error during unmounting bitacora list app', e);
+        }
     }
 
     // Manejar submit del formulario de bitácora
@@ -910,112 +1051,175 @@ document.addEventListener('DOMContentLoaded', function () {
     const BITACORA_LIST_MOUNT = '#bitacora-list-app';
 
     if (document.querySelector(BITACORA_LIST_MOUNT)) {
-        const {createApp} = Vue;
-        window.appBitacoraList = createApp({
-            delimiters: ['[[', ']]'], data() {
-                return {
-                    isVisible: false,
-                    employeeId: null,
-                    employeeName: '',
-                    employeeIdentification: '',
-                    bitacoras: [],
-                    selectedBitacoras: [],
-                    selectAll: false,
-                    fromDate: '',
-                    toDate: '',
-                    currentPage: 1,
-                    perPage: 10
-                }
-            }, computed: {
-                filteredBitacoras() {
-                    // Filtrar por rango de fechas (start_date)
-                    if (!this.fromDate && !this.toDate) return this.bitacoras;
-                    const from = this.fromDate ? new Date(this.fromDate) : null;
-                    const to = this.toDate ? new Date(this.toDate) : null;
-                    // Normalize to compare dates only
-                    return this.bitacoras.filter(b => {
-                        if (!b.start_date) return false;
-                        const d = new Date(b.start_date);
-                        if (from && d < from) return false;
-                        if (to) {
-                            // include entire 'to' day
-                            const toEnd = new Date(to);
-                            toEnd.setHours(23, 59, 59, 999);
-                            if (d > toEnd) return false;
-                        }
-                        return true;
-                    });
-                }, totalPages() {
-                    return Math.ceil(this.filteredBitacoras.length / this.perPage) || 1;
-                }, paginatedBitacoras() {
-                    const start = (this.currentPage - 1) * this.perPage;
-                    const end = start + this.perPage;
-                    return this.filteredBitacoras.slice(start, end);
-                }, startIndex() {
-                    return this.filteredBitacoras.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
-                }, endIndex() {
-                    return Math.min(this.currentPage * this.perPage, this.filteredBitacoras.length);
-                }
-            }, methods: {
-                async open(employeeId) {
-                    this.employeeId = employeeId;
-                    this.fromDate = '';
-                    this.toDate = '';
-                    this.currentPage = 1;
-                    this.selectedBitacoras = [];
-                    this.selectAll = false;
-                    await this.fetchBitacoras();
-                    this.isVisible = true;
-                }, clearDates() {
-                    this.fromDate = '';
-                    this.toDate = '';
-                    this.currentPage = 1;
-                }, closeModal() {
-                    this.isVisible = false;
-                    this.bitacoras = [];
-                    this.selectedBitacoras = [];
-                    // Cerrar overlay padre
-                    if (bitacoraListModal) {
-                        bitacoraListModal.classList.add('hidden');
-                        document.body.style.overflow = '';
+        // Avoid creating multiple app instances if already initialized (protect against duplicate bundles)
+        if (window._bitacoraListAppInstance) {
+            console.debug('bitacora list app already initialized, skipping createApp');
+        } else {
+            const {createApp} = Vue;
+            // create the app instance and keep a reference for unmounting later
+            const _bitacoraListApp = createApp({
+                delimiters: ['[[', ']]'], data() {
+                    return {
+                        isVisible: false,
+                        employeeId: null,
+                        employeeName: '',
+                        employeeIdentification: '',
+                        bitacoras: [],
+                        selectedBitacoras: [],
+                        selectAll: false,
+                        fromDate: '',
+                        toDate: '',
+                        currentPage: 1,
+                        perPage: 10
                     }
-                }, async fetchBitacoras() {
-                    try {
-                        const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (data.success) {
-                            this.employeeName = data.employee_name;
-                            this.employeeIdentification = data.employee_identification;
-                            this.bitacoras = data.bitacoras;
-                        }
-                    } catch (err) {
-                        console.error('Error:', err);
+                }, computed: {
+                    filteredBitacoras() {
+                        // Filtrar por rango de fechas (start_date)
+                        if (!this.fromDate && !this.toDate) return this.bitacoras;
+                        const from = this.fromDate ? new Date(this.fromDate) : null;
+                        const to = this.toDate ? new Date(this.toDate) : null;
+                        // Normalize to compare dates only
+                        return this.bitacoras.filter(b => {
+                            if (!b.start_date) return false;
+                            const d = new Date(b.start_date);
+                            if (from && d < from) return false;
+                            if (to) {
+                                // include entire 'to' day
+                                const toEnd = new Date(to);
+                                toEnd.setHours(23, 59, 59, 999);
+                                if (d > toEnd) return false;
+                            }
+                            return true;
+                        });
+                    }, totalPages() {
+                        return Math.ceil(this.filteredBitacoras.length / this.perPage) || 1;
+                    }, paginatedBitacoras() {
+                        const start = (this.currentPage - 1) * this.perPage;
+                        const end = start + this.perPage;
+                        return this.filteredBitacoras.slice(start, end);
+                    }, startIndex() {
+                        return this.filteredBitacoras.length === 0 ? 0 : (this.currentPage - 1) * this.perPage + 1;
+                    }, endIndex() {
+                        return Math.min(this.currentPage * this.perPage, this.filteredBitacoras.length);
                     }
-                }, toggleAll() {
-                    if (this.selectAll) {
-                        this.selectedBitacoras = this.paginatedBitacoras.map(b => b.id);
-                    } else {
+                }, methods: {
+                    async open(employeeId) {
+                        this.employeeId = employeeId;
+                        this.fromDate = '';
+                        this.toDate = '';
+                        this.currentPage = 1;
                         this.selectedBitacoras = [];
-                    }
-                }, async approveSelected() {
-                    if (this.selectedBitacoras.length === 0) return;
-
-                    const result = await Swal.fire({
-                        title: '¿Aprobar bitácoras?',
-                        text: `Se aprobarán ${this.selectedBitacoras.length} bitácora(s)`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, aprobar',
-                        cancelButtonText: 'Cancelar'
-                    });
-
-                    if (result.isConfirmed) {
+                        this.selectAll = false;
+                        await this.fetchBitacoras();
+                        this.isVisible = true;
+                    }, clearDates() {
+                        this.fromDate = '';
+                        this.toDate = '';
+                        this.currentPage = 1;
+                    }, closeModal() {
+                        this.isVisible = false;
+                        this.bitacoras = [];
+                        this.selectedBitacoras = [];
+                        // Cerrar overlay padre
+                        if (bitacoraListModal) {
+                            bitacoraListModal.classList.add('hidden');
+                            document.body.style.overflow = '';
+                        }
+                        // Unmount the Vue instance to avoid later DOM patch errors
                         try {
-                            const res = await fetch('/permitrequest/bitacora/approve/', {
+                            ensureUnmountBitacoraList();
+                        } catch (e) { /* ignore */
+                        }
+                    }, async fetchBitacoras() {
+                        try {
+                            const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
+                            console.debug('fetchBitacoras ->', url);
+                            const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                            const text = await res.text();
+                            let data = null;
+                            try {
+                                data = JSON.parse(text);
+                            } catch (e) {
+                                console.warn('fetchBitacoras: response not JSON', text);
+                            }
+
+                            if (data && data.success) {
+                                // Ensure the root element still exists before updating reactive state
+                                const rootEl = document.getElementById('bitacora-list-app');
+                                if (!rootEl) {
+                                    console.warn('bitacora root element removed; skipping state update');
+                                    return;
+                                }
+                                this.employeeName = data.employee_name;
+                                this.employeeIdentification = data.employee_identification;
+                                this.bitacoras = data.bitacoras || [];
+                            } else {
+                                console.warn('fetchBitacoras: no success', data);
+                                this.bitacoras = [];
+                            }
+                        } catch (err) {
+                            console.error('fetchBitacoras error:', err);
+                            this.bitacoras = [];
+                        }
+                    }, toggleAll() {
+                        if (this.selectAll) {
+                            this.selectedBitacoras = this.paginatedBitacoras.map(b => b.id);
+                        } else {
+                            this.selectedBitacoras = [];
+                        }
+                    }, async approveSelected() {
+                        if (this.selectedBitacoras.length === 0) return;
+
+                        const result = await Swal.fire({
+                            title: '¿Aprobar bitácoras?',
+                            text: `Se aprobarán ${this.selectedBitacoras.length} bitácora(s)`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, aprobar',
+                            cancelButtonText: 'Cancelar'
+                        });
+
+                        if (result.isConfirmed) {
+                            try {
+                                const res = await fetch('/permitrequest/bitacora/approve/', {
+                                    method: 'POST', headers: {
+                                        'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                    }, body: JSON.stringify({ids: this.selectedBitacoras})
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    Swal.fire('Éxito', data.message, 'success');
+                                    this.selectedBitacoras = [];
+                                    this.selectAll = false;
+                                    await this.fetchBitacoras();
+                                } else {
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            } catch (err) {
+                                Swal.fire('Error', 'Error de comunicación', 'error');
+                            }
+                        }
+                    }, async rejectSelected() {
+                        if (this.selectedBitacoras.length === 0) return;
+
+                        const {value: reason} = await Swal.fire({
+                            title: 'Rechazar bitácoras',
+                            input: 'textarea',
+                            inputLabel: `Ingrese motivo de rechazo para ${this.selectedBitacoras.length} bitácora(s)`,
+                            inputPlaceholder: 'Motivo de rechazo...',
+                            showCancelButton: true,
+                            confirmButtonText: 'Rechazar',
+                            cancelButtonText: 'Cancelar',
+                            inputAttributes: {maxlength: 1000},
+                        });
+
+                        if (!reason) return;
+
+                        try {
+                            const res = await fetch('/permitrequest/bitacora/reject/', {
                                 method: 'POST', headers: {
                                     'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                                }, body: JSON.stringify({ids: this.selectedBitacoras})
+                                }, body: JSON.stringify({ids: this.selectedBitacoras, reason})
                             });
                             const data = await res.json();
                             if (data.success) {
@@ -1029,66 +1233,60 @@ document.addEventListener('DOMContentLoaded', function () {
                         } catch (err) {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
-                    }
-                }, async rejectSelected() {
-                    if (this.selectedBitacoras.length === 0) return;
+                    }, async deleteSelected() {
+                        if (this.selectedBitacoras.length === 0) return;
 
-                    const {value: reason} = await Swal.fire({
-                        title: 'Rechazar bitácoras',
-                        input: 'textarea',
-                        inputLabel: `Ingrese motivo de rechazo para ${this.selectedBitacoras.length} bitácora(s)`,
-                        inputPlaceholder: 'Motivo de rechazo...',
-                        showCancelButton: true,
-                        confirmButtonText: 'Rechazar',
-                        cancelButtonText: 'Cancelar',
-                        inputAttributes: {maxlength: 1000},
-                    });
-
-                    if (!reason) return;
-
-                    try {
-                        const res = await fetch('/permitrequest/bitacora/reject/', {
-                            method: 'POST', headers: {
-                                'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                            }, body: JSON.stringify({ids: this.selectedBitacoras, reason})
+                        const result = await Swal.fire({
+                            title: '¿Marcar bitácoras como inactivas?',
+                            text: `Se marcarán como inactivas ${this.selectedBitacoras.length} bitácora(s)`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, marcar inactivas',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#ef4444'
                         });
-                        const data = await res.json();
-                        if (data.success) {
-                            Swal.fire('Éxito', data.message, 'success');
-                            this.selectedBitacoras = [];
-                            this.selectAll = false;
-                            await this.fetchBitacoras();
-                        } else {
-                            Swal.fire('Error', data.message, 'error');
+
+                        if (result.isConfirmed) {
+                            try {
+                                const res = await fetch('/permitrequest/bitacora/delete/', {
+                                    method: 'POST', headers: {
+                                        'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                    }, body: JSON.stringify({ids: this.selectedBitacoras})
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    Swal.fire('Éxito', data.message, 'success');
+                                    this.selectedBitacoras = [];
+                                    this.selectAll = false;
+                                    await this.fetchBitacoras();
+                                } else {
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            } catch (err) {
+                                Swal.fire('Error', 'Error de comunicación', 'error');
+                            }
                         }
-                    } catch (err) {
-                        Swal.fire('Error', 'Error de comunicación', 'error');
-                    }
-                }, async deleteSelected() {
-                    if (this.selectedBitacoras.length === 0) return;
-
-                    const result = await Swal.fire({
-                        title: '¿Marcar bitácoras como inactivas?',
-                        text: `Se marcarán como inactivas ${this.selectedBitacoras.length} bitácora(s)`,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, marcar inactivas',
-                        cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#ef4444'
-                    });
-
-                    if (result.isConfirmed) {
+                    }, async deleteSingle(id) {
+                        // Reuse same confirmation as bulk delete
+                        const result = await Swal.fire({
+                            title: '¿Eliminar bitácora? ',
+                            text: `Se eliminará la bitácora seleccionada. Esta acción es irreversible.`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, eliminar',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#ef4444'
+                        });
+                        if (!result.isConfirmed) return;
                         try {
                             const res = await fetch('/permitrequest/bitacora/delete/', {
                                 method: 'POST', headers: {
                                     'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                                }, body: JSON.stringify({ids: this.selectedBitacoras})
+                                }, body: JSON.stringify({ids: [id]})
                             });
                             const data = await res.json();
                             if (data.success) {
                                 Swal.fire('Éxito', data.message, 'success');
-                                this.selectedBitacoras = [];
-                                this.selectAll = false;
                                 await this.fetchBitacoras();
                             } else {
                                 Swal.fire('Error', data.message, 'error');
@@ -1096,76 +1294,47 @@ document.addEventListener('DOMContentLoaded', function () {
                         } catch (err) {
                             Swal.fire('Error', 'Error de comunicación', 'error');
                         }
-                    }
-                }, async deleteSingle(id) {
-                    // Reuse same confirmation as bulk delete
-                    const result = await Swal.fire({
-                        title: '¿Eliminar bitácora? ',
-                        text: `Se eliminará la bitácora seleccionada. Esta acción es irreversible.`,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, eliminar',
-                        cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#ef4444'
-                    });
-                    if (!result.isConfirmed) return;
-                    try {
-                        const res = await fetch('/permitrequest/bitacora/delete/', {
-                            method: 'POST', headers: {
-                                'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                            }, body: JSON.stringify({ids: [id]})
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            Swal.fire('Éxito', data.message, 'success');
-                            await this.fetchBitacoras();
-                        } else {
-                            Swal.fire('Error', data.message, 'error');
-                        }
-                    } catch (err) {
-                        Swal.fire('Error', 'Error de comunicación', 'error');
-                    }
-                },
+                    },
 
-                async openEdit(bitacora) {
-                    // Preload start/end times into SweetAlert inputs
-                    const {value: formValues} = await Swal.fire({
-                        title: 'Editar hora (Inicio / Fin)', html: `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
+                    async openEdit(bitacora) {
+                        // Preload start/end times into SweetAlert inputs
+                        const {value: formValues} = await Swal.fire({
+                            title: 'Editar hora (Inicio / Fin)', html: `<div style="display:flex;gap:8px;align-items:center;justify-content:center;">
                                 <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
                                 <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
                             </div>`, focusConfirm: false, showCancelButton: true, preConfirm: () => {
-                            const start = document.getElementById('swal-start').value;
-                            const end = document.getElementById('swal-end').value;
-                            if (!start && !end) {
-                                Swal.showValidationMessage('Debe ingresar al menos una hora');
-                                return false;
+                                const start = document.getElementById('swal-start').value;
+                                const end = document.getElementById('swal-end').value;
+                                if (!start && !end) {
+                                    Swal.showValidationMessage('Debe ingresar al menos una hora');
+                                    return false;
+                                }
+                                return {start, end};
                             }
-                            return {start, end};
-                        }
-                    });
+                        });
 
-                    if (formValues) {
-                        try {
-                            const res = await fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
-                                method: 'POST', headers: {
-                                    'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                                }, body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                Swal.fire('Éxito', data.message, 'success');
-                                await this.fetchBitacoras();
-                            } else {
-                                Swal.fire('Error', data.message || 'No se pudo actualizar', 'error');
+                        if (formValues) {
+                            try {
+                                const res = await fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
+                                    method: 'POST', headers: {
+                                        'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                    }, body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    Swal.fire('Éxito', data.message, 'success');
+                                    await this.fetchBitacoras();
+                                } else {
+                                    Swal.fire('Error', data.message || 'No se pudo actualizar', 'error');
+                                }
+                            } catch (err) {
+                                Swal.fire('Error', 'Error de comunicación', 'error');
                             }
-                        } catch (err) {
-                            Swal.fire('Error', 'Error de comunicación', 'error');
                         }
-                    }
-                }, async openEditSwal(bitacora) {
-                    const { value: response } = await Swal.fire({
-                        title: 'Editar bitácora',
-                        html: `
+                    }, async openEditSwal(bitacora) {
+                        const {value: response} = await Swal.fire({
+                            title: 'Editar bitácora',
+                            html: `
                             <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:8px;">
                                 <input id="swal-start" type="time" class="swal2-input" value="${bitacora.start_time || ''}" />
                                 <input id="swal-end" type="time" class="swal2-input" value="${bitacora.end_time || ''}" />
@@ -1187,151 +1356,169 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </div>
                             </div>
                         `,
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        showLoaderOnConfirm: true,
-                        didOpen: () => {
-                            const up = document.getElementById('swal-upload');
-                            const fileEl = document.getElementById('swal-file');
-                            if (up && fileEl) up.addEventListener('click', () => fileEl.click());
-                        },
-                        preConfirm: () => {
-                            const start = document.getElementById('swal-start').value;
-                            const end = document.getElementById('swal-end').value;
-                            const note = document.getElementById('swal-note').value.trim();
-                            const fileEl = document.getElementById('swal-file');
-                            const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+                            focusConfirm: false,
+                            showCancelButton: true,
+                            showLoaderOnConfirm: true,
+                            didOpen: () => {
+                                const up = document.getElementById('swal-upload');
+                                const fileEl = document.getElementById('swal-file');
+                                if (up && fileEl) up.addEventListener('click', () => fileEl.click());
+                            },
+                            preConfirm: () => {
+                                const start = document.getElementById('swal-start').value;
+                                const end = document.getElementById('swal-end').value;
+                                const note = document.getElementById('swal-note').value.trim();
+                                const fileEl = document.getElementById('swal-file');
+                                const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
 
-                            if (file) {
-                                if (!file.name.toLowerCase().endsWith('.pdf')) {
-                                    Swal.showValidationMessage('Solo se permiten archivos PDF');
-                                    return false;
+                                if (file) {
+                                    if (!file.name.toLowerCase().endsWith('.pdf')) {
+                                        Swal.showValidationMessage('Solo se permiten archivos PDF');
+                                        return false;
+                                    }
+                                    if (file.size > 500 * 1024) {
+                                        Swal.showValidationMessage('El archivo no debe superar los 500 KB');
+                                        return false;
+                                    }
                                 }
-                                if (file.size > 500 * 1024) {
-                                    Swal.showValidationMessage('El archivo no debe superar los 500 KB');
-                                    return false;
-                                }
+
+                                // Concatenar mensaje nuevo al historial existente, sin precargarlo en el textarea
+                                // Send only the new note; server will format and prepend to history
+                                const formData = new FormData();
+                                formData.append('start_time', start || '');
+                                formData.append('end_time', end || '');
+                                formData.append('response_note', note || '');
+                                if (file) formData.append('justification_file', file);
+
+                                return fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
+                                    method: 'POST', headers: {'X-CSRFToken': csrfToken}, body: formData
+                                }).then(res => res.json()).catch(() => {
+                                    Swal.showValidationMessage('Error de comunicación');
+                                });
                             }
+                        });
 
-                            // Concatenar mensaje nuevo al historial existente, sin precargarlo en el textarea
-                            // Send only the new note; server will format and prepend to history
-                            const formData = new FormData();
-                            formData.append('start_time', start || '');
-                            formData.append('end_time', end || '');
-                            formData.append('response_note', note || '');
-                            if (file) formData.append('justification_file', file);
-
-                            return fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
-                                method: 'POST', headers: {'X-CSRFToken': csrfToken}, body: formData
-                            }).then(res => res.json()).catch(() => { Swal.showValidationMessage('Error de comunicación'); });
+                        if (response) {
+                            if (response.success) {
+                                Swal.fire('Éxito', response.message, 'success');
+                                await this.fetchBitacoras();
+                            } else {
+                                Swal.fire('Error', response.message || 'No se pudo actualizar', 'error');
+                            }
                         }
-                    });
-
-                    if (response) {
-                        if (response.success) {
-                            Swal.fire('Éxito', response.message, 'success');
-                            await this.fetchBitacoras();
-                        } else {
-                            Swal.fire('Error', response.message || 'No se pudo actualizar', 'error');
+                    }, formatDate(dateStr) {
+                        if (!dateStr) return '--';
+                        const date = new Date(dateStr + 'T00:00:00');
+                        return date.toLocaleDateString('es-EC', {
+                            year: 'numeric', month: '2-digit', day: '2-digit'
+                        });
+                    }, formatDateShort(dateTimeStr) {
+                        if (!dateTimeStr) return '--';
+                        const date = new Date(dateTimeStr);
+                        return date.toLocaleDateString('es-EC', {
+                            month: '2-digit', day: '2-digit', year: '2-digit'
+                        });
+                    }, formatTime(timeStr) {
+                        return timeStr || '--:--';
+                    }, formatDateTime(dateTimeStr) {
+                        if (!dateTimeStr) return '--';
+                        const date = new Date(dateTimeStr);
+                        return date.toLocaleString('es-EC', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        });
+                    }, truncateText(text, maxLength) {
+                        if (!text) return '';
+                        if (text.length <= maxLength) return text;
+                        return text.substring(0, maxLength) + '...';
+                    }, getStatusLabel(status) {
+                        const labels = {
+                            'REQUESTED': 'Pendiente', 'APPROVED': 'Aprobado', 'REJECTED': 'Rechazado'
+                        };
+                        return labels[status] || status;
+                    }, getStatusClass(status) {
+                        const classes = {
+                            'REQUESTED': 'badge-secondary', 'APPROVED': 'badge-success', 'REJECTED': 'badge-danger'
+                        };
+                        return classes[status] || '';
+                    }, // Rich note helpers
+                    getFirstSegmentHtml(html) {
+                        if (!html) return '';
+                        const parts = html.split('\n\n');
+                        return parts[0] || '';
+                    },
+                    stripHtml(html) {
+                        if (!html) return '';
+                        const d = document.createElement('div');
+                        d.innerHTML = html;
+                        return d.textContent || d.innerText || '';
+                    },
+                    joinHtmlSegments(html) {
+                        if (!html) return '';
+                        const parts = html.split('\n\n').map(p => p.trim()).filter(Boolean);
+                        if (parts.length === 0) return '';
+                        const mapped = parts.map(p => {
+                            // If segment already contains an HTML span label, keep as is
+                            if (/\<span[^>]*class=["']?note-label/.test(p)) {
+                                return p;
+                            }
+                            // otherwise escape and wrap
+                            return `<span class="note-text">${this.escapeHtml(p)}</span>`;
+                        });
+                        return mapped.join(' ');
+                    },
+                    escapeHtml(text) {
+                        if (!text) return '';
+                        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                    },
+                    truncateHtmlFirst(html, maxLength) {
+                        const seg = this.getFirstSegmentHtml(html);
+                        if (!seg) return '';
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = seg;
+                        const labelEl = wrapper.querySelector('.note-label');
+                        // Caso: todo el texto está dentro del label (ej. <span class="note-label">Rechazo: texto</span>)
+                        if (labelEl) {
+                            const full = (labelEl.textContent || '').trim();
+                            const idx = full.indexOf(':');
+                            if (idx !== -1) {
+                                const labelText = full.substring(0, idx + 1);
+                                const msg = full.substring(idx + 1).trim();
+                                let truncatedMsg = msg;
+                                if (msg.length > maxLength) truncatedMsg = msg.substring(0, maxLength) + '...';
+                                const cls = this.escapeHtml(labelEl.getAttribute('class') || 'note-label');
+                                return `<span class="${cls}">${this.escapeHtml(labelText)} ${this.escapeHtml(truncatedMsg)}</span>`;
+                            }
+                            // Si no se puede separar, devolver el outerHTML truncado
+                            const labelHtml = labelEl.outerHTML;
+                            // remove label to get any extra text (rare)
+                            labelEl.remove();
+                            const msgText = (wrapper.textContent || '').trim();
+                            const truncated = msgText.length > maxLength ? msgText.substring(0, maxLength) + '...' : msgText;
+                            return labelHtml + ' ' + this.escapeHtml(truncated);
                         }
+                        // Si no hay label, devolver texto truncado
+                        const textOnly = (wrapper.textContent || '').trim();
+                        const truncated = textOnly.length > maxLength ? textOnly.substring(0, maxLength) + '...' : textOnly;
+                        return this.escapeHtml(truncated);
                     }
-                }, formatDate(dateStr) {
-                    if (!dateStr) return '--';
-                    const date = new Date(dateStr + 'T00:00:00');
-                    return date.toLocaleDateString('es-EC', {
-                        year: 'numeric', month: '2-digit', day: '2-digit'
-                    });
-                }, formatDateShort(dateTimeStr) {
-                    if (!dateTimeStr) return '--';
-                    const date = new Date(dateTimeStr);
-                    return date.toLocaleDateString('es-EC', {
-                        month: '2-digit', day: '2-digit', year: '2-digit'
-                    });
-                }, formatTime(timeStr) {
-                    return timeStr || '--:--';
-                }, formatDateTime(dateTimeStr) {
-                    if (!dateTimeStr) return '--';
-                    const date = new Date(dateTimeStr);
-                    return date.toLocaleString('es-EC', {
-                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                    });
-                }, truncateText(text, maxLength) {
-                    if (!text) return '';
-                    if (text.length <= maxLength) return text;
-                    return text.substring(0, maxLength) + '...';
-                }, getStatusLabel(status) {
-                    const labels = {
-                        'REQUESTED': 'Pendiente', 'APPROVED': 'Aprobado', 'REJECTED': 'Rechazado'
-                    };
-                    return labels[status] || status;
-                }, getStatusClass(status) {
-                    const classes = {
-                        'REQUESTED': 'badge-secondary', 'APPROVED': 'badge-success', 'REJECTED': 'badge-danger'
-                    };
-                    return classes[status] || '';
-                }, // Rich note helpers
-                getFirstSegmentHtml(html) {
-                    if (!html) return '';
-                    const parts = html.split('\n\n');
-                    return parts[0] || '';
-                },
-                stripHtml(html) {
-                    if (!html) return '';
-                    const d = document.createElement('div');
-                    d.innerHTML = html;
-                    return d.textContent || d.innerText || '';
-                },
-                joinHtmlSegments(html) {
-                    if (!html) return '';
-                    const parts = html.split('\n\n').map(p => p.trim()).filter(Boolean);
-                    if (parts.length === 0) return '';
-                    const mapped = parts.map(p => {
-                        // If segment already contains an HTML span label, keep as is
-                        if (/\<span[^>]*class=["']?note-label/.test(p)) {
-                            return p;
-                        }
-                        // otherwise escape and wrap
-                        return `<span class="note-text">${this.escapeHtml(p)}</span>`;
-                    });
-                    return mapped.join(' ');
-                },
-                escapeHtml(text) {
-                    if (!text) return '';
-                    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                },
-                truncateHtmlFirst(html, maxLength) {
-                    const seg = this.getFirstSegmentHtml(html);
-                    if (!seg) return '';
-                    const wrapper = document.createElement('div');
-                    wrapper.innerHTML = seg;
-                    const labelEl = wrapper.querySelector('.note-label');
-                    // Caso: todo el texto está dentro del label (ej. <span class="note-label">Rechazo: texto</span>)
-                    if (labelEl) {
-                        const full = (labelEl.textContent || '').trim();
-                        const idx = full.indexOf(':');
-                        if (idx !== -1) {
-                            const labelText = full.substring(0, idx + 1);
-                            const msg = full.substring(idx + 1).trim();
-                            let truncatedMsg = msg;
-                            if (msg.length > maxLength) truncatedMsg = msg.substring(0, maxLength) + '...';
-                            const cls = this.escapeHtml(labelEl.getAttribute('class') || 'note-label');
-                            return `<span class="${cls}">${this.escapeHtml(labelText)} ${this.escapeHtml(truncatedMsg)}</span>`;
-                        }
-                        // Si no se puede separar, devolver el outerHTML truncado
-                        const labelHtml = labelEl.outerHTML;
-                        // remove label to get any extra text (rare)
-                        labelEl.remove();
-                        const msgText = (wrapper.textContent || '').trim();
-                        const truncated = msgText.length > maxLength ? msgText.substring(0, maxLength) + '...' : msgText;
-                        return labelHtml + ' ' + this.escapeHtml(truncated);
-                    }
-                    // Si no hay label, devolver texto truncado
-                    const textOnly = (wrapper.textContent || '').trim();
-                    const truncated = textOnly.length > maxLength ? textOnly.substring(0, maxLength) + '...' : textOnly;
-                    return this.escapeHtml(truncated);
                 }
+            });
+
+            try {
+                const proxy = _bitacoraListApp.mount(BITACORA_LIST_MOUNT);
+                // store both the app instance and the proxy so we can unmount safely later
+                window._bitacoraListAppInstance = _bitacoraListApp;
+                window.appBitacoraList = proxy;
+                console.debug('bitacora list app mounted');
+            } catch (mountErr) {
+                console.error('Error mounting bitacora list app', mountErr);
             }
-        }).mount(BITACORA_LIST_MOUNT);
+        }
     }
 });
 
@@ -1347,3 +1534,27 @@ $(document).on('click', '#bitacora-history-container button', function (e) {
         e.preventDefault();
     }
 });
+
+/* Global helper used by server-side paginator in modal_bitacora_history.html */
+function bitacoraHistoryChangePage(page) {
+    try {
+        if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.goTo === 'function') {
+            window._bitacoraHistoryApp.goTo(page);
+            return;
+        }
+        // fallback: fetch JSON via dataset historyUrl if available
+        const container = document.getElementById('modal-dynamic-content') || document.getElementById('modalContentContainer');
+        const baseUrl = container && container.dataset && container.dataset.historyUrl ? container.dataset.historyUrl : null;
+        if (baseUrl) {
+            const url = new URL(baseUrl, window.location.origin);
+            url.searchParams.set('page', page);
+            fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(res => res.text())
+                .then(html => {
+                    if (container) container.innerHTML = html;
+                }).catch(err => console.error('Error fetching page:', err));
+        }
+    } catch (e) {
+        console.error('bitacoraHistoryChangePage error', e);
+    }
+}
