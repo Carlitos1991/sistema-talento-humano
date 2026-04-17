@@ -836,10 +836,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Abrir listado de bitácoras
     function openBitacoraList(employeeId) {
+        console.debug('openBitacoraList called for employeeId=', employeeId, 'appBitacoraList=', !!window.appBitacoraList);
         if (window.appBitacoraList) {
             bitacoraListModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            window.appBitacoraList.open(employeeId);
+            try {
+                window.appBitacoraList.open(employeeId);
+            } catch (err) {
+                console.error('Error calling appBitacoraList.open', err);
+            }
+        } else {
+            console.warn('appBitacoraList not initialized');
+            // Try to show modal with included HTML fallback
+            if (bitacoraListModal) {
+                bitacoraListModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
         }
     }
 
@@ -1014,15 +1026,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, async fetchBitacoras() {
                     try {
                         const url = `/permitrequest/bitacora/list/${this.employeeId}/`;
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (data.success) {
+                        console.debug('fetchBitacoras ->', url);
+                        const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                        const text = await res.text();
+                        let data = null;
+                        try { data = JSON.parse(text); } catch (e) { console.warn('fetchBitacoras: response not JSON', text); }
+
+                        if (data && data.success) {
+                            // Ensure the root element still exists before updating reactive state
+                            const rootEl = document.getElementById('bitacora-list-app');
+                            if (!rootEl) {
+                                console.warn('bitacora root element removed; skipping state update');
+                                return;
+                            }
                             this.employeeName = data.employee_name;
                             this.employeeIdentification = data.employee_identification;
-                            this.bitacoras = data.bitacoras;
+                            this.bitacoras = data.bitacoras || [];
+                        } else {
+                            console.warn('fetchBitacoras: no success', data);
+                            this.bitacoras = [];
                         }
                     } catch (err) {
-                        console.error('Error:', err);
+                        console.error('fetchBitacoras error:', err);
+                        this.bitacoras = [];
                     }
                 }, toggleAll() {
                     if (this.selectAll) {

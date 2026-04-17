@@ -120,14 +120,14 @@
                                         title="Eliminar bitácora"><i class="fa-solid fa-trash-can"></i></button>
                             </td>
                         </tr>
+                        <tr v-if="filteredBitacoras.length === 0">
+                            <td colspan="11" class="text-center py-5">
+                                <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                                <p class="mt-3 text-muted">No hay bitácoras registradas</p>
+                            </td>
+                        </tr>
                         </tbody>
                     </table>
-
-                    <!-- EMPTY STATE -->
-                    <div v-if="filteredBitacoras.length === 0" class="text-center py-5">
-                        <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                        <p class="mt-3 text-muted">No hay bitácoras registradas</p>
-                    </div>
                 </div>
 
                 <!-- PAGINACIÓN -->
