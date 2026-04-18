@@ -1344,10 +1344,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }, formatDate(dateStr) {
                         if (!dateStr) return '--';
-                        const date = new Date(dateStr + 'T00:00:00');
-                        return date.toLocaleDateString('es-EC', {
-                            year: 'numeric', month: '2-digit', day: '2-digit'
-                        });
+                        try {
+                            // Separamos el string exacto que viene de la BD para evitar zonas horarias
+                            const partes = dateStr.split('T')[0].split('-');
+                            if (partes.length === 3) {
+                                return `${parseInt(partes[2], 10)}/${parseInt(partes[1], 10)}/${partes[0]}`;
+                            }
+                            return dateStr;
+                        } catch (e) {
+                            return dateStr;
+                        }
                     }, formatDateShort(dateTimeStr) {
                         if (!dateTimeStr) return '--';
                         const date = new Date(dateTimeStr);
