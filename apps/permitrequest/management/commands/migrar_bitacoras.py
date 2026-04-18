@@ -10,27 +10,32 @@ from django.db.models import Q
 
 
 class Command(BaseCommand):
-    help = 'Migración de Bitácoras con justificación simplificada y auditoría completa'
+    help = 'Migración de Bitácoras filtrable por año y mes con fechas históricas exactas'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=str, default='2026', help='Año a migrar')
+        parser.add_argument('--mes', type=str, default=None, help='Mes a migrar (1-12) opcional')
 
     def handle(self, *args, **options):
         User = get_user_model()
         anio = options['anio']
+        mes = options['mes']
         mapeo_manual = {"Bitacora": 3}
 
         db_config = settings.DATABASES['old_db']
         migrados, total = 0, 0
 
+        texto_periodo = f"año {anio} - mes {mes}" if mes else f"año {anio} completo"
+
         try:
-            self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración para el año {anio}..."))
+            self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración para el {texto_periodo}..."))
             conn = psycopg2.connect(
                 dbname=db_config['NAME'], user=db_config['USER'],
                 password=db_config['PASSWORD'], host=db_config['HOST'], port=db_config['PORT']
             )
 
             with conn.cursor() as cursor:
+                # Consulta SQL base
                 sql = """
                       SELECT per.cedula, \
                              p.registered_by, \
@@ -48,10 +53,17 @@ class Command(BaseCommand):
                       FROM permissions_permission p
                                INNER JOIN employee_employee e ON p.employee_id = e.id
                                INNER JOIN person_person per ON e.person_id = per.id
-                      WHERE p.action = 'Bitacora' \
+                      WHERE p.action = 'Bitacora'
                         AND EXTRACT(YEAR FROM p.date_permission_start) = %s
                       """
-                cursor.execute(sql, (anio,))
+                params = [anio]
+
+                # Añadimos el filtro por mes si el usuario lo proporcionó
+                if mes:
+                    sql += " AND EXTRACT(MONTH FROM p.date_permission_start) = %s"
+                    params.append(mes)
+
+                cursor.execute(sql, tuple(params))
 
                 with transaction.atomic():
                     while True:
@@ -66,7 +78,6 @@ class Command(BaseCommand):
                             empleado = Employee.objects.filter(person__document_number=cedula).first()
                             if not id_tipo or not empleado: continue
 
-                            # Búsqueda directa de usuarios para asegurar precisión
                             def buscar_usuario_real(texto):
                                 if not texto: return None
                                 nombre = texto.split()[0]
@@ -77,12 +88,11 @@ class Command(BaseCommand):
                             u_creador = buscar_usuario_real(reg_by)
                             u_editor = buscar_usuario_real(edit_by)
 
-                            # Mapeo de Estados
                             estado_sigeth2 = 'INACTIVE' if estado == 'INACTIVO' else (
                                 'APPROVED' if estado == 'APROBADO' else 'REQUESTED')
 
-                            # Inserción con texto de justificación limpio
-                            PermitRequest.objects.get_or_create(
+                            # 1. Creamos el registro
+                            obj, created = PermitRequest.objects.get_or_create(
                                 employee=empleado,
                                 start_date=f_ini,
                                 start_time=h_ini,
@@ -93,29 +103,30 @@ class Command(BaseCommand):
                                     'hours': n_h or 0,
                                     'minutes': n_m or 0,
                                     'justification_file': archivo,
-
-                                    # Auditoría de Creación
-                                    'created_at': f_reg or datetime.datetime.now(),
                                     'created_by': u_creador,
-
-                                    # Mapeo de Response
                                     'response_date': edit_date,
                                     'response_by': u_editor,
-
-                                    # Auditoría de Sistema
-                                    'updated_at': edit_date or f_reg,
                                     'updated_by': u_editor,
-
-                                    # Texto solicitado: Solo "Migración"
                                     'response_note': "Migración"
                                 }
                             )
+
+                            # 2. Forzamos las fechas históricas
+                            fecha_creacion = f_reg if f_reg else datetime.datetime.now()
+                            fecha_edicion = edit_date if edit_date else fecha_creacion
+
+                            PermitRequest.objects.filter(id=obj.id).update(
+                                created_at=fecha_creacion,
+                                updated_at=fecha_edicion
+                            )
+
                             migrados += 1
 
                         self.stdout.write(f"⏳ Procesando... {total} revisados | {migrados} migrados", ending='\r')
 
             conn.close()
-            self.stdout.write(self.style.SUCCESS(f"\n✅ Año {anio} terminado. Registros: {migrados}"))
+            self.stdout.write(
+                self.style.SUCCESS(f"\n✅ Período terminado ({texto_periodo}). Registros migrados: {migrados}"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Error: {e}"))

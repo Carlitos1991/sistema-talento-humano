@@ -497,10 +497,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 methods: {
                     formatDate(s) {
-                        if (!s) return '';
+                        if (!s) return '--';
                         try {
-                            const d = new Date(s);
-                            return d.toLocaleDateString('es-EC');
+                            // Extraemos el texto "2026-02-24" sin usar new Date() para evitar el desfase de zona horaria
+                            const partes = s.split('T')[0].split('-');
+                            if (partes.length === 3) {
+                                // parts[0] = año, parts[1] = mes, parts[2] = día
+                                return `${parseInt(partes[2], 10)}/${parseInt(partes[1], 10)}/${partes[0]}`;
+                            }
+                            return s;
                         } catch (e) {
                             return s;
                         }
