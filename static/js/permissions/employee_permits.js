@@ -4,8 +4,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('table-search');
     const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
     const urlList = document.getElementById('url-list') ? document.getElementById('url-list').value : '';
-    const modalOverlay = document.getElementById('customModal') || document.getElementById('modal-dynamic-content') || document.getElementById('bitacoraModal') || document.getElementById('bitacoraListModal') || null;
-    const modalContentContainer = document.getElementById('modal-dynamic-content') || document.getElementById('modalContentContainer') || null;
+    // Prefer the server-included overlay `modalContentContainer` when present,
+    // otherwise fall back to dynamic containers used by other flows.
+    const modalOverlay = document.getElementById('customModal') || document.getElementById('modalContentContainer') || document.getElementById('modal-dynamic-content') || document.getElementById('bitacoraModal') || document.getElementById('bitacoraListModal') || null;
+    const modalContentContainer = document.getElementById('modalContentContainer') || document.getElementById('modal-dynamic-content') || null;
     const pageInfo = document.querySelector('.pagination-info');
     const currentPageDisplay = document.querySelector('.page-input') || null;
     const btnPrev = document.querySelector('.pagination-controls .page-btn[title="Anterior"]') || null;
@@ -53,10 +55,23 @@ document.addEventListener('DOMContentLoaded', function () {
     // 4. Cerrar Modal desde overlay o botón cerrar
     if (modalOverlay) {
         modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay || e.target.closest('.btn-close-modal') || e.target.closest('.js-close-modal')) {
+            if (e.target === modalOverlay || e.target.closest('.btn-close-modal') || e.target.closest('.js-close-modal') || e.target.closest('.js-close-bitacora-modal') || e.target.closest('.btn-cancel')) {
                 closeModal();
             }
         });
+    }
+
+    // Delegated close handler on modalContentContainer so close buttons
+    // work even if Vue re-renders/replaces inner nodes.
+    if (modalContentContainer && !modalContentContainer._closeDelegateAttached) {
+        modalContentContainer.addEventListener('click', function (e) {
+            const btn = e.target.closest('.js-close-bitacora-modal, .js-close-modal, .btn-cancel, .btn-close-modal');
+            if (btn) {
+                e.preventDefault();
+                closeModal();
+            }
+        });
+        modalContentContainer._closeDelegateAttached = true;
     }
 
     // 5. DELEGACIÓN DE ACCIONES EN LA TABLA
@@ -184,14 +199,20 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalContentContainer && modalContentContainer.querySelector && !modalContentContainer.querySelector('#bitacora-history-container')) {
                 // Contenido dinámico: sí podemos limpiar (Vue no está montado aquí)
                 if (window._bitacoraHistoryApp) {
-                    try { window._bitacoraHistoryApp.unmount(); } catch (e) { /* ignore */ }
+                    try {
+                        window._bitacoraHistoryApp.unmount();
+                    } catch (e) { /* ignore */
+                    }
                     window._bitacoraHistoryApp = null;
                 }
                 modalContentContainer.innerHTML = '';
             }
             // Si #bitacora-history-container está presente: solo ocultar, NO desmontar Vue
         } catch (e) {
-            try { modalContentContainer.innerHTML = ''; } catch (ee) { /* ignore */ }
+            try {
+                modalContentContainer.innerHTML = '';
+            } catch (ee) { /* ignore */
+            }
         }
 
         // Restaurar scroll del body
@@ -450,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 data() {
                     return {
                         employeeId: emp,
+                        employee_name: '',
                         can_edit: canEditFlag,
                         bitacoras: [],
                         from: '',
@@ -503,6 +525,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (!resp.ok) throw new Error('HTTP ' + resp.status);
                             const data = await resp.json();
                             this.bitacoras = data.bitacoras || [];
+                            this.employee_name = data.employee_name || '';
                             this.can_edit = !!data.can_edit;
                             this.page = data.page || this.page;
                             this.total_count = data.total_count || 0;

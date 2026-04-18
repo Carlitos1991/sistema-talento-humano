@@ -1,94 +1,103 @@
 {% load static %}
 
-<div id="bitacora-history-container" class="modal-container-medium animate-scale-in" data-can-edit="{{ can_edit|yesno:'1,0' }}">
+<div id="bitacora-history-container" class="modal-container-medium animate-scale-in"
+     data-can-edit="{{ can_edit|yesno:'1,0' }}">
 
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-clipboard-list me-2"></i> Historial Bitácoras Aprobadas: [[ employee_name || '' ]]
-                </h3>
-                <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
-                    <i class="fas fa-times"></i>
-                </button>
+    <div class="modal-header-medium modal-header-gradient">
+        <h3 class="modal-title text-white">
+            <i class="fa-solid fa-clipboard-list me-2"></i> Historial Bitácoras Aprobadas: [[ employee_name || '' ]]
+        </h3>
+        <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="modal-body-content modal-body-custom" style="display:flex; flex-direction:column; height:100%;">
+        <div class="table-controls mb-3" style="align-items:center; gap:12px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <label style="font-weight:600; color:#334155;">Desde:</label>
+                <input type="date" id="bitacora-history-from" class="input-field"/>
+                <label style="font-weight:600; color:#334155;">Hasta:</label>
+                <input type="date" id="bitacora-history-to" class="input-field"/>
+                <button type="button" class="btn-pill-action" id="bitacora-history-clear">Limpiar</button>
             </div>
-
-            <div class="modal-body-content modal-body-custom" style="display:flex; flex-direction:column; height:100%;">
-                <div class="table-controls mb-3" style="align-items:center; gap:12px;">
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <label style="font-weight:600; color:#334155;">Desde:</label>
-                        <input type="date" id="bitacora-history-from" class="input-field" />
-                        <label style="font-weight:600; color:#334155;">Hasta:</label>
-                        <input type="date" id="bitacora-history-to" class="input-field" />
-                        <button type="button" class="btn-pill-action" id="bitacora-history-clear">Limpiar</button>
-                    </div>
-                    <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-                        <!-- acciones si se requieren -->
-                    </div>
-                </div>
-
-                <div class="table-container flex-grow-1" style="overflow-y:auto; min-height:300px;">
-                    <table class="managed-table w-100">
-                        <thead>
-                        <tr>
-                            <th style="width:4%;">N°</th>
-                            <th style="width:12%;">Fecha Bit.</th>
-                            <th style="width:8%;">Inicio</th>
-                            <th style="width:8%;">Fin</th>
-                            <th style="width:8%;">Estado</th>
-                            <th style="width:20%;">Registrado por</th>
-                            <th style="width:12%;">Fecha Registro</th>
-                            <th style="width:18%;">Aprobado por</th>
-                            <th style="width:10%;">Fecha Aprobación</th>
-                            <th style="width:10%;">Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody id="bitacora-history-tbody">
-                        <tr v-if="bitacoras.length === 0">
-                            <td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td>
-                        </tr>
-                        <tr v-for="(b, idx) in bitacoras" :key="b.id">
-                            <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
-                            <td>[[ formatDate(b.start_date) ]]</td>
-                            <td class="text-center">[[ b.start_time || '--:--' ]]</td>
-                            <td class="text-center">[[ b.end_time || '--:--' ]]</td>
-                            <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span></td>
-                            <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>
-                            <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
-                            <td style="font-size:12px;">[[ b.approved_by_full_name || '' ]]</td>
-                            <td style="font-size:12px;">[[ formatDateTimeShort(b.approved_at) ]]</td>
-                            <td class="text-center">
-                                <button class="btn-pill-action" v-if="can_edit" data-id="[[ b.id ]]" data-action="review">Revisar Permiso</button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="pagination-container mt-3" v-if="total_pages > 1">
-                    <span id="bitacora-history-info" class="pagination-info">Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ total_count ]]</span>
-                    <div class="pagination-controls">
-                        <button type="button" class="page-btn" title="Primera"
-                                :disabled="page === 1"
-                                @click="page = 1">&laquo;</button>
-                        <button type="button" class="page-btn" title="Anterior"
-                                :disabled="page === 1"
-                                @click="page = Math.max(1, page - 1)">&lsaquo;</button>
-
-                        <div class="page-input-wrapper">
-                            <input type="number" id="bitacora-history-current" v-model.number="page" min="1" :max="total_pages" class="page-input" style="width:80px; text-align:center;">
-                            <span id="bitacora-history-total" class="total-pages-badge">de [[ total_pages ]]</span>
-                        </div>
-
-                        <button type="button" class="page-btn" title="Siguiente"
-                                :disabled="page === total_pages"
-                                @click="page = Math.min(total_pages, page + 1)">&rsaquo;</button>
-                        <button type="button" class="page-btn" title="Última"
-                                :disabled="page === total_pages"
-                                @click="page = total_pages">&raquo;</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer modal-footer-spaced">
-                <button type="button" class="btn-cancel js-close-bitacora-modal">Cerrar</button>
+            <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+                <!-- acciones si se requieren -->
             </div>
         </div>
+
+        <div class="table-container flex-grow-1" style="overflow-y:auto; min-height:300px;">
+            <table class="w-100 table-vue-custom" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr>
+                    <th style="width:4%;">N°</th>
+                    <th style="width:12%;">Fecha Bit.</th>
+                    <th style="width:8%;">Inicio</th>
+                    <th style="width:8%;">Fin</th>
+                    <th style="width:8%;">Estado</th>
+                    <th style="width:20%;">Registrado por</th>
+                    <th style="width:12%;">Fecha Registro</th>
+                    <th style="width:18%;">Aprobado por</th>
+                    <th style="width:10%;">Fecha Aprobación</th>
+                    <th style="width:10%;">Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="bitacora-history-tbody">
+                <tr v-if="bitacoras.length === 0">
+                    <td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td>
+                </tr>
+                <tr v-for="(b, idx) in bitacoras" :key="b.id">
+                    <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
+                    <td>[[ formatDate(b.start_date) ]]</td>
+                    <td class="text-center">[[ b.start_time || '--:--' ]]</td>
+                    <td class="text-center">[[ b.end_time || '--:--' ]]</td>
+                    <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span>
+                    </td>
+                    <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>
+                    <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
+                    <td style="font-size:12px;">[[ b.approved_by_full_name || '' ]]</td>
+                    <td style="font-size:12px;">[[ formatDateTimeShort(b.approved_at) ]]</td>
+                    <td class="text-center">
+                        <button class="btn-pill-action" v-if="can_edit" data-id="[[ b.id ]]" data-action="review">
+                            Revisar Permiso
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container mt-3" v-if="total_pages > 1">
+            <span id="bitacora-history-info" class="pagination-info">Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ total_count ]]</span>
+            <div class="pagination-controls">
+                <button type="button" class="page-btn" title="Primera"
+                        :disabled="page === 1"
+                        @click="page = 1">&laquo;
+                </button>
+                <button type="button" class="page-btn" title="Anterior"
+                        :disabled="page === 1"
+                        @click="page = Math.max(1, page - 1)">&lsaquo;
+                </button>
+
+                <div class="page-input-wrapper">
+                    <input type="number" id="bitacora-history-current" v-model.number="page" min="1" :max="total_pages"
+                           class="page-input" style="width:80px; text-align:center;">
+                    <span id="bitacora-history-total" class="total-pages-badge">de [[ total_pages ]]</span>
+                </div>
+
+                <button type="button" class="page-btn" title="Siguiente"
+                        :disabled="page === total_pages"
+                        @click="page = Math.min(total_pages, page + 1)">&rsaquo;
+                </button>
+                <button type="button" class="page-btn" title="Última"
+                        :disabled="page === total_pages"
+                        @click="page = total_pages">&raquo;
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer modal-footer-spaced">
+        <button type="button" class="btn-cancel js-close-bitacora-modal">Cerrar</button>
+    </div>
+</div>
