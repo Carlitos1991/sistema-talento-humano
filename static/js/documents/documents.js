@@ -35,6 +35,8 @@ const documentsApp = createApp({
             stats: { total: 0, regimes: [], display_total: 0 },
             canDelete: false,
             statsYear: new Date().getFullYear(),
+            dateFrom: null,
+            dateTo: null,
             isAdvancedSearch: false,
                 advancedFilters: { documents: '', q: '' }
             ,
@@ -66,34 +68,38 @@ const documentsApp = createApp({
         // Deshabilitar el botón Nuevo Documento por defecto (visualmente y funcionalmente)
         this.setAddButtonEnabled(false);
         // Leer atributo del contenedor para saber si el usuario puede ver stats globales
-        // Input de año para estadísticas
-        const yearInput = document.getElementById('stats-year-input');
-        if (yearInput) {
-            try { this.statsYear = parseInt(yearInput.value) || this.statsYear; } catch(e){}
-            // Re-trigger on change, input (debounced) and Enter
-            let to = null;
-            yearInput.addEventListener('input', (ev) => {
-                clearTimeout(to);
-                to = setTimeout(() => {
-                    const v = parseInt(ev.target.value);
-                    if (!isNaN(v)) {
-                        this.statsYear = v;
-                        this.currentPage = 1;
-                        this.fetchTable(this.isAdvancedSearch, 1);
-                    }
-                }, 350);
-            });
-            yearInput.addEventListener('change', (e) => {
-                const v = parseInt(e.target.value);
-                if (!isNaN(v)) {
-                    this.statsYear = v;
-                    // Refrescar tabla/estadísticas para el año seleccionado
+            // Inputs de rango de fechas para estadísticas (Desde / Hasta)
+        const dateFromInput = document.getElementById('stats-date-from');
+        const dateToInput = document.getElementById('stats-date-to');
+        // Inicializar valores desde DOM si existen
+        if (dateFromInput) {
+            this.dateFrom = dateFromInput.value || null;
+        }
+        if (dateToInput) {
+            this.dateTo = dateToInput.value || null;
+        }
+        // Añadir listeners (debounced) para recargar tabla cuando cambian
+        const bindDateChange = (el) => {
+            if (!el) return;
+            let t = null;
+            el.addEventListener('input', (ev) => {
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    this.dateFrom = dateFromInput ? dateFromInput.value : null;
+                    this.dateTo = dateToInput ? dateToInput.value : null;
                     this.currentPage = 1;
                     this.fetchTable(this.isAdvancedSearch, 1);
-                }
+                }, 350);
             });
-            yearInput.addEventListener('keypress', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); yearInput.blur(); } });
-        }
+            el.addEventListener('change', () => {
+                this.dateFrom = dateFromInput ? dateFromInput.value : null;
+                this.dateTo = dateToInput ? dateToInput.value : null;
+                this.currentPage = 1;
+                this.fetchTable(this.isAdvancedSearch, 1);
+            });
+        };
+        bindDateChange(dateFromInput);
+        bindDateChange(dateToInput);
         // Finalmente, cargar tabla (después de inicializar statsYear y canDelete)
         this.fetchTable();
     },
@@ -193,8 +199,9 @@ const documentsApp = createApp({
                 documents: this.advancedFilters.documents || '',
                 page: requestedPage
             };
-            // Añadir año para estadísticas y filtrado
-            if (this.statsYear) paramsObj.year = String(this.statsYear);
+            // Añadir rango de fechas para estadísticas y filtrado (si están definidos)
+            if (this.dateFrom) paramsObj.date_from = this.dateFrom;
+            if (this.dateTo) paramsObj.date_to = this.dateTo;
             // Añadir orden si está definido
             if (this.sortField) {
                 paramsObj.sort_field = this.sortField;

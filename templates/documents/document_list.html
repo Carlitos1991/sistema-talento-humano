@@ -50,17 +50,30 @@
     </div>
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <!-- Input de búsqueda -->
-                    <input type="text" id="table-search-document" class="input-field"
-                           placeholder="Buscar por número, tipo, asunto, responsable o cédula">
+            <div class="table-controls" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div class="table-controls-left" style="flex:1">
+                    <!-- placeholder izquierdo (puede usarse para botones futuros) -->
                 </div>
-                <div class="search-controls">
-                    <label for="stats-year-input" class="sr-only">Año</label>
-                    <input type="number" id="stats-year-input" class="input-field small" min="2000" max="2500"
-                           value="{% now 'Y' %}" title="Año para estadísticas">
+
+                <div class="search-controls-center" style="display:flex; gap:8px; align-items:center;">
+                    {% now "Y" as current_year %}
+                    <div style="display:flex; flex-direction:column; font-size:0.85rem;">
+                        <label for="stats-date-from" style="font-weight:600; color:#334155;">Desde</label>
+                        <input type="date" id="stats-date-from" class="input-field small" value="{{ current_year }}-01-01" title="Fecha desde">
+                    </div>
+                    <div style="display:flex; flex-direction:column; font-size:0.85rem;">
+                        <label for="stats-date-to" style="font-weight:600; color:#334155;">Hasta</label>
+                        <input type="date" id="stats-date-to" class="input-field small" value="{{ current_year }}-12-31" title="Fecha hasta">
+                    </div>
+                </div>
+
+                <div class="search-box-right" style="flex:1; display:flex; justify-content:flex-end;">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <!-- Input de búsqueda -->
+                        <input type="text" id="table-search-document" class="input-field"
+                               placeholder="Buscar por número, tipo, asunto, responsable o cédula">
+                    </div>
                 </div>
             </div>
 

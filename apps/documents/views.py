@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView
 from django.utils import timezone
+from datetime import datetime
 import re
 import os
 
@@ -30,14 +31,25 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(is_active=True)
-        # Permitir filtrar por año vía parámetro GET (por defecto año actual)
-        try:
-            year = int(self.request.GET.get('year') or timezone.now().year)
-        except (TypeError, ValueError):
-            year = timezone.now().year
-
-        # Filtrar por año solicitado para el listado (siempre se aplica)
-        queryset = queryset.filter(registration_date__year=year)
+        # Permitir filtrar por rango de fechas vía parámetros GET (date_from/date_to)
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        if date_from and date_to:
+            try:
+                d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                d_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(registration_date__date__range=(d_from, d_to))
+            except Exception:
+                # Si las fechas no son válidas, fallback a año actual
+                year = timezone.now().year
+                queryset = queryset.filter(registration_date__year=year)
+        else:
+            # Permitir filtrar por año vía parámetro GET (por defecto año actual)
+            try:
+                year = int(self.request.GET.get('year') or timezone.now().year)
+            except (TypeError, ValueError):
+                year = timezone.now().year
+            queryset = queryset.filter(registration_date__year=year)
 
         # Si el usuario NO tiene permiso de eliminar, además restringir a sus propios documentos
         if not getattr(self.request.user, 'is_superuser', False) and not self.request.user.has_perm('documents.delete_document'):
@@ -109,25 +121,60 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 {'documents': object_list},
                 request=request
             )
-            # Estadísticas por tipo de documento (solo del año solicitado)
-            try:
-                year = int(request.GET.get('year') or timezone.now().year)
-            except (TypeError, ValueError):
-                year = timezone.now().year
+            # Estadísticas por tipo de documento (rango de fechas o año por defecto)
+            date_from = request.GET.get('date_from')
+            date_to = request.GET.get('date_to')
+            if date_from and date_to:
+                try:
+                    d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                    d_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                    types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                        count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to))),
+                        user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to), documents__created_by=request.user))
+                    ).order_by('name')
 
-            types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-                user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=request.user))
-            ).order_by('name')
+                    stats = {
+                        'total': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to)).count(),
+                        'total_user': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to), created_by=request.user).count(),
+                        'regimes': [
+                            {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                            for t in types_qs
+                        ]
+                    }
+                except Exception:
+                    # Fallback a año actual
+                    year = timezone.now().year
+                    types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                        count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
+                        user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=request.user))
+                    ).order_by('name')
 
-            stats = {
-                'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-                'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=request.user).count(),
-                'regimes': [
-                    {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
-                    for t in types_qs
-                ]
-            }
+                    stats = {
+                        'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
+                        'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=request.user).count(),
+                        'regimes': [
+                            {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                            for t in types_qs
+                        ]
+                    }
+            else:
+                try:
+                    year = int(request.GET.get('year') or timezone.now().year)
+                except (TypeError, ValueError):
+                    year = timezone.now().year
+                types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
+                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=request.user))
+                ).order_by('name')
+
+                stats = {
+                    'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
+                    'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=request.user).count(),
+                    'regimes': [
+                        {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                        for t in types_qs
+                    ]
+                }
 
             pagination = {
                 'current_page': page_obj.number,
@@ -139,25 +186,63 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # Estadísticas limitadas al año solicitado (por defecto año actual)
-        try:
-            year = int(self.request.GET.get('year') or timezone.now().year)
-        except (TypeError, ValueError):
-            year = timezone.now().year
+        # Estadísticas limitadas a rango de fechas si se envían, sino por año (por defecto año actual)
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        if date_from and date_to:
+            try:
+                d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                d_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to))),
+                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to), documents__created_by=self.request.user))
+                ).order_by('name')
 
-        types_qs = DocumentType.objects.filter(is_active=True).annotate(
-            count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-            user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=self.request.user))
-        ).order_by('name')
+                ctx['stats'] = {
+                    'total': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to)).count(),
+                    'total_user': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to), created_by=self.request.user).count(),
+                    'regimes': [
+                        {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                        for t in types_qs
+                    ]
+                }
+            except Exception:
+                # Fallback a año actual
+                try:
+                    year = int(self.request.GET.get('year') or timezone.now().year)
+                except (TypeError, ValueError):
+                    year = timezone.now().year
+                types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
+                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=self.request.user))
+                ).order_by('name')
 
-        ctx['stats'] = {
-            'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-            'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=self.request.user).count(),
-            'regimes': [
-                {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
-                for t in types_qs
-            ]
-        }
+                ctx['stats'] = {
+                    'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
+                    'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=self.request.user).count(),
+                    'regimes': [
+                        {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                        for t in types_qs
+                    ]
+                }
+        else:
+            try:
+                year = int(self.request.GET.get('year') or timezone.now().year)
+            except (TypeError, ValueError):
+                year = timezone.now().year
+            types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
+                user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=self.request.user))
+            ).order_by('name')
+
+            ctx['stats'] = {
+                'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
+                'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=self.request.user).count(),
+                'regimes': [
+                    {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
+                    for t in types_qs
+                ]
+            }
         # Anotar índices globales para los objetos de la página (mismo criterio que en la petición AJAX)
         try:
             global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
