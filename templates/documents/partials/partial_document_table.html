@@ -36,8 +36,8 @@
                 </td>
                 <td>
                     <button type="button" class="btn-icon btn-views-action" data-action="edit" data-id="{{ doc.id }}"
-                            onclick="editDocument({{ doc.id }})">
-                        <i class="fa-solid fa-pen"></i>
+                            onclick="editDocument({{ doc.id }})" title="Actualizar">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button type="button" class="btn-icon btn-list-action" data-action="upload" data-id="{{ doc.id }}"
                             onclick="uploadDocumentFile({{ doc.id }})" title="Subir archivo PDF">
@@ -50,12 +50,14 @@
                 <td colspan="8" class="text-center py-4">No se encontraron documentos.</td>
             </tr>
         {% endfor %}
-        <!-- Fila para mostrar cuando la búsqueda no retorna resultados -->
-        <tr id="frontend-no-results" class="hidden">
-            <td colspan="8" class="text-center py-4">
-                <i class="fa-solid fa-search"></i> No se encontraron registros
-            </td>
-        </tr>
+        <!-- Fila para mostrar cuando la búsqueda no retorna resultados (solo si hubo resultados iniciales) -->
+        {% if documents %}
+            <tr id="frontend-no-results" class="hidden">
+                <td colspan="8" class="text-center py-4">
+                    <i class="fa-solid fa-search"></i> No se encontraron registros
+                </td>
+            </tr>
+        {% endif %}
         </tbody>
     </table>
 </div>

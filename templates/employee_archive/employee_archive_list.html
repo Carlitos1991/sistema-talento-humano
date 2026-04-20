@@ -19,7 +19,7 @@
 
     <div class="content-table archive-content-table archive-employee-list-width">
         <div class="table-controls archive-controls archive-controls-row" data-manual-export="true">
-            
+
             <div class="archive-export-actions">
                 <button type="button" class="btn-export-excel" onclick="exportTableToExcel(document.querySelector('.archive-employee-list-table'))">
                     <i class="fas fa-file-excel"></i> Excel
@@ -38,7 +38,7 @@
                     <div class="modern-toggle-circle"></div>
                     <span class="modern-toggle-text">Mostrar Expedientes Prestados</span>
                 </label>
-                
+
                 {% if total_loaned_count > 0 %}
                     <span class="archive-loaned-badge archive-loaned-badge--attached">{{ total_loaned_count }}</span>
                 {% endif %}

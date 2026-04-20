@@ -3437,11 +3437,34 @@ th.sorted-desc .sort-arrow {
 }
 
 /* Ajustes específicos para modales que contienen tablas y paginadores (evita solapamientos) */
-.modal-body-scrolled { padding-bottom: 110px !important; }
-.modal-body-scrolled .table-controls { display:flex; justify-content: center; align-items: center; gap: 12px; }
-.modal-body-scrolled .table-container { margin-bottom: 0; }
-.modal-body-scrolled .pagination-container { position: relative; z-index: 2; width: 100%; display:flex; justify-content: space-between; align-items:center; }
-.modal-body-scrolled .pagination-container .pagination-controls { justify-content: flex-end; gap: 6px; }
+.modal-body-scrolled {
+    padding-bottom: 110px !important;
+}
+
+.modal-body-scrolled .table-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-body-scrolled .table-container {
+    margin-bottom: 0;
+}
+
+.modal-body-scrolled .pagination-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body-scrolled .pagination-container .pagination-controls {
+    justify-content: flex-end;
+    gap: 6px;
+}
 
 .modal-content {
     padding: 2rem;
@@ -4039,7 +4062,6 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 
 /* Fallback para botones con clase btn-icon (mantener compatibilidad) */
 .btn-icon {
-    background: transparent;
     border: none;
 }
 
@@ -5891,6 +5913,9 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 
 /* Forzar tamaño y espaciado iguales en botones de acciones dentro de tablas */
 .table-container td .btn-views-action,
+.table-container td .btn-list-action,
+.table-container td .btn-success-action,
+.table-container td .btn-info-action,
 .table-container td .btn-delete-action {
     box-sizing: border-box;
     width: var(--table-btn-size) !important;
@@ -5904,10 +5929,26 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 }
 
 .table-container td .btn-views-action i,
+.table-container td .btn-list-action i,
+.table-container td .btn-success-action i,
+.table-container td .btn-info-action i,
 .table-container td .btn-delete-action i {
     font-size: var(--table-btn-icon-size) !important;
     line-height: 1 !important;
 }
 
 /* Asegurar separación mínima entre botones (primero sin margen izquierdo extra) */
-.table-container td .btn-views-action:first-child { margin-left: 4px !important; }
+.table-container td .btn-views-action:first-child {
+    margin-left: 4px !important;
+}
+
+.table-container td .btn-info-action:first-child {
+    margin-left: 4px !important;
+}
+
+.table-container td .btn-success-action:first-child {
+    margin-left: 4px !important;
+}
+.table-container td .btn-list-action:first-child {
+    margin-left: 4px !important;
+}
