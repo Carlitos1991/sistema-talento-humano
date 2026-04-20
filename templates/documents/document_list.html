@@ -17,7 +17,7 @@
     </div>
     <!-- 2. Estadísticas (Filtros Rápidos) -->
     <div id="documents-app" v-cloak data-current-user="{{ user.get_full_name }}"
-           data-can-delete="{% if user.is_superuser or perms.documents.delete_document %}1{% else %}0{% endif %}">
+         data-can-delete="{% if user.is_superuser or perms.documents.delete_document %}1{% else %}0{% endif %}">
     {# Inyectar stats inicial para evitar parpadeo y mostrar 0 correctamente al cargar #}
     {% if stats %}
         {{ stats|json_script:"initial-doc-stats" }}
@@ -50,27 +50,34 @@
     </div>
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:6px;">
+            <div class="table-controls"
+                 style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:6px;">
                 <div class="table-controls-left" style="flex:1; display:flex; align-items:center;">
                     <!-- espacio izquierdo disponible para botones u otros controles -->
                 </div>
 
-                <div class="table-controls-center" style="width:40%; display:flex; align-items:center; justify-content:center; gap:12px; margin-top:-6px;">
+                <div class="table-controls-center"
+                     style="width:40%; display:flex; align-items:center; justify-content:center; gap:12px; margin-top:-10px; transform:translateX(-90px);">
                     {% now "Y" as current_year %}
                     <div style="display:flex; flex-direction:column; font-size:0.88rem; margin-bottom:0; align-items:center;">
-                        <label for="stats-date-from" style="font-weight:600; color:#334155; margin-bottom:4px;">Desde</label>
-                        <input type="date" id="stats-date-from" class="input-field small" value="{{ current_year }}-01-01" title="Fecha desde" style="height:36px; width:140px;">
+                        <label for="stats-date-from"
+                               style="font-weight:600; color:#334155; margin-bottom:4px;">Desde</label>
+                        <input type="date" id="stats-date-from" class="input-field small"
+                               value="{{ current_year }}-01-01" title="Fecha desde" style="height:36px; width:150px;">
                     </div>
                     <div style="display:flex; flex-direction:column; font-size:0.88rem; margin-bottom:0; align-items:center;">
-                        <label for="stats-date-to" style="font-weight:600; color:#334155; margin-bottom:4px;">Hasta</label>
-                        <input type="date" id="stats-date-to" class="input-field small" value="{{ current_year }}-12-31" title="Fecha hasta" style="height:36px; width:140px;">
+                        <label for="stats-date-to"
+                               style="font-weight:600; color:#334155; margin-bottom:4px;">Hasta</label>
+                        <input type="date" id="stats-date-to" class="input-field small" value="{{ current_year }}-12-31"
+                               title="Fecha hasta" style="height:36px; width:150px;">
                     </div>
                 </div>
 
                 <div style="flex:1; display:flex; justify-content:flex-end; align-items:center;">
-                    <div class="search-box" style="display:flex; align-items:center; width:60%">
+                    <div class="search-box" style="display:flex; align-items:center; width:120%; max-width:720px;">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search-document" class="input-field" style="width:100%;" 
+                        <input type="text" id="table-search-document" class="input-field"
+                               style="width:100%; height:46px;"
                                placeholder="Buscar por número, tipo, asunto, responsable o cédula">
                     </div>
                 </div>
