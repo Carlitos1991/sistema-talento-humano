@@ -17,7 +17,7 @@
     </div>
     <!-- 2. Estadísticas (Filtros Rápidos) -->
     <div id="documents-app" v-cloak data-current-user="{{ user.get_full_name }}"
-         data-can-delete="{% if perms.documents.delete_document %}1{% else %}0{% endif %}">
+           data-can-delete="{% if user.is_superuser or perms.documents.delete_document %}1{% else %}0{% endif %}">
     {# Inyectar stats inicial para evitar parpadeo y mostrar 0 correctamente al cargar #}
     {% if stats %}
         {{ stats|json_script:"initial-doc-stats" }}
