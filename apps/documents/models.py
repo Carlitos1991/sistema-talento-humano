@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from django.db import models
+from django.conf import settings
 
 
 class DocumentType(models.Model):
@@ -32,10 +33,10 @@ class Document(models.Model):
     subject = models.CharField(max_length=255, verbose_name="Asunto")
 
     # "responsible" del modelo anterior (quien firma/envía)
-    sender_name = models.CharField(max_length=100, verbose_name="Remitente / Responsable", blank=True, null=True)
+    sender_name = models.CharField(max_length=255, verbose_name="Remitente / Responsable", blank=True, null=True)
 
     # "target_person" del modelo anterior
-    recipient_name = models.CharField(max_length=100, verbose_name="Dirigido a", blank=True, null=True)
+    recipient_name = models.CharField(max_length=255, verbose_name="Dirigido a", blank=True, null=True)
 
     file_attachment = models.FileField(
         upload_to=document_upload_path, verbose_name='Archivo Digital',
@@ -47,6 +48,14 @@ class Document(models.Model):
 
     # Control de estado lógico
     is_active = models.BooleanField(default=True, verbose_name='Activo')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='documents_created',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name='Creado por'
+    )
 
     class Meta:
         verbose_name = 'Documento'
