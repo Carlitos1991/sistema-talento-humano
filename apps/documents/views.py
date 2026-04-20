@@ -388,9 +388,9 @@ def create_multiple_documents(request):
     except DocumentType.DoesNotExist:
         initials = ''
 
-    # Contar TODOS los documentos de este tipo (sin filtrar por año)
-    # El siguiente número será el total + 1
-    total_count = Document.objects.filter(category_id=category_id).count()
+    # Contar documentos de este tipo en el año actual y activos
+    # El siguiente número será el total + 1 (secuencia por año)
+    total_count = Document.objects.filter(category_id=category_id, registration_date__year=year, is_active=True).count()
 
     created = []
     for i in range(1, quantity + 1):
@@ -430,9 +430,9 @@ def next_filing_code(request, category_id):
     except DocumentType.DoesNotExist:
         initials = ''
 
-    # Contar todos los documentos de este tipo (sin filtrar por año)
-    # El siguiente número será el total + 1
-    total_count = Document.objects.filter(category_id=cid).count()
+    # Contar documentos de este tipo en el año actual y activos
+    # El siguiente número será el total + 1 (secuencia por año)
+    total_count = Document.objects.filter(category_id=cid, registration_date__year=year, is_active=True).count()
     next_num = total_count + 1
 
     next_code = f"{prefix}{next_num:03d}{('-' + initials) if initials else ''}"
