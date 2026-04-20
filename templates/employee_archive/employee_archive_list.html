@@ -120,7 +120,7 @@
                                 {% endif %}
                                 {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' or perms.employee_archive.change_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
                                     <button type="button"
-                                            class="btn-icon btn-loan-manual-action"
+                                            class="btn-icon btn-success-action"
                                             title="Prestar expediente"
                                             data-employee-name="{{ employee.person.name_and_last_name }}"
                                             data-manual-loan-url="{% url 'employee_archive:loan_manual_create' employee.id %}"
