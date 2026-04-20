@@ -33,6 +33,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         target_apps = {
             'person': 'Gestión de Personal',
             'employee': 'Gestión de Empleados',
+            'documents': 'Gestión Documental',
             'employee_archive': 'Archivo Digital',
             'institution': 'Estructura Organizacional',
             'function_manual': 'Manual de Funciones',

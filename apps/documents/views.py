@@ -30,10 +30,16 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(is_active=True)
+        # Si el usuario NO tiene permiso de eliminar, solo ve los documentos que él creó
+        if not getattr(self.request.user, 'is_superuser', False) and not self.request.user.has_perm('documents.delete_document'):
+            queryset = queryset.filter(created_by=self.request.user)
         q = self.request.GET.get('q')
         if q:
+            # Buscar por número de expediente, asunto o por nombre/apellidos del responsable (sender_name)
             queryset = queryset.filter(
-                Q(filing_code__icontains=q) | Q(subject__icontains=q)
+                Q(filing_code__icontains=q) |
+                Q(subject__icontains=q) |
+                Q(sender_name__icontains=q)
             )
 
         # Filtrado por tipo de documento (parametro 'documents' desde frontend)
@@ -79,6 +85,16 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             except (ValueError, TypeError):
                 page = 1
             paginator, page_obj, object_list, is_paginated = self.paginate_queryset(self.object_list, self.paginate_by)
+            # Calcular índice global (secuencia numérica) sobre TODOS los documentos activos
+            global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+            rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
+            # Anotar cada objeto de la página con su índice global para mostrar en la tabla
+            for o in object_list:
+                try:
+                    o.global_index = rank_map.get(o.id)
+                except Exception:
+                    o.global_index = None
+
             html = render_to_string(
                 'documents/partials/partial_document_table.html',
                 {'documents': object_list},
@@ -118,8 +134,18 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 for t in types_qs
             ]
         }
+        # Anotar índices globales para los objetos de la página (mismo criterio que en la petición AJAX)
+        try:
+            global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+            rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
+            docs = ctx.get('documents')
+            if docs:
+                for d in docs:
+                    setattr(d, 'global_index', rank_map.get(d.id))
+        except Exception:
+            pass
+
         return ctx
-        return super().get(request, *args, **kwargs)
 
 
 class DocumentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -130,6 +156,8 @@ class DocumentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     success_url = reverse_lazy('documents:document_list')
 
     def form_valid(self, form):
+        # Asignar creador antes de guardar
+        form.instance.created_by = self.request.user
         self.object = form.save()
         return JsonResponse({'status': 'success', 'message': 'Documento registrado correctamente.'})
 

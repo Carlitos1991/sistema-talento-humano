@@ -6,6 +6,7 @@
            data-external-search="true">
         <thead class="table-light">
         <tr>
+            <th>#</th>
             <th data-sortable="filing_code">Número <span class="sort-arrow">⇅</span></th>
             <th data-sortable="category">Tipo <span class="sort-arrow">⇅</span></th>
             <th data-sortable="subject">Asunto <span class="sort-arrow">⇅</span></th>
@@ -19,10 +20,11 @@
         <tbody>
         {% for doc in documents %}
             <tr>
+                <td>{{ doc.global_index|default:'-' }}</td>
                 <td><span class="badge bg-secondary">{{ doc.filing_code }}</span></td>
                 <td>{{ doc.category.name }}</td>
-                <td>{{ doc.subject|truncatechars:30 }}</td>
-                <td>{{ doc.recipient_name|truncatechars:25 }}</td>
+                <td style="white-space:pre-line; word-break:break-word;">{{ doc.subject|linebreaksbr|safe }}</td>
+                <td style="white-space:pre-line; word-break:break-word;">{{ doc.recipient_name|linebreaksbr|safe }}</td>
                 <td>{{ doc.sender_name }}</td>
                 <td>{{ doc.registration_date|date:"d/m/Y H:i" }}</td>
                 <td>
