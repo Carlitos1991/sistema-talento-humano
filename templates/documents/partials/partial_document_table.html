@@ -49,13 +49,13 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="8" class="text-center py-4">No se encontraron documentos.</td>
+                <td colspan="9" class="text-center py-4">No se encontraron documentos.</td>
             </tr>
         {% endfor %}
         <!-- Fila para mostrar cuando la búsqueda no retorna resultados (solo si hubo resultados iniciales) -->
         {% if documents %}
             <tr id="frontend-no-results" class="hidden">
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <i class="fa-solid fa-search"></i> No se encontraron registros
                 </td>
             </tr>

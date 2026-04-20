@@ -32,7 +32,9 @@ const documentsApp = createApp({
             searchTerm: '',
             allDOMRows: [],
             // Estadísticas y filtros
-            stats: { total: 0, regimes: [] },
+            stats: { total: 0, regimes: [], display_total: 0 },
+            canDelete: false,
+            statsYear: new Date().getFullYear(),
             isAdvancedSearch: false,
                 advancedFilters: { documents: '', q: '' }
             ,
@@ -44,10 +46,56 @@ const documentsApp = createApp({
         };
     },
     mounted() {
-        this.fetchTable();
+        // Inicializar flags y stats desde HTML renderizado por el servidor (si existe)
+        const initialStatsScript = document.getElementById('initial-doc-stats');
+        const appEl = document.getElementById('documents-app');
+        if (appEl && appEl.dataset && typeof appEl.dataset.canDelete !== 'undefined') {
+            this.canDelete = String(appEl.dataset.canDelete) === '1' || String(appEl.dataset.canDelete) === 'true';
+        }
+        if (initialStatsScript && initialStatsScript.textContent) {
+            try {
+                const s = JSON.parse(initialStatsScript.textContent);
+                const regimes = (s.regimes || []).map(r => ({ ...r, code: String(r.code), display_count: this.canDelete ? (r.count || 0) : (r.user_count || 0) }));
+                this.stats = { total: s.total || 0, total_user: s.total_user || 0, regimes };
+                this.stats.display_total = this.canDelete ? this.stats.total : this.stats.total_user;
+            } catch (e) {
+                console.warn('No se pudo parsear initial-doc-stats:', e);
+            }
+        }
         this.initDelegatedListeners();
         // Deshabilitar el botón Nuevo Documento por defecto (visualmente y funcionalmente)
         this.setAddButtonEnabled(false);
+        // Leer atributo del contenedor para saber si el usuario puede ver stats globales
+        // Input de año para estadísticas
+        const yearInput = document.getElementById('stats-year-input');
+        if (yearInput) {
+            try { this.statsYear = parseInt(yearInput.value) || this.statsYear; } catch(e){}
+            // Re-trigger on change, input (debounced) and Enter
+            let to = null;
+            yearInput.addEventListener('input', (ev) => {
+                clearTimeout(to);
+                to = setTimeout(() => {
+                    const v = parseInt(ev.target.value);
+                    if (!isNaN(v)) {
+                        this.statsYear = v;
+                        this.currentPage = 1;
+                        this.fetchTable(this.isAdvancedSearch, 1);
+                    }
+                }, 350);
+            });
+            yearInput.addEventListener('change', (e) => {
+                const v = parseInt(e.target.value);
+                if (!isNaN(v)) {
+                    this.statsYear = v;
+                    // Refrescar tabla/estadísticas para el año seleccionado
+                    this.currentPage = 1;
+                    this.fetchTable(this.isAdvancedSearch, 1);
+                }
+            });
+            yearInput.addEventListener('keypress', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); yearInput.blur(); } });
+        }
+        // Finalmente, cargar tabla (después de inicializar statsYear y canDelete)
+        this.fetchTable();
     },
     methods: {
         initDelegatedListeners() {
@@ -145,6 +193,8 @@ const documentsApp = createApp({
                 documents: this.advancedFilters.documents || '',
                 page: requestedPage
             };
+            // Añadir año para estadísticas y filtrado
+            if (this.statsYear) paramsObj.year = String(this.statsYear);
             // Añadir orden si está definido
             if (this.sortField) {
                 paramsObj.sort_field = this.sortField;
@@ -220,9 +270,12 @@ const documentsApp = createApp({
                     // Asegurar que los códigos vienen como strings para comparación en plantilla
                     const regimes = (data.stats.regimes || []).map(r => ({
                         ...r,
-                        code: String(r.code)
+                        code: String(r.code),
+                        display_count: this.canDelete ? (r.count || 0) : (r.user_count || 0)
                     }));
-                    this.stats = { total: data.stats.total || 0, regimes };
+                    this.stats = { total: data.stats.total || 0, total_user: data.stats.total_user || 0, regimes };
+                    // display_total será global si puede eliminar, sino el conteo del usuario
+                    this.stats.display_total = this.canDelete ? this.stats.total : this.stats.total_user;
                 }
 
                 // Si el servidor devuelve info de paginación, sincronizar estado
