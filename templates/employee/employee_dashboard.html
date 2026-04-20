@@ -31,7 +31,7 @@
            <div id="employeeWizardApp"
                v-cloak
                data-person-id="{{ person.id }}"
-               data-photo-url="{{ person.photo.url if person.photo else '' }}"
+               data-photo-url="{% if person.photo %}{{ person.photo.url }}{% endif %}"
                data-titles="{{ curriculum_titles_count|default:0 }}"
                data-experiences="{{ curriculum_experiences_count|default:0 }}"
                data-courses="{{ curriculum_courses_count|default:0 }}"
