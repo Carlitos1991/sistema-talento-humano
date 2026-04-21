@@ -34,6 +34,13 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(last_name__icontains=q) |
                 Q(document_number__icontains=q)
             )
+            # También permitir buscar por rol (nombre del Group)
+            qs = qs.filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(document_number__icontains=q) |
+                Q(user__groups__name__icontains=q)
+            )
 
         cedula = self.request.GET.get('cedula')
         first_name = self.request.GET.get('first_name')
@@ -58,7 +65,8 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif status == 'no_account':
             qs = qs.filter(user__isnull=True)
 
-        return qs
+        # Evitar duplicados cuando se hace join con grupos
+        return qs.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
