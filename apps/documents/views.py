@@ -471,6 +471,9 @@ def create_multiple_documents(request):
     subject = request.POST.get('subject', '')
     sender_name = request.POST.get('sender_name', '')
     recipient_name = request.POST.get('recipient_name', '')
+    # Validación: 'recipient_name' es obligatorio
+    if not recipient_name or not recipient_name.strip():
+        return JsonResponse({'success': False, 'message': 'El campo "A Quién va Dirigido" es obligatorio.'}, status=400)
     observation = request.POST.get('observation', '')
     file_obj = request.FILES.get('file_attachment')
 

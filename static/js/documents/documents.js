@@ -594,6 +594,15 @@ const documentsApp = createApp({
         async saveDocument() {
             const form = document.getElementById('documentForm');
             if (!form) return;
+            // Cliente: validar que 'recipient_name' esté presente
+            const recipInput = form.querySelector('input[name="recipient_name"]');
+            if (recipInput && (!recipInput.value || recipInput.value.trim() === '')) {
+                try {
+                    Swal.fire('Atención', 'El campo "A Quién va Dirigido" es obligatorio.', 'warning');
+                } catch (e) { alert('El campo "A Quién va Dirigido" es obligatorio.'); }
+                return;
+            }
+
             const formData = new FormData(form);
             this.loading = true;
             try {
