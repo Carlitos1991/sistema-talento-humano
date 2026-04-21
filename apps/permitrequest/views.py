@@ -914,25 +914,24 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
         employee = get_object_or_404(Employee, pk=employee_id)
         
         try:
-            # Validar archivo PDF (centralizado en forms)
+            # Validar archivo PDF (opcional)
             attachment = request.FILES.get('attachment')
-            if not attachment:
-                return JsonResponse({'success': False, 'message': 'Debe adjuntar un documento PDF'}, status=400)
-            try:
-                from .forms import validate_justification_file
-                validate_justification_file(attachment)
-            except Exception as exc:
-                return JsonResponse({'success': False, 'message': str(exc)}, status=400)
+            if attachment:
+                try:
+                    from .forms import validate_justification_file
+                    validate_justification_file(attachment)
+                except Exception as exc:
+                    return JsonResponse({'success': False, 'message': str(exc)}, status=400)
             
             # Obtener tipo de permiso "Bitácora"
             bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
             if not bitacora_type:
-                # Crear si no existe
+                # Crear si no existe (por defecto no requerir attachment para bitácoras)
                 bitacora_type = PermitType.objects.create(
                     name='Bitácora',
                     needs_justification=True,
                     affects_vacation=False,
-                    requires_attachment=True
+                    requires_attachment=False
                 )
             
             # Datos del formulario
@@ -963,14 +962,16 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
                     'message': 'Debe ingresar la justificación'
                 }, status=400)
             
-            # Guardar archivo
+            # Guardar archivo (si fue proporcionado)
             from django.utils.text import slugify
             import os
-            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
-            employee_slug = slugify(employee.person.full_name)
-            file_name = f"bitacora_{employee_slug}_{timestamp}.pdf"
-            file_path = os.path.join('permits', 'bitacoras', file_name)
-            saved_path = default_storage.save(file_path, attachment)
+            saved_path = None
+            if attachment:
+                timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+                employee_slug = slugify(employee.person.full_name)
+                file_name = f"bitacora_{employee_slug}_{timestamp}.pdf"
+                file_path = os.path.join('permits', 'bitacoras', file_name)
+                saved_path = default_storage.save(file_path, attachment)
             
             # Crear permisos para cada día
             created_count = 0
@@ -1252,9 +1253,9 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
             except ValueError:
                 page = 1
             try:
-                page_size = int(request.GET.get('page_size', 10))
+                page_size = int(request.GET.get('page_size', 100))
             except ValueError:
-                page_size = 10
+                page_size = 100
 
             paginator = Paginator(qs, page_size)
 

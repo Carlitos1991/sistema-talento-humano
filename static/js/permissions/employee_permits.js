@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const totalBadge = document.getElementById('bitacora-history-total');
 
         let currentPage = parseInt(pageInput ? pageInput.value : 1) || 1;
-        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 10) || 10;
+        let pageSize = parseInt(pageSizeSelect ? pageSizeSelect.value : 100) || 100;
         let sort = modalContentContainer.dataset.sort || '-start_date';
 
         function fetchAndRender(params = {}) {
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         from: '',
                         to: '',
                         page: 1,
-                        page_size: 10,
+                        page_size: 100,
                         total_pages: 1,
                         total_count: 0
                     };
@@ -915,20 +915,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Validar archivo PDF
         const fileInput = form.querySelector('#attachment');
-        if (!fileInput.files || fileInput.files.length === 0) {
-            Swal.fire('Error', 'Debe adjuntar un documento PDF', 'error');
-            return;
-        }
-
-        const file = fileInput.files[0];
-        if (file.size > 500 * 1024) {
-            Swal.fire('Error', 'El archivo no debe superar los 500 KB', 'error');
-            return;
-        }
-
-        if (!file.name.toLowerCase().endsWith('.pdf')) {
-            Swal.fire('Error', 'Solo se permiten archivos PDF', 'error');
-            return;
+        let file = null;
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            file = fileInput.files[0];
+            if (file.size > 500 * 1024) {
+                Swal.fire('Error', 'El archivo no debe superar los 500 KB', 'error');
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                Swal.fire('Error', 'Solo se permiten archivos PDF', 'error');
+                return;
+            }
         }
 
         const formData = new FormData(form);
@@ -991,18 +988,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const _bitacoraListApp = createApp({
                 delimiters: ['[[', ']]'], data() {
                     return {
-                        isVisible: false,
-                        employeeId: null,
-                        employeeName: '',
-                        employeeIdentification: '',
-                        bitacoras: [],
-                        selectedBitacoras: [],
-                        selectAll: false,
-                        fromDate: '',
-                        toDate: '',
-                        currentPage: 1,
-                        perPage: 10
-                    }
+                            isVisible: false,
+                            employeeId: null,
+                            employeeName: '',
+                            employeeIdentification: '',
+                            bitacoras: [],
+                            selectedBitacoras: [],
+                            selectAll: false,
+                            fromDate: '',
+                            toDate: '',
+                            currentPage: 1,
+                            perPage: 100
+                        }
                 }, computed: {
                     filteredBitacoras() {
                         // Filtrar por rango de fechas (start_date)
