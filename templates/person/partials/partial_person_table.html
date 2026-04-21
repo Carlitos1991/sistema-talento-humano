@@ -9,11 +9,13 @@
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i></th>
-            <th data-field="full_name_str" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th data-field="full_name_str" onclick="sortPersonTable(this)" class="sortable-header"
+                style="cursor: pointer;">
                 Empleado
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header"
+                style="cursor: pointer;">
                 Cédula
                 <span class="sort-arrow">⇅</span>
             </th>
@@ -21,15 +23,18 @@
                 <i class="far fa-envelope header-icon"></i> Correo Institucional
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th data-field="phone_number" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th data-field="phone_number" onclick="sortPersonTable(this)" class="sortable-header"
+                style="cursor: pointer;">
                 <i class="fas fa-phone header-icon"></i> Teléfono
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th class="text-center" data-field="employee_profile__area__name" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th class="text-center" data-field="employee_profile__area__name" onclick="sortPersonTable(this)"
+                class="sortable-header" style="cursor: pointer;">
                 <i class="fas fa-building header-icon"></i> Dependencia
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th class="text-center" data-field="employee_profile__employment_status__name" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th class="text-center" data-field="employee_profile__employment_status__name"
+                onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
                 <i class="fas fa-toggle-on header-icon"></i> Estado
                 <span class="sort-arrow">⇅</span>
             </th>
@@ -96,6 +101,12 @@
                     <td>
                         <div class="actions-wrapper">
                             <button type="button"
+                                    class="btn-info-action"
+                                    title="Reubicar Empleado"
+                                    onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ unit.name }}')">
+                                <i class="fa-solid fa-sitemap"></i>
+                            </button>
+                            <button type="button"
                                     class="btn-views-action btn-quick-view"
                                     data-id="{{ person.id }}"
                                     title="Vista Rápida">
@@ -116,26 +127,26 @@
             <tr>
                 {% if perms.person.change_person or perms.person.delete_person %}
                     <td colspan="8">
-                {% else %}
+                        {% else %}
                     <td colspan="7">
                 {% endif %}
-                    <div class="empty-state-container">
-                        <i class="fas fa-calendar-times empty-state-icon"></i>
-                        <p class="empty-state-text">No se encontraron registros registrados.</p>
-                    </div>
+                <div class="empty-state-container">
+                    <i class="fas fa-calendar-times empty-state-icon"></i>
+                    <p class="empty-state-text">No se encontraron registros registrados.</p>
+                </div>
                 </td>
             </tr>
         {% endfor %}
         <tr id="client-no-results" style="display: none;">
             {% if perms.person.change_person or perms.person.delete_person %}
                 <td colspan="8">
-            {% else %}
+                    {% else %}
                 <td colspan="7">
             {% endif %}
-                <div class="empty-state-container">
-                    <i class="fas fa-search empty-state-icon"></i>
-                    <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
-                </div>
+            <div class="empty-state-container">
+                <i class="fas fa-search empty-state-icon"></i>
+                <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
+            </div>
             </td>
         </tr>
         </tbody>
@@ -182,14 +193,14 @@
 
 <!-- Script temporario para evitar error si person.js aun no cargó -->
 <script>
-if (!window.sortPersonTable) {
-    window.sortPersonTable = (thElement) => {
-        console.warn('sortPersonTable no está lista aún, esperando a person.js...');
-        setTimeout(() => {
-            if (window.sortPersonTable && vueApp) {
-                vueApp.fetchPeople(1);
-            }
-        }, 100);
-    };
-}
+    if (!window.sortPersonTable) {
+        window.sortPersonTable = (thElement) => {
+            console.warn('sortPersonTable no está lista aún, esperando a person.js...');
+            setTimeout(() => {
+                if (window.sortPersonTable && vueApp) {
+                    vueApp.fetchPeople(1);
+                }
+            }, 100);
+        };
+    }
 </script>
