@@ -45,7 +45,7 @@
 .sidebar-menu .has-submenu > a,
 .sidebar-menu .has-inner-submenu > a {
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) auto 14px;
+    grid-template-columns: 24px minmax(0, 1fr) auto 8px;
     align-items: center;
     column-gap: 10px;
     padding-right: 0.9rem;
@@ -90,9 +90,12 @@
 .sidebar-menu .has-inner-submenu > a .inner-chevron {
     margin-left: 0;
     margin-right: 0;
-    width: 14px;
+    width: 12px;
     text-align: right;
     justify-self: end;
+
+    /* Adelantar más las flechas hacia la izquierda */
+    margin-right: -10px;
 }
 
 .sidebar-menu .has-submenu > a .sidebar-badge,

@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function truncateWithEllipsis(textElement) {
-        const fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
+        let fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
+        // Guardar original
         textElement.dataset.fullLabel = fullLabel;
 
         // Evita truncar etiquetas cortas como "Inicio".
@@ -41,21 +42,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const maxWidth = textElement.clientWidth;
-
         if (!fullLabel || !maxWidth) {
             textElement.textContent = fullLabel;
             return false;
         }
 
+        // Limpiar terminadores existentes (puntos, espacios) para evitar múltiples puntos
+        fullLabel = fullLabel.replace(/[\.\s]+$/g, '').trim();
+
         textElement.textContent = fullLabel;
 
-        // Usa overflow real renderizado para decidir si truncar.
+        // Si cabe completo, nada que hacer
         if (textElement.scrollWidth <= (textElement.clientWidth + 1)) {
             textElement.textContent = fullLabel;
             return false;
         }
 
-        const dot = '...';
+        const dot = '.';
         let right = fullLabel.length - 1;
         let best = dot;
 
