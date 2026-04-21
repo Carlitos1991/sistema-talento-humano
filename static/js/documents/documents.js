@@ -88,6 +88,7 @@ const documentsApp = createApp({
                 t = setTimeout(() => {
                     this.dateFrom = dateFromInput ? dateFromInput.value : null;
                     this.dateTo = dateToInput ? dateToInput.value : null;
+                    console.debug('date inputs changed ->', {date_from: this.dateFrom, date_to: this.dateTo});
                     this.currentPage = 1;
                     this.fetchTable(this.isAdvancedSearch, 1);
                 }, 350);
@@ -95,6 +96,7 @@ const documentsApp = createApp({
             el.addEventListener('change', () => {
                 this.dateFrom = dateFromInput ? dateFromInput.value : null;
                 this.dateTo = dateToInput ? dateToInput.value : null;
+                console.debug('date inputs changed (change) ->', {date_from: this.dateFrom, date_to: this.dateTo});
                 this.currentPage = 1;
                 this.fetchTable(this.isAdvancedSearch, 1);
             });
@@ -209,9 +211,9 @@ const documentsApp = createApp({
                 paramsObj.sort_dir = this.sortAsc ? 'asc' : 'desc';
             }
             const params = new URLSearchParams(paramsObj).toString();
-
             try {
                 const url = `${window.location.pathname}?${params}`;
+                console.debug('Fetching documents with URL', url, 'paramsObj', paramsObj);
                 const response = await fetch(url, {
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
@@ -237,6 +239,7 @@ const documentsApp = createApp({
                 }
 
                 const data = await response.json();
+                console.debug('documents.fetchTable response stats:', data.stats);
 
                 const container = document.getElementById('table-content-wrapper');
                 if (container) container.innerHTML = data.table_html || data.html || container.innerHTML;
