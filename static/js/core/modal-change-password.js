@@ -1,17 +1,27 @@
 // Modal: Cambiar Contraseña - Lógica
 
+let __forceChangeRequired = false;
+
 function openChangePasswordModal() {
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
         modal.classList.remove('hidden');
-        document.getElementById('newPassword').focus();
+        // asegurar visibilidad si reglas CSS externas siguen ocultando el elemento
+        try {
+            modal.style.display = modal.style.display || 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.zIndex = modal.style.zIndex || '2147483647';
+        } catch (e) { /* ignore */ }
+        const pw = document.getElementById('newPassword');
+        if (pw) pw.focus();
         // Cerrar el dropdown del navbar
         const dropdown = document.querySelector('.dropdown-menu');
         if (dropdown) dropdown.classList.add('hidden');
     }
 }
 
-function closeChangePasswordModal() {
+function closeChangePasswordModal(forceOverride = false) {
+    if (__forceChangeRequired && !forceOverride) return; // bloquea cierre si es obligatorio
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
         modal.classList.add('hidden');
@@ -129,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modal) {
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
+                // solo cerrar si NO es obligatorio el cambio
                 closeChangePasswordModal();
             }
         });
@@ -141,6 +152,122 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Auto-open si la URL contiene ?force=1 o si el servidor indicó con data-force-change
+document.addEventListener('DOMContentLoaded', function () {
+    console.debug('[modal-change-password] DOMContentLoaded - checking force flags');
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('force') === '1') {
+            __forceChangeRequired = true;
+            console.debug('[modal-change-password] detected URL param force=1');
+        }
+    } catch (e) { /* ignore */ }
+
+    try {
+        if (!__forceChangeRequired && document && document.body && document.body.dataset && document.body.dataset.forceChange === '1') {
+            __forceChangeRequired = true;
+            console.debug('[modal-change-password] detected body data-force-change=1');
+        }
+    } catch (e) { /* ignore */ }
+
+    if (__forceChangeRequired) {
+        console.debug('[modal-change-password] forcing modal open (forceRequired=true)');
+        // Abrir modal y desactivar botones de cierre
+        openChangePasswordModal();
+        const closeBtn = document.querySelector('#changePasswordModal .modal-close');
+        if (closeBtn) closeBtn.style.display = 'none';
+        const cancelBtn = document.querySelector('#changePasswordModal .btn-cancel');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+
+        // Evitar cerrar por overlay o Escape: handlers ya consultan __forceChangeRequired
+    }
+});
+
+// --- Ejecutar comprobación inmediata (útil si el script se carga después de DOMContentLoaded o filtros de consola)
+(function immediateCheck() {
+    try {
+        // Preferir la variable expuesta por el servidor
+        const serverFlag = (typeof window !== 'undefined' && window.__serverForceChange) ? true : false;
+        const params = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search) : null;
+        const urlFlag = params && params.get('force') === '1';
+
+        if (serverFlag || urlFlag || (document && document.body && document.body.getAttribute && document.body.getAttribute('data-force-change') === '1')) {
+            console.info('[modal-change-password] immediateCheck: will open modal (serverFlag, urlFlag)=', serverFlag, urlFlag);
+            __forceChangeRequired = true;
+            openChangePasswordModal();
+            const closeBtn = document.querySelector('#changePasswordModal .modal-close');
+            if (closeBtn) closeBtn.style.display = 'none';
+            const cancelBtn = document.querySelector('#changePasswordModal .btn-cancel');
+            if (cancelBtn) cancelBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.warn('[modal-change-password] immediateCheck error', e);
+    }
+})();
+
+// Si el flag del servidor se asigna después de cargar este script, hacemos
+// una comprobación corta por intervalos y observamos cambios en el atributo
+// `data-force-change` del <body> para garantizar que abrimos el modal.
+(function watchForLateServerFlag() {
+    try {
+        // Si ya forzado, no necesitamos hacer nada
+        if (typeof __forceChangeRequired !== 'undefined' && __forceChangeRequired) return;
+
+        let checks = 0;
+        const maxChecks = 10; // comprobar ~2s en total
+        const intervalMs = 200;
+
+        const checker = setInterval(() => {
+            const serverFlag = !!(window && window.__serverForceChange);
+            const bodyFlag = (document && document.body && document.body.getAttribute && document.body.getAttribute('data-force-change') === '1');
+            if (serverFlag || bodyFlag) {
+                console.info('[modal-change-password] late-detect: opening modal (serverFlag, bodyFlag)=', serverFlag, bodyFlag);
+                __forceChangeRequired = true;
+                openChangePasswordModal();
+                const closeBtn = document.querySelector('#changePasswordModal .modal-close');
+                if (closeBtn) closeBtn.style.display = 'none';
+                const cancelBtn = document.querySelector('#changePasswordModal .btn-cancel');
+                if (cancelBtn) cancelBtn.style.display = 'none';
+                clearInterval(checker);
+                observer && observer.disconnect();
+                return;
+            }
+
+            checks += 1;
+            if (checks >= maxChecks) {
+                clearInterval(checker);
+            }
+        }, intervalMs);
+
+        // Observar cambios en atributos del body (por si otro script asigna data-force-change)
+        const observer = (typeof MutationObserver !== 'undefined' && document && document.body) ? new MutationObserver(mutations => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'data-force-change') {
+                    const val = document.body.getAttribute('data-force-change');
+                    if (val === '1') {
+                        console.info('[modal-change-password] MutationObserver detected data-force-change=1');
+                        __forceChangeRequired = true;
+                        openChangePasswordModal();
+                        const closeBtn = document.querySelector('#changePasswordModal .modal-close');
+                        if (closeBtn) closeBtn.style.display = 'none';
+                        const cancelBtn = document.querySelector('#changePasswordModal .btn-cancel');
+                        if (cancelBtn) cancelBtn.style.display = 'none';
+                        clearInterval(checker);
+                        observer.disconnect();
+                        break;
+                    }
+                }
+            }
+        }) : null;
+
+        if (observer) {
+            observer.observe(document.body, { attributes: true });
+        }
+    } catch (e) {
+        console.warn('[modal-change-password] watchForLateServerFlag error', e);
+    }
+})();
 
 // Enviar formulario
 function submitChangePassword() {
@@ -180,7 +307,8 @@ function submitChangePassword() {
                 text: 'Tu contraseña ha sido cambiada correctamente.',
                 confirmButtonText: 'OK'
             }).then(() => {
-                closeChangePasswordModal();
+                // Forzar cierre aunque había bloqueo obligatorio (se debe haber actualizado el flag en el servidor)
+                closeChangePasswordModal(true);
             });
         } else {
             Swal.fire({

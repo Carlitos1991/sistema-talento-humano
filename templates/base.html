@@ -28,7 +28,7 @@
         display: none !important;
     }</style>
 </head>
-<body>
+<body {% if request.user.is_authenticated and request.session.force_change_on_login %}data-force-change="1"{% endif %}>
 
 <!-- 1. PUNTO DE MONTAJE VUE (Debe envolver todo el layout) -->
 <!-- 2. CLASE DINÁMICA DE VUE AQUÍ -->
@@ -121,6 +121,15 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+    // Determinar si el servidor pidió forzar cambio leyendo el atributo del <body>
+    try {
+        window.__serverForceChange = (document && document.body && document.body.getAttribute && document.body.getAttribute('data-force-change') === '1');
+    } catch (e) {
+        window.__serverForceChange = false;
+    }
+    console.debug('[server] force_change_on_login =', window.__serverForceChange);
+</script>
 <script src="{% static 'js/core/modal-change-password.js' %}"></script>
 {% block extra_js %}{% endblock %}
 

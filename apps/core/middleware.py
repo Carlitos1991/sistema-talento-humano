@@ -91,11 +91,8 @@ class SIGETHSecurityMiddleware:
         if not is_public and not request.user.is_authenticated:
             return redirect(login_url_resolved)
 
-        # 4. Lógica de Cambio de Contraseña Obligatorio
-        if request.user.is_authenticated:
-            if getattr(request.user, 'must_change_password', False):
-                # Evitar bucle infinito y permitir estáticos
-                if not path.startswith('/security/change-password/') and not path.startswith('/static/'):
-                    return redirect('/security/change-password/?force=1')
+        # 4. (Reservado) - El flujo de cambio obligatorio se gestiona mediante
+        # la sesión `force_change_on_login` establecida en el LoginView, y la
+        # plantilla base muestra el modal cuando corresponde. No redirigimos aquí.
 
         return self.get_response(request)

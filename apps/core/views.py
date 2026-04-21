@@ -41,6 +41,14 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def form_valid(self, form):
+        # Si el usuario nunca se había logueado antes (last_login is None), marcar en sesión
+        try:
+            user_obj = form.get_user()
+            if getattr(user_obj, 'last_login', None) is None:
+                self.request.session['force_change_on_login'] = True
+        except Exception:
+            pass
+
         response = super().form_valid(form)
 
         current_session_key = self.request.session.session_key
@@ -193,6 +201,8 @@ class CreateUserFromLoginView(TemplateView):
                 last_name=person.last_name,
                 is_active=True
             )
+            # No forzamos aquí; el modal se mostrará en el primer login según last_login
+            user.save()
             person.user = user
             person.save(update_fields=['user', 'updated_at'])
 
@@ -1134,6 +1144,12 @@ class ChangePasswordView(LoginRequiredMixin, View):
             user = request.user
             user.set_password(new_password)
             user.save()
+            # Limpiar marca en sesión si existe (para el flujo basado en first-login)
+            try:
+                if 'force_change_on_login' in request.session:
+                    del request.session['force_change_on_login']
+            except Exception:
+                pass
             
             return JsonResponse({
                 'success': True,
