@@ -7,7 +7,8 @@
     </script>
     <div class="sidebar-header">
         {% if sidebar_logo_url %}
-            <img src="{{ sidebar_logo_url }}?v={{ current_system_configuration.updated_at|date:'U' }}" alt="Logo institucional" class="sidebar-logo-img">
+            <img src="{{ sidebar_logo_url }}?v={{ current_system_configuration.updated_at|date:'U' }}"
+                 alt="Logo institucional" class="sidebar-logo-img">
         {% else %}
             <img src="{% static 'img/logo.png' %}" alt="Logo institucional" class="sidebar-logo-img">
         {% endif %}
@@ -336,7 +337,8 @@
                                 <a href="{% url 'permissions:permit_employee_list' %}"
                                    class="{% if request.resolver_match.app_name == 'permissions' and request.resolver_match.url_name == 'permit_employee_list' %}active-child{% endif %}">
                                     <i class="fa-solid fa-plus-circle"></i>
-                                    <span class="menu-text">{% if perms.permitrequest.change_permitrequest %}Permisos{% else %}Bitácora{% endif %}</span>
+                                    <span class="menu-text">{% if perms.permitrequest.change_permitrequest %}
+                                        Permisos{% else %}Bitácora{% endif %}</span>
                                 </a>
                             </li>
                         {% endif %}
@@ -614,23 +616,6 @@
                     </a>
                     <ul class="submenu">
                         <li class="submenu-title">Ajustes</li>
-                        {% if perms.core.view_user %}
-                            <li>
-                                <a href="{% url 'security:user_list' %}">
-                                    <i class="fa-solid fa-user-shield"></i>
-                                    <span class="menu-text">Usuarios Sistema</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.auth.view_group %}
-                            <li>
-                                <a href="{% url 'security:role_list' %}">
-                                    <i class="fa-solid fa-user-lock"></i>
-                                    <span class="menu-text">Roles y Permisos</span>
-                                </a>
-                            </li>
-                        {% endif %}
-
                         {% if perms.core.view_catalog %}
                             <li>
                                 <a href="{% url 'core:catalog_list' %}">
@@ -659,12 +644,40 @@
                     </ul>
                 </li>
             {% endif %}
+
             {% if perms.auth.view_user %}
-                <li>
-                    <a href="{% url 'security:user_control_list' %}">
+                <li class="has-submenu">
+                    <a href="#" class="{% if request.resolver_match.app_name == 'institution' %}active{% endif %}">
                         <i class="fa-solid fa-users-gear"></i>
-                        <span class="menu-text">Control de Usuarios</span>
+                        <span class="menu-text">Usuarios</span>
+                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
+                    <ul class="submenu">
+                        {% if perms.core.view_user %}
+                            <li>
+                                <a href="{% url 'security:user_list' %}">
+                                    <i class="fa-solid fa-user-shield"></i>
+                                    <span class="menu-text">Usuarios Sistema</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if perms.auth.view_user %}
+                            <li>
+                                <a href="{% url 'security:user_control_list' %}">
+                                    <i class="fa-solid fa-users-gear"></i>
+                                    <span class="menu-text">Control de Usuarios</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if perms.auth.view_group %}
+                            <li>
+                                <a href="{% url 'security:role_list' %}">
+                                    <i class="fa-solid fa-user-lock"></i>
+                                    <span class="menu-text">Roles y Permisos</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
                 </li>
             {% endif %}
             <li>
