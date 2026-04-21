@@ -25,7 +25,15 @@
                 <td>{{ doc.category.name }}</td>
                 <td style="white-space:pre-line; word-break:break-word;">{{ doc.subject|linebreaksbr|safe }}</td>
                 <td style="white-space:pre-line; word-break:break-word;">{{ doc.recipient_name|linebreaksbr|safe }}</td>
-                <td>{{ doc.sender_name }}</td>
+                <td>
+                    {% if doc.updated_by %}
+                        {{ doc.updated_by.get_full_name }}
+                    {% elif doc.created_by %}
+                        {{ doc.created_by.get_full_name }}
+                    {% else %}
+                        {{ doc.sender_name }}
+                    {% endif %}
+                </td>
                 <td>{{ doc.registration_date|date:"d/m/Y H:i" }}</td>
                 <td>
                     {% if doc.file_attachment %}

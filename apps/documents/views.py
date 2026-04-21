@@ -346,6 +346,16 @@ class DocumentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
     permission_required = 'documents.change_document'
 
     def form_valid(self, form):
+        # Registrar quién hizo la última edición y actualizar el campo 'sender_name'
+        try:
+            form.instance.updated_by = self.request.user
+            # Actualizar 'sender_name' con el nombre completo del último editor
+            try:
+                form.instance.sender_name = self.request.user.get_full_name() or str(self.request.user)
+            except Exception:
+                form.instance.sender_name = str(self.request.user)
+        except Exception:
+            pass
         self.object = form.save()
         return JsonResponse({'success': True, 'message': 'Documento actualizado correctamente.'})
 
@@ -366,6 +376,8 @@ def document_detail(request, pk):
             'sender_name': doc.sender_name,
             'observation': doc.observation,
             'file_url': doc.file_attachment.url if doc.file_attachment else None,
+            'created_by': doc.created_by.get_full_name() if getattr(doc, 'created_by', None) else None,
+            'updated_by': doc.updated_by.get_full_name() if getattr(doc, 'updated_by', None) else None,
         }
         return JsonResponse({'success': True, 'data': data})
     except Document.DoesNotExist:
@@ -494,6 +506,10 @@ def create_multiple_documents(request):
         if file_obj:
             # Reuse same file object — Django will handle saving copy
             doc.file_attachment = file_obj
+        try:
+            doc.created_by = request.user
+        except Exception:
+            pass
         doc.save()
         created.append({'id': doc.id, 'filing_code': doc.filing_code})
 

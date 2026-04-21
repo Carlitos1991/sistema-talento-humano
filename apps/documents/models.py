@@ -56,6 +56,14 @@ class Document(models.Model):
         blank=True,
         verbose_name='Creado por'
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='documents_updated',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name='Última edición por'
+    )
 
     class Meta:
         verbose_name = 'Documento'

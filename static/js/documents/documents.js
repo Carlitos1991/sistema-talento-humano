@@ -45,6 +45,7 @@ const documentsApp = createApp({
             sortAsc: true
             ,
             editingId: null
+            ,creating: false
         };
     },
     mounted() {
@@ -594,6 +595,14 @@ const documentsApp = createApp({
             this.loading = true;
             try {
                 let response;
+                if (!this.editingId) {
+                    // Prevención doble envío: si ya se creó recientemente, pedir esperar
+                    if (this.creating) {
+                        try { Swal.fire('Espere', 'Espere 5 segundos antes de crear nuevos registros.', 'info'); } catch(e) { alert('Espere 5 segundos antes de crear nuevos registros.'); }
+                        this.loading = false;
+                        return;
+                    }
+                }
                 if (this.editingId) {
                     // Update single document
                     const url = `/documents/update/${this.editingId}/`;
@@ -623,6 +632,17 @@ const documentsApp = createApp({
                         showConfirmButton: false
                     });
                     
+                    // Si fue una creación, bloquear nuevas creaciones por 5s para evitar doble clic accidental
+                    if (!this.editingId) {
+                        this.creating = true;
+                        // Deshabilitar botón de guardar en modal
+                        const saveBtn = document.querySelector('#documentForm button[type="submit"], #documentForm .btn-save');
+                        if (saveBtn) saveBtn.disabled = true;
+                        setTimeout(() => {
+                            this.creating = false;
+                            if (saveBtn) saveBtn.disabled = false;
+                        }, 5000);
+                    }
                     // Refrescar tabla después de corto delay
                     await new Promise(r => setTimeout(r, 500));
                     this.fetchTable();
