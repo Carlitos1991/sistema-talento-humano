@@ -225,7 +225,8 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
 
             user.is_active = data['is_active']
             user.is_staff = data['is_staff']
-            user.email = person.email
+            # Evitar asignar None al email (la columna puede ser NOT NULL en DB)
+            user.email = person.email or (user.email or '')
             user.custom_name = (data.get('custom_name') or '').strip() or user.get_default_signature_name()
             user.custom_position = (data.get('custom_position') or '').strip() or user.get_default_signature_position()
             user.save()
@@ -239,7 +240,7 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
             user = User.objects.create_user(
                 username=data['username'],
                 password=data['password'],
-                email=person.email,
+                email=(person.email or ''),
                 first_name=person.first_name,
                 last_name=person.last_name,
                 is_active=data['is_active'],

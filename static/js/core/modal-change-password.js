@@ -21,7 +21,22 @@ function openChangePasswordModal() {
 }
 
 function closeChangePasswordModal(forceOverride = false) {
-    if (__forceChangeRequired && !forceOverride) return; // bloquea cierre si es obligatorio
+    // Bloquea cierre solo si el servidor o el body indican que el cambio es obligatorio.
+    if (!forceOverride) {
+        try {
+            const serverFlag = (typeof window !== 'undefined' && !!window.__serverForceChange);
+            const bodyFlag = (document && document.body && document.body.getAttribute && document.body.getAttribute('data-force-change') === '1');
+            const params = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search) : null;
+            const urlFlag = params && params.get('force') === '1';
+
+            if (serverFlag || bodyFlag || urlFlag) {
+                // El servidor exige el cambio: bloqueamos el cierre a menos que forceOverride === true
+                return;
+            }
+        } catch (e) {
+            // En caso de error al evaluar flags, no bloqueamos el cierre para evitar UX bloqueada.
+        }
+    }
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
         modal.classList.add('hidden');
