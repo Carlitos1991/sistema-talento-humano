@@ -36,25 +36,27 @@
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha Inicio <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Fecha Inicio <span
+                                class="text-danger">*</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar input-icon-left"></i>
-                            <input type="date" 
-                                   name="start_date" 
-                                   id="start_date" 
-                                   class="form-control with-icon" 
+                            <input type="date"
+                                   name="start_date"
+                                   id="start_date"
+                                   class="form-control with-icon"
                                    required>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Número de Días <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Número de Días <span
+                                class="text-danger">*</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-hashtag input-icon-left"></i>
-                            <input type="number" 
-                                   name="num_days" 
-                                   id="num_days" 
-                                   class="form-control with-icon" 
-                                   min="1" 
+                            <input type="number"
+                                   name="num_days"
+                                   id="num_days"
+                                   class="form-control with-icon"
+                                   min="1"
                                    value="1"
                                    required>
                         </div>
@@ -76,26 +78,26 @@
                             <div class="grid-2-cols gap-2">
                                 <div class="form-group">
                                     <label class="small font-weight-700 text-muted">ENTRADA</label>
-                                    <input type="time" 
-                                           name="first_start" 
-                                           id="first_start" 
-                                           class="form-control" 
+                                    <input type="time"
+                                           name="first_start"
+                                           id="first_start"
+                                           class="form-control"
                                            value="08:00">
                                 </div>
                                 <div class="form-group">
                                     <label class="small font-weight-700 text-muted">SALIDA</label>
-                                    <input type="time" 
-                                           name="first_end" 
-                                           id="first_end" 
-                                           class="form-control" 
+                                    <input type="time"
+                                           name="first_end"
+                                           id="first_end"
+                                           class="form-control"
                                            value="13:00">
                                 </div>
                             </div>
                             <div class="mt-3 p-2 bg-light rounded text-center">
                                 <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
-                                    <input type="checkbox" 
+                                    <input type="checkbox"
                                            name="first_crosses_midnight"
-                                           id="first_crosses_midnight" 
+                                           id="first_crosses_midnight"
                                            class="custom-checkbox">
                                     <span class="small font-weight-600">Cruza medianoche</span>
                                 </label>
@@ -110,24 +112,24 @@
                             <div class="grid-2-cols gap-2">
                                 <div class="form-group">
                                     <label class="small font-weight-700 text-muted">ENTRADA</label>
-                                    <input type="time" 
-                                           name="second_start" 
-                                           id="second_start" 
+                                    <input type="time"
+                                           name="second_start"
+                                           id="second_start"
                                            class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label class="small font-weight-700 text-muted">SALIDA</label>
-                                    <input type="time" 
-                                           name="second_end" 
-                                           id="second_end" 
+                                    <input type="time"
+                                           name="second_end"
+                                           id="second_end"
                                            class="form-control">
                                 </div>
                             </div>
                             <div class="mt-3 p-2 bg-light rounded text-center">
                                 <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
-                                    <input type="checkbox" 
+                                    <input type="checkbox"
                                            name="second_crosses_midnight"
-                                           id="second_crosses_midnight" 
+                                           id="second_crosses_midnight"
                                            class="custom-checkbox">
                                     <span class="small font-weight-600">Cruza medianoche</span>
                                 </label>
@@ -142,26 +144,29 @@
                 <h4 class="section-title">
                     <i class="fas fa-file-alt text-primary"></i> JUSTIFICACIÓN Y DOCUMENTACIÓN
                 </h4>
-                
-                <div class="grid-cols-custom" style="display: grid; grid-template-columns: 80% 20%; gap: 1rem; align-items: stretch;">
+
+                <div class="grid-cols-custom"
+                     style="display: grid; grid-template-columns: 80% 20%; gap: 1rem; align-items: stretch;">
                     <!-- Justificación (75%) -->
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label font-weight-700">Motivo / Justificación <span class="text-danger">*</span></label>
-                        <textarea name="justification" 
-                                  id="justification" 
-                                  class="form-control" 
+                        <label class="form-label font-weight-700">Motivo / Justificación <span
+                                class="text-danger">*</span></label>
+                        <textarea name="justification"
+                                  id="justification"
+                                  class="form-control"
                                   rows="5"
                                   placeholder="Describa el motivo de la bitácora..."
                                   required
                                   style="resize: vertical; min-height: 120px;"></textarea>
                         <small class="form-text text-muted" style="margin-top: 0.25rem;">
-                            <i class="fas fa-info-circle"></i> Especifique la razón por la cual se registra esta bitácora y adjunte el PDF, de la disposición.
+                            <i class="fas fa-info-circle"></i> Especifique la razón por la cual se registra esta
+                            bitácora y adjunte el PDF, de la disposición.
                         </small>
                     </div>
 
                     <!-- Archivo PDF (25%) -->
                     <div class="form-group file-column" style="margin-bottom: 0;">
-                        <label class="form-label font-weight-700">Documento PDF <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Documento PDF</label>
                         <div class="file-upload-box">
                             <input type="file"
                                    name="attachment"
@@ -169,13 +174,15 @@
                                    class="file-input-hidden"
                                    accept=".pdf"
                                    style="position:absolute;left:-9999px;">
-                            <label for="attachment" id="attachment-label" class="file-upload-label" title="Adjuntar PDF">
+                            <label for="attachment" id="attachment-label" class="file-upload-label"
+                                   title="Adjuntar PDF">
                                 <div class="file-upload-icon" aria-hidden="true">
                                     <i class="fas fa-file-pdf"></i>
                                 </div>
                             </label>
                             <div style="margin-left: 0.75rem; display:none;">
-                                <span class="file-upload-subtext" id="file-name-display">Ningún archivo seleccionado</span>
+                                <span class="file-upload-subtext"
+                                      id="file-name-display">Ningún archivo seleccionado</span>
                             </div>
                         </div>
                         <small class="form-text text-muted" style="margin-top: 0.5rem;">
@@ -194,8 +201,9 @@
                             ¿Qué son las bitácoras?
                         </h5>
                         <p style="margin: 0; font-size: 13px; color: #0c4a6e; line-height: 1.6;">
-                            Se crearán <strong>permisos de tipo Bitácora</strong> para cada día del período especificado, 
-                            con los horarios configurados. Todos quedarán en estado <strong>PENDIENTE</strong> 
+                            Se crearán <strong>permisos de tipo Bitácora</strong> para cada día del período
+                            especificado,
+                            con los horarios configurados. Todos quedarán en estado <strong>PENDIENTE</strong>
                             hasta su aprobación.
                         </p>
                     </div>
@@ -218,13 +226,13 @@
 
 <script>
     // Mostrar nombre del archivo seleccionado y marcar icono
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const fileInput = document.getElementById('attachment');
         const fileNameDisplay = document.getElementById('file-name-display');
         const attachmentLabel = document.getElementById('attachment-label');
 
         if (fileInput) {
-            fileInput.addEventListener('change', function() {
+            fileInput.addEventListener('change', function () {
                 if (this.files && this.files.length > 0) {
                     const file = this.files[0];
                     const fileName = file.name;
