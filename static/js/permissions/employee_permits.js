@@ -52,6 +52,117 @@ document.addEventListener('DOMContentLoaded', function () {
     // Solo si hay búsqueda activa, recargar
     // fetchTableData(urlList + '?page=1');
 
+    // Montar pequeña app Vue para el modal de historial de PERMISOS (no bitácoras)
+    try {
+        const mountEl = document.getElementById('permit-history-app');
+        if (mountEl && typeof Vue !== 'undefined' && !window.vmPermitHistory) {
+            const { createApp } = Vue;
+            const app = createApp({
+                delimiters: ['[[', ']]'],
+                data() {
+                    return {
+                        isVisible: false,
+                        employeeId: null,
+                        employeeName: '',
+                        employeeIdentification: '',
+                        permits: [],
+                        page: 1,
+                        page_size: 100,
+                        searchQuery: ''
+                    };
+                },
+                computed: {
+                    filteredPermits() {
+                        if (!this.searchQuery) return this.permits;
+                        const q = this.searchQuery.toLowerCase();
+                        return this.permits.filter(p => (p.permit_type__name || '').toLowerCase().includes(q) || (p.reason || '').toLowerCase().includes(q));
+                    },
+                    totalPages() {
+                        return Math.max(1, Math.ceil(this.filteredPermits.length / this.page_size));
+                    },
+                    paginatedPermits() {
+                        const start = (this.page - 1) * this.page_size;
+                        return this.filteredPermits.slice(start, start + this.page_size);
+                    },
+                    startIndex() {
+                        return this.filteredPermits.length === 0 ? 0 : ((this.page - 1) * this.page_size) + 1;
+                    },
+                    endIndex() {
+                        return Math.min(this.filteredPermits.length, this.page * this.page_size);
+                    }
+                },
+                methods: {
+                    formatDate(s) {
+                        if (!s) return '--';
+                        try {
+                            const partes = s.split('T')[0].split('-');
+                            return `${parseInt(partes[2], 10)}/${parseInt(partes[1], 10)}/${partes[0]}`;
+                        } catch (e) { return s; }
+                    },
+                    open(empId) {
+                        if (!empId) return;
+                        this.employeeId = empId;
+                        this.fetchData();
+                        this.isVisible = true;
+                        this.page = 1;
+                        this.searchQuery = '';
+                    },
+                    closeModal() {
+                        this.isVisible = false;
+                    },
+                    getStatusClass(status) {
+                        // Mapear estados a clases CSS usadas en templates
+                        switch ((status || '').toUpperCase()) {
+                            case 'REQUESTED':
+                                return 'status-badge requested';
+                            case 'APPROVED':
+                                return 'status-badge approved';
+                            case 'REJECTED':
+                                return 'status-badge rejected';
+                            default:
+                                return 'status-badge';
+                        }
+                    },
+                    getStatusLabel(status) {
+                        switch ((status || '').toUpperCase()) {
+                            case 'REQUESTED':
+                                return 'Solicitado';
+                            case 'APPROVED':
+                                return 'Aprobado';
+                            case 'REJECTED':
+                                return 'Rechazado';
+                            default:
+                                return status || '';
+                        }
+                    },
+                    async fetchData() {
+                        if (!this.employeeId) return;
+                        try {
+                            const resp = await fetch(`/permitrequest/employees/${this.employeeId}/history/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                            const data = await resp.json();
+                            if (data && data.success) {
+                                this.employeeName = data.employee_name || '';
+                                this.employeeIdentification = data.employee_identification || '';
+                                this.permits = Array.isArray(data.permits) ? data.permits : [];
+                                this.page = 1;
+                            } else {
+                                console.error('Error fetching permit history', data);
+                                if (window.Swal) Swal.fire('Error', data.message || 'No se pudo cargar historial de permisos', 'error');
+                            }
+                        } catch (err) {
+                            console.error('Error fetching permit history', err);
+                            if (window.Swal) Swal.fire('Error', 'Error de comunicacion al obtener historial de permisos', 'error');
+                        }
+                    }
+                }
+            });
+            const vm = app.mount('#permit-history-app');
+            window.vmPermitHistory = vm;
+        }
+    } catch (err) {
+        console.warn('No se pudo montar permit history app', err);
+    }
+
     // 4. Cerrar Modal desde overlay o botón cerrar
     if (modalOverlay) {
         modalOverlay.addEventListener('click', (e) => {
@@ -93,9 +204,63 @@ document.addEventListener('DOMContentLoaded', function () {
             if (historyBtn) {
                 e.preventDefault();
                 const employeeId = historyBtn.dataset.employeeId;
+
+                // If a Vue-based handler exists, prefer it
                 if (window.vmPermitHistory && employeeId) {
                     window.vmPermitHistory.open(employeeId);
+                    return;
                 }
+
+                if (!employeeId) return;
+
+                const url = `/permitrequest/bitacora/history/${employeeId}/`;
+
+                // If template is already present in the page, show it and initialize
+                if (modalContentContainer && document.getElementById('bitacora-history-container')) {
+                    modalContentContainer.dataset.historyUrl = url;
+                    modalContentContainer.classList.remove('hidden');
+                    modalOverlay.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+
+                    modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel, .btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+
+                    try {
+                        if (typeof Vue !== 'undefined' && typeof mountBitacoraHistory === 'function') {
+                            mountBitacoraHistory(employeeId);
+                        } else if (typeof initBitacoraHistoryModal === 'function') {
+                            initBitacoraHistoryModal();
+                        }
+                    } catch (err) {
+                        console.warn('No se pudo inicializar history Vue app desde template incluido', err);
+                    }
+
+                    return;
+                }
+
+                // Fallback: request HTML from server
+                fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.text().then(text => { throw new Error(text || 'Error al obtener historial'); });
+                        }
+                        return res.text();
+                    })
+                    .then(html => {
+                        if (!modalContentContainer || !modalOverlay) return;
+                        modalContentContainer.innerHTML = html;
+                        modalContentContainer.dataset.historyUrl = url;
+                        modalOverlay.classList.remove('hidden');
+                        modalContentContainer.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                        modalContentContainer.querySelectorAll('.js-close-modal, .js-close-bitacora-modal, .btn-cancel, .btn-close-modal').forEach(btn => btn.addEventListener('click', closeModal));
+                        if (typeof initBitacoraHistoryModal === 'function') initBitacoraHistoryModal();
+                        if (typeof Vue !== 'undefined' && typeof mountBitacoraHistory === 'function') mountBitacoraHistory(employeeId);
+                    })
+                    .catch(err => {
+                        console.error('Error al cargar historial de permisos:', err);
+                        if (window.Swal) Swal.fire('Error', 'No se pudo cargar el historial de permisos', 'error');
+                    });
+
                 return;
             }
 
@@ -810,6 +975,20 @@ document.addEventListener('DOMContentLoaded', function () {
             closeBitacoraModal();
         }
     });
+
+    // Fallback global handler para botones de "Generar Permiso" fuera del contenedor
+    if (!window.__fallbackGeneratePermitBound) {
+        document.addEventListener('click', function (ev) {
+            const genBtn = ev.target.closest && ev.target.closest('.js-generate-permit');
+            if (genBtn) {
+                ev.preventDefault();
+                const employeeId = genBtn.dataset.employeeId;
+                const employeeName = genBtn.dataset.employeeName;
+                openGeneratePermitModal(employeeId, employeeName);
+            }
+        });
+        window.__fallbackGeneratePermitBound = true;
+    }
 
     // Abrir listado de bitácoras
     function openBitacoraList(employeeId) {

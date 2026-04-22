@@ -2,7 +2,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 from django.db.models import Q
 
-
 PREDEFINED_ARCHIVE_TYPES = [
     {
         'code': 'EXPEDIENTE_INICIAL',

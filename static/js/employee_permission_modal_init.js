@@ -29,17 +29,24 @@
 
     function fetchAndShow(url, containerSel) {
         if (!url) return;
-        const container = document.getElementById(containerSel.replace('#', ''));
-        if (!container) return;
-
+        // Inserta el overlay directamente en <body> para evitar problemas de stacking
+        // cuando el contenedor padre tiene transform/overflow que limita elementos fixed.
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(r => r.text())
             .then(html => {
+                // Limpiar overlays previos similares
+                try {
+                    const prev = document.querySelectorAll('#permission-modal-employee > .modal-overlay, body > .modal-overlay[data-source="permission-modal"]');
+                    prev.forEach(p => p.remove());
+                } catch (e) { /* ignore */ }
+
                 const wrapper = document.createElement('div');
                 wrapper.className = 'modal-overlay';
+                wrapper.setAttribute('data-source', 'permission-modal');
                 wrapper.innerHTML = html;
-                container.innerHTML = '';
-                container.appendChild(wrapper);
+
+                // Añadir al body para asegurar posicionamiento fijo global
+                document.body.appendChild(wrapper);
                 document.body.classList.add('no-scroll');
             })
             .catch(e => console.error('Error cargando detalle permiso', e));
@@ -213,18 +220,22 @@
         if (!employeeId) return;
 
         const url = `/permitrequest/requests/generate/?employee=${employeeId}`;
-        const container = document.getElementById('permission-modal-employee');
-        if (!container) return;
-
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(r => r.text())
             .then(html => {
+                try {
+                    const prev = document.querySelectorAll('body > .modal-overlay[data-source="permission-modal"]');
+                    prev.forEach(p => p.remove());
+                } catch (e) { /* ignore */ }
+
                 const wrapper = document.createElement('div');
                 wrapper.className = 'modal-overlay';
+                wrapper.setAttribute('data-source', 'permission-modal');
                 wrapper.innerHTML = html;
-                container.innerHTML = '';
-                container.appendChild(wrapper);
+
+                document.body.appendChild(wrapper);
                 document.body.classList.add('no-scroll');
+
                 initGeneratePermitForm(wrapper);
             })
             .catch(() => showToast('Error', 'No se pudo cargar el formulario', 'error'));
