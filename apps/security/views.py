@@ -488,7 +488,8 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     permission_required = 'auth.view_user'
 
     def get_queryset(self):
-        return get_user_model().objects.filter(last_login__isnull=False).order_by('-last_login')
+        # Prefetch groups para evitar consultas N+1 al obtener roles
+        return get_user_model().objects.filter(last_login__isnull=False).prefetch_related('groups').order_by('-last_login')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -518,6 +519,7 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
                 'ip_address': last_session.ip_address if last_session else 'N/A',
                 'mac_address': last_session.mac_address if last_session else 'N/A',
                 'device_info': last_session.user_agent if last_session else 'N/A',
+                'roles': ', '.join([g.name for g in user.groups.all()]) if hasattr(user, 'groups') else ''
             })
             
         context['user_data'] = user_data

@@ -14,6 +14,7 @@
             {% for data in user_data %}
             <tr>
                 <td>{{ data.user.username }}</td>
+                <td>{{ data.roles }}</td>
                 <td>{{ data.user.get_full_name }}</td>
                 <td>{{ data.user.last_login|date:"d/m/Y H:i" }}</td>
                 <td>{{ data.ip_address }}</td>
