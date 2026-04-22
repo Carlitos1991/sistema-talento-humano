@@ -34,6 +34,18 @@
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(r => r.text())
             .then(html => {
+                const text = String(html || '').trim();
+                // Si el servidor devolvió JSON (error), parsear y mostrar toast en lugar de insertar overlay
+                if (text.startsWith('{') || text.startsWith('[')) {
+                    try {
+                        const data = JSON.parse(text);
+                        showToast('Error', data.message || data.error || 'Respuesta inesperada del servidor', 'error');
+                    } catch (e) {
+                        console.warn('fetchAndShow: respuesta no-HTML', e);
+                    }
+                    return;
+                }
+
                 // Limpiar overlays previos similares
                 try {
                     const prev = document.querySelectorAll('#permission-modal-employee > .modal-overlay, body > .modal-overlay[data-source="permission-modal"]');
@@ -96,8 +108,10 @@
             }
 
             try {
-                const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`);
+                console.debug('initGeneratePermitForm: fetching subtypes for', parentId);
+                const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const data = await response.json();
+                console.debug('initGeneratePermitForm: subtypes response', data);
 
                 subtypeSelect.innerHTML = '<option value="">-- Seleccione --</option>';
 
@@ -217,12 +231,46 @@
     }
 
     function openGeneratePermitModal(employeeId) {
-        if (!employeeId) return;
+        const idStr = String(employeeId || '').trim();
 
-        const url = `/permitrequest/requests/generate/?employee=${employeeId}`;
+        // Validar input para evitar placeholders como <id> o ejecuciones accidentales
+        if (!idStr || /[<>]/.test(idStr) || !/^\d+$/.test(idStr)) {
+            console.warn('openGeneratePermitModal: invalid employeeId', employeeId);
+            showToast('Error', 'ID de empleado inválido', 'error');
+            return;
+        }
+
+        const url = `/permitrequest/requests/generate/?employee=${encodeURIComponent(idStr)}`;
+        console.debug('Fetching generate-permit URL:', url);
+
+        // Evitar fetchs paralelos para el mismo employeeId
+        window.__generatePermitInflight = window.__generatePermitInflight || new Set();
+        if (window.__generatePermitInflight.has(idStr)) {
+            console.warn('generate-permit already in flight for', idStr);
+            return;
+        }
+        window.__generatePermitInflight.add(idStr);
+
+        // Remover cualquier overlay previo antes de solicitar (reduce flash visual)
+        try {
+            const prev = document.querySelectorAll('body > .modal-overlay[data-source="permission-modal"]');
+            prev.forEach(p => p.remove());
+        } catch (e) { /* ignore */ }
+
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(r => r.text())
             .then(html => {
+                const text = String(html || '').trim();
+                if (text.startsWith('{') || text.startsWith('[')) {
+                    try {
+                        const data = JSON.parse(text);
+                        showToast('Error', data.message || data.error || 'Respuesta inesperada del servidor', 'error');
+                    } catch (e) {
+                        console.warn('openGeneratePermitModal: respuesta no-HTML', e);
+                    }
+                    return;
+                }
+
                 try {
                     const prev = document.querySelectorAll('body > .modal-overlay[data-source="permission-modal"]');
                     prev.forEach(p => p.remove());
@@ -230,15 +278,30 @@
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'modal-overlay';
+                wrapper.id = 'permission-modal-employee';
                 wrapper.setAttribute('data-source', 'permission-modal');
                 wrapper.innerHTML = html;
+
+                // Si el servidor devolviera el mismo formulario duplicado, conservar solo el primero
+                try {
+                    const containers = wrapper.querySelectorAll('.modal-container-medium');
+                    if (containers.length > 1) {
+                        for (let i = 1; i < containers.length; i++) containers[i].remove();
+                    }
+                } catch (e) { /* ignore */ }
 
                 document.body.appendChild(wrapper);
                 document.body.classList.add('no-scroll');
 
                 initGeneratePermitForm(wrapper);
             })
-            .catch(() => showToast('Error', 'No se pudo cargar el formulario', 'error'));
+            .catch((err) => {
+                console.error('Error fetching generate permit form', err);
+                showToast('Error', 'No se pudo cargar el formulario', 'error');
+            })
+            .finally(() => {
+                try { window.__generatePermitInflight.delete(idStr); } catch (e) { /* ignore */ }
+            });
     }
 
     function initPermissionHistoryTable(tableRoot) {

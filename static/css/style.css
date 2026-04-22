@@ -2579,6 +2579,16 @@ table {
     display: none;
 }
 
+/* Clase para forzar visibilidad del helper en vistas que lo requieren */
+.table-scroll-helper-force-visible .table-scroll-helper-group {
+    display: flex !important;
+}
+
+.table-scroll-helper-force-visible .table-scroll-nav-start,
+.table-scroll-helper-force-visible .table-scroll-nav-end {
+    display: inline-flex !important;
+}
+
 .table-container table {
     width: 100%;
     min-width: 980px;

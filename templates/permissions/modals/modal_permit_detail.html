@@ -117,7 +117,7 @@
                     <label class="form-label font-weight-700">
                         {% if permit.status == 'REQUESTED' %}Observaciones{% else %}Motivo{% endif %}
                     </label>
-                    <p class="form-control-static">{{ permit.response_note }}</p>
+                    <p class="form-control-static">{{ permit.response_note|safe }}</p>
                 </div>
                 {% if permit.response_date %}
                     <div class="form-group">

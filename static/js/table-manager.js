@@ -78,6 +78,10 @@ class TableManager {
             helperGroup.appendChild(startButton);
             helperGroup.appendChild(endButton);
             this.scrollContainer.appendChild(helperGroup);
+            // Forzar clase que permite mostrar el helper aunque haya un override
+            try {
+                this.scrollContainer.classList.add('table-scroll-helper-force-visible');
+            } catch (e) { /* ignore */ }
         }
 
         const startButton = this.scrollContainer.querySelector('.table-scroll-nav-start');

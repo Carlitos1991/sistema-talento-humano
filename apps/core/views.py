@@ -522,18 +522,26 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                         area_id__in=scoped_unit_ids
                     ).select_related('person', 'area')
 
-                    unit_permits_qs = PermitRequest.objects.filter(
-                        employee__in=unit_employees,
+                    # Filtrar directamente por el área del empleado en la consulta para evitar
+                    # discrepancias por instancias en memoria. Además, dejar claro que la
+                    # lista de pendientes mostrada en el dashboard del jefe debe incluir
+                    # únicamente solicitudes con estado REQUESTED.
+                    unit_permits_qs = PermitRequest.objects.select_related(
+                        'employee__person', 'permit_type'
+                    ).filter(
+                        employee__area_id__in=scoped_unit_ids,
+                        employee__is_active=True,
                         status__in=['REQUESTED', 'APPROVED', 'REJECTED']
-                    ).select_related('employee__person', 'permit_type').order_by('-created_at')
+                    ).order_by('-created_at')
 
                     pending_permits_count = unit_permits_qs.filter(status='REQUESTED').count()
 
                     context['boss_unit'] = managed_unit
                     context['boss_unit_detail_url'] = reverse('institution:unit_detail', args=[managed_unit.id])
-                    context['boss_total_personal'] = unit_employees.count()
+                    context['boss_total_personal'] = Employee.objects.filter(is_active=True, area_id__in=scoped_unit_ids).count()
                     context['boss_pending_permits_count'] = pending_permits_count
-                    context['boss_pending_permits'] = unit_permits_qs
+                    # Para la vista principal del dashboard mostramos únicamente los pendientes (REQUESTED)
+                    context['boss_pending_permits'] = unit_permits_qs.filter(status='REQUESTED')
         except Exception:
             context['boss_unit'] = None
             context['boss_unit_detail_url'] = ''

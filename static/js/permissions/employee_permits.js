@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.__employeePermitsInit) return;
+    window.__employeePermitsInit = true;
     // Referencias importantes para búsqueda y paginación
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
@@ -327,13 +329,59 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- FUNCIONES ---
 
     function openGeneratePermitModal(employeeId, employeeName) {
-        const url = `/permitrequest/requests/generate/?employee=${employeeId}`;
+        const idStr = String(employeeId || '').trim();
+        if (!idStr || /[<>]/.test(idStr) || !/^\d+$/.test(idStr)) {
+            console.warn('openGeneratePermitModal (permits.js): invalid employeeId', employeeId);
+            if (window.Swal) Swal.fire('Error', 'ID de empleado inválido', 'error');
+            return;
+        }
+
+        // Global inflight guard shared with other modules
+        window.__generatePermitInflight = window.__generatePermitInflight || new Set();
+        if (window.__generatePermitInflight.has(idStr)) {
+            console.warn('generate-permit already in flight for', idStr);
+            return;
+        }
+        window.__generatePermitInflight.add(idStr);
+
+        const url = `/permitrequest/requests/generate/?employee=${encodeURIComponent(idStr)}`;
+
+        // Disable UI button if possible
+        try {
+            const btn = document.querySelector(`[data-employee-id="${idStr}"]`);
+            if (btn) btn.disabled = true;
+        } catch (e) { /* ignore */ }
 
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
-                modalContentContainer.innerHTML = html;
-                modalOverlay.classList.remove('hidden');
+                const text = String(html || '').trim();
+                if (text.startsWith('{') || text.startsWith('[')) {
+                    try {
+                        const data = JSON.parse(text);
+                        if (window.Swal) Swal.fire('Error', data.message || data.error || 'Respuesta inesperada del servidor', 'error');
+                    } catch (e) {
+                        console.warn('openGeneratePermitModal (permits.js): respuesta no-HTML', e);
+                    }
+                    return;
+                }
+
+                // Insertar el HTML en el contenedor dinámico disponible.
+                // Preferir `modal-dynamic-content` dentro de `customModal` si existe,
+                // si no, usar `modalContentContainer` (overlay estático incluido en la página).
+                const dynamicSlot = document.getElementById('modal-dynamic-content');
+                if (dynamicSlot) {
+                    dynamicSlot.innerHTML = html;
+                    // Asegurar que el overlay padre esté visible
+                    const parentOverlay = dynamicSlot.closest('.modal-overlay');
+                    if (parentOverlay && parentOverlay.classList) parentOverlay.classList.remove('hidden');
+                } else if (modalContentContainer) {
+                    modalContentContainer.innerHTML = html;
+                    if (modalContentContainer.classList) modalContentContainer.classList.remove('hidden');
+                }
+
+                // Mostrar overlay global si existe
+                if (modalOverlay && modalOverlay.classList) modalOverlay.classList.remove('hidden');
 
                 // Bloquear scroll del body
                 document.body.style.overflow = 'hidden';
@@ -348,7 +396,14 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(err => {
                 console.error('Error al abrir modal:', err);
-                Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
+                if (window.Swal) Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
+            })
+            .finally(() => {
+                try { window.__generatePermitInflight.delete(idStr); } catch (e) { /* ignore */ }
+                try {
+                    const btn = document.querySelector(`[data-employee-id="${idStr}"]`);
+                    if (btn) btn.disabled = false;
+                } catch (e) { /* ignore */ }
             });
     }
 
@@ -818,8 +873,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             try {
-                const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`);
+                console.debug('initPermitForm: fetching subtypes for', parentId);
+                const response = await fetch(`/permitrequest/api/subtypes/${parentId}/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const data = await response.json();
+                console.debug('initPermitForm: subtypes response', data);
 
                 subtypeSelect.innerHTML = '<option value="">-- Seleccione --</option>';
 
