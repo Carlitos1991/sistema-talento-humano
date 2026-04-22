@@ -1866,6 +1866,27 @@ class PermitHistoryDetailView(LoginRequiredMixin, TemplateView):
     """
     template_name = 'vacation/modals/modal_permit_history.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Comprobar que el balance solicitado exista y pertenezca al usuario que realiza la petición,
+        # para evitar devolver contenido a usuarios no autorizados. Si no es así, devolver 403.
+        balance_id = kwargs.get('balance_id')
+        try:
+            balance = EmployeeVacationBalance.objects.select_related('employee__person').get(pk=balance_id)
+        except EmployeeVacationBalance.DoesNotExist:
+            from django.http import Http404
+            raise Http404()
+
+        # Si el empleado asociado al balance no coincide con la persona del usuario actual,
+        # bloquear el acceso salvo que el usuario sea staff/superuser.
+        person_of_request = _safe_related(request.user, 'person', None)
+        if balance.employee and getattr(balance.employee, 'person', None) is not None:
+            if person_of_request is None or balance.employee.person.pk != person_of_request.pk:
+                if not (request.user.is_staff or request.user.is_superuser):
+                    from django.http import HttpResponseForbidden
+                    return HttpResponseForbidden('No autorizado para ver este historial.')
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from employee.models import Employee

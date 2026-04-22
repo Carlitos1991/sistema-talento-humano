@@ -293,7 +293,7 @@ class UserAccountForm(forms.Form):
             user = User.objects.create_user(
                 username=data['username'],
                 password=data['password'],
-                email=person.email  # Vinculamos el email de la persona
+                email=(person.email or '')  # Vinculamos el email de la persona, usar cadena vacía si es None
             )
             user.is_active = data['is_active']
             user.save()
