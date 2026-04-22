@@ -5,7 +5,8 @@
                 <th>Usuario</th>
                 <th>Nombres Completos</th>
                 <th>Última Conexión</th>
-                <th>Dirección IP</th>
+                <th>Última Conexión</th>
+                <th>Rol</th>
                 <th>MAC</th>
                 <th>Estado</th>
             </tr>
@@ -14,9 +15,9 @@
             {% for data in user_data %}
             <tr>
                 <td>{{ data.user.username }}</td>
-                <td>{{ data.roles }}</td>
                 <td>{{ data.user.get_full_name }}</td>
                 <td>{{ data.user.last_login|date:"d/m/Y H:i" }}</td>
+                <td>{{ data.roles }}</td>
                 <td>{{ data.ip_address }}</td>
                 <td>{{ data.mac_address }}</td>
                 <td>
