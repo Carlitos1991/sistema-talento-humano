@@ -175,11 +175,8 @@ h1, h2, h3, h4, h5, h6 {
     padding-bottom: 3rem;
     flex: 1 1 auto;
     width: 100%;
-    /* Quitar el max-width y el centrado automático para evitar
-       que el contenido se quede 'centrado' dejando un gran espacio
-       junto al sidebar. */
-    max-width: none;
-    margin: 0;
+    max-width: 1400px;
+    margin: 0 auto;
     overflow-y: auto;
     overflow-x: auto;
     scroll-behavior: smooth;
@@ -3146,8 +3143,8 @@ th.sorted-desc .sort-arrow {
    ===================================================================== */
 .stats-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
@@ -3165,6 +3162,8 @@ th.sorted-desc .sort-arrow {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    min-height: 100px;
+    max-height: 130px;
 }
 
 .stat-card:hover {
@@ -5959,6 +5958,16 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 .table-container td .btn-success-action:first-child {
     margin-left: 4px !important;
 }
+
 .table-container td .btn-list-action:first-child {
     margin-left: 4px !important;
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+        font-size: 0.85rem; /* Reducimos un poco más la base para compensar */
+    }
+    :root {
+        --sidebar-width: 200px; /* Estrechamos un poco el sidebar */
+    }
 }

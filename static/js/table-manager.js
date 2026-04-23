@@ -105,21 +105,36 @@ class TableManager {
         }
 
         const syncHelperVisibility = () => {
-            const needsScroll = this.scrollContainer.scrollWidth > this.scrollContainer.clientWidth + 8;
-            const maxScrollLeft = Math.max(0, this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth);
+            const clientW = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth;
+            const needsScroll = this.scrollContainer.scrollWidth > clientW + 8;
+            const maxScrollLeft = Math.max(0, this.scrollContainer.scrollWidth - clientW);
             const currentScrollLeft = this.scrollContainer.scrollLeft;
 
-            if (helperGroup) {
-                helperGroup.style.display = needsScroll ? 'flex' : 'none';
+            // Regla: si el contenedor es mayor a 1475px no mostrar ninguna flecha
+            if (clientW > 1475) {
+                if (helperGroup) helperGroup.style.display = 'none';
+                if (startButton) startButton.style.display = 'none';
+                if (endButton) endButton.style.display = 'none';
+                return;
             }
 
-            if (startButton) {
-                startButton.style.display = needsScroll && currentScrollLeft > 8 ? 'inline-flex' : 'none';
+            // Solo mostrar helpers cuando el contenido requiera scroll horizontal
+            if (helperGroup) helperGroup.style.display = needsScroll ? 'flex' : 'none';
+
+            // Si hay scroll necesario:
+            // - Por defecto (no en el extremo derecho) mostrar SOLO la flecha derecha
+            // - Si estamos en el extremo derecho, mostrar SOLO la flecha izquierda
+            if (!needsScroll) {
+                if (startButton) startButton.style.display = 'none';
+                if (endButton) endButton.style.display = 'none';
+                return;
             }
 
-            if (endButton) {
-                endButton.style.display = needsScroll && currentScrollLeft < maxScrollLeft - 8 ? 'inline-flex' : 'none';
-            }
+            const atStart = currentScrollLeft <= 8;
+            const atEnd = currentScrollLeft >= maxScrollLeft - 8;
+
+            if (startButton) startButton.style.display = atEnd ? 'inline-flex' : 'none';
+            if (endButton) endButton.style.display = atStart ? 'inline-flex' : 'none';
         };
 
         syncHelperVisibility();
