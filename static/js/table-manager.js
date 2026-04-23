@@ -78,10 +78,6 @@ class TableManager {
             helperGroup.appendChild(startButton);
             helperGroup.appendChild(endButton);
             this.scrollContainer.appendChild(helperGroup);
-            // Forzar clase que permite mostrar el helper aunque haya un override
-            try {
-                this.scrollContainer.classList.add('table-scroll-helper-force-visible');
-            } catch (e) { /* ignore */ }
         }
 
         const startButton = this.scrollContainer.querySelector('.table-scroll-nav-start');
@@ -102,48 +98,6 @@ class TableManager {
                 });
             });
             endButton.dataset.bound = '1';
-        }
-
-        const syncHelperVisibility = () => {
-            const clientW = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth;
-            const needsScroll = this.scrollContainer.scrollWidth > clientW + 8;
-            const maxScrollLeft = Math.max(0, this.scrollContainer.scrollWidth - clientW);
-            const currentScrollLeft = this.scrollContainer.scrollLeft;
-
-            // Regla: si el contenedor es mayor a 1475px no mostrar ninguna flecha
-            if (clientW > 1475) {
-                if (helperGroup) helperGroup.style.display = 'none';
-                if (startButton) startButton.style.display = 'none';
-                if (endButton) endButton.style.display = 'none';
-                return;
-            }
-
-            // Solo mostrar helpers cuando el contenido requiera scroll horizontal
-            if (helperGroup) helperGroup.style.display = needsScroll ? 'flex' : 'none';
-
-            // Si hay scroll necesario:
-            // - Por defecto (no en el extremo derecho) mostrar SOLO la flecha derecha
-            // - Si estamos en el extremo derecho, mostrar SOLO la flecha izquierda
-            if (!needsScroll) {
-                if (startButton) startButton.style.display = 'none';
-                if (endButton) endButton.style.display = 'none';
-                return;
-            }
-
-            const atStart = currentScrollLeft <= 8;
-            const atEnd = currentScrollLeft >= maxScrollLeft - 8;
-
-            if (startButton) startButton.style.display = atEnd ? 'inline-flex' : 'none';
-            if (endButton) endButton.style.display = atStart ? 'inline-flex' : 'none';
-        };
-
-        syncHelperVisibility();
-        this.scrollContainer.addEventListener('scroll', syncHelperVisibility, {passive: true});
-
-        if (typeof ResizeObserver !== 'undefined') {
-            const resizeObserver = new ResizeObserver(syncHelperVisibility);
-            resizeObserver.observe(this.scrollContainer);
-            resizeObserver.observe(this.table);
         }
     }
 
