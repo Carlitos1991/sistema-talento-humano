@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard | SIGETH{% endblock %}
+{% block title %}SIGETH | Municipio de Loja{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
@@ -313,7 +313,7 @@
     {% elif perms.auth.dashboard_jefe or show_boss_dashboard %}
 
         <div style="margin-top: 20px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h2 style="margin: 0; color: #1f2937; font-size: 1.35rem;">Dashboard de Jefatura</h2>
+            <h2 style="margin: 0; color: #1f2937; font-size: 1.35rem;">Oficina Virtual</h2>
             {% if boss_unit %}
                 <p style="margin: 8px 0 0 0; color: #64748b;">
                     Unidad asignada: <strong>{{ boss_unit.name }}</strong>

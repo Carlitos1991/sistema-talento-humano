@@ -86,7 +86,7 @@
                     </ul>
                 </li>
             {% endif %}
-            {% if perms.personnel_actions.view_personnelaction %}
+            {% if perms.personnel_actions.view_personnelaction or perms.personnel_actions.can_admin %}
                 <li class="has-submenu">
                     <a href="#"
                        class="{% if request.resolver_match.app_name == 'personnel_actions' %}active{% endif %}">
@@ -476,7 +476,7 @@
                     </ul>
                 </li>
             {% endif %}
-            {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations %}
+            {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation %}
                 <li class="has-submenu">
                     <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-regular fa-clock"></i>
@@ -484,7 +484,7 @@
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-                        {% if perms.schedule.can_manage_schedules %}
+                        {% if perms.schedule.can_manage_schedules or perms.schedule.view_schedule %}
                             <li>
                                 <a href="{% url 'schedule:schedule_list' %}"
                                    class="{% if request.resolver_match.url_name == 'schedule_list' %}active-child{% endif %}">
@@ -493,7 +493,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.schedule.can_manage_observations %}
+                        {% if perms.schedule.can_manage_observations or perms.schedule.view_scheduleobservation %}
                             <li>
                                 <a href="{% url 'schedule:observation_list' %}"
                                    class="{% if request.resolver_match.url_name == 'observation_list' %}active-child{% endif %}">
@@ -645,7 +645,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.auth.view_user %}
+            {% if perms.core.view_user or perms.auth.view_user or perms.auth.view_group %}
                 <li class="has-submenu">
                     <a href="#" class="{% if request.resolver_match.app_name == 'institution' %}active{% endif %}">
                         <i class="fa-solid fa-users-gear"></i>
