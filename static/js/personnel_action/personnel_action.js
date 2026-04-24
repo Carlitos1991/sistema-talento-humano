@@ -194,7 +194,33 @@ createApp({
 
         initializePluginsInModal() {
             if (window.jQuery && $.fn.select2) {
-                $('.select2').select2({width: '100%', dropdownParent: $('.modal-container')});
+                const $modal = $('.modal-container');
+
+                // Inicializar selects con AJAX (tienen data-ajax-url)
+                $modal.find('select[data-ajax-url]').each(function () {
+                    const $s = $(this);
+                    if ($s.data('select2')) return; // ya inicializado
+                    $s.select2({
+                        width: '100%',
+                        dropdownParent: $modal,
+                        placeholder: $s.data('placeholder') || '',
+                        minimumInputLength: parseInt($s.data('minimum-input-length') || 1),
+                        ajax: {
+                            url: $s.data('ajax-url'),
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) { return {term: params.term}; },
+                            processResults: function (data) { return {results: data.results || []}; }
+                        }
+                    });
+                });
+
+                // Inicializar el resto de select2 (no-AJAX)
+                $modal.find('select.select2').not('[data-ajax-url]').each(function () {
+                    const $s = $(this);
+                    if ($s.data('select2')) return;
+                    $s.select2({width: '100%', dropdownParent: $modal});
+                });
             }
         },
         bindFormSubmit() {

@@ -3,48 +3,123 @@
 <head>
     <style>
         @page {
-            size: A4 landscape;
-            margin: 1cm;
+            size: A4 portrait;
+            margin: 0; /* se controlan márgenes desde body */
         }
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 9px; color: #333; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .info-table { width: 100%; margin-bottom: 10px; border-bottom: 2px solid #000; }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 7px; /* más compacto */
+            color: #222;
+            position: relative;
+            padding: 0.45cm 0.45cm; /* margen visible reducido */
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #000;
+            font-size: 9px
+        }
 
         /* Estilo Calendario */
-        table.calendar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.calendar {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 7px
+        }
+
         table.calendar th {
             background-color: #f2f2f2;
             border: 1px solid #000;
-            padding: 5px;
+            padding: 2px 3px;
             text-align: center;
             font-weight: bold;
-        }
-        table.calendar td {
-            border: 1px solid #000;
-            height: 100px; /* Altura de la celda del día */
-            vertical-align: top;
-            padding: 0;
-        }
-        .day-header {
-            background-color: #fafafa;
-            border-bottom: 1px solid #ddd;
-            padding: 2px 4px;
-            font-weight: bold;
-            text-align: right;
-        }
-        .punch-row {
-            padding: 1px 3px;
-            border-bottom: 0.5px solid #eee;
             font-size: 8px;
         }
-        .punch-time { font-weight: bold; color: #000; }
-        .punch-device { color: #666; font-size: 7px; }
+
+        table.calendar td {
+            border: 1px solid #000;
+            height: 44px; /* más compacto */
+            vertical-align: top;
+            padding: 0.5mm 0.7mm;
+            overflow: hidden;
+        }
+
+        .holiday {
+            background-color: #fff7e6;
+        }
+
+        .permit {
+            background-color: #eaf7ea;
+            border-left: 3px solid #2ea44f;
+            padding: 1px 3px;
+            margin: 1px 0;
+            font-size: 6px;
+        }
+
+        .holiday-label {
+            background: #ffd7a8;
+            padding: 1px 3px;
+            font-size: 7px;
+            font-weight: bold;
+        }
+
+        .day-header {
+            background-color: transparent;
+            border-bottom: 0px;
+            padding: 1px 2px;
+            font-weight: bold;
+            text-align: right;
+            font-size: 9px;
+        }
+
+        .punch-row {
+            padding: 0px 2px;
+            border-bottom: 0.5px solid #eee;
+            font-size: 6px;
+            color: #111;
+        }
+
+        .punch-time {
+            font-weight: bold;
+            color: #000;
+            font-size: 7px
+        }
+
+        .punch-device {
+            color: #000;
+            font-size: 6px;
+        }
     </style>
 </head>
 <body>
+{% comment %} Usar background en body para evitar que la imagen cree nueva página en xhtml2pdf {% endcomment %}
+{% if letterhead_data %}
+    <style>
+        @page {
+            background: url('{{ letterhead_data }}') no-repeat top center;
+        }
+
+        body {
+            background-image: url('{{ letterhead_data }}');
+            background-repeat: no-repeat;
+            background-position: top center;
+            background-size: 100% 100%;
+            background-attachment: fixed;
+        }
+    </style>
+{% endif %}
+<div style="position:relative;z-index:1;">
     <div class="header">
-        <h2>REPORTE MENSUAL DE ASISTENCIA</h2>
-        <h3>{{ month_name }} {{ year }}</h3>
+        <h2 style="margin:0;font-size:12px;">REPORTE MENSUAL DE ASISTENCIA</h2>
+        <h3 style="margin:0;font-size:10px;">{{ month_name }} {{ year }}</h3>
     </div>
 
     <table class="info-table">
@@ -57,29 +132,50 @@
 
     <table class="calendar">
         <thead>
-            <tr>
-                <th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th><th>Sábado</th><th>Domingo</th>
-            </tr>
+        <tr>
+            <th>Lunes</th>
+            <th>Martes</th>
+            <th>Miércoles</th>
+            <th>Jueves</th>
+            <th>Viernes</th>
+            <th>Sábado</th>
+            <th>Domingo</th>
+        </tr>
         </thead>
         <tbody>
-            {% for week in calendar %}
-            <tr>
+        {% for week in calendar %}
+            <tr style="page-break-inside:avoid;">
                 {% for day_obj in week %}
-                <td>
-                    {% if day_obj.day %}
-                        <div class="day-header">{{ day_obj.day }}</div>
-                        {% for p in day_obj.punches %}
-                            <div class="punch-row">
-                                <span class="punch-time">{{ p.time }}</span>
-                                <span class="punch-device">{{ p.device }}</span>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                </td>
+                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}">
+                        {% if day_obj.day %}
+                            <div class="day-header">{{ day_obj.day }}</div>
+                            {% if day_obj.is_holiday %}
+                                <div class="holiday-label">{{ day_obj.holi_name }}</div>
+                            {% endif %}
+                            {% for perm in day_obj.permits %}
+                                <div class="permit">{{ perm.type }}{% if perm.note %} - {{ perm.note }}{% endif %}</div>
+                            {% endfor %}
+                            {% for p in day_obj.punches %}
+                                <div class="punch-row">
+                                    <span class="punch-time">{{ p.time }}</span>
+                                    <span class="punch-device">{{ p.device }}</span>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
                 {% endfor %}
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
+
+    <div style="margin-top:6px; font-size:9px;">
+        <strong>Observaciones:</strong>
+        {% if observations_list %}
+            {{ observations_list|join:" // " }}
+        {% else %}
+            -
+        {% endif %}
+    </div>
 </body>
 </html>

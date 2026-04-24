@@ -1,7 +1,10 @@
 import calendar
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
+import base64
+import mimetypes
+import os
 from decimal import Decimal
 from uuid import UUID
 
@@ -21,6 +24,10 @@ from django.shortcuts import get_object_or_404
 from xhtml2pdf import pisa
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand, OfflineAttendanceRegistry
 from .utils import test_connection, BiometricConnection
+from permitrequest.models import PermitRequest
+from schedule.models import ScheduleObservation
+from core.models import SystemConfiguration
+from django.db.models import Q
 from employee.models import InstitutionalData
 from employee.models import Employee
 
@@ -551,12 +558,111 @@ def generate_monthly_report_pdf(request):
             week_list.append({'day': day if day != 0 else '', 'punches': punches_map.get(day, [])})
         calendar_data.append(week_list)
 
+    
+
     months_es = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE",
                  "NOVIEMBRE", "DICIEMBRE"]
+    # --- Permits (aprobados) ---
+    month_start = date(year, month, 1)
+    month_end = date(year, month, calendar.monthrange(year, month)[1])
+
+    permits_qs = PermitRequest.objects.filter(employee_id=emp_id, status='APPROVED').filter(
+        Q(start_date__lte=month_end, end_date__gte=month_start) |
+        Q(start_date__range=(month_start, month_end)) |
+        Q(end_date__range=(month_start, month_end))
+    )
+    permits_map = {}
+    for pr in permits_qs:
+        start = pr.start_date if pr.start_date >= month_start else month_start
+        end = (pr.end_date or pr.start_date)
+        if end > month_end:
+            end = month_end
+        cur = start
+        while cur <= end:
+            d = cur.day
+            if d not in permits_map:
+                permits_map[d] = []
+            permits_map[d].append({'type': pr.permit_type.name, 'note': pr.response_note or ''})
+            cur = cur + timedelta(days=1)
+
+    # --- Feriados (is_holiday=True y activos) y Observaciones (is_holiday=False y activos) ---
+    holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True,
+                                                     start_date__lte=month_end, end_date__gte=month_start)
+    holidays_map = {}
+    for obs in holidays_qs:
+        start = obs.start_date if obs.start_date >= month_start else month_start
+        end = obs.end_date if obs.end_date <= month_end else month_end
+        cur = start
+        while cur <= end:
+            holidays_map[cur.day] = obs.name
+            cur = cur + timedelta(days=1)
+
+    notes_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=False,
+                                                 start_date__lte=month_end, end_date__gte=month_start)
+    observations_list = []
+    for obs in notes_qs:
+        # Mostrar la fecha inicial de la observación (si está dentro del mes)
+        disp_date = obs.start_date if (month_start <= obs.start_date <= month_end) else obs.start_date
+        # Formatear: "13 de Marzo de 2026 - NOMBRE"
+        months_es = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE",
+                     "NOVIEMBRE", "DICIEMBRE"]
+        disp = f"{disp_date.day} de {months_es[disp_date.month].capitalize()} de {disp_date.year} - {obs.name.upper()}"
+        observations_list.append(disp)
+
+    # Añadir flags de permisos y feriados por día (facilita el template)
+    for widx, week in enumerate(calendar_data):
+        for didx, day_obj in enumerate(week):
+            d = day_obj.get('day')
+            if not d:
+                day_obj['is_holiday'] = False
+                day_obj['holi_name'] = ''
+                day_obj['permits'] = []
+            else:
+                day_obj['is_holiday'] = d in holidays_map
+                day_obj['holi_name'] = holidays_map.get(d, '')
+                day_obj['permits'] = permits_map.get(d, [])
+                # Etiqueta de fecha: 01 de enero
+                try:
+                    months_es_local = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+                    day_obj['day_label'] = f"{int(d):02d} de {months_es_local[month]}"
+                except Exception:
+                    day_obj['day_label'] = str(d)
+
+    # --- Membrete (configuración del sistema) embebido como data URI para xhtml2pdf ---
+    config = SystemConfiguration.get_current()
+    letterhead_data = None
+    # Permitir desactivar membrete vía parámetro para pruebas
+    no_letterhead = request.GET.get('no_letterhead') == '1'
+    if not no_letterhead and config and getattr(config, 'letterhead', None):
+        try:
+            # Preferir siempre la URL pública del archivo (funciona mejor con xhtml2pdf)
+            try:
+                letterhead_data = request.build_absolute_uri(config.letterhead.url)
+            except Exception:
+                letterhead_data = config.letterhead.url
+            # Si no hay URL válida y existe en disco, usar data URI como fallback
+            if not letterhead_data:
+                file_path = getattr(config.letterhead, 'path', None)
+                if file_path and os.path.exists(file_path):
+                    mime, _ = mimetypes.guess_type(file_path)
+                    with open(file_path, 'rb') as f:
+                        encoded = base64.b64encode(f.read()).decode('ascii')
+                        letterhead_data = f"data:{mime};base64,{encoded}"
+        except Exception:
+            letterhead_data = None
+
     template = get_template('biometric/reports/pdf_attendance_calendar.html')
     html = template.render({
-        'emp': inst_data.employee, 'month_name': months_es[month], 'year': year,
-        'calendar': calendar_data, 'today': datetime.now()  # Naive
+        'emp': inst_data.employee,
+        'month_name': months_es[month],
+        'year': year,
+        'calendar': calendar_data,
+        'today': datetime.now(),
+        'permits_map': permits_map,
+        'holidays_map': holidays_map,
+        'configuration': config,
+        'letterhead_data': letterhead_data,
+        'observations_list': observations_list,
     })
     response = HttpResponse(content_type='application/pdf')
     pisa.CreatePDF(html, dest=response)

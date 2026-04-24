@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from datetime import timedelta
 
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetModificationHistory
-from core.models import CatalogItem
+from core.models import CatalogItem, User
 from .models import PersonnelAction, ActionMovement, ActionType
 from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
 
@@ -167,8 +167,13 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 'employee_id': employee_id
             })
 
-        # Si no es AJAX, renderizar la página completa
-        return render(request, self.template_name, {'form': form})
+        # Si no es AJAX, renderizar dentro de una página completa que cargue estilos y scripts
+        return render(request, 'personnel_action/action_form_page.html', {
+            'form': form,
+            'employee': employee,
+            'employee_id': employee_id,
+            'is_edit': False
+        })
 
     def form_valid(self, form):
         # Lógica transaccional para guardar Cabecera + Detalle
@@ -517,8 +522,33 @@ class ActionDetailView(LoginRequiredMixin, View):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'html': html})
 
-        from django.http import HttpResponse
         return HttpResponse(html)
+
+
+def user_search_json(request):
+    """JSON endpoint para buscar usuarios (Select2 AJAX)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'results': []}, status=401)
+
+    term = request.GET.get('term', '').strip()
+    qs = User.objects.filter(is_active=True)
+    if term:
+        qs = qs.filter(
+            Q(first_name__icontains=term) |
+            Q(last_name__icontains=term) |
+            Q(username__icontains=term) |
+            Q(email__icontains=term)
+        )
+
+    qs = qs.order_by('first_name', 'last_name')[:20]
+    results = []
+    for u in qs:
+        label = f"{u.signature_name or (u.first_name + ' ' + u.last_name).strip()}"
+        if getattr(u, 'signature_position', None):
+            label = f"{label} - {u.signature_position}"
+        results.append({'id': str(u.id), 'text': f"{label} ({u.username})"})
+
+    return JsonResponse({'results': results})
 
 
 class ActionUpdateView(LoginRequiredMixin, UpdateView):
@@ -561,9 +591,12 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
                 'is_edit': True
             })
 
-        return render(request, self.template_name, {
+        # Si es vista directa, renderizar página completa que incluya el modal
+        return render(request, 'personnel_action/action_form_page.html', {
             'form': form,
             'action': self.object,
+            'employee': self.object.employee,
+            'employee_id': self.object.employee.id,
             'is_edit': True
         })
 

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div id="personnelActionApp">
+    <div class="page-container">
+        <h2 class="page-title">{% if is_edit %}Editar Acción de Personal{% else %}Nueva Acción de Personal{% endif %}</h2>
+        <div class="modal-container">
+            {% include 'personnel_action/modals/modal_personnel_action_form.html' %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

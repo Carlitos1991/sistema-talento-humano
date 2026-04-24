@@ -83,7 +83,100 @@ document.addEventListener('DOMContentLoaded', function () {
             if (editBtn) {
                 e.preventDefault();
                 const actionId = editBtn.dataset.actionId;
-                window.location.href = `/personnel_actions/${actionId}/edit/`;
+                // Abrir formulario de edición vía AJAX en el modal de edición
+                fetch(`/personnel_actions/${actionId}/edit/`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(res => res.text())
+                    .then(html => {
+                        const editContent = document.getElementById('modal-edit-content');
+                        const editModal = document.getElementById('actionEditModal');
+                        if (!editContent || !editModal) return;
+                        editContent.innerHTML = html;
+                        editModal.classList.remove('hidden');
+                        document.body.classList.add('modal-open');
+
+                        // Setup close behavior for this edit modal. Preserve any existing global closeModal.
+                        try {
+                            const previousClose = window.closeModal;
+                            const closeEditModal = function () {
+                                editModal.classList.add('hidden');
+                                editContent.innerHTML = '';
+                                document.body.classList.remove('modal-open');
+                                // restore previous global closeModal if any
+                                window.closeModal = previousClose;
+                            };
+                            window.closeModal = closeEditModal;
+
+                            // Close when clicking outside modal content
+                            editModal.addEventListener('click', function (ev) {
+                                if (ev.target === editModal) {
+                                    closeEditModal();
+                                }
+                            });
+                        } catch (err) {
+                            console.warn('Error setting edit modal close handlers', err);
+                        }
+
+                        // Inicializar Select2 dentro del modal si está disponible
+                        try {
+                            if (window.jQuery && jQuery.fn.select2) {
+                                jQuery(editContent).find('.select2').each(function () {
+                                    jQuery(this).select2({width: '100%', dropdownParent: jQuery(editContent)});
+                                });
+                            }
+                        } catch (err) {
+                            console.warn('Select2 init failed', err);
+                        }
+
+                        // Inicializar scripts específicos del modal (cascadas, búsqueda de partidas)
+                        try {
+                            if (window.PersonnelActionModal && typeof PersonnelActionModal.init === 'function') {
+                                PersonnelActionModal.init();
+                            }
+                        } catch (err) {
+                            console.warn('PersonnelActionModal init error', err);
+                        }
+
+                        // Bind submit del formulario dentro del modal para enviar vía AJAX
+                        const form = editContent.querySelector('form');
+                        if (form) {
+                            form.addEventListener('submit', function (ev) {
+                                ev.preventDefault();
+                                const formData = new FormData(form);
+                                fetch(form.action, {
+                                    method: 'POST',
+                                    body: formData,
+                                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                                }).then(async (res) => {
+                                    if (res.ok) {
+                                        // Cerrar modal y refrescar tabla
+                                        editModal.classList.add('hidden');
+                                        editContent.innerHTML = '';
+                                        document.body.classList.remove('modal-open');
+                                        fetchTableData();
+                                        if (typeof Swal !== 'undefined') {
+                                            Swal.fire({icon: 'success', title: 'Guardado', timer: 1200, showConfirmButton: false});
+                                        }
+                                    } else {
+                                        // Reemplazar contenido del modal con formulario con errores
+                                        const txt = await res.text();
+                                        editContent.innerHTML = txt;
+                                    }
+                                }).catch(err => {
+                                    console.error('Error enviando formulario:', err);
+                                    if (typeof Swal !== 'undefined') Swal.fire('Error', 'Error inesperado', 'error');
+                                });
+                            });
+                        }
+                        // Bind cancel buttons inside modal to close
+                        const btnCancel = editContent.querySelector('.btn-cancel');
+                        if (btnCancel) btnCancel.addEventListener('click', () => { if (window.closeModal) window.closeModal(); });
+                    })
+                    .catch(err => {
+                        console.error('Error al cargar formulario de edición:', err);
+                        if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo abrir el formulario', 'error');
+                    });
                 return;
             }
 
