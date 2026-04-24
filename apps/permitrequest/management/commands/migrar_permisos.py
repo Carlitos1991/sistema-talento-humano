@@ -8,7 +8,7 @@ from permitrequest.models import PermitRequest, PermitType
 
 
 class Command(BaseCommand):
-    help = 'Migración universal: Mapeo por ID real + Nota de referencia desde action'
+    help = 'Migración universal con detección de duplicados y mapeo estricto'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=int, required=True)
@@ -17,17 +17,30 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         anio, mes = options['anio'], options['mes']
 
-        # --- EL MAPEO QUE DEFINIMOS ---
+        # --- MAPEO ESTRICTO DE IDs ---
         # { ID_SIGETH1 : ID_SIGETH2 }
         MAPEO_ESTRICTO = {
-            8: 9,  # De 'Otros' (ID 9 en viejo) a 'DESCUENTO A ROL' (ID 9 en nuevo)
-            9: 7,  # De 'Calamidad doméstica' (7) a 'CALAMIDAD DOMESTICA' (7)
-            5: 13,  # Maternidad
+            # TODO: Agrega aquí el ID de 'Bitacora' de la base antigua
+            8: 8,  # Compensacion
+            14: 15,  # Matrimonio
+            10: 14,  # Asuntos Oficiales
+            7: 13,  # CALAMIDAD DOMESTICA
+            2: 5,  # Cargo a vacaciones
+            13: 11,  # Maternidad
+            12: 12,  # Paternidad
+            9: 9,  # DESCUENTO A ROL
+            5: 7,  # Permiso Médico
+            29: 3,  # Permiso Médico
         }
 
         cedulas_faltantes = set()
         tipos_no_mapeados = set()
-        migrados, saltados = 0, 0
+
+        # Contadores de estadísticas
+        migrados = 0
+        duplicados = 0
+        saltados = 0
+        total_analizados = 0
 
         db_config = settings.DATABASES['old_db']
 
@@ -38,7 +51,6 @@ class Command(BaseCommand):
             )
 
             with conn.cursor() as cursor:
-                # Traemos el type_of_permit_id (el número) y el action (el texto)
                 sql = """
                       SELECT per.cedula, \
                              p.type_of_permit_id, \
@@ -62,15 +74,12 @@ class Command(BaseCommand):
                     params.append(mes)
 
                 cursor.execute(sql, params)
-                filas = cursor.fetchall()
 
-                for row in filas:
+                for row in cursor.fetchall():
+                    total_analizados += 1
                     cedula, id_tipo_old, action_txt, f_ini, h_ini, h_fin, n_h, n_m, estado, f_reg, archivo = row
 
-                    # 1. Buscar el nuevo ID en nuestro diccionario
                     id_tipo_nuevo = MAPEO_ESTRICTO.get(id_tipo_old)
-
-                    # 2. Buscar empleado por document_number
                     empleado = Employee.objects.filter(person__document_number=cedula).first()
 
                     if not empleado or not id_tipo_nuevo:
@@ -79,11 +88,11 @@ class Command(BaseCommand):
                         if not id_tipo_nuevo: tipos_no_mapeados.add(f"ID Antiguo: {id_tipo_old} ({action_txt})")
                         continue
 
-                    # 3. MIGRACIÓN CON NOTA PERSONALIZADA
+                    # MIGRACIÓN CON CONTROL DE DUPLICADOS
                     with transaction.atomic():
-                        # Creamos la nota: "Migrado: Otros" o lo que diga el campo action
                         nota = f"Migrado: {action_txt}" if action_txt else "Migración Histórica"
 
+                        # get_or_create busca coincidencias. Si existe, 'created' será False.
                         obj, created = PermitRequest.objects.get_or_create(
                             employee=empleado,
                             start_date=f_ini,
@@ -95,21 +104,41 @@ class Command(BaseCommand):
                                 'hours': n_h or 0,
                                 'minutes': n_m or 0,
                                 'justification_file': archivo,
-                                'response_note': nota  # AQUÍ SE GUARDA EL TEXTO "OTROS"
+                                'response_note': nota
                             }
                         )
 
-                        # Forzar fecha de registro original
-                        PermitRequest.objects.filter(id=obj.id).update(created_at=f_reg)
-                        migrados += 1
+                        if created:
+                            # Solo actualizamos la fecha de registro si el registro es nuevo
+                            PermitRequest.objects.filter(id=obj.id).update(created_at=f_reg)
+                            migrados += 1
+                        else:
+                            # Si ya existía (por ejemplo, migrado antes como Bitácora), se cuenta aquí
+                            duplicados += 1
+
+                    self.stdout.write(f"⏳ Analizando... {total_analizados}", ending='\r')
 
             conn.close()
 
-            # --- REPORTE ---
-            self.stdout.write(self.style.SUCCESS(f"\n✅ MIGRACIÓN EXITOSA"))
-            self.stdout.write(f"🚀 Registros migrados: {migrados}")
+            # --- REPORTE DETALLADO ---
+            self.stdout.write("\n" + "=" * 60)
+            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN DE MIGRACIÓN: {anio}" + (f" Mes {mes}" if mes else "")))
+            self.stdout.write("=" * 60)
+            self.stdout.write(f"📊 Total de registros analizados: {total_analizados}")
+            self.stdout.write(self.style.SUCCESS(f"🚀 Registros nuevos migrados:      {migrados}"))
+            self.stdout.write(self.style.WARNING(f"⚠️  Registros duplicados (omitidos): {duplicados}"))
+            self.stdout.write(f"✖  Registros saltados (errores):   {saltados}")
+            self.stdout.write("-" * 60)
+
             if tipos_no_mapeados:
-                self.stdout.write(self.style.ERROR(f"❌ FALTAN MAPEAR EN EL SCRIPT: {tipos_no_mapeados}"))
+                self.stdout.write(self.style.ERROR(f"❌ TIPOS POR MAPEAR EN EL DICCIONARIO:"))
+                for t in sorted(tipos_no_mapeados):
+                    self.stdout.write(f"   -> {t}")
+
+            if cedulas_faltantes:
+                self.stdout.write(self.style.ERROR(f"❌ EMPLEADOS NO ENCONTRADOS EN SIGETH 2: {len(cedulas_faltantes)}"))
+
+            self.stdout.write("=" * 60 + "\n")
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error: {e}"))

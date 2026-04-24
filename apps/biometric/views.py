@@ -21,7 +21,11 @@ from django.views.generic import ListView, TemplateView, View
 from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 
-from xhtml2pdf import pisa
+try:
+    from weasyprint import HTML, CSS
+except Exception:
+    HTML = None
+    CSS = None
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand, OfflineAttendanceRegistry
 from .utils import test_connection, BiometricConnection
 from permitrequest.models import PermitRequest
@@ -582,7 +586,12 @@ def generate_monthly_report_pdf(request):
             d = cur.day
             if d not in permits_map:
                 permits_map[d] = []
-            permits_map[d].append({'type': pr.permit_type.name, 'note': pr.response_note or ''})
+            permits_map[d].append({
+                'type': pr.permit_type.name,
+                'note': pr.response_note or '',
+                'start_time': pr.start_time,
+                'end_time': pr.end_time,
+            })
             cur = cur + timedelta(days=1)
 
     # --- Feriados (is_holiday=True y activos) y Observaciones (is_holiday=False y activos) ---
@@ -664,9 +673,19 @@ def generate_monthly_report_pdf(request):
         'letterhead_data': letterhead_data,
         'observations_list': observations_list,
     })
-    response = HttpResponse(content_type='application/pdf')
-    pisa.CreatePDF(html, dest=response)
-    return response
+
+    # Usar WeasyPrint si está disponible, si no, intentar pisa como fallback
+    if HTML:
+        base_url = request.build_absolute_uri('/')
+        pdf = HTML(string=html, base_url=base_url).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 0.8cm }')])
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = 'inline; filename="reporte_mensual.pdf"'
+        return response
+    else:
+        response = HttpResponse(content_type='application/pdf')
+        from xhtml2pdf import pisa
+        pisa.CreatePDF(html, dest=response)
+        return response
 
 
 # Receptor ADMS unificado
@@ -750,11 +769,19 @@ def generate_specific_report_pdf(request):
         'today': datetime.now(),
     })
 
-    response = HttpResponse(content_type='application/pdf')
     filename = f"Reporte_Especifico_{institutional_info.employee.person.document_number}_{start_str}_al_{end_str}.pdf"
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
 
-    pisa_status = pisa.CreatePDF(html_content, dest=response)
-    if pisa_status.err:
-        return HttpResponse('Error al generar PDF', status=500)
-    return response
+    if HTML:
+        base_url = request.build_absolute_uri('/')
+        pdf = HTML(string=html_content, base_url=base_url).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 0.8cm }')])
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    else:
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        from xhtml2pdf import pisa
+        pisa_status = pisa.CreatePDF(html_content, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar PDF', status=500)
+        return response

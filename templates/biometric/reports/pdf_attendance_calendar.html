@@ -5,6 +5,10 @@
         @page {
             size: A4 portrait;
             margin: 0; /* se controlan márgenes desde body */
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 8px;
+            }
         }
 
         body {
@@ -12,12 +16,13 @@
             font-size: 7px; /* más compacto */
             color: #222;
             position: relative;
-            padding: 0.45cm 0.45cm; /* margen visible reducido */
+            padding: 2.5cm 0.8cm 0.8cm 0.8cm; /* más espacio superior y laterales */
+            box-sizing: border-box;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 6px;
+            margin: 28px 0 6px 0; /* bajar título */
         }
 
         .info-table {
@@ -29,7 +34,8 @@
 
         /* Estilo Calendario */
         table.calendar {
-            width: 100%;
+            width: 88%;
+            max-width: 88%;
             border-collapse: collapse;
             table-layout: fixed;
             font-size: 7px
@@ -46,10 +52,25 @@
 
         table.calendar td {
             border: 1px solid #000;
-            height: 44px; /* más compacto */
+            min-height: 44px; /* más compacto pero permite crecer */
             vertical-align: top;
             padding: 0.5mm 0.7mm;
-            overflow: hidden;
+            overflow: visible;
+            box-sizing: border-box;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        .cell-inner { min-height:44px; padding-bottom:6px; box-sizing:border-box; overflow:visible; }
+
+        table.calendar th {
+            box-sizing: border-box
+        }
+
+        /* asegurar que la tabla respete márgenes del body */
+        .report-wrapper {
+            width: 100%;
+            padding: 0 0.3cm;
+            box-sizing: border-box
         }
 
         .holiday {
@@ -60,7 +81,7 @@
             background-color: #eaf7ea;
             border-left: 3px solid #2ea44f;
             padding: 1px 3px;
-            margin: 1px 0;
+            margin: 2px 0;
             font-size: 6px;
         }
 
@@ -85,6 +106,7 @@
             border-bottom: 0.5px solid #eee;
             font-size: 6px;
             color: #111;
+            margin-bottom:2px;
         }
 
         .punch-time {
@@ -121,25 +143,27 @@
         <h2 style="margin:0;font-size:12px;">REPORTE MENSUAL DE ASISTENCIA</h2>
         <h3 style="margin:0;font-size:10px;">{{ month_name }} {{ year }}</h3>
     </div>
-
-    <table class="info-table">
+    <div style="height:8px;">&nbsp;</div>
+    <table class="info-table"
+           style="width:88%; margin:0 auto 6px auto; border-bottom:1px solid #000; border-collapse:collapse;"
+           cellspacing="0" cellpadding="0">
         <tr>
-            <td><strong>EMPLEADO:</strong> {{ emp.person.full_name }}</td>
-            <td><strong>CÉDULA:</strong> {{ emp.person.document_number }}</td>
-            <td align="right"><strong>FECHA IMPRESIÓN:</strong> {{ today|date:"d/m/Y" }}</td>
+            <td style="width:50%;"><strong>EMPLEADO:</strong> {{ emp.person.full_name }}</td>
+            <td style="width:50%; text-align:right;"><strong>CÉDULA:</strong> {{ emp.person.document_number }}</td>
         </tr>
     </table>
 
-    <table class="calendar">
+    <table class="calendar" style="width:88%; margin:12px auto 0 auto; border-collapse:collapse; table-layout:fixed;"
+           cellspacing="0" cellpadding="0">
         <thead>
         <tr>
-            <th>Lunes</th>
-            <th>Martes</th>
-            <th>Miércoles</th>
-            <th>Jueves</th>
-            <th>Viernes</th>
-            <th>Sábado</th>
-            <th>Domingo</th>
+            <th style="width:14.2857%;">Lunes</th>
+            <th style="width:14.2857%;">Martes</th>
+            <th style="width:14.2857%;">Miércoles</th>
+            <th style="width:14.2857%;">Jueves</th>
+            <th style="width:14.2857%;">Viernes</th>
+            <th style="width:14.2857%;">Sábado</th>
+            <th style="width:14.2857%;">Domingo</th>
         </tr>
         </thead>
         <tbody>
@@ -147,13 +171,19 @@
             <tr style="page-break-inside:avoid;">
                 {% for day_obj in week %}
                     <td class="{% if day_obj.is_holiday %}holiday{% endif %}">
+                        <div class="cell-inner">
                         {% if day_obj.day %}
                             <div class="day-header">{{ day_obj.day }}</div>
                             {% if day_obj.is_holiday %}
                                 <div class="holiday-label">{{ day_obj.holi_name }}</div>
                             {% endif %}
                             {% for perm in day_obj.permits %}
-                                <div class="permit">{{ perm.type }}{% if perm.note %} - {{ perm.note }}{% endif %}</div>
+                                <div class="permit">
+                                    {{ perm.type }}
+                                    {% if perm.start_time and perm.end_time %}: {{ perm.start_time|time:"H:i" }} a {{ perm.end_time|time:"H:i" }}
+                                    {% elif perm.note %} - {{ perm.note }}
+                                    {% endif %}
+                                </div>
                             {% endfor %}
                             {% for p in day_obj.punches %}
                                 <div class="punch-row">
@@ -161,7 +191,10 @@
                                     <span class="punch-device">{{ p.device }}</span>
                                 </div>
                             {% endfor %}
+                        {% else %}
+                            &nbsp;
                         {% endif %}
+                        </div>
                     </td>
                 {% endfor %}
             </tr>
@@ -169,13 +202,10 @@
         </tbody>
     </table>
 
-    <div style="margin-top:6px; font-size:9px;">
-        <strong>Observaciones:</strong>
-        {% if observations_list %}
-            {{ observations_list|join:" // " }}
-        {% else %}
-            -
-        {% endif %}
+    <div style="width:88%; margin:10px auto 0 auto; display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="text-align:left;">{% if observations_list %}<strong>Observaciones:</strong>
+            {{ observations_list|join:" // " }}{% endif %}</div>
+        <div style="text-align:right;"><strong>FECHA IMPRESIÓN:</strong> {{ today|date:"d/m/Y" }}</div>
     </div>
 </body>
 </html>
