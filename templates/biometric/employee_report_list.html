@@ -10,6 +10,11 @@
                 <h1>Reportes de Asistencia</h1>
                 <p>Generación de archivos PDF basados en marcaciones de hardware.</p>
             </div>
+            <div class="header-actions">
+                <button class="btn-custom btn-search" @click="showUnitModal=true">
+                    <i class="fas fa-building"></i> Reporte por Dependencia
+                </button>
+            </div>
         </div>
         <div class="search-panel">
             <div class="search-form-row">
@@ -78,6 +83,7 @@
         <!-- INCLUSIÓN DE MODALES -->
         {% include 'biometric/modals/modal_report_monthly.html' %}
         {% include 'biometric/modals/modal_report_specific.html' %}
+        {% include 'biometric/modals/modal_report_by_unit.html' %}
     </div>
 {% endblock %}
 

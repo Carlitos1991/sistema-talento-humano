@@ -21,13 +21,20 @@ const reportApp = createApp({
                 searchQuery: '',
                 showMonthlyModal: false,
                 showSpecificModal: false,
+                showUnitModal: false,
                 selectedEmp: {id: '', name: '', dni: ''},
+                unitRoots: [],
+                unitLevel2: [],
+                unitRoot: '',
+                unitChild: '',
+                unitForm: {month: new Date().getMonth() + 1, year: new Date().getFullYear()},
                 monthlyForm: {month: new Date().getMonth() + 1, year: new Date().getFullYear()},
                 specificForm: {start: '', end: ''}
             }
         },
         mounted() {
             this.performBackendSearch();
+            this.loadUnitRoots();
         },
         methods: {
             async performBackendSearch() {
@@ -131,6 +138,38 @@ const reportApp = createApp({
             downloadSpecific() {
                 const url = `/biometric/reports/specific-pdf/?emp_id=${this.selectedEmp.id}&start=${this.specificForm.start}&end=${this.specificForm.end}`;
                 window.open(url, '_blank');
+            }
+,
+            async loadUnitRoots() {
+                try {
+                    const res = await fetch('/personnel_actions/api/unit-children/', {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                    const json = await res.json();
+                    this.unitRoots = json.units || [];
+                } catch (e) {
+                    console.error('No se pudo cargar unidades raíz', e);
+                }
+            },
+            async loadUnitChildren(parent_id, level) {
+                try {
+                    const url = parent_id ? `/personnel_actions/api/unit-children/?parent_id=${parent_id}` : `/personnel_actions/api/unit-children/`;
+                    const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                    const json = await res.json();
+                    if (level === 1) {
+                        this.unitLevel2 = json.units || [];
+                    }
+                } catch (e) {
+                    console.error('No se pudo cargar subunidades', e);
+                }
+            },
+            downloadByUnit() {
+                const unit_id = this.unitChild || this.unitRoot;
+                if (!unit_id) {
+                    alert('Seleccione una unidad.');
+                    return;
+                }
+                const url = `/biometric/reports/department-pdf/?unit_id=${unit_id}&month=${this.unitForm.month}&year=${this.unitForm.year}`;
+                window.open(url, '_blank');
+                this.showUnitModal = false;
             }
         }
     })

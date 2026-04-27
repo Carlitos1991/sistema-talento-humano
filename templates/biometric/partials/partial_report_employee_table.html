@@ -14,7 +14,7 @@
                 <td>
                     <div class="person-info">
                         {% if data.employee.person.photo %}
-                            <img src="{{ data.employee.person.photo.url }}" class="person-avatar">
+                            <img src="{{ data.employee.person.photo.url }}" class="person-avatar" alt="avatar" onerror="this.onerror=null;this.src='/static/img/avatar-placeholder.png'">
                         {% else %}
                             <div class="person-avatar-placeholder">{{ data.employee.person.first_name|slice:":1" }}</div>
                         {% endif %}

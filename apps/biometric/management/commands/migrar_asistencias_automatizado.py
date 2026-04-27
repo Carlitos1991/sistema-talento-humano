@@ -122,7 +122,7 @@ class Command(BaseCommand):
 
             # --- REPORTE DE AUDITORÍA ---
             self.stdout.write("\n" + "=" * 60)
-            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN FINAL DE MIGRACIÓN: {mes}/{anio}"))
+            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN FINAL DE MIGRACIÓN: {anio}//{mes}"))
             self.stdout.write("=" * 60)
             self.stdout.write(f"🚀 Total registros migrados:    {total_global_migrados}")
             self.stdout.write(f"⚠️  Total registros saltados:    {total_global_saltados}")

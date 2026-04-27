@@ -46,4 +46,5 @@ urlpatterns = [
     path('reports/employees/', views.EmployeeReportListView.as_view(), name='employee_report_list'),
     path('reports/monthly-pdf/', views.generate_monthly_report_pdf, name='generate_monthly_pdf'),
     path('reports/specific-pdf/', views.generate_specific_report_pdf, name='generate_specific_pdf'),
+    path('reports/department-pdf/', views.generate_department_report_pdf, name='generate_department_pdf'),
 ]
