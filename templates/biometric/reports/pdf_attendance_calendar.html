@@ -216,10 +216,12 @@
                                 </div>
                             {% endfor %}
                             {% for p in day_obj.punches %}
+                                {% if not p.filtered %}
                                 <div class="punch-row {% if p.row_class %}{{ p.row_class }}{% endif %}">
                                     <span class="punch-time">{{ p.time }}</span>
                                     <span class="punch-device">{{ p.device }}</span>
                                 </div>
+                                {% endif %}
                             {% endfor %}
                         {% else %}
                             &nbsp;
