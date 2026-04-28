@@ -4,7 +4,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Referencias importantes para búsqueda y paginación
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
-    const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
+    const csrfTokenElem = document.getElementById('csrf-token');
+    let csrfToken = csrfTokenElem ? csrfTokenElem.value : '';
+    // Fallback: leer token desde cookie si no está en el DOM
+    if (!csrfToken && document.cookie) {
+        const m = document.cookie.match(/(^|; )csrftoken=([^;]+)/);
+        if (m) csrfToken = decodeURIComponent(m[2]);
+    }
     const urlList = document.getElementById('url-list') ? document.getElementById('url-list').value : '';
     // Prefer the server-included overlay `modalContentContainer` when present,
     // otherwise fall back to dynamic containers used by other flows.
@@ -190,8 +196,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const reviewBtn = e.target.closest('[data-action="review"]');
             if (reviewBtn) {
                 e.preventDefault();
-                const bitacoraId = reviewBtn.dataset.id;
-                if (!bitacoraId) return;
+                let bitacoraId = reviewBtn.dataset.id;
+                // Si el atributo contiene plantillas no resueltas (ej. '[[ b.id ]]'), intentar resolver usando la app Vue
+                if (!bitacoraId || !/^\d+$/.test(String(bitacoraId).trim())) {
+                    const tr = reviewBtn.closest('tr');
+                    if (tr && window._bitacoraHistoryApp && Array.isArray(window._bitacoraHistoryApp.bitacoras)) {
+                        const rows = Array.from(tr.parentNode.querySelectorAll('tr'));
+                        const idx = rows.indexOf(tr);
+                        if (idx >= 0 && window._bitacoraHistoryApp.bitacoras[idx] && window._bitacoraHistoryApp.bitacoras[idx].id) {
+                            bitacoraId = String(window._bitacoraHistoryApp.bitacoras[idx].id);
+                        }
+                    }
+                }
+                if (!bitacoraId || !/^\d+$/.test(String(bitacoraId).trim())) {
+                    if (window.Swal) Swal.fire('Error', 'No se pudo resolver el ID de la bitácora. Actualice la lista y vuelva a intentar.', 'error');
+                    return;
+                }
 
                 // Use Swal prompt to ask for reason
                 if (window.Swal) {
@@ -216,13 +236,22 @@ document.addEventListener('DOMContentLoaded', function () {
                         // POST JSON to BitacoraReviewView
                         fetch(`/permitrequest/bitacora/review/${bitacoraId}/`, {
                             method: 'POST',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRFToken': csrfToken
                             },
                             body: JSON.stringify({reason})
-                        }).then(res => res.json())
+                        })
+                            .then(res => {
+                                const ct = res.headers.get('content-type') || '';
+                                if (!res.ok) {
+                                    return res.text().then(text => { throw {status: res.status, text}; });
+                                }
+                                if (ct.includes('application/json')) return res.json();
+                                return res.text().then(text => { throw {status: res.status || 200, text}; });
+                            })
                             .then(data => {
                                 if (data && data.success) {
                                     Swal.fire({icon: 'success', title: 'Enviado', text: data.message || 'Bitácora marcada para revisión', timer: 2000, showConfirmButton: false});
@@ -237,9 +266,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 } else {
                                     Swal.fire('Error', data && data.message ? data.message : 'No se pudo marcar la bitácora', 'error');
                                 }
-                            }).catch(err => {
+                            })
+                            .catch(err => {
                                 console.error('Error reviewing bitacora', err);
-                                Swal.fire('Error', 'Error de comunicación al marcar bitácora', 'error');
+                                const text = err && err.text ? String(err.text).slice(0, 1000) : (err && err.message ? err.message : 'Error de comunicación');
+                                Swal.fire('Error', `No se pudo completar la solicitud (${err && err.status ? err.status : ''}). Respuesta: ${text}`, 'error');
                             });
                     });
                 } else {

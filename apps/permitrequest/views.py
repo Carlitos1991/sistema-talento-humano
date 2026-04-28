@@ -1409,6 +1409,12 @@ class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """
     permission_required = 'permitrequest.can_edit'
 
+    def handle_no_permission(self):
+        # Para peticiones AJAX devolvemos JSON en lugar de redirigir
+        if self.request and self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
+        return super().handle_no_permission()
+
     def post(self, request, pk):
         from django.shortcuts import get_object_or_404
         from django.utils.html import escape
