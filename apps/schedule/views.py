@@ -5,7 +5,7 @@ from django.template.loader import render_to_string
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
 
-from .models import Schedule, ScheduleObservation
+from .models import Schedule, ScheduleObservation, ScheduleChangeHistory
 from .forms import ScheduleForm, ScheduleSearchForm, ScheduleObservationForm, ObservationSearchForm
 
 
@@ -38,6 +38,24 @@ class ScheduleCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 instance = form.save(commit=False)
                 instance.created_by = request.user
                 instance.save()
+                # Si se proporcionó una fecha 'vigente_desde', crear entrada en historial
+                vdesde = form.cleaned_data.get('vigente_desde')
+                if vdesde:
+                    ScheduleChangeHistory.objects.create(
+                        schedule=instance,
+                        effective_from=vdesde,
+                        morning_start=instance.morning_start,
+                        morning_end=instance.morning_end,
+                        morning_crosses_midnight=instance.morning_crosses_midnight,
+                        afternoon_start=instance.afternoon_start,
+                        afternoon_end=instance.afternoon_end,
+                        afternoon_crosses_midnight=instance.afternoon_crosses_midnight,
+                        monday=instance.monday, tuesday=instance.tuesday, wednesday=instance.wednesday,
+                        thursday=instance.thursday, friday=instance.friday, saturday=instance.saturday,
+                        sunday=instance.sunday, late_tolerance_minutes=instance.late_tolerance_minutes,
+                        daily_hours=instance.daily_hours,
+                        created_by=request.user
+                    )
             return JsonResponse({'success': True, 'message': 'Horario creado exitosamente'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
@@ -52,8 +70,36 @@ class ScheduleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
             instance = form.save(commit=False)
             instance.updated_by = request.user
             instance.save()
+            # Si se proporcionó 'vigente_desde', registrar versión del horario
+            vdesde = form.cleaned_data.get('vigente_desde')
+            if vdesde:
+                ScheduleChangeHistory.objects.create(
+                    schedule=instance,
+                    effective_from=vdesde,
+                    morning_start=instance.morning_start,
+                    morning_end=instance.morning_end,
+                    morning_crosses_midnight=instance.morning_crosses_midnight,
+                    afternoon_start=instance.afternoon_start,
+                    afternoon_end=instance.afternoon_end,
+                    afternoon_crosses_midnight=instance.afternoon_crosses_midnight,
+                    monday=instance.monday, tuesday=instance.tuesday, wednesday=instance.wednesday,
+                    thursday=instance.thursday, friday=instance.friday, saturday=instance.saturday,
+                    sunday=instance.sunday, late_tolerance_minutes=instance.late_tolerance_minutes,
+                    daily_hours=instance.daily_hours,
+                    created_by=request.user
+                )
             return JsonResponse({'success': True, 'message': 'Horario actualizado exitosamente'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class ScheduleHistoryAPIView(LoginRequiredMixin, View):
+    """Retorna el modal HTML con el historial de cambios de un horario."""
+    def get(self, request, pk):
+        schedule = get_object_or_404(Schedule, pk=pk)
+        histories = ScheduleChangeHistory.objects.filter(schedule=schedule).select_related('created_by').order_by('-effective_from')
+        html = render_to_string('schedule/modals/modal_schedule_history.html', {'histories': histories, 'schedule': schedule}, request=request)
+        from django.http import HttpResponse
+        return HttpResponse(html)
 
 
 class ScheduleDetailAPIView(View):

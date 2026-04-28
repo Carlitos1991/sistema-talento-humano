@@ -178,10 +178,83 @@ document.addEventListener('DOMContentLoaded', function () {
     // work even if Vue re-renders/replaces inner nodes.
     if (modalContentContainer && !modalContentContainer._closeDelegateAttached) {
         modalContentContainer.addEventListener('click', function (e) {
+            // Close modal buttons
             const btn = e.target.closest('.js-close-bitacora-modal, .js-close-modal, .btn-cancel, .btn-close-modal');
             if (btn) {
                 e.preventDefault();
                 closeModal();
+                return;
+            }
+
+            // Review action for a specific bitacora: show prompt and POST reason
+            const reviewBtn = e.target.closest('[data-action="review"]');
+            if (reviewBtn) {
+                e.preventDefault();
+                const bitacoraId = reviewBtn.dataset.id;
+                if (!bitacoraId) return;
+
+                // Use Swal prompt to ask for reason
+                if (window.Swal) {
+                    Swal.fire({
+                        title: 'Marcar para revisión',
+                        input: 'textarea',
+                        inputLabel: 'Motivo',
+                        inputPlaceholder: 'Escriba el motivo por el cual se envía a revisión',
+                        inputAttributes: { 'aria-label': 'Motivo' },
+                        showCancelButton: true,
+                        confirmButtonText: 'Enviar',
+                        preConfirm: (value) => {
+                            if (!value || !value.trim()) {
+                                Swal.showValidationMessage('Se requiere un motivo');
+                                return false;
+                            }
+                            return value.trim();
+                        }
+                    }).then(result => {
+                        if (!result || !result.isConfirmed) return;
+                        const reason = result.value;
+                        // POST JSON to BitacoraReviewView
+                        fetch(`/permitrequest/bitacora/review/${bitacoraId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({reason})
+                        }).then(res => res.json())
+                            .then(data => {
+                                if (data && data.success) {
+                                    Swal.fire({icon: 'success', title: 'Enviado', text: data.message || 'Bitácora marcada para revisión', timer: 2000, showConfirmButton: false});
+                                    // Refresh the bitacora list if Vue app mounted
+                                    try {
+                                        if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') {
+                                            window._bitacoraHistoryApp.fetchData();
+                                        } else if (typeof initBitacoraHistoryModal === 'function') {
+                                            initBitacoraHistoryModal();
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                } else {
+                                    Swal.fire('Error', data && data.message ? data.message : 'No se pudo marcar la bitácora', 'error');
+                                }
+                            }).catch(err => {
+                                console.error('Error reviewing bitacora', err);
+                                Swal.fire('Error', 'Error de comunicación al marcar bitácora', 'error');
+                            });
+                    });
+                } else {
+                    // Fallback: simple prompt
+                    const reason = prompt('Motivo para marcar la bitácora como pendiente:');
+                    if (!reason) return;
+                    fetch(`/permitrequest/bitacora/review/${bitacoraId}/`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({reason})
+                    }).then(() => {
+                        try { if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.fetchData === 'function') window._bitacoraHistoryApp.fetchData(); } catch (e) {}
+                    }).catch(() => {});
+                }
+                return;
             }
         });
         modalContentContainer._closeDelegateAttached = true;

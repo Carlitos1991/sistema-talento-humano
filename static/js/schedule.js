@@ -33,6 +33,7 @@ const scheduleApp = createApp({
                 afternoon_start: '', afternoon_end: '', afternoon_crosses_midnight: false,
                 monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
                 saturday: false, sunday: false
+                , vigente_desde: ''
             }
         }
     },
@@ -121,6 +122,8 @@ const scheduleApp = createApp({
                 if (data.success) {
                     // Llenamos el objeto form con los datos que vienen del servidor
                     this.form = data.schedule;
+                    // mantener campo vigente_desde vacío al editar para que el usuario lo elija si corresponde
+                    this.form.vigente_desde = '';
                     this.showModal = true;
                     // Bloqueamos scroll del body
                     document.body.classList.add('no-scroll');
@@ -139,7 +142,31 @@ const scheduleApp = createApp({
                 afternoon_start: '', afternoon_end: '', afternoon_crosses_midnight: false,
                 monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
                 saturday: false, sunday: false
+                , vigente_desde: ''
             };
+        },
+
+        async openHistoryModal(id) {
+            try {
+                const response = await fetch(`/schedule/history/${id}/`);
+                if (!response.ok) throw new Error('No se pudo cargar el historial');
+                const data = await response.text();
+                // insertar modal HTML en el body y mostrar
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = data;
+                document.body.appendChild(wrapper);
+                // asumir que el modal tiene clase .modal-overlay y manejar cierre
+                const modal = wrapper.querySelector('.modal-overlay');
+                if (modal) {
+                        // delegación: cerrar al hacer click en el fondo o en cualquier elemento con .btn-close-modal
+                        modal.addEventListener('click', (e) => {
+                            if (e.target === modal) return wrapper.remove();
+                            if (e.target.closest && (e.target.closest('.btn-close-modal') || e.target.closest('.btn-cancel'))) return wrapper.remove();
+                        });
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo cargar el historial de cambios', 'error');
+            }
         },
 
         autoCalculateHours() {

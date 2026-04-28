@@ -719,11 +719,9 @@ def generate_monthly_report_pdf(request):
                 day_obj['permits'] = permits_map.get(d, [])
                 # Evaluar tardanzas / salidas anticipadas según horario asignado
                 try:
-                    from schedule.models import EmployeeScheduleHistory
-                    sched_hist = EmployeeScheduleHistory.objects.filter(employee=inst_data.employee,
-                                                                        is_current=True).select_related(
-                        'schedule').first()
-                    schedule = sched_hist.schedule if sched_hist else None
+                    from schedule.models import get_employee_schedule_for_date
+                    cur_date = date(year, month, int(d))
+                    schedule = get_employee_schedule_for_date(inst_data.employee, cur_date)
                     if debug_punches:
                         msg = f"[punch-debug] emp={emp_id} day={d} schedule={getattr(schedule, 'name', None)}"
                         logger.debug(msg)
@@ -799,7 +797,7 @@ def generate_monthly_report_pdf(request):
                             if windowed:
                                 candidates = windowed
                             # limitar candidatos a una distancia razonable del evento
-                            MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
+                            MAX_MATCH_SECONDS = 60 * 60 * 4  # 2 horas
 
                             def get_dt(p):
                                 return p.get('dt_norm') or p.get('dt')
@@ -1276,14 +1274,8 @@ def generate_monthly_report_pdf(request):
         inconsistencias = 0
         dias_sin_marcar = 0
         minutos_atraso = 0
-        # obtener schedule actual del empleado si existe
-        try:
-            from schedule.models import EmployeeScheduleHistory
-            sched_hist = EmployeeScheduleHistory.objects.filter(employee=inst_data.employee,
-                                                                is_current=True).select_related('schedule').first()
-            schedule_obj = sched_hist.schedule if sched_hist else None
-        except Exception:
-            schedule_obj = None
+        # compute schedule per day using history lookup
+        schedule_obj = None
         for week in calendar_data:
             for day_obj in week:
                 d = day_obj.get('day')
@@ -1298,6 +1290,12 @@ def generate_monthly_report_pdf(request):
                 try:
                     cur_date = date(year, month, int(d))
                     wd = cur_date.weekday()  # 0=Lun .. 6=Dom
+                    try:
+                        from schedule.models import get_employee_schedule_for_date
+                        schedule_obj = get_employee_schedule_for_date(inst_data.employee, cur_date)
+                    except Exception:
+                        schedule_obj = None
+
                     if schedule_obj:
                         if wd == 0:
                             is_workday = bool(getattr(schedule_obj, 'monday', True))
@@ -1652,12 +1650,10 @@ def generate_department_report_pdf(request):
                     punches_sorted = sorted(day_obj.get('punches', []), key=lambda x: x.get('dt_norm') or x.get('dt'))
                     annotated = []
                     try:
-                        # obtener schedule para este empleado
-                        from schedule.models import EmployeeScheduleHistory
-                        sched_hist = EmployeeScheduleHistory.objects.filter(employee=inst.employee,
-                                                                            is_current=True).select_related(
-                            'schedule').first()
-                        schedule = sched_hist.schedule if sched_hist else None
+                        # obtener schedule para este empleado en la fecha
+                        from schedule.models import get_employee_schedule_for_date
+                        cur_date = date(year, month, int(d))
+                        schedule = get_employee_schedule_for_date(inst.employee, cur_date)
                     except Exception:
                         schedule = None
 
@@ -1881,13 +1877,8 @@ def generate_department_report_pdf(request):
         inconsistencias = 0
         dias_sin_marcar = 0
         minutos_atraso = 0
-        try:
-            from schedule.models import EmployeeScheduleHistory
-            sched_hist = EmployeeScheduleHistory.objects.filter(employee=inst.employee, is_current=True).select_related(
-                'schedule').first()
-            schedule_obj = sched_hist.schedule if sched_hist else None
-        except Exception:
-            schedule_obj = None
+        # schedule will be resolved per-day using history
+        schedule_obj = None
 
         for week in calendar_data:
             for day_obj in week:
@@ -1900,6 +1891,12 @@ def generate_department_report_pdf(request):
                 try:
                     cur_date = date(year, month, int(d))
                     wd = cur_date.weekday()
+                    try:
+                        from schedule.models import get_employee_schedule_for_date
+                        schedule_obj = get_employee_schedule_for_date(inst.employee, cur_date)
+                    except Exception:
+                        schedule_obj = None
+
                     if schedule_obj:
                         if wd == 0:
                             is_workday = bool(getattr(schedule_obj, 'monday', True))

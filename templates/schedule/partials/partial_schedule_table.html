@@ -53,6 +53,10 @@
                                 title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
+                        <button class="btn-views-action" title="Historial de Cambios"
+                                onclick="scheduleInstance.openHistoryModal({{ schedule.id }})">
+                            <i class="fas fa-history"></i>
+                        </button>
                         <button class="{% if schedule.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
                                 onclick="scheduleInstance.toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
                                 title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">

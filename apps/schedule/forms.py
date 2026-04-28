@@ -3,6 +3,7 @@ from .models import Schedule, ScheduleObservation, EmployeeScheduleHistory
 
 
 class ScheduleForm(forms.ModelForm):
+    vigente_desde = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
     class Meta:
         model = Schedule
         fields = '__all__'
@@ -22,6 +23,27 @@ class ScheduleForm(forms.ModelForm):
         if m_start and m_end and not cleaned_data.get('morning_crosses_midnight'):
             if m_start >= m_end:
                 self.add_error('morning_end', 'La hora de fin debe ser posterior al inicio.')
+
+        # Validación de 'vigente_desde' respecto al historial del horario
+        vdesde = cleaned_data.get('vigente_desde')
+        if vdesde:
+            try:
+                from .models import ScheduleChangeHistory
+                if self.instance and self.instance.pk:
+                    last = ScheduleChangeHistory.objects.filter(schedule=self.instance).order_by('-effective_from').first()
+                    if last:
+                        min_date = last.effective_from
+                    else:
+                        # usar la fecha de creación del registro si no hay historial
+                        try:
+                            min_date = self.instance.created_at.date()
+                        except Exception:
+                            min_date = None
+                    if min_date and vdesde < min_date:
+                        self.add_error('vigente_desde', f'La fecha de cambio no puede ser anterior a {min_date.isoformat()}')
+            except Exception:
+                # Si ocurre algún error en validación servidor no bloqueará por fallo interno
+                pass
 
         return cleaned_data
 
