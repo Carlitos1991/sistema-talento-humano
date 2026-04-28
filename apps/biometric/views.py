@@ -2,6 +2,7 @@ import calendar
 import json
 import logging
 from datetime import datetime, date, timedelta
+from datetime import time as dtime
 from django.utils import timezone
 import base64
 import mimetypes
@@ -661,21 +662,69 @@ def generate_monthly_report_pdf(request):
     )
     permits_map = {}
     for pr in permits_qs:
-        start = pr.start_date if pr.start_date >= month_start else month_start
-        end = (pr.end_date or pr.start_date)
-        if end > month_end:
-            end = month_end
-        cur = start
-        while cur <= end:
+        # Normalizar rango dentro del mes
+        start_date = pr.start_date if pr.start_date >= month_start else month_start
+        end_date = (pr.end_date or pr.start_date)
+        if end_date > month_end:
+            end_date = month_end
+
+        # Detectar si el permiso cruza la medianoche (end_time <= start_time)
+        crosses_midnight = False
+        try:
+            if pr.start_time and pr.end_time and pr.end_time <= pr.start_time:
+                crosses_midnight = True
+        except Exception:
+            crosses_midnight = False
+
+        cur = start_date
+        while cur <= end_date:
             d = cur.day
             if d not in permits_map:
                 permits_map[d] = []
-            permits_map[d].append({
-                'type': pr.permit_type.name,
-                'note': pr.response_note or '',
-                'start_time': pr.start_time,
-                'end_time': pr.end_time,
-            })
+
+            # Casos:
+            # - permiso dentro del mismo día: mostrar start_time/end_time
+            # - permiso multi-día (no cruza medianoche): primer día mostrar start->23:59,
+            #   días intermedios 00:00->23:59, último día 00:00->end
+            # - permiso que cruza medianoche: primer día start->00:00, siguiente día 00:00->end
+            entry = {'type': pr.permit_type.name, 'note': pr.response_note or ''}
+
+            if not pr.start_time and not pr.end_time:
+                entry['start_time'] = None
+                entry['end_time'] = None
+            else:
+                # permiso single-day (start_date == end_date and no cross)
+                if (pr.start_date == (pr.end_date or pr.start_date)) and not crosses_midnight:
+                    entry['start_time'] = pr.start_time
+                    entry['end_time'] = pr.end_time
+                else:
+                    # multi-day or crossing
+                    if crosses_midnight:
+                        # si es el primer día (día de inicio real)
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(0, 0)
+                        # si es el día final (día donde termina)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            # días intermedios en permisos largos: mostrar full-day
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
+                    else:
+                        # no cruza medianoche pero abarca varios días
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(23, 59)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
+
+            permits_map[d].append(entry)
             cur = cur + timedelta(days=1)
 
     # --- Feriados (is_holiday=True y activos) y Observaciones (is_holiday=False y activos) ---
