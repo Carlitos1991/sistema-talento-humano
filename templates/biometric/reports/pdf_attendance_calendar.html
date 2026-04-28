@@ -203,7 +203,7 @@
                     <td class="{% if day_obj.is_holiday %}holiday{% endif %} {% if day_obj.no_marks_all_day %}cell-missing{% endif %}">
                         <div class="cell-inner">
                         {% if day_obj.day %}
-                            <div class="day-header">{% if day_obj.has_inconsistency and not day_obj.no_marks_all_day %}<span class="day-number-inconsistency">{{ day_obj.day }}</span>{% else %}{{ day_obj.day }}{% endif %}</div>
+                            <div class="day-header">{% if day_obj.has_inconsistency and not day_obj.no_marks_all_day and summary.inconsistencias %}<span class="day-number-inconsistency">{{ day_obj.day }}</span>{% else %}{{ day_obj.day }}{% endif %}</div>
                             {% if day_obj.is_holiday %}
                                 <div class="holiday-label">{{ day_obj.holi_name }}</div>
                             {% endif %}

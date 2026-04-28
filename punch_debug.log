@@ -150,6 +150,8 @@
 [punch-debug] emp=5828 day=26 ev=J1_out result_row_class=
 [punch-debug] emp=5828 day=26 ev=J2_in ev_dt=2026-02-26 14:00:00 best_dt=2026-02-26 14:39:07 diff_s=2347.0 reason=after best_raw={'time': '14:39', 'device': 'CGIRS', 'dt': datetime.datetime(2026, 2, 26, 14, 39, 7), 'dt_norm': datetime.datetime(2026, 2, 26, 14, 39, 7), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 26, 14, 0), 'assigned': True, 'match_reason': 'after'}
 [punch-debug] emp=5828 day=26 ev=J2_in result_row_class=late
+[punch-debug] emp=5828 day=26 ev=J2_out ev_dt=2026-02-26 17:00:00 best_dt=2026-02-26 17:54:20 diff_s=3260.0 reason=after best_raw={'time': '17:54', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 26, 17, 54, 20), 'dt_norm': datetime.datetime(2026, 2, 26, 17, 54, 20), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 26, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=27 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=27 ev=J1_in ev_dt=2026-02-27 08:00:00 best_dt=2026-02-27 07:59:13 diff_s=-47.0 reason=before best_raw={'time': '07:59', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 7, 59, 13), 'dt_norm': datetime.datetime(2026, 2, 27, 7, 59, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 27, 8, 0), 'assigned': True, 'match_reason': 'before'}
 [punch-debug] emp=5828 day=27 ev=J1_in result_row_class=
@@ -162,42 +164,168 @@
 [punch-debug] emp=5828 day=28 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=1 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=2 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=2 ev=J1_in ev_dt=2026-02-02 08:00:00 best_dt=2026-02-02 07:59:46 diff_s=-14.0 reason=before best_raw={'time': '07:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 2, 7, 59, 46), 'dt_norm': datetime.datetime(2026, 2, 2, 7, 59, 46), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 2, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=2 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=2 ev=J1_out ev_dt=2026-02-02 13:00:00 best_dt=2026-02-02 13:21:45 diff_s=1305.0 reason=after best_raw={'time': '13:21', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 2, 13, 21, 45), 'dt_norm': datetime.datetime(2026, 2, 2, 13, 21, 45), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 2, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=2 ev=J2_in ev_dt=2026-02-02 15:00:00 best_dt=2026-02-02 15:00:11 diff_s=11.0 reason=after best_raw={'time': '15:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 2, 15, 0, 11), 'dt_norm': datetime.datetime(2026, 2, 2, 15, 0, 11), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 2, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=2 ev=J2_out ev_dt=2026-02-02 18:00:00 best_dt=2026-02-02 19:18:22 diff_s=4702.0 reason=after best_raw={'time': '19:18', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 2, 19, 18, 22), 'dt_norm': datetime.datetime(2026, 2, 2, 19, 18, 22), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 2, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=3 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=3 ev=J1_in ev_dt=2026-02-03 08:00:00 best_dt=2026-02-03 07:59:45 diff_s=-15.0 reason=before best_raw={'time': '07:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 3, 7, 59, 45), 'dt_norm': datetime.datetime(2026, 2, 3, 7, 59, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 3, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=3 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=3 ev=J1_out ev_dt=2026-02-03 13:00:00 best_dt=2026-02-03 13:07:30 diff_s=450.0 reason=after best_raw={'time': '13:07', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 3, 13, 7, 30), 'dt_norm': datetime.datetime(2026, 2, 3, 13, 7, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 3, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=3 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=3 ev=J2_in ev_dt=2026-02-03 15:00:00 best_dt=2026-02-03 15:01:35 diff_s=95.0 reason=after best_raw={'time': '15:01', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 3, 15, 1, 35), 'dt_norm': datetime.datetime(2026, 2, 3, 15, 1, 35), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 3, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=3 ev=J2_in result_row_class=late
 [punch-debug] emp=5828 day=4 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=4 ev=J1_in ev_dt=2026-02-04 08:00:00 best_dt=2026-02-04 07:54:45 diff_s=-315.0 reason=before best_raw={'time': '07:54', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 4, 7, 54, 45), 'dt_norm': datetime.datetime(2026, 2, 4, 7, 54, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 4, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=4 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=4 ev=J1_out ev_dt=2026-02-04 13:00:00 best_dt=2026-02-04 13:01:25 diff_s=85.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 4, 13, 1, 25), 'dt_norm': datetime.datetime(2026, 2, 4, 13, 1, 25), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 4, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=4 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=4 ev=J2_in ev_dt=2026-02-04 15:00:00 best_dt=2026-02-04 14:56:46 diff_s=-194.0 reason=before best_raw={'time': '14:56', 'device': '08 Garita', 'dt': datetime.datetime(2026, 2, 4, 14, 56, 46), 'dt_norm': datetime.datetime(2026, 2, 4, 14, 56, 46), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 4, 15, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=4 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=4 ev=J2_out ev_dt=2026-02-04 18:00:00 best_dt=2026-02-04 18:33:50 diff_s=2030.0 reason=after best_raw={'time': '18:33', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 4, 18, 33, 50), 'dt_norm': datetime.datetime(2026, 2, 4, 18, 33, 50), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 4, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=4 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=5 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=5 ev=J1_in ev_dt=2026-02-05 08:00:00 best_dt=2026-02-05 08:00:05 diff_s=5.0 reason=after best_raw={'time': '08:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 8, 0, 5), 'dt_norm': datetime.datetime(2026, 2, 5, 8, 0, 5), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 5, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=5 ev=J1_out ev_dt=2026-02-05 13:00:00 best_dt=2026-02-05 13:06:56 diff_s=416.0 reason=after best_raw={'time': '13:06', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 13, 6, 56), 'dt_norm': datetime.datetime(2026, 2, 5, 13, 6, 56), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 5, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=5 ev=J2_in ev_dt=2026-02-05 15:00:00 best_dt=2026-02-05 15:00:08 diff_s=8.0 reason=after best_raw={'time': '15:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 5, 15, 0, 8), 'dt_norm': datetime.datetime(2026, 2, 5, 15, 0, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 5, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=5 ev=J2_out ev_dt=2026-02-05 18:00:00 best_dt=2026-02-05 18:21:54 diff_s=1314.0 reason=after best_raw={'time': '18:21', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 18, 21, 54), 'dt_norm': datetime.datetime(2026, 2, 5, 18, 21, 54), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 5, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=6 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=6 ev=J1_in ev_dt=2026-02-06 08:00:00 best_dt=2026-02-06 08:00:04 diff_s=4.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 6, 8, 0, 4), 'dt_norm': datetime.datetime(2026, 2, 6, 8, 0, 4), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 6, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=6 ev=J1_out ev_dt=2026-02-06 13:00:00 best_dt=2026-02-06 13:02:15 diff_s=135.0 reason=after best_raw={'time': '13:02', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 13, 2, 15), 'dt_norm': datetime.datetime(2026, 2, 6, 13, 2, 15), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 6, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_in ev_dt=2026-02-06 15:00:00 best_dt=2026-02-06 15:00:13 diff_s=13.0 reason=after best_raw={'time': '15:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 15, 0, 13), 'dt_norm': datetime.datetime(2026, 2, 6, 15, 0, 13), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 6, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_out ev_dt=2026-02-06 18:00:00 best_dt=2026-02-06 18:17:20 diff_s=1040.0 reason=after best_raw={'time': '18:17', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 18, 17, 20), 'dt_norm': datetime.datetime(2026, 2, 6, 18, 17, 20), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 6, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=7 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=8 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=9 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=9 ev=J1_in ev_dt=2026-02-09 08:00:00 best_dt=2026-02-09 08:00:28 diff_s=28.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 9, 8, 0, 28), 'dt_norm': datetime.datetime(2026, 2, 9, 8, 0, 28), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 9, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J1_out ev_dt=2026-02-09 13:00:00 best_dt=2026-02-09 13:01:11 diff_s=71.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 9, 13, 1, 11), 'dt_norm': datetime.datetime(2026, 2, 9, 13, 1, 11), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 9, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_in ev_dt=2026-02-09 14:00:00 best_dt=2026-02-09 13:59:38 diff_s=-22.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 9, 13, 59, 38), 'dt_norm': datetime.datetime(2026, 2, 9, 13, 59, 38), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 9, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=9 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_out ev_dt=2026-02-09 17:00:00 best_dt=2026-02-09 17:42:44 diff_s=2564.0 reason=after best_raw={'time': '17:42', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 9, 17, 42, 44), 'dt_norm': datetime.datetime(2026, 2, 9, 17, 42, 44), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 9, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=10 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=10 ev=J1_in ev_dt=2026-02-10 08:00:00 best_dt=2026-02-10 07:58:37 diff_s=-83.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 10, 7, 58, 37), 'dt_norm': datetime.datetime(2026, 2, 10, 7, 58, 37), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 10, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J1_out ev_dt=2026-02-10 13:00:00 best_dt=2026-02-10 13:01:24 diff_s=84.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 10, 13, 1, 24), 'dt_norm': datetime.datetime(2026, 2, 10, 13, 1, 24), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 10, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_in ev_dt=2026-02-10 14:00:00 best_dt=2026-02-10 13:56:52 diff_s=-188.0 reason=before best_raw={'time': '13:56', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 10, 13, 56, 52), 'dt_norm': datetime.datetime(2026, 2, 10, 13, 56, 52), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 10, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_out ev_dt=2026-02-10 17:00:00 best_dt=2026-02-10 17:34:40 diff_s=2080.0 reason=after best_raw={'time': '17:34', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 10, 17, 34, 40), 'dt_norm': datetime.datetime(2026, 2, 10, 17, 34, 40), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 10, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=11 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=11 ev=J1_in ev_dt=2026-02-11 08:00:00 best_dt=2026-02-11 07:50:13 diff_s=-587.0 reason=before best_raw={'time': '07:50', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 11, 7, 50, 13), 'dt_norm': datetime.datetime(2026, 2, 11, 7, 50, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 11, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=11 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=11 ev=J1_out ev_dt=2026-02-11 13:00:00 best_dt=2026-02-11 13:01:11 diff_s=71.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 11, 13, 1, 11), 'dt_norm': datetime.datetime(2026, 2, 11, 13, 1, 11), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 11, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=11 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=11 ev=J2_in ev_dt=2026-02-11 14:00:00 best_dt=2026-02-11 13:59:48 diff_s=-12.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 11, 13, 59, 48), 'dt_norm': datetime.datetime(2026, 2, 11, 13, 59, 48), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 11, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=11 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=11 ev=J2_out ev_dt=2026-02-11 17:00:00 best_dt=2026-02-11 18:34:48 diff_s=5688.0 reason=after best_raw={'time': '18:34', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 11, 18, 34, 48), 'dt_norm': datetime.datetime(2026, 2, 11, 18, 34, 48), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 11, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=11 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=12 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=12 ev=J1_in ev_dt=2026-02-12 08:00:00 best_dt=2026-02-12 08:00:50 diff_s=50.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 12, 8, 0, 50), 'dt_norm': datetime.datetime(2026, 2, 12, 8, 0, 50), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 12, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=12 ev=J1_out ev_dt=2026-02-12 13:00:00 best_dt=2026-02-12 13:07:34 diff_s=454.0 reason=after best_raw={'time': '13:07', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 12, 13, 7, 34), 'dt_norm': datetime.datetime(2026, 2, 12, 13, 7, 34), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 12, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=12 ev=J2_in ev_dt=2026-02-12 14:00:00 best_dt=2026-02-12 14:00:20 diff_s=20.0 reason=after best_raw={'time': '14:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 12, 14, 0, 20), 'dt_norm': datetime.datetime(2026, 2, 12, 14, 0, 20), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 12, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=12 ev=J2_out ev_dt=2026-02-12 17:00:00 best_dt=2026-02-12 18:30:12 diff_s=5412.0 reason=after best_raw={'time': '18:30', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 12, 18, 30, 12), 'dt_norm': datetime.datetime(2026, 2, 12, 18, 30, 12), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 12, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=13 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=13 ev=J1_in ev_dt=2026-02-13 08:00:00 best_dt=2026-02-13 08:02:46 diff_s=166.0 reason=after best_raw={'time': '08:02', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 13, 8, 2, 46), 'dt_norm': datetime.datetime(2026, 2, 13, 8, 2, 46), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 13, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=13 ev=J1_out ev_dt=2026-02-13 13:00:00 best_dt=2026-02-13 13:35:05 diff_s=2105.0 reason=after best_raw={'time': '13:35', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 13, 13, 35, 5), 'dt_norm': datetime.datetime(2026, 2, 13, 13, 35, 5), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 13, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J1_out result_row_class=
 [punch-debug] emp=5828 day=14 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=15 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=16 schedule=HORARIO NORMAL
-[punch-debug] emp=5828 day=16 ev=J1_in ev_dt=2026-04-16 08:00:00 best_dt=2026-04-16 09:10:45 diff_s=4245.0 reason=after best_raw={'time': '09:10', 'device': 'ML2', 'dt': datetime.datetime(2026, 4, 16, 9, 10, 45), 'dt_norm': datetime.datetime(2026, 4, 16, 9, 10, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 16, 8, 0), 'assigned': True, 'match_reason': 'after'}
-[punch-debug] emp=5828 day=16 ev=J1_in result_row_class=late
-[punch-debug] emp=5828 day=16 ev=J2_in ev_dt=2026-04-16 14:00:00 best_dt=2026-04-16 10:10:52 diff_s=-13748.0 reason=before,far best_raw={'time': '10:10', 'device': 'TTHH', 'dt': datetime.datetime(2026, 4, 16, 10, 10, 52), 'dt_norm': datetime.datetime(2026, 4, 16, 10, 10, 52), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 16, 14, 0), 'assigned': True, 'match_reason': 'before,far'}
-[punch-debug] emp=5828 day=16 ev=J2_in result_row_class=
 [punch-debug] emp=5828 day=17 schedule=HORARIO NORMAL
-[punch-debug] emp=5828 day=17 ev=J1_in ev_dt=2026-04-17 08:00:00 best_dt=2026-04-17 08:29:07 diff_s=1747.0 reason=after best_raw={'time': '08:29', 'device': 'M. Tebaida', 'dt': datetime.datetime(2026, 4, 17, 8, 29, 7), 'dt_norm': datetime.datetime(2026, 4, 17, 8, 29, 7), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 17, 8, 0), 'assigned': True, 'match_reason': 'after'}
-[punch-debug] emp=5828 day=17 ev=J1_in result_row_class=late
 [punch-debug] emp=5828 day=18 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=18 ev=J1_in ev_dt=2026-02-18 08:00:00 best_dt=2026-02-18 08:00:02 diff_s=2.0 reason=after best_raw={'time': '08:00', 'device': '08 Garita', 'dt': datetime.datetime(2026, 2, 18, 8, 0, 2), 'dt_norm': datetime.datetime(2026, 2, 18, 8, 0, 2), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 18, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=18 ev=J1_out ev_dt=2026-02-18 13:00:00 best_dt=2026-02-18 13:03:30 diff_s=210.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 18, 13, 3, 30), 'dt_norm': datetime.datetime(2026, 2, 18, 13, 3, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 18, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=18 ev=J2_in ev_dt=2026-02-18 14:00:00 best_dt=2026-02-18 13:59:49 diff_s=-11.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 18, 13, 59, 49), 'dt_norm': datetime.datetime(2026, 2, 18, 13, 59, 49), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 18, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=18 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=18 ev=J2_out ev_dt=2026-02-18 17:00:00 best_dt=2026-02-18 18:27:05 diff_s=5225.0 reason=after best_raw={'time': '18:27', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 18, 18, 27, 5), 'dt_norm': datetime.datetime(2026, 2, 18, 18, 27, 5), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 18, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=19 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=19 ev=J1_in ev_dt=2026-02-19 08:00:00 best_dt=2026-02-19 07:51:45 diff_s=-495.0 reason=before best_raw={'time': '07:51', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 19, 7, 51, 45), 'dt_norm': datetime.datetime(2026, 2, 19, 7, 51, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 19, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=19 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=19 ev=J1_out ev_dt=2026-02-19 13:00:00 best_dt=2026-02-19 13:05:14 diff_s=314.0 reason=after best_raw={'time': '13:05', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 19, 13, 5, 14), 'dt_norm': datetime.datetime(2026, 2, 19, 13, 5, 14), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 19, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=19 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=19 ev=J2_in ev_dt=2026-02-19 14:00:00 best_dt=2026-02-19 13:58:05 diff_s=-115.0 reason=before best_raw={'time': '13:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 19, 13, 58, 5), 'dt_norm': datetime.datetime(2026, 2, 19, 13, 58, 5), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 19, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=19 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=19 ev=J2_out ev_dt=2026-02-19 17:00:00 best_dt=2026-02-19 18:49:31 diff_s=6571.0 reason=after best_raw={'time': '18:49', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 19, 18, 49, 31), 'dt_norm': datetime.datetime(2026, 2, 19, 18, 49, 31), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 19, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=19 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=20 schedule=HORARIO NORMAL
-[punch-debug] emp=5828 day=20 ev=J2_out ev_dt=2026-04-20 17:00:00 best_dt=2026-04-20 17:07:15 diff_s=435.0 reason=after best_raw={'time': '17:07', 'device': 'TTHH', 'dt': datetime.datetime(2026, 4, 20, 17, 7, 15), 'dt_norm': datetime.datetime(2026, 4, 20, 17, 7, 15), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 20, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J1_in ev_dt=2026-02-20 08:00:00 best_dt=2026-02-20 07:58:00 diff_s=-120.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 7, 58), 'dt_norm': datetime.datetime(2026, 2, 20, 7, 58), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 20, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=20 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=20 ev=J1_out ev_dt=2026-02-20 13:00:00 best_dt=2026-02-20 13:03:30 diff_s=210.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 20, 13, 3, 30), 'dt_norm': datetime.datetime(2026, 2, 20, 13, 3, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 20, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=20 ev=J2_in ev_dt=2026-02-20 14:00:00 best_dt=2026-02-20 14:00:10 diff_s=10.0 reason=after best_raw={'time': '14:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 14, 0, 10), 'dt_norm': datetime.datetime(2026, 2, 20, 14, 0, 10), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 20, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=20 ev=J2_out ev_dt=2026-02-20 17:00:00 best_dt=2026-02-20 17:42:05 diff_s=2525.0 reason=after best_raw={'time': '17:42', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 17, 42, 5), 'dt_norm': datetime.datetime(2026, 2, 20, 17, 42, 5), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 20, 17, 0), 'assigned': True, 'match_reason': 'after'}
 [punch-debug] emp=5828 day=20 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=21 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=22 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=23 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=23 ev=J1_in ev_dt=2026-02-23 08:00:00 best_dt=2026-02-23 08:01:54 diff_s=114.0 reason=after best_raw={'time': '08:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 23, 8, 1, 54), 'dt_norm': datetime.datetime(2026, 2, 23, 8, 1, 54), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 23, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=23 ev=J1_out ev_dt=2026-02-23 13:00:00 best_dt=2026-02-23 13:00:50 diff_s=50.0 reason=after best_raw={'time': '13:00', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 23, 13, 0, 50), 'dt_norm': datetime.datetime(2026, 2, 23, 13, 0, 50), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 23, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=23 ev=J2_in ev_dt=2026-02-23 14:00:00 best_dt=2026-02-23 13:45:06 diff_s=-894.0 reason=before best_raw={'time': '13:45', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 23, 13, 45, 6), 'dt_norm': datetime.datetime(2026, 2, 23, 13, 45, 6), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 23, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=23 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=23 ev=J2_out ev_dt=2026-02-23 17:00:00 best_dt=2026-02-23 17:14:21 diff_s=861.0 reason=after best_raw={'time': '17:14', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 23, 17, 14, 21), 'dt_norm': datetime.datetime(2026, 2, 23, 17, 14, 21), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 23, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=24 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=24 ev=J1_in ev_dt=2026-02-24 08:00:00 best_dt=2026-02-24 07:58:34 diff_s=-86.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 24, 7, 58, 34), 'dt_norm': datetime.datetime(2026, 2, 24, 7, 58, 34), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 24, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=24 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=24 ev=J1_out ev_dt=2026-02-24 13:00:00 best_dt=2026-02-24 13:08:36 diff_s=516.0 reason=after best_raw={'time': '13:08', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 13, 8, 36), 'dt_norm': datetime.datetime(2026, 2, 24, 13, 8, 36), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 24, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=24 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=24 ev=J2_in ev_dt=2026-02-24 14:00:00 best_dt=2026-02-24 13:38:08 diff_s=-1312.0 reason=before best_raw={'time': '13:38', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 13, 38, 8), 'dt_norm': datetime.datetime(2026, 2, 24, 13, 38, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 24, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=24 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=24 ev=J2_out ev_dt=2026-02-24 17:00:00 best_dt=2026-02-24 17:31:10 diff_s=1870.0 reason=after best_raw={'time': '17:31', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 17, 31, 10), 'dt_norm': datetime.datetime(2026, 2, 24, 17, 31, 10), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 24, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=24 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=25 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=25 ev=J1_in ev_dt=2026-02-25 08:00:00 best_dt=2026-02-25 07:58:08 diff_s=-112.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 25, 7, 58, 8), 'dt_norm': datetime.datetime(2026, 2, 25, 7, 58, 8), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 25, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=25 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=25 ev=J1_out ev_dt=2026-02-25 13:00:00 best_dt=2026-02-25 13:02:44 diff_s=164.0 reason=after best_raw={'time': '13:02', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 25, 13, 2, 44), 'dt_norm': datetime.datetime(2026, 2, 25, 13, 2, 44), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 25, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=25 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=25 ev=J2_in ev_dt=2026-02-25 14:00:00 best_dt=2026-02-25 13:55:54 diff_s=-246.0 reason=before best_raw={'time': '13:55', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 25, 13, 55, 54), 'dt_norm': datetime.datetime(2026, 2, 25, 13, 55, 54), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 25, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=25 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=25 ev=J2_out ev_dt=2026-02-25 17:00:00 best_dt=2026-02-25 19:55:34 diff_s=10534.0 reason=after,far best_raw={'time': '19:55', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 25, 19, 55, 34), 'dt_norm': datetime.datetime(2026, 2, 25, 19, 55, 34), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 25, 17, 0), 'assigned': True, 'match_reason': 'after,far'}
+[punch-debug] emp=5828 day=25 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=26 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=26 ev=J1_out ev_dt=2026-02-26 13:00:00 best_dt=2026-02-26 13:58:02 diff_s=3482.0 reason=after best_raw={'time': '13:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 26, 13, 58, 2), 'dt_norm': datetime.datetime(2026, 2, 26, 13, 58, 2), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 26, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=26 ev=J2_in ev_dt=2026-02-26 14:00:00 best_dt=2026-02-26 14:39:07 diff_s=2347.0 reason=after best_raw={'time': '14:39', 'device': 'CGIRS', 'dt': datetime.datetime(2026, 2, 26, 14, 39, 7), 'dt_norm': datetime.datetime(2026, 2, 26, 14, 39, 7), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 26, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J2_in result_row_class=late
+[punch-debug] emp=5828 day=26 ev=J2_out ev_dt=2026-02-26 17:00:00 best_dt=2026-02-26 17:54:20 diff_s=3260.0 reason=after best_raw={'time': '17:54', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 26, 17, 54, 20), 'dt_norm': datetime.datetime(2026, 2, 26, 17, 54, 20), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 26, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=27 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=27 ev=J1_in ev_dt=2026-02-27 08:00:00 best_dt=2026-02-27 07:59:13 diff_s=-47.0 reason=before best_raw={'time': '07:59', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 7, 59, 13), 'dt_norm': datetime.datetime(2026, 2, 27, 7, 59, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 27, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=27 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=27 ev=J1_out ev_dt=2026-02-27 13:00:00 best_dt=2026-02-27 13:10:27 diff_s=627.0 reason=after best_raw={'time': '13:10', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 13, 10, 27), 'dt_norm': datetime.datetime(2026, 2, 27, 13, 10, 27), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 27, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=27 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=27 ev=J2_in ev_dt=2026-02-27 14:00:00 best_dt=2026-02-27 13:45:08 diff_s=-892.0 reason=before best_raw={'time': '13:45', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 13, 45, 8), 'dt_norm': datetime.datetime(2026, 2, 27, 13, 45, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 27, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=27 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=27 ev=J2_out ev_dt=2026-02-27 17:00:00 best_dt=2026-02-27 19:13:14 diff_s=7994.0 reason=after,far best_raw={'time': '19:13', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 19, 13, 14), 'dt_norm': datetime.datetime(2026, 2, 27, 19, 13, 14), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 27, 17, 0), 'assigned': True, 'match_reason': 'after,far'}
+[punch-debug] emp=5828 day=27 ev=J2_out result_row_class=
 [punch-debug] emp=5828 day=28 schedule=HORARIO NORMAL
-[punch-debug] emp=5828 day=29 schedule=HORARIO NORMAL
-[punch-debug] emp=5828 day=30 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=1 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=2 schedule=HORARIO NORMAL
 [punch-debug] emp=5828 day=2 ev=J1_in ev_dt=2026-03-02 08:00:00 best_dt=2026-03-02 08:01:19 diff_s=79.0 reason=after best_raw={'time': '08:01', 'device': 'HALL', 'dt': datetime.datetime(2026, 3, 2, 8, 1, 19), 'dt_norm': datetime.datetime(2026, 3, 2, 8, 1, 19), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 3, 2, 8, 0), 'assigned': True, 'match_reason': 'after'}
@@ -397,3 +525,275 @@
 [punch-debug] emp=5828 day=31 ev=J2_in result_row_class=
 [punch-debug] emp=5828 day=31 ev=J2_out ev_dt=2026-03-31 17:00:00 best_dt=2026-03-31 17:25:35 diff_s=1535.0 reason=after best_raw={'time': '17:25', 'device': 'S. General', 'dt': datetime.datetime(2026, 3, 31, 17, 25, 35), 'dt_norm': datetime.datetime(2026, 3, 31, 17, 25, 35), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 3, 31, 17, 0), 'assigned': True, 'match_reason': 'after'}
 [punch-debug] emp=5828 day=31 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=1 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=1 ev=J1_in ev_dt=2026-04-01 08:00:00 best_dt=2026-04-01 07:58:44 diff_s=-76.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 1, 7, 58, 44), 'dt_norm': datetime.datetime(2026, 4, 1, 7, 58, 44), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 1, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=1 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=1 ev=J1_out ev_dt=2026-04-01 13:00:00 best_dt=2026-04-01 13:03:47 diff_s=227.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 1, 13, 3, 47), 'dt_norm': datetime.datetime(2026, 4, 1, 13, 3, 47), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 1, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=1 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=1 ev=J2_in ev_dt=2026-04-01 14:00:00 best_dt=2026-04-01 14:00:03 diff_s=3.0 reason=after best_raw={'time': '14:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 1, 14, 0, 3), 'dt_norm': datetime.datetime(2026, 4, 1, 14, 0, 3), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 1, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=1 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=1 ev=J2_out ev_dt=2026-04-01 17:00:00 best_dt=2026-04-01 17:09:28 diff_s=568.0 reason=after best_raw={'time': '17:09', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 1, 17, 9, 28), 'dt_norm': datetime.datetime(2026, 4, 1, 17, 9, 28), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 1, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=1 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=2 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=3 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=4 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=5 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=6 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=6 ev=J1_in ev_dt=2026-04-06 08:00:00 best_dt=2026-04-06 08:02:07 diff_s=127.0 reason=after best_raw={'time': '08:02', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 6, 8, 2, 7), 'dt_norm': datetime.datetime(2026, 4, 6, 8, 2, 7), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 6, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=6 ev=J1_out ev_dt=2026-04-06 13:00:00 best_dt=2026-04-06 13:03:35 diff_s=215.0 reason=after best_raw={'time': '13:03', 'device': '08 Garita', 'dt': datetime.datetime(2026, 4, 6, 13, 3, 35), 'dt_norm': datetime.datetime(2026, 4, 6, 13, 3, 35), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 6, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_in ev_dt=2026-04-06 14:00:00 best_dt=2026-04-06 13:46:58 diff_s=-782.0 reason=before best_raw={'time': '13:46', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 6, 13, 46, 58), 'dt_norm': datetime.datetime(2026, 4, 6, 13, 46, 58), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 6, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=6 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_out ev_dt=2026-04-06 17:00:00 best_dt=2026-04-06 17:31:46 diff_s=1906.0 reason=after best_raw={'time': '17:31', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 6, 17, 31, 46), 'dt_norm': datetime.datetime(2026, 4, 6, 17, 31, 46), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 6, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=7 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=7 ev=J1_in ev_dt=2026-04-07 08:00:00 best_dt=2026-04-07 08:00:11 diff_s=11.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 7, 8, 0, 11), 'dt_norm': datetime.datetime(2026, 4, 7, 8, 0, 11), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 7, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=7 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=7 ev=J1_out ev_dt=2026-04-07 13:00:00 best_dt=2026-04-07 13:11:21 diff_s=681.0 reason=after best_raw={'time': '13:11', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 7, 13, 11, 21), 'dt_norm': datetime.datetime(2026, 4, 7, 13, 11, 21), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 7, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=7 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=7 ev=J2_in ev_dt=2026-04-07 14:00:00 best_dt=2026-04-07 13:55:12 diff_s=-288.0 reason=before best_raw={'time': '13:55', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 7, 13, 55, 12), 'dt_norm': datetime.datetime(2026, 4, 7, 13, 55, 12), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 7, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=7 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=7 ev=J2_out ev_dt=2026-04-07 17:00:00 best_dt=2026-04-07 17:39:16 diff_s=2356.0 reason=after best_raw={'time': '17:39', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 7, 17, 39, 16), 'dt_norm': datetime.datetime(2026, 4, 7, 17, 39, 16), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 7, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=7 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=8 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=8 ev=J1_in ev_dt=2026-04-08 08:00:00 best_dt=2026-04-08 08:00:44 diff_s=44.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 8, 8, 0, 44), 'dt_norm': datetime.datetime(2026, 4, 8, 8, 0, 44), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 8, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=8 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=8 ev=J1_out ev_dt=2026-04-08 13:00:00 best_dt=2026-04-08 13:11:11 diff_s=671.0 reason=after best_raw={'time': '13:11', 'device': '08 Garita', 'dt': datetime.datetime(2026, 4, 8, 13, 11, 11), 'dt_norm': datetime.datetime(2026, 4, 8, 13, 11, 11), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 8, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=8 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=8 ev=J2_in ev_dt=2026-04-08 14:00:00 best_dt=2026-04-08 14:00:48 diff_s=48.0 reason=after best_raw={'time': '14:00', 'device': '08 Garita', 'dt': datetime.datetime(2026, 4, 8, 14, 0, 48), 'dt_norm': datetime.datetime(2026, 4, 8, 14, 0, 48), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 8, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=8 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=8 ev=J2_out ev_dt=2026-04-08 17:00:00 best_dt=2026-04-08 17:37:27 diff_s=2247.0 reason=after best_raw={'time': '17:37', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 8, 17, 37, 27), 'dt_norm': datetime.datetime(2026, 4, 8, 17, 37, 27), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 8, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=8 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=9 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=9 ev=J1_in ev_dt=2026-04-09 08:00:00 best_dt=2026-04-09 08:00:10 diff_s=10.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 9, 8, 0, 10), 'dt_norm': datetime.datetime(2026, 4, 9, 8, 0, 10), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 9, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J1_out ev_dt=2026-04-09 13:00:00 best_dt=2026-04-09 13:04:00 diff_s=240.0 reason=after best_raw={'time': '13:04', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 9, 13, 4), 'dt_norm': datetime.datetime(2026, 4, 9, 13, 4), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 9, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_in ev_dt=2026-04-09 14:00:00 best_dt=2026-04-09 13:41:26 diff_s=-1114.0 reason=before best_raw={'time': '13:41', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 9, 13, 41, 26), 'dt_norm': datetime.datetime(2026, 4, 9, 13, 41, 26), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 9, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=9 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_out ev_dt=2026-04-09 17:00:00 best_dt=2026-04-09 18:17:42 diff_s=4662.0 reason=after best_raw={'time': '18:17', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 9, 18, 17, 42), 'dt_norm': datetime.datetime(2026, 4, 9, 18, 17, 42), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 9, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=10 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=10 ev=J1_in ev_dt=2026-04-10 08:00:00 best_dt=2026-04-10 07:57:17 diff_s=-163.0 reason=before best_raw={'time': '07:57', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 10, 7, 57, 17), 'dt_norm': datetime.datetime(2026, 4, 10, 7, 57, 17), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 10, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J1_out ev_dt=2026-04-10 13:00:00 best_dt=2026-04-10 13:01:58 diff_s=118.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 10, 13, 1, 58), 'dt_norm': datetime.datetime(2026, 4, 10, 13, 1, 58), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 10, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_in ev_dt=2026-04-10 14:00:00 best_dt=2026-04-10 13:39:00 diff_s=-1260.0 reason=before best_raw={'time': '13:39', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 10, 13, 39), 'dt_norm': datetime.datetime(2026, 4, 10, 13, 39), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 10, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_out ev_dt=2026-04-10 17:00:00 best_dt=2026-04-10 17:13:15 diff_s=795.0 reason=after best_raw={'time': '17:13', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 10, 17, 13, 15), 'dt_norm': datetime.datetime(2026, 4, 10, 17, 13, 15), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 10, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=11 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=12 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=13 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=13 ev=J1_in ev_dt=2026-04-13 08:00:00 best_dt=2026-04-13 07:59:42 diff_s=-18.0 reason=before best_raw={'time': '07:59', 'device': '08 Garita', 'dt': datetime.datetime(2026, 4, 13, 7, 59, 42), 'dt_norm': datetime.datetime(2026, 4, 13, 7, 59, 42), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 13, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=13 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=13 ev=J1_out ev_dt=2026-04-13 13:00:00 best_dt=2026-04-13 13:09:45 diff_s=585.0 reason=after best_raw={'time': '13:09', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 13, 13, 9, 45), 'dt_norm': datetime.datetime(2026, 4, 13, 13, 9, 45), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 13, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=13 ev=J2_in ev_dt=2026-04-13 14:00:00 best_dt=2026-04-13 13:44:15 diff_s=-945.0 reason=before best_raw={'time': '13:44', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 13, 13, 44, 15), 'dt_norm': datetime.datetime(2026, 4, 13, 13, 44, 15), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 13, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=13 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=13 ev=J2_out ev_dt=2026-04-13 17:00:00 best_dt=2026-04-13 17:08:39 diff_s=519.0 reason=after best_raw={'time': '17:08', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 13, 17, 8, 39), 'dt_norm': datetime.datetime(2026, 4, 13, 17, 8, 39), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 13, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=14 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=14 ev=J1_in ev_dt=2026-04-14 08:00:00 best_dt=2026-04-14 07:51:10 diff_s=-530.0 reason=before best_raw={'time': '07:51', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 14, 7, 51, 10), 'dt_norm': datetime.datetime(2026, 4, 14, 7, 51, 10), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 14, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=14 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=14 ev=J1_out ev_dt=2026-04-14 13:00:00 best_dt=2026-04-14 13:01:16 diff_s=76.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 14, 13, 1, 16), 'dt_norm': datetime.datetime(2026, 4, 14, 13, 1, 16), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 14, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=14 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=15 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=15 ev=J1_in ev_dt=2026-04-15 08:00:00 best_dt=2026-04-15 08:02:13 diff_s=133.0 reason=after best_raw={'time': '08:02', 'device': '08 Garita', 'dt': datetime.datetime(2026, 4, 15, 8, 2, 13), 'dt_norm': datetime.datetime(2026, 4, 15, 8, 2, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 15, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=15 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=15 ev=J1_out ev_dt=2026-04-15 13:00:00 best_dt=2026-04-15 13:03:15 diff_s=195.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 15, 13, 3, 15), 'dt_norm': datetime.datetime(2026, 4, 15, 13, 3, 15), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 15, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=15 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=15 ev=J2_in ev_dt=2026-04-15 14:00:00 best_dt=2026-04-15 14:01:30 diff_s=90.0 reason=after best_raw={'time': '14:01', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 15, 14, 1, 30), 'dt_norm': datetime.datetime(2026, 4, 15, 14, 1, 30), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 15, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=15 ev=J2_in result_row_class=late
+[punch-debug] emp=5828 day=15 ev=J2_out ev_dt=2026-04-15 17:00:00 best_dt=2026-04-15 19:06:39 diff_s=7599.0 reason=after,far best_raw={'time': '19:06', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 15, 19, 6, 39), 'dt_norm': datetime.datetime(2026, 4, 15, 19, 6, 39), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 15, 17, 0), 'assigned': True, 'match_reason': 'after,far'}
+[punch-debug] emp=5828 day=15 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=16 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=16 ev=J1_in ev_dt=2026-04-16 08:00:00 best_dt=2026-04-16 08:00:31 diff_s=31.0 reason=after best_raw={'time': '08:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 16, 8, 0, 31), 'dt_norm': datetime.datetime(2026, 4, 16, 8, 0, 31), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 16, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=16 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=16 ev=J1_out ev_dt=2026-04-16 13:00:00 best_dt=2026-04-16 13:01:04 diff_s=64.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 16, 13, 1, 4), 'dt_norm': datetime.datetime(2026, 4, 16, 13, 1, 4), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 4, 16, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=16 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=16 ev=J2_in ev_dt=2026-04-16 14:00:00 best_dt=2026-04-16 13:59:41 diff_s=-19.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 4, 16, 13, 59, 41), 'dt_norm': datetime.datetime(2026, 4, 16, 13, 59, 41), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 4, 16, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=16 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=17 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=17 ev=J1_in ev_dt=2026-04-17 08:00:00 best_dt=2026-04-17 08:00:30 diff_s=30.0 reason=after best_raw={'time': '08:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 4, 17, 8, 0, 30), 'dt_norm': datetime.datetime(2026, 4, 17, 8, 0, 30), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 4, 17, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=17 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=18 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=19 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=20 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=20 ev=J2_out ev_dt=2026-04-20 17:00:00 best_dt=2026-04-20 17:07:15 diff_s=435.0 reason=after best_raw={'time': '17:07', 'device': 'TTHH', 'dt': datetime.datetime(2026, 4, 20, 17, 7, 15), 'dt_norm': datetime.datetime(2026, 4, 20, 17, 7, 15), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 4, 20, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=21 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=22 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=23 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=24 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=25 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=26 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=27 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=28 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=29 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=30 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=1 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=2 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=2 ev=J1_in ev_dt=2026-02-02 08:00:00 best_dt=2026-02-02 07:59:46 diff_s=-14.0 reason=before best_raw={'time': '07:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 2, 7, 59, 46), 'dt_norm': datetime.datetime(2026, 2, 2, 7, 59, 46), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 2, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=2 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=2 ev=J1_out ev_dt=2026-02-02 13:00:00 best_dt=2026-02-02 13:21:45 diff_s=1305.0 reason=after best_raw={'time': '13:21', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 2, 13, 21, 45), 'dt_norm': datetime.datetime(2026, 2, 2, 13, 21, 45), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 2, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=2 ev=J2_in ev_dt=2026-02-02 15:00:00 best_dt=2026-02-02 15:00:11 diff_s=11.0 reason=after best_raw={'time': '15:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 2, 15, 0, 11), 'dt_norm': datetime.datetime(2026, 2, 2, 15, 0, 11), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 2, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=2 ev=J2_out ev_dt=2026-02-02 18:00:00 best_dt=2026-02-02 19:18:22 diff_s=4702.0 reason=after best_raw={'time': '19:18', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 2, 19, 18, 22), 'dt_norm': datetime.datetime(2026, 2, 2, 19, 18, 22), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 2, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=2 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=3 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=3 ev=J1_in ev_dt=2026-02-03 08:00:00 best_dt=2026-02-03 07:59:45 diff_s=-15.0 reason=before best_raw={'time': '07:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 3, 7, 59, 45), 'dt_norm': datetime.datetime(2026, 2, 3, 7, 59, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 3, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=3 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=3 ev=J1_out ev_dt=2026-02-03 13:00:00 best_dt=2026-02-03 13:07:30 diff_s=450.0 reason=after best_raw={'time': '13:07', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 3, 13, 7, 30), 'dt_norm': datetime.datetime(2026, 2, 3, 13, 7, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 3, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=3 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=3 ev=J2_in ev_dt=2026-02-03 15:00:00 best_dt=2026-02-03 15:01:35 diff_s=95.0 reason=after best_raw={'time': '15:01', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 3, 15, 1, 35), 'dt_norm': datetime.datetime(2026, 2, 3, 15, 1, 35), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 3, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=3 ev=J2_in result_row_class=late
+[punch-debug] emp=5828 day=4 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=4 ev=J1_in ev_dt=2026-02-04 08:00:00 best_dt=2026-02-04 07:54:45 diff_s=-315.0 reason=before best_raw={'time': '07:54', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 4, 7, 54, 45), 'dt_norm': datetime.datetime(2026, 2, 4, 7, 54, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 4, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=4 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=4 ev=J1_out ev_dt=2026-02-04 13:00:00 best_dt=2026-02-04 13:01:25 diff_s=85.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 4, 13, 1, 25), 'dt_norm': datetime.datetime(2026, 2, 4, 13, 1, 25), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 4, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=4 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=4 ev=J2_in ev_dt=2026-02-04 15:00:00 best_dt=2026-02-04 14:56:46 diff_s=-194.0 reason=before best_raw={'time': '14:56', 'device': '08 Garita', 'dt': datetime.datetime(2026, 2, 4, 14, 56, 46), 'dt_norm': datetime.datetime(2026, 2, 4, 14, 56, 46), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 4, 15, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=4 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=4 ev=J2_out ev_dt=2026-02-04 18:00:00 best_dt=2026-02-04 18:33:50 diff_s=2030.0 reason=after best_raw={'time': '18:33', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 4, 18, 33, 50), 'dt_norm': datetime.datetime(2026, 2, 4, 18, 33, 50), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 4, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=4 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=5 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=5 ev=J1_in ev_dt=2026-02-05 08:00:00 best_dt=2026-02-05 08:00:05 diff_s=5.0 reason=after best_raw={'time': '08:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 8, 0, 5), 'dt_norm': datetime.datetime(2026, 2, 5, 8, 0, 5), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 5, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=5 ev=J1_out ev_dt=2026-02-05 13:00:00 best_dt=2026-02-05 13:06:56 diff_s=416.0 reason=after best_raw={'time': '13:06', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 13, 6, 56), 'dt_norm': datetime.datetime(2026, 2, 5, 13, 6, 56), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 5, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=5 ev=J2_in ev_dt=2026-02-05 15:00:00 best_dt=2026-02-05 15:00:08 diff_s=8.0 reason=after best_raw={'time': '15:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 5, 15, 0, 8), 'dt_norm': datetime.datetime(2026, 2, 5, 15, 0, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 5, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=5 ev=J2_out ev_dt=2026-02-05 18:00:00 best_dt=2026-02-05 18:21:54 diff_s=1314.0 reason=after best_raw={'time': '18:21', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 5, 18, 21, 54), 'dt_norm': datetime.datetime(2026, 2, 5, 18, 21, 54), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 5, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=5 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=6 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=6 ev=J1_in ev_dt=2026-02-06 08:00:00 best_dt=2026-02-06 08:00:04 diff_s=4.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 6, 8, 0, 4), 'dt_norm': datetime.datetime(2026, 2, 6, 8, 0, 4), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 6, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=6 ev=J1_out ev_dt=2026-02-06 13:00:00 best_dt=2026-02-06 13:02:15 diff_s=135.0 reason=after best_raw={'time': '13:02', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 13, 2, 15), 'dt_norm': datetime.datetime(2026, 2, 6, 13, 2, 15), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 6, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_in ev_dt=2026-02-06 15:00:00 best_dt=2026-02-06 15:00:13 diff_s=13.0 reason=after best_raw={'time': '15:00', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 15, 0, 13), 'dt_norm': datetime.datetime(2026, 2, 6, 15, 0, 13), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 6, 15, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=6 ev=J2_out ev_dt=2026-02-06 18:00:00 best_dt=2026-02-06 18:17:20 diff_s=1040.0 reason=after best_raw={'time': '18:17', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 6, 18, 17, 20), 'dt_norm': datetime.datetime(2026, 2, 6, 18, 17, 20), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 6, 18, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=6 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=7 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=8 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=9 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=9 ev=J1_in ev_dt=2026-02-09 08:00:00 best_dt=2026-02-09 08:00:28 diff_s=28.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 9, 8, 0, 28), 'dt_norm': datetime.datetime(2026, 2, 9, 8, 0, 28), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 9, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J1_out ev_dt=2026-02-09 13:00:00 best_dt=2026-02-09 13:01:11 diff_s=71.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 9, 13, 1, 11), 'dt_norm': datetime.datetime(2026, 2, 9, 13, 1, 11), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 9, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_in ev_dt=2026-02-09 14:00:00 best_dt=2026-02-09 13:59:38 diff_s=-22.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 9, 13, 59, 38), 'dt_norm': datetime.datetime(2026, 2, 9, 13, 59, 38), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 9, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=9 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=9 ev=J2_out ev_dt=2026-02-09 17:00:00 best_dt=2026-02-09 17:42:44 diff_s=2564.0 reason=after best_raw={'time': '17:42', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 9, 17, 42, 44), 'dt_norm': datetime.datetime(2026, 2, 9, 17, 42, 44), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 9, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=9 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=10 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=10 ev=J1_in ev_dt=2026-02-10 08:00:00 best_dt=2026-02-10 07:58:37 diff_s=-83.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 10, 7, 58, 37), 'dt_norm': datetime.datetime(2026, 2, 10, 7, 58, 37), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 10, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J1_out ev_dt=2026-02-10 13:00:00 best_dt=2026-02-10 13:01:24 diff_s=84.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 10, 13, 1, 24), 'dt_norm': datetime.datetime(2026, 2, 10, 13, 1, 24), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 10, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_in ev_dt=2026-02-10 14:00:00 best_dt=2026-02-10 13:56:52 diff_s=-188.0 reason=before best_raw={'time': '13:56', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 10, 13, 56, 52), 'dt_norm': datetime.datetime(2026, 2, 10, 13, 56, 52), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 10, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=10 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=10 ev=J2_out ev_dt=2026-02-10 17:00:00 best_dt=2026-02-10 17:34:40 diff_s=2080.0 reason=after best_raw={'time': '17:34', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 10, 17, 34, 40), 'dt_norm': datetime.datetime(2026, 2, 10, 17, 34, 40), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 10, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=10 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=11 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=11 ev=J1_in ev_dt=2026-02-11 08:00:00 best_dt=2026-02-11 07:50:13 diff_s=-587.0 reason=before best_raw={'time': '07:50', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 11, 7, 50, 13), 'dt_norm': datetime.datetime(2026, 2, 11, 7, 50, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 11, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=11 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=11 ev=J1_out ev_dt=2026-02-11 13:00:00 best_dt=2026-02-11 13:01:11 diff_s=71.0 reason=after best_raw={'time': '13:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 11, 13, 1, 11), 'dt_norm': datetime.datetime(2026, 2, 11, 13, 1, 11), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 11, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=11 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=11 ev=J2_in ev_dt=2026-02-11 14:00:00 best_dt=2026-02-11 13:59:48 diff_s=-12.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 11, 13, 59, 48), 'dt_norm': datetime.datetime(2026, 2, 11, 13, 59, 48), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 11, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=11 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=11 ev=J2_out ev_dt=2026-02-11 17:00:00 best_dt=2026-02-11 18:34:48 diff_s=5688.0 reason=after best_raw={'time': '18:34', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 11, 18, 34, 48), 'dt_norm': datetime.datetime(2026, 2, 11, 18, 34, 48), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 11, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=11 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=12 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=12 ev=J1_in ev_dt=2026-02-12 08:00:00 best_dt=2026-02-12 08:00:50 diff_s=50.0 reason=after best_raw={'time': '08:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 12, 8, 0, 50), 'dt_norm': datetime.datetime(2026, 2, 12, 8, 0, 50), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 12, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=12 ev=J1_out ev_dt=2026-02-12 13:00:00 best_dt=2026-02-12 13:07:34 diff_s=454.0 reason=after best_raw={'time': '13:07', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 12, 13, 7, 34), 'dt_norm': datetime.datetime(2026, 2, 12, 13, 7, 34), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 12, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=12 ev=J2_in ev_dt=2026-02-12 14:00:00 best_dt=2026-02-12 14:00:20 diff_s=20.0 reason=after best_raw={'time': '14:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 12, 14, 0, 20), 'dt_norm': datetime.datetime(2026, 2, 12, 14, 0, 20), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 12, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=12 ev=J2_out ev_dt=2026-02-12 17:00:00 best_dt=2026-02-12 18:30:12 diff_s=5412.0 reason=after best_raw={'time': '18:30', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 12, 18, 30, 12), 'dt_norm': datetime.datetime(2026, 2, 12, 18, 30, 12), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 12, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=12 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=13 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=13 ev=J1_in ev_dt=2026-02-13 08:00:00 best_dt=2026-02-13 08:02:46 diff_s=166.0 reason=after best_raw={'time': '08:02', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 13, 8, 2, 46), 'dt_norm': datetime.datetime(2026, 2, 13, 8, 2, 46), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 13, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=13 ev=J1_out ev_dt=2026-02-13 13:00:00 best_dt=2026-02-13 13:35:05 diff_s=2105.0 reason=after best_raw={'time': '13:35', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 13, 13, 35, 5), 'dt_norm': datetime.datetime(2026, 2, 13, 13, 35, 5), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 13, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=13 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=14 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=15 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=16 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=17 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=18 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=18 ev=J1_in ev_dt=2026-02-18 08:00:00 best_dt=2026-02-18 08:00:02 diff_s=2.0 reason=after best_raw={'time': '08:00', 'device': '08 Garita', 'dt': datetime.datetime(2026, 2, 18, 8, 0, 2), 'dt_norm': datetime.datetime(2026, 2, 18, 8, 0, 2), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 18, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=18 ev=J1_out ev_dt=2026-02-18 13:00:00 best_dt=2026-02-18 13:03:30 diff_s=210.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 18, 13, 3, 30), 'dt_norm': datetime.datetime(2026, 2, 18, 13, 3, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 18, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=18 ev=J2_in ev_dt=2026-02-18 14:00:00 best_dt=2026-02-18 13:59:49 diff_s=-11.0 reason=before best_raw={'time': '13:59', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 18, 13, 59, 49), 'dt_norm': datetime.datetime(2026, 2, 18, 13, 59, 49), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 18, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=18 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=18 ev=J2_out ev_dt=2026-02-18 17:00:00 best_dt=2026-02-18 18:27:05 diff_s=5225.0 reason=after best_raw={'time': '18:27', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 18, 18, 27, 5), 'dt_norm': datetime.datetime(2026, 2, 18, 18, 27, 5), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 18, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=18 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=19 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=19 ev=J1_in ev_dt=2026-02-19 08:00:00 best_dt=2026-02-19 07:51:45 diff_s=-495.0 reason=before best_raw={'time': '07:51', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 19, 7, 51, 45), 'dt_norm': datetime.datetime(2026, 2, 19, 7, 51, 45), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 19, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=19 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=19 ev=J1_out ev_dt=2026-02-19 13:00:00 best_dt=2026-02-19 13:05:14 diff_s=314.0 reason=after best_raw={'time': '13:05', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 19, 13, 5, 14), 'dt_norm': datetime.datetime(2026, 2, 19, 13, 5, 14), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 19, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=19 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=19 ev=J2_in ev_dt=2026-02-19 14:00:00 best_dt=2026-02-19 13:58:05 diff_s=-115.0 reason=before best_raw={'time': '13:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 19, 13, 58, 5), 'dt_norm': datetime.datetime(2026, 2, 19, 13, 58, 5), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 19, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=19 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=19 ev=J2_out ev_dt=2026-02-19 17:00:00 best_dt=2026-02-19 18:49:31 diff_s=6571.0 reason=after best_raw={'time': '18:49', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 19, 18, 49, 31), 'dt_norm': datetime.datetime(2026, 2, 19, 18, 49, 31), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 19, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=19 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=20 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=20 ev=J1_in ev_dt=2026-02-20 08:00:00 best_dt=2026-02-20 07:58:00 diff_s=-120.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 7, 58), 'dt_norm': datetime.datetime(2026, 2, 20, 7, 58), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 20, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=20 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=20 ev=J1_out ev_dt=2026-02-20 13:00:00 best_dt=2026-02-20 13:03:30 diff_s=210.0 reason=after best_raw={'time': '13:03', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 20, 13, 3, 30), 'dt_norm': datetime.datetime(2026, 2, 20, 13, 3, 30), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 20, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=20 ev=J2_in ev_dt=2026-02-20 14:00:00 best_dt=2026-02-20 14:00:10 diff_s=10.0 reason=after best_raw={'time': '14:00', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 14, 0, 10), 'dt_norm': datetime.datetime(2026, 2, 20, 14, 0, 10), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 20, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=20 ev=J2_out ev_dt=2026-02-20 17:00:00 best_dt=2026-02-20 17:42:05 diff_s=2525.0 reason=after best_raw={'time': '17:42', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 20, 17, 42, 5), 'dt_norm': datetime.datetime(2026, 2, 20, 17, 42, 5), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 20, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=20 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=21 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=22 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=23 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=23 ev=J1_in ev_dt=2026-02-23 08:00:00 best_dt=2026-02-23 08:01:54 diff_s=114.0 reason=after best_raw={'time': '08:01', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 23, 8, 1, 54), 'dt_norm': datetime.datetime(2026, 2, 23, 8, 1, 54), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 23, 8, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J1_in result_row_class=late
+[punch-debug] emp=5828 day=23 ev=J1_out ev_dt=2026-02-23 13:00:00 best_dt=2026-02-23 13:00:50 diff_s=50.0 reason=after best_raw={'time': '13:00', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 23, 13, 0, 50), 'dt_norm': datetime.datetime(2026, 2, 23, 13, 0, 50), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 23, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=23 ev=J2_in ev_dt=2026-02-23 14:00:00 best_dt=2026-02-23 13:45:06 diff_s=-894.0 reason=before best_raw={'time': '13:45', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 23, 13, 45, 6), 'dt_norm': datetime.datetime(2026, 2, 23, 13, 45, 6), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 23, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=23 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=23 ev=J2_out ev_dt=2026-02-23 17:00:00 best_dt=2026-02-23 17:14:21 diff_s=861.0 reason=after best_raw={'time': '17:14', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 23, 17, 14, 21), 'dt_norm': datetime.datetime(2026, 2, 23, 17, 14, 21), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 23, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=23 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=24 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=24 ev=J1_in ev_dt=2026-02-24 08:00:00 best_dt=2026-02-24 07:58:34 diff_s=-86.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 24, 7, 58, 34), 'dt_norm': datetime.datetime(2026, 2, 24, 7, 58, 34), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 24, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=24 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=24 ev=J1_out ev_dt=2026-02-24 13:00:00 best_dt=2026-02-24 13:08:36 diff_s=516.0 reason=after best_raw={'time': '13:08', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 13, 8, 36), 'dt_norm': datetime.datetime(2026, 2, 24, 13, 8, 36), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 24, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=24 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=24 ev=J2_in ev_dt=2026-02-24 14:00:00 best_dt=2026-02-24 13:38:08 diff_s=-1312.0 reason=before best_raw={'time': '13:38', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 13, 38, 8), 'dt_norm': datetime.datetime(2026, 2, 24, 13, 38, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 24, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=24 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=24 ev=J2_out ev_dt=2026-02-24 17:00:00 best_dt=2026-02-24 17:31:10 diff_s=1870.0 reason=after best_raw={'time': '17:31', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 24, 17, 31, 10), 'dt_norm': datetime.datetime(2026, 2, 24, 17, 31, 10), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 24, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=24 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=25 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=25 ev=J1_in ev_dt=2026-02-25 08:00:00 best_dt=2026-02-25 07:58:08 diff_s=-112.0 reason=before best_raw={'time': '07:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 25, 7, 58, 8), 'dt_norm': datetime.datetime(2026, 2, 25, 7, 58, 8), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 25, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=25 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=25 ev=J1_out ev_dt=2026-02-25 13:00:00 best_dt=2026-02-25 13:02:44 diff_s=164.0 reason=after best_raw={'time': '13:02', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 25, 13, 2, 44), 'dt_norm': datetime.datetime(2026, 2, 25, 13, 2, 44), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 25, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=25 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=25 ev=J2_in ev_dt=2026-02-25 14:00:00 best_dt=2026-02-25 13:55:54 diff_s=-246.0 reason=before best_raw={'time': '13:55', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 25, 13, 55, 54), 'dt_norm': datetime.datetime(2026, 2, 25, 13, 55, 54), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 25, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=25 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=25 ev=J2_out ev_dt=2026-02-25 17:00:00 best_dt=2026-02-25 19:55:34 diff_s=10534.0 reason=after,far best_raw={'time': '19:55', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 25, 19, 55, 34), 'dt_norm': datetime.datetime(2026, 2, 25, 19, 55, 34), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 25, 17, 0), 'assigned': True, 'match_reason': 'after,far'}
+[punch-debug] emp=5828 day=25 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=26 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=26 ev=J1_out ev_dt=2026-02-26 13:00:00 best_dt=2026-02-26 13:58:02 diff_s=3482.0 reason=after best_raw={'time': '13:58', 'device': 'HALL', 'dt': datetime.datetime(2026, 2, 26, 13, 58, 2), 'dt_norm': datetime.datetime(2026, 2, 26, 13, 58, 2), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 26, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=26 ev=J2_in ev_dt=2026-02-26 14:00:00 best_dt=2026-02-26 14:39:07 diff_s=2347.0 reason=after best_raw={'time': '14:39', 'device': 'CGIRS', 'dt': datetime.datetime(2026, 2, 26, 14, 39, 7), 'dt_norm': datetime.datetime(2026, 2, 26, 14, 39, 7), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 26, 14, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J2_in result_row_class=late
+[punch-debug] emp=5828 day=26 ev=J2_out ev_dt=2026-02-26 17:00:00 best_dt=2026-02-26 17:54:20 diff_s=3260.0 reason=after best_raw={'time': '17:54', 'device': 'TTHH', 'dt': datetime.datetime(2026, 2, 26, 17, 54, 20), 'dt_norm': datetime.datetime(2026, 2, 26, 17, 54, 20), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 26, 17, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=26 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=27 schedule=HORARIO NORMAL
+[punch-debug] emp=5828 day=27 ev=J1_in ev_dt=2026-02-27 08:00:00 best_dt=2026-02-27 07:59:13 diff_s=-47.0 reason=before best_raw={'time': '07:59', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 7, 59, 13), 'dt_norm': datetime.datetime(2026, 2, 27, 7, 59, 13), 'matched_event': 'J1_in', 'matched_event_dt': datetime.datetime(2026, 2, 27, 8, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=27 ev=J1_in result_row_class=
+[punch-debug] emp=5828 day=27 ev=J1_out ev_dt=2026-02-27 13:00:00 best_dt=2026-02-27 13:10:27 diff_s=627.0 reason=after best_raw={'time': '13:10', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 13, 10, 27), 'dt_norm': datetime.datetime(2026, 2, 27, 13, 10, 27), 'matched_event': 'J1_out', 'matched_event_dt': datetime.datetime(2026, 2, 27, 13, 0), 'assigned': True, 'match_reason': 'after'}
+[punch-debug] emp=5828 day=27 ev=J1_out result_row_class=
+[punch-debug] emp=5828 day=27 ev=J2_in ev_dt=2026-02-27 14:00:00 best_dt=2026-02-27 13:45:08 diff_s=-892.0 reason=before best_raw={'time': '13:45', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 13, 45, 8), 'dt_norm': datetime.datetime(2026, 2, 27, 13, 45, 8), 'matched_event': 'J2_in', 'matched_event_dt': datetime.datetime(2026, 2, 27, 14, 0), 'assigned': True, 'match_reason': 'before'}
+[punch-debug] emp=5828 day=27 ev=J2_in result_row_class=
+[punch-debug] emp=5828 day=27 ev=J2_out ev_dt=2026-02-27 17:00:00 best_dt=2026-02-27 19:13:14 diff_s=7994.0 reason=after,far best_raw={'time': '19:13', 'device': 'S. General', 'dt': datetime.datetime(2026, 2, 27, 19, 13, 14), 'dt_norm': datetime.datetime(2026, 2, 27, 19, 13, 14), 'matched_event': 'J2_out', 'matched_event_dt': datetime.datetime(2026, 2, 27, 17, 0), 'assigned': True, 'match_reason': 'after,far'}
+[punch-debug] emp=5828 day=27 ev=J2_out result_row_class=
+[punch-debug] emp=5828 day=28 schedule=HORARIO NORMAL

@@ -1266,11 +1266,48 @@ def generate_monthly_report_pdf(request):
 
                 # Flags de resumen: falta algun slot esperado y hay marcaciones
                 try:
-                    expected_slots = len(events_list)
-                    assigned_slots = sum(1 for v in g_regs.values() if v is not None)
+                    # Calcular expected/assigned excluyendo eventos cubiertos por permisos
+                    permits_local = day_obj.get('permits', []) or []
+
+                    def event_covered_by_permit_local(ev, permits_list):
+                        for perm in permits_list:
+                            ps = perm.get('start_time')
+                            pe = perm.get('end_time')
+                            # permiso de jornada completa
+                            if not ps and not pe:
+                                return True
+                            try:
+                                ev_time = ev.get('dt').time()
+                            except Exception:
+                                continue
+                            if ps and not pe:
+                                if ev_time >= ps:
+                                    return True
+                                continue
+                            if pe and not ps:
+                                if ev_time <= pe:
+                                    return True
+                                continue
+                            if ps and pe:
+                                try:
+                                    if ps <= ev_time <= pe:
+                                        return True
+                                except Exception:
+                                    continue
+                        return False
+
+                    expected_slots = sum(1 for ev in events_list if not event_covered_by_permit_local(ev, permits_local))
+                    # assigned_slots: contar solo slots realmente cubiertos (ev asignado y no cubierto por permiso)
+                    events_map_local = {ev.get('label'): ev for ev in events_list}
+                    assigned_slots = 0
+                    for ev_label, ev in events_map_local.items():
+                        if ev_label in (event_to_punch.keys() if 'event_to_punch' in locals() else []):
+                            if not event_covered_by_permit_local(ev, permits_local):
+                                assigned_slots += 1
+
                     raw_cnt = day_obj.get('raw_punches_count', len(day_punches))
                     is_holiday = day_obj.get('is_holiday', False)
-                    has_permits = bool(day_obj.get('permits'))
+                    has_permits = bool(permits_local)
                     cur_date_tmp = date(year, month, int(d))
                     is_workday_tmp = cur_date_tmp.weekday() < 5
                     # Inconsistencia = falta al menos una marcación esperada en un día laborable:
@@ -1278,6 +1315,7 @@ def generate_monthly_report_pdf(request):
                     #   · No tiene ninguna marcación en un día laborable sin permiso ni feriado
                     missing_slots = expected_slots > assigned_slots
                     no_marks = (raw_cnt == 0 and not is_holiday and not has_permits and is_workday_tmp)
+                    # Usar expected/matched coherente con el resumen global
                     day_obj['has_inconsistency'] = (missing_slots or no_marks) and is_workday_tmp and not is_holiday
                     day_obj['no_marks_all_day'] = no_marks
                 except Exception:
@@ -1430,6 +1468,12 @@ def generate_monthly_report_pdf(request):
                     # solo calcular atraso para eventos de tipo 'in'
                     if ev.get('type') != 'in':
                         continue
+                    # No contar atrasos sobre eventos que están cubiertos por permisos
+                    try:
+                        if event_covered_by_permit(ev, day_obj.get('permits', [])):
+                            continue
+                    except Exception:
+                        pass
                     try:
                         p_dt = p.get('dt_norm') or p.get('dt')
                         ev_dt = ev.get('dt')
