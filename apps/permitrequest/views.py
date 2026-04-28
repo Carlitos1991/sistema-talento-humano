@@ -1415,6 +1415,21 @@ class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
         return super().handle_no_permission()
 
+    def has_permission(self):
+        # Permitir acceso si el usuario tiene el permiso custom 'can_edit'
+        # o el permiso estándar 'change_permitrequest' (columna 'Editar' en la UI)
+        try:
+            user = self.request.user
+            if not user or not user.is_authenticated:
+                return False
+            if user.has_perm('permitrequest.can_edit'):
+                return True
+            if user.has_perm('permitrequest.change_permitrequest'):
+                return True
+            return False
+        except Exception:
+            return False
+
     def post(self, request, pk):
         from django.shortcuts import get_object_or_404
         from django.utils.html import escape
