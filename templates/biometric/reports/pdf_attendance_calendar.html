@@ -60,7 +60,13 @@
             white-space: normal;
             word-wrap: break-word;
         }
-        .cell-inner { min-height:44px; padding-bottom:6px; box-sizing:border-box; overflow:visible; }
+
+        .cell-inner {
+            min-height: 44px;
+            padding-bottom: 6px;
+            box-sizing: border-box;
+            overflow: visible;
+        }
 
         table.calendar th {
             box-sizing: border-box
@@ -83,7 +89,7 @@
 
         .day-number-inconsistency {
             background-color: #ffecec; /* resaltar número de día en rojo claro */
-            color: #800; 
+            color: #800;
             padding: 1px 4px;
             border-radius: 2px;
             display: inline-block;
@@ -118,13 +124,13 @@
             border-bottom: 0.5px solid #eee;
             font-size: 6px;
             color: #111;
-            margin-bottom:2px;
+            margin-bottom: 2px;
         }
 
         .punch-row.late {
             background-color: #d9ecff; /* azul suave para tardanzas / salidas anticipadas */
-            padding-left:2px;
-            padding-right:2px;
+            padding-left: 2px;
+            padding-right: 2px;
         }
 
         .punch-time {
@@ -172,15 +178,18 @@
     </table>
 
     {% if summary %}
-    <div style="width:88%; margin:6px auto 0 auto;">
-        <table style="width:100%; border-collapse:collapse; font-size:9px;">
-            <tr>
-                <td style="width:33%; padding:4px; border:1px solid #ddd;"><strong>Inconsistencias:</strong> {{ summary.inconsistencias }}</td>
-                <td style="width:33%; padding:4px; border:1px solid #ddd;"><strong>Días sin marcar:</strong> {{ summary.dias_sin_marcar }}</td>
-                <td style="width:34%; padding:4px; border:1px solid #ddd; text-align:right;"><strong>Atrasos (min):</strong> {{ summary.minutos_atraso }}</td>
-            </tr>
-        </table>
-    </div>
+        <div style="width:88%; margin:6px auto 0 auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                <tr>
+                    <td style="width:33%; padding:4px; border:1px solid #ddd;">
+                        <strong>Inconsistencias:</strong> {{ summary.inconsistencias }}</td>
+                    <td style="width:33%; padding:4px; border:1px solid #ddd;"><strong>Días sin
+                        marcar:</strong> {{ summary.dias_sin_marcar }}</td>
+                    <td style="width:34%; padding:4px; border:1px solid #ddd; text-align:right;"><strong>Atrasos
+                        (min):</strong> {{ summary.minutos_atraso }}</td>
+                </tr>
+            </table>
+        </div>
     {% endif %}
 
     <table class="calendar" style="width:88%; margin:12px auto 0 auto; border-collapse:collapse; table-layout:fixed;"
@@ -200,32 +209,35 @@
         {% for week in calendar %}
             <tr style="page-break-inside:avoid;">
                 {% for day_obj in week %}
-                    <td class="{% if day_obj.is_holiday %}holiday{% endif %} {% if day_obj.no_marks_all_day %}cell-missing{% endif %}">
+                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}{% if day_obj.no_marks_all_day %} cell-missing{% elif day_obj.has_inconsistency %} cell-missing{% endif %}">
                         <div class="cell-inner">
-                        {% if day_obj.day %}
-                            <div class="day-header">{% if day_obj.has_inconsistency and not day_obj.no_marks_all_day and summary.inconsistencias %}<span class="day-number-inconsistency">{{ day_obj.day }}</span>{% else %}{{ day_obj.day }}{% endif %}</div>
-                            {% if day_obj.is_holiday %}
-                                <div class="holiday-label">{{ day_obj.holi_name }}</div>
-                            {% endif %}
-                            {% for perm in day_obj.permits %}
-                                <div class="permit">
-                                    {{ perm.type }}
-                                    {% if perm.start_time and perm.end_time %}: {{ perm.start_time|time:"H:i" }} a {{ perm.end_time|time:"H:i" }}
-                                    {% elif perm.note %} - {{ perm.note }}
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                            {% for p in day_obj.punches %}
-                                {% if not p.filtered %}
-                                <div class="punch-row {% if p.row_class %}{{ p.row_class }}{% endif %}">
-                                    <span class="punch-time">{{ p.time }}</span>
-                                    <span class="punch-device">{{ p.device }}</span>
-                                </div>
+                            {% if day_obj.day %}
+                                <div class="day-header">{% if day_obj.has_inconsistency %}
+                                    <span class="day-number-inconsistency">{{ day_obj.day }}</span>{% else %}
+                                    {{ day_obj.day }}{% endif %}</div>
+                                {% if day_obj.is_holiday %}
+                                    <div class="holiday-label">{{ day_obj.holi_name }}</div>
                                 {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            &nbsp;
-                        {% endif %}
+                                {% for perm in day_obj.permits %}
+                                    <div class="permit">
+                                        {{ perm.type }}
+                                        {% if perm.start_time and perm.end_time %}: {{ perm.start_time|time:"H:i" }} a
+                                            {{ perm.end_time|time:"H:i" }}
+                                        {% elif perm.note %} - {{ perm.note }}
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                {% for p in day_obj.punches %}
+                                    {% if not p.filtered %}
+                                        <div class="punch-row {% if p.row_class %}{{ p.row_class }}{% endif %}">
+                                            <span class="punch-time">{{ p.time }}</span>
+                                            <span class="punch-device">{{ p.device }}</span>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                &nbsp;
+                            {% endif %}
                         </div>
                     </td>
                 {% endfor %}

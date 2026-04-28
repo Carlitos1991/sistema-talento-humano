@@ -847,7 +847,7 @@ def generate_monthly_report_pdf(request):
                                         return True
                             return False
 
-                        events_active = [ev for ev in events if not _ev_covered(ev, permits_day)]
+                        events_active  = [ev for ev in events if not _ev_covered(ev, permits_day)]
                         events_skipped = [ev['label'] for ev in events if _ev_covered(ev, permits_day)]
 
                         # Guardar los eventos esperados para uso en el resumen
@@ -918,7 +918,7 @@ def generate_monthly_report_pdf(request):
                                                            next_ev_dt=next_ev_dt)
                             else:
                                 best = select_out_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
-                                                            next_ev_dt=next_ev_dt)
+                                                             next_ev_dt=next_ev_dt)
                             if not best:
                                 # no hubo candidato válido según las reglas
                                 continue
@@ -1303,37 +1303,44 @@ def generate_monthly_report_pdf(request):
                 except Exception:
                     pass
 
-                # Flags de resumen: falta algun slot esperado y hay marcaciones
+                # Flags de resumen
                 try:
-                    # expected_slots = eventos activos (ya excluidos los cubiertos por permiso)
-                    # events_active fue construido antes del loop de emparejamiento
-                    events_active_local = day_obj.get('events_skipped', [])
-                    expected_slots = sum(
-                        1 for ev in events_list
-                        if ev.get('label') not in events_active_local
-                    )
-                    # assigned_slots: marcaciones emparejadas a eventos activos
-                    assigned_slots = sum(
+                    # events_skipped = labels de eventos cubiertos por permiso (no requieren marca)
+                    skipped_labels  = set(day_obj.get('events_skipped', []))
+                    # Solo cuentan como obligatorios los eventos NO cubiertos por permiso
+                    expected_slots  = sum(1 for ev in events_list if ev.get('label') not in skipped_labels)
+                    # Solo cuentan como cubiertos los emparejados a eventos obligatorios
+                    assigned_slots  = sum(
                         1 for p in annotated
-                        if p.get('assigned') and p.get('matched_event') not in events_active_local
+                        if p.get('assigned') and p.get('matched_event') not in skipped_labels
                     )
-
-                    raw_cnt = day_obj.get('raw_punches_count', len(day_punches))
-                    is_holiday = day_obj.get('is_holiday', False)
-                    has_permits = bool(permits_local)
-                    cur_date_tmp = date(year, month, int(d))
+                    raw_cnt        = day_obj.get('raw_punches_count', len(day_punches))
+                    is_holiday     = day_obj.get('is_holiday', False)
+                    has_permits    = bool(day_obj.get('permits'))
+                    cur_date_tmp   = date(year, month, int(d))
                     is_workday_tmp = cur_date_tmp.weekday() < 5
-                    # Inconsistencia = falta al menos una marcación esperada en un día laborable:
-                    #   · Tiene marcaciones pero no alcanzó todos los slots (ej. falta salida)
-                    #   · No tiene ninguna marcación en un día laborable sin permiso ni feriado
+
+                    # Dia sin marcar: laborable, sin feriado, sin permiso, sin ninguna marca
+                    no_marks = (
+                        raw_cnt == 0
+                        and not is_holiday
+                        and not has_permits
+                        and is_workday_tmp
+                    )
+                    # Inconsistencia: faltan marcaciones obligatorias Y no hay permiso que lo justifique
+                    # Un día con permiso parcial que cubre todos los slots activos NO es inconsistencia.
+                    # Un día con permiso de día completo tampoco es inconsistencia.
                     missing_slots = expected_slots > assigned_slots
-                    no_marks = (raw_cnt == 0 and not is_holiday and not has_permits and is_workday_tmp)
-                    # Usar expected/matched coherente con el resumen global
-                    day_obj['has_inconsistency'] = (missing_slots or no_marks) and is_workday_tmp and not is_holiday
-                    day_obj['no_marks_all_day'] = no_marks
+                    day_obj['has_inconsistency'] = (
+                        (missing_slots or no_marks)
+                        and is_workday_tmp
+                        and not is_holiday
+                        and not has_permits       # ← permiso justifica la ausencia
+                    )
+                    day_obj['no_marks_all_day']  = no_marks
                 except Exception:
                     day_obj['has_inconsistency'] = day_obj.get('has_inconsistency', False)
-                    day_obj['no_marks_all_day'] = day_obj.get('no_marks_all_day', False)
+                    day_obj['no_marks_all_day']  = day_obj.get('no_marks_all_day', False)
 
                 day_obj['punches'] = annotated
                 # Etiqueta de fecha: 01 de enero
