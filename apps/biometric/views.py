@@ -63,7 +63,7 @@ def select_in_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     return None
 
 
-def select_out_candidate(candidates, ev_dt, prev_ev_dt=None):
+def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     """Selecciona candidato para evento 'out'.
     Preferir el candidato más cercano DESPUÉS de ev_dt. Si no existe, elegir el más cercano ANTES
     sólo si está dentro de OUT_MAX_SECONDS.
@@ -73,7 +73,15 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None):
     after = [p for p in candidates if _p_dt(p) >= ev_dt]
     if after:
         # elegir el posterior más cercano (mínima dt)
-        return min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
+        best_after = min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
+        # evitar robar un punch que sea claramente más cercano al siguiente evento
+        try:
+            res = resolve_cross_shift(best_after, prev_ev_dt=ev_dt, next_ev_dt=next_ev_dt)
+            if res == 'next':
+                return None
+        except Exception:
+            pass
+        return best_after
     before = [p for p in candidates if _p_dt(p) < ev_dt]
     if not before:
         return None
@@ -813,14 +821,44 @@ def generate_monthly_report_pdf(request):
                                 ev_dt = ev_dt + timedelta(days=1)
                             events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
 
+                        # Suprimir eventos cubiertos por permiso ANTES del emparejamiento.
+                        # Así sus marcas candidatas quedan disponibles para los eventos del
+                        # turno activo (ej: permiso 08-13 libera 13:57 para J2_in=14:00).
+                        permits_day = day_obj.get('permits', []) or []
+
+                        def _ev_covered(ev_obj, perms):
+                            try:
+                                ev_time = ev_obj['dt'].time()
+                            except Exception:
+                                return False
+                            for perm in perms:
+                                ps = perm.get('start_time')
+                                pe = perm.get('end_time')
+                                if not ps and not pe:
+                                    return True  # dia completo
+                                if ps and pe:
+                                    if ps <= ev_time <= pe:
+                                        return True
+                                elif ps and not pe:
+                                    if ev_time >= ps:
+                                        return True
+                                elif pe and not ps:
+                                    if ev_time <= pe:
+                                        return True
+                            return False
+
+                        events_active = [ev for ev in events if not _ev_covered(ev, permits_day)]
+                        events_skipped = [ev['label'] for ev in events if _ev_covered(ev, permits_day)]
+
                         # Guardar los eventos esperados para uso en el resumen
                         day_obj['events'] = events
+                        day_obj['events_skipped'] = events_skipped
 
                         # Emparejamiento greedy por proximidad manteniendo orden
                         prev_assigned_dt = datetime.min
                         # No emparejar con marcas extremadamente lejanas: umbral en segundos
                         MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
-                        for ev in events:
+                        for ev in events_active:  # solo eventos NO cubiertos por permiso
                             # candidatos sin asignar
                             candidates = [p for p in punches_sorted if not p.get('assigned')]
 
@@ -879,7 +917,8 @@ def generate_monthly_report_pdf(request):
                                 best = select_in_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
                                                            next_ev_dt=next_ev_dt)
                             else:
-                                best = select_out_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt)
+                                best = select_out_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
+                                                            next_ev_dt=next_ev_dt)
                             if not best:
                                 # no hubo candidato válido según las reglas
                                 continue
@@ -1266,44 +1305,18 @@ def generate_monthly_report_pdf(request):
 
                 # Flags de resumen: falta algun slot esperado y hay marcaciones
                 try:
-                    # Calcular expected/assigned excluyendo eventos cubiertos por permisos
-                    permits_local = day_obj.get('permits', []) or []
-
-                    def event_covered_by_permit_local(ev, permits_list):
-                        for perm in permits_list:
-                            ps = perm.get('start_time')
-                            pe = perm.get('end_time')
-                            # permiso de jornada completa
-                            if not ps and not pe:
-                                return True
-                            try:
-                                ev_time = ev.get('dt').time()
-                            except Exception:
-                                continue
-                            if ps and not pe:
-                                if ev_time >= ps:
-                                    return True
-                                continue
-                            if pe and not ps:
-                                if ev_time <= pe:
-                                    return True
-                                continue
-                            if ps and pe:
-                                try:
-                                    if ps <= ev_time <= pe:
-                                        return True
-                                except Exception:
-                                    continue
-                        return False
-
-                    expected_slots = sum(1 for ev in events_list if not event_covered_by_permit_local(ev, permits_local))
-                    # assigned_slots: contar solo slots realmente cubiertos (ev asignado y no cubierto por permiso)
-                    events_map_local = {ev.get('label'): ev for ev in events_list}
-                    assigned_slots = 0
-                    for ev_label, ev in events_map_local.items():
-                        if ev_label in (event_to_punch.keys() if 'event_to_punch' in locals() else []):
-                            if not event_covered_by_permit_local(ev, permits_local):
-                                assigned_slots += 1
+                    # expected_slots = eventos activos (ya excluidos los cubiertos por permiso)
+                    # events_active fue construido antes del loop de emparejamiento
+                    events_active_local = day_obj.get('events_skipped', [])
+                    expected_slots = sum(
+                        1 for ev in events_list
+                        if ev.get('label') not in events_active_local
+                    )
+                    # assigned_slots: marcaciones emparejadas a eventos activos
+                    assigned_slots = sum(
+                        1 for p in annotated
+                        if p.get('assigned') and p.get('matched_event') not in events_active_local
+                    )
 
                     raw_cnt = day_obj.get('raw_punches_count', len(day_punches))
                     is_holiday = day_obj.get('is_holiday', False)
