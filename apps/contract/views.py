@@ -1194,7 +1194,8 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 'message': 'La fecha fin de gestión no puede ser menor a la fecha de inicio.'
             }, status=400)
 
-        release_concept = 'Finalizacion de gestion laboral'
+        # Usar el motivo provisto por el usuario como motivo/observación de liberación
+        release_concept = reason
 
         try:
             with transaction.atomic():
