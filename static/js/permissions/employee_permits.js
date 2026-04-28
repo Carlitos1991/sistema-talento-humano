@@ -1557,12 +1557,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
                         if (!result.isConfirmed) return;
                         try {
-                            const res = await fetch('/permitrequest/bitacora/delete/', {
-                                method: 'POST', headers: {
-                                    'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
-                                }, body: JSON.stringify({ids: [id]})
-                            });
-                            const data = await res.json();
+                                const res = await fetch('/permitrequest/bitacora/delete/', {
+                                    method: 'POST', credentials: 'same-origin', headers: {
+                                        'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
+                                    }, body: JSON.stringify({ids: [id]})
+                                });
+                                const ct = res.headers.get('content-type') || '';
+                                const data = ct.includes('application/json') ? await res.json() : {success: false, message: await res.text()};
                             if (data.success) {
                                 Swal.fire('Éxito', data.message, 'success');
                                 await this.fetchBitacoras();
@@ -1594,11 +1595,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (formValues) {
                             try {
                                 const res = await fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
-                                    method: 'POST', headers: {
+                                    method: 'POST', credentials: 'same-origin', headers: {
                                         'Content-Type': 'application/json', 'X-CSRFToken': csrfToken
                                     }, body: JSON.stringify({start_time: formValues.start, end_time: formValues.end})
                                 });
-                                const data = await res.json();
+                                const ct = res.headers.get('content-type') || '';
+                                const data = ct.includes('application/json') ? await res.json() : {success: false, message: await res.text()};
                                 if (data.success) {
                                     Swal.fire('Éxito', data.message, 'success');
                                     await this.fetchBitacoras();
@@ -1669,8 +1671,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                 if (file) formData.append('justification_file', file);
 
                                 return fetch(`/permitrequest/bitacora/edit/${bitacora.id}/`, {
-                                    method: 'POST', headers: {'X-CSRFToken': csrfToken}, body: formData
-                                }).then(res => res.json()).catch(() => {
+                                    method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrfToken}, body: formData
+                                }).then(async res => {
+                                    const ct2 = res.headers.get('content-type') || '';
+                                    if (ct2.includes('application/json')) return res.json();
+                                    const t = await res.text();
+                                    throw new Error(t || 'Respuesta no válida');
+                                }).catch((err) => {
+                                    console.error('Edit bitacora error', err);
                                     Swal.showValidationMessage('Error de comunicación');
                                 });
                             }

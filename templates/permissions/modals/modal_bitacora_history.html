@@ -50,7 +50,12 @@
                     <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
                     <td>[[ formatDate(b.start_date) ]]</td>
                     <td class="text-center">[[ b.start_time || '--:--' ]]</td>
-                    <td class="text-center">[[ b.end_time || '--:--' ]]</td>
+                    <td class="text-center">
+                        <div>[[ b.end_time || '--:--' ]]</div>
+                        <div v-if="b.end_date && b.end_date !== b.start_date" style="font-size:11px;color:#6b7280;">
+                            [[ formatDate(b.end_date) ]]
+                        </div>
+                    </td>
                     <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span>
                     </td>
                     <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>

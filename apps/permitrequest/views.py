@@ -1283,7 +1283,9 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 'q': q,
                 'sort': sort,
                 'page_size': page_size,
-                'can_edit': request.user.has_perm('permitrequest.can_edit') or request.user.has_perm('permitrequest.change_permitrequest')
+                'can_edit': (request.user.has_perm('permitrequest.can_edit')
+                             or request.user.has_perm('permitrequest.change_permitrequest')
+                             or request.user.has_perm('permitrequest.delete_permitrequest'))
             }
 
             # Si se solicita JSON (para render dinámico por JS/Vue), devolver datos en JSON
@@ -1304,6 +1306,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         bit = {
                             'id': b.id,
                             'start_date': b.start_date.isoformat() if getattr(b, 'start_date', None) else None,
+                            'end_date': b.end_date.isoformat() if getattr(b, 'end_date', None) else None,
                             'start_time': (b.start_time.strftime('%H:%M') if getattr(b, 'start_time', None) else None),
                             'end_time': (b.end_time.strftime('%H:%M') if getattr(b, 'end_time', None) else None),
                             'status': b.status,
@@ -1328,7 +1331,9 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         'page': page_obj.number,
                         'total_pages': paginator.num_pages,
                         'total_count': paginator.count,
-                        'can_edit': request.user.has_perm('permitrequest.can_edit') or request.user.has_perm('permitrequest.change_permitrequest')
+                        'can_edit': (request.user.has_perm('permitrequest.can_edit')
+                                     or request.user.has_perm('permitrequest.change_permitrequest')
+                                     or request.user.has_perm('permitrequest.delete_permitrequest'))
                     })
                 except Exception:
                     logger.exception('Error serializing bitacoras for JSON response')
@@ -1412,6 +1417,19 @@ class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def handle_no_permission(self):
         # Para peticiones AJAX devolvemos JSON en lugar de redirigir
         if self.request and self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Logging temporal para depuración: quién hizo la petición y sus permisos
+            try:
+                user = getattr(self.request, 'user', None)
+                username = getattr(user, 'username', None) if user else None
+                is_auth = bool(user and user.is_authenticated)
+                perms = list(user.get_all_permissions()) if is_auth else []
+                has_change = user.has_perm('permitrequest.change_permitrequest') if is_auth else False
+                has_can_edit = user.has_perm('permitrequest.can_edit') if is_auth else False
+                session_present = 'sessionid' in (self.request.COOKIES or {})
+                logger.warning('BitacoraReview denied - user=%s authenticated=%s session=%s has_change=%s has_can_edit=%s perms_sample=%s path=%s',
+                               username, is_auth, session_present, has_change, has_can_edit, perms[:10], self.request.path)
+            except Exception:
+                logger.exception('Error logging denied BitacoraReview request')
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
         return super().handle_no_permission()
 
@@ -1436,7 +1454,8 @@ class BitacoraReviewView(LoginRequiredMixin, PermissionRequiredMixin, View):
         import json
 
         try:
-            if not request.user.has_perm('permitrequest.can_edit'):
+            # Allow users with either the custom can_edit permission or the standard change_permitrequest
+            if not (request.user.has_perm('permitrequest.can_edit') or request.user.has_perm('permitrequest.change_permitrequest')):
                 return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
 
             # intentar leer JSON del body primero
@@ -1563,9 +1582,42 @@ class BitacoraEditView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Vista para editar horas de una bitácora (solo inicio/fin)"""
     permission_required = 'permitrequest.change_permitrequest'
 
+    def handle_no_permission(self):
+        # Para peticiones AJAX devolvemos JSON en lugar de la página 403
+        if self.request and self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            try:
+                user = getattr(self.request, 'user', None)
+                username = getattr(user, 'username', None) if user else None
+                session_present = 'sessionid' in (self.request.COOKIES or {})
+                logger.warning('BitacoraEdit denied - user=%s authenticated=%s session=%s path=%s',
+                               username, bool(user and user.is_authenticated), session_present, self.request.path)
+            except Exception:
+                logger.exception('Error logging denied BitacoraEdit request')
+            return JsonResponse({'success': False, 'message': 'No tiene permisos'}, status=403)
+        return super().handle_no_permission()
+
+    def has_permission(self):
+        try:
+            user = self.request.user
+            if not user or not user.is_authenticated:
+                return False
+            # allow if user has any of these permissions
+            if user.has_perm('permitrequest.change_permitrequest'):
+                return True
+            if user.has_perm('permitrequest.can_edit'):
+                return True
+            if user.has_perm('permitrequest.delete_permitrequest'):
+                return True
+            return False
+        except Exception:
+            return False
+
     def post(self, request, pk):
         try:
-            if not request.user.has_perm('permitrequest.change_permitrequest'):
+            # Allow users who can change, have the custom can_edit, or can delete (admin-like)
+            if not (request.user.has_perm('permitrequest.change_permitrequest')
+                    or request.user.has_perm('permitrequest.can_edit')
+                    or request.user.has_perm('permitrequest.delete_permitrequest')):
                 return JsonResponse({'success': False, 'message': 'No tiene permisos'}, status=403)
 
             pr = PermitRequest.objects.filter(pk=pk, status__in=['REQUESTED', 'REJECTED']).first()

@@ -88,7 +88,12 @@
                             <td class="text-center">[[ (currentPage - 1) * perPage + index + 1 ]]</td>
                             <td>[[ formatDate(bitacora.start_date) ]]</td>
                             <td class="text-center">[[ formatTime(bitacora.start_time) ]]</td>
-                            <td class="text-center">[[ formatTime(bitacora.end_time) ]]</td>
+                            <td class="text-center">
+                                <div>[[ formatTime(bitacora.end_time) ]]</div>
+                                <div v-if="bitacora.end_date && bitacora.end_date !== bitacora.start_date" style="font-size:11px;color:#6b7280;">
+                                    [[ formatDate(bitacora.end_date) ]]
+                                </div>
+                            </td>
                             <td class="text-center">
                                 <span class="status-badge" :class="getStatusClass(bitacora.status)">
                                     [[ getStatusLabel(bitacora.status) ]]
