@@ -1656,6 +1656,7 @@ def generate_department_report_pdf(request):
     unit_id = request.GET.get('unit_id')
     month = int(request.GET.get('month', 1))
     year = int(request.GET.get('year', datetime.now().year))
+    debug_punches = request.GET.get('debug_punches') == '1'
     if not unit_id:
         return HttpResponse('unit_id requerido', status=400)
 
@@ -1961,7 +1962,6 @@ def generate_department_report_pdf(request):
 
                     annotated = sorted(annotated, key=lambda x: x.get('dt'))
                     day_obj['punches'] = annotated
-                    # debug: volcar info detallada por día cuando se solicita
                     if debug_punches:
                         try:
                             raw_list = [(p.get('dt_norm') or p.get('dt')).strftime('%Y-%m-%d %H:%M:%S') for p in
