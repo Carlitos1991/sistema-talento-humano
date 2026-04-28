@@ -583,7 +583,7 @@
                 </li>
             {% endif %}
             <!--  Biométricos -->
-            {% if perms.biometric.view_biometricdevice or perms.biometric.view_biometricload %}
+            {% if perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
                 <li class="has-submenu">
                     <a href="#" class="nav-link">
                         <i class="fa-solid fa-fingerprint"></i>

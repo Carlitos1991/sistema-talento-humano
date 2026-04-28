@@ -11,9 +11,11 @@
                 <p>Generación de archivos PDF basados en marcaciones de hardware.</p>
             </div>
             <div class="header-actions">
+                {% if perms.biometric.change_attendanceregistry %}
                 <button class="btn-custom btn-search" @click="showUnitModal=true">
                     <i class="fas fa-building"></i> Reporte por Dependencia
                 </button>
+                {% endif %}
             </div>
         </div>
         <div class="search-panel">
