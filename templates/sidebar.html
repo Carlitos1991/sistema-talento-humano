@@ -591,11 +591,13 @@
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-                        <li>
-                            <a href="{% url 'biometric:biometric_list' %}">
-                                <i class="fa-solid fa-list-check"></i> Dispositivos
-                            </a>
-                        </li>
+                        {% if perms.biometric.view_biometricdevice %}
+                            <li>
+                                <a href="{% url 'biometric:biometric_list' %}">
+                                    <i class="fa-solid fa-list-check"></i> Dispositivos
+                                </a>
+                            </li>
+                        {% endif %}
                         <li>
                             <a href="{% url 'biometric:employee_report_list' %}"
                                class="{% if 'reportes' in request.path %}active-child{% endif %}">
