@@ -22,6 +22,8 @@ const biometricApp = createApp({
             pagination: {
                 label: 'Mostrando 0-0 de 0'
             },
+            sort_field: '',
+            sort_dir: 'asc',
             isSaving: false,
             form: {
                 id: null,
@@ -148,7 +150,9 @@ const biometricApp = createApp({
         },
         async search() {
             try {
-                const data = await BiometricService.getTable(this.searchQuery, this.currentStatus);
+                const pageEl = document.getElementById('js-pagination');
+                const currentPage = pageEl ? parseInt(pageEl.dataset.currentPage || '1') : 1;
+                const data = await BiometricService.getTable(this.searchQuery, this.currentStatus, currentPage, this.sort_field, this.sort_dir);
 
                 // 1. Actualizar Tabla
                 document.getElementById('table-content-wrapper').innerHTML = data.html;
@@ -157,13 +161,42 @@ const biometricApp = createApp({
                 if (data.stats) this.stats = data.stats;
 
                 // 3. Actualizar Paginación
-                if (data.pagination) this.pagination.label = data.pagination.label;
+                if (data.pagination) {
+                    this.pagination.label = data.pagination.label;
+                    const pageEl2 = document.getElementById('js-pagination');
+                    if (pageEl2) {
+                        pageEl2.dataset.currentPage = data.pagination.current_page || 1;
+                        pageEl2.dataset.numPages = data.pagination.num_pages || 1;
+                    }
+                    document.getElementById('current-page-display').innerText = data.pagination.current_page || 1;
+                    const pageInput = document.getElementById('biometric-page-input');
+                    if (pageInput) {
+                        pageInput.value = data.pagination.current_page || 1;
+                        pageInput.max = data.pagination.num_pages || 1;
+                    }
+                    const totalPagesEl = document.getElementById('biometric-total-pages');
+                    if (totalPagesEl) totalPagesEl.innerText = data.pagination.num_pages || 1;
+                }
             } catch (error) {
                 console.error(error);
             }
         },
         async filterByStatus(status) {
             this.currentStatus = status;
+            const pageEl = document.getElementById('js-pagination');
+            if (pageEl) pageEl.dataset.currentPage = 1;
+            await this.search();
+        },
+        // Sort handler similar a person_list
+        async applySort(field) {
+            if (this.sort_field === field) {
+                this.sort_dir = this.sort_dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sort_field = field;
+                this.sort_dir = 'asc';
+            }
+            const pageEl = document.getElementById('js-pagination');
+            if (pageEl) pageEl.dataset.currentPage = 1;
             await this.search();
         },
         async openModalEdit(id) {
@@ -565,8 +598,72 @@ const biometricApp = createApp({
         if (initialLabel) {
             this.pagination.label = initialLabel.trim();
         }
+        // Alinear estado inicial del toggle if present
+        const toggle = document.getElementById('toggleInactiveBiometrics');
+        if (toggle) toggle.checked = this.currentStatus === 'inactive';
+        const label = document.querySelector('label[for="toggleInactiveBiometrics"]');
+        if (label && toggle) {
+            if (toggle.checked) label.classList.add('modern-toggle-green');
+            else label.classList.remove('modern-toggle-green');
+        }
     }
 });
 
 // MONTAR Y EXPONER GLOBALMENTE
 window.biometricVM = biometricApp.mount('#biometric-app');
+
+// Funciones globales para el paginador y toggle usadas desde los botones HTML
+function biometricPrevPage() {
+    const pageEl = document.getElementById('js-pagination');
+    if (!pageEl) return;
+    let cur = parseInt(pageEl.dataset.currentPage || '1');
+    if (cur > 1) {
+        pageEl.dataset.currentPage = cur - 1;
+        biometricVM.search();
+    }
+}
+
+function biometricNextPage() {
+    const pageEl = document.getElementById('js-pagination');
+    if (!pageEl) return;
+    let cur = parseInt(pageEl.dataset.currentPage || '1');
+    const num = parseInt(pageEl.dataset.numPages || '1');
+    if (cur < num) {
+        pageEl.dataset.currentPage = cur + 1;
+        biometricVM.search();
+    }
+}
+
+function toggleInactiveBiometrics(checked) {
+    if (!window.biometricVM) return;
+    window.biometricVM.currentStatus = checked ? 'inactive' : 'all';
+    // Toggle visual class on the label to match other lists
+    const label = document.querySelector('label[for="toggleInactiveBiometrics"]');
+    if (label) {
+        if (checked) label.classList.add('modern-toggle-green');
+        else label.classList.remove('modern-toggle-green');
+    }
+    // reset to first page
+    const pageEl = document.getElementById('js-pagination');
+    if (pageEl) { pageEl.dataset.currentPage = 1; }
+    window.biometricVM.search();
+}
+
+// Sort handler called from TH elements
+function sortBiometricTable(th) {
+    const field = th.dataset.field;
+    if (!field) return;
+    if (!window.biometricVM) return;
+    window.biometricVM.applySort(field);
+}
+
+// changePage function similar to person_list (direct navigation)
+function changePage(page) {
+    const pageEl = document.getElementById('js-pagination');
+    if (!pageEl) return;
+    const numPages = parseInt(pageEl.dataset.numPages || '1');
+    let p = parseInt(page) || 1;
+    p = Math.max(1, Math.min(p, numPages));
+    pageEl.dataset.currentPage = p;
+    window.biometricVM.search();
+}

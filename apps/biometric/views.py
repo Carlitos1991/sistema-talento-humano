@@ -658,6 +658,7 @@ class BiometricListView(ListView):
     model = BiometricDevice
     template_name = 'biometric/biometric_list.html'
     context_object_name = 'devices'
+    paginate_by = 10
 
     def get_queryset(self):
         qs = BiometricDevice.objects.all()
@@ -670,13 +671,40 @@ class BiometricListView(ListView):
             qs = qs.filter(is_active=True)
         elif status == 'inactive':
             qs = qs.filter(is_active=False)
+        # Ordenamiento via GET params similar a PersonListView
+        sort_field = self.request.GET.get('sort_field')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        allowed = {
+            'name': 'name',
+            'ip_address': 'ip_address',
+            'serial_number': 'serial_number',
+            'model_name': 'model_name',
+            'location': 'location',
+            'is_active': 'is_active'
+        }
+        if sort_field in allowed:
+            field = allowed[sort_field]
+            if sort_dir == 'desc':
+                field = '-' + field
+            qs = qs.order_by(field)
         return qs
 
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            self.object_list = self.get_queryset()
+            qs = self.get_queryset()
+            # paginar resultados para AJAX
+            from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+            page = request.GET.get('page', 1)
+            paginator = Paginator(qs, self.paginate_by)
+            try:
+                page_obj = paginator.page(page)
+            except PageNotAnInteger:
+                page_obj = paginator.page(1)
+            except EmptyPage:
+                page_obj = paginator.page(paginator.num_pages)
+
             html = render_to_string('biometric/partials/partial_biometric_table.html', {
-                'devices': self.object_list
+                'devices': page_obj.object_list
             }, request=request)
 
             all_devs = BiometricDevice.objects.all()
@@ -688,7 +716,11 @@ class BiometricListView(ListView):
                     'inactive': all_devs.filter(is_active=False).count()
                 },
                 'pagination': {
-                    'label': f"Mostrando 1-{self.object_list.count()} de {self.object_list.count()}" if self.object_list.count() > 0 else "Mostrando 0-0 de 0"
+                    'label': f"Mostrando {page_obj.start_index()}-{page_obj.end_index()} de {paginator.count}" if paginator.count > 0 else "Mostrando 0-0 de 0",
+                    'current_page': page_obj.number,
+                    'num_pages': paginator.num_pages,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous()
                 }
             })
         return super().get(request, *args, **kwargs)

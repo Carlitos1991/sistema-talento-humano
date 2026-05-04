@@ -2,8 +2,14 @@
  * Service para manejar todas las peticiones fetch de Biométricos
  */
 const BiometricService = {
-    async getTable(query = '', status = '') {
-        const url = `${window.location.pathname}?q=${query}&status=${status}`;
+    async getTable(query = '', status = '', page = 1, sort_field = '', sort_dir = '') {
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (status) params.append('status', status);
+        if (page) params.append('page', page);
+        if (sort_field) params.append('sort_field', sort_field);
+        if (sort_dir) params.append('sort_dir', sort_dir);
+        const url = `${window.location.pathname}?${params.toString()}`;
 
         const response = await fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}

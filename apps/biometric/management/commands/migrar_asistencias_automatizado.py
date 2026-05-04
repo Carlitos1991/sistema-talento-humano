@@ -7,25 +7,30 @@ from biometric.models import BiometricDevice, BiometricLoad, AttendanceRegistry
 
 
 class Command(BaseCommand):
-    help = 'Migración automatizada de todas las asistencias de sigeth1 a SIGETH2 por año y mes'
+    help = 'Migración automatizada de asistencias de sigeth1 a SIGETH2 (Por mes o año completo)'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=int, required=True, help='Año a migrar')
-        parser.add_argument('--mes', type=int, required=True, help='Mes a migrar (1-12)')
+        parser.add_argument('--mes', type=int, required=False,
+                            help='Mes a migrar (Opcional, si se omite migra todo el año)')
         parser.add_argument('--motivo', type=str, required=True, help='Motivo que aparecerá en la carga de SIGETH2')
 
     def handle(self, *args, **options):
-        anio, mes = options['anio'], options['mes']
+        anio = options['anio']
+        mes = options.get('mes')
         motivo_usuario = options['motivo']
 
         cedulas_faltantes = set()
         bios_no_mapeados = set()
 
         total_global_migrados = 0
+        total_global_duplicados = 0
         total_global_saltados = 0
 
+        periodo_log = f"{mes}/{anio}" if mes else f"AÑO COMPLETO {anio}"
         db_config = settings.DATABASES['old_db']
-        self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando Escaneo Global: Período {mes}/{anio}"))
+
+        self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando Escaneo: {periodo_log}"))
 
         try:
             conn = psycopg2.connect(
@@ -34,38 +39,38 @@ class Command(BaseCommand):
             )
 
             with conn.cursor() as cursor:
-                # 1. BUSCAR TODOS LOS BIOMÉTRICOS CON ACTIVIDAD EN EL PERIODO
+                # 1. BUSCAR DISPOSITIVOS CON ACTIVIDAD (Consulta dinámica)
                 sql_bios = """
                            SELECT DISTINCT b.id, b.name
                            FROM biometric_biometric b
                                     JOIN biometric_biometric_load bl ON bl.biometric_id = b.id
                                     JOIN biometric_registry r ON r.biometric_load_id = bl.id
                            WHERE EXTRACT(YEAR FROM r.registry_date) = %s
-                             AND EXTRACT(MONTH FROM r.registry_date) = %s \
                            """
-                cursor.execute(sql_bios, (anio, mes))
+                params_bios = [anio]
+                if mes:
+                    sql_bios += " AND EXTRACT(MONTH FROM r.registry_date) = %s"
+                    params_bios.append(mes)
+
+                cursor.execute(sql_bios, tuple(params_bios))
                 biometricos_antiguos = cursor.fetchall()
 
                 if not biometricos_antiguos:
-                    self.stdout.write(
-                        self.style.WARNING("⚠️ No se encontró actividad de biométricos en este periodo en sigeth1."))
+                    self.stdout.write(self.style.WARNING(f"⚠️ No se encontró actividad en el periodo {periodo_log}."))
                     return
 
-                self.stdout.write(
-                    f"📊 Se detectaron {len(biometricos_antiguos)} biométricos con registros. Iniciando proceso...")
+                self.stdout.write(f"📊 Se detectaron {len(biometricos_antiguos)} biométricos con registros.")
 
                 for id_old, nombre_old in biometricos_antiguos:
-                    self.stdout.write(f"🔍 Dispositivo: '{nombre_old}'...", ending=' ')
+                    self.stdout.write(f"🔍 Procesando: '{nombre_old}'...", ending=' ')
 
-                    # 2. BUSCAR POR NOMBRE EN SIGETH2
                     dispositivo_nuevo = BiometricDevice.objects.filter(name__iexact=nombre_old).first()
-
                     if not dispositivo_nuevo:
-                        self.stdout.write(self.style.ERROR("❌ NO ENCONTRADO EN SIGETH2"))
+                        self.stdout.write(self.style.ERROR("❌ NO HALLADO EN DESTINO"))
                         bios_no_mapeados.add(nombre_old)
                         continue
 
-                    # 3. TRAER MARCACIONES ASOCIADAS A ESTE BIOMÉTRICO
+                    # 2. TRAER MARCACIONES (Consulta dinámica respetando per.cedula)
                     sql_regs = """
                                SELECT per.cedula, r.employee_id_bio, r.registry_date, bl.load_type
                                FROM biometric_registry r
@@ -74,25 +79,28 @@ class Command(BaseCommand):
                                         JOIN biometric_biometric_load bl ON r.biometric_load_id = bl.id
                                WHERE bl.biometric_id = %s
                                  AND EXTRACT(YEAR FROM r.registry_date) = %s
-                                 AND EXTRACT(MONTH FROM r.registry_date) = %s \
                                """
-                    cursor.execute(sql_regs, (id_old, anio, mes))
+                    params_regs = [id_old, anio]
+                    if mes:
+                        sql_regs += " AND EXTRACT(MONTH FROM r.registry_date) = %s"
+                        params_regs.append(mes)
+
+                    cursor.execute(sql_regs, tuple(params_regs))
                     registros = cursor.fetchall()
 
                     migrados_este_bio = 0
+                    duplicados_este_bio = 0
 
-                    # Usamos una sola carga por biométrico/periodo para SIGETH2
                     with transaction.atomic():
-                        # Creamos la cabecera de carga con el motivo del usuario
                         nueva_carga = BiometricLoad.objects.create(
                             biometric=dispositivo_nuevo,
-                            reason=motivo_usuario,
+                            reason=f"{motivo_usuario} ({periodo_log})",
                             load_type="MIGRACION",
-                            num_records=0  # Se actualizará al final
+                            num_records=0
                         )
 
                         for cedula, id_bio_emp, fecha_reg, tipo_carga_old in registros:
-                            # Buscar empleado por document_number
+                            # Buscar empleado en SIGETH2
                             empleado = Employee.objects.filter(person__document_number=cedula).first()
 
                             if not empleado:
@@ -100,8 +108,8 @@ class Command(BaseCommand):
                                 total_global_saltados += 1
                                 continue
 
-                            # Insertar marcación
-                            AttendanceRegistry.objects.get_or_create(
+                            # Control de duplicados usando registry_date
+                            obj, created = AttendanceRegistry.objects.get_or_create(
                                 employee=empleado,
                                 registry_date=fecha_reg,
                                 defaults={
@@ -109,37 +117,36 @@ class Command(BaseCommand):
                                     'employee_id_bio': id_bio_emp
                                 }
                             )
-                            migrados_este_bio += 1
 
-                        # ACTUALIZAR NUM_RECORDS EN LA CARGA
+                            if created:
+                                migrados_este_bio += 1
+                            else:
+                                duplicados_este_bio += 1
+
                         nueva_carga.num_records = migrados_este_bio
                         nueva_carga.save()
 
                     total_global_migrados += migrados_este_bio
-                    self.stdout.write(self.style.SUCCESS(f"✅ OK ({migrados_este_bio} registros migrados)"))
+                    total_global_duplicados += duplicados_este_bio
+                    self.stdout.write(
+                        self.style.SUCCESS(f"✅ OK (Nuevos: {migrados_este_bio} | Duplicados: {duplicados_este_bio})"))
 
             conn.close()
 
-            # --- REPORTE DE AUDITORÍA ---
+            # --- REPORTE FINAL ---
             self.stdout.write("\n" + "=" * 60)
-            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN FINAL DE MIGRACIÓN: {anio}//{mes}"))
+            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN FINAL: {periodo_log}"))
             self.stdout.write("=" * 60)
-            self.stdout.write(f"🚀 Total registros migrados:    {total_global_migrados}")
-            self.stdout.write(f"⚠️  Total registros saltados:    {total_global_saltados}")
+            self.stdout.write(f"✅ Registros nuevos migrados:   {total_global_migrados}")
+            self.stdout.write(self.style.WARNING(f"⚠️  Omitidos por duplicado:      {total_global_duplicados}"))
+            self.stdout.write(f"❌ Saltados (Emp. no hallados): {total_global_saltados}")
             self.stdout.write("-" * 60)
 
-            if bios_no_mapeados:
-                self.stdout.write(self.style.ERROR(f"🚫 BIOMÉTRICOS FALTANTES EN SIGETH2 ({len(bios_no_mapeados)}):"))
-                for b in sorted(bios_no_mapeados):
-                    self.stdout.write(f"   -> '{b}'")
-
             if cedulas_faltantes:
-                self.stdout.write(
-                    self.style.ERROR(f"\n❌ EMPLEADOS NO ENCONTRADOS EN SIGETH2 ({len(cedulas_faltantes)}):"))
-                for c in sorted(cedulas_faltantes):
-                    self.stdout.write(f"   -> {c}")
+                self.stdout.write(self.style.ERROR(f"❌ CEDULAS NO ENCONTRADAS ({len(cedulas_faltantes)})"))
 
-            self.stdout.write("=" * 60 + "\n")
+            if bios_no_mapeados:
+                self.stdout.write(self.style.ERROR(f"🚫 BIOMÉTRICOS NO MAPEADOS: {list(bios_no_mapeados)}"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Error General: {e}"))

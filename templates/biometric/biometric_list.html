@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Biométricos | SIGETH{% endblock %}
 {% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
     <link rel="stylesheet" href="{% static 'css/biometric.css' %}">
 {% endblock %}
 {% block content %}
@@ -21,60 +22,27 @@
                 </button>
             </div>
         </div>
-        <!-- 2. Estadísticas -->
-        <div class="stats-row">
-            <!-- TOTAL -->
-            <div class="stat-card color-one"
-                 @click="filterByStatus('all')"
-                 :class="{'opacity-low': currentStatus !== 'all' && currentStatus !== ''}">
-                <div class="stat-left">
-                    <h3>Total</h3>
-                    <div class="number">
-                        <span id="val-total" class="hidden">{{ stats_total }}</span>[[ stats.total ]]
-                    </div>
-                </div>
-                <i class="fas fa-users stat-icon"></i>
-            </div>
+        <!-- 2. Mostrar Inactivos (toggle) - centrado como Estructura Organizacional -->
+        <div class="table-controls managed-table" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem; margin-bottom:12px;">
+            <div></div>
+            <div style="display:flex; justify-content: center;">
+                <input class="modern-toggle-input" type="checkbox" id="toggleInactiveBiometrics"
+                       onchange="toggleInactiveBiometrics(this.checked)">
 
-            <!-- ACTIVOS -->
-            <div class="stat-card color-two"
-                 @click="filterByStatus('active')"
-                 :class="{'opacity-low': currentStatus !== 'active'}">
-                <div class="stat-left">
-                    <h3>Activos</h3>
-                    <div class="number">
-                        <span id="val-active" class="hidden">{{ stats_active }}</span>[[ stats.active ]]
-                    </div>
-                </div>
-                <i class="fa-regular fa-circle-check stat-icon"></i>
+                <label class="modern-toggle-wrapper mb-0" for="toggleInactiveBiometrics">
+                    <div class="modern-toggle-circle"></div>
+                    <span class="modern-toggle-text">Mostrar Biométricos Inactivos</span>
+                </label>
             </div>
-
-            <!-- INACTIVOS -->
-            <div class="stat-card color-three"
-                 @click="filterByStatus('inactive')"
-                 :class="{'opacity-low': currentStatus !== 'inactive'}">
-                <div class="stat-left">
-                    <h3>Inactivos</h3>
-                    <div class="number">
-                        <span id="val-inactive" class="hidden">{{ stats_inactive }}</span>[[ stats.inactive ]]
-                    </div>
-                </div>
-                <i class="fa-solid fa-circle-xmark stat-icon"></i>
+            <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 420px;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" v-model="searchQuery" @input="search"
+                       placeholder="Buscar por nombre o IP...">
             </div>
         </div>
 
         <!-- 3. Contenedor principal Tabla (AJAX) -->
-        <div class="content-table">
-            <div class="table-controls">
-                {#                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">#}
-                {#                    <i class="fas fa-sliders-h"></i> Filtros Avanzados#}
-                {#                </button>#}
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" v-model="searchQuery" @input="search"
-                           placeholder="Buscar por nombre o IP...">
-                </div>
-            </div>
+            <div class="content-table">
             <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
             <div id="table-content-wrapper">
                 {% include 'biometric/partials/partial_biometric_table.html' %}
@@ -94,23 +62,34 @@
                 {% include 'biometric/modals/modal_biometric_adms.html' %}
             </div>
 
-            <div class="pagination-container" id="js-pagination">
+            <div class="pagination-container" id="js-pagination"
+                 data-current-page="{{ page_obj.number|default:1 }}"
+                 data-num-pages="{{ paginator.num_pages|default:1 }}">
                 <span id="val-pagination-label" class="hidden">
-                    {% if stats_total > 0 %}Mostrando 1-{{ stats_total }} de {{ stats_total }}{% else %}Mostrando 0-0 de
-                        0{% endif %}
+                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
                 </span>
                 <span class="pagination-info">[[ pagination.label ]]</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    </li>
-                    <li>
-                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                    </li>
-                    <li>
-                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                    </li>
-                </ul>
+                <div class="pagination-controls" style="visibility:visible; display:flex; gap:8px; align-items:center;">
+                    <button class="page-btn" title="Primera" onclick="changePage(1)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button class="page-btn" title="Anterior" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.currentPage || '1') - 1)">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <div class="page-input-wrapper">
+                        <input type="number" class="page-input" id="biometric-page-input"
+                               value="{{ page_obj.number|default:1 }}" min="1" max="{{ paginator.num_pages|default:1 }}"
+                               onchange="changePage(parseInt(this.value)||1)"
+                               onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
+                        <span class="total-pages-badge">de <span id="biometric-total-pages">{{ paginator.num_pages|default:1 }}</span></span>
+                    </div>
+                    <button class="page-btn" title="Siguiente" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.currentPage || '1') + 1)">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button class="page-btn" title="Última" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.numPages || '1'))">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

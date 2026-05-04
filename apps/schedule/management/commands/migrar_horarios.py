@@ -11,17 +11,13 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Migración de historial de horarios con reporte de duplicados, cédulas y horarios por estado'
-
-    def add_arguments(self, parser):
-        parser.add_argument('--anio', type=int, help='Opcional: Filtrar por año')
+    help = 'Migración de historial buscando empleados por Cédula (Identificación)'
 
     def handle(self, *args, **options):
-        anio = options['anio']
-
         # --- 1. CONFIGURACIÓN DE MAPEOS ---
         MAPEO_HORARIOS = {
-            1: 1, 2: 1, 3: 1, 4: 2, 7: 1, 8: 2, 9: 1, 10: 4, 11: 5, 12: 6, 13: 7, 14: 8, 15: 9, 16: 10, 18: 11, 20: 12, 27: 8
+            1: 1, 2: 1, 3: 1, 4: 2, 7: 1, 8: 2, 9: 1, 10: 4, 11: 5, 12: 6, 13: 7, 14: 8, 15: 9, 16: 10, 18: 11, 20: 12,
+            27: 8
         }
 
         MAPEO_USUARIOS = {
@@ -41,20 +37,17 @@ class Command(BaseCommand):
             'MARIA VERONICA SOLANO DE LA SALA LOZANO - 0703172817': '0703172817',
         }
 
-        # Contadores de control
+        # Contadores
         total_analizados = 0
         migrados_nuevos = 0
         duplicados_actualizados = 0
-        saltados_errores = 0
+        errores_emp = 0
+        errores_horario = 0
 
-        # Colecciones para el reporte
         cedulas_faltantes = set()
-        sched_no_map_activos = set()  # Horarios en la vieja DB que están con status=True
-        sched_no_map_inactivos = set()  # Horarios en la vieja DB que están con status=False
         usuarios_en_fallback = set()
 
-        self.stdout.write(self.style.SUCCESS('🚀 Iniciando migración avanzada de Historial de Horarios...'))
-
+        self.stdout.write(self.style.SUCCESS('🚀 Iniciando migración basada en Cédulas...'))
         db_config = settings.DATABASES['old_db']
 
         try:
@@ -64,7 +57,7 @@ class Command(BaseCommand):
             )
             cur = conn.cursor()
 
-            # --- 2. SQL CON JOIN PARA TRAER CÉDULA (identification) ---
+            # SQL para traer historial con cédula del empleado
             query = """
                     SELECT h.employee_id, \
                            h.schedule_id, \
@@ -72,14 +65,11 @@ class Command(BaseCommand):
                            h.user_change, \
                            h.reason, \
                            h.status, \
-                           p.cedula
+                           p.cedula -- Campo clave para buscar en el nuevo sistema
                     FROM employee_employeeschedulehistory h
                              LEFT JOIN employee_employee e ON h.employee_id = e.id
                              LEFT JOIN person_person p ON e.person_id = p.id \
                     """
-            if anio:
-                query += f" WHERE EXTRACT(YEAR FROM h.date_of_assignment) = {anio}"
-
             cur.execute(query)
             rows = cur.fetchall()
 
@@ -88,44 +78,41 @@ class Command(BaseCommand):
                     total_analizados += 1
                     old_emp_id, old_sched_id, old_date, old_user_txt, old_reason, old_status, old_cedula = row
 
-                    # A. Buscar Empleado (Si no existe, guardamos la CÉDULA para el reporte)
-                    try:
-                        empleado = Employee.objects.get(id=old_emp_id)
-                    except Employee.DoesNotExist:
-                        cedulas_faltantes.add(str(old_cedula or f"ID:{old_emp_id}"))
-                        saltados_errores += 1
+                    # --- A. BUSCAR EMPLEADO POR CÉDULA (Más seguro que por ID) ---
+                    if not old_cedula:
+                        errores_emp += 1
                         continue
 
-                    # B. Clasificación de Horarios No Mapeados
+                    # Buscamos en el nuevo sistema al empleado que tenga esa cédula
+                    empleado = Employee.objects.filter(person__document_number=old_cedula.strip()).first()
+
+                    if not empleado:
+                        cedulas_faltantes.add(str(old_cedula))
+                        errores_emp += 1
+                        continue
+
+                    # --- B. MAPEO DE HORARIO ---
                     nuevo_sched_id = MAPEO_HORARIOS.get(old_sched_id)
                     if not nuevo_sched_id:
-                        if old_status:  # Si el registro es activo en la vieja DB
-                            sched_no_map_activos.add(old_sched_id)
-                        else:
-                            sched_no_map_inactivos.add(old_sched_id)
-                        saltados_errores += 1
+                        errores_horario += 1
                         continue
 
                     horario_obj = Schedule.objects.filter(id=nuevo_sched_id).first()
                     if not horario_obj:
-                        saltados_errores += 1
+                        errores_horario += 1
                         continue
 
-                    # C. Resolución de Usuario (Fallback ID 3)
+                    # --- C. RESOLUCIÓN DE USUARIO (Fallback ID 3) ---
                     username_nuevo = MAPEO_USUARIOS.get(old_user_txt, old_user_txt)
                     creador = User.objects.filter(username=username_nuevo).first()
-
                     if not creador:
-                        creador = User.objects.filter(id=3).first()
-                        if not creador:  # Fallback de emergencia si el ID 3 no existe
-                            creador = User.objects.filter(is_superuser=True).first()
+                        creador = User.objects.filter(id=3).first() or User.objects.filter(is_superuser=True).first()
                         usuarios_en_fallback.add(old_user_txt)
 
-                    # D. Preparar estado y fecha
-                    estado_logico = bool(old_status)
+                    # --- D. GUARDAR / ACTUALIZAR ---
                     fecha_inicio = old_date.date() if isinstance(old_date, datetime.datetime) else old_date
+                    estado_logico = bool(old_status)
 
-                    # E. GUARDAR O ACTUALIZAR (Detección de duplicidad)
                     history, created = EmployeeScheduleHistory.objects.update_or_create(
                         employee=empleado,
                         schedule=horario_obj,
@@ -148,31 +135,20 @@ class Command(BaseCommand):
 
             conn.close()
 
-            # --- 3. REPORTE FINAL DETALLADO ---
+            # --- REPORTE FINAL ---
             self.stdout.write("\n" + "=" * 70)
-            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN DE MIGRACIÓN DE HISTORIAL"))
+            self.stdout.write(self.style.SUCCESS(f"🏁 RESULTADO DE LA MIGRACIÓN"))
             self.stdout.write("=" * 70)
-            self.stdout.write(f"📊 Total analizados en DB Old:   {total_analizados}")
-            self.stdout.write(self.style.SUCCESS(f"✅ Registros nuevos creados:    {migrados_nuevos}"))
-            self.stdout.write(self.style.WARNING(f"⚠️  Duplicados (Actualizados):   {duplicados_actualizados}"))
-            self.stdout.write(self.style.ERROR(f"✖  Saltados (Errores/Faltas):   {saltados_errores}"))
+            self.stdout.write(f"📊 Registros analizados:       {total_analizados}")
+            self.stdout.write(f"✅ Migrados (Nuevos):          {migrados_nuevos}")
+            self.stdout.write(f"⚠️  Duplicados (Actualizados):  {duplicados_actualizados}")
+            self.stdout.write(f"❌ Saltados por falta de Emp:  {errores_emp}")
+            self.stdout.write(f"❌ Saltados por Horario:       {errores_horario}")
             self.stdout.write("-" * 70)
 
             if cedulas_faltantes:
-                self.stdout.write(self.style.ERROR(f"❌ EMPLEADOS NO ENCONTRADOS (Cédulas):"))
+                self.stdout.write(self.style.ERROR(f"📋 CÉDULAS NO ENCONTRADAS EN SIGETH (Debes crearlos):"))
                 self.stdout.write(f"   {', '.join(sorted(list(cedulas_faltantes)))}")
-                self.stdout.write(f"   (Total: {len(cedulas_faltantes)})")
-
-            if sched_no_map_activos or sched_no_map_inactivos:
-                self.stdout.write(self.style.NOTICE(f"📋 HORARIOS PENDIENTES DE MAPEAR (IDs antiguos):"))
-                if sched_no_map_activos:
-                    self.stdout.write(f"   🟢 ACTIVO en DB vieja: {list(sched_no_map_activos)}")
-                if sched_no_map_inactivos:
-                    self.stdout.write(f"   ⚪ INACTIVO en DB vieja: {list(sched_no_map_inactivos)}")
-
-            if usuarios_en_fallback:
-                self.stdout.write(self.style.NOTICE(f"👤 USUARIOS ASIGNADOS AL ID 3 (Fallback):"))
-                self.stdout.write(f"   -> {', '.join(list(usuarios_en_fallback)[:15])}...")
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ ERROR CRÍTICO: {e}"))
+            self.stdout.write(self.style.ERROR(f"❌ ERROR: {e}"))

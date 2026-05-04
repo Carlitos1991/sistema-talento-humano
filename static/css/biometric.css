@@ -33,6 +33,32 @@
     font-size: 0.9rem;
 }
 
+/* Forzar anchos fijos y comportamiento de la tabla */
+.biometric-table {
+    width: 100%;
+    table-layout: fixed; /* Respeta colgroup widths */
+    border-collapse: collapse;
+}
+
+.biometric-table th, .biometric-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Override toggle text width coming from payroll.css to show full label */
+.managed-table .modern-toggle-wrapper .modern-toggle-text {
+    width: auto !important;
+    min-width: 230px !important; /* ensure enough space to display full text */
+    white-space: nowrap !important; /* keep on single line */
+    text-overflow: clip !important;
+    overflow: visible !important;
+}
+
+.managed-table .modern-toggle-wrapper {
+    min-width: 280px !important; /* ensure wrapper is wide enough to fit text */
+}
+
 /* ID de la fila (el número 5 de tu imagen) */
 .device-id {
     color: #64748b;
