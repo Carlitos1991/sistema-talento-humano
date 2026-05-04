@@ -1,0 +1,65 @@
+<div class="modal-container-medium shadow-card">
+    <button type="button" class="btn-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-clock-rotate-left"></i>
+            </div>
+            <h2 class="header-title-main">Historial de Horarios - {{ employee.person.full_name }}</h2>
+        </div>
+    </div>
+
+    <div class="modal-body-scrolled">
+        <div style="margin-bottom: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <strong>Horario vigente actual:</strong>
+            {% if current_row and current_row.schedule %}
+                {{ current_row.schedule.name }}
+                <span class="text-muted">({{ current_row.start_date|date:"d/m/Y" }}{% if current_row.end_date %} - {{ current_row.end_date|date:"d/m/Y" }}{% endif %})</span>
+            {% else %}
+                <span class="text-muted">Sin horario vigente</span>
+            {% endif %}
+        </div>
+
+        {% if histories %}
+            <table class="table table-striped table-sm" style="margin-bottom:0; font-size:.92rem;">
+                <thead>
+                <tr>
+                    <th>Horario</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th>Estado</th>
+                    <th>Registrado por</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for h in histories %}
+                    <tr>
+                        <td><strong>{{ h.schedule.name }}</strong></td>
+                        <td>{{ h.start_date|date:"d/m/Y" }}</td>
+                        <td>{% if h.end_date %}{{ h.end_date|date:"d/m/Y" }}{% else %}Sin fecha fin{% endif %}</td>
+                        <td>
+                            {% if current_row and current_row.pk == h.pk %}
+                                <span class="status-badge active">Vigente</span>
+                            {% else %}
+                                <span class="status-badge neutral">Histórico</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ h.created_by.get_full_name|default:h.created_by.username|default:'-' }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay historial de horarios para este empleado.</p>
+        {% endif %}
+    </div>
+
+    <div class="modal-footer-fixed">
+        <button type="button" class="btn-cancel" style="min-width: 150px;">
+            <i class="fa-solid fa-xmark"></i> CERRAR
+        </button>
+    </div>
+</div>

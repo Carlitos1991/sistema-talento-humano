@@ -1,0 +1,52 @@
+{% load static %}
+<div class="table-container">
+    <table class="managed-table exportable-table" data-title="Asignación de Horarios" data-filename="Asignacion_Horarios" data-external-pagination="true" data-external-search="true">
+        <thead>
+        <tr>
+            <th style="width: 38%;">Nombres y Apellidos</th>
+            <th style="width: 20%;">Cargo</th>
+            <th style="width: 16%;">Tipo</th>
+            <th style="width: 18%;">Área</th>
+            <th class="text-center actions" style="width: 8%;">Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in employees_data %}
+            <tr>
+                <td style="font-weight: 500; padding-left: 8px;">
+                    <strong>{{ item.employee.person.full_name }}</strong><br>
+                    <small class="text-muted">{{ item.employee.person.document_number }}</small>
+                </td>
+                <td>{{ item.position_name }}</td>
+                <td>{{ item.type_name }}</td>
+                <td>{{ item.area_name }}</td>
+                <td class="actions">
+                    <div class="actions-wrapper" style="justify-content:center; gap: 8px;">
+                        <button type="button" class="btn-list-action js-view-schedule-history"
+                                data-employee-id="{{ item.employee.pk }}"
+                                title="Historial de Horarios">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </button>
+                        {% if perms.schedule.change_schedule %}
+                            <button type="button" class="btn-create-action js-change-schedule"
+                                    data-employee-id="{{ item.employee.pk }}"
+                                    title="Cambiar Horario">
+                                <i class="fa-solid fa-right-left"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5">
+                    <div class="no-results-content">
+                        <i class="fas fa-clock no-results-icon"></i>
+                        <p class="no-results-text">No se encontraron empleados para asignar horario.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

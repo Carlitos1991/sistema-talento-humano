@@ -1,0 +1,85 @@
+<div id="employee-schedule-modal" class="modal-container-medium shadow-card">
+    <button type="button" class="btn-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-right-left"></i>
+            </div>
+            <h2 class="header-title-main">Cambiar Horario - {{ employee.person.full_name }}</h2>
+        </div>
+    </div>
+        <script>
+            (function(){
+                if (window.$ && $.fn.select2) {
+                    $('#employee-schedule-modal .select2').select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Seleccione una opción',
+                        dropdownParent: $('#employee-schedule-modal')
+                    });
+                }
+            })();
+        </script>
+
+    <style>
+        /* Ajustes puntuales para este modal: reducir espacio inferior y compactar footer */
+        #employee-schedule-modal .modal-body-scrolled { padding-bottom: 28px !important; }
+        #employee-schedule-modal .modal-footer-fixed { padding: 10px 18px; }
+    </style>
+
+    <div class="modal-body-scrolled">
+        <div style="margin-bottom: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <strong>Horario actual:</strong>
+            {% if current_row and current_row.schedule %}
+                {{ current_row.schedule.name }}
+                <span class="text-muted">({{ current_row.start_date|date:"d/m/Y" }}{% if current_row.end_date %} - {{ current_row.end_date|date:"d/m/Y" }}{% endif %})</span>
+            {% else %}
+                <span class="text-muted">Sin horario vigente</span>
+            {% endif %}
+        </div>
+
+        <form id="employee-schedule-form" action="{{ action_url }}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="employee_id" value="{{ employee.pk }}">
+
+            <div class="form-group mb-3">
+                <label class="form-label" for="schedule_id">Horario</label>
+                <select id="schedule_id" name="schedule_id" class="form-control select2" required>
+                    <option value="">-- Seleccione --</option>
+                    {% for schedule in schedules %}
+                        <option value="{{ schedule.pk }}">{{ schedule.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid-2-cols" style="gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="start_date">Fecha desde</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="end_date">Fecha hasta</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control">
+                    <small class="form-hint">Opcional. Si se deja vacío, el horario queda vigente sin fecha fin.</small>
+                </div>
+            </div>
+
+            <div class="form-group mt-3">
+                <label class="form-label" for="reason">Motivo</label>
+                <textarea id="reason" name="reason" class="form-control" rows="3" placeholder="Opcional: indique si es temporal o el motivo del cambio"></textarea>
+            </div>
+
+            <div class="modal-footer-fixed" style="padding-left:0; padding-right:0;">
+                <button type="button" class="btn-cancel js-close-modal">
+                    <i class="fa-solid fa-xmark"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> GUARDAR
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -502,6 +502,15 @@
                                 </a>
                             </li>
                         {% endif %}
+                        {% if perms.schedule.view_schedule or perms.schedule.change_schedule %}
+                            <li>
+                                <a href="{% url 'schedule:assignment_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'assignment_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-right-left"></i>
+                                    <span class="menu-text">Asignar horario</span>
+                                </a>
+                            </li>
+                        {% endif %}
                     </ul>
                 </li>
             {% endif %}

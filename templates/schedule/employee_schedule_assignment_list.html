@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asignar Horario | SIGETH{% endblock %}
+
+{% block content %}
+    <div id="employee-schedule-app"
+         data-query="{{ query|default:'' }}"
+         data-total="{{ page_obj.paginator.count|default:0 }}"
+         data-current-page="{{ page_obj.number|default:1 }}"
+         data-total-pages="{{ page_obj.paginator.num_pages|default:1 }}">
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'schedule:assignment_list' %}">
+        <input type="hidden" id="url-partial" value="{% url 'schedule:assignment_partial_table' %}">
+
+        <div class="header-card">
+            <div>
+                <h1><i class="fa-regular fa-clock"></i> Asignar Horario</h1>
+                <p>Seleccione un empleado para revisar su historial o cambiar su horario.</p>
+            </div>
+        </div>
+
+        <div class="content-table">
+            <div class="table-controls">
+                <div class="search-box" style="max-width: 520px;">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="table-search" class="input-field"
+                           placeholder="Buscar por nombre, cédula, cargo, tipo o área"
+                           value="{{ query|default:'' }}">
+                </div>
+            </div>
+
+            <div id="table-content-wrapper">
+                {% include 'schedule/partials/partial_employee_assignment_table.html' %}
+            </div>
+
+            <div class="pagination-container" id="js-pagination" style="margin-top:25px; display:flex; justify-content:center; align-items:center; gap:12px;">
+                <span class="pagination-info" id="page-info">
+                    {% if page_obj %}
+                        Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} registros
+                    {% else %}
+                        Mostrando 0 a 0 registros de 0 registros
+                    {% endif %}
+                </span>
+                <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+                    <li><button id="btn-first" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Primera"><i class="fas fa-angle-double-left"></i></button></li>
+                    <li><button id="btn-prev" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Anterior"><i class="fas fa-chevron-left"></i></button></li>
+                    <li>
+                        <div class="page-input-wrapper">
+                            <input type="number" id="page-input" class="page-input" min="1" max="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}" value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
+                            <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}</span>
+                        </div>
+                    </li>
+                    <li><button id="btn-next" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Siguiente"><i class="fas fa-chevron-right"></i></button></li>
+                    <li><button id="btn-last" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Última"><i class="fas fa-angle-double-right"></i></button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div id="customModal" class="modal-overlay hidden">
+        <div id="modal-dynamic-content"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/schedule_assignment.js' %}"></script>
+{% endblock %}
