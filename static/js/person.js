@@ -89,6 +89,112 @@ window.quickFilterStatus = (statusId) => {
     if (vueApp) vueApp.applyQuickFilter(statusId);
 };
 
+/**
+ * Inicializa el scroll horizontal con flecha en la tabla
+ * Detecta si hay scroll y muestra/oculta una flecha para desplazarse al final
+ * La flecha se mantiene visible al inicio de la tabla para no depender de ver el final.
+ */
+window.initTableHorizontalScroll = () => {
+    const tableContainer = document.querySelector('.table-container');
+    if (!tableContainer) return;
+
+    const table = tableContainer.querySelector('table');
+    if (!table) return;
+
+    // Usar el helper nativo de TableManager cuando exista y adaptarlo al listado de personas
+    tableContainer.classList.add('table-container-has-scroll-helper');
+
+    let helperGroup = tableContainer.querySelector('.table-scroll-helper-group');
+    if (!helperGroup) {
+        helperGroup = document.createElement('div');
+        helperGroup.className = 'table-scroll-helper-group';
+
+        const startButton = document.createElement('button');
+        startButton.type = 'button';
+        startButton.className = 'table-scroll-nav-button table-scroll-nav-start';
+        startButton.setAttribute('aria-label', 'Ir al inicio de la tabla');
+        startButton.title = 'Ir al inicio de la tabla';
+        startButton.innerHTML = '<i class="fas fa-angles-left"></i>';
+
+        const endButton = document.createElement('button');
+        endButton.type = 'button';
+        endButton.className = 'table-scroll-nav-button table-scroll-nav-end';
+        endButton.setAttribute('aria-label', 'Ir al final de la tabla');
+        endButton.title = 'Ir al final de la tabla';
+        endButton.innerHTML = '<i class="fas fa-angles-right"></i>';
+
+        helperGroup.appendChild(startButton);
+        helperGroup.appendChild(endButton);
+        tableContainer.appendChild(helperGroup);
+    }
+
+    // Función para verificar y actualizar el estado del scroll
+    const updateScrollIndicator = () => {
+        const hasHorizontalScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
+        const atStart = tableContainer.scrollLeft <= 4;
+        const atEnd = tableContainer.scrollLeft + tableContainer.clientWidth >= tableContainer.scrollWidth - 4;
+
+        const startButton = tableContainer.querySelector('.table-scroll-nav-start');
+        const endButton = tableContainer.querySelector('.table-scroll-nav-end');
+
+        tableContainer.classList.toggle('table-scroll-helper-force-visible', hasHorizontalScroll);
+        tableContainer.classList.toggle('table-scroll-helper-at-end', hasHorizontalScroll && atEnd && !atStart);
+
+        if (helperGroup) {
+            helperGroup.style.left = 'auto';
+            helperGroup.style.right = '0.65rem';
+            helperGroup.style.top = '0.55rem';
+            helperGroup.style.flexDirection = 'row';
+            helperGroup.style.gap = '0.35rem';
+            helperGroup.style.alignItems = 'center';
+            helperGroup.style.padding = '0.2rem 0.35rem';
+            helperGroup.style.borderRadius = '999px';
+            helperGroup.style.background = 'rgba(15, 23, 42, 0.18)';
+            helperGroup.style.backdropFilter = 'blur(2px)';
+            helperGroup.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.08)';
+        }
+
+        if (startButton) {
+            startButton.style.display = hasHorizontalScroll && atEnd ? 'inline-flex' : 'none';
+            startButton.title = 'Regresar al inicio de la tabla';
+            startButton.setAttribute('aria-label', 'Regresar al inicio de la tabla');
+            if (!startButton.dataset.bound) {
+                startButton.addEventListener('click', () => {
+                    tableContainer.scrollTo({left: 0, behavior: 'smooth'});
+                });
+                startButton.dataset.bound = '1';
+            }
+        }
+
+        if (endButton) {
+            endButton.style.display = hasHorizontalScroll && !atEnd ? 'inline-flex' : 'none';
+            endButton.title = 'Ir al final de la tabla';
+            endButton.setAttribute('aria-label', 'Ir al final de la tabla');
+            endButton.style.width = '28px';
+            endButton.style.height = '28px';
+            endButton.style.background = 'rgba(14, 165, 233, 0.78)';
+            endButton.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.16)';
+            endButton.style.color = '#ffffff';
+            if (!endButton.dataset.bound) {
+                endButton.addEventListener('click', () => {
+                    tableContainer.scrollTo({
+                        left: tableContainer.scrollWidth,
+                        behavior: 'smooth'
+                    });
+                });
+                endButton.dataset.bound = '1';
+            }
+        }
+    };
+    
+    // Actualizar al cargar y cuando se redimensiona
+    updateScrollIndicator();
+    window.addEventListener('resize', updateScrollIndicator);
+    
+    // Actualizar cuando el usuario hace scroll
+    tableContainer.addEventListener('scroll', updateScrollIndicator);
+};
+
 window.sortPersonTable = (thElement) => {
     // Inicializar si no existe
     if (!window._personExport) window._personExport = {};
@@ -417,6 +523,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             if (typeof window.applyPersonClientSearchFilter === 'function') {
                                 window.applyPersonClientSearchFilter();
+                            }
+
+                            // Inicializar scroll horizontal con flecha
+                            if (typeof window.initTableHorizontalScroll === 'function') {
+                                window.initTableHorizontalScroll();
                             }
                         }
                     }
@@ -1005,6 +1116,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof addExportButtonsToTables === 'function') {
                     addExportButtonsToTables();
                 }
+                // Inicializar scroll horizontal con flecha
+                if (typeof window.initTableHorizontalScroll === 'function') {
+                    window.initTableHorizontalScroll();
+                }
                 // Select2 para el modal de búsqueda avanzada (independiente)
                 $('.select2-field', '#modalAdvancedSearch').select2({
                     dropdownParent: $('#modalAdvancedSearch')
@@ -1039,4 +1154,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicializar Select2 para el modal de búsqueda avanzada
     window.initializeSelect2();
+
+    // ========== Sincronizar scrollbar horizontal de la tabla ==========
+    window.initTableXScroll = function() {
+        const tc = document.querySelector('.table-container');
+        if (!tc) return;
+
+        const wrapper = tc.querySelector('.table-horizontal-wrapper');
+        const table = tc.querySelector('table.managed-table');
+        const xscroll = tc.querySelector('.table-xscroll');
+        const xinner = tc.querySelector('.table-xscroll-inner');
+
+        if (!wrapper || !table || !xscroll || !xinner) return;
+
+        let isUserScrolling = false;
+
+        function refreshXScroll() {
+            // Establecer ancho del elemento interno igual al ancho de la tabla
+            const w = table.scrollWidth;
+            xinner.style.width = w + 'px';
+            
+            // Sincronizar scrollLeft desde wrapper a xscroll
+            if (!isUserScrolling) {
+                xscroll.scrollLeft = wrapper.scrollLeft;
+            }
+        }
+
+        // Cuando el usuario mueve el scrollbar superior
+        xscroll.addEventListener('scroll', function() {
+            isUserScrolling = true;
+            wrapper.scrollLeft = xscroll.scrollLeft;
+            isUserScrolling = false;
+        }, false);
+
+        // Cuando el usuario mueve la tabla (teclado, trackpad, etc)
+        wrapper.addEventListener('scroll', function() {
+            if (!isUserScrolling) {
+                xscroll.scrollLeft = wrapper.scrollLeft;
+            }
+        }, false);
+
+        // Actualizar cuando la ventana cambie de tamaño
+        window.addEventListener('resize', refreshXScroll);
+
+        // Inicializar las dimensiones
+        refreshXScroll();
+        setTimeout(refreshXScroll, 100);
+        setTimeout(refreshXScroll, 500);
+    };
+
+    // Ejecutar cuando el DOM está listo
+    window.initTableXScroll();
 });

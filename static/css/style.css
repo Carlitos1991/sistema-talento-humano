@@ -2547,6 +2547,10 @@ table {
     transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
+.table-scroll-nav-start {
+    display: none !important;
+}
+
 .table-scroll-nav-button:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 22px rgba(37, 99, 235, 0.28);
@@ -2581,9 +2585,26 @@ table {
     display: flex !important;
 }
 
-.table-scroll-helper-force-visible .table-scroll-nav-start,
+.table-scroll-helper-force-visible .table-scroll-nav-start {
+    display: none !important;
+}
+
+.table-scroll-helper-force-visible.table-scroll-helper-at-end .table-scroll-nav-start {
+    display: inline-flex !important;
+    background: rgba(14, 165, 233, 0.62);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12);
+    color: #fff;
+}
+
 .table-scroll-helper-force-visible .table-scroll-nav-end {
     display: inline-flex !important;
+    background: rgba(14, 165, 233, 0.78);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.16);
+    color: #fff;
+}
+
+.table-scroll-helper-force-visible.table-scroll-helper-at-end .table-scroll-nav-end {
+    display: none !important;
 }
 
 .table-container table {
@@ -3142,14 +3163,18 @@ th.sorted-desc .sort-arrow {
    12. ESTADÍSTICAS
    ===================================================================== */
 .stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 0.5rem;
     gap: 1rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
-    flex: 1;
+    flex: 0 0 calc(20% - 0.8rem);
+    min-width: 220px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3267,6 +3292,24 @@ th.sorted-desc .sort-arrow {
 
 .stat-card.color-six .number, .stat-card.color-six .stat-icon {
     color: #605f5f;
+}
+
+/* Scrollbar personalizada para .stats-row horizontal scroll */
+.stats-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.stats-row::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.stats-row::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.stats-row::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 
@@ -5733,7 +5776,14 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 
 @media (max-width: 768px) {
     .stats-row {
+        flex-wrap: wrap;
+        overflow-x: visible;
         flex-direction: column;
+    }
+
+    .stat-card {
+        flex: 1 1 calc(50% - 0.5rem);
+        min-width: auto;
     }
 
     .table-controls {
