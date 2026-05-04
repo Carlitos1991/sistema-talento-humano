@@ -1829,6 +1829,11 @@ def generate_department_report_pdf(request):
         biometric_id__isnull=False
     )
 
+    try:
+        from schedule.models import get_employee_schedule_for_date
+    except Exception:
+        get_employee_schedule_for_date = None
+
     results_by_unit = {}
     for inst in inst_qs:
         emp_id = inst.employee_id
@@ -1909,7 +1914,31 @@ def generate_department_report_pdf(request):
         dias_sin_marcar = summary_emp.get('dias_sin_marcar', 0)
         minutos_atraso = summary_emp.get('minutos_atraso', 0)
 
-        if inconsistencias > 0 or dias_sin_marcar > 0 or minutos_atraso > 0:
+        schedule_tolerance = None
+        if get_employee_schedule_for_date:
+            try:
+                schedule_ref = get_employee_schedule_for_date(inst.employee, month_end)
+                if not schedule_ref:
+                    schedule_ref = get_employee_schedule_for_date(inst.employee, month_start)
+                if schedule_ref:
+                    schedule_tolerance = int(getattr(schedule_ref, 'late_tolerance_minutes', 0))
+            except Exception:
+                schedule_tolerance = None
+
+        show_employee = (
+            inconsistencias > 0
+            or dias_sin_marcar > 0
+            or (
+                schedule_tolerance is not None
+                and minutos_atraso > schedule_tolerance
+            )
+            or (
+                schedule_tolerance is None
+                and minutos_atraso > 0
+            )
+        )
+
+        if show_employee:
             unit_name = inst.employee.area.name if inst.employee and inst.employee.area else 'Sin Unidad'
             results_by_unit.setdefault(unit_name, []).append({
                 'employee': inst.employee,
