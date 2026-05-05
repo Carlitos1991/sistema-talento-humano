@@ -156,6 +156,7 @@ const biometricApp = createApp({
 
                 // 1. Actualizar Tabla
                 document.getElementById('table-content-wrapper').innerHTML = data.html;
+                initBiometricHorizontalScroll();
 
                 // 2. Actualizar Estadísticas dinámicamente
                 if (data.stats) this.stats = data.stats;
@@ -606,6 +607,7 @@ const biometricApp = createApp({
             if (toggle.checked) label.classList.add('modern-toggle-green');
             else label.classList.remove('modern-toggle-green');
         }
+        initBiometricHorizontalScroll();
     }
 });
 
@@ -647,6 +649,81 @@ function toggleInactiveBiometrics(checked) {
     const pageEl = document.getElementById('js-pagination');
     if (pageEl) { pageEl.dataset.currentPage = 1; }
     window.biometricVM.search();
+}
+
+// Flechas de scroll horizontal como en person_list (ir al final / volver al inicio)
+function initBiometricHorizontalScroll() {
+    const tableContainer = document.querySelector('.table-container');
+    if (!tableContainer) return;
+
+    const table = tableContainer.querySelector('table');
+    if (!table) return;
+
+    tableContainer.classList.add('table-container-has-scroll-helper');
+
+    let helperGroup = tableContainer.querySelector('.table-scroll-helper-group');
+    if (!helperGroup) {
+        helperGroup = document.createElement('div');
+        helperGroup.className = 'table-scroll-helper-group';
+
+        const startButton = document.createElement('button');
+        startButton.type = 'button';
+        startButton.className = 'table-scroll-nav-button table-scroll-nav-start';
+        startButton.setAttribute('aria-label', 'Ir al inicio de la tabla');
+        startButton.title = 'Ir al inicio de la tabla';
+        startButton.innerHTML = '<i class="fas fa-angles-left"></i>';
+
+        const endButton = document.createElement('button');
+        endButton.type = 'button';
+        endButton.className = 'table-scroll-nav-button table-scroll-nav-end';
+        endButton.setAttribute('aria-label', 'Ir al final de la tabla');
+        endButton.title = 'Ir al final de la tabla';
+        endButton.innerHTML = '<i class="fas fa-angles-right"></i>';
+
+        helperGroup.appendChild(startButton);
+        helperGroup.appendChild(endButton);
+        tableContainer.appendChild(helperGroup);
+    }
+
+    const updateScrollIndicator = () => {
+        const hasHorizontalScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
+        const atStart = tableContainer.scrollLeft <= 4;
+        const atEnd = tableContainer.scrollLeft + tableContainer.clientWidth >= tableContainer.scrollWidth - 4;
+
+        const startButton = tableContainer.querySelector('.table-scroll-nav-start');
+        const endButton = tableContainer.querySelector('.table-scroll-nav-end');
+
+        tableContainer.classList.toggle('table-scroll-helper-force-visible', hasHorizontalScroll);
+        tableContainer.classList.toggle('table-scroll-helper-at-end', hasHorizontalScroll && atEnd && !atStart);
+
+        if (startButton) {
+            startButton.style.display = hasHorizontalScroll && atEnd ? 'inline-flex' : 'none';
+            if (!startButton.dataset.bound) {
+                startButton.addEventListener('click', () => {
+                    tableContainer.scrollTo({left: 0, behavior: 'smooth'});
+                });
+                startButton.dataset.bound = '1';
+            }
+        }
+
+        if (endButton) {
+            endButton.style.display = hasHorizontalScroll && !atEnd ? 'inline-flex' : 'none';
+            if (!endButton.dataset.bound) {
+                endButton.addEventListener('click', () => {
+                    tableContainer.scrollTo({left: tableContainer.scrollWidth, behavior: 'smooth'});
+                });
+                endButton.dataset.bound = '1';
+            }
+        }
+    };
+
+    if (!tableContainer.dataset.scrollBound) {
+        tableContainer.addEventListener('scroll', updateScrollIndicator);
+        window.addEventListener('resize', updateScrollIndicator);
+        tableContainer.dataset.scrollBound = '1';
+    }
+
+    updateScrollIndicator();
 }
 
 // Sort handler called from TH elements

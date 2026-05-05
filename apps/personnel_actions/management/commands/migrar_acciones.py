@@ -6,148 +6,166 @@ from django.db import transaction
 from django.conf import settings
 from employee.models import Employee
 from core.models import User
-# Ajusta los imports según tu app
-from actions.models import PersonnelAction, ActionType, ActionMovement
+# Asegúrate de que estas rutas sean las correctas en tu proyecto SIGETH 2
+from personnel_actions.models import PersonnelAction, ActionType, ActionMovement
+from institution.models import AdministrativeUnit
 
 class Command(BaseCommand):
-    help = 'Migración de Acciones de Personal y sus Movimientos'
+    help = 'Migración detallada de Acciones de Personal usando Usuario ID 4'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=int, required=True)
         parser.add_argument('--mes', type=int, help='Opcional (1-12)')
 
-    def limpiar_monto(self, valor_texto):
-        """Convierte CharField ('$ 1,200.50' o '1200,50') a Decimal"""
-        if not valor_texto:
+    def limpiar_monto(self, valor):
+        if not valor:
             return Decimal('0.00')
         try:
-            # Eliminar símbolos de moneda y limpiar comas/puntos
-            limpio = re.sub(r'[^\d,\.]', '', str(valor_texto))
+            limpio = re.sub(r'[^\d,\.]', '', str(valor))
             if ',' in limpio and '.' in limpio:
-                limpio = limpio.replace(',', '') # 1,200.50 -> 1200.50
+                limpio = limpio.replace(',', '')
             elif ',' in limpio:
-                limpio = limpio.replace(',', '.') # 1200,50 -> 1200.50
+                limpio = limpio.replace(',', '.')
             return Decimal(limpio)
         except Exception:
             return Decimal('0.00')
 
+    def convertir_booleano(self, valor):
+        if valor in (True, 't', 'T', 'true', 'True', 1, '1'):
+            return True
+        return False
+
     def handle(self, *args, **options):
         anio, mes = options['anio'], options['mes']
+        USER_ID_MIGRACION = 4
 
-        # --- MAPEOS ---
-        MAPEO_TIPO_ACCION = {
-            1: 1,
-            # Llenar según los resultados de la auditoría
+        # --- AQUÍ DEBES AGREGAR LOS IDs QUE TE SALTEN ---
+        MAPEO_ACCIONES = {
+            20: 2,  # Ejemplo: Vacaciones[cite: 5]
+            6: 4,  # Ejemplo: Encargo[cite: 5]
+            16: 6,  # Ejemplo: Renuncia[cite: 5]
+            19: 7,  # Ejemplo: Renuncia[cite: 5]
+            22: 7,  # Ejemplo: Renuncia[cite: 5]
+            28: 8,  # Ejemplo: Renuncia[cite: 5]
+            14: 9,  # Ejemplo: Renuncia[cite: 5]
+            12: 10,  # Ejemplo: Renuncia[cite: 5]
+            18: 11,  # Ejemplo: Renuncia[cite: 5]
+            24: 3,  # Ejemplo: Renuncia[cite: 5]
+            2: 5,  # Ejemplo: Renuncia[cite: 5]
+            17: 11,  # Ejemplo: Renuncia[cite: 5]
         }
 
-        # En SIGETH 1 las firmas vienen por ID de Authority.
-        # Si no tienes las equivalencias de usuarios en SIGETH 2, puedes definir un admin por defecto.
-        USUARIO_SISTEMA_ID = User.objects.filter(is_active=True).first().id # ID de respaldo
+        MAPEO_UNIDADES = {
+            "Centro de Apoyo Social Municipal": 128,  # Formato pedido: "TEXTO_ORIGEN": ID_DESTINO
+            "Dirección Administrativa": 30,
+            "Dirección de Higiene": 73,
+            "UMAPAL": 67,
+            "Dirección de Seguridad Ciudadana y Control Público": 70,
+            "Dirección Estratégica de Tránsito": 87,
+            "Dirección de Cultura": 95,
+            "Dirección de Educación, Deportes y Recreación": 93,
+            "Dirección de Gestión Ambiental": 72,
+            "Dirección de Gestión Económica": 68,
+            "Dirección de Gestión Territorial": 65,
+            "Dirección de Movilidad y Transporte": 69,
+            "Dirección de Obras Públicas": 66,
+            "Dirección de Planificación": 15,
+            "Dirección de Talento Humano": 32,
+            "Secretaría General": 5,
+        }
 
-        cedulas_faltantes = set()
-        tipos_no_mapeados = set()
-        migrados, duplicados, saltados, total_analizados = 0, 0, 0, 0
+        migrados = 0
+        ya_existentes = 0
+        sin_empleado = 0
+        sin_mapeo_tipo = 0
+        errores_db = 0
+        total_procesados = 0
 
         db_config = settings.DATABASES['old_db']
 
         try:
-            self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando migración de Acciones: Año {anio}"))
             conn = psycopg2.connect(
                 dbname=db_config['NAME'], user=db_config['USER'],
                 password=db_config['PASSWORD'], host=db_config['HOST'], port=db_config['PORT']
             )
 
             with conn.cursor() as cursor:
-                # Hacemos un JOIN con History_Actions para traer la info de movimiento en la misma consulta
+                # SQL mejorado para traer el nombre de la acción desde el origen[cite: 3, 5]
                 sql = """
-                      SELECT per.cedula, 
-                             pa.type_of_action_id, 
-                             pa.number, 
-                             pa.explanation,
-                             pa.date_issue, 
-                             pa.date_valid, 
-                             pa.registered, 
-                             pa.date_register,
-                             ha.remuneration_actual, 
-                             ha.remuneration_new, 
-                             ha.place_work_new
-                      FROM app_personnelaction pa
-                      INNER JOIN employee_employee e ON pa.employee_id = e.id
-                      INNER JOIN person_person per ON e.person_id = per.id
-                      LEFT JOIN app_history_actions ha ON ha.personnel_action_id = pa.id
-                      WHERE EXTRACT(YEAR FROM pa.date_issue) = %s
-                      """
+                    SELECT per.cedula, pa.action_id, pa.number, pa.explanation, 
+                           pa.date_issue, pa.date_valid, pa.registered, pa.date_register,
+                           ha.remuneration_actual, ha.remuneration_new, 
+                           ha.direction_new, ha.place_work_new,
+                           act.name as nombre_accion_old
+                    FROM actions_personnelaction pa
+                    INNER JOIN employee_employee e ON pa.employee_id = e.id
+                    INNER JOIN person_person per ON e.person_id = per.id
+                    INNER JOIN actions_actions act ON pa.action_id = act.id
+                    LEFT JOIN actions_history_actions ha ON ha.personnel_action_id = pa.id
+                    WHERE EXTRACT(YEAR FROM pa.date_issue) = %s
+                """
                 params = [anio]
                 if mes:
                     sql += " AND EXTRACT(MONTH FROM pa.date_issue) = %s"
                     params.append(mes)
 
                 cursor.execute(sql, params)
+                rows = cursor.fetchall()
 
-                for row in cursor.fetchall():
-                    total_analizados += 1
-                    (cedula, id_tipo_old, numero_accion, explicacion,
-                     fecha_emision, fecha_vigente, registrado, fecha_registro,
-                     rmu_actual, rmu_nuevo, lugar_trabajo) = row
+                self.stdout.write(f"Analizando {len(rows)} registros...")
 
-                    id_tipo_nuevo = MAPEO_TIPO_ACCION.get(id_tipo_old)
-                    empleado = Employee.objects.filter(person__document_number=cedula).first()
+                for row in rows:
+                    total_procesados += 1
+                    (cedula, id_act_old, num, exp, f_emision, f_vence,
+                     reg_old, f_reg_old, r_old, r_new, unidad_txt, lugar, nombre_accion_old) = row
 
-                    if not empleado or not id_tipo_nuevo:
-                        saltados += 1
-                        if not empleado: cedulas_faltantes.add(cedula)
-                        if not id_tipo_nuevo: tipos_no_mapeados.add(str(id_tipo_old))
+                    if PersonnelAction.objects.filter(number=num).exists():
+                        ya_existentes += 1
                         continue
 
-                    # Detección de duplicados por número de acción (que ahora es unique=True en destino)
-                    if PersonnelAction.objects.filter(number=numero_accion).exists():
-                        duplicados += 1
+                    emp = Employee.objects.filter(person__document_number=cedula).first()
+                    if not emp:
+                        sin_empleado += 1
+                        continue
+
+                    tipo_id_nuevo = MAPEO_ACCIONES.get(id_act_old)
+                    if not tipo_id_nuevo:
+                        # AHORA TE DIRÁ EL NOMBRE
+                        self.stdout.write(self.style.WARNING(
+                            f"[-] Saltado {num}: El ID {id_act_old} ({nombre_accion_old}) no está mapeado."
+                        ))
+                        sin_mapeo_tipo += 1
                         continue
 
                     try:
                         with transaction.atomic():
-                            # 1. Crear Cabecera (PersonnelAction)
-                            nueva_accion = PersonnelAction.objects.create(
-                                employee=empleado,
-                                action_type_id=id_tipo_nuevo,
-                                number=numero_accion,
-                                explanation=explicacion,
-                                date_issue=fecha_emision,
-                                date_effective=fecha_vigente,
-                                is_registered=registrado,
-                                date_registered=fecha_registro,
-                                created_by_id=USUARIO_SISTEMA_ID,
-                                authority_1_id=USUARIO_SISTEMA_ID # Usamos el de respaldo para evitar crasheos FK
+                            nueva_pa = PersonnelAction.objects.create(
+                                employee=emp,
+                                action_type_id=tipo_id_nuevo,
+                                number=num,
+                                explanation=exp or "Migración Histórica",
+                                date_issue=f_emision,
+                                date_effective=f_vence,
+                                is_registered=self.convertir_booleano(reg_old),
+                                date_registered=f_reg_old,
+                                created_by_id=USER_ID_MIGRACION,
+                                authority_1_id=USER_ID_MIGRACION
                             )
 
-                            # 2. Crear Detalle de Movimiento (ActionMovement)
-                            # Nota: Puestos y Unidades (FK) se dejan en None de momento si en el origen eran simples strings.
-                            # Si tienes catálogo para cruzar, habría que hacer un mapeo extra aquí.
                             ActionMovement.objects.create(
-                                personnel_action=nueva_accion,
-                                previous_remuneration=self.limpiar_monto(rmu_actual),
-                                new_remuneration=self.limpiar_monto(rmu_nuevo),
-                                location_text=lugar_trabajo
+                                personnel_action=nueva_pa,
+                                previous_remuneration=self.limpiar_monto(r_old),
+                                new_remuneration=self.limpiar_monto(r_new),
+                                new_unit_id=MAPEO_UNIDADES.get(unidad_txt),
+                                location_text=lugar or unidad_txt
                             )
-
                             migrados += 1
                     except Exception as e:
-                        self.stdout.write(self.style.ERROR(f"Error en acción {numero_accion} (Ced: {cedula}): {e}"))
-                        saltados += 1
-
-                    self.stdout.write(f"⏳ Analizando... {total_analizados}", ending='\r')
+                        self.stdout.write(self.style.ERROR(f"[!] Error DB en {num}: {str(e)}"))
+                        errores_db += 1
 
             conn.close()
-
-            # --- REPORTE FINAL ---
-            self.stdout.write("\n" + "=" * 60)
-            self.stdout.write(self.style.SUCCESS(f"🏁 RESUMEN FINAL MIGRACIÓN ACCIONES"))
-            self.stdout.write("=" * 60)
-            self.stdout.write(f"📊 Analizados en BD antigua:        {total_analizados}")
-            self.stdout.write(f"✅ Acciones + Movimientos creados:  {migrados}")
-            self.stdout.write(f"⚠️  Acciones duplicadas (omitidas):  {duplicados}")
-            self.stdout.write(f"✖  Saltados (errores/faltantes):    {saltados}")
-            self.stdout.write("=" * 60 + "\n")
+            self.stdout.write(self.style.SUCCESS(f"\n🏁 FINALIZADO: {migrados} nuevos, {ya_existentes} ya estaban."))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Fallo crítico: {e}"))
+            self.stdout.write(self.style.ERROR(f"Fallo crítico: {str(e)}"))

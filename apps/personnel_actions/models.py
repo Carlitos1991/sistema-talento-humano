@@ -11,7 +11,7 @@ class ActionType(models.Model):
     Catálogo de Tipos de Acción (ej: Nombramiento, Ascenso, Vacaciones)
     """
     name = models.CharField(verbose_name='Nombre', max_length=100)
-    code = models.CharField(verbose_name='Código', max_length=20, unique=True, help_text="Ej: ASC, NOM, REM")
+    code = models.CharField(verbose_name='Código', max_length=35, unique=True, help_text="Ej: ASC, NOM, REM")
     is_active = models.BooleanField(verbose_name='Activo', default=True)
 
     class Meta:

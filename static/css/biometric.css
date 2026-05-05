@@ -46,6 +46,53 @@
     white-space: nowrap;
 }
 
+/* En biométricos, la última columna no debe quedar con tratamiento "estático" global */
+.table-container .biometric-table th:last-child,
+.table-container .biometric-table td:last-child {
+    position: static !important;
+    right: auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    box-shadow: none !important;
+}
+
+.table-container .biometric-table tbody td:last-child {
+    white-space: normal !important;
+    text-align: center;
+    min-width: auto !important;
+    width: auto !important;
+    padding: 0.5rem 0.3rem !important;
+    overflow: visible !important;
+}
+
+/* Prevent action buttons from shrinking on smaller screens */
+.table-container .biometric-table td .btn-views-action,
+.table-container .biometric-table td .btn-list-action,
+.table-container .biometric-table td .btn-success-action,
+.table-container .biometric-table td .btn-info-action,
+.table-container .biometric-table td .btn-delete-action {
+    width: 36px !important;
+    height: 36px !important;
+    margin: 0 3px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+.table-container .biometric-table td .btn-views-action i,
+.table-container .biometric-table td .btn-list-action i,
+.table-container .biometric-table td .btn-success-action i,
+.table-container .biometric-table td .btn-info-action i,
+.table-container .biometric-table td .btn-delete-action i {
+    font-size: 0.95rem !important;
+}
+
+/* Ensure actions wrapper allows wrapping if needed */
+.table-container .biometric-table .actions-wrapper {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 3px !important;
+}
+
 /* Override toggle text width coming from payroll.css to show full label */
 .managed-table .modern-toggle-wrapper .modern-toggle-text {
     width: auto !important;

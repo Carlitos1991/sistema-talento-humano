@@ -1,340 +1,362 @@
+/**
+ * action_admin.js
+ *
+ * ARQUITECTURA CLAVE:
+ *   window.fetchTableData se define ANTES del DOMContentLoaded para que
+ *   los onclick inline del partial HTML siempre la encuentren, tanto en
+ *   la carga inicial como después de cada reemplazo AJAX.
+ */
+
+// ─── Estado global accesible por los onclick del partial ───────────────────
+window._paState = {
+    currentPage:      1,
+    totalPages:       1,
+    currentOrder:     null,
+    currentDirection: 'asc',
+};
+
+/**
+ * Recarga la tabla vía AJAX.
+ * Expuesta globalmente para los onclick del partial HTML.
+ */
+window.fetchTableData = function (page) {
+    const state       = window._paState;
+    const container   = document.getElementById('table-content-wrapper');
+    const urlList     = document.getElementById('url-list');
+    const searchInput = document.getElementById('table-search');
+    const filtersForm = document.getElementById('filtersForm');
+
+    if (!container || !urlList) return;
+
+    const pageNumber = (page != null) ? parseInt(page, 10) : state.currentPage;
+
+    const params = new URLSearchParams();
+    params.set('page', pageNumber);
+
+    if (searchInput && searchInput.value.trim()) {
+        params.set('q', searchInput.value.trim());
+    }
+
+    if (filtersForm) {
+        new FormData(filtersForm).forEach(function (v, k) {
+            if (v && v.toString().trim()) params.set(k, v);
+        });
+    }
+
+    if (state.currentOrder) {
+        params.set('order_by',  state.currentOrder);
+        params.set('direction', state.currentDirection);
+    }
+
+    fetch(urlList.value + '?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+        if (data.html) {
+            container.innerHTML = data.html;
+            _updateSortIcons();
+        }
+        state.currentPage = data.page_number || 1;
+        state.totalPages  = data.num_pages   || 1;
+    })
+    .catch(function (err) {
+        console.error('fetchTableData error:', err);
+    });
+};
+
+/** Marca visualmente el encabezado de columna ordenado actualmente */
+function _updateSortIcons() {
+    var state = window._paState;
+    document.querySelectorAll('a.sortable').forEach(function (el) {
+        el.classList.remove('asc', 'desc');
+        if (el.dataset.order === state.currentOrder) {
+            el.classList.add(state.currentDirection);
+        }
+    });
+}
+
+// ─── Inicialización al cargar el DOM ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
 
-    // --- REFERENCIAS ---
-    const tableContainer = document.getElementById('table-content-wrapper');
-    const searchInput = document.getElementById('table-search');
-    const csrfToken = document.getElementById('csrf-token').value;
-    const urlList = document.getElementById('url-list').value;
+    var state = window._paState;
 
-    // Referencias Modal
-    const detailModal = document.getElementById('actionDetailModal');
-    const detailContent = document.getElementById('modal-detail-content');
-
-    // Referencias de paginación
-    const pageInfo = document.getElementById('page-info');
-    const btnPrev = document.getElementById('btn-prev');
-    const btnNext = document.getElementById('btn-next');
-    const currentPageDisplay = document.getElementById('current-page-display');
-
-    // Estado de paginación
-    let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
-    let totalPages = window.initialPagination ? window.initialPagination.total_pages : 1;
-
-    // Inicializar botones de paginación con datos del servidor
+    // Leer paginación inicial inyectada por Django
     if (window.initialPagination) {
-        if (btnPrev) btnPrev.disabled = !window.initialPagination.has_previous;
-        if (btnNext) btnNext.disabled = !window.initialPagination.has_next;
+        state.currentPage = window.initialPagination.current_page || 1;
+        state.totalPages  = window.initialPagination.total_pages  || 1;
     }
 
-    // --- EVENTOS ---
+    var csrfToken   = (document.getElementById('csrf-token')  || {}).value || '';
+    var tableContainer = document.getElementById('table-content-wrapper');
+    var filtersForm    = document.getElementById('filtersForm');
+    var detailModal    = document.getElementById('actionDetailModal');
+    var detailContent  = document.getElementById('modal-detail-content');
 
-    // 1. Buscador
-    let timeout = null;
-    if (searchInput) {
-        searchInput.addEventListener('keyup', (e) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                currentPage = 1;
-                fetchTableData();
-            }, 300);
+    // ── Filtros: Buscar / Limpiar ─────────────────────────────────────────
+    var btnSearch = document.getElementById('btn-filter-search');
+    var btnClear  = document.getElementById('btn-filter-clear');
+
+    if (btnSearch) {
+        btnSearch.addEventListener('click', function (e) {
+            e.preventDefault();
+            state.currentPage = 1;
+            window.fetchTableData(1);
+        });
+    }
+    if (btnClear && filtersForm) {
+        btnClear.addEventListener('click', function (e) {
+            e.preventDefault();
+            filtersForm.reset();
+            state.currentPage = 1;
+            window.fetchTableData(1);
         });
     }
 
-    // 2. Botones de paginación
-    if (btnPrev) {
-        btnPrev.addEventListener('click', () => {
-            if (currentPage > 1) {
-                fetchTableData(currentPage - 1);
-            }
-        });
-    }
-
-    if (btnNext) {
-        btnNext.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                fetchTableData(currentPage + 1);
-            }
-        });
-    }
-
-    // 3. Cerrar Modal de detalle
+    // ── Cerrar modal de detalle ───────────────────────────────────────────
     if (detailModal) {
-        detailModal.addEventListener('click', (e) => {
-            if (e.target === detailModal || e.target.closest('.js-close-detail-modal') || e.target.closest('.btn-close-modal')) {
-                closeDetailModal();
+        detailModal.addEventListener('click', function (e) {
+            if (e.target === detailModal ||
+                e.target.closest('.js-close-detail-modal') ||
+                e.target.closest('.btn-close-modal')) {
+                _closeDetailModal();
             }
         });
     }
 
-    // 4. DELEGACIÓN DE ACCIONES EN LA TABLA
+    // ── Delegación de clics en la tabla ──────────────────────────────────
     if (tableContainer) {
         tableContainer.addEventListener('click', function (e) {
 
             // A. VER DETALLE
-            const detailBtn = e.target.closest('.js-view-detail');
+            var detailBtn = e.target.closest('.js-view-detail');
             if (detailBtn) {
                 e.preventDefault();
-                openDetailModal(detailBtn.dataset.url);
+                _viewDetail(detailBtn.dataset.actionId);
                 return;
             }
 
             // B. EDITAR ACCIÓN
-            const editBtn = e.target.closest('.js-edit-action');
+            var editBtn = e.target.closest('.js-edit-action');
             if (editBtn) {
                 e.preventDefault();
-                const actionId = editBtn.dataset.actionId;
-                // Abrir formulario de edición vía AJAX en el modal de edición
-                fetch(`/personnel_actions/${actionId}/edit/`, {
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                })
-                    .then(res => res.text())
-                    .then(html => {
-                        const editContent = document.getElementById('modal-edit-content');
-                        const editModal = document.getElementById('actionEditModal');
-                        if (!editContent || !editModal) return;
-                        editContent.innerHTML = html;
-                        editModal.classList.remove('hidden');
-                        document.body.classList.add('modal-open');
-
-                        // Setup close behavior for this edit modal. Preserve any existing global closeModal.
-                        try {
-                            const previousClose = window.closeModal;
-                            const closeEditModal = function () {
-                                editModal.classList.add('hidden');
-                                editContent.innerHTML = '';
-                                document.body.classList.remove('modal-open');
-                                // restore previous global closeModal if any
-                                window.closeModal = previousClose;
-                            };
-                            window.closeModal = closeEditModal;
-
-                            // Close when clicking outside modal content
-                            editModal.addEventListener('click', function (ev) {
-                                if (ev.target === editModal) {
-                                    closeEditModal();
-                                }
-                            });
-                        } catch (err) {
-                            console.warn('Error setting edit modal close handlers', err);
-                        }
-
-                        // Inicializar Select2 dentro del modal si está disponible
-                        try {
-                            if (window.jQuery && jQuery.fn.select2) {
-                                jQuery(editContent).find('.select2').each(function () {
-                                    jQuery(this).select2({width: '100%', dropdownParent: jQuery(editContent)});
-                                });
-                            }
-                        } catch (err) {
-                            console.warn('Select2 init failed', err);
-                        }
-
-                        // Inicializar scripts específicos del modal (cascadas, búsqueda de partidas)
-                        try {
-                            if (window.PersonnelActionModal && typeof PersonnelActionModal.init === 'function') {
-                                PersonnelActionModal.init();
-                            }
-                        } catch (err) {
-                            console.warn('PersonnelActionModal init error', err);
-                        }
-
-                        // Bind submit del formulario dentro del modal para enviar vía AJAX
-                        const form = editContent.querySelector('form');
-                        if (form) {
-                            form.addEventListener('submit', function (ev) {
-                                ev.preventDefault();
-                                const formData = new FormData(form);
-                                fetch(form.action, {
-                                    method: 'POST',
-                                    body: formData,
-                                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                                }).then(async (res) => {
-                                    if (res.ok) {
-                                        // Cerrar modal y refrescar tabla
-                                        editModal.classList.add('hidden');
-                                        editContent.innerHTML = '';
-                                        document.body.classList.remove('modal-open');
-                                        fetchTableData();
-                                        if (typeof Swal !== 'undefined') {
-                                            Swal.fire({icon: 'success', title: 'Guardado', timer: 1200, showConfirmButton: false});
-                                        }
-                                    } else {
-                                        // Reemplazar contenido del modal con formulario con errores
-                                        const txt = await res.text();
-                                        editContent.innerHTML = txt;
-                                    }
-                                }).catch(err => {
-                                    console.error('Error enviando formulario:', err);
-                                    if (typeof Swal !== 'undefined') Swal.fire('Error', 'Error inesperado', 'error');
-                                });
-                            });
-                        }
-                        // Bind cancel buttons inside modal to close
-                        const btnCancel = editContent.querySelector('.btn-cancel');
-                        if (btnCancel) btnCancel.addEventListener('click', () => { if (window.closeModal) window.closeModal(); });
-                    })
-                    .catch(err => {
-                        console.error('Error al cargar formulario de edición:', err);
-                        if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo abrir el formulario', 'error');
-                    });
+                _openEditModal(editBtn.dataset.actionId);
                 return;
             }
 
             // C. REGISTRAR ACCIÓN
-            const registerBtn = e.target.closest('.js-register-action');
+            var registerBtn = e.target.closest('.js-register-action');
             if (registerBtn) {
                 e.preventDefault();
-                const actionId = registerBtn.dataset.actionId;
-                confirmRegisterAction(actionId);
+                _confirmRegister(registerBtn.dataset.actionId, csrfToken);
                 return;
             }
 
             // D. IMPRIMIR PDF
-            const printBtn = e.target.closest('.js-print-action');
+            var printBtn = e.target.closest('.js-print-action');
             if (printBtn) {
                 e.preventDefault();
-                const actionId = printBtn.dataset.actionId;
-                window.open(`/personnel_actions/${actionId}/pdf/`, '_blank');
+                window.open('/personnel_actions/' + printBtn.dataset.actionId + '/pdf/', '_blank');
                 return;
             }
         });
     }
 
-    // --- FUNCIONES AUXILIARES ---
-
-    /**
-     * Fetch actualizado de la tabla con paginación y búsqueda
-     */
-    function fetchTableData(page = null) {
-        const searchQuery = searchInput ? searchInput.value : '';
-        const pageNumber = page || currentPage;
-
-        let url = `${urlList}?page=${pageNumber}`;
-        if (searchQuery) {
-            url += `&q=${encodeURIComponent(searchQuery)}`;
+    // ── Ordenamiento por columna ──────────────────────────────────────────
+    document.addEventListener('click', function (e) {
+        var s = e.target.closest('.sortable');
+        if (!s) return;
+        e.preventDefault();
+        var order = s.dataset.order;
+        if (state.currentOrder === order) {
+            state.currentDirection = (state.currentDirection === 'asc') ? 'desc' : 'asc';
+        } else {
+            state.currentOrder     = order;
+            state.currentDirection = 'asc';
         }
+        state.currentPage = 1;
+        window.fetchTableData(1);
+    });
 
-        fetch(url, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.html) {
-                    tableContainer.innerHTML = data.html;
-                }
-
-                // Actualizar paginación
-                currentPage = data.page_number || 1;
-                totalPages = data.num_pages || 1;
-
-                if (pageInfo) {
-                    const start = ((currentPage - 1) * 10) + 1;
-                    const end = Math.min(currentPage * 10, data.total_records || 0);
-                    pageInfo.textContent = `Mostrando ${start} a ${end} registros de ${data.total_records} registros`;
-                }
-
-                if (currentPageDisplay) {
-                    currentPageDisplay.textContent = currentPage;
-                }
-
-                if (btnPrev) {
-                    btnPrev.disabled = !data.has_previous;
-                }
-                if (btnNext) {
-                    btnNext.disabled = !data.has_next;
-                }
-            })
-            .catch(err => {
-                console.error('Error al cargar datos:', err);
-            });
+    // ── Exportar ──────────────────────────────────────────────────────────
+    var btnExportExcel = document.getElementById('btn-export-excel');
+    var btnExportPdf   = document.getElementById('btn-export-pdf');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', function (e) {
+            e.preventDefault();
+            var table = document.querySelector('.exportable-table');
+            if (table && typeof exportTableCSVFallback === 'function') exportTableCSVFallback(table);
+        });
+    }
+    if (btnExportPdf) {
+        btnExportPdf.addEventListener('click', function (e) {
+            e.preventDefault();
+            var table = document.querySelector('.exportable-table');
+            if (table && typeof exportTablePDFFallback === 'function') exportTablePDFFallback(table);
+        });
     }
 
-    /**
-     * Abrir modal de detalle
-     */
-    function openDetailModal(url) {
-        fetch(url, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(res => res.text())
-            .then(html => {
-                detailContent.innerHTML = html;
-                detailModal.classList.remove('hidden');
-                document.body.classList.add('modal-open');
-            })
-            .catch(err => {
-                console.error('Error al cargar detalle:', err);
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire('Error', 'No se pudo cargar el detalle', 'error');
-                }
-            });
-    }
+    // ─────────────────────────────────────────────────────────────────────
+    // FUNCIONES PRIVADAS
+    // ─────────────────────────────────────────────────────────────────────
 
-    /**
-     * Cerrar modal de detalle
-     */
-    function closeDetailModal() {
-        detailModal.classList.add('hidden');
-        detailContent.innerHTML = '';
+    function _closeDetailModal() {
+        if (detailModal)  detailModal.classList.add('hidden');
+        if (detailContent) detailContent.innerHTML = '';
         document.body.classList.remove('modal-open');
     }
 
-    /**
-     * Confirmar registro de acción
-     */
-    function confirmRegisterAction(actionId) {
+    function _viewDetail(actionId) {
+        if (!detailContent || !detailModal) return;
+
+        detailContent.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;padding:3rem;flex-direction:column;">' +
+            '<div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;"></div>' +
+            '<p class="mt-3 text-muted fw-bold">Cargando detalles...</p></div>';
+        detailModal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+
+        fetch('/personnel_actions/' + actionId + '/detail/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (res) {
+            if (!res.ok) throw new Error('No encontrado');
+            return res.json();
+        })
+        .then(function (data) {
+            detailContent.innerHTML = data.html;
+            detailContent.querySelectorAll('.js-close-detail-modal').forEach(function (btn) {
+                btn.onclick = function () { _closeDetailModal(); };
+            });
+        })
+        .catch(function (err) {
+            console.error('viewDetail error:', err);
+            detailContent.innerHTML = '<div class="alert alert-danger m-4 text-center">' +
+                '<i class="fas fa-exclamation-circle fa-2x"></i>' +
+                '<p class="mt-2">No se pudo cargar la información.</p>' +
+                '<button class="btn btn-secondary mt-2" onclick="document.getElementById(\'actionDetailModal\').classList.add(\'hidden\')">Cerrar</button></div>';
+        });
+    }
+
+    function _openEditModal(actionId) {
+        var editContent = document.getElementById('modal-edit-content');
+        var editModal   = document.getElementById('actionEditModal');
+        if (!editContent || !editModal) return;
+
+        fetch('/personnel_actions/' + actionId + '/edit/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (res) { return res.text(); })
+        .then(function (html) {
+            editContent.innerHTML = html;
+            editModal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+
+            var closeEditModal = function () {
+                editModal.classList.add('hidden');
+                editContent.innerHTML = '';
+                document.body.classList.remove('modal-open');
+            };
+            window.closeModal = closeEditModal;
+
+            editModal.addEventListener('click', function (ev) {
+                if (ev.target === editModal) closeEditModal();
+            });
+
+            // Select2
+            try {
+                if (window.jQuery && jQuery.fn.select2) {
+                    jQuery(editContent).find('.select2').each(function () {
+                        jQuery(this).select2({ width: '100%', dropdownParent: jQuery(editContent) });
+                    });
+                }
+            } catch (err) { console.warn('Select2 init failed', err); }
+
+            // Modal init
+            try {
+                if (window.PersonnelActionModal && typeof PersonnelActionModal.init === 'function') {
+                    PersonnelActionModal.init();
+                }
+            } catch (err) { console.warn('PersonnelActionModal init error', err); }
+
+            // Submit AJAX
+            var form = editContent.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function (ev) {
+                    ev.preventDefault();
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (res) {
+                        if (res.ok) {
+                            closeEditModal();
+                            window.fetchTableData();
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Guardado', timer: 1200, showConfirmButton: false });
+                            }
+                        } else {
+                            return res.text().then(function (txt) { editContent.innerHTML = txt; });
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('Edit submit error:', err);
+                        if (typeof Swal !== 'undefined') Swal.fire('Error', 'Error inesperado', 'error');
+                    });
+                });
+            }
+
+            var btnCancel = editContent.querySelector('.btn-cancel');
+            if (btnCancel) btnCancel.addEventListener('click', function () {
+                if (window.closeModal) window.closeModal();
+            });
+        })
+        .catch(function (err) {
+            console.error('Edit modal error:', err);
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo abrir el formulario', 'error');
+        });
+    }
+
+    function _confirmRegister(actionId, csrf) {
         if (typeof Swal === 'undefined') {
-            alert('¿Está seguro de registrar esta acción?');
-            registerAction(actionId);
+            if (confirm('¿Está seguro de registrar esta acción?')) _doRegister(actionId, csrf);
             return;
         }
-
         Swal.fire({
             title: '¿Registrar Acción?',
             text: 'Una vez registrada, no podrá ser editada.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3b82f6',
-            cancelButtonColor: '#6b7280',
+            cancelButtonColor:  '#6b7280',
             confirmButtonText: 'Sí, registrar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                registerAction(actionId);
-            }
+            cancelButtonText:  'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) _doRegister(actionId, csrf);
         });
     }
 
-    /**
-     * Registrar acción vía AJAX
-     */
-    function registerAction(actionId) {
-        fetch(`/personnel_actions/${actionId}/register/`, {
+    function _doRegister(actionId, csrf) {
+        fetch('/personnel_actions/' + actionId + '/register/', {
             method: 'POST',
             headers: {
-                'X-CSRFToken': csrfToken,
+                'X-CSRFToken':      csrf,
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire('¡Registrada!', data.message || 'Acción registrada correctamente', 'success');
-                    }
-                    fetchTableData();
-                } else {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', data.message || 'No se pudo registrar', 'error');
-                    }
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire('Error', 'Error de conexión', 'error');
-                }
-            });
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.success) {
+                if (typeof Swal !== 'undefined') Swal.fire('¡Registrada!', data.message || 'Acción registrada correctamente', 'success');
+                window.fetchTableData();
+            } else {
+                if (typeof Swal !== 'undefined') Swal.fire('Error', data.message || 'No se pudo registrar', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error('Register error:', err);
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Error de conexión', 'error');
+        });
     }
 
 });

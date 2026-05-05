@@ -5,7 +5,6 @@
 
 {% block content %}
     <div class="content-wrapper">
-        <!-- Configuración oculta -->
         <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
         <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_list' %}">
 
@@ -17,71 +16,86 @@
             </div>
         </div>
 
-        <!-- Filtros y búsqueda -->
         <div id="table-app">
             <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por número, empleado, cédula o tipo">
-                    </div>
+
+                <!-- ── Zona de filtros centrada bajo el header ── -->
+                <div class="pa-filter-box">
+                    <form id="filtersForm" onsubmit="return false;">
+                        <div class="pa-filter-row">
+                            <input type="text" id="filter_name" name="q" class="pa-input"
+                                   placeholder="Apellidos / Nombres">
+                            <select id="filter_action_type" name="action_type" class="pa-input">
+                                <option value="">Tipo de Acción</option>
+                                {% for t in action_types %}
+                                    <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="date" id="filter_date_from" name="date_from" class="pa-input datepicker"
+                                   placeholder="Fecha Desde">
+                            <input type="date" id="filter_date_to" name="date_to" class="pa-input datepicker"
+                                   placeholder="Fecha Hasta">
+                        </div>
+                        <div class="pa-filter-row">
+                            <input type="text" id="filter_prev_unit" name="prev_unit" class="pa-input"
+                                   placeholder="Dirección Original">
+                            <input type="text" id="filter_new_unit" name="new_unit" class="pa-input"
+                                   placeholder="Dirección Propuesta">
+                            <input type="text" id="filter_prev_pos" name="prev_pos" class="pa-input"
+                                   placeholder="Cargo Original">
+                            <input type="text" id="filter_new_pos" name="new_pos" class="pa-input"
+                                   placeholder="Cargo Propuesto">
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Zona de recarga AJAX -->
+                <!-- ── Toolbar: Excel/PDF izq | Buscar/Limpiar centrados | espacio der ── -->
+                <div class="pa-toolbar">
+                    <div class="pa-toolbar-left">
+                        <button id="btn-export-excel" class="pa-btn-export pa-btn-excel">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <button id="btn-export-pdf" class="pa-btn-export pa-btn-pdf">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                    <div class="pa-toolbar-center">
+                        <button id="btn-filter-search" class="pa-btn-action pa-btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button id="btn-filter-clear" class="pa-btn-action pa-btn-secondary">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                    </div>
+                    <div class="pa-toolbar-right"><!-- espaciador --></div>
+                </div>
+
+                <!-- ── Tabla AJAX (sin segundo contador aquí) ── -->
                 <div id="table-content-wrapper">
                     {% include 'personnel_action/partials/partial_personnel_action_admin_table.html' %}
                 </div>
 
-                <!-- Paginación -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">
-                        {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de
-                            {{ page_obj.paginator.count }} registros
-                        {% else %}
-                            Mostrando 0 a 0 registros de 0 registros
-                        {% endif %}
-                    </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"
-                                    {% if not page_obj.has_previous %}disabled{% endif %}>
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
-                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
-                            </span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </div>
     </div>
-    <!-- Modal para detalles -->
+
+    <!-- Modal detalle -->
     <div id="actionDetailModal" class="modal-overlay hidden">
-        <div id="modal-detail-content"></div>
+        <div class="modal-container-medium animate-scale-in"
+             style="max-width:850px;background:#fff;border-radius:12px;display:flex;flex-direction:column;max-height:85vh;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.25);">
+            <div id="modal-detail-content" style="display:flex;flex-direction:column;height:100%;width:100%;"></div>
+        </div>
     </div>
 
-    <!-- Modal para editar -->
+    <!-- Modal editar -->
     <div id="actionEditModal" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;"
-             id="modal-edit-content">
-            <!-- Contenido dinámico del formulario -->
-        </div>
+        <div class="modal-container-medium animate-scale-in" style="max-width:750px;max-height:95vh;"
+             id="modal-edit-content"></div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        // Inicializar paginación desde el servidor
         window.initialPagination = {
             current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
             total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
@@ -90,4 +104,252 @@
         };
     </script>
     <script src="{% static 'js/personnel_actions/action_admin.js' %}"></script>
+{% endblock %}
+
+{% block extra_css %}
+    <style>
+        /* ─── Persona ─────────────────────────────── */
+        .person-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .person-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .person-avatar-placeholder {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #4a90e2;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: .85rem;
+        }
+
+        .person-full-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: .875rem;
+        }
+
+        .person-doc {
+            font-size: .78rem;
+            color: #64748b;
+        }
+
+        /* ─── Caja de filtros ─────────────────────── */
+        .pa-filter-box {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px 20px 12px;
+            margin-bottom: 12px;
+        }
+
+        .pa-filter-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .pa-filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .pa-input {
+            flex: 1 1 190px;
+            max-width: 255px;
+            padding: 8px 11px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: .875rem;
+            background: #fff;
+            color: #374151;
+            outline: none;
+            transition: border-color .15s;
+        }
+
+        .pa-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, .15);
+        }
+
+        /* ─── Toolbar ─────────────────────────────── */
+        .pa-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pa-toolbar-left {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pa-toolbar-center {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pa-toolbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        /* Para que el centro quede realmente centrado usamos flex:1 en los extremos */
+        .pa-toolbar-left,
+        .pa-toolbar-right {
+            flex: 1;
+        }
+
+        .pa-toolbar-right {
+            justify-content: flex-end;
+        }
+
+        /* Exportar: fondo blanco + borde de color */
+        .pa-btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #fff;
+            border: 2px solid currentColor;
+            transition: background .15s, color .15s;
+            line-height: 1.4;
+        }
+
+        .pa-btn-excel {
+            color: #16a34a;
+        }
+
+        .pa-btn-excel:hover {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        .pa-btn-pdf {
+            color: #dc2626;
+        }
+
+        .pa-btn-pdf:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        /* Buscar / Limpiar */
+        .pa-btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 22px;
+            border-radius: 6px;
+            font-size: .875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            min-width: 110px;
+            justify-content: center;
+            transition: opacity .15s;
+        }
+
+        .pa-btn-action:hover {
+            opacity: .85;
+        }
+
+        .pa-btn-primary {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .pa-btn-secondary {
+            background: #64748b;
+            color: #fff;
+        }
+
+        /* ─── Paginación (vive en el partial) ────── */
+        .pagination-container {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pagination-info {
+            font-size: .875rem;
+            color: #64748b;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .page-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .page-input {
+            width: 58px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: .875rem;
+        }
+
+        .total-pages-badge {
+            font-size: .875rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        /* ─── Sort inline con el nombre ──────────── */
+        th a.sortable {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: inherit;
+            white-space: nowrap;
+        }
+
+        th a.sortable .sort-icon {
+            font-size: .68rem;
+            opacity: .45;
+            transition: opacity .1s;
+        }
+
+        th a.sortable.asc .sort-icon,
+        th a.sortable.desc .sort-icon {
+            opacity: 1;
+        }
+    </style>
 {% endblock %}

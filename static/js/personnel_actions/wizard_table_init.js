@@ -215,14 +215,21 @@
             fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}})
                 .then(r=>r.json().catch(()=>null).then(j=> j || null))
                 .then(data=>{
-                    let html = null;
-                    if (data && data.html) html = data.html;
-                    else {
-                        // If server returned full HTML (not JSON), fetch as text
-                        return fetch(url).then(r=>r.text()).then(t=>t);
-                    }
-                    return html;
-                })
+                        if (data && data.html) return data.html;
+                        // If we didn't get JSON, fetch as text and attempt to recover
+                        return fetch(url).then(r=>r.text()).then(t=>{
+                            const trimmed = (t || '').trim();
+                            // Some servers may return a JSON string even when requested without AJAX headers.
+                            // Try to detect a JSON payload and extract `.html` if present.
+                            if (trimmed.startsWith('{') || trimmed.startsWith('\"{')) {
+                                try {
+                                    const parsed = JSON.parse(trimmed);
+                                    if (parsed && parsed.html) return parsed.html;
+                                } catch(e){ /* fallthrough to return raw text */ }
+                            }
+                            return t;
+                        });
+                    })
                 .then(html=>{
                     if (!html) return;
                     // Inject modal

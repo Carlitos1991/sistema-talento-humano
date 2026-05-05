@@ -143,3 +143,52 @@
     margin-bottom: 1rem;
 }
 
+/* Forzar que el pie del modal mande los botones a la derecha */
+.modal-footer-medium.modal-footer-spaced {
+    display: flex !important;
+    justify-content: flex-end !important; /* Mueve el botón a la derecha */
+    gap: 12px;
+    padding: 1.25rem 1.5rem !important;
+    background-color: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Arreglar el padding del cuerpo para que no choque con los bordes */
+.modal-body-custom {
+    padding: 1.5rem !important;
+}
+
+/* Asegurar que las tarjetas de información tengan sombra suave */
+.form-section-card {
+    border: 1px solid #e5e7eb !important;
+    margin-bottom: 1rem !important;
+    border-radius: 8px !important;
+}
+
+/* Asegurar que el contenido inyectado se distribuya correctamente */
+#modal-detail-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* El encabezado se queda arriba */
+.modal-header-medium {
+    flex: 0 0 auto;
+}
+
+/* El cuerpo tiene el scroll */
+.modal-body-custom {
+    flex: 1 1 auto;
+    overflow-y: auto !important;
+    padding: 1.5rem !important;
+}
+
+/* El pie de página se queda abajo y alinea el botón a la derecha */
+.modal-footer-medium.modal-footer-spaced {
+    flex: 0 0 auto;
+    display: flex !important;
+    justify-content: flex-end !important; /* Mueve el botón "Cerrar" a la derecha */
+    padding: 1rem 1.5rem !important;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}

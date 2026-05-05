@@ -105,9 +105,17 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('employee__person', 'action_type')
+        # Filtros básicos y avanzados
+        q = self.request.GET.get('q', '').strip()
+        action_type = self.request.GET.get('action_type', '').strip()
+        date_from = self.request.GET.get('date_from', '').strip()
+        date_to = self.request.GET.get('date_to', '').strip()
+        prev_unit = self.request.GET.get('prev_unit', '').strip()
+        new_unit = self.request.GET.get('new_unit', '').strip()
+        prev_pos = self.request.GET.get('prev_pos', '').strip()
+        new_pos = self.request.GET.get('new_pos', '').strip()
+        detail = self.request.GET.get('detail', '').strip()
 
-        # Filtro de búsqueda
-        q = self.request.GET.get('q')
         if q:
             qs = qs.filter(
                 Q(employee__person__first_name__icontains=q) |
@@ -117,7 +125,54 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                 Q(action_type__name__icontains=q)
             )
 
+        if action_type:
+            qs = qs.filter(Q(action_type__id=action_type) | Q(action_type__name__icontains=action_type))
+
+        if date_from:
+            try:
+                qs = qs.filter(date_issue__gte=date_from)
+            except Exception:
+                pass
+
+        if date_to:
+            try:
+                qs = qs.filter(date_issue__lte=date_to)
+            except Exception:
+                pass
+
+        if prev_unit:
+            qs = qs.filter(movement__previous_unit__name__icontains=prev_unit)
+
+        if new_unit:
+            qs = qs.filter(movement__new_unit__name__icontains=new_unit)
+
+        if prev_pos:
+            qs = qs.filter(movement__previous_position__name__icontains=prev_pos)
+
+        if new_pos:
+            qs = qs.filter(movement__new_position__name__icontains=new_pos)
+
+        if detail:
+            qs = qs.filter(Q(explanation__icontains=detail) | Q(motivation__icontains=detail))
+
+        # Aplicar orden dinámico si se solicita
+        order_by = self.request.GET.get('order_by', '').strip()
+        direction = self.request.GET.get('direction', 'asc').strip().lower()
+        if order_by:
+            prefix = '-' if direction == 'desc' else ''
+            try:
+                return qs.order_by(f"{prefix}{order_by}")
+            except Exception:
+                pass
+
+        # Orden por defecto
         return qs.order_by('-date_issue', '-number')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Añadir lista de tipos para el select de filtros
+        context['action_types'] = ActionType.objects.all()
+        return context
 
     def render_to_response(self, context, **response_kwargs):
         """Si es AJAX, devolver JSON con HTML de la tabla"""
