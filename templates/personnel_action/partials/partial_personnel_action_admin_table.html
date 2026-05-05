@@ -13,29 +13,19 @@
                     Empleado <span class="sort-icon">⇅</span>
                 </a>
             </th>
-            <th style="width:18%;">
+            <th style="width:15%;">
                 <a href="#" class="sortable" data-order="action_type__name">
                     Tipo <span class="sort-icon">⇅</span>
                 </a>
             </th>
-            <th style="width:18%;">
+            <th style="width:25%;">
                 <a href="#" class="sortable" data-order="movement__new_position">
-                    Cargo Propuesto <span class="sort-icon"></span>
+                    Cargo <span class="sort-icon"></span>
                 </a>
             </th>
-            <th style="width:12%;">
+            <th style="width:18%;">
                 <a href="#" class="sortable" data-order="movement__new_unit">
-                    Hacia <span class="sort-icon"></span>
-                </a>
-            </th>
-            <th style="width:12%;">
-                <a href="#" class="sortable" data-order="date_effective">
-                    Fecha Vigencia <span class="sort-icon"></span>
-                </a>
-            </th>
-            <th style="width:10%;">
-                <a href="#" class="sortable" data-order="is_registered">
-                    Registro <span class="sort-icon">⇅</span>
+                    Dependencia <span class="sort-icon"></span>
                 </a>
             </th>
             <th class="text-center actions no-sort" style="width:16%;">Acciones</th>
@@ -46,23 +36,9 @@
             <tr>
                 <td style="font-weight:500;">{{ action.number }}</td>
                 <td>
-                    <div class="person-info">
-                        <a href="{% url 'employee:employee_detail' action.employee.id %}" class="person-avatar-link"
-                           title="Ver perfil">
-                            {% if action.employee.person.photo %}
-                                <img src="{{ action.employee.person.photo.url }}"
-                                     alt="{{ action.employee.person.full_name }}"
-                                     class="person-avatar">
-                            {% else %}
-                                <div class="person-avatar-placeholder">
-                                    {{ action.employee.person.first_name|first }}{{ action.employee.person.last_name|first }}
-                                </div>
-                            {% endif %}
-                        </a>
-                        <div class="person-details">
-                            <div class="person-full-name">{{ action.employee.person.full_name }}</div>
-                            <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
-                        </div>
+                    <div class="person-details">
+                        <div class="person-full-name">{{ action.employee.person.full_name }}</div>
+                        <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
                     </div>
                 </td>
                 <td>
@@ -71,17 +47,16 @@
                     </span>
                 </td>
                 {% with mv=action.movement.first %}
-                    <td>{% if mv and mv.new_position %}{{ mv.new_position }}{% else %}&nbsp;{% endif %}</td>
-                    <td>{% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</td>
-                    <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                    <td>
+                        <small class="d-block">cargo anterior: {% if mv and mv.previous_position %}{{ mv.previous_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">nuevo: {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-muted">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
+                    </td>
+                    <td>
+                        <small class="d-block">desde: {% if mv and mv.previous_unit %}{{ mv.previous_unit }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">hacia: {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
+                    </td>
                 {% endwith %}
-                <td class="text-center">
-                    {% if action.is_registered %}
-                        <span class="status-badge" style="background:#e0f2fe;color:#0369a1;">Registrada</span>
-                    {% else %}
-                        <span class="status-badge active">Sin registrar</span>
-                    {% endif %}
-                </td>
                 <td class="actions">
                     <div class="actions-wrapper">
                         {% if perms.personnel_actions.view_personnelaction %}
@@ -113,7 +88,7 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="9" class="text-center" style="padding:2rem;">
+                <td colspan="6" class="text-center" style="padding:2rem;">
                     <i class="fa-solid fa-inbox" style="font-size:3rem;color:#ccc;"></i>
                     <p style="margin-top:1rem;color:#666;">No hay acciones de personal registradas</p>
                 </td>

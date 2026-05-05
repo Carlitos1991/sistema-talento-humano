@@ -6,8 +6,8 @@
             <th>Número</th>
             <th>Empleado</th>
             <th>Tipo</th>
-            <th>Fechas</th>
-            <th>Estado</th>
+            <th>Cargo</th>
+            <th>Hacia</th>
             <th class="text-end">Acciones</th>
         </tr>
         </thead>
@@ -16,28 +16,23 @@
             <tr>
                 <td class="fw-bold">{{ action.number }}</td>
                 <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">{{ action.employee.first_name|first }}</div>
-                        <div>
-                            <div>{{ action.employee.full_name }}</div>
-                            <small class="text-muted">{{ action.employee.identification }}</small>
-                        </div>
+                    <div>
+                        <div>{{ action.employee.full_name }}</div>
+                        <small class="text-muted">{{ action.employee.identification }}</small>
                     </div>
                 </td>
                 <td><span class="badge bg-info-subtle text-info">{{ action.action_type.name }}</span></td>
                 <td>
                     {% with mv=action.movement.first %}
-                        <small class="d-block">Cargo propuesto: {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}&nbsp;{% endif %}</small>
-                        <small class="d-block text-primary">Hacia: {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-primary">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
+                        <small class="d-block">cargo anterior: {% if mv and mv.previous_position %}{{ mv.previous_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">nuevo: {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-muted">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
                     {% endwith %}
                 </td>
                 <td>
-                    {% if action.is_registered %}
-                        <span class="badge bg-success">Registrada</span>
-                    {% else %}
-                        <span class="badge bg-warning">Borrador</span>
-                    {% endif %}
+                    {% with mv=action.movement.first %}
+                        <small class="d-block">{% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
+                    {% endwith %}
                 </td>
                 <td>
                     <div class="actions-wrapper">
