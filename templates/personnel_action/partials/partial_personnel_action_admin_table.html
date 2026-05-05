@@ -3,29 +3,29 @@
            data-external-pagination="true" data-external-search="true">
         <thead>
         <tr>
-            <th style="width:10%;">
+            <th style="width:10%;" class="sortable-header">
                 <a href="#" class="sortable" data-order="number">
-                    Número <span class="sort-icon">⇅</span>
+                    Número <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:22%;">
+            <th style="width:22%;" class="sortable-header">
                 <a href="#" class="sortable" data-order="employee__person__last_name">
-                    Empleado <span class="sort-icon">⇅</span>
+                    Empleado <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:15%;">
+            <th style="width:15%;" class="sortable-header">
                 <a href="#" class="sortable" data-order="action_type__name">
-                    Tipo <span class="sort-icon">⇅</span>
+                    Tipo <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:25%;">
+            <th style="width:25%;" class="sortable-header">
                 <a href="#" class="sortable" data-order="movement__new_position">
-                    Cargo <span class="sort-icon"></span>
+                    Cargo <span class="sort-arrow"></span>
                 </a>
             </th>
-            <th style="width:18%;">
+            <th style="width:18%;" class="sortable-header">
                 <a href="#" class="sortable" data-order="movement__new_unit">
-                    Dependencia <span class="sort-icon"></span>
+                    Dependencia <span class="sort-arrow"></span>
                 </a>
             </th>
             <th class="text-center actions no-sort" style="width:16%;">Acciones</th>
@@ -33,7 +33,7 @@
         </thead>
         <tbody>
         {% for action in actions %}
-            <tr>
+            <tr data-search-text="{{ action.employee.person.first_name|default:''|lower }} {{ action.employee.person.last_name|default:''|lower }} {{ action.employee.person.document_number|default:''|lower }} {{ action.action_type.name|default:''|lower }}">
                 <td style="font-weight:500;">{{ action.number }}</td>
                 <td>
                     <div class="person-details">
@@ -48,19 +48,23 @@
                 </td>
                 {% with mv=action.movement.first %}
                     <td>
-                        <small class="d-block">cargo anterior: {% if mv and mv.previous_position %}{{ mv.previous_position }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-primary">nuevo: {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block">cargo anterior:
+                            {% if mv and mv.previous_position %}{{ mv.previous_position }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">nuevo:
+                            {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}-{% endif %}</small>
                         <small class="d-block text-muted">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
                     </td>
                     <td>
-                        <small class="d-block">desde: {% if mv and mv.previous_unit %}{{ mv.previous_unit }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-primary">hacia: {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
+                        <small class="d-block">desde:
+                            {% if mv and mv.previous_unit %}{{ mv.previous_unit }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">hacia:
+                            {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
                     </td>
                 {% endwith %}
                 <td class="actions">
                     <div class="actions-wrapper">
                         {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-views-action js-view-detail"
+                            <button class="btn-icon btn-info-action js-view-detail"
                                     data-action-id="{{ action.pk }}" title="Ver Detalle">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
@@ -78,7 +82,7 @@
                             </button>
                         {% endif %}
                         {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-detail-action js-print-action"
+                            <button class="btn-icon btn-list-action js-print-action"
                                     data-action-id="{{ action.pk }}" title="Imprimir PDF">
                                 <i class="fa-solid fa-print"></i>
                             </button>

@@ -9,7 +9,7 @@
 
 <!-- BODY -->
 <div class="modal-body-custom" style="max-height: 65vh; overflow-y: auto;">
-    
+
     <!-- 1. INFORMACIÓN DEL EMPLEADO -->
     <div class="form-section-card">
         <h5 class="section-title">
@@ -53,7 +53,7 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Fecha de Vigencia</label>
-                <p class="form-control-static">{{ action.date_validity|date:"d/m/Y" }}</p>
+                <p class="form-control-static">{{ action.date_effective|date:"d/m/Y" }}</p>
             </div>
             <div class="form-group">
                 <label class="form-label">Estado</label>
@@ -70,64 +70,100 @@
 
     <!-- 3. MOTIVACIÓN Y EXPLICACIÓN -->
     {% if action.motivation or action.explanation %}
+        <div class="form-section-card mt-3">
+            <h5 class="section-title">
+                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+            </h5>
+            {% if action.motivation %}
+                <div class="form-group">
+                    <label class="form-label">Motivación</label>
+                    <p class="form-control-static">{{ action.motivation }}</p>
+                </div>
+            {% endif %}
+            {% if action.explanation %}
+                <div class="form-group">
+                    <label class="form-label">Explicación</label>
+                    <p class="form-control-static" style="white-space: pre-wrap;">{{ action.explanation }}</p>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+    <!-- 4. movimientos -->
     <div class="form-section-card mt-3">
         <h5 class="section-title">
-            <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+            <i class="fa-solid fa-code-compare"></i> MOVIMIENTO
         </h5>
-        {% if action.motivation %}
-        <div class="form-group">
-            <label class="form-label">Motivación</label>
-            <p class="form-control-static">{{ action.motivation }}</p>
+        <div class="grid-2-cols">
+            <div class="form-group">
+                <label class="form-label">Unidad Actual</label>
+                <p class="form-control-static">
+                    {{ history_action.previous_unit }}</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unidad Actual</label>
+                <p class="form-control-static">
+                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
+                        {{ action.elaboration_signature_position }}{% endif %}</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unidad Actual</label>
+                <p class="form-control-static">
+                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
+                        {{ action.elaboration_signature_position }}{% endif %}</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unidad Actual</label>
+                <p class="form-control-static">
+                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
+                        {{ action.elaboration_signature_position }}{% endif %}</p>
+            </div>
         </div>
-        {% endif %}
-        {% if action.explanation %}
-        <div class="form-group">
-            <label class="form-label">Explicación</label>
-            <p class="form-control-static" style="white-space: pre-wrap;">{{ action.explanation }}</p>
-        </div>
-        {% endif %}
     </div>
-    {% endif %}
 
-    <!-- 4. FIRMAS AUTORIZADAS -->
+    <!-- 5. FIRMAS AUTORIZADAS -->
     <div class="form-section-card mt-3">
         <h5 class="section-title">
             <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
         </h5>
         <div class="grid-2-cols">
             {% if action.elaboration_signature_name %}
-            <div class="form-group">
-                <label class="form-label">Elaborado Por</label>
-                <p class="form-control-static">{{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} - {{ action.elaboration_signature_position }}{% endif %}</p>
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Elaborado Por</label>
+                    <p class="form-control-static">
+                        {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
+                            {{ action.elaboration_signature_position }}{% endif %}</p>
+                </div>
             {% endif %}
             {% if action.reviewer %}
-            <div class="form-group">
-                <label class="form-label">Revisado Por</label>
-                <p class="form-control-static">{{ action.reviewer.name }}{% if action.reviewer.position %} - {{ action.reviewer.position }}{% endif %}</p>
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Revisado Por</label>
+                    <p class="form-control-static">{{ action.reviewer.name }}{% if action.reviewer.position %} -
+                        {{ action.reviewer.position }}{% endif %}</p>
+                </div>
             {% endif %}
             {% if action.authority_1 %}
-            <div class="form-group">
-                <label class="form-label">Aprobado Por</label>
-                <p class="form-control-static">{{ action.authority_1.name }}{% if action.authority_1.position %} - {{ action.authority_1.position }}{% endif %}</p>
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Aprobado Por</label>
+                    <p class="form-control-static">{{ action.authority_1.name }}{% if action.authority_1.position %} -
+                        {{ action.authority_1.position }}{% endif %}</p>
+                </div>
             {% endif %}
             {% if action.authority_2 %}
-            <div class="form-group">
-                <label class="form-label">Autorizado Por</label>
-                <p class="form-control-static">{{ action.authority_2.name }}{% if action.authority_2.position %} - {{ action.authority_2.position }}{% endif %}</p>
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Autorizado Por</label>
+                    <p class="form-control-static">{{ action.authority_2.name }}{% if action.authority_2.position %} -
+                        {{ action.authority_2.position }}{% endif %}</p>
+                </div>
             {% endif %}
             {% if action.register %}
-            <div class="form-group">
-                <label class="form-label">Registrado Por</label>
-                <p class="form-control-static">{{ action.register.name }}{% if action.register.position %} - {{ action.register.position }}{% endif %}</p>
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Registrado Por</label>
+                    <p class="form-control-static">{{ action.register.name }}{% if action.register.position %} -
+                        {{ action.register.position }}{% endif %}</p>
+                </div>
             {% endif %}
         </div>
     </div>
-
 </div>
 
 <!-- FOOTER -->

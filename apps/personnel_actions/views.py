@@ -117,26 +117,40 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
         detail = self.request.GET.get('detail', '').strip()
 
         if q:
-            qs = qs.filter(
-                Q(employee__person__first_name__icontains=q) |
-                Q(employee__person__last_name__icontains=q) |
-                Q(employee__person__document_number__icontains=q) |
-                Q(number__icontains=q) |
-                Q(action_type__name__icontains=q)
-            )
+            # Búsqueda combinada: divide el término en palabras
+            # y busca registros que contengan todas las palabras en nombres/apellidos
+            terms = q.split()
+            if len(terms) > 1:
+                # Búsqueda combinada: todos los términos deben estar en nombres/apellidos
+                query = Q()
+                for term in terms:
+                    query &= (
+                            Q(employee__person__first_name__icontains=term) |
+                            Q(employee__person__last_name__icontains=term)
+                    )
+                qs = qs.filter(query)
+            else:
+                # Búsqueda simple: un solo término
+                qs = qs.filter(
+                    Q(employee__person__first_name__icontains=q) |
+                    Q(employee__person__last_name__icontains=q) |
+                    Q(employee__person__document_number__icontains=q) |
+                    Q(number__icontains=q) |
+                    Q(action_type__name__icontains=q)
+                )
 
         if action_type:
             qs = qs.filter(Q(action_type__id=action_type) | Q(action_type__name__icontains=action_type))
 
         if date_from:
             try:
-                qs = qs.filter(date_issue__gte=date_from)
+                qs = qs.filter(date_effective__gte=date_from)
             except Exception:
                 pass
 
         if date_to:
             try:
-                qs = qs.filter(date_issue__lte=date_to)
+                qs = qs.filter(date_effective__lte=date_to)
             except Exception:
                 pass
 
@@ -268,7 +282,9 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 'personnel_action': self.object,
                 'previous_unit': current_unit.name if current_unit else '',
                 'previous_budget_line': current_budget,
-                'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget, 'position_item', None) else '',
+                'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget,
+                                                                                                     'position_item',
+                                                                                                     None) else '',
                 'previous_remuneration': current_budget.remuneration if current_budget else 0,
             }
 
@@ -287,7 +303,9 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 try:
                     new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
                     movement_data['new_budget_line'] = new_budget_line
-                    movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line, 'position_item', None) else ''
+                    movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line,
+                                                                                                  'position_item',
+                                                                                                  None) else ''
                     movement_data['new_remuneration'] = new_budget_line.remuneration
                 except BudgetLine.DoesNotExist:
                     pass
@@ -302,7 +320,8 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             })
 
         return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
-            'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[:300]
+            'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
+                       :300]
         })
 
     def form_invalid(self, form):
@@ -568,10 +587,11 @@ class ActionDetailView(LoginRequiredMixin, View):
             PersonnelAction.objects.select_related('employee__person', 'action_type'),
             pk=pk
         )
+        history_action = ActionMovement.objects.get(pk=pk)
 
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
-            {'action': action},
+            {'action': action, 'history_action': history_action},
             request=request
         )
 
@@ -623,14 +643,14 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
     def get_form_kwargs(self):
         """Sobrescribir para pasar datos iniciales con fechas en formato correcto"""
         kwargs = super().get_form_kwargs()
-        
+
         # Si es GET y tenemos un objeto, preparar initial data con fechas correctas
         if self.request.method == 'GET' and hasattr(self, 'object') and self.object:
             kwargs['initial'] = {
                 'date_issue': self.object.date_issue.strftime('%Y-%m-%d') if self.object.date_issue else '',
                 'date_effective': self.object.date_effective.strftime('%Y-%m-%d') if self.object.date_effective else '',
             }
-        
+
         return kwargs
 
     def get(self, request, *args, **kwargs):
@@ -714,7 +734,8 @@ class ActionRegisterView(LoginRequiredMixin, View):
                     if previous_history:
                         release_date = effective_date - timedelta(days=1)
                         if previous_history.start_date and release_date < previous_history.start_date:
-                            raise ValueError('La fecha efectiva de la acción no permite liberar la partida antes de su inicio.')
+                            raise ValueError(
+                                'La fecha efectiva de la acción no permite liberar la partida antes de su inicio.')
 
                 if movement and movement.new_unit:
                     from institution.models import AdministrativeUnit
@@ -831,7 +852,8 @@ class ActionPDFView(LoginRequiredMixin, View):
         management_period = getattr(action, 'management_period', None)
         show_without_current_situation = bool(
             management_period
-            and getattr(getattr(management_period, 'contract_type', None), 'contract_type_category', '') == 'ACCION_PERSONAL'
+            and getattr(getattr(management_period, 'contract_type', None), 'contract_type_category',
+                        '') == 'ACCION_PERSONAL'
         )
 
         if movement and movement.previous_budget_line:
@@ -904,6 +926,7 @@ class ActionPDFView(LoginRequiredMixin, View):
         except Exception:
             return HttpResponse('Error al generar el PDF de la acción', status=500)
 
+
 # ==========================================
 # APIs PARA MODAL DE ACCIONES DE PERSONAL
 # ==========================================
@@ -954,7 +977,7 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
 
     def get(self, request):
         search_term = request.GET.get('term', '').strip()
-        
+
         # Base queryset: partidas con estado LIBRE
         qs = BudgetLine.objects.filter(
             status_item__code='LIBRE'
@@ -986,7 +1009,7 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
         for line in qs:
             program_name = line.activity.project.subprogram.program.name if line.activity else ''
             position_name = line.position_item.name if line.position_item else ''
-            
+
             results.append({
                 'id': line.id,
                 'text': f"{line.code} - {position_name} - RMU: ${line.remuneration:.2f}",

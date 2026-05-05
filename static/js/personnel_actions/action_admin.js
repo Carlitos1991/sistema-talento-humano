@@ -70,20 +70,26 @@ window.fetchTableData = function (page) {
                 var newTable = container.querySelector('.managed-table');
                 if (newTable && window.TableManager) {
                     new window.TableManager(newTable);
-                    // Reaplicar estado visual del sort
-                    if (sortInfo && sortInfo.col != null) {
-                        var ths = newTable.querySelectorAll('thead th');
-                        ths.forEach(function (th, i) {
-                            th.classList.remove('sorted-asc', 'sorted-desc');
-                            var arrow = th.querySelector('.sort-arrow');
-                            if (i === sortInfo.col) {
-                                th.classList.add(sortInfo.asc ? 'sorted-asc' : 'sorted-desc');
-                                if (arrow) arrow.innerText = sortInfo.asc ? '↑' : '↓';
-                            } else {
-                                if (arrow) arrow.innerText = '⇅';
-                            }
-                        });
+                }
+                
+                // Aplicar estado visual del sort a los headers
+                var ths = container.querySelectorAll('thead th');
+                ths.forEach(function (th) {
+                    th.classList.remove('sorted-asc', 'sorted-desc');
+                    var link = th.querySelector('.sortable');
+                    if (link && link.dataset.order === state.currentOrder) {
+                        th.classList.add(state.currentDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                        var arrow = th.querySelector('.sort-arrow');
+                        if (arrow) arrow.innerText = state.currentDirection === 'asc' ? '↑' : '↓';
+                    } else {
+                        var arrow = th.querySelector('.sort-arrow');
+                        if (arrow) arrow.innerText = '⇅';
                     }
+                });
+
+                // Re-inicializar búsqueda rápida después de cargar nuevos datos
+                if (window.applyPersonnelActionClientSearchFilter) {
+                    window.applyPersonnelActionClientSearchFilter();
                 }
             }
             state.currentPage = data.page_number || 1;
@@ -111,9 +117,90 @@ document.addEventListener('DOMContentLoaded', function () {
     var detailModal = document.getElementById('actionDetailModal');
     var detailContent = document.getElementById('modal-detail-content');
 
+    // ── BÚSQUEDA RÁPIDA (Client-side filtering) ────────────────────────
+    var initQuickSearch = function() {
+        var filterNameInput = document.getElementById('filter_name');
+        if (!filterNameInput) return;
+
+        var normalizeSearchText = function(value) {
+            return (value || '')
+                .toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+        };
+
+        var filterVisibleRows = function() {
+            var terms = normalizeSearchText(filterNameInput.value)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            if (!tableContainer) return;
+
+            var dataRows = Array.from(tableContainer.querySelectorAll('tbody tr[data-search-text]'));
+            var visibleRows = 0;
+
+            dataRows.forEach(function(row) {
+                var rowText = normalizeSearchText(row.dataset.searchText || row.textContent || '');
+                var matches = terms.length === 0 || terms.every(function(term) {
+                    return rowText.includes(term);
+                });
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleRows += 1;
+            });
+
+            var noResultsRow = tableContainer.querySelector('#client-no-results');
+            if (noResultsRow) {
+                noResultsRow.style.display = dataRows.length > 0 && visibleRows === 0 ? '' : 'none';
+            }
+        };
+
+        // Exponer para reutilizar después de renderizados AJAX
+        window.applyPersonnelActionClientSearchFilter = filterVisibleRows;
+
+        // Debounce para búsqueda en el backend
+        var searchTimeout;
+        filterNameInput.addEventListener('input', function() {
+            filterVisibleRows();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                var term = filterNameInput.value.trim();
+                if (term) {
+                    state.currentPage = 1;
+                    window.fetchTableData(1);
+                }
+            }, 500);
+        });
+
+        // Presionar Enter para buscar inmediatamente
+        filterNameInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                filterVisibleRows();
+                clearTimeout(searchTimeout);
+                var term = filterNameInput.value.trim();
+                state.currentPage = 1;
+                window.fetchTableData(1);
+            }
+        });
+
+        // Initial filter on first load
+        filterVisibleRows();
+    };
+
     // ── Filtros: Buscar / Limpiar ─────────────────────────────────────────
     var btnSearch = document.getElementById('btn-filter-search');
     var btnClear = document.getElementById('btn-filter-clear');
+    var filterActionType = document.getElementById('filter_action_type');
+
+    // Event listener para cambios en Tipo de Acción
+    if (filterActionType) {
+        filterActionType.addEventListener('change', function() {
+            state.currentPage = 1;
+            window.fetchTableData(1);
+        });
+    }
 
     if (btnSearch) {
         btnSearch.addEventListener('click', function (e) {
@@ -126,9 +213,54 @@ document.addEventListener('DOMContentLoaded', function () {
         btnClear.addEventListener('click', function (e) {
             e.preventDefault();
             filtersForm.reset();
+            var filterNameInput = document.getElementById('filter_name');
+            if (filterNameInput) filterNameInput.value = '';
+            if (filterActionType) {
+                filterActionType.value = '';
+            }
             state.currentPage = 1;
             window.fetchTableData(1);
         });
+    }
+
+    // Event listeners para campos de fecha
+    var filterDateFrom = document.getElementById('filter_date_from');
+    var filterDateTo = document.getElementById('filter_date_to');
+    if (filterDateFrom) {
+        filterDateFrom.addEventListener('change', function() {
+            state.currentPage = 1;
+            window.fetchTableData(1);
+        });
+    }
+    if (filterDateTo) {
+        filterDateTo.addEventListener('change', function() {
+            state.currentPage = 1;
+            window.fetchTableData(1);
+        });
+    }
+
+    // Event listeners para campos de filtro de texto (Dirección y Cargo)
+    var filterPrevUnit = document.getElementById('filter_prev_unit');
+    var filterNewUnit = document.getElementById('filter_new_unit');
+    var filterPrevPos = document.getElementById('filter_prev_pos');
+    var filterNewPos = document.getElementById('filter_new_pos');
+
+    var onFilterTextChange = function() {
+        state.currentPage = 1;
+        window.fetchTableData(1);
+    };
+
+    if (filterPrevUnit) {
+        filterPrevUnit.addEventListener('change', onFilterTextChange);
+    }
+    if (filterNewUnit) {
+        filterNewUnit.addEventListener('change', onFilterTextChange);
+    }
+    if (filterPrevPos) {
+        filterPrevPos.addEventListener('change', onFilterTextChange);
+    }
+    if (filterNewPos) {
+        filterNewPos.addEventListener('change', onFilterTextChange);
     }
 
     // ── Cerrar modal de detalle ───────────────────────────────────────────
@@ -199,18 +331,60 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Exportar ──────────────────────────────────────────────────────────
     var btnExportExcel = document.getElementById('btn-export-excel');
     var btnExportPdf = document.getElementById('btn-export-pdf');
+
+    // Función global para exportar a CSV
+    window.exportTableToCSV = function(table) {
+        var filename = (table && table.dataset.filename) || 'acciones_personal';
+        var csv = [];
+        var rows = table.querySelectorAll('tr');
+
+        rows.forEach(function(row) {
+            var cols = row.querySelectorAll('td, th');
+            var rowData = [];
+            cols.forEach(function(col) {
+                rowData.push('"' + (col.innerText || '').replace(/"/g, '""') + '"');
+            });
+            csv.push(rowData.join(','));
+        });
+
+        var csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv.join('\n'));
+        var link = document.createElement('a');
+        link.setAttribute('href', csvContent);
+        link.setAttribute('download', filename + '.csv');
+        link.click();
+    };
+
+    // Función global para exportar a PDF
+    window.exportTableToPDF = function(table) {
+        var filename = (table && table.dataset.filename) || 'acciones_personal';
+        var html = '<html><head><meta charset="utf-8"><title>' + filename + '</title>' +
+            '<style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background-color:#f2f2f2;}</style>' +
+            '</head><body>' + table.outerHTML + '</body></html>';
+        var w = window.open('', '_blank');
+        if (!w) {
+            alert('Permita ventanas emergentes para exportar PDF');
+            return;
+        }
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(function() {
+            w.print();
+        }, 600);
+    };
+
     if (btnExportExcel) {
         btnExportExcel.addEventListener('click', function (e) {
             e.preventDefault();
             var table = document.querySelector('.exportable-table');
-            if (table && typeof exportTableCSVFallback === 'function') exportTableCSVFallback(table);
+            if (table) window.exportTableToCSV(table);
         });
     }
     if (btnExportPdf) {
         btnExportPdf.addEventListener('click', function (e) {
             e.preventDefault();
             var table = document.querySelector('.exportable-table');
-            if (table && typeof exportTablePDFFallback === 'function') exportTablePDFFallback(table);
+            if (table) window.exportTableToPDF(table);
         });
     }
 
@@ -393,5 +567,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (typeof Swal !== 'undefined') Swal.fire('Error', 'Error de conexión', 'error');
             });
     }
+
+    // ── Inicializar búsqueda rápida ───────────────────────────────────────
+    initQuickSearch();
 
 });

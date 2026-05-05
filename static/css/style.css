@@ -2581,7 +2581,7 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-info-action {
-    background: linear-gradient(to right, #6366f1, #4f46e5);
+    background: linear-gradient(to right, #3ac5d1, #20acb8);
 }
 
 .btn-create-action:hover, .btn-success-action:hover, .btn-views-action:hover,
