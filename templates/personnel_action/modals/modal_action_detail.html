@@ -100,22 +100,21 @@
                     {{ history_action.previous_unit }}</p>
             </div>
             <div class="form-group">
-                <label class="form-label">Unidad Actual</label>
+                <label class="form-label">Unidad Propuesta</label>
                 <p class="form-control-static">
-                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
-                        {{ action.elaboration_signature_position }}{% endif %}</p>
+                    {{ history_action.new_unit }}</p>
             </div>
             <div class="form-group">
-                <label class="form-label">Unidad Actual</label>
+                <label class="form-label">Cargo Actual</label>
                 <p class="form-control-static">
-                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
-                        {{ action.elaboration_signature_position }}{% endif %}</p>
+                    {{ history_action.previous_position }}</p>
+                <h5>{{ history_action.previous_remuneration }}</h5>
             </div>
             <div class="form-group">
-                <label class="form-label">Unidad Actual</label>
+                <label class="form-label">Cargo Propuesto</label>
                 <p class="form-control-static">
-                    {{ action.elaboration_signature_name }}{% if action.elaboration_signature_position %} -
-                        {{ action.elaboration_signature_position }}{% endif %}</p>
+                    {{ history_action.new_position }}</p>
+                <h5>{{ history_action.new_remuneration }}</h5>
             </div>
         </div>
     </div>
