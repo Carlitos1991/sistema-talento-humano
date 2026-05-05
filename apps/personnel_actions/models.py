@@ -124,19 +124,15 @@ class ActionMovement(models.Model):
     personnel_action = models.ForeignKey(PersonnelAction, on_delete=models.CASCADE, related_name='movement')
 
     # --- SITUACIÓN ACTUAL (Snapshots o FKs) ---
-    previous_unit = models.ForeignKey(AdministrativeUnit, verbose_name='Unidad Anterior', on_delete=models.PROTECT,
-                                      related_name='movements_from', null=True, blank=True)
-    previous_position = models.ForeignKey(CatalogItem, verbose_name='Puesto Anterior', on_delete=models.PROTECT,
-                                          related_name='movements_from_pos', null=True, blank=True)
+    previous_unit = models.CharField(verbose_name='Unidad Administrativa anterior', max_length=200, blank=True, null=True)
+    previous_position = models.CharField(verbose_name='Puesto anterior', max_length=200, blank=True, null=True)
     previous_remuneration = models.DecimalField(verbose_name='RMU Anterior', max_digits=10, decimal_places=2, default=0)
     previous_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Anterior', on_delete=models.SET_NULL,
                                              related_name='movements_from_budget', null=True, blank=True)
 
     # --- SITUACIÓN PROPUESTA ---
-    new_unit = models.ForeignKey(AdministrativeUnit, verbose_name='Unidad Nueva', on_delete=models.PROTECT,
-                                 related_name='movements_to', null=True, blank=True)
-    new_position = models.ForeignKey(CatalogItem, verbose_name='Puesto Nuevo', on_delete=models.PROTECT,
-                                     related_name='movements_to_pos', null=True, blank=True)
+    new_unit = models.CharField(verbose_name='Unidad nueva', max_length=200, blank=True, null=True)
+    new_position = models.CharField(verbose_name='Puesto nuevo', max_length=200, blank=True, null=True)
     new_remuneration = models.DecimalField(verbose_name='RMU Nuevo', max_digits=10, decimal_places=2, default=0)
     new_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Presupuestaria Nueva', on_delete=models.SET_NULL,
                                         related_name='movements_to_budget', null=True, blank=True)

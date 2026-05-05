@@ -26,8 +26,11 @@
                 </td>
                 <td><span class="badge bg-info-subtle text-info">{{ action.action_type.name }}</span></td>
                 <td>
-                    <small class="d-block">Emisión: {{ action.date_issue|date:"d/m/Y" }}</small>
-                    <small class="d-block text-primary">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
+                    {% with mv=action.movement.first %}
+                        <small class="d-block">Cargo propuesto: {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}&nbsp;{% endif %}</small>
+                        <small class="d-block text-primary">Hacia: {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
+                        <small class="d-block text-primary">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
+                    {% endwith %}
                 </td>
                 <td>
                     {% if action.is_registered %}

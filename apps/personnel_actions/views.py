@@ -141,16 +141,16 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                 pass
 
         if prev_unit:
-            qs = qs.filter(movement__previous_unit__name__icontains=prev_unit)
+            qs = qs.filter(movement__previous_unit__icontains=prev_unit)
 
         if new_unit:
-            qs = qs.filter(movement__new_unit__name__icontains=new_unit)
+            qs = qs.filter(movement__new_unit__icontains=new_unit)
 
         if prev_pos:
-            qs = qs.filter(movement__previous_position__name__icontains=prev_pos)
+            qs = qs.filter(movement__previous_position__icontains=prev_pos)
 
         if new_pos:
-            qs = qs.filter(movement__new_position__name__icontains=new_pos)
+            qs = qs.filter(movement__new_position__icontains=new_pos)
 
         if detail:
             qs = qs.filter(Q(explanation__icontains=detail) | Q(motivation__icontains=detail))
@@ -161,12 +161,14 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
         if order_by:
             prefix = '-' if direction == 'desc' else ''
             try:
-                return qs.order_by(f"{prefix}{order_by}")
+                ordered = qs.order_by(f"{prefix}{order_by}")
+                return ordered[:300]
             except Exception:
                 pass
 
-        # Orden por defecto
-        return qs.order_by('-date_issue', '-number')
+        # Orden por defecto y limitar a últimos 300 registros
+        ordered = qs.order_by('-date_issue', '-number')
+        return ordered[:300]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -264,9 +266,9 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             # Crear detalle con datos del modal si están disponibles
             movement_data = {
                 'personnel_action': self.object,
-                'previous_unit': current_unit,
+                'previous_unit': current_unit.name if current_unit else '',
                 'previous_budget_line': current_budget,
-                'previous_position': current_budget.position_item if current_budget else None,
+                'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget, 'position_item', None) else '',
                 'previous_remuneration': current_budget.remuneration if current_budget else 0,
             }
 
@@ -277,15 +279,15 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             if new_unit_id:
                 from institution.models import AdministrativeUnit
                 try:
-                    movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id)
+                    movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id).name
                 except AdministrativeUnit.DoesNotExist:
-                    pass
+                    movement_data['new_unit'] = ''
 
             if new_budget_line_id:
                 try:
                     new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
                     movement_data['new_budget_line'] = new_budget_line
-                    movement_data['new_position'] = new_budget_line.position_item
+                    movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line, 'position_item', None) else ''
                     movement_data['new_remuneration'] = new_budget_line.remuneration
                 except BudgetLine.DoesNotExist:
                     pass
@@ -300,8 +302,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             })
 
         return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
-            'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
-                       :10]
+            'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[:300]
         })
 
     def form_invalid(self, form):
@@ -695,7 +696,7 @@ class ActionRegisterView(LoginRequiredMixin, View):
         try:
             with transaction.atomic():
                 movement = ActionMovement.objects.select_related(
-                    'previous_unit', 'previous_budget_line', 'new_unit', 'new_budget_line'
+                    'previous_budget_line', 'new_budget_line'
                 ).filter(personnel_action=action).first()
 
                 effective_date = action.date_effective
@@ -716,8 +717,14 @@ class ActionRegisterView(LoginRequiredMixin, View):
                             raise ValueError('La fecha efectiva de la acción no permite liberar la partida antes de su inicio.')
 
                 if movement and movement.new_unit:
-                    action.employee.area = movement.new_unit
-                    action.employee.save(update_fields=['area'])
+                    from institution.models import AdministrativeUnit
+                    try:
+                        unit = AdministrativeUnit.objects.get(name=movement.new_unit)
+                        action.employee.area = unit
+                        action.employee.save(update_fields=['area'])
+                    except AdministrativeUnit.DoesNotExist:
+                        # no se encontró unidad con ese nombre; no actualizar área
+                        pass
 
                 if new_budget_line:
                     libre_status = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')

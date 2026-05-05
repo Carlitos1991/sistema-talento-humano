@@ -5,22 +5,27 @@
         <tr>
             <th style="width:10%;">
                 <a href="#" class="sortable" data-order="number">
-                    Número <span class="sort-icon"></span>
+                    Número <span class="sort-icon">⇅</span>
                 </a>
             </th>
             <th style="width:22%;">
                 <a href="#" class="sortable" data-order="employee__person__last_name">
-                    Empleado <span class="sort-icon"></span>
+                    Empleado <span class="sort-icon">⇅</span>
                 </a>
             </th>
             <th style="width:18%;">
                 <a href="#" class="sortable" data-order="action_type__name">
-                    Tipo <span class="sort-icon"></span>
+                    Tipo <span class="sort-icon">⇅</span>
+                </a>
+            </th>
+            <th style="width:18%;">
+                <a href="#" class="sortable" data-order="movement__new_position">
+                    Cargo Propuesto <span class="sort-icon"></span>
                 </a>
             </th>
             <th style="width:12%;">
-                <a href="#" class="sortable" data-order="date_issue">
-                    Fecha Emisión <span class="sort-icon"></span>
+                <a href="#" class="sortable" data-order="movement__new_unit">
+                    Hacia <span class="sort-icon"></span>
                 </a>
             </th>
             <th style="width:12%;">
@@ -30,10 +35,10 @@
             </th>
             <th style="width:10%;">
                 <a href="#" class="sortable" data-order="is_registered">
-                    Registro <span class="sort-icon"></span>
+                    Registro <span class="sort-icon">⇅</span>
                 </a>
             </th>
-            <th class="text-center actions" style="width:16%;">Acciones</th>
+            <th class="text-center actions no-sort" style="width:16%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -65,8 +70,11 @@
                         {{ action.action_type.name }}
                     </span>
                 </td>
-                <td>{{ action.date_issue|date:"d/m/Y" }}</td>
-                <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                {% with mv=action.movement.first %}
+                    <td>{% if mv and mv.new_position %}{{ mv.new_position }}{% else %}&nbsp;{% endif %}</td>
+                    <td>{% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</td>
+                    <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                {% endwith %}
                 <td class="text-center">
                     {% if action.is_registered %}
                         <span class="status-badge" style="background:#e0f2fe;color:#0369a1;">Registrada</span>
@@ -95,7 +103,7 @@
                             </button>
                         {% endif %}
                         {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-success-action js-print-action"
+                            <button class="btn-icon btn-detail-action js-print-action"
                                     data-action-id="{{ action.pk }}" title="Imprimir PDF">
                                 <i class="fa-solid fa-print"></i>
                             </button>
@@ -105,7 +113,7 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7" class="text-center" style="padding:2rem;">
+                <td colspan="9" class="text-center" style="padding:2rem;">
                     <i class="fa-solid fa-inbox" style="font-size:3rem;color:#ccc;"></i>
                     <p style="margin-top:1rem;color:#666;">No hay acciones de personal registradas</p>
                 </td>

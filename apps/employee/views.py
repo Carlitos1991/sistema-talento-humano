@@ -379,8 +379,8 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                 actions_list = []
                 for a in actions_qs:
                     mv = a.movement.first() if hasattr(a, 'movement') else None
-                    from_area = mv.previous_unit.name if mv and mv.previous_unit else ''
-                    to_area = mv.new_unit.name if mv and mv.new_unit else ''
+                    from_area = mv.previous_unit if mv and mv.previous_unit else ''
+                    to_area = mv.new_unit if mv and mv.new_unit else ''
                     actions_list.append({
                         'id': a.pk,
                         'number': a.number,

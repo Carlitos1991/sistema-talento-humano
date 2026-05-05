@@ -94,8 +94,8 @@ class ActionMovementForm(forms.ModelForm):
         fields = ['previous_remuneration', 'new_remuneration',
                   'new_unit', 'new_position', 'new_budget_line', 'location_text']
         widgets = {
-            'new_unit': forms.Select(attrs={'class': 'form-select select2'}),
-            'new_position': forms.Select(attrs={'class': 'form-select select2'}),
+            'new_unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unidad Administrativa Nueva'}),
+            'new_position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Puesto Nuevo'}),
             'new_budget_line': forms.Select(attrs={'class': 'form-select select2'}),
             'previous_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
             'new_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),

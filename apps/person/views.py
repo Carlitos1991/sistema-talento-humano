@@ -481,7 +481,14 @@ class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Person
     form_class = PersonForm
     template_name = 'person/modals/modal_person_form.html'
-    permission_required = 'person.create_person'
+    permission_required = 'person.add_person'
+
+    def has_permission(self):
+        # Los superadministradores siempre tienen permiso
+        if self.request.user.is_superuser:
+            return True
+        # Para otros usuarios, verificar permiso explícito
+        return super().has_permission()
 
     def post(self, request, *args, **kwargs):
         # Nota: request.FILES es necesario para la foto
@@ -518,6 +525,13 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     form_class = PersonForm
     template_name = 'person/modals/modal_person_form.html'
     permission_required = 'person.change_person'
+
+    def has_permission(self):
+        # Los superadministradores siempre tienen permiso
+        if self.request.user.is_superuser:
+            return True
+        # Para otros usuarios, verificar permiso explícito
+        return super().has_permission()
 
     def post(self, request, *args, **kwargs):
         try:
