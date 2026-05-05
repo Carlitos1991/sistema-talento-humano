@@ -176,13 +176,13 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
             prefix = '-' if direction == 'desc' else ''
             try:
                 ordered = qs.order_by(f"{prefix}{order_by}")
-                return ordered[:300]
+                return ordered[:3000]
             except Exception:
                 pass
 
-        # Orden por defecto y limitar a últimos 300 registros
+        # Orden por defecto y limitar a últimos 3000 registros
         ordered = qs.order_by('-date_issue', '-number')
-        return ordered[:300]
+        return ordered[:3000]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -321,7 +321,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
 
         return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
             'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
-                       :300]
+                       :3000]
         })
 
     def form_invalid(self, form):
