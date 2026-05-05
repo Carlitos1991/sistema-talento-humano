@@ -30,9 +30,8 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background:
-                radial-gradient(circle at 20% 10%, rgba(17, 129, 204, 0.12) 0, transparent 38%),
-                linear-gradient(180deg, #eef4fb 0%, #e8eff7 100%);
+            background: radial-gradient(circle at 20% 10%, rgba(17, 129, 204, 0.12) 0, transparent 38%),
+            linear-gradient(180deg, #eef4fb 0%, #e8eff7 100%);
             color: var(--ink);
             padding: 12px;
         }
@@ -356,7 +355,13 @@
                 <div class="grid two">
                     <div class="cell">
                         <div class="label">Procesado Por</div>
-                        <div class="value">{{ permit.response_by.get_full_name|default:permit.response_by.username }}</div>
+                        <div class="value">
+                            {% if permit.response_by %}
+                                {{ permit.response_by.get_full_name|default:permit.response_by.username }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="cell">
                         <div class="label">Fecha de Respuesta</div>
@@ -378,7 +383,15 @@
                 <div class="cell">
                     <div class="label">Registrado Por</div>
                     <div class="value">
-                        {{ permit.created_by.get_full_name|default:permit.created_by.username|default:"Sistema" }}
+                        {% if permit.created_by %}
+                            {% if permit.created_by.get_full_name %}
+                                {{ permit.created_by.get_full_name }}
+                            {% else %}
+                                {{ permit.created_by.username }}
+                            {% endif %}
+                        {% else %}
+                            Sistema
+                        {% endif %}
                     </div>
                 </div>
                 <div class="cell">
@@ -389,10 +402,10 @@
         </div>
 
         <div class="footer">
-        <p>
+            <p>
                 Documento consultado electrónicamente por código QR.<br>
                 Fecha de consulta: {% now "d/m/Y H:i" %}
-        </p>
+            </p>
         </div>
     </div>
 </div>

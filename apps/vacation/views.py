@@ -307,94 +307,34 @@ class CreateFirstVacationView(LoginRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        employee = get_object_or_404(Employee.objects.select_related('employment_status'),
-                                     pk=self.kwargs['employee_id'])
+        employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
 
-        # Obtener todos los periodos anteriores (ordenados por fecha de creación)
-        previous_balances = EmployeeVacationBalance.objects.filter(
-            employee=employee
-        ).order_by('created_at')
+        # 1. Obtener valores del formulario
+        days = form.cleaned_data.get('total_days', Decimal('0'))
+        hours = form.cleaned_data.get('hours', 0)
+        minutes = form.cleaned_data.get('minutes', 0)
+        user_detail = form.cleaned_data.get('observation_detail', '')
 
-        # Determinar días base según el estado laboral
-        is_trabajador = employee.employment_status and employee.employment_status.code == 'TRABAJADOR'
-        base_days = Decimal('15.0') if is_trabajador else Decimal('30.0')
+        # 2. Convertir horas y minutos a decimal de días usando tus constantes del modelo
+        # FACTOR_HOUR = 0.125 (1/8), FACTOR_MINUTE = 0.0020833 (1/480)
+        from .models import FACTOR_HOUR, FACTOR_MINUTE
 
-        # Calcular días adicionales para TRABAJADOR (a partir del quinto año)
-        additional_days = Decimal('0.0')
-        if is_trabajador:
-            num_periods = previous_balances.count()
-            if num_periods >= 4:  # A partir del 5to período (índice 4)
-                years_bonus = min(num_periods - 3, 15)  # Máximo 15 años extra
-                additional_days = Decimal(str(years_bonus))
+        extra_from_hours = Decimal(str(hours)) * FACTOR_HOUR
+        extra_from_minutes = Decimal(str(minutes)) * FACTOR_MINUTE
 
-        # Días totales para este período
-        new_period_days = base_days + additional_days
+        # Este es el valor real que el usuario quiere guardar
+        final_calculated_days = days + extra_from_hours + extra_from_minutes
 
-        # Calcular balance
-        if previous_balances.exists():
-            # Obtener el balance anterior
-            last_balance = previous_balances.last()
-            previous_balance = last_balance.balance_days
-
-            # Calcular nuevo balance
-            calculated_balance = previous_balance + new_period_days
-
-            # Límite máximo según tipo
-            max_limit = Decimal('45.0') if is_trabajador else Decimal('60.0')
-
-            # Calcular días perdidos
-            lost_days = Decimal('0.0')
-            if calculated_balance > max_limit:
-                lost_days = calculated_balance - max_limit
-                final_balance = max_limit
-            else:
-                final_balance = calculated_balance
-
-            # Generar observación
-            period_name = form.cleaned_data['period'].name
-
-            if lost_days > 0:
-                if is_trabajador:
-                    observation = (
-                        f"Se creó el período {period_name} con un balance de {final_balance} días. "
-                        f"IMPORTANTE: El empleado perdió {lost_days} días del período {period_name} "
-                        f"por exceder el límite máximo de tres periodos "
-                        f"(balance anterior: {previous_balance} días + {new_period_days} días nuevos = {calculated_balance} días)."
-                    )
-                else:
-                    observation = (
-                        f"Se creó el período {period_name} con un balance de {final_balance} días. "
-                        f"IMPORTANTE: El empleado perdió {lost_days} días "
-                        f"por exceder el límite máximo de 60 días "
-                        f"(balance anterior: {previous_balance} días + {new_period_days} días nuevos = {calculated_balance} días)."
-                    )
-            else:
-                observation = (
-                    f"Se creó el período {period_name} con un balance de {final_balance} días "
-                    f"(balance anterior: {previous_balance} días + {new_period_days} días nuevos)."
-                )
-        else:
-            # Primer período
-            final_balance = new_period_days
-            period_name = form.cleaned_data['period'].name
-            observation = (
-                f"Se creó el período {period_name} con un balance inicial de {final_balance} días "
-                f"(primer período del empleado)."
-            )
-
-        # Crear el balance
+        # 3. Crear el balance ignorando la lógica automática restrictiva
         balance = form.save(commit=False)
         balance.employee = employee
-        balance.total_days = new_period_days
-        balance.balance_days = final_balance
-        balance.observation = observation
+        balance.total_days = final_calculated_days
+        balance.balance_days = final_calculated_days
+        balance.additional_days = Decimal('0.0')
 
-        # Guardar días adicionales (balance del período anterior)
-        if previous_balances.exists():
-            last_balance = previous_balances.last()
-            balance.additional_days = last_balance.balance_days
-        else:
-            balance.additional_days = Decimal('0.0')
+        # Guardar el motivo ingresado por el usuario
+        period_name = form.cleaned_data['period'].name
+        balance.observation = f"CARGA INICIAL PERIODO {period_name}: {user_detail}"
 
         balance.is_active = True
         balance.created_by = self.request.user
@@ -403,11 +343,10 @@ class CreateFirstVacationView(LoginRequiredMixin, CreateView):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
-                'message': f'Periodo de vacaciones creado exitosamente',
+                'message': 'Periodo inicial creado exitosamente con la cantidad especificada.',
                 'redirect_url': reverse('vacation:employee_vacation_detail', kwargs={'employee_id': employee.id})
             })
 
-        messages.success(self.request, 'Periodo de vacaciones creado exitosamente')
         return redirect('vacation:employee_vacation_detail', employee_id=employee.id)
 
     def form_invalid(self, form):
@@ -712,7 +651,7 @@ class CreateHourPermitVacationView(LoginRequiredMixin, FormView):
             from datetime import datetime, timedelta
             total_minutes_permit = (hours * 60) + minutes
             end_time_calculated = (
-                        datetime.combine(start_date, start_time) + timedelta(minutes=total_minutes_permit)).time()
+                    datetime.combine(start_date, start_time) + timedelta(minutes=total_minutes_permit)).time()
 
             existing_permit = PermitRequest.objects.filter(
                 employee=employee,
@@ -756,7 +695,7 @@ class CreateHourPermitVacationView(LoginRequiredMixin, FormView):
 
             # Calcular descuento proporcional
             proportional_discount = (Decimal(str(hours)) * PROPORTIONAL_HOUR) + (
-                        Decimal(str(minutes)) * PROPORTIONAL_MINUTE)
+                    Decimal(str(minutes)) * PROPORTIONAL_MINUTE)
 
             # Descuento total
             total_discount = value_discount + proportional_discount
@@ -1168,7 +1107,7 @@ class ApprovePermitView(LoginRequiredMixin, View):
 
                 value_discount = (Decimal(str(hours)) * FACTOR_HOUR) + (Decimal(str(minutes)) * FACTOR_MINUTE)  # Base
                 proportional_discount = (Decimal(str(hours)) * PROPORTIONAL_HOUR) + (
-                            Decimal(str(minutes)) * PROPORTIONAL_MINUTE)  # Adicional
+                        Decimal(str(minutes)) * PROPORTIONAL_MINUTE)  # Adicional
                 total_discount = value_discount + proportional_discount  # Total
 
             # Verificar saldo suficiente
@@ -2179,12 +2118,12 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
 
         # Consultas paralelas optimizadas
         employee = action.employee
-        
+
         # Budget: usar only() para traer solo campos necesarios
         budget = None
         try:
             budget = BudgetLine.objects.select_related('position_item').only(
-                'id', 'current_employee', 'position_item__name', 'number_individual', 
+                'id', 'current_employee', 'position_item__name', 'number_individual',
                 'remuneration', 'status_item__name'
             ).get(current_employee=employee.pk)
         except BudgetLine.DoesNotExist:
@@ -2200,7 +2139,7 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
                 'days_discount', 'value_discount', 'proportional_discount',
                 'vacation_balance__period__name'
             ).first()
-            
+
             if history:
                 total_discount = (history.value_discount or 0) + (history.proportional_discount or 0)
 
@@ -2223,7 +2162,7 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
             """
             import os
             from django.conf import settings
-            
+
             # Si la URI empieza con STATIC_URL
             if uri.startswith(settings.STATIC_URL):
                 # Remover STATIC_URL del inicio
@@ -2244,8 +2183,8 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
         from io import BytesIO
         result = BytesIO()
         pdf = pisa.pisaDocument(
-            BytesIO(html.encode("UTF-8")), 
-            result, 
+            BytesIO(html.encode("UTF-8")),
+            result,
             encoding='UTF-8',
             link_callback=link_callback
         )

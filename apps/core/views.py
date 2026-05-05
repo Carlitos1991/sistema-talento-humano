@@ -10,7 +10,8 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
-from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm, SystemLetterheadForm, SystemConfigurationSetupForm
+from .forms import CatalogForm, CatalogItemForm, LocationForm, AuthorityForm, SystemLetterheadForm, \
+    SystemConfigurationSetupForm
 from .forms import UserProfileForm
 from .models import Catalog, CatalogItem, Location, Authority, SystemConfiguration
 from .models import User
@@ -106,7 +107,8 @@ class ForgotPasswordView(TemplateView):
         institutional_email = getattr(institutional_data, 'institutional_email', None)
 
         if not institutional_email:
-            return JsonResponse({'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+            return JsonResponse(
+                {'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
 
         username = person.user.username or cedula
         plain_password = cedula
@@ -119,7 +121,7 @@ class ForgotPasswordView(TemplateView):
         person.user.save()
 
         subject = 'Recuperación de credenciales - SIGETH'
-        
+
         context_email = {
             'nombre': person.full_name,
             'usuario': username,
@@ -136,14 +138,15 @@ class ForgotPasswordView(TemplateView):
         try:
             email.send(fail_silently=False)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+            return JsonResponse(
+                {'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
 
         masked_email = institutional_email
         if institutional_email and len(institutional_email) > 8:
             masked_email = f"{institutional_email[:4]}{'*' * (len(institutional_email) - 8)}{institutional_email[-4:]}"
 
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': f'Se enviaron el usuario y la contraseña al correo {masked_email}'
         })
 
@@ -170,16 +173,19 @@ class CreateUserFromLoginView(TemplateView):
 
         employee_profile = getattr(person, 'employee_profile', None)
         if not employee_profile or not employee_profile.is_active:
-            return JsonResponse({'status': 'error', 'message': 'Para crear usuario debe estar registrado como empleado o trabajador de la institución.'})
+            return JsonResponse({'status': 'error',
+                                 'message': 'Para crear usuario debe estar registrado como empleado o trabajador de la institución.'})
 
         employment_code = (getattr(getattr(employee_profile, 'employment_status', None), 'code', '') or '').upper()
         if employment_code not in ['EMPLEADO', 'TRABAJADOR']:
-            return JsonResponse({'status': 'error', 'message': 'Solo se pueden crear usuarios para registros con estado laboral EMPLEADO o TRABAJADOR.'})
+            return JsonResponse({'status': 'error',
+                                 'message': 'Solo se pueden crear usuarios para registros con estado laboral EMPLEADO o TRABAJADOR.'})
 
         institutional_data = getattr(employee_profile, 'institutional_data', None)
         institutional_email = getattr(institutional_data, 'institutional_email', None)
         if not institutional_email:
-            return JsonResponse({'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+            return JsonResponse(
+                {'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
 
         username = cedula
         plain_password = cedula
@@ -191,7 +197,8 @@ class CreateUserFromLoginView(TemplateView):
 
         if user is None:
             if user_model.objects.filter(username=username).exists():
-                return JsonResponse({'status': 'error', 'message': 'Ya existe un usuario con esa cédula. Contacte a Talento Humano.'})
+                return JsonResponse(
+                    {'status': 'error', 'message': 'Ya existe un usuario con esa cédula. Contacte a Talento Humano.'})
 
             user = user_model.objects.create_user(
                 username=username,
@@ -219,7 +226,7 @@ class CreateUserFromLoginView(TemplateView):
         user.user_permissions.add(dashboard_perm)
 
         subject = 'Creación de usuario - SIGETH'
-        
+
         context_email = {
             'nombre': person.full_name,
             'usuario': username,
@@ -236,7 +243,8 @@ class CreateUserFromLoginView(TemplateView):
         try:
             email.send(fail_silently=False)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+            return JsonResponse(
+                {'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
 
         return JsonResponse({
             'status': 'success',
@@ -258,7 +266,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 return redirect('employee:self_dashboard')
 
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from employee.models import Employee
@@ -274,10 +282,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         has_boss_dashboard = self.request.user.has_perm('auth.dashboard_jefe')
         has_hr_dashboard = self.request.user.has_perm('auth.dashboard_talento_humano')
         can_use_boss_view = (
-            self.request.user.has_perm('auth.dashboard_jefe') or
-            self.request.user.has_perm('auth.dashboard_talento_humano')
+                self.request.user.has_perm('auth.dashboard_jefe') or
+                self.request.user.has_perm('auth.dashboard_talento_humano')
         )
-        
+
         # Lógica mejorada: Si el usuario es admin (tiene ambos permisos), mostrar el de Talento Humano por defecto
         # Solo mostrar dashboard de Jefe si ESPECÍFICAMENTE se solicita o si SOLO tiene ese permiso
         if has_hr_dashboard and has_boss_dashboard:
@@ -289,53 +297,54 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         else:
             # Solo admin o solo con un permiso
             context['show_boss_dashboard'] = force_boss_view and can_use_boss_view
-        
+
         # === ESTADÍSTICAS DE EMPLEADOS (SOLO ACTIVOS) ===
         active_employees = Employee.objects.filter(is_active=True)
-        
+
         employee_stats = active_employees.values(
             'employment_status__code',
             'employment_status__name'
         ).annotate(total=Count('id'))
-        
-        stats_dict = {stat['employment_status__code']: stat['total'] for stat in employee_stats if stat['employment_status__code']}
-        
+
+        stats_dict = {stat['employment_status__code']: stat['total'] for stat in employee_stats if
+                      stat['employment_status__code']}
+
         context['total_employees'] = active_employees.count()
         context['empleados'] = stats_dict.get('EMPLEADO', 0)
         context['trabajadores'] = stats_dict.get('TRABAJADOR', 0)
         context['contratados'] = stats_dict.get('CONTRATADO', 0)
         context['profesionales'] = stats_dict.get('PROFESIONAL', 0)
-        
+
         # === ESTADÍSTICAS DE PARTIDAS (SOLO ACTIVAS) ===
         active_budgets = BudgetLine.objects.exclude(status_item__code='INACTIVA')
         budget_stats = active_budgets.values(
             'status_item__code',
             'status_item__name'
         ).annotate(total=Count('id'))
-        
+
         budget_dict = {stat['status_item__code']: stat['total'] for stat in budget_stats if stat['status_item__code']}
-        
+
         context['total_partidas'] = active_budgets.count()
         context['partidas_ocupadas'] = budget_dict.get('OCUPADA', 0)
         context['partidas_libres'] = budget_dict.get('LIBRE', 0)
         context['partidas_concurso'] = budget_dict.get('CONCURSO', 0)
         context['partidas_litigio'] = budget_dict.get('LITIGIO', 0)
-        
+
         # === ESTADÍSTICAS ADICIONALES ===
         # Porcentaje de ocupación
         if context['total_partidas'] > 0:
             context['porcentaje_ocupacion'] = round((context['partidas_ocupadas'] / context['total_partidas']) * 100, 1)
         else:
             context['porcentaje_ocupacion'] = 0
-            
+
         # Género
         gender_stats = active_employees.values(
             'person__gender__name'
         ).annotate(total=Count('id'))
-        
+
         context['empleados_masculino'] = 0
         context['empleados_femenino'] = 0
-        
+
         for stat in gender_stats:
             if stat['person__gender__name']:
                 gender_name = stat['person__gender__name'].upper()
@@ -343,7 +352,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     context['empleados_masculino'] = stat['total']
                 elif 'FEMENINO' in gender_name or 'MUJER' in gender_name:
                     context['empleados_femenino'] = stat['total']
-        
+
         # Empleados con título universitario (sumar TERCER_NIVEL, CUARTO_NIVEL y TECNOLOGO)
         try:
             levels = ['TERCER_NIVEL', 'CUARTO_NIVEL', 'TECNOLOGO']
@@ -368,35 +377,35 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['empleados_con_titulo'] = 0
             context['empleados_cuarto_nivel'] = 0
             context['empleados_tecnologo'] = 0
-        
+
         # Empleados con discapacidad
         context['empleados_con_discapacidad'] = active_employees.filter(
             person__has_disability=True
         ).count()
-        
+
         # Empleados sustitutos
         context['empleados_sustitutos'] = active_employees.filter(
             person__is_substitute=True
         ).count()
-        
+
         # Próximos jubilados (mayores de 60 años)
-        fecha_jubilacion = date.today() - timedelta(days=365*60)
+        fecha_jubilacion = date.today() - timedelta(days=365 * 60)
         context['proximos_jubilados'] = active_employees.filter(
             person__birth_date__lte=fecha_jubilacion
         ).count()
-        
+
         # Áreas con más empleados
         top_areas = active_employees.values(
             'area__name'
         ).annotate(
             total=Count('id')
         ).order_by('-total')[:5]
-        
+
         context['top_areas'] = [
-            {'name': area['area__name'] or 'Sin área', 'total': area['total']} 
+            {'name': area['area__name'] or 'Sin área', 'total': area['total']}
             for area in top_areas
         ]
-        
+
         # === DATOS PARA GRÁFICOS ===
         context['employee_chart_data'] = {
             'labels': ['Empleados', 'Trabajadores', 'Contratados', 'Profesionales'],
@@ -407,7 +416,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 context['profesionales']
             ]
         }
-        
+
         context['budget_chart_data'] = {
             'labels': ['Libres', 'Ocupadas', 'Litigio', 'Concurso'],
             'values': [
@@ -417,7 +426,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 context['partidas_concurso']
             ]
         }
-        
+
         context['gender_chart_data'] = {
             'labels': ['Masculino', 'Femenino'],
             'values': [context['empleados_masculino'], context['empleados_femenino']]
@@ -529,6 +538,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     unit_permits_qs = PermitRequest.objects.select_related(
                         'employee__person', 'permit_type'
                     ).filter(
+                        Q(permit_type_id=1) | Q(permit_type__parent_id=1),
                         employee__area_id__in=scoped_unit_ids,
                         employee__is_active=True,
                         status__in=['REQUESTED', 'APPROVED', 'REJECTED']
@@ -538,7 +548,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
                     context['boss_unit'] = managed_unit
                     context['boss_unit_detail_url'] = reverse('institution:unit_detail', args=[managed_unit.id])
-                    context['boss_total_personal'] = Employee.objects.filter(is_active=True, area_id__in=scoped_unit_ids).count()
+                    context['boss_total_personal'] = Employee.objects.filter(is_active=True,
+                                                                             area_id__in=scoped_unit_ids).count()
                     context['boss_pending_permits_count'] = pending_permits_count
                     # Para la vista principal del dashboard mostramos únicamente los pendientes (REQUESTED)
                     context['boss_pending_permits'] = unit_permits_qs.filter(status='REQUESTED')
@@ -548,7 +559,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['boss_total_personal'] = 0
             context['boss_pending_permits_count'] = 0
             context['boss_pending_permits'] = []
-        
+
         return context
 
 
@@ -1105,34 +1116,34 @@ def custom_page_not_found(request, exception=None):
 # --- CAMBIO DE CONTRASEÑA ---
 class ChangePasswordView(LoginRequiredMixin, View):
     """Vista para cambiar la contraseña del usuario"""
-    
+
     def post(self, request):
         """Procesa el cambio de contraseña"""
         if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'Petición inválida'}, status=400)
-        
+
         new_password = request.POST.get('new_password', '').strip()
         confirm_password = request.POST.get('confirm_password', '').strip()
-        
+
         # Validaciones
         if not new_password or not confirm_password:
             return JsonResponse({
                 'success': False,
                 'message': 'Los campos de contraseña no pueden estar vacíos.'
             })
-        
+
         if new_password != confirm_password:
             return JsonResponse({
                 'success': False,
                 'message': 'Las contraseñas no coinciden.'
             })
-        
+
         if len(new_password) < 8:
             return JsonResponse({
                 'success': False,
                 'message': 'La contraseña debe tener al menos 8 caracteres.'
             })
-        
+
         # Verificar requisitos de contraseña
         import re
         if not re.search(r'[a-z]', new_password):
@@ -1140,13 +1151,13 @@ class ChangePasswordView(LoginRequiredMixin, View):
                 'success': False,
                 'message': 'La contraseña debe contener al menos una minúscula.'
             })
-        
+
         if not re.search(r'[0-9]', new_password):
             return JsonResponse({
                 'success': False,
                 'message': 'La contraseña debe contener al menos un número.'
             })
-        
+
         # Actualizar contraseña
         try:
             user = request.user
@@ -1158,7 +1169,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
                     del request.session['force_change_on_login']
             except Exception:
                 pass
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Tu contraseña ha sido cambiada exitosamente.'
