@@ -307,7 +307,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 
                 perms = PermitRequest.objects.filter(
                     employee=employee,
-                ).select_related('permit_type').order_by('-start_date', '-created_at')
+                ).exclude(status__in=['CANCELED', 'INACTIVE']).select_related('permit_type').order_by('-start_date', '-created_at')
 
                 type_ids = list(
                     perms.values_list('permit_type_id', flat=True).distinct()

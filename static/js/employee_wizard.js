@@ -33,23 +33,19 @@ const app = createApp({
     delimiters: ['[[', ']]'],
     setup() {
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
-        // Forzar que al entrar en el detalle el tab inicial sea 'personal'
-        const activeTab = ref('personal');
+        // Recuperar el tab activo de localStorage o por defecto 'personal'
+        const savedTab = localStorage.getItem('wizardActiveTab');
+        const activeTab = ref(savedTab || 'personal');
         const appElement = document.getElementById('employeeWizardApp');
         const detailPhotoPreviewUrl = ref(appElement && appElement.dataset.photoUrl ? appElement.dataset.photoUrl : '');
         const detailPhotoHasFile = ref(false);
         Vue.watch(activeTab, (newTab, oldTab) => {
             localStorage.setItem('wizardActiveTab', newTab);
 
-            // Lógica para inicializar tablas (Paginación)
+            // Inicializar paginación de acciones si se abre el tab
             if (newTab === 'actions') {
                 Vue.nextTick(() => {
-                    console.log("Inicializando tabla de acciones...");
-                    if (typeof initManagedTables === 'function') {
-                        initManagedTables();
-                    } else {
-                        $(document).trigger('contentChanged'); // Despierta el script managed-table
-                    }
+                    initActionsLocalPagination();
                 });
             }
 
@@ -85,121 +81,101 @@ const app = createApp({
             if (personId) {
                 refreshCvTab(personId);
             }
-
-            // Delegación de evento para el botón "Ver" de Acciones de Personal
-            $(document).on('click', '.js-view-action-detail', function (e) {
-                e.preventDefault();
-                const actionId = $(this).data('id');
-                const modalPlaceholder = $('#action-modal-employee');
-
-                // URL de tu servidor para el detalle
-                const url = `/personnel_actions/action/${actionId}/detail/`;
-
-                fetch(url, {
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                })
-                    .then(response => response.text())
-                    .then(html => {
-                        modalPlaceholder.html(`
-                <div class="modal-overlay" style="display:flex;">
-                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
-                        ${html}
-                    </div>
-                </div>
-            `);
-                        $('body').addClass('modal-open');
-                    })
-                    .catch(err => {
-                        console.error("Error:", err);
-                        Swal.fire("Error", "No se pudo cargar el detalle de la acción", "error");
-                    });
-            });
-        });
-        // --- LÓGICA DE PAGINACIÓN LOCAL PARA ACCIONES ---
-        const initActionsLocalPagination = () => {
-            const rowsPerPage = 10;
-            let currentPage = 1;
-            const $rows = $('[data-action-row]');
-            const totalRows = $rows.length;
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-            const updateTable = () => {
-                const start = (currentPage - 1) * rowsPerPage;
-                const end = start + rowsPerPage;
-
-                $rows.hide().slice(start, end).show();
-
-                // Actualizar info
-                $('[data-action-page-info]').text(`Mostrando ${start + 1}-${Math.min(end, totalRows)} de ${totalRows}`);
-                $('[data-action-total-pages]').text(`de ${totalPages}`);
-                $('[data-action-page-input]').val(currentPage);
-
-                // Deshabilitar botones
-                $('[data-action-prev], [data-action-first]').prop('disabled', currentPage === 1);
-                $('[data-action-next], [data-action-last]').prop('disabled', currentPage === totalPages);
-            };
-
-            // Eventos de botones
-            $('[data-action-next]').off().on('click', () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    updateTable();
-                }
-            });
-            $('[data-action-prev]').off().on('click', () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    updateTable();
-                }
-            });
-            $('[data-action-first]').off().on('click', () => {
-                currentPage = 1;
-                updateTable();
-            });
-            $('[data-action-last]').off().on('click', () => {
-                currentPage = totalPages;
-                updateTable();
-            });
-
-            $('[data-action-page-input]').on('change', function () {
-                let val = parseInt($(this).val());
-                if (val >= 1 && val <= totalPages) {
-                    currentPage = val;
-                    updateTable();
-                }
-            });
-
-            updateTable();
-        };
-
-// --- ARREGLO PARA EL ERROR 404 Y MODAL ---
-        $(document).on('click', '.js-view-action-detail', function (e) {
-            e.preventDefault();
-            // LEEMOS LA URL DIRECTAMENTE DEL BOTÓN (Evita el 404)
-            const url = $(this).data('url');
-            const modalPlaceholder = $('#action-modal-employee');
-
-            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(response => response.text())
-                .then(html => {
-                    modalPlaceholder.html(`
-                <div class="modal-overlay" style="display:flex;">
-                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
-                        ${html}
-                    </div>
-                </div>
-            `);
-                    $('body').addClass('modal-open');
-                })
-                .catch(err => Swal.fire("Error", "No se pudo cargar el detalle", "error"));
-        });
-        Vue.watch(activeTab, (newTab) => {
-            if (newTab === 'actions') {
+            
+            if (activeTab.value === 'actions') {
                 Vue.nextTick(() => {
                     initActionsLocalPagination();
                 });
             }
         });
+        // --- LÓGICA DE PAGINACIÓN LOCAL PARA ACCIONES ---
+        const initActionsLocalPagination = () => {
+            const rowsPerPage = 10;
+            let currentPage = 1;
+            let searchQuery = ($('#action-search-input').val() || '').toLowerCase();
+            const $allRows = $('[data-action-row]');
+
+            const updateTable = () => {
+                // Filtramos las filas si hay búsqueda
+                const $filteredRows = $allRows.filter(function() {
+                    if (!searchQuery) return true;
+                    const text = $(this).text().toLowerCase();
+                    return text.includes(searchQuery);
+                });
+
+                const totalRows = $filteredRows.length;
+                const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+                
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                const start = (currentPage - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+
+                $allRows.hide();
+                $filteredRows.slice(start, end).show();
+
+                // Actualizar info y estado vacío
+                const emptyRow = $('[data-action-empty-row]');
+                if (totalRows === 0) {
+                    if (emptyRow.length === 0) {
+                        $('[data-action-tbody]').append(`
+                            <tr data-action-empty-row>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-inbox" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                                    <p class="text-muted mt-3 mb-0">No hay acciones para la búsqueda.</p>
+                                </td>
+                            </tr>
+                        `);
+                    } else {
+                        emptyRow.show();
+                    }
+                    $('[data-action-page-info]').text(`Mostrando 0-0 de 0`);
+                    $('[data-action-total-pages]').text(`de 1`);
+                    $('[data-action-page-input]').val(1);
+                    $('[data-action-prev], [data-action-first], [data-action-next], [data-action-last]').prop('disabled', true);
+                } else {
+                    if (emptyRow.length) emptyRow.hide();
+                    $('[data-action-page-info]').text(`Mostrando ${start + 1}-${Math.min(end, totalRows)} de ${totalRows}`);
+                    $('[data-action-total-pages]').text(`de ${totalPages}`);
+                    $('[data-action-page-input]').val(currentPage);
+
+                    // Deshabilitar botones
+                    $('[data-action-prev], [data-action-first]').prop('disabled', currentPage === 1);
+                    $('[data-action-next], [data-action-last]').prop('disabled', currentPage === totalPages);
+                }
+            };
+
+            // Eventos de botones
+            $('[data-action-next]').off('click').on('click', () => { currentPage++; updateTable(); });
+            $('[data-action-prev]').off('click').on('click', () => { currentPage--; updateTable(); });
+            $('[data-action-first]').off('click').on('click', () => { currentPage = 1; updateTable(); });
+            $('[data-action-last]').off('click').on('click', () => { currentPage = 99999; updateTable(); });
+
+            $('[data-action-page-input]').off('change').on('change', function () {
+                let val = parseInt($(this).val());
+                if (!isNaN(val)) {
+                    currentPage = val;
+                    updateTable();
+                }
+            });
+            
+            // Eventos de búsqueda
+            $('#action-search-input').off('input').on('input', function() {
+                searchQuery = $(this).val().toLowerCase();
+                currentPage = 1;
+                updateTable();
+            });
+            
+            $('#action-clear-btn').off('click').on('click', function() {
+                $('#action-search-input').val('');
+                searchQuery = '';
+                currentPage = 1;
+                updateTable();
+            });
+
+            updateTable();
+        };
 
         const isSaving = ref(false);
         const isPhotoSaving = ref(false);
@@ -1449,6 +1425,28 @@ $(document).on('click', '.js-close-detail-modal', function () {
     $('#action-modal-employee').empty();
     $('body').removeClass('modal-open');
 });
+
+// Delegación global para abrir el detalle de la acción (Evita eventos duplicados y 404s)
+$(document).off('click', '.js-view-action-detail').on('click', '.js-view-action-detail', function (e) {
+    e.preventDefault();
+    const url = $(this).data('url');
+    const modalPlaceholder = $('#action-modal-employee');
+
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            modalPlaceholder.html(`
+                <div class="modal-overlay" style="display:flex;">
+                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
+                        ${html}
+                    </div>
+                </div>
+            `);
+            $('body').addClass('modal-open');
+        })
+        .catch(err => Swal.fire("Error", "No se pudo cargar el detalle", "error"));
+});
+
 // Montaje Global
 document.addEventListener('DOMContentLoaded', () => {
     app.mount('#employeeWizardApp');

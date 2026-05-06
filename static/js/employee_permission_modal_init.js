@@ -50,7 +50,8 @@
                 try {
                     const prev = document.querySelectorAll('#permission-modal-employee > .modal-overlay, body > .modal-overlay[data-source="permission-modal"]');
                     prev.forEach(p => p.remove());
-                } catch (e) { /* ignore */ }
+                } catch (e) { /* ignore */
+                }
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'modal-overlay';
@@ -215,7 +216,10 @@
 
                     if (res.ok && data.success) {
                         const permContainer = document.getElementById('permission-modal-employee');
-                        if (permContainer) permContainer.innerHTML = '';
+                        if (permContainer) {
+                            permContainer.innerHTML = '';
+                            permContainer.className = '';
+                        }
                         document.body.classList.remove('no-scroll');
                         showToast('Guardado', data.message || 'Permiso generado correctamente', 'success');
                         setTimeout(() => window.location.reload(), 300);
@@ -255,7 +259,8 @@
         try {
             const prev = document.querySelectorAll('body > .modal-overlay[data-source="permission-modal"]');
             prev.forEach(p => p.remove());
-        } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */
+        }
 
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(r => r.text())
@@ -274,11 +279,16 @@
                 try {
                     const prev = document.querySelectorAll('body > .modal-overlay[data-source="permission-modal"]');
                     prev.forEach(p => p.remove());
-                } catch (e) { /* ignore */ }
+                } catch (e) { /* ignore */
+                }
 
-                const wrapper = document.createElement('div');
+                let wrapper = document.getElementById('permission-modal-employee');
+                if (!wrapper) {
+                    wrapper = document.createElement('div');
+                    wrapper.id = 'permission-modal-employee';
+                    document.body.appendChild(wrapper);
+                }
                 wrapper.className = 'modal-overlay';
-                wrapper.id = 'permission-modal-employee';
                 wrapper.setAttribute('data-source', 'permission-modal');
                 wrapper.innerHTML = html;
 
@@ -288,9 +298,9 @@
                     if (containers.length > 1) {
                         for (let i = 1; i < containers.length; i++) containers[i].remove();
                     }
-                } catch (e) { /* ignore */ }
+                } catch (e) { /* ignore */
+                }
 
-                document.body.appendChild(wrapper);
                 document.body.classList.add('no-scroll');
 
                 initGeneratePermitForm(wrapper);
@@ -300,7 +310,10 @@
                 showToast('Error', 'No se pudo cargar el formulario', 'error');
             })
             .finally(() => {
-                try { window.__generatePermitInflight.delete(idStr); } catch (e) { /* ignore */ }
+                try {
+                    window.__generatePermitInflight.delete(idStr);
+                } catch (e) { /* ignore */
+                }
             });
     }
 
@@ -325,7 +338,7 @@
         const defaultListLabel = listLabel ? (listLabel.dataset.defaultLabel || listLabel.textContent.trim()) : '';
         let emptyRow = tbody ? tbody.querySelector('[data-permission-empty-row]') : null;
 
-        const pageSize = 8;
+        const pageSize = 10;
         let currentPage = 1;
 
         function parseDate(value) {
@@ -572,11 +585,16 @@
                 return;
             }
 
-            const closeBtn = ev.target.closest && ev.target.closest('.js-close-modal');
+            const closeBtn = ev.target.closest && ev.target.closest('.js-close-modal, .btn-cancel, .btn-close-modal-refined');
             if (closeBtn) {
-                const permContainer = document.getElementById('permission-modal-employee');
-                if (permContainer && permContainer.contains(closeBtn)) {
-                    permContainer.innerHTML = '';
+                const overlay = closeBtn.closest('.modal-overlay');
+                if (overlay) {
+                    if (overlay.id === 'permission-modal-employee') {
+                        overlay.innerHTML = '';
+                        overlay.className = '';
+                    } else {
+                        overlay.remove();
+                    }
                     document.body.classList.remove('no-scroll');
                 }
             }
@@ -611,7 +629,10 @@
                     }
 
                     const permContainer = document.getElementById('permission-modal-employee');
-                    if (permContainer) permContainer.innerHTML = '';
+                    if (permContainer) {
+                        permContainer.innerHTML = '';
+                        permContainer.className = '';
+                    }
                     document.body.classList.remove('no-scroll');
 
                     showToast('Correcto', data.message || 'Solicitud insistida correctamente', 'success');

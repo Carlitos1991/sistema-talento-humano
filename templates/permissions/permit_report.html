@@ -452,16 +452,22 @@
                     <div class="grid two">
                         <div class="cell">
                             <div class="label">Aprobado Por</div>
-                            <div class="value">{{ permit.response_by.get_full_name|default:permit.response_by.username }}</div>
+                            <div class="value">
+                                {% if permit.response_by %}
+                                    {{ permit.response_by.get_full_name|default:permit.response_by.username }}
+                                {% else %}
+                                    Sistema / Migrado
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="cell">
                             <div class="label">Fecha de Aprobación</div>
-                            <div class="value">{{ permit.response_date|date:"d/m/Y H:i" }}</div>
+                            <div class="value">{{ permit.response_date|date:"d/m/Y H:i"|default:"N/A" }}</div>
                         </div>
                         {% if permit.response_note %}
                             <div class="cell full">
                                 <div class="label">Observación de Respuesta</div>
-                                <div class="value">{{ permit.response_note }}</div>
+                                <div class="value">{{ permit.response_note|safe }}</div>
                             </div>
                         {% endif %}
                     </div>
