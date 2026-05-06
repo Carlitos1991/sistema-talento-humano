@@ -838,3 +838,10 @@
     background: rgba(15, 23, 42, 0.08);
     border-radius: 8px;
 }
+
+/* =========================================
+   VACATION TAB METRICS
+   ========================================= */
+.vacation-metric-card {
+    min-height: 195px;
+}

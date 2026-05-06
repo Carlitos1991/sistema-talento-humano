@@ -5,98 +5,124 @@
 <div class="row g-3 mt-3">
 
     <div class="col-12 col-md-4">
-
-    <!-- Permisos cargados a vacaciones -->
-    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #f59e0b; margin-bottom:0;">
-        <h6 class="section-title" style="color:#b45309;">
-            <i class="fa-solid fa-clock"></i> Permisos
-        </h6>
-        <div class="info-data-row">
-            <label>Días cargados:</label>
-            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
-                {% localize off %}{{ vacation_chart.permits|floatformat:2|default:"0.00" }}{% endlocalize %}
-            </span>
+        <!-- Permisos cargados a vacaciones -->
+        <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #f59e0b; margin-bottom:0;">
+            <h6 class="section-title" style="color:#b45309;">
+                <i class="fa-solid fa-clock"></i> Permisos
+            </h6>
+            <div class="info-data-row">
+                <label>Días cargados:</label>
+                <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                    {% localize off %}{{ vacation_chart.permits|floatformat:2|default:"0.00" }}{% endlocalize %}
+                </span>
+            </div>
+            <div class="info-data-row" style="flex-direction: column; gap: 10px; border-bottom: none; padding-bottom: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0; font-size: 0.75rem;">Generar:</label>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn-box-action" onclick="openHourPermitModal({{ employee_profile.id }})" title="Permisos por Horas" {% if not employee_profile %}disabled{% endif %}>
+                            <i class="fas fa-clock"></i> Horas
+                        </button>
+                        <button class="btn-box-action" onclick="openDayPermitModal({{ employee_profile.id }})" title="Permisos por Días" {% if not employee_profile %}disabled{% endif %}>
+                            <i class="fas fa-calendar"></i> Días
+                        </button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                    <label style="margin:0; font-size: 0.75rem;">Listado:</label>
+                    <span>
+                        {% if vacation_balances and vacation_balances|length > 0 %}
+                            <button class="btn btn-sm btn-outline" style="border: 1px solid #f59e0b; color:#b45309; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; background: transparent; font-weight: 600;"
+                                    type="button"
+                                    data-open-permit-history
+                                    data-balance-id="{{ vacation_balances.0.id }}">
+                                <i class="fa-solid fa-list-ul"></i> Ver detalle
+                            </button>
+                        {% elif employee_profile %}
+                            <span class="text-muted small">Sin periodos</span>
+                        {% else %}
+                            <span class="text-muted small">Sin empleado</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="info-data-row">
-            <label>Acción:</label>
-            <span>
-                {% if vacation_balances and vacation_balances|length > 0 %}
-                    <button class="btn btn-sm btn-outline" style="border-color:#f59e0b; color:#b45309;"
-                            type="button"
-                            data-open-permit-history
-                            data-balance-id="{{ vacation_balances.0.id }}">
-                        <i class="fa-solid fa-list-ul"></i> Ver listado
-                    </button>
-                {% elif employee_profile %}
-                    <span class="text-muted small">Sin períodos registrados</span>
-                {% else %}
-                    <span class="text-muted small">Sin empleado</span>
-                {% endif %}
-            </span>
-        </div>
-    </div>
-    </div>
-
-    <div class="col-12 col-md-4">
-
-    <!-- Vacaciones liquidadas -->
-    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #0ea5a4; margin-bottom:0;">
-        <h6 class="section-title" style="color:#0ea5a4;">
-            <i class="fa-solid fa-plane-departure"></i> Liquidaciones
-        </h6>
-        <div class="info-data-row">
-            <label>Días liquidados:</label>
-            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
-                {% localize off %}{{ vacation_chart.vacations|floatformat:2|default:"0.00" }}{% endlocalize %}
-            </span>
-        </div>
-        <div class="info-data-row">
-            <label>Acción:</label>
-            <span>
-                {% if vacation_balances and vacation_balances|length > 0 %}
-                    <button class="btn btn-sm btn-outline" style="border-color:#0ea5a4; color:#0ea5a4;"
-                            onclick="openVacationHistoryModal({{ vacation_balances.0.id }})">
-                        <i class="fa-solid fa-file-lines"></i> Ver detalle
-                    </button>
-                {% elif employee_profile %}
-                    <span class="text-muted small">Sin períodos registrados</span>
-                {% else %}
-                    <span class="text-muted small">Sin empleado</span>
-                {% endif %}
-            </span>
-        </div>
-    </div>
     </div>
 
     <div class="col-12 col-md-4">
-
-    <!-- Saldo disponible -->
-    <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #06b6d4; margin-bottom:0;">
-        <h6 class="section-title" style="color:#0891b2;">
-            <i class="fa-solid fa-piggy-bank"></i> Saldo Actual
-        </h6>
-        <div class="info-data-row">
-            <label>Días disponibles:</label>
-            <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
-                {% localize off %}{{ vacation_chart.saldo|floatformat:2|default:"0.00" }}{% endlocalize %}
-            </span>
-        </div>
-        <div class="info-data-row">
-            <label>Acción:</label>
-            <span class="text-muted" style="visibility:hidden;">Reservado</span>
-        </div>
-        <div class="info-data-row" style="display:none;">
+        <!-- Vacaciones liquidadas -->
+        <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #0ea5a4; margin-bottom:0;">
+            <h6 class="section-title" style="color:#0ea5a4;">
+                <i class="fa-solid fa-plane-departure"></i> Liquidaciones
+            </h6>
+            <div class="info-data-row">
+                <label>Días liquidados:</label>
+                <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                    {% localize off %}{{ vacation_chart.vacations|floatformat:2|default:"0.00" }}{% endlocalize %}
+                </span>
+            </div>
+            <div class="info-data-row" style="flex-direction: column; gap: 10px; border-bottom: none; padding-bottom: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0; font-size: 0.75rem;">Liquidar:</label>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn-box-action" style="background:#ccfbf1; border-color:#14b8a6; color:#0f766e;" onclick="openLiquidationModal({{ employee_profile.id }})" title="Nueva Liquidación" {% if not employee_profile %}disabled{% endif %}>
+                            <i class="fa-solid fa-file-circle-plus"></i> Nueva
+                        </button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                    <label style="margin:0; font-size: 0.75rem;">Listado:</label>
+                    <span>
+                        {% if vacation_balances and vacation_balances|length > 0 %}
+                            <button class="btn btn-sm btn-outline" style="border: 1px solid #0ea5a4; color:#0ea5a4; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; background: transparent; font-weight: 600;"
+                                    onclick="openVacationHistoryModal({{ vacation_balances.0.id }})">
+                                <i class="fa-solid fa-file-lines"></i> Ver detalle
+                            </button>
+                        {% elif employee_profile %}
+                            <span class="text-muted small">Sin periodos</span>
+                        {% else %}
+                            <span class="text-muted small">Sin empleado</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
+
+    <div class="col-12 col-md-4">
+        <!-- Saldo disponible -->
+        <div class="info-box-styled h-100 vacation-metric-card" style="border-top: 3px solid #06b6d4; margin-bottom:0;">
+            <h6 class="section-title" style="color:#0891b2;">
+                <i class="fa-solid fa-piggy-bank"></i> Saldo Actual
+            </h6>
+            <div class="info-data-row">
+                <label>Días disponibles:</label>
+                <span class="fw-bold" style="font-size:1.2rem; color:#0f172a;">
+                    {% localize off %}{{ vacation_chart.saldo|floatformat:2|default:"0.00" }}{% endlocalize %}
+                </span>
+            </div>
+            <div class="info-data-row" style="flex-direction: column; gap: 10px; border-bottom: none; padding-bottom: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; visibility:hidden;">
+                    <label style="margin:0; font-size: 0.75rem;">Espacio</label>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn-box-action"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid transparent; padding-top: 10px;">
+                    <label style="margin:0; font-size: 0.75rem; color:#0891b2;">Estado General:</label>
+                    <span>
+                        {% if vacation_chart.saldo > 0 %}
+                            <span class="status-badge active" style="background:#cffafe; color:#0891b2;">Disponible</span>
+                        {% else %}
+                            <span class="status-badge inactive">Sin saldo</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
-
-<style>
-    .vacation-metric-card {
-        min-height: 168px;
-    }
-</style>
 
 <!-- Fila inferior: gráfico donut + lista de periodos -->
 <div class="grid-info-personal mt-2">
