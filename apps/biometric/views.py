@@ -128,12 +128,6 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
             d = day_obj_local.get('day')
             if not d:
                 continue
-            used_precomputed_flags = 'has_inconsistency' in day_obj_local
-            if used_precomputed_flags:
-                if day_obj_local.get('has_inconsistency'):
-                    inconsistencias += 1
-                if day_obj_local.get('no_marks_all_day'):
-                    dias_sin_marcar += 1
 
             events = day_obj_local.get('events', []) or []
             events_skipped = day_obj_local.get('events_skipped', [])
@@ -146,44 +140,21 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     if ev_label not in events_skipped:
                         matched += 1
 
-            if not used_precomputed_flags:
-                is_holiday = day_obj_local.get('is_holiday', False)
-                has_permits = bool(day_obj_local.get('permits'))
-                raw_cnt = day_obj_local.get('raw_punches_count', 0)
-                try:
-                    cur_date = date(year_local, month_local, int(d))
-                    wd = cur_date.weekday()
-                    try:
-                        from schedule.models import get_employee_schedule_for_date
-                        schedule_obj = get_employee_schedule_for_date(employee_obj, cur_date)
-                    except Exception:
-                        schedule_obj = None
+            is_holiday = day_obj_local.get('is_holiday', False)
+            raw_cnt = day_obj_local.get('raw_punches_count', 0)
+            
+            try:
+                cur_date = date(year_local, month_local, int(d))
+                wd = cur_date.weekday()
+                is_workday = wd < 5
+            except Exception:
+                is_workday = True
 
-                    if schedule_obj:
-                        if wd == 0:
-                            is_workday = bool(getattr(schedule_obj, 'monday', True))
-                        elif wd == 1:
-                            is_workday = bool(getattr(schedule_obj, 'tuesday', True))
-                        elif wd == 2:
-                            is_workday = bool(getattr(schedule_obj, 'wednesday', True))
-                        elif wd == 3:
-                            is_workday = bool(getattr(schedule_obj, 'thursday', True))
-                        elif wd == 4:
-                            is_workday = bool(getattr(schedule_obj, 'friday', True))
-                        elif wd == 5:
-                            is_workday = bool(getattr(schedule_obj, 'saturday', False))
-                        else:
-                            is_workday = bool(getattr(schedule_obj, 'sunday', False))
-                    else:
-                        is_workday = wd < 5
-                except Exception:
-                    is_workday = True
-
-                if raw_cnt == 0 and not is_holiday and not has_permits and is_workday:
-                    dias_sin_marcar += 1
-
-                if is_workday and expected > matched:
+            if is_workday and not is_holiday:
+                if expected > matched:
                     inconsistencias += (expected - matched)
+                if raw_cnt == 0 and expected > 0:
+                    dias_sin_marcar += 1
 
             events_map = {ev['label']: ev for ev in events}
             for p in day_obj_local.get('punches', []):
@@ -406,14 +377,13 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             expected_slots = sum(1 for ev in events if ev.get('label') not in skipped_labels)
             assigned_slots = sum(1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
             is_holiday = day_obj_local.get('is_holiday', False)
-            has_permits = bool(day_obj_local.get('permits'))
-            no_marks = raw_cnt == 0 and not is_holiday and not has_permits and cur_date.weekday() < 5
+            no_marks = raw_cnt == 0 and not is_holiday and cur_date.weekday() < 5 and expected_slots > 0
             missing_slots = expected_slots > assigned_slots
             day_obj_local['expected_cnt'] = expected_slots
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
             day_obj_local['no_marks_all_day'] = no_marks
-            day_obj_local['has_inconsistency'] = (missing_slots or no_marks) and cur_date.weekday() < 5 and not is_holiday and not has_permits
+            day_obj_local['has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday
 
             day_obj_local['punches'] = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
 
@@ -1200,8 +1170,14 @@ def generate_monthly_report_pdf(request):
                                     elif pe and not ps and ev_time <= pe:
                                         ev['dt'] = datetime.combine(ev['dt'].date(), pe)
                                 elif ev['type'] == 'out':
-                                    if ps and pe and ps <= ev_time <= pe:
-                                        ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                    if ps and pe:
+                                        if ps <= ev_time <= pe:
+                                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                        elif ps <= ev_time and ev['label'] in ('J1_out', 'J2_out'):
+                                            ev_dt_tmp = datetime.combine(ev['dt'].date(), ev_time)
+                                            pe_dt_tmp = datetime.combine(ev['dt'].date(), pe)
+                                            if (ev_dt_tmp - pe_dt_tmp).total_seconds() <= 2.5 * 3600:
+                                                ev['dt'] = datetime.combine(ev['dt'].date(), ps)
                                     elif ps and not pe and ev_time >= ps:
                                         ev['dt'] = datetime.combine(ev['dt'].date(), ps)
                                     elif pe and not ps and ev_time <= pe:
@@ -1692,22 +1668,19 @@ def generate_monthly_report_pdf(request):
                     cur_date_tmp = date(year, month, int(d))
                     is_workday_tmp = cur_date_tmp.weekday() < 5
 
-                    # Dia sin marcar: laborable, sin feriado, sin permiso, sin ninguna marca
+                    # Dia sin marcar: laborable, sin feriado, sin ninguna marca (y con turnos esperados)
                     no_marks = (
                             raw_cnt == 0
                             and not is_holiday
-                            and not has_permits
                             and is_workday_tmp
+                            and expected_slots > 0
                     )
-                    # Inconsistencia: faltan marcaciones obligatorias Y no hay permiso que lo justifique
-                    # Un día con permiso parcial que cubre todos los slots activos NO es inconsistencia.
-                    # Un día con permiso de día completo tampoco es inconsistencia.
+                    # Inconsistencia: faltan marcaciones obligatorias (ya descontados los permisos completos)
                     missing_slots = expected_slots > assigned_slots
                     day_obj['has_inconsistency'] = (
-                            (missing_slots or no_marks)
+                            missing_slots
                             and is_workday_tmp
                             and not is_holiday
-                            and not has_permits  # ← permiso justifica la ausencia
                     )
                     day_obj['no_marks_all_day'] = no_marks
                 except Exception:
