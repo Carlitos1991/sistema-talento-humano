@@ -33,10 +33,30 @@ const app = createApp({
     delimiters: ['[[', ']]'],
     setup() {
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
-        // Recuperar el tab activo de localStorage o por defecto 'personal'
-        const savedTab = localStorage.getItem('wizardActiveTab');
-        const activeTab = ref(savedTab || 'personal');
         const appElement = document.getElementById('employeeWizardApp');
+        const personId = appElement ? appElement.dataset.personId : null;
+
+        // Recuperar el tab activo de localStorage o por defecto 'personal'
+        const savedPersonId = localStorage.getItem('wizardPersonId');
+        let savedTab = localStorage.getItem('wizardActiveTab');
+
+        // Verificar si la página fue recargada intencionalmente (ej. location.reload() tras guardar)
+        let isReload = false;
+        const navEntries = window.performance?.getEntriesByType?.("navigation");
+        if (navEntries && navEntries.length > 0) {
+            isReload = navEntries[0].type === "reload";
+        } else if (window.performance && window.performance.navigation) {
+            isReload = window.performance.navigation.type === 1; // 1 = TYPE_RELOAD
+        }
+
+        // Reiniciar al tab 'personal' si cambiamos de empleado o si es una visita nueva
+        if (savedPersonId !== personId || !isReload) {
+            savedTab = 'personal';
+            localStorage.setItem('wizardPersonId', personId || '');
+            localStorage.setItem('wizardActiveTab', 'personal');
+        }
+
+        const activeTab = ref(savedTab || 'personal');
         const detailPhotoPreviewUrl = ref(appElement && appElement.dataset.photoUrl ? appElement.dataset.photoUrl : '');
         const detailPhotoHasFile = ref(false);
         Vue.watch(activeTab, (newTab, oldTab) => {
@@ -182,7 +202,6 @@ const app = createApp({
         const loadingList = ref(false);
 
         // Atributos de datos inyectados por Django
-        const personId = appElement ? appElement.dataset.personId : null;
         const personStats = ref({
             titles: appElement ? parseInt(appElement.dataset.titles) : 0,
             experiences: appElement ? parseInt(appElement.dataset.experiences) : 0,
