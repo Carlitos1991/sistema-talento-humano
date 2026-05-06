@@ -1161,33 +1161,57 @@ def generate_monthly_report_pdf(request):
                             events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
 
                         # Suprimir eventos cubiertos por permiso ANTES del emparejamiento.
-                        # Así sus marcas candidatas quedan disponibles para los eventos del
-                        # turno activo (ej: permiso 08-13 libera 13:57 para J2_in=14:00).
+                        # En caso de overlap, desplazar el evento al borde del permiso.
                         permits_day = day_obj.get('permits', []) or []
 
-                        def _ev_covered(ev_obj, perms):
+                        events_active = []
+                        events_skipped = []
+                        
+                        for ev in events:
+                            is_covered = False
                             try:
-                                ev_time = ev_obj['dt'].time()
+                                ev_time = ev['dt'].time()
                             except Exception:
-                                return False
-                            for perm in perms:
+                                events_active.append(ev)
+                                continue
+                                
+                            for perm in permits_day:
                                 ps = perm.get('start_time')
                                 pe = perm.get('end_time')
+                                
                                 if not ps and not pe:
-                                    return True  # dia completo
-                                if ps and pe:
-                                    if ps <= ev_time <= pe:
-                                        return True
-                                elif ps and not pe:
-                                    if ev_time >= ps:
-                                        return True
-                                elif pe and not ps:
-                                    if ev_time <= pe:
-                                        return True
-                            return False
-
-                        events_active = [ev for ev in events if not _ev_covered(ev, permits_day)]
-                        events_skipped = [ev['label'] for ev in events if _ev_covered(ev, permits_day)]
+                                    is_covered = True
+                                    break
+                                
+                                if ev['type'] == 'in':
+                                    if ps and pe and ps <= ev_time <= pe:
+                                        ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                                    elif ps and not pe and ev_time >= ps:
+                                        is_covered = True
+                                    elif pe and not ps and ev_time <= pe:
+                                        ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                                elif ev['type'] == 'out':
+                                    if ps and pe and ps <= ev_time <= pe:
+                                        ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                    elif ps and not pe and ev_time >= ps:
+                                        ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                    elif pe and not ps and ev_time <= pe:
+                                        is_covered = True
+                                        
+                            if is_covered:
+                                events_skipped.append(ev['label'])
+                            else:
+                                events_active.append(ev)
+                                
+                        to_remove = []
+                        for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
+                            ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
+                            ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
+                            if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
+                                to_remove.extend([in_lbl, out_lbl])
+                                
+                        events_skipped.extend(to_remove)
+                        events_active = [e for e in events_active if e['label'] not in to_remove]
 
                         # Guardar los eventos esperados para uso en el resumen
                         day_obj['events'] = events
