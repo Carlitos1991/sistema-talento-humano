@@ -86,9 +86,21 @@
         .cell-missing {
             background-color: #ffecec; /* rojo claro para día sin marcaciones */
         }
+        
+        .cell-absent {
+            background-color: #ffcccc; /* rojo más oscuro para ausencia total */
+        }
 
         .day-number-inconsistency {
             background-color: #ffecec; /* resaltar número de día en rojo claro */
+            color: #800;
+            padding: 1px 4px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+        
+        .day-number-absent {
+            background-color: #ffaaaa;
             color: #800;
             padding: 1px 4px;
             border-radius: 2px;
@@ -209,12 +221,18 @@
         {% for week in calendar %}
             <tr style="page-break-inside:avoid;">
                 {% for day_obj in week %}
-                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}{% if day_obj.no_marks_all_day %} cell-missing{% elif day_obj.has_inconsistency %} cell-missing{% endif %}">
+                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}{% if day_obj.no_marks_all_day %} cell-absent{% elif day_obj.has_inconsistency %} cell-missing{% endif %}">
                         <div class="cell-inner">
                             {% if day_obj.day %}
-                                <div class="day-header">{% if day_obj.has_inconsistency %}
-                                    <span class="day-number-inconsistency">{{ day_obj.day }}</span>{% else %}
-                                    {{ day_obj.day }}{% endif %}</div>
+                                <div class="day-header">
+                                    {% if day_obj.no_marks_all_day %}
+                                        <span class="day-number-absent">{{ day_obj.day }}</span>
+                                    {% elif day_obj.has_inconsistency %}
+                                        <span class="day-number-inconsistency">{{ day_obj.day }}</span>
+                                    {% else %}
+                                        {{ day_obj.day }}
+                                    {% endif %}
+                                </div>
                                 {% if day_obj.is_holiday %}
                                     <div class="holiday-label">{{ day_obj.holi_name }}</div>
                                 {% endif %}
