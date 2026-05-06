@@ -4664,11 +4664,19 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 
 /* Módulos de navegación */
 .module-grid-premium {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
+    display: flex !important;
+    flex-wrap: nowrap !important; /* Fuerza estrictamente a una sola fila */
+    overflow-x: auto;
+    gap: 6px;
     margin-top: 0;
     margin-bottom: 0;
+    padding-top: 8px; /* Espacio superior para que el hover (salto) no se corte */
+    padding-bottom: 12px; /* Espacio inferior para que no se corte la sombra */
+    scrollbar-width: none; /* Oculta scroll en Firefox */
+}
+
+.module-grid-premium::-webkit-scrollbar {
+    display: none; /* Oculta scroll en Chrome/Edge/Safari */
 }
 
 .module-card-item {
@@ -4771,7 +4779,9 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     background: white;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
-    padding: 12px 8px;
+    padding: 8px 2px;
+    flex: 1 1 0%; 
+    min-width: 70px; /* Ligeramente más angostos para que entren todos */
     text-decoration: none;
     text-align: center;
     transition: all 0.3s ease;
