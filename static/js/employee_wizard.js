@@ -1433,18 +1433,25 @@ $(document).off('click', '.js-view-action-detail').on('click', '.js-view-action-
     const modalPlaceholder = $('#action-modal-employee');
 
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-        .then(response => response.text())
-        .then(html => {
-            modalPlaceholder.html(`
-                <div class="modal-overlay" style="display:flex;">
-                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
-                        ${html}
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.html) {
+                modalPlaceholder.html(`
+                    <div class="modal-overlay" style="display:flex;">
+                        <div class="modal-container-medium animate-scale-in shadow-card animate__animated animate__fadeInDown" 
+                             style="max-width:850px;background:#fff;border-radius:12px;display:flex;flex-direction:column;max-height:85vh;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.25);">
+                            <div style="display:flex;flex-direction:column;height:100%;width:100%;">
+                                ${data.html}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            `);
-            $('body').addClass('modal-open');
+                `);
+                $('body').addClass('modal-open');
+            } else {
+                Swal.fire("Error", "Respuesta inválida del servidor al cargar el detalle.", "error");
+            }
         })
-        .catch(err => Swal.fire("Error", "No se pudo cargar el detalle", "error"));
+        .catch(err => Swal.fire("Error", "No se pudo cargar el detalle de la acción.", "error"));
 });
 
 // Montaje Global

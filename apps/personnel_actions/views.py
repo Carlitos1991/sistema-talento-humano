@@ -12,6 +12,7 @@ from datetime import timedelta
 
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetModificationHistory
 from core.models import CatalogItem, User
+from institution.models import AdministrativeUnit
 from .models import PersonnelAction, ActionMovement, ActionType
 from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
 
@@ -587,11 +588,11 @@ class ActionDetailView(LoginRequiredMixin, View):
             PersonnelAction.objects.select_related('employee__person', 'action_type'),
             pk=pk
         )
-        history_action = ActionMovement.objects.get(pk=pk)
+        movement = action.movement.first()
 
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
-            {'action': action, 'history_action': history_action},
+            {'action': action, 'history_action': movement},
             request=request
         )
 
@@ -835,16 +836,33 @@ class ActionPDFView(LoginRequiredMixin, View):
         )
 
         movement = action.movement.select_related(
-            'previous_unit', 'previous_unit__parent', 'previous_budget_line', 'previous_budget_line__position_item',
+            'previous_budget_line', 'previous_budget_line__position_item',
             'previous_budget_line__group_item', 'previous_budget_line__grade_item', 'previous_budget_line__activity',
             'previous_budget_line__activity__project__subprogram__program',
-            'new_unit', 'new_unit__parent', 'new_budget_line', 'new_budget_line__position_item',
+            'new_budget_line', 'new_budget_line__position_item',
             'new_budget_line__group_item', 'new_budget_line__grade_item', 'new_budget_line__activity',
             'new_budget_line__activity__project__subprogram__program'
         ).first()
 
-        current_unit = movement.previous_unit if movement and movement.previous_unit else action.employee.area
-        proposed_unit = movement.new_unit if movement and movement.new_unit else current_unit
+        # Para datos migrados, 'previous_unit' y 'new_unit' son CharFields.
+        # Debemos obtener los objetos AdministrativeUnit correspondientes.
+        current_unit = None
+        if movement and movement.previous_unit:
+            try:
+                current_unit = AdministrativeUnit.objects.get(name=movement.previous_unit)
+            except AdministrativeUnit.DoesNotExist:
+                current_unit = None  # Puede ser un nombre antiguo que ya no existe
+        if not current_unit:
+            current_unit = action.employee.area  # Fallback al área actual del empleado
+
+        proposed_unit = None
+        if movement and movement.new_unit:
+            try:
+                proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
+            except AdministrativeUnit.DoesNotExist:
+                proposed_unit = None
+        if not proposed_unit:
+            proposed_unit = current_unit  # Fallback a la unidad actual
 
         current_budget = None
         proposed_budget = None
