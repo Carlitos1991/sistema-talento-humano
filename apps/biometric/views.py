@@ -22,7 +22,7 @@ from django.db import transaction, models
 logger = logging.getLogger(__name__)
 ENABLE_SHIFT_COLLAPSE = False  # desactivar colapso automático hasta afinar reglas
 # Configurables para el emparejador (ajustables según pruebas)
-DEDUPE_WINDOW_MINUTES = 3
+DEDUPE_WINDOW_MINUTES = 5
 IN_TOLERANCE_SECONDS = 60  # 1 minuto de tolerancia para in
 OUT_MAX_SECONDS = 30 * 60  # 30 minutos para aceptar out antes del evento si no hay after
 IN_MAX_SECONDS = 60 * 60 * 2  # 2 horas máximo para emparejar despues en in
@@ -327,6 +327,18 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
+        # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
+        last_p_dt = datetime.min
+        for p in punches_sorted:
+            try:
+                p_dt = p.get('dt_norm') or p.get('dt')
+                if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
+                    p['is_duplicate'] = True
+                else:
+                    last_p_dt = p_dt
+            except Exception:
+                pass
+
             def get_dt(p):
                 return p.get('dt_norm') or p.get('dt')
 
@@ -335,7 +347,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             max_match_seconds = 60 * 60 * 4
 
             for ev in events_active:
-                candidates = [p for p in punches_sorted if not p.get('assigned')]
+                candidates = [p for p in punches_sorted if not p.get('assigned') and not p.get('is_duplicate')]
                 ordered_candidates = [p for p in candidates if get_dt(p) >= prev_assigned_dt]
                 if ordered_candidates:
                     candidates = ordered_candidates
@@ -1112,6 +1124,18 @@ def generate_monthly_report_pdf(request):
                 # Ordenar copias de marcaciones (asegurarnos que están ordenadas) usando 'dt_norm'
                 punches_sorted = sorted(punches, key=lambda x: x.get('dt_norm') or x.get('dt'))
 
+                # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
+                last_p_dt = datetime.min
+                for p in punches_sorted:
+                    try:
+                        p_dt = p.get('dt_norm') or p.get('dt')
+                        if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
+                            p['is_duplicate'] = True
+                        else:
+                            last_p_dt = p_dt
+                    except Exception:
+                        pass
+
                 annotated = []
                 if schedule and punches_sorted:
                     # Construir eventos esperados en datetime, respetando cruces de medianoche
@@ -1175,7 +1199,7 @@ def generate_monthly_report_pdf(request):
                         MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
                         for ev in events_active:  # solo eventos NO cubiertos por permiso
                             # candidatos sin asignar
-                            candidates = [p for p in punches_sorted if not p.get('assigned')]
+                            candidates = [p for p in punches_sorted if not p.get('assigned') and not p.get('is_duplicate')]
 
                             # Preferir candidatos que mantengan orden cronológico respecto a la última asignación
                             def get_dt(p):
