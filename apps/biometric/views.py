@@ -214,8 +214,32 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
             events_map = {ev['label']: ev for ev in day_obj_local.get('events', [])}
             cur_date = date(year_local, month_local, int(d))
+            permits_local = day_obj_local.get('permits', [])
             for p in day_obj_local.get('punches', []):
                 if not p.get('matched_event'):
+                    # Punch sin asignar: puede ser marcación en día con permiso
+                    # Si cayó fuera del rango del permiso (row_class='late'), contar como atraso
+                    # respecto al end_time del permiso más relevante (el que cubre el evento 'in')
+                    if p.get('row_class') == 'late' and permits_local:
+                        try:
+                            p_dt = p.get('dt_norm') or p.get('dt')
+                            if p_dt is None:
+                                continue
+                            p_time = p_dt.time()
+                            # buscar el permiso cuyo end_time es anterior a la hora del punch
+                            # (es el permiso que "debería haberlo cubierto pero no llegó a tiempo")
+                            for perm in permits_local:
+                                pe = perm.get('end_time')
+                                ps = perm.get('start_time')
+                                if pe and ps and ps <= p_time:
+                                    # el punch está después del fin del permiso
+                                    cutoff = datetime.combine(cur_date, pe)
+                                    diff = (p_dt - cutoff).total_seconds()
+                                    if diff >= 60:
+                                        minutos_atraso += int(diff // 60)
+                                    break
+                        except Exception:
+                            pass
                     continue
                 ev_label = p.get('matched_event')
                 ev = events_map.get(ev_label)
@@ -234,7 +258,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 except Exception:
                     continue
                 cutoff = ev_dt
-                for perm in day_obj_local.get('permits', []):
+                for perm in permits_local:
                     try:
                         ps = perm.get('start_time')
                         pe = perm.get('end_time')
@@ -253,7 +277,8 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
             'minutos_atraso': minutos_atraso}
 
 
-def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj, debug_flag=False):
+def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
+                                              debug_flag=False):
     """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma heurística del reporte mensual."""
     try:
         from schedule.models import get_employee_schedule_for_date
@@ -283,7 +308,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     events.append({'label': 'J1_in', 'type': 'in', 'dt': ev_dt})
                 if getattr(schedule, 'morning_end', None):
                     ev_dt = datetime.combine(cur_date, schedule.morning_end)
-                    if getattr(schedule, 'morning_crosses_midnight', False) and schedule.morning_end <= schedule.morning_start:
+                    if getattr(schedule, 'morning_crosses_midnight',
+                               False) and schedule.morning_end <= schedule.morning_start:
                         ev_dt = ev_dt + timedelta(days=1)
                     events.append({'label': 'J1_out', 'type': 'out', 'dt': ev_dt})
                 if getattr(schedule, 'afternoon_start', None):
@@ -383,7 +409,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             raw_cnt = day_obj_local.get('raw_punches_count', len(punches_sorted))
             skipped_labels = set(events_skipped)
             expected_slots = sum(1 for ev in events if ev.get('label') not in skipped_labels)
-            assigned_slots = sum(1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
+            assigned_slots = sum(
+                1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
             is_holiday = day_obj_local.get('is_holiday', False)
             has_permits = bool(day_obj_local.get('permits'))
             no_marks = raw_cnt == 0 and not is_holiday and not has_permits and cur_date.weekday() < 5
@@ -392,7 +419,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
             day_obj_local['no_marks_all_day'] = no_marks
-            day_obj_local['has_inconsistency'] = (missing_slots or no_marks) and cur_date.weekday() < 5 and not is_holiday and not has_permits
+            day_obj_local['has_inconsistency'] = (
+                                                         missing_slots or no_marks) and cur_date.weekday() < 5 and not is_holiday and not has_permits
 
             day_obj_local['punches'] = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
 
@@ -1316,10 +1344,33 @@ def generate_monthly_report_pdf(request):
                             annotated.append(newp)
 
                         # añadir marcaciones no asignadas (si las hay) en orden cronológico
+                        # Si caen dentro del permiso → visibles sin azul (el permiso las cubre)
+                        # Si caen fuera del permiso → visibles con azul (tardanza real)
                         remaining = [p for p in punches_sorted if not p.get('assigned')]
                         for r in remaining:
                             r_new = r.copy()
-                            r_new['row_class'] = r_new.get('row_class', '')
+                            try:
+                                p_time = (r_new.get('dt_norm') or r_new.get('dt')).time()
+                                in_permit = False
+                                for perm in permits_day:
+                                    ps = perm.get('start_time')
+                                    pe = perm.get('end_time')
+                                    if not ps and not pe:
+                                        in_permit = True;
+                                        break
+                                    if ps and pe and ps <= p_time <= pe:
+                                        in_permit = True;
+                                        break
+                                    if ps and not pe and p_time >= ps:
+                                        in_permit = True;
+                                        break
+                                    if pe and not ps and p_time <= pe:
+                                        in_permit = True;
+                                        break
+                                r_new['row_class'] = '' if in_permit else 'late'
+                                r_new['permit_punch'] = True  # marcación en día con permiso
+                            except Exception:
+                                r_new['row_class'] = r_new.get('row_class', '')
                             annotated.append(r_new)
 
                         # El filtrado de duplicados se realiza más abajo en el bloque
@@ -1579,6 +1630,28 @@ def generate_monthly_report_pdf(request):
                     def dt_of(p):
                         return p.get('dt_norm') or p.get('dt')
 
+                    def _punch_covered_by_permit(punch, perms):
+                        """Devuelve True si la hora del punch cae dentro de algún permiso del día."""
+                        try:
+                            p_time = (punch.get('dt_norm') or punch.get('dt')).time()
+                        except Exception:
+                            return False
+                        for perm in perms:
+                            ps = perm.get('start_time')
+                            pe = perm.get('end_time')
+                            if not ps and not pe:
+                                return True  # permiso día completo
+                            if ps and pe:
+                                if ps <= p_time <= pe:
+                                    return True
+                            elif ps and not pe:
+                                if p_time >= ps:
+                                    return True
+                            elif pe and not ps:
+                                if p_time <= pe:
+                                    return True
+                        return False
+
                     # Mapeo inverso: evento → marcación asignada
                     # (un evento solo puede tener UNA marcación asignada)
                     event_to_punch = {}
@@ -1594,8 +1667,15 @@ def generate_monthly_report_pdf(request):
                                 # (el emparejador greedy ya eligió la mejor)
                                 pass
 
-                    # Construir el set de ids visibles
+                    # Construir el set de ids visibles:
+                    # - Punches asignados a un evento activo (siempre visibles)
+                    # - Punches sin asignar: SIEMPRE visibles (dentro o fuera del permiso)
+                    #   - dentro del permiso → row_class='' (ya asignado arriba en remaining)
+                    #   - fuera del permiso  → row_class='late' (ya asignado arriba en remaining)
                     visible_ids = {id(p) for p in event_to_punch.values()}
+                    for p in annotated:
+                        if not p.get('assigned'):
+                            visible_ids.add(id(p))
 
                     for p in annotated:
                         if 'selected_slot' in p:
@@ -1610,7 +1690,7 @@ def generate_monthly_report_pdf(request):
                             }
                             p['selected_slot'] = slot_map.get(ev_label, '')
                         else:
-                            # Marcación extra sin evento: ocultar
+                            # Solo se ocultan punches que son duplicados del mismo evento
                             p['filtered'] = True
 
                     # mantener orden cronológico
@@ -1690,8 +1770,6 @@ def generate_monthly_report_pdf(request):
             letterhead_data = None
 
     template = get_template('biometric/reports/pdf_attendance_calendar.html')
-
-    
 
     summary = build_attendance_summary_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
 
@@ -1958,16 +2036,16 @@ def generate_department_report_pdf(request):
                 schedule_tolerance = None
 
         show_employee = (
-            inconsistencias > 0
-            or dias_sin_marcar > 0
-            or (
-                schedule_tolerance is not None
-                and minutos_atraso > schedule_tolerance
-            )
-            or (
-                schedule_tolerance is None
-                and minutos_atraso > 0
-            )
+                inconsistencias > 0
+                or dias_sin_marcar > 0
+                or (
+                        schedule_tolerance is not None
+                        and minutos_atraso > schedule_tolerance
+                )
+                or (
+                        schedule_tolerance is None
+                        and minutos_atraso > 0
+                )
         )
 
         if show_employee:

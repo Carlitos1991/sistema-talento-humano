@@ -534,21 +534,42 @@ th.sortable:hover .sort-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .vacation-detail-table .btn-ver-detalle {
-    padding: 0.15rem 0.3rem;
-    font-size: 0.65rem;
+    /* Espaciado y Tamaño */
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
     white-space: nowrap;
-    min-width: auto;
-    height: 22px;
+
+    /* Forma y Alineación */
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.15rem;
+    gap: 5px;
+    height: 26px;
+    min-width: 90px;
+
+    /* Estética */
     background-color: #3b82f6;
     color: white;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.vacation-detail-table .btn-ver-detalle:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.vacation-detail-table .btn-ver-detalle i {
+    font-size: 0.8rem;
 }
 
 /* Cards de estadísticas */

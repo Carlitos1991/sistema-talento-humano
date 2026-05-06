@@ -38,10 +38,22 @@ const app = createApp({
         const appElement = document.getElementById('employeeWizardApp');
         const detailPhotoPreviewUrl = ref(appElement && appElement.dataset.photoUrl ? appElement.dataset.photoUrl : '');
         const detailPhotoHasFile = ref(false);
-        
-        // Watch for changes and save to localStorage (se mantiene por si el usuario navega internamente)
         Vue.watch(activeTab, (newTab, oldTab) => {
             localStorage.setItem('wizardActiveTab', newTab);
+
+            // Lógica para inicializar tablas (Paginación)
+            if (newTab === 'actions') {
+                Vue.nextTick(() => {
+                    console.log("Inicializando tabla de acciones...");
+                    if (typeof initManagedTables === 'function') {
+                        initManagedTables();
+                    } else {
+                        $(document).trigger('contentChanged'); // Despierta el script managed-table
+                    }
+                });
+            }
+
+            // Registro de Auditoría (Solo si cambió el tab realmente)
             if (oldTab && newTab !== oldTab) {
                 const sectionMap = {
                     personal: 'Datos personales',
@@ -54,10 +66,9 @@ const app = createApp({
                     sanctions: 'Sanciones',
                     vacations: 'Vacaciones',
                     payments: 'Roles de pago',
-                    curriculum: 'Curriculum',
-                    bitacora: 'Bitácora',
+                    curriculum: 'Curriculum'
                 };
-                void fetch(`/person/audit-log/${personId}/`, {
+                fetch(`/person/audit-log/${personId}/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': window.getCookie('csrftoken'),
@@ -67,7 +78,126 @@ const app = createApp({
                         action: 'VIEW',
                         section: sectionMap[newTab] || newTab
                     })
-                }).catch((error) => console.error('No se pudo registrar la auditoría:', error));
+                }).catch(err => console.error('Error auditoría:', err));
+            }
+        });
+        onMounted(() => {
+            if (personId) {
+                refreshCvTab(personId);
+            }
+
+            // Delegación de evento para el botón "Ver" de Acciones de Personal
+            $(document).on('click', '.js-view-action-detail', function (e) {
+                e.preventDefault();
+                const actionId = $(this).data('id');
+                const modalPlaceholder = $('#action-modal-employee');
+
+                // URL de tu servidor para el detalle
+                const url = `/personnel_actions/action/${actionId}/detail/`;
+
+                fetch(url, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(response => response.text())
+                    .then(html => {
+                        modalPlaceholder.html(`
+                <div class="modal-overlay" style="display:flex;">
+                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
+                        ${html}
+                    </div>
+                </div>
+            `);
+                        $('body').addClass('modal-open');
+                    })
+                    .catch(err => {
+                        console.error("Error:", err);
+                        Swal.fire("Error", "No se pudo cargar el detalle de la acción", "error");
+                    });
+            });
+        });
+        // --- LÓGICA DE PAGINACIÓN LOCAL PARA ACCIONES ---
+        const initActionsLocalPagination = () => {
+            const rowsPerPage = 10;
+            let currentPage = 1;
+            const $rows = $('[data-action-row]');
+            const totalRows = $rows.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+            const updateTable = () => {
+                const start = (currentPage - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+
+                $rows.hide().slice(start, end).show();
+
+                // Actualizar info
+                $('[data-action-page-info]').text(`Mostrando ${start + 1}-${Math.min(end, totalRows)} de ${totalRows}`);
+                $('[data-action-total-pages]').text(`de ${totalPages}`);
+                $('[data-action-page-input]').val(currentPage);
+
+                // Deshabilitar botones
+                $('[data-action-prev], [data-action-first]').prop('disabled', currentPage === 1);
+                $('[data-action-next], [data-action-last]').prop('disabled', currentPage === totalPages);
+            };
+
+            // Eventos de botones
+            $('[data-action-next]').off().on('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updateTable();
+                }
+            });
+            $('[data-action-prev]').off().on('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateTable();
+                }
+            });
+            $('[data-action-first]').off().on('click', () => {
+                currentPage = 1;
+                updateTable();
+            });
+            $('[data-action-last]').off().on('click', () => {
+                currentPage = totalPages;
+                updateTable();
+            });
+
+            $('[data-action-page-input]').on('change', function () {
+                let val = parseInt($(this).val());
+                if (val >= 1 && val <= totalPages) {
+                    currentPage = val;
+                    updateTable();
+                }
+            });
+
+            updateTable();
+        };
+
+// --- ARREGLO PARA EL ERROR 404 Y MODAL ---
+        $(document).on('click', '.js-view-action-detail', function (e) {
+            e.preventDefault();
+            // LEEMOS LA URL DIRECTAMENTE DEL BOTÓN (Evita el 404)
+            const url = $(this).data('url');
+            const modalPlaceholder = $('#action-modal-employee');
+
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(response => response.text())
+                .then(html => {
+                    modalPlaceholder.html(`
+                <div class="modal-overlay" style="display:flex;">
+                    <div class="modal-container-medium shadow-card animate__animated animate__fadeInDown">
+                        ${html}
+                    </div>
+                </div>
+            `);
+                    $('body').addClass('modal-open');
+                })
+                .catch(err => Swal.fire("Error", "No se pudo cargar el detalle", "error"));
+        });
+        Vue.watch(activeTab, (newTab) => {
+            if (newTab === 'actions') {
+                Vue.nextTick(() => {
+                    initActionsLocalPagination();
+                });
             }
         });
 
@@ -150,12 +280,19 @@ const app = createApp({
                 if (type === 'experience') expForm.value = {id: null, is_current: false};
                 if (type === 'training') trainForm.value = {id: null};
                 if (type === 'bank') { // No action 'new' usually but for consistency
-                   bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
-                   bankErrors.value = {};
+                    bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
+                    bankErrors.value = {};
                 }
                 if (type === 'payroll') {
-                     payrollForm.value = {monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0};
-                     payrollErrors.value = {};
+                    payrollForm.value = {
+                        monthly_payment: false,
+                        reserve_funds: false,
+                        family_dependents: 0,
+                        education_dependents: 0,
+                        roles_entry_date: null,
+                        roles_count: 0
+                    };
+                    payrollErrors.value = {};
                 }
 
                 $(selector).removeClass('hidden');
@@ -163,7 +300,7 @@ const app = createApp({
             } else if (action === 'edit' && type === 'bank') {
                 // Load existing bank data logic would go here if we fetched it asynchronously or injected it
                 // For now, we assume user might want to edit. If data is in Django template, we might need to parse it or fetch it.
-                 // Ideally we call an API to get current data or pass it in the button.
+                // Ideally we call an API to get current data or pass it in the button.
                 // Simplified for now:
                 $(selector).removeClass('hidden');
                 initSelect2(selector);
@@ -176,12 +313,11 @@ const app = createApp({
                 initSelect2(selector);
                 // Pequeña espera para asegurar que Vue haya aplicado los datos y luego refrescar selects
                 setTimeout(() => refreshSelect2(selector), 200);
-                
-            } else if(action === 'edit' && type === 'payroll') {
-                 // Similar to bank
-                 $(selector).removeClass('hidden');
-            }
-             else {
+
+            } else if (action === 'edit' && type === 'payroll') {
+                // Similar to bank
+                $(selector).removeClass('hidden');
+            } else {
                 fetchListData(type);
             }
         };
@@ -191,7 +327,14 @@ const app = createApp({
         const editErrors = ref({});
         const bankForm = ref({bank: '', account_type: '', account_number: '', holder_name: ''});
         const bankErrors = ref({});
-        const payrollForm = ref({monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0});
+        const payrollForm = ref({
+            monthly_payment: false,
+            reserve_funds: false,
+            family_dependents: 0,
+            education_dependents: 0,
+            roles_entry_date: null,
+            roles_count: 0
+        });
         const payrollErrors = ref({});
         const titleForm = ref({education_level: '', senescyt_number: ''});
         const titleErrors = ref({});
@@ -200,11 +343,11 @@ const app = createApp({
         const trainForm = ref({training_name: ''});
         const trainErrors = ref({});
         const institutionalForm = ref({
-            area: null, 
-            employment_status: null, 
-            file_number: '', 
-            biometric_id: '', 
-            institutional_email: '', 
+            area: null,
+            employment_status: null,
+            file_number: '',
+            biometric_id: '',
+            institutional_email: '',
             observations: ''
         });
         const institutionalErrors = ref({});
@@ -215,7 +358,7 @@ const app = createApp({
         const listModalTitle = ref('');
         const listTableHead = ref('');
         const listTableBody = ref('');
-        
+
         // --- 3.1 BÚSQUEDA Y FILTRADO ---
         const searchQuery = ref('');
         const listItems = ref([]);
@@ -225,7 +368,7 @@ const app = createApp({
                 return listItems.value;
             }
             const query = searchQuery.value.toLowerCase();
-            return listItems.value.filter(item => 
+            return listItems.value.filter(item =>
                 (item.name && item.name.toLowerCase().includes(query)) ||
                 (item.code && item.code.toLowerCase().includes(query))
             );
@@ -364,21 +507,21 @@ const app = createApp({
         const handleEditCvItem = async (type, id) => {
             try {
                 const res = await (await fetch(`/employee/api/cv/detail/${type}/${id}/`)).json();
-                    if (res.success) {
-                        $('#modalCVListOverlay').addClass('hidden');
-                        
-                        if (type === 'academic') {
-                            titleForm.value = res.data;
-                            openModal('academic', 'edit');
-                        }
-                        if (type === 'experience') {
-                            expForm.value = res.data;
-                            openModal('experience', 'edit');
-                        }
-                        if (type === 'training') {
-                            trainForm.value = res.data;
-                            openModal('training', 'edit');
-                        }
+                if (res.success) {
+                    $('#modalCVListOverlay').addClass('hidden');
+
+                    if (type === 'academic') {
+                        titleForm.value = res.data;
+                        openModal('academic', 'edit');
+                    }
+                    if (type === 'experience') {
+                        expForm.value = res.data;
+                        openModal('experience', 'edit');
+                    }
+                    if (type === 'training') {
+                        trainForm.value = res.data;
+                        openModal('training', 'edit');
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -421,12 +564,12 @@ const app = createApp({
                 const response = await fetch(`/person/update/${editForm.value.id}/`, {
                     method: 'POST', body: formData, headers: {'X-CSRFToken': window.getCookie('csrftoken')}
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Error del servidor:', errorData);
                     window.Toast.fire({
-                        icon: 'error', 
+                        icon: 'error',
                         title: errorData.message || 'Error al actualizar datos',
                         text: JSON.stringify(errorData.errors || {})
                     });
@@ -434,7 +577,7 @@ const app = createApp({
                     isSaving.value = false;
                     return;
                 }
-                
+
                 const res = await response.json();
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
@@ -608,7 +751,7 @@ const app = createApp({
 
         const refreshCvTab = async (pId) => {
             // En lugar de reemplazar todo el HTML, actualizar solo los contadores
-            
+
             try {
                 // Obtener la persona actualizada para los contadores
                 const [titlesRes, expRes, trainRes] = await Promise.all([
@@ -616,26 +759,26 @@ const app = createApp({
                     fetch(`/employee/api/cv/list-experience/${pId}/`),
                     fetch(`/employee/api/cv/list-training/${pId}/`)
                 ]);
-                
+
                 const titlesData = await titlesRes.json();
                 const expData = await expRes.json();
                 const trainData = await trainRes.json();
-                
+
                 if (titlesData.success) {
                     personStats.value.titles = titlesData.items.length;
                 }
-                
+
                 if (expData.success) {
                     personStats.value.experiences = expData.items.length;
                     personStats.value.experienceYears = expData.total_years || 0;
                     personStats.value.experienceMonths = expData.total_months || 0;
                 }
-                
+
                 if (trainData.success) {
                     personStats.value.courses = trainData.items.length;
                 }
-                
-                
+
+
             } catch (e) {
                 console.error('Error actualizando estadísticas:', e);
             }
@@ -666,7 +809,7 @@ const app = createApp({
                     if (isBossEl) {
                         const isBoss = !!res.data.is_boss;
                         isBossEl.textContent = isBoss ? 'SÍ' : 'NO';
-                        isBossEl.classList.remove('active','neutral');
+                        isBossEl.classList.remove('active', 'neutral');
                         isBossEl.classList.add(isBoss ? 'active' : 'neutral');
                     }
                     // Contrato colectivo
@@ -690,7 +833,7 @@ const app = createApp({
         const refreshEconomicTab = async (pId) => {
             try {
                 const pid = pId || appElement.dataset.personId;
-                
+
                 // Fetch both bank and payroll summaries
                 const [bankRes, payrollRes] = await Promise.all([
                     fetch(`/employee/person/${pid}/get-bank-account/`),
@@ -699,7 +842,7 @@ const app = createApp({
 
                 const bankData = await bankRes.json();
                 const payrollData = await payrollRes.json();
-                
+
 
                 // Update DOM elements if present
                 if (bankData && bankData.success) {
@@ -721,12 +864,11 @@ const app = createApp({
                     const statusEl = document.getElementById('econ_bank_status');
                     if (statusEl) {
                         statusEl.textContent = isActive ? 'Activa' : 'Inactiva';
-                        statusEl.classList.remove('active','neutral');
+                        statusEl.classList.remove('active', 'neutral');
                         statusEl.classList.add(isActive ? 'active' : 'neutral');
                     }
-                }
-                else {
-                    
+                } else {
+
                 }
 
                 if (payrollData && payrollData.success) {
@@ -744,7 +886,7 @@ const app = createApp({
                     // Mantener la pestaña activa en económico
                     activeTab.value = 'economic';
                 } else {
-                    
+
                 }
             } catch (e) {
                 console.error('Error refreshing economic tab', e);
@@ -871,7 +1013,7 @@ const app = createApp({
             currentListType.value = type;
             loadingList.value = true;
             listItems.value = [];
-            
+
             // Show the modal
             $('#modalCVListOverlay').removeClass('hidden');
 
@@ -908,7 +1050,7 @@ const app = createApp({
         };
 
         const closeModal = (type) => {
-             const map = {
+            const map = {
                 academic: '#modalTitleOverlay',
                 experience: '#modalExperienceOverlay',
                 training: '#modalTrainingOverlay',
@@ -929,15 +1071,15 @@ const app = createApp({
         };
 
         const editItem = (item) => {
-            
+
             if (currentListType.value && item) {
                 handleEditCvItem(currentListType.value, item.id);
             }
         };
 
         const deleteItem = (item) => {
-             
-             if (currentListType.value && item) {
+
+            if (currentListType.value && item) {
                 handleDeleteCvItem(currentListType.value, item.id);
             }
         };
@@ -973,58 +1115,65 @@ const app = createApp({
         // --- 8. MÉTODOS: DATOS ECONÓMICOS ---
 
         const openBankModal = async (personId) => {
-             // Reset form first
-             bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
-             bankErrors.value = {};
-             
-             // Fetch existing data
-             try {
-                // Assuming we somehow have personId in scope or pass it. 
+            // Reset form first
+            bankForm.value = {bank: '', account_type: '', account_number: '', holder_name: ''};
+            bankErrors.value = {};
+
+            // Fetch existing data
+            try {
+                // Assuming we somehow have personId in scope or pass it.
                 // Let's rely on the passed argument or the global personId if available.
                 const pid = personId || appElement.dataset.personId;
                 const response = await fetch(`/employee/person/${pid}/get-bank-account/`);
                 const result = await response.json();
                 if (result.success && result.data && Object.keys(result.data).length > 0) {
-                     bankForm.value = result.data;
-                     // Set underlying select values so select2 shows the correct items
-                     setTimeout(() => {
-                         try {
-                             if (bankForm.value.bank) $('.select2-wizard-bank[name="bank"]').val(bankForm.value.bank).trigger('change');
-                             if (bankForm.value.account_type) $('.select2-wizard-bank[name="account_type"]').val(bankForm.value.account_type).trigger('change');
-                         } catch (e) {
-                             console.warn('select2 set value failed', e);
-                         }
-                     }, 120);
+                    bankForm.value = result.data;
+                    // Set underlying select values so select2 shows the correct items
+                    setTimeout(() => {
+                        try {
+                            if (bankForm.value.bank) $('.select2-wizard-bank[name="bank"]').val(bankForm.value.bank).trigger('change');
+                            if (bankForm.value.account_type) $('.select2-wizard-bank[name="account_type"]').val(bankForm.value.account_type).trigger('change');
+                        } catch (e) {
+                            console.warn('select2 set value failed', e);
+                        }
+                    }, 120);
                 }
-             } catch(e) {
-                 
-             }
+            } catch (e) {
 
-             $('#modalBankOverlay').removeClass('hidden');
-             initSelect2('#modalBankOverlay');
+            }
+
+            $('#modalBankOverlay').removeClass('hidden');
+            initSelect2('#modalBankOverlay');
         };
 
         const openPayrollModal = async (personId) => {
-             // Reset form
-             payrollForm.value = {monthly_payment: false, reserve_funds: false, family_dependents: 0, education_dependents: 0, roles_entry_date: null, roles_count: 0};
-             payrollErrors.value = {};
-             
-             try {
+            // Reset form
+            payrollForm.value = {
+                monthly_payment: false,
+                reserve_funds: false,
+                family_dependents: 0,
+                education_dependents: 0,
+                roles_entry_date: null,
+                roles_count: 0
+            };
+            payrollErrors.value = {};
+
+            try {
                 const pid = personId || appElement.dataset.personId;
                 const response = await fetch(`/employee/person/${pid}/get-payroll-info/`);
                 const result = await response.json();
                 if (result.success && result.data && Object.keys(result.data).length > 0) {
                     payrollForm.value = result.data;
                 }
-             } catch (e) {
-                 
-             }
+            } catch (e) {
 
-             $('#modalPayrollOverlay').removeClass('hidden');
+            }
+
+            $('#modalPayrollOverlay').removeClass('hidden');
         };
 
         const saveBankAccount = async (personId) => {
-             try {
+            try {
                 const pid = personId || appElement.dataset.personId;
                 // Build form payload, prefer reactive state but fallback to DOM values
                 const formData = new FormData();
@@ -1033,7 +1182,7 @@ const app = createApp({
                 keys.forEach(key => {
                     let val = bankForm.value ? bankForm.value[key] : '';
                     // If reactive state is empty, try jQuery (.val()) first because select2 plays with DOM
-                    if ((val === undefined || val === null || val === '') ) {
+                    if ((val === undefined || val === null || val === '')) {
                         try {
                             if (window.jQuery && window.jQuery(`[name="${key}"]`).length) {
                                 val = window.jQuery(`[name="${key}"]`).val();
@@ -1054,7 +1203,8 @@ const app = createApp({
                     console.debug('bank select element', bankEl, window.jQuery ? window.jQuery('[name="bank"]').val() : null);
                     const typeEl = document.querySelector('[name="account_type"]');
                     console.debug('account_type select element', typeEl, window.jQuery ? window.jQuery('[name="account_type"]').val() : null);
-                } catch (e) {}
+                } catch (e) {
+                }
                 // Debug log: muestra en consola los valores que se enviarán
                 console.debug('saveBankAccount payload', payloadDebug);
 
@@ -1070,7 +1220,13 @@ const app = createApp({
                     $('#modalBankOverlay').addClass('hidden');
                     // Mensaje de éxito (SweetAlert2 si está disponible)
                     if (window.Swal) {
-                        Swal.fire({position: 'top-end', icon: 'success', title: data.message || 'Guardado', showConfirmButton: false, timer: 1400});
+                        Swal.fire({
+                            position: 'top-end',
+                            icon: 'success',
+                            title: data.message || 'Guardado',
+                            showConfirmButton: false,
+                            timer: 1400
+                        });
                     } else if (window.Toast) {
                         window.Toast.fire({icon: 'success', title: data.message || 'Guardado'});
                     }
@@ -1087,21 +1243,21 @@ const app = createApp({
             }
         };
 
-         const savePayrollInfo = async (personId) => {
-             try {
+        const savePayrollInfo = async (personId) => {
+            try {
                 const pid = personId || appElement.dataset.personId;
                 const formData = new FormData();
                 const form = payrollForm.value;
 
                 // Booleans: CheckboxInput in Django checks for presence or 'on'
-                if(form.monthly_payment) formData.append('monthly_payment', 'on');
-                if(form.reserve_funds) formData.append('reserve_funds', 'on');
-                
+                if (form.monthly_payment) formData.append('monthly_payment', 'on');
+                if (form.reserve_funds) formData.append('reserve_funds', 'on');
+
                 // Numbers: Ensure they are not empty strings to avoid validation errors
                 formData.append('family_dependents', (form.family_dependents === '' || form.family_dependents == null) ? 0 : form.family_dependents);
                 formData.append('education_dependents', (form.education_dependents === '' || form.education_dependents == null) ? 0 : form.education_dependents);
                 formData.append('roles_count', (form.roles_count === '' || form.roles_count == null) ? 0 : form.roles_count);
-                
+
                 // Dates: Send empty string if null, which Django blank=True accepts
                 formData.append('roles_entry_date', form.roles_entry_date || '');
 
@@ -1116,7 +1272,13 @@ const app = createApp({
                 if (data.success) {
                     $('#modalPayrollOverlay').addClass('hidden');
                     if (window.Swal) {
-                        Swal.fire({position: 'top-end', icon: 'success', title: data.message || 'Guardado', showConfirmButton: false, timer: 1400});
+                        Swal.fire({
+                            position: 'top-end',
+                            icon: 'success',
+                            title: data.message || 'Guardado',
+                            showConfirmButton: false,
+                            timer: 1400
+                        });
                     } else if (window.Toast) {
                         window.Toast.fire({icon: 'success', title: data.message || 'Guardado'});
                     }
@@ -1139,18 +1301,18 @@ const app = createApp({
             institutionalErrors.value = {};
             // Reset form could be here, but we usually fetch first
             try {
-                 const pid = personId || appElement.dataset.personId;
-                 const response = await fetch(`/employee/person/${pid}/get-institutional-data/`);
-                 const res = await response.json();
-                 if (res.success) {
-                     institutionalForm.value = res.data;
-                     
-                     // Abrir modal (solo mostrar campos editables en este modal)
-                     $('#modalInstitutionalOverlay').removeClass('hidden');
-                     document.body.classList.add('no-scroll');
-                 } else {
-                     window.Toast.fire({icon: 'error', title: 'Error al cargar datos institucionales'});
-                 }
+                const pid = personId || appElement.dataset.personId;
+                const response = await fetch(`/employee/person/${pid}/get-institutional-data/`);
+                const res = await response.json();
+                if (res.success) {
+                    institutionalForm.value = res.data;
+
+                    // Abrir modal (solo mostrar campos editables en este modal)
+                    $('#modalInstitutionalOverlay').removeClass('hidden');
+                    document.body.classList.add('no-scroll');
+                } else {
+                    window.Toast.fire({icon: 'error', title: 'Error al cargar datos institucionales'});
+                }
             } catch (e) {
                 console.error("Error fetching institutional data", e);
                 window.Toast.fire({icon: 'error', title: 'Error de conexión'});
@@ -1158,43 +1320,43 @@ const app = createApp({
         };
 
         const saveInstitutionalData = async (personId) => {
-             if (isSaving.value) return;
-             isSaving.value = true;
-             
-             try {
-                 const pid = personId || appElement.dataset.personId;
-                 const formData = new FormData();
-                 Object.keys(institutionalForm.value).forEach(key => {
-                     const val = institutionalForm.value[key];
-                     if (val !== null && val !== undefined) {
-                         formData.append(key, val);
-                     }
-                 });
+            if (isSaving.value) return;
+            isSaving.value = true;
 
-                 const response = await fetch(`/employee/person/${pid}/save-institutional-data/`, {
-                     method: 'POST',
-                     headers: {
-                         'X-CSRFToken': window.getCookie('csrftoken')
-                     },
-                     body: formData
-                 });
-                 const res = await response.json();
-                 
+            try {
+                const pid = personId || appElement.dataset.personId;
+                const formData = new FormData();
+                Object.keys(institutionalForm.value).forEach(key => {
+                    const val = institutionalForm.value[key];
+                    if (val !== null && val !== undefined) {
+                        formData.append(key, val);
+                    }
+                });
+
+                const response = await fetch(`/employee/person/${pid}/save-institutional-data/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': window.getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                const res = await response.json();
+
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
                     $('#modalInstitutionalOverlay').addClass('hidden');
                     // Refrescar sólo el tab institucional y mantenerlo activo
                     await refreshInstitutionalTab(pid);
                 } else {
-                     institutionalErrors.value = res.errors;
-                     window.Toast.fire({icon: 'warning', title: 'Revise los campos'});
-                 }
-             } catch (e) {
-                 console.error("Error saving institutional data", e);
-                 window.Toast.fire({icon: 'error', title: 'Error al guardar'});
-             } finally {
-                 isSaving.value = false;
-             }
+                    institutionalErrors.value = res.errors;
+                    window.Toast.fire({icon: 'warning', title: 'Revise los campos'});
+                }
+            } catch (e) {
+                console.error("Error saving institutional data", e);
+                window.Toast.fire({icon: 'error', title: 'Error al guardar'});
+            } finally {
+                isSaving.value = false;
+            }
         };
 
 
@@ -1241,28 +1403,52 @@ const app = createApp({
             currentListType,
 
             // Métodos Persona
-            openEditPersonModal, closeEditModal, submitPersonEdit, handlePhotoChange,
-            openAuditModal, closeAuditModal,
-            handleDetailPhotoChange, submitDetailPhotoUpdate,
+            openEditPersonModal,
+            closeEditModal,
+            submitPersonEdit,
+            handlePhotoChange,
+            openAuditModal,
+            closeAuditModal,
+            handleDetailPhotoChange,
+            submitDetailPhotoUpdate,
 
             // Métodos CV
-            handlePdfUpload, closeModal, closeListModal, handleEditCvItem, handleDeleteCvItem,
-            submitAcademicTitle, submitExperience, submitTraining,
-            editItem, deleteItem,
-            formatDate, durationBetween,
+            handlePdfUpload,
+            closeModal,
+            closeListModal,
+            handleEditCvItem,
+            handleDeleteCvItem,
+            submitAcademicTitle,
+            submitExperience,
+            submitTraining,
+            editItem,
+            deleteItem,
+            formatDate,
+            durationBetween,
 
             // Métodos Bancos
-            openBankModal, saveBankAccount, refreshEconomicTab, refreshCvTab,
+            openBankModal,
+            saveBankAccount,
+            refreshEconomicTab,
+            refreshCvTab,
 
             // Métodos Nómina
-            openPayrollModal, savePayrollInfo,
+            openPayrollModal,
+            savePayrollInfo,
 
             // Métodos Institucionales
-            institutionalForm, institutionalErrors, openInstitutionalModal, saveInstitutionalData, refreshInstitutionalTab,
+            institutionalForm,
+            institutionalErrors,
+            openInstitutionalModal,
+            saveInstitutionalData,
+            refreshInstitutionalTab,
         };
     }
 });
-
+$(document).on('click', '.js-close-detail-modal', function () {
+    $('#action-modal-employee').empty();
+    $('body').removeClass('modal-open');
+});
 // Montaje Global
 document.addEventListener('DOMContentLoaded', () => {
     app.mount('#employeeWizardApp');

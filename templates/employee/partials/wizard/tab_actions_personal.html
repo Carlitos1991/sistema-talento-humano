@@ -1,67 +1,94 @@
-<!-- Pestaña: Acciones de Personal (tabla con búsqueda, orden y paginación) -->
-<div class="grid-info-personal mt-3">
-    <div class="info-box-styled info-box-accent-gold" style="grid-column: span 3;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-            <h6 class="section-title section-title-accent-gold" style="margin:0"><i
-                    class="fa-solid fa-clipboard-list"></i> Acciones de Personal</h6>
+<!-- Pestaña: Acciones de Personal -->
+<div class="content-table mt-3" data-action-history-table>
+    <div class="table-controls"
+         style="display:flex;justify-content:center;align-items:flex-end;gap:8px;flex-wrap:nowrap; margin-bottom: 15px;">
+        <div class="form-group mb-0" style="min-width:320px;">
+            <label class="form-label" style="font-size:0.72rem;">Buscar Acción</label>
+            <input type="text" class="input-field" id="action-search-input" placeholder="Buscar por número o tipo..."
+                   style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
         </div>
-        <div class="p-3 bg-light rounded">
-            <div class="content-table">
-                <div class="table-controls" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;">
-                    <div class="table-export-btns"></div>
-                    <div class="search-box" style="width:320px;">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="search" class="input-field table-search-input" placeholder="Buscar..."
-                               style="width:100%;max-width:none;">
-                    </div>
-                </div>
+        <div class="form-group mb-0" style="min-width:90px;">
+            <button type="button" class="btn btn-cancel" id="action-clear-btn"
+                    style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;">
+                <i class="fa-solid fa-eraser"></i> Limpiar
+            </button>
+        </div>
+    </div>
 
-                <div id="table-app">
-                    <table class="table table-striped table-sm managed-table exportable-table"
-                           data-title="Acciones de Personal" data-filename="acciones_personal" data-page-size="10">
-                        <thead>
-                        <tr>
-                            <th class="col-number">Nº</th>
-                            <th>Número</th>
-                            <th>Acción</th>
-                            <th>Fecha Emisión</th>
-                            <th>Fecha Vigente</th>
-                            <th style="width:160px">Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% if actions_list and actions_list|length > 0 %}
-                            {% for a in actions_list %}
-                                <tr data-id="{{ a.id }}">
-                                    <td class="col-number">{{ forloop.counter }}</td>
-                                    <td>{{ a.number }}</td>
-                                    <td>{{ a.action_name }}</td>
-                                    <td>{{ a.issued_date|date:"d \d\e F \d\e Y" }}</td>
-                                    <td>{{ a.effective_date|date:"d \d\e F \d\e Y" }}</td>
-                                    <td class="text-end">
-                                        <div class="action-buttons">
-                                            <a href="#" data-url="{% url 'personnel_actions:action_detail' a.id %}"
-                                               class="btn btn-sm btn-action-view open-action-detail" title="Ver"><i
-                                                    class="fa-solid fa-eye"></i> <span class="btn-label"></span></a>
-                                            {% if a.document_url %}
-                                                <a href="{{ a.document_url }}" target="_blank" rel="noopener noreferrer"
-                                                   class="btn btn-sm btn-action-download" title="Documento"><i
-                                                        class="fa-solid fa-file-pdf"></i> <span
-                                                        class="btn-label"></span></a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">No se encontraron acciones.</td>
-                            </tr>
-                        {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+    <div class="mt-2 mb-3">
+        <div class="text-muted small">
+            <i class="fa-solid fa-clipboard-list"></i>
+            Historial de Acciones de Personal
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table" id="actions-personal-table">
+            <thead>
+            <tr>
+                <th>Nº</th>
+                <th>Número</th>
+                <th>Tipo de Acción</th>
+                <th>Fecha Emisión</th>
+                <th>Vigencia</th>
+                <th class="actions no-sort">Acciones</th>
+            </tr>
+            </thead>
+            <tbody data-action-tbody>
+            {% if actions_list %}
+                {% for a in actions_list %}
+                    <tr data-action-row>
+                        <td>{{ forloop.counter }}</td>
+                        <td style="font-weight: 600;">{{ a.number }}</td>
+                        <td>
+                            <span class="badge-code" style="background:#dbeafe;color:#1e40af;">
+                                {{ a.action_name }}
+                            </span>
+                        </td>
+                        <td>{{ a.issued_date|date:"d/m/Y" }}</td>
+                        <td>{{ a.effective_date|date:"d/m/Y" }}</td>
+                        <td class="actions">
+                            <div class="actions-wrapper">
+                                <!-- USAMOS data-url QUE YA TRAE LA URL CORRECTA DE DJANGO -->
+                                <button type="button"
+                                        class="btn-icon btn-info-action js-view-action-detail"
+                                        data-url="{% url 'personnel_actions:action_detail' a.id %}"
+                                        title="Ver Detalle">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                {% if a.document_url %}
+                                    <a href="{{ a.document_url }}" target="_blank" class="btn-print-action" title="PDF">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr data-action-empty-row>
+                    <td colspan="6" class="text-center py-5">
+                        <i class="fas fa-inbox" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                        <p class="text-muted mt-3">No hay acciones registradas.</p>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginador idéntico al de Permisos -->
+    <div class="pagination-container" data-action-pagination>
+        <div class="pagination-info" data-action-page-info>Mostrando 0-0 de 0</div>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn" data-action-first><i class="fas fa-angle-double-left"></i></button>
+            <button type="button" class="page-btn" data-action-prev><i class="fas fa-angle-left"></i></button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" min="1" value="1" data-action-page-input>
+                <span class="total-pages-badge" data-action-total-pages>de 1</span>
             </div>
+            <button type="button" class="page-btn" data-action-next><i class="fas fa-angle-right"></i></button>
+            <button type="button" class="page-btn" data-action-last><i class="fas fa-angle-double-right"></i></button>
         </div>
     </div>
 </div>
