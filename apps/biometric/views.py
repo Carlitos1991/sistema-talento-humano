@@ -136,41 +136,14 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     dias_sin_marcar += 1
 
             events = day_obj_local.get('events', []) or []
-
-            def event_covered_by_permit_local(ev, permits):
-                for perm in permits:
-                    ps = perm.get('start_time')
-                    pe = perm.get('end_time')
-                    if not ps and not pe:
-                        return True
-                    try:
-                        ev_time = ev.get('dt').time()
-                    except Exception:
-                        continue
-                    if ps and not pe:
-                        if ev_time >= ps:
-                            return True
-                        continue
-                    if pe and not ps:
-                        if ev_time <= pe:
-                            return True
-                        continue
-                    if ps and pe:
-                        try:
-                            if ps <= ev_time <= pe:
-                                return True
-                        except Exception:
-                            continue
-                return False
-
-            permits = day_obj_local.get('permits', [])
-            expected = sum(1 for ev in events if not event_covered_by_permit_local(ev, permits))
+            events_skipped = day_obj_local.get('events_skipped', [])
+            
+            expected = sum(1 for ev in events if ev.get('label') not in events_skipped)
             matched = 0
             for p in day_obj_local.get('punches', []):
                 if p.get('assigned') and p.get('matched_event'):
                     ev_label = p.get('matched_event')
-                    ev = next((e for e in events if e.get('label') == ev_label), None)
-                    if ev and not event_covered_by_permit_local(ev, permits):
+                    if ev_label not in events_skipped:
                         matched += 1
 
             if not used_precomputed_flags:
@@ -212,40 +185,28 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 if is_workday and expected > matched:
                     inconsistencias += (expected - matched)
 
-            events_map = {ev['label']: ev for ev in day_obj_local.get('events', [])}
-            cur_date = date(year_local, month_local, int(d))
+            events_map = {ev['label']: ev for ev in events}
             for p in day_obj_local.get('punches', []):
                 if not p.get('matched_event'):
                     continue
                 ev_label = p.get('matched_event')
+                
+                if ev_label in events_skipped:
+                    continue
+                    
                 ev = events_map.get(ev_label)
                 if not ev:
                     continue
                 if ev.get('type') != 'in':
                     continue
                 try:
-                    if event_covered_by_permit_local(ev, day_obj_local.get('permits', [])):
-                        continue
-                except Exception:
-                    pass
-                try:
                     p_dt = p.get('dt_norm') or p.get('dt')
                     ev_dt = ev.get('dt')
                 except Exception:
                     continue
-                cutoff = ev_dt
-                for perm in day_obj_local.get('permits', []):
-                    try:
-                        ps = perm.get('start_time')
-                        pe = perm.get('end_time')
-                        if ps and pe:
-                            if ps <= ev_dt.time() <= pe:
-                                cutoff = datetime.combine(cur_date, pe)
-                                break
-                    except Exception:
-                        continue
-
-                diff = (p_dt - cutoff).total_seconds()
+                
+                # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
+                diff = (p_dt - ev_dt).total_seconds()
                 if diff >= 60:
                     minutos_atraso += int(diff // 60)
 
@@ -296,28 +257,56 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                         ev_dt = ev_dt + timedelta(days=1)
                     events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
 
-            permits = day_obj_local.get('permits', []) or []
+            permits_day = day_obj_local.get('permits', []) or []
 
-            def _event_covered(ev_obj, perms):
+            events_active = []
+            events_skipped = []
+            
+            for ev in events:
+                is_covered = False
                 try:
-                    ev_time = ev_obj['dt'].time()
+                    ev_time = ev['dt'].time()
                 except Exception:
-                    return False
-                for perm in perms:
+                    events_active.append(ev)
+                    continue
+                    
+                for perm in permits_day:
                     ps = perm.get('start_time')
                     pe = perm.get('end_time')
+                    
                     if not ps and not pe:
-                        return True
-                    if ps and pe and ps <= ev_time <= pe:
-                        return True
-                    if ps and not pe and ev_time >= ps:
-                        return True
-                    if pe and not ps and ev_time <= pe:
-                        return True
-                return False
-
-            events_skipped = [ev['label'] for ev in events if _event_covered(ev, permits)]
-            events_active = [ev for ev in events if ev['label'] not in events_skipped]
+                        is_covered = True
+                        break
+                    
+                    if ev['type'] == 'in':
+                        if ps and pe and ps <= ev_time <= pe:
+                            ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                        elif ps and not pe and ev_time >= ps:
+                            is_covered = True
+                        elif pe and not ps and ev_time <= pe:
+                            ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                    elif ev['type'] == 'out':
+                        if ps and pe and ps <= ev_time <= pe:
+                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                        elif ps and not pe and ev_time >= ps:
+                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                        elif pe and not ps and ev_time <= pe:
+                            is_covered = True
+                            
+                if is_covered:
+                    events_skipped.append(ev['label'])
+                else:
+                    events_active.append(ev)
+                    
+            to_remove = []
+            for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
+                ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
+                ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
+                if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
+                    to_remove.extend([in_lbl, out_lbl])
+                    
+            events_skipped.extend(to_remove)
+            events_active = [e for e in events_active if e['label'] not in to_remove]
 
             day_obj_local['events'] = events
             day_obj_local['events_skipped'] = events_skipped
@@ -327,17 +316,17 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
-        # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
-        last_p_dt = datetime.min
-        for p in punches_sorted:
-            try:
-                p_dt = p.get('dt_norm') or p.get('dt')
-                if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
-                    p['is_duplicate'] = True
-                else:
-                    last_p_dt = p_dt
-            except Exception:
-                pass
+            # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
+            last_p_dt = datetime.min
+            for p in punches_sorted:
+                try:
+                    p_dt = p.get('dt_norm') or p.get('dt')
+                    if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
+                        p['is_duplicate'] = True
+                    else:
+                        last_p_dt = p_dt
+                except Exception:
+                    pass
 
             def get_dt(p):
                 return p.get('dt_norm') or p.get('dt')
@@ -384,12 +373,32 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 best['matched_event'] = ev['label']
                 best['matched_event_dt'] = ev['dt']
                 best['assigned'] = True
-                annotated.append(best.copy())
+                
+                # determinar si es tardanza/anticipada
+                row_class = ''
+                try:
+                    best_dt = best.get('dt_norm') or best.get('dt')
+                    if ev['type'] == 'in' and best_dt:
+                        cutoff = ev['dt'].replace(second=0, microsecond=0)
+                        best_min = best_dt.replace(second=0, microsecond=0)
+                        if best_min > cutoff:
+                            row_class = 'late'
+                    if ev['type'] == 'out' and best_dt:
+                        cutoff = ev['dt'].replace(second=0, microsecond=0)
+                        best_min = best_dt.replace(second=0, microsecond=0)
+                        if best_min < cutoff:
+                            row_class = 'late'
+                except Exception:
+                    row_class = ''
+                
+                newp = best.copy()
+                newp['row_class'] = row_class
+                annotated.append(newp)
 
             remaining = [p for p in punches_sorted if not p.get('assigned')]
             for r in remaining:
                 r_new = r.copy()
-                r_new['row_class'] = ''
+                r_new['row_class'] = r_new.get('row_class', '')
                 annotated.append(r_new)
 
             raw_cnt = day_obj_local.get('raw_punches_count', len(punches_sorted))
