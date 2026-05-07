@@ -1329,7 +1329,7 @@ class SanctionTypeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Delete
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         self.object.delete()
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'message': 'Eliminado correctamente.'})
         return super().delete(request, *args, **kwargs)
 
@@ -1412,26 +1412,24 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
         context['employees_data'] = employees_with_budget
         
         # Data for "Recent Notifications" tab
-        # Determine the default month and year based on the latest notification
-        latest_notification = SanctionNotification.objects.order_by('-year', '-month').first()
-        
-        if latest_notification:
-            default_month = str(latest_notification.month)
-            default_year = str(latest_notification.year)
-        else:
-            default_month = str(timezone.now().month)
-            default_year = str(timezone.now().year)
-
+        # Pre-select last notification's month by default if not specified
         selected_notifications_month = self.request.GET.get('notifications_month')
-        if selected_notifications_month is None:
-            selected_notifications_month = default_month
+        selected_notifications_year = self.request.GET.get('notifications_year')
+
+        if selected_notifications_month is None or selected_notifications_year is None:
+            last_notification = SanctionNotification.objects.order_by('-year', '-month', '-created_at').first()
+            if last_notification:
+                if selected_notifications_month is None:
+                    selected_notifications_month = str(last_notification.month)
+                if selected_notifications_year is None:
+                    selected_notifications_year = str(last_notification.year)
+            else:
+                if selected_notifications_month is None:
+                    selected_notifications_month = str(timezone.now().month)
+                if selected_notifications_year is None:
+                    selected_notifications_year = str(timezone.now().year)
         else:
             selected_notifications_month = selected_notifications_month.strip()
-
-        selected_notifications_year = self.request.GET.get('notifications_year')
-        if selected_notifications_year is None:
-            selected_notifications_year = default_year
-        else:
             selected_notifications_year = selected_notifications_year.strip()
 
         notifications_qs = SanctionNotification.objects.select_related(
@@ -1560,18 +1558,9 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        latest_notification = SanctionNotification.objects.order_by('-year', '-month').first()
-        if latest_notification:
-            default_month = str(latest_notification.month)
-            default_year = str(latest_notification.year)
-        else:
-            default_month = str(timezone.now().month)
-            default_year = str(timezone.now().year)
-
         context['notification_month_choices'] = MONTH_CHOICES[1:]
-        context['selected_notifications_month'] = self.request.GET.get('notifications_month', default_month).strip()
-        context['selected_notifications_year'] = self.request.GET.get('notifications_year', default_year).strip()
+        context['selected_notifications_month'] = self.request.GET.get('notifications_month', '').strip()
+        context['selected_notifications_year'] = self.request.GET.get('notifications_year', '').strip()
         return context
 
     def render_to_response(self, context, **response_kwargs):

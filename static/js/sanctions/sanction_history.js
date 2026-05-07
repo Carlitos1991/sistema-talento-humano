@@ -147,6 +147,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 notificationsWrapper.innerHTML = data.html;
                 bindNotificationPagination();
                 bindNotificationEditButtons();
+                if (data.pagination) {
+                    updatePagination(data.pagination);
+                }
             }
         })
         .catch(err => console.error('Error fetching notifications:', err));
@@ -231,6 +234,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
             notificationsPageInput.dataset.bound = '1';
+        }
+    }
+
+    function updatePagination(paginationData) {
+        const pageInfo = document.getElementById('notifications-page-info');
+        const notificationsFirst = document.getElementById('notifications-btn-first');
+        const notificationsPrev = document.getElementById('notifications-btn-prev');
+        const notificationsNext = document.getElementById('notifications-btn-next');
+        const notificationsLast = document.getElementById('notifications-btn-last');
+        const notificationsPageInput = document.getElementById('notifications-page-input');
+
+        if (pageInfo) {
+            pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
+        }
+
+        if (notificationsFirst) notificationsFirst.disabled = !paginationData.has_previous;
+        if (notificationsPrev) notificationsPrev.disabled = !paginationData.has_previous;
+        if (notificationsNext) notificationsNext.disabled = !paginationData.has_next;
+        if (notificationsLast) notificationsLast.disabled = !paginationData.has_next;
+
+        if (notificationsPageInput) {
+            notificationsPageInput.value = paginationData.current_page;
+            notificationsPageInput.max = paginationData.total_pages;
         }
     }
     

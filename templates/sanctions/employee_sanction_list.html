@@ -47,42 +47,51 @@
                     </div>
 
                     <!-- Paginación -->
-                    <div class="pagination-container" id="js-pagination" style="margin-top:25px; display:flex; justify-content:center; align-items:center; gap:12px;">
-                        <span class="pagination-info" id="page-info">
-                            {% if page_obj %}
-                                Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
-                            {% else %}
-                                Mostrando 0 a 0 registros de 0 registros
-                            {% endif %}
-                        </span>
-                        <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
-                            <li>
-                                <button id="btn-first" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Primera">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </button>
-                            </li>
-                            <li>
-                                <button id="btn-prev" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Anterior">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                            </li>
-                            <li>
-                                <div class="page-input-wrapper">
-                                    <input type="number" id="page-input" class="page-input" min="1" max="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}" value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
-                                    <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}</span>
-                                </div>
-                            </li>
-                            <li>
-                                <button id="btn-next" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Siguiente">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                            </li>
-                            <li>
-                                <button id="btn-last" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Última">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </button>
-                            </li>
-                        </ul>
+                    <div class="pagination-container" id="js-pagination" style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex: 1; display:flex; align-items:center;">
+                            <span class="pagination-info" id="page-info">
+                                {% if page_obj %}
+                                    Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+                                {% else %}
+                                    Mostrando 0 a 0 registros
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        {% if page_obj.paginator.num_pages > 1 %}
+                            <div style="flex: 1; display:flex; justify-content:center;">
+                                <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+                                    <li>
+                                        <button id="btn-first" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Primera">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button id="btn-prev" class="page-btn btn-secondary" {% if not page_obj.has_previous %}disabled{% endif %} title="Anterior">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <div class="page-input-wrapper">
+                                            <input type="number" id="page-input" class="page-input" min="1" max="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}" value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
+                                            <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}</span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <button id="btn-next" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Siguiente">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button id="btn-last" class="page-btn btn-secondary" {% if not page_obj.has_next %}disabled{% endif %} title="Última">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <div style="flex: 1;"></div>
                     </div>
                 </div>
             </div>

@@ -14,7 +14,7 @@
         <tbody>
         {% for notification in latest_notifications_page_obj.object_list %}
             <tr>
-                <td>{{ forloop.counter }}</td>
+                <td>{{ latest_notifications_page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
                     <strong>{{ notification.sequential_code }}</strong>
                 </td>
@@ -60,41 +60,55 @@
         </tbody>
     </table>
 </div>
-{% if latest_notifications_page_obj.paginator.num_pages > 1 %}
-    <div class="page-buttons-wrapper">
-        <ul class="page-buttons">
-            <li>
-                <button id="notifications-btn-first" class="page-btn btn-secondary"
-                        {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">
-                    <i class="fas fa-angle-double-left"></i>
-                </button>
-            </li>
-            <li>
-                <button id="notifications-btn-prev" class="page-btn btn-secondary"
-                        {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Anterior">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </li>
-            <li>
-                <div class="page-input-wrapper">
-                    <input type="number" id="notifications-page-input" class="page-input" min="1"
-                           max="{{ latest_notifications_page_obj.paginator.num_pages }}"
-                           value="{{ latest_notifications_page_obj.number }}">
-                    <span class="total-pages-badge">de {{ latest_notifications_page_obj.paginator.num_pages }}</span>
-                </div>
-            </li>
-            <li>
-                <button id="notifications-btn-next" class="page-btn btn-secondary"
-                        {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Siguiente">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </li>
-            <li>
-                <button id="notifications-btn-last" class="page-btn btn-secondary"
-                        {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Última">
-                    <i class="fas fa-angle-double-right"></i>
-                </button>
-            </li>
-        </ul>
+
+<div class="pagination-container" id="notifications-js-pagination" style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="flex: 1; display: flex; align-items: center;">
+        <span class="pagination-info" id="notifications-page-info">
+            {% if latest_notifications_page_obj %}
+                Mostrando {{ latest_notifications_page_obj.start_index }} a {{ latest_notifications_page_obj.end_index }} de {{ latest_notifications_page_obj.paginator.count }}
+            {% else %}
+                Mostrando 0 a 0 registros de 0 registros
+            {% endif %}
+        </span>
     </div>
-{% endif %}
+
+    {% if latest_notifications_page_obj.paginator.num_pages > 1 %}
+        <div class="page-buttons-wrapper" style="flex: 1; display:flex; justify-content:center;">
+            <ul class="page-buttons pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+                <li>
+                    <button id="notifications-btn-first" class="page-btn btn-secondary"
+                            {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                </li>
+                <li>
+                    <button id="notifications-btn-prev" class="page-btn btn-secondary"
+                            {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Anterior">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </li>
+                <li>
+                    <div class="page-input-wrapper">
+                        <input type="number" id="notifications-page-input" class="page-input" min="1"
+                               max="{{ latest_notifications_page_obj.paginator.num_pages }}"
+                               value="{{ latest_notifications_page_obj.number }}">
+                        <span class="total-pages-badge">de {{ latest_notifications_page_obj.paginator.num_pages }}</span>
+                    </div>
+                </li>
+                <li>
+                    <button id="notifications-btn-next" class="page-btn btn-secondary"
+                            {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Siguiente">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </li>
+                <li>
+                    <button id="notifications-btn-last" class="page-btn btn-secondary"
+                            {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Última">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    {% endif %}
+    <div style="flex: 1;"></div>
+</div>
