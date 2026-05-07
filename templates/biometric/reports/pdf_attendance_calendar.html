@@ -84,7 +84,11 @@
         }
 
         .cell-missing {
-            background-color: #ffecec; /* rojo claro para día sin marcaciones */
+            background-color: #ffecec; /* rojo claro para día con inconsistencias */
+        }
+
+        .cell-no-marks {
+            background-color: #ffcccc; /* rojo más oscuro para día sin marcaciones */
         }
 
         .day-number-inconsistency {
@@ -209,7 +213,7 @@
         {% for week in calendar %}
             <tr style="page-break-inside:avoid;">
                 {% for day_obj in week %}
-                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}{% if day_obj.no_marks_all_day %} cell-missing{% elif day_obj.has_inconsistency %} cell-missing{% endif %}">
+                    <td class="{% if day_obj.is_holiday %}holiday{% endif %}{% if day_obj.no_marks_all_day %} cell-no-marks{% elif day_obj.has_inconsistency %} cell-missing{% endif %}">
                         <div class="cell-inner">
                             {% if day_obj.day %}
                                 <div class="day-header">{% if day_obj.has_inconsistency %}
