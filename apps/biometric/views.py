@@ -158,35 +158,35 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 elif expected > matched:
                     inconsistencias += (expected - matched)
 
-            events_map = {ev['label']: ev for ev in events}
-            for p in day_obj_local.get('punches', []):
-                if not p.get('matched_event'):
-                    continue
-                ev_label = p.get('matched_event')
-
-                if ev_label in events_skipped:
-                    continue
-
-                ev = events_map.get(ev_label)
-                if not ev:
-                    continue
-                try:
-                    p_dt = p.get('dt_norm') or p.get('dt')
-                    ev_dt = ev.get('dt')
-                except Exception:
-                    continue
-
-                # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
-                if ev.get('type') == 'in':
-                    # Entrada tardía: punch llegó después de la hora esperada
-                    diff = (p_dt - ev_dt).total_seconds()
-                    if diff >= 60:
-                        minutos_atraso += int(diff // 60)
-                elif ev.get('type') == 'out':
-                    # Salida anticipada: punch salió antes de la hora esperada
-                    diff = (ev_dt - p_dt).total_seconds()
-                    if diff >= 60:
-                        minutos_atraso += int(diff // 60)
+                events_map = {ev['label']: ev for ev in events}
+                for p in day_obj_local.get('punches', []):
+                    if not p.get('matched_event'):
+                        continue
+                    ev_label = p.get('matched_event')
+    
+                    if ev_label in events_skipped:
+                        continue
+    
+                    ev = events_map.get(ev_label)
+                    if not ev:
+                        continue
+                    try:
+                        p_dt = p.get('dt_norm') or p.get('dt')
+                        ev_dt = ev.get('dt')
+                    except Exception:
+                        continue
+    
+                    # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
+                    if ev.get('type') == 'in':
+                        # Entrada tardía: punch llegó después de la hora esperada
+                        diff = (p_dt - ev_dt).total_seconds()
+                        if diff >= 60:
+                            minutos_atraso += int(diff // 60)
+                    elif ev.get('type') == 'out':
+                        # Salida anticipada: punch salió antes de la hora esperada
+                        diff = (ev_dt - p_dt).total_seconds()
+                        if diff >= 60:
+                            minutos_atraso += int(diff // 60)
 
     return {'inconsistencias': inconsistencias, 'dias_sin_marcar': dias_sin_marcar,
             'minutos_atraso': minutos_atraso}
@@ -209,6 +209,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 continue
 
             cur_date = date(year_local, month_local, int(d))
+            is_workday = cur_date.weekday() < 5
+            is_holiday = day_obj_local.get('is_holiday', False)
             schedule = None
             if get_employee_schedule_for_date:
                 try:
@@ -362,20 +364,21 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
                 # determinar si es tardanza/anticipada
                 row_class = ''
-                try:
-                    best_dt = best.get('dt_norm') or best.get('dt')
-                    if ev['type'] == 'in' and best_dt:
-                        cutoff = ev['dt'].replace(second=0, microsecond=0)
-                        best_min = best_dt.replace(second=0, microsecond=0)
-                        if best_min > cutoff:
-                            row_class = 'late'
-                    if ev['type'] == 'out' and best_dt:
-                        cutoff = ev['dt'].replace(second=0, microsecond=0)
-                        best_min = best_dt.replace(second=0, microsecond=0)
-                        if best_min < cutoff:
-                            row_class = 'late'
-                except Exception:
-                    row_class = ''
+                if is_workday and not is_holiday:
+                    try:
+                        best_dt = best.get('dt_norm') or best.get('dt')
+                        if ev['type'] == 'in' and best_dt:
+                            cutoff = ev['dt'].replace(second=0, microsecond=0)
+                            best_min = best_dt.replace(second=0, microsecond=0)
+                            if best_min > cutoff:
+                                row_class = 'late'
+                        if ev['type'] == 'out' and best_dt:
+                            cutoff = ev['dt'].replace(second=0, microsecond=0)
+                            best_min = best_dt.replace(second=0, microsecond=0)
+                            if best_min < cutoff:
+                                row_class = 'late'
+                    except Exception:
+                        row_class = ''
 
                 newp = best.copy()
                 newp['row_class'] = row_class
@@ -1100,6 +1103,7 @@ def generate_monthly_report_pdf(request):
                 try:
                     from schedule.models import get_employee_schedule_for_date
                     cur_date = date(year, month, int(d))
+                    is_workday = cur_date.weekday() < 5
                     schedule = get_employee_schedule_for_date(inst_data.employee, cur_date)
                     if debug_punches:
                         msg = f"[punch-debug] emp={emp_id} day={d} schedule={getattr(schedule, 'name', None)}"
@@ -1337,22 +1341,23 @@ def generate_monthly_report_pdf(request):
                                     pass
                             # determinar si es tardanza/anticipada
                             row_class = ''
-                            try:
-                                best_dt = best.get('dt_norm') or best.get('dt')
-                                # Comparar truncando segundos: 08:00:30 NO es tardanza,
-                                # solo se marca 'late' si el MINUTO es posterior al esperado.
-                                if ev['type'] == 'in' and best_dt:
-                                    cutoff = ev['dt'].replace(second=0, microsecond=0)
-                                    best_min = best_dt.replace(second=0, microsecond=0)
-                                    if best_min > cutoff:
-                                        row_class = 'late'
-                                if ev['type'] == 'out' and best_dt:
-                                    cutoff = ev['dt'].replace(second=0, microsecond=0)
-                                    best_min = best_dt.replace(second=0, microsecond=0)
-                                    if best_min < cutoff:
-                                        row_class = 'late'
-                            except Exception:
-                                row_class = ''
+                            if is_workday and not day_obj.get('is_holiday', False):
+                                try:
+                                    best_dt = best.get('dt_norm') or best.get('dt')
+                                    # Comparar truncando segundos: 08:00:30 NO es tardanza,
+                                    # solo se marca 'late' si el MINUTO es posterior al esperado.
+                                    if ev['type'] == 'in' and best_dt:
+                                        cutoff = ev['dt'].replace(second=0, microsecond=0)
+                                        best_min = best_dt.replace(second=0, microsecond=0)
+                                        if best_min > cutoff:
+                                            row_class = 'late'
+                                    if ev['type'] == 'out' and best_dt:
+                                        cutoff = ev['dt'].replace(second=0, microsecond=0)
+                                        best_min = best_dt.replace(second=0, microsecond=0)
+                                        if best_min < cutoff:
+                                            row_class = 'late'
+                                except Exception:
+                                    row_class = ''
                             if debug_punches:
                                 msg = f"[punch-debug] emp={emp_id} day={d} ev={ev['label']} result_row_class={row_class}"
                                 logger.debug(msg)
@@ -1483,133 +1488,134 @@ def generate_monthly_report_pdf(request):
                 # ── Decisión raíz: ¿HORARIO 4 JORNADAS? ─────────────────────
                 is_4_jornadas = (E2 is not None and S2 is not None)
 
-                for p in day_punches:
-                    try:
-                        M = p.get('dt_norm') or p.get('dt')
-                    except Exception:
-                        continue
-                    if M is None:
-                        continue
-
-                    # ════════════════════════════════════════════════════════
-                    # RAMA NO  → 2 GUARDADOS (horario de una sola jornada)
-                    # Nodos según diagrama: SI G1 → M>E1 → M=G1 → ATR=M-E1
-                    #                                      ↓ NO
-                    #                       SI G2 → G2≥S2 → FIN
-                    # ════════════════════════════════════════════════════════
-                    if not is_4_jornadas:
-
-                        # ── Slot G1 vacío → primera marca del día ──────────
+                if is_workday and not day_obj.get('is_holiday', False):
+                    for p in day_punches:
+                        try:
+                            M = p.get('dt_norm') or p.get('dt')
+                        except Exception:
+                            continue
+                        if M is None:
+                            continue
+    
+                        # ════════════════════════════════════════════════════════
+                        # RAMA NO  → 2 GUARDADOS (horario de una sola jornada)
+                        # Nodos según diagrama: SI G1 → M>E1 → M=G1 → ATR=M-E1
+                        #                                      ↓ NO
+                        #                       SI G2 → G2≥S2 → FIN
+                        # ════════════════════════════════════════════════════════
+                        if not is_4_jornadas:
+    
+                            # ── Slot G1 vacío → primera marca del día ──────────
+                            if g_regs['G1'] is None:
+                                g_regs['G1'] = M
+                                # Diagrama: M > E1  →  ATR = M - E1
+                                if E1 and M > E1:
+                                    mins = int((M - E1).total_seconds() // 60)
+                                    ATR += max(0, mins)
+                                    g_atr['G1'] = max(0, mins)
+                                # M <= E1 → llegó a tiempo, ATR no cambia
+                                continue
+    
+                            # ── G1 lleno, G2 vacío → segunda marca (salida) ────
+                            if g_regs['G2'] is None:
+                                g_regs['G2'] = M
+                                # Diagrama: G2 ≥ S2 → FIN (salida ok)
+                                #           G2 < S2 → salida anticipada → ATR = ATR + (S1 - G2)
+                                if S1 and M < S1:
+                                    mins = int((S1 - M).total_seconds() // 60)
+                                    ATR += max(0, mins)
+                                    g_atr['G2'] = max(0, mins)
+                                continue
+    
+                            # G1 y G2 ya llenos → marcas extra ignoradas en ruta 2
+                            continue
+    
+                        # ════════════════════════════════════════════════════════
+                        # RAMA SÍ  → 4 GUARDADOS (horario con dos jornadas)
+                        # El diagrama sigue este orden para cada marcación M:
+                        #
+                        #  SI G1 vacío:
+                        #      M > E1? SÍ → M = G1 ;  ATR = M - E1
+                        #              NO → (marca antes de E1, no asignar G1)
+                        #
+                        #  SI G1 lleno, G2 vacío:
+                        #      M ≥ S1? SÍ → G2 = M  (salida a tiempo, sin TEMP)
+                        #              NO → G2 = M ; TEMP = S1 - G2 ; ATR = ATR + TEMP
+                        #
+                        #  SI G2 lleno, G3 vacío:
+                        #      G2 ≥ S2?  SÍ → [nunca ocurre si hay J2, rama de seguridad → FIN]
+                        #      SI G3:
+                        #          M > E2? SÍ → G3 = M
+                        #                       ATR = ATR - TEMP ; TEMP = 0
+                        #                       M > E2? → ATR = ATR + (M - E2)
+                        #                  NO → (antes de E2, ignorar o marcar INC)
+                        #
+                        #  SI G3 lleno, G4 vacío:
+                        #      M ≥ S2? SÍ → G4 = M  (salida a tiempo, TEMP ya = 0)
+                        #              NO → G4 = M ; TEMP = S2 - G4 ; ATR = ATR + TEMP
+                        # ════════════════════════════════════════════════════════
+    
+                        # ── Slot G1 ─────────────────────────────────────────────
                         if g_regs['G1'] is None:
-                            g_regs['G1'] = M
-                            # Diagrama: M > E1  →  ATR = M - E1
+                            # Diagrama: M > E1 → asignar G1 y calcular ATR
                             if E1 and M > E1:
+                                g_regs['G1'] = M
                                 mins = int((M - E1).total_seconds() // 60)
                                 ATR += max(0, mins)
                                 g_atr['G1'] = max(0, mins)
-                            # M <= E1 → llegó a tiempo, ATR no cambia
+                            # M <= E1: llegó antes de la entrada esperada → no asignar todavía
+                            # (el diagrama muestra "NO" volviendo al inicio del loop)
                             continue
-
-                        # ── G1 lleno, G2 vacío → segunda marca (salida) ────
+    
+                        # ── Slot G2 ─────────────────────────────────────────────
                         if g_regs['G2'] is None:
                             g_regs['G2'] = M
-                            # Diagrama: G2 ≥ S2 → FIN (salida ok)
-                            #           G2 < S2 → salida anticipada → ATR = ATR + (S1 - G2)
-                            if S1 and M < S1:
-                                mins = int((S1 - M).total_seconds() // 60)
-                                ATR += max(0, mins)
-                                g_atr['G2'] = max(0, mins)
+                            if S1 and M >= S1:
+                                # Salida a tiempo o tardía → sin penalidad por salida anticipada
+                                # (TEMP permanece en 0)
+                                pass
+                            elif S1 and M < S1:
+                                # Salida anticipada J1: TEMP = S1 - G2 ; ATR += TEMP
+                                TEMP = int((S1 - M).total_seconds() // 60)
+                                ATR += max(0, TEMP)
+                                g_atr['G2'] = max(0, TEMP)
                             continue
-
-                        # G1 y G2 ya llenos → marcas extra ignoradas en ruta 2
-                        continue
-
-                    # ════════════════════════════════════════════════════════
-                    # RAMA SÍ  → 4 GUARDADOS (horario con dos jornadas)
-                    # El diagrama sigue este orden para cada marcación M:
-                    #
-                    #  SI G1 vacío:
-                    #      M > E1? SÍ → M = G1 ;  ATR = M - E1
-                    #              NO → (marca antes de E1, no asignar G1)
-                    #
-                    #  SI G1 lleno, G2 vacío:
-                    #      M ≥ S1? SÍ → G2 = M  (salida a tiempo, sin TEMP)
-                    #              NO → G2 = M ; TEMP = S1 - G2 ; ATR = ATR + TEMP
-                    #
-                    #  SI G2 lleno, G3 vacío:
-                    #      G2 ≥ S2?  SÍ → [nunca ocurre si hay J2, rama de seguridad → FIN]
-                    #      SI G3:
-                    #          M > E2? SÍ → G3 = M
-                    #                       ATR = ATR - TEMP ; TEMP = 0
-                    #                       M > E2? → ATR = ATR + (M - E2)
-                    #                  NO → (antes de E2, ignorar o marcar INC)
-                    #
-                    #  SI G3 lleno, G4 vacío:
-                    #      M ≥ S2? SÍ → G4 = M  (salida a tiempo, TEMP ya = 0)
-                    #              NO → G4 = M ; TEMP = S2 - G4 ; ATR = ATR + TEMP
-                    # ════════════════════════════════════════════════════════
-
-                    # ── Slot G1 ─────────────────────────────────────────────
-                    if g_regs['G1'] is None:
-                        # Diagrama: M > E1 → asignar G1 y calcular ATR
-                        if E1 and M > E1:
-                            g_regs['G1'] = M
-                            mins = int((M - E1).total_seconds() // 60)
-                            ATR += max(0, mins)
-                            g_atr['G1'] = max(0, mins)
-                        # M <= E1: llegó antes de la entrada esperada → no asignar todavía
-                        # (el diagrama muestra "NO" volviendo al inicio del loop)
-                        continue
-
-                    # ── Slot G2 ─────────────────────────────────────────────
-                    if g_regs['G2'] is None:
-                        g_regs['G2'] = M
-                        if S1 and M >= S1:
-                            # Salida a tiempo o tardía → sin penalidad por salida anticipada
-                            # (TEMP permanece en 0)
-                            pass
-                        elif S1 and M < S1:
-                            # Salida anticipada J1: TEMP = S1 - G2 ; ATR += TEMP
-                            TEMP = int((S1 - M).total_seconds() // 60)
-                            ATR += max(0, TEMP)
-                            g_atr['G2'] = max(0, TEMP)
-                        continue
-
-                    # ── Slot G3 ─────────────────────────────────────────────
-                    if g_regs['G3'] is None:
-                        # Diagrama: G2 ≥ S2 → rama de cortocircuito (no debería llegar
-                        # aquí si la segunda jornada arrancó antes de S1; protección)
-                        if S1 and g_regs['G2'] >= S1 and E2 and M <= E2:
-                            # marca entre S1 y E2 → no es entrada J2 todavía; ignorar
+    
+                        # ── Slot G3 ─────────────────────────────────────────────
+                        if g_regs['G3'] is None:
+                            # Diagrama: G2 ≥ S2 → rama de cortocircuito (no debería llegar
+                            # aquí si la segunda jornada arrancó antes de S1; protección)
+                            if S1 and g_regs['G2'] >= S1 and E2 and M <= E2:
+                                # marca entre S1 y E2 → no es entrada J2 todavía; ignorar
+                                continue
+                            if E2 and M > E2:
+                                g_regs['G3'] = M
+                                # Revertir TEMP (salida anticipada J1 quedó cubierta por llegada J2)
+                                ATR = max(0, ATR - TEMP)
+                                TEMP = 0
+                                # Nuevo atraso: llegada J2 después de E2
+                                mins = int((M - E2).total_seconds() // 60)
+                                if mins > 0:
+                                    ATR += mins
+                                    g_atr['G3'] = mins
+                            # M <= E2 → antes de la entrada J2 → ignorar (diagrama "NO")
                             continue
-                        if E2 and M > E2:
-                            g_regs['G3'] = M
-                            # Revertir TEMP (salida anticipada J1 quedó cubierta por llegada J2)
-                            ATR = max(0, ATR - TEMP)
-                            TEMP = 0
-                            # Nuevo atraso: llegada J2 después de E2
-                            mins = int((M - E2).total_seconds() // 60)
-                            if mins > 0:
-                                ATR += mins
-                                g_atr['G3'] = mins
-                        # M <= E2 → antes de la entrada J2 → ignorar (diagrama "NO")
+    
+                        # ── Slot G4 ─────────────────────────────────────────────
+                        if g_regs['G4'] is None:
+                            g_regs['G4'] = M
+                            if S2 and M >= S2:
+                                # Salida J2 a tiempo o tardía → sin penalidad adicional
+                                pass
+                            elif S2 and M < S2:
+                                # Salida anticipada J2: TEMP = S2 - G4 ; ATR += TEMP
+                                TEMP = int((S2 - M).total_seconds() // 60)
+                                ATR += max(0, TEMP)
+                                g_atr['G4'] = max(0, TEMP)
+                            continue
+    
+                        # G1..G4 ya llenos → marcas extra se ignoran
                         continue
-
-                    # ── Slot G4 ─────────────────────────────────────────────
-                    if g_regs['G4'] is None:
-                        g_regs['G4'] = M
-                        if S2 and M >= S2:
-                            # Salida J2 a tiempo o tardía → sin penalidad adicional
-                            pass
-                        elif S2 and M < S2:
-                            # Salida anticipada J2: TEMP = S2 - G4 ; ATR += TEMP
-                            TEMP = int((S2 - M).total_seconds() // 60)
-                            ATR += max(0, TEMP)
-                            g_atr['G4'] = max(0, TEMP)
-                        continue
-
-                    # G1..G4 ya llenos → marcas extra se ignoran
-                    continue
 
                 # ── Exponer resultados del día ───────────────────────────────
                 day_obj['g_regs'] = g_regs
