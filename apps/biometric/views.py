@@ -153,10 +153,10 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 is_workday = True
 
             if is_workday and not is_holiday:
-                if expected > matched:
-                    inconsistencias += (expected - matched)
                 if raw_cnt == 0 and expected > 0:
                     dias_sin_marcar += 1
+                elif expected > matched:
+                    inconsistencias += (expected - matched)
 
             events_map = {ev['label']: ev for ev in events}
             for p in day_obj_local.get('punches', []):
@@ -399,7 +399,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
             day_obj_local['no_marks_all_day'] = no_marks
-            day_obj_local['has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday
+            day_obj_local['has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday and not no_marks
 
             day_obj_local['punches'] = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
 
@@ -1132,92 +1132,89 @@ def generate_monthly_report_pdf(request):
                         pass
 
                 annotated = []
-                if schedule and punches_sorted:
-                    # Construir eventos esperados en datetime, respetando cruces de medianoche
-                    try:
-                        cur_date = date(year, month, int(d))
-                        events = []
-                        if schedule.morning_start:
-                            ev_dt = datetime.combine(cur_date, schedule.morning_start)
-                            events.append({'label': 'J1_in', 'type': 'in', 'dt': ev_dt})
-                        if schedule.morning_end:
-                            ev_dt = datetime.combine(cur_date, schedule.morning_end)
-                            if schedule.morning_crosses_midnight and schedule.morning_end <= schedule.morning_start:
-                                ev_dt = ev_dt + timedelta(days=1)
-                            events.append({'label': 'J1_out', 'type': 'out', 'dt': ev_dt})
-                        if schedule.afternoon_start:
-                            ev_dt = datetime.combine(cur_date, schedule.afternoon_start)
-                            events.append({'label': 'J2_in', 'type': 'in', 'dt': ev_dt})
-                        if schedule.afternoon_end:
-                            ev_dt = datetime.combine(cur_date, schedule.afternoon_end)
-                            if schedule.afternoon_crosses_midnight and schedule.afternoon_end <= (
-                                    schedule.afternoon_start or schedule.morning_start):
-                                ev_dt = ev_dt + timedelta(days=1)
-                            events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
+                events = []
+                events_active = []
+                events_skipped = []
+                if schedule:
+                    # Construir eventos esperados en datetime, incluso si no hay marcaciones
+                    cur_date = date(year, month, int(d))
+                    if schedule.morning_start:
+                        ev_dt = datetime.combine(cur_date, schedule.morning_start)
+                        events.append({'label': 'J1_in', 'type': 'in', 'dt': ev_dt})
+                    if schedule.morning_end:
+                        ev_dt = datetime.combine(cur_date, schedule.morning_end)
+                        if schedule.morning_crosses_midnight and schedule.morning_end <= schedule.morning_start:
+                            ev_dt = ev_dt + timedelta(days=1)
+                        events.append({'label': 'J1_out', 'type': 'out', 'dt': ev_dt})
+                    if schedule.afternoon_start:
+                        ev_dt = datetime.combine(cur_date, schedule.afternoon_start)
+                        events.append({'label': 'J2_in', 'type': 'in', 'dt': ev_dt})
+                    if schedule.afternoon_end:
+                        ev_dt = datetime.combine(cur_date, schedule.afternoon_end)
+                        if schedule.afternoon_crosses_midnight and schedule.afternoon_end <= (
+                                schedule.afternoon_start or schedule.morning_start):
+                            ev_dt = ev_dt + timedelta(days=1)
+                        events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
 
-                        # Suprimir eventos cubiertos por permiso ANTES del emparejamiento.
-                        # En caso de overlap, desplazar el evento al borde del permiso.
-                        permits_day = day_obj.get('permits', []) or []
+                    # Suprimir eventos cubiertos por permiso ANTES del emparejamiento.
+                    permits_day = day_obj.get('permits', []) or []
+                    for ev in events:
+                        is_covered = False
+                        try:
+                            ev_time = ev['dt'].time()
+                        except Exception:
+                            events_active.append(ev)
+                            continue
 
-                        events_active = []
-                        events_skipped = []
+                        for perm in permits_day:
+                            ps = perm.get('start_time')
+                            pe = perm.get('end_time')
 
-                        for ev in events:
-                            is_covered = False
-                            try:
-                                ev_time = ev['dt'].time()
-                            except Exception:
-                                events_active.append(ev)
-                                continue
+                            if not ps and not pe:
+                                is_covered = True
+                                break
 
-                            for perm in permits_day:
-                                ps = perm.get('start_time')
-                                pe = perm.get('end_time')
-
-                                if not ps and not pe:
+                            if ev['type'] == 'in':
+                                if ps and pe and ps <= ev_time <= pe:
+                                    ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                                elif ps and not pe and ev_time >= ps:
                                     is_covered = True
-                                    break
-
-                                if ev['type'] == 'in':
-                                    if ps and pe and ps <= ev_time <= pe:
-                                        ev['dt'] = datetime.combine(ev['dt'].date(), pe)
-                                    elif ps and not pe and ev_time >= ps:
-                                        is_covered = True
-                                    elif pe and not ps and ev_time <= pe:
-                                        ev['dt'] = datetime.combine(ev['dt'].date(), pe)
-                                elif ev['type'] == 'out':
-                                    if ps and pe:
-                                        if ps <= ev_time <= pe:
-                                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                        elif ps <= ev_time and ev['label'] in ('J1_out', 'J2_out'):
-                                            ev_dt_tmp = datetime.combine(ev['dt'].date(), ev_time)
-                                            pe_dt_tmp = datetime.combine(ev['dt'].date(), pe)
-                                            if (ev_dt_tmp - pe_dt_tmp).total_seconds() <= 2.5 * 3600:
-                                                ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                    elif ps and not pe and ev_time >= ps:
+                                elif pe and not ps and ev_time <= pe:
+                                    ev['dt'] = datetime.combine(ev['dt'].date(), pe)
+                            elif ev['type'] == 'out':
+                                if ps and pe:
+                                    if ps <= ev_time <= pe:
                                         ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                    elif pe and not ps and ev_time <= pe:
-                                        is_covered = True
+                                    elif ps <= ev_time and ev['label'] in ('J1_out', 'J2_out'):
+                                        ev_dt_tmp = datetime.combine(ev['dt'].date(), ev_time)
+                                        pe_dt_tmp = datetime.combine(ev['dt'].date(), pe)
+                                        if (ev_dt_tmp - pe_dt_tmp).total_seconds() <= 2.5 * 3600:
+                                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                elif ps and not pe and ev_time >= ps:
+                                    ev['dt'] = datetime.combine(ev['dt'].date(), ps)
+                                elif pe and not ps and ev_time <= pe:
+                                    is_covered = True
 
-                            if is_covered:
-                                events_skipped.append(ev['label'])
-                            else:
-                                events_active.append(ev)
+                        if is_covered:
+                            events_skipped.append(ev['label'])
+                        else:
+                            events_active.append(ev)
 
-                        to_remove = []
-                        for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
-                            ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
-                            ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
-                            if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
-                                to_remove.extend([in_lbl, out_lbl])
+                    to_remove = []
+                    for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
+                        ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
+                        ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
+                        if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
+                            to_remove.extend([in_lbl, out_lbl])
 
-                        events_skipped.extend(to_remove)
-                        events_active = [e for e in events_active if e['label'] not in to_remove]
+                    events_skipped.extend(to_remove)
+                    events_active = [e for e in events_active if e['label'] not in to_remove]
 
-                        # Guardar los eventos esperados para uso en el resumen
-                        day_obj['events'] = events
-                        day_obj['events_skipped'] = events_skipped
+                day_obj['events'] = events
+                day_obj['events_skipped'] = events_skipped
 
+                if schedule and punches_sorted:
+                    try:
                         # Emparejamiento greedy por proximidad manteniendo orden
                         prev_assigned_dt = datetime.min
                         # No emparejar con marcas extremadamente lejanas: umbral en segundos
@@ -1430,7 +1427,7 @@ def generate_monthly_report_pdf(request):
                                                                                                         False))
                             day_obj['no_marks_all_day'] = no_marks
                             # flag: si hay menos marcaciones asignadas que eventos esperados
-                            day_obj['has_inconsistency'] = (expected_cnt > matched_cnt)
+                            day_obj['has_inconsistency'] = (expected_cnt > matched_cnt) and not no_marks
                         except Exception:
                             day_obj['expected_cnt'] = 0
                             day_obj['matched_cnt'] = 0
@@ -1703,6 +1700,7 @@ def generate_monthly_report_pdf(request):
                             missing_slots
                             and is_workday_tmp
                             and not is_holiday
+                            and not no_marks
                     )
                     day_obj['no_marks_all_day'] = no_marks
                 except Exception:
