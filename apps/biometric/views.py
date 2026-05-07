@@ -24,7 +24,7 @@ ENABLE_SHIFT_COLLAPSE = False  # desactivar colapso automático hasta afinar reg
 # Configurables para el emparejador (ajustables según pruebas)
 DEDUPE_WINDOW_MINUTES = 5
 IN_TOLERANCE_SECONDS = 60  # 1 minuto de tolerancia para in
-OUT_MAX_SECONDS = 30 * 60  # 30 minutos para aceptar out antes del evento si no hay after
+OUT_MAX_SECONDS = 90 * 60  # 30 minutos para aceptar out antes del evento si no hay after
 IN_MAX_SECONDS = 60 * 60 * 2  # 2 horas máximo para emparejar despues en in
 CROSS_SHIFT_THRESHOLD = 60  # umbral en segundos para decidir entre salida vs ingreso cercano
 
@@ -131,7 +131,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
             events = day_obj_local.get('events', []) or []
             events_skipped = day_obj_local.get('events_skipped', [])
-            
+
             expected = sum(1 for ev in events if ev.get('label') not in events_skipped)
             matched = 0
             for p in day_obj_local.get('punches', []):
@@ -142,7 +142,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
             is_holiday = day_obj_local.get('is_holiday', False)
             raw_cnt = day_obj_local.get('raw_punches_count', 0)
-            
+
             try:
                 cur_date = date(year_local, month_local, int(d))
                 wd = cur_date.weekday()
@@ -161,10 +161,10 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 if not p.get('matched_event'):
                     continue
                 ev_label = p.get('matched_event')
-                
+
                 if ev_label in events_skipped:
                     continue
-                    
+
                 ev = events_map.get(ev_label)
                 if not ev:
                     continue
@@ -175,7 +175,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     ev_dt = ev.get('dt')
                 except Exception:
                     continue
-                
+
                 # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
                 diff = (p_dt - ev_dt).total_seconds()
                 if diff >= 60:
@@ -185,7 +185,8 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
             'minutos_atraso': minutos_atraso}
 
 
-def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj, debug_flag=False):
+def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
+                                              debug_flag=False):
     """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma heurística del reporte mensual."""
     try:
         from schedule.models import get_employee_schedule_for_date
@@ -215,7 +216,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     events.append({'label': 'J1_in', 'type': 'in', 'dt': ev_dt})
                 if getattr(schedule, 'morning_end', None):
                     ev_dt = datetime.combine(cur_date, schedule.morning_end)
-                    if getattr(schedule, 'morning_crosses_midnight', False) and schedule.morning_end <= schedule.morning_start:
+                    if getattr(schedule, 'morning_crosses_midnight',
+                               False) and schedule.morning_end <= schedule.morning_start:
                         ev_dt = ev_dt + timedelta(days=1)
                     events.append({'label': 'J1_out', 'type': 'out', 'dt': ev_dt})
                 if getattr(schedule, 'afternoon_start', None):
@@ -232,7 +234,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
             events_active = []
             events_skipped = []
-            
+
             for ev in events:
                 is_covered = False
                 try:
@@ -240,15 +242,15 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 except Exception:
                     events_active.append(ev)
                     continue
-                    
+
                 for perm in permits_day:
                     ps = perm.get('start_time')
                     pe = perm.get('end_time')
-                    
+
                     if not ps and not pe:
                         is_covered = True
                         break
-                    
+
                     if ev['type'] == 'in':
                         if ps and pe and ps <= ev_time <= pe:
                             ev['dt'] = datetime.combine(ev['dt'].date(), pe)
@@ -263,19 +265,19 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                             ev['dt'] = datetime.combine(ev['dt'].date(), ps)
                         elif pe and not ps and ev_time <= pe:
                             is_covered = True
-                            
+
                 if is_covered:
                     events_skipped.append(ev['label'])
                 else:
                     events_active.append(ev)
-                    
+
             to_remove = []
             for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
                 ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
                 ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
                 if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
                     to_remove.extend([in_lbl, out_lbl])
-                    
+
             events_skipped.extend(to_remove)
             events_active = [e for e in events_active if e['label'] not in to_remove]
 
@@ -334,6 +336,11 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     best = select_in_candidate(candidates, ev['dt'], prev_ev_dt=prev_ev_dt, next_ev_dt=next_ev_dt)
                 else:
                     best = select_out_candidate(candidates, ev['dt'], prev_ev_dt=prev_ev_dt, next_ev_dt=next_ev_dt)
+                if not best and ev['type'] == 'out':
+                    # Buscar el punch anterior más cercano sin restricción de OUT_MAX_SECONDS
+                    before_all = [p for p in candidates if _p_dt(p) < ev['dt']]
+                    if before_all:
+                        best = max(before_all, key=lambda p: _p_dt(p))
                 if not best:
                     continue
 
@@ -344,7 +351,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 best['matched_event'] = ev['label']
                 best['matched_event_dt'] = ev['dt']
                 best['assigned'] = True
-                
+
                 # determinar si es tardanza/anticipada
                 row_class = ''
                 try:
@@ -361,7 +368,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                             row_class = 'late'
                 except Exception:
                     row_class = ''
-                
+
                 newp = best.copy()
                 newp['row_class'] = row_class
                 annotated.append(newp)
@@ -375,7 +382,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             raw_cnt = day_obj_local.get('raw_punches_count', len(punches_sorted))
             skipped_labels = set(events_skipped)
             expected_slots = sum(1 for ev in events if ev.get('label') not in skipped_labels)
-            assigned_slots = sum(1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
+            assigned_slots = sum(
+                1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
             is_holiday = day_obj_local.get('is_holiday', False)
             no_marks = raw_cnt == 0 and not is_holiday and cur_date.weekday() < 5 and expected_slots > 0
             missing_slots = expected_slots > assigned_slots
@@ -1145,7 +1153,7 @@ def generate_monthly_report_pdf(request):
 
                         events_active = []
                         events_skipped = []
-                        
+
                         for ev in events:
                             is_covered = False
                             try:
@@ -1153,15 +1161,15 @@ def generate_monthly_report_pdf(request):
                             except Exception:
                                 events_active.append(ev)
                                 continue
-                                
+
                             for perm in permits_day:
                                 ps = perm.get('start_time')
                                 pe = perm.get('end_time')
-                                
+
                                 if not ps and not pe:
                                     is_covered = True
                                     break
-                                
+
                                 if ev['type'] == 'in':
                                     if ps and pe and ps <= ev_time <= pe:
                                         ev['dt'] = datetime.combine(ev['dt'].date(), pe)
@@ -1182,19 +1190,19 @@ def generate_monthly_report_pdf(request):
                                         ev['dt'] = datetime.combine(ev['dt'].date(), ps)
                                     elif pe and not ps and ev_time <= pe:
                                         is_covered = True
-                                        
+
                             if is_covered:
                                 events_skipped.append(ev['label'])
                             else:
                                 events_active.append(ev)
-                                
+
                         to_remove = []
                         for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
                             ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
                             ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
                             if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
                                 to_remove.extend([in_lbl, out_lbl])
-                                
+
                         events_skipped.extend(to_remove)
                         events_active = [e for e in events_active if e['label'] not in to_remove]
 
@@ -1208,7 +1216,8 @@ def generate_monthly_report_pdf(request):
                         MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
                         for ev in events_active:  # solo eventos NO cubiertos por permiso
                             # candidatos sin asignar
-                            candidates = [p for p in punches_sorted if not p.get('assigned') and not p.get('is_duplicate')]
+                            candidates = [p for p in punches_sorted if
+                                          not p.get('assigned') and not p.get('is_duplicate')]
 
                             # Preferir candidatos que mantengan orden cronológico respecto a la última asignación
                             def get_dt(p):
@@ -1267,6 +1276,11 @@ def generate_monthly_report_pdf(request):
                             else:
                                 best = select_out_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
                                                             next_ev_dt=next_ev_dt)
+                            if not best and ev['type'] == 'out':
+                                # Buscar el punch anterior más cercano sin restricción de OUT_MAX_SECONDS
+                                before_all = [p for p in candidates if _p_dt(p) < ev['dt']]
+                                if before_all:
+                                    best = max(before_all, key=lambda p: _p_dt(p))
                             if not best:
                                 # no hubo candidato válido según las reglas
                                 continue
@@ -1721,8 +1735,6 @@ def generate_monthly_report_pdf(request):
 
     template = get_template('biometric/reports/pdf_attendance_calendar.html')
 
-
-
     summary = build_attendance_summary_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
 
     html = template.render({
@@ -1988,16 +2000,16 @@ def generate_department_report_pdf(request):
                 schedule_tolerance = None
 
         show_employee = (
-            inconsistencias > 0
-            or dias_sin_marcar > 0
-            or (
-                schedule_tolerance is not None
-                and minutos_atraso > schedule_tolerance
-            )
-            or (
-                schedule_tolerance is None
-                and minutos_atraso > 0
-            )
+                inconsistencias > 0
+                or dias_sin_marcar > 0
+                or (
+                        schedule_tolerance is not None
+                        and minutos_atraso > schedule_tolerance
+                )
+                or (
+                        schedule_tolerance is None
+                        and minutos_atraso > 0
+                )
         )
 
         if show_employee:
