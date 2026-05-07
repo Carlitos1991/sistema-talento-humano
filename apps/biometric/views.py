@@ -133,12 +133,14 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
             events_skipped = day_obj_local.get('events_skipped', [])
 
             expected = sum(1 for ev in events if ev.get('label') not in events_skipped)
-            matched = 0
+            # Usar set de labels para evitar doble conteo si el mismo punch aparece duplicado
+            matched_labels = set()
             for p in day_obj_local.get('punches', []):
                 if p.get('assigned') and p.get('matched_event'):
                     ev_label = p.get('matched_event')
                     if ev_label not in events_skipped:
-                        matched += 1
+                        matched_labels.add(ev_label)
+            matched = len(matched_labels)
 
             is_holiday = day_obj_local.get('is_holiday', False)
             raw_cnt = day_obj_local.get('raw_punches_count', 0)
@@ -168,8 +170,6 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                 ev = events_map.get(ev_label)
                 if not ev:
                     continue
-                if ev.get('type') != 'in':
-                    continue
                 try:
                     p_dt = p.get('dt_norm') or p.get('dt')
                     ev_dt = ev.get('dt')
@@ -177,9 +177,16 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     continue
 
                 # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
-                diff = (p_dt - ev_dt).total_seconds()
-                if diff >= 60:
-                    minutos_atraso += int(diff // 60)
+                if ev.get('type') == 'in':
+                    # Entrada tardía: punch llegó después de la hora esperada
+                    diff = (p_dt - ev_dt).total_seconds()
+                    if diff >= 60:
+                        minutos_atraso += int(diff // 60)
+                elif ev.get('type') == 'out':
+                    # Salida anticipada: punch salió antes de la hora esperada
+                    diff = (ev_dt - p_dt).total_seconds()
+                    if diff >= 60:
+                        minutos_atraso += int(diff // 60)
 
     return {'inconsistencias': inconsistencias, 'dias_sin_marcar': dias_sin_marcar,
             'minutos_atraso': minutos_atraso}
@@ -341,6 +348,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     before_all = [p for p in candidates if _p_dt(p) < ev['dt']]
                     if before_all:
                         best = max(before_all, key=lambda p: _p_dt(p))
+
                 if not best:
                     continue
 
