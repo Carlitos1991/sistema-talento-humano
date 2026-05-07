@@ -25,6 +25,8 @@ urlpatterns = [
 
     # --- Employee List to Generate Sanctions ---
     path('employees/', views.EmployeeSanctionListView.as_view(), name='sanction_employee_list'),
+    # --- Sanction History ---
+    path('history/', views.SanctionHistoryListView.as_view(), name='sanction_history'),
 
     # --- Sanction Creation ---
     path('generate/', views.GenerateSanctionFormView.as_view(), name='generate_sanction'),

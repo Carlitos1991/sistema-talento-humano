@@ -1410,44 +1410,57 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
             })
         
         context['employees_data'] = employees_with_budget
-        selected_notifications_month = self.request.GET.get('notifications_month', '').strip()
-        selected_notifications_year = self.request.GET.get('notifications_year', '').strip()
+        
+        # Data for "Recent Notifications" tab
+        # Determine the default month and year based on the latest notification
+        latest_notification = SanctionNotification.objects.order_by('-year', '-month').first()
+        
+        if latest_notification:
+            default_month = str(latest_notification.month)
+            default_year = str(latest_notification.year)
+        else:
+            default_month = str(timezone.now().month)
+            default_year = str(timezone.now().year)
 
-        latest_notifications_queryset = SanctionNotification.objects.select_related(
+        selected_notifications_month = self.request.GET.get('notifications_month')
+        if selected_notifications_month is None:
+            selected_notifications_month = default_month
+        else:
+            selected_notifications_month = selected_notifications_month.strip()
+
+        selected_notifications_year = self.request.GET.get('notifications_year')
+        if selected_notifications_year is None:
+            selected_notifications_year = default_year
+        else:
+            selected_notifications_year = selected_notifications_year.strip()
+
+        notifications_qs = SanctionNotification.objects.select_related(
             'employee__person',
             'notification_type',
             'labor_regime',
-            'authority_1',
-            'authority_2',
-            'created_by',
         ).order_by('-sequence_number', '-created_at')
-
-        latest_notification = SanctionNotification.objects.order_by('-registration_date', '-created_at').first()
-        if latest_notification and not selected_notifications_month and not selected_notifications_year:
-            selected_notifications_month = str(latest_notification.month or '')
-            selected_notifications_year = str(latest_notification.year or '')
 
         if selected_notifications_month:
             try:
-                latest_notifications_queryset = latest_notifications_queryset.filter(month=int(selected_notifications_month))
-            except (TypeError, ValueError):
-                selected_notifications_month = ''
-
+                notifications_qs = notifications_qs.filter(month=int(selected_notifications_month))
+            except (ValueError, TypeError):
+                pass
+        
         if selected_notifications_year:
             try:
-                latest_notifications_queryset = latest_notifications_queryset.filter(year=int(selected_notifications_year))
-            except (TypeError, ValueError):
-                selected_notifications_year = ''
+                notifications_qs = notifications_qs.filter(year=int(selected_notifications_year))
+            except (ValueError, TypeError):
+                pass
 
-        # Paginate notifications (10 per page)
-        notifications_page = self.request.GET.get('notifications_page', 1)
-        paginator = Paginator(latest_notifications_queryset, 10)
+        notifications_paginator = Paginator(notifications_qs, 10)
         try:
-            latest_notifications_page_obj = paginator.page(notifications_page)
-        except (EmptyPage, PageNotAnInteger):
-            latest_notifications_page_obj = paginator.page(1)
+            # Use 'notifications_page' for notifications pagination
+            notifications_page = notifications_paginator.page(self.request.GET.get('notifications_page', 1))
+        except EmptyPage:
+            notifications_page = Paginator([], 10).page(1)
 
-        context['latest_notifications_page_obj'] = latest_notifications_page_obj
+        context['latest_notifications_page_obj'] = notifications_page
+        
         context['notification_month_choices'] = MONTH_CHOICES[1:]
         context['selected_notifications_month'] = selected_notifications_month
         context['selected_notifications_year'] = selected_notifications_year
@@ -1455,21 +1468,32 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            section = self.request.GET.get('section')
-            if section == 'notifications':
+            # Check if this is a request for the notifications tab
+            if self.request.GET.get('section') == 'notifications':
                 html = render_to_string(
                     'sanctions/partials/partial_latest_notification_list.html',
                     context,
                     request=self.request
                 )
                 page_obj = context.get('latest_notifications_page_obj')
-            else:
-                html = render_to_string(
-                    'sanctions/partials/partial_employee_list.html',
-                    context,
-                    request=self.request
-                )
-                page_obj = context.get('page_obj')
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+                return JsonResponse({'html': html, 'pagination': pagination_data})
+
+            # Otherwise, it's a request for the employees list
+            html = render_to_string(
+                'sanctions/partials/partial_employee_list.html',
+                context,
+                request=self.request
+            )
+            page_obj = context.get('page_obj')
 
             if page_obj:
                 pagination_data = {
@@ -1499,7 +1523,92 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
         return super().render_to_response(context, **response_kwargs)
 
 
-# REMOVED - EmployeeSanctionHistoryView no longer needed as we redirect to admin page
+class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """View to list all sanction notifications (history)"""
+    model = SanctionNotification
+    template_name = 'sanctions/sanction_history.html'
+    context_object_name = 'latest_notifications_page_obj'
+    permission_required = 'sanctions.view_sanctionnotification'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = SanctionNotification.objects.select_related(
+            'employee__person',
+            'notification_type',
+            'labor_regime',
+            'authority_1',
+            'authority_2',
+            'created_by',
+        ).order_by('-sequence_number', '-created_at')
+
+        selected_notifications_month = self.request.GET.get('notifications_month', '').strip()
+        selected_notifications_year = self.request.GET.get('notifications_year', '').strip()
+
+        if selected_notifications_month:
+            try:
+                queryset = queryset.filter(month=int(selected_notifications_month))
+            except (TypeError, ValueError):
+                pass
+
+        if selected_notifications_year:
+            try:
+                queryset = queryset.filter(year=int(selected_notifications_year))
+            except (TypeError, ValueError):
+                pass
+        
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        latest_notification = SanctionNotification.objects.order_by('-year', '-month').first()
+        if latest_notification:
+            default_month = str(latest_notification.month)
+            default_year = str(latest_notification.year)
+        else:
+            default_month = str(timezone.now().month)
+            default_year = str(timezone.now().year)
+
+        context['notification_month_choices'] = MONTH_CHOICES[1:]
+        context['selected_notifications_month'] = self.request.GET.get('notifications_month', default_month).strip()
+        context['selected_notifications_year'] = self.request.GET.get('notifications_year', default_year).strip()
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'sanctions/partials/partial_latest_notification_list.html',
+                context,
+                request=self.request
+            )
+            page_obj = context.get('page_obj')
+
+            if page_obj:
+                pagination_data = {
+                    'start_index': page_obj.start_index(),
+                    'end_index': page_obj.end_index(),
+                    'total_count': page_obj.paginator.count,
+                    'current_page': page_obj.number,
+                    'total_pages': page_obj.paginator.num_pages,
+                    'has_previous': page_obj.has_previous(),
+                    'has_next': page_obj.has_next(),
+                }
+            else:
+                pagination_data = {
+                    'start_index': 0,
+                    'end_index': 0,
+                    'total_count': 0,
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'has_previous': False,
+                    'has_next': False,
+                }
+            
+            return JsonResponse({
+                'html': html,
+                'pagination': pagination_data
+            })
+        return super().render_to_response(context, **response_kwargs)
 
 
 # ==========================================
@@ -1989,4 +2098,3 @@ class SanctionPDFView(LoginRequiredMixin, PermissionRequiredMixin, View):
             return response
         else:
             return HttpResponse('Error al generar el PDF', status=500)
-

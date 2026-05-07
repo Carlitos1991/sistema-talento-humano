@@ -6,8 +6,8 @@
             <th style="width: 8%;">Código</th>
             <th style="width: 32%;">Empleado</th>
             <th style="width: 14%;">Mes Notificación</th>
-            <th style="width: 16%;">Fecha Registro</th>
-            <th style="width: 10%;">Inconsistencias</th>
+            <th style="width: 16%;">Inconsistencias</th>
+            <th style="width: 10%;">Fecha Registro</th>
             <th class="text-center actions" style="width: 15%;">Acciones</th>
         </tr>
         </thead>
@@ -26,37 +26,32 @@
                     {{ notification.month_label }}
                 </td>
                 <td>
-                    <small class="text-muted"><b>Atrasos:</b>{{ notification.minutes_late }} minutos</small>
+                    <small class="text-muted"><b>Atrasos:</b> {{ notification.minutes_late }} minutos</small><br>
                     <small class="text-muted"><b>Inconsistencias:</b> {{ notification.regs_without_mark }}</small>
                 </td>
                 <td>{{ notification.registration_date|date:"j \d\e F \d\e Y" }}</td>
                 <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if perms.sanctions.change_sanctionnotification or perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
-                            <button type="button"
-                                    class="btn-views-action js-edit-notification"
-                                    data-employee-id="{{ notification.employee_id }}"
+                    <div class="actions-wrapper" style="justify-content: center;">
+                        <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
+                           target="_blank"
+                           class="btn-list-action"
+                           title="Ver PDF">
+                            <i class="fa-regular fa-file-pdf"></i>
+                        </a>
+                        {% if perms.sanctions.change_sanctionnotification %}
+                            <button type="button" class="btn-edit-action js-edit-notification"
                                     data-notification-id="{{ notification.pk }}"
+                                    data-employee-id="{{ notification.employee_id }}"
                                     title="Editar Notificación">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                        {% endif %}
-
-                        {% if perms.sanctions.view_sanctionnotification %}
-                            <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
-                               class="btn-detail-action"
-                               target="_blank"
-                               rel="noopener"
-                               title="Imprimir PDF">
-                                <i class="fa-solid fa-print"></i>
-                            </a>
                         {% endif %}
                     </div>
                 </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="6" class="text-center" style="padding: 2rem;">
+                <td colspan="7" class="text-center" style="padding: 2rem;">
                     <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
                     <p style="margin-top: 1rem; color: #666;">No hay notificaciones registradas</p>
                 </td>

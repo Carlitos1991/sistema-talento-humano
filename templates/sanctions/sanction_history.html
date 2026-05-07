@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Historial de Sanciones | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+        <!-- Configuración oculta -->
+        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+        <input type="hidden" id="url-list" value="{% url 'sanctions:sanction_history' %}">
+
+        <!-- Encabezado -->
+        <div class="header-card">
+            <div>
+                <h1>Historial de Sanciones</h1>
+                <p>Revise las últimas notificaciones registradas.</p>
+            </div>
+        </div>
+
+        <div class="sanctions-tab-pane is-active" data-sanctions-pane="notifications">
+            <div class="content-table">
+                <div id="notifications-filter-form" class="table-controls sanctions-notifications-filters">
+                    <div class="sanctions-notification-field">
+                        <label class="form-label" for="notifications-month">Mes</label>
+                        <select id="notifications-month" class="input-field">
+                            <option value="">Todos</option>
+                            {% for value, label in notification_month_choices %}
+                                <option value="{{ value }}" {% if selected_notifications_month == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="sanctions-notification-field">
+                        <label class="form-label" for="notifications-year">Año</label>
+                        <input type="number" id="notifications-year" class="input-field" min="2000" max="2100" value="{{ selected_notifications_year }}" placeholder="2026">
+                    </div>
+                </div>
+                <div id="latest-notifications-wrapper">
+                    {% include 'sanctions/partials/partial_latest_notification_list.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <!-- Modal para generar sanción -->
+    <div id="customModal" class="modal-overlay hidden">
+        <div id="modal-dynamic-content"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Inicializar paginación desde el servidor
+        {% if latest_notifications_page_obj %}
+        window.initialNotificationsPagination = {
+            current_page: {{ latest_notifications_page_obj.number }},
+            total_pages: {{ latest_notifications_page_obj.paginator.num_pages }},
+            has_previous: {{ latest_notifications_page_obj.has_previous|yesno:"true,false" }},
+            has_next: {{ latest_notifications_page_obj.has_next|yesno:"true,false" }}
+        };
+        {% else %}
+        window.initialNotificationsPagination = {
+            current_page: 1,
+            total_pages: 1,
+            has_previous: false,
+            has_next: false
+        };
+        {% endif %}
+    </script>
+    <script src="{% static 'js/sanctions/sanction_history.js' %}"></script>
+{% endblock %}

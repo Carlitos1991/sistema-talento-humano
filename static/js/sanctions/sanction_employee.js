@@ -10,9 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalOverlay = document.getElementById('customModal');
     const modalContentContainer = document.getElementById('modal-dynamic-content');
 
-    // Modal de historial
-    // REMOVED - No longer needed as we redirect to admin page
-
     // Referencias de paginación
     const pageInfo = document.getElementById('page-info');
     const btnFirst = document.getElementById('btn-first');
@@ -137,8 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     bindNotificationEditButtons();
 
-    // 4. REMOVED - History modal no longer needed
-
     // 5. DELEGACIÓN DE ACCIONES EN LA TABLA
     if (tableContainer) {
         tableContainer.addEventListener('click', function (e) {
@@ -189,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(html => {
                 modalContentContainer.innerHTML = html;
                 modalOverlay.classList.remove('hidden');
-                document.body.classList.add('modal-open'); // Block background scroll
+                document.body.classList.add('modal-open');
 
                 initModalPlugins();
 
@@ -248,15 +243,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // REMOVED - openHistoryModal function no longer needed
 
     function closeModal() {
         modalOverlay.classList.add('hidden');
         modalContentContainer.innerHTML = '';
-        document.body.classList.remove('modal-open'); // Restore background scroll
+        document.body.classList.remove('modal-open');
     }
-
-    // REMOVED - closeHistoryModal function no longer needed
 
     function initModalPlugins() {
         // Inicializar Select2
@@ -289,27 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         });
-
-        // Initialize custom file upload
-        const fileInput = document.getElementById('id_attachment_file');
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                const fileLabel = this.nextElementSibling;
-                const fileNameSpan = fileLabel.querySelector('.file-name');
-                const fileTextSpan = fileLabel.querySelector('.file-text');
-                const container = this.parentElement;
-                
-                if (this.files && this.files.length > 0) {
-                    fileNameSpan.textContent = this.files[0].name;
-                    fileTextSpan.textContent = 'Archivo seleccionado:';
-                    container.classList.add('has-file');
-                } else {
-                    fileNameSpan.textContent = 'Ningún archivo seleccionado';
-                    fileTextSpan.textContent = 'Seleccionar archivo';
-                    container.classList.remove('has-file');
-                }
-            });
-        }
     }
 
     function handleSanctionFormSubmit(e) {
@@ -317,7 +288,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const form = e.target;
         const formData = new FormData(form);
 
-        // Limpiar errores previos
         form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
@@ -392,12 +362,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const activeTab = getActiveTab();
                     if (activeTab === 'notifications') {
-                        window.location.reload();
+                        // Refresh notifications page
+                        const currentNotificationsPage = parseInt(document.getElementById('notifications-page-input')?.value) || 1;
+                        fetchNotificationsPage(currentNotificationsPage);
                         return;
                     }
 
                     const searchQuery = searchInput ? searchInput.value : '';
-                    fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + encodeURIComponent(searchQuery) : ''}`);
+                    fetchEmployeesPage(currentPage, searchQuery);
                     return;
                 }
 
@@ -417,20 +389,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-    function fetchTableData(url) {
-        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-            .then(res => res.json())
-            .then(data => {
-                tableContainer.innerHTML = data.html;
-                bindNotificationEditButtons();
-                bindNotificationPagination();
-                if (data.pagination) {
-                    updatePagination(data.pagination);
-                }
-            })
-            .catch(err => console.error('Error al cargar datos:', err));
-    }
-
     function fetchEmployeesPage(page, searchQuery = null) {
         const query = searchQuery !== null ? searchQuery : (searchInput ? searchInput.value : '');
         const params = new URLSearchParams();
@@ -438,7 +396,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (query) {
             params.set('q', query);
         }
-        fetchTableData(`${urlList}?${params.toString()}`);
+        
+        fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.json())
+            .then(data => {
+                if (tableContainer && data.html) {
+                    tableContainer.innerHTML = data.html;
+                    if (data.pagination) {
+                        updatePagination(data.pagination);
+                    }
+                }
+            })
+            .catch(err => console.error('Error al cargar empleados:', err));
     }
 
     function fetchNotificationsPage(page) {
@@ -455,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
-                if (notificationsWrapper) {
+                if (notificationsWrapper && data.html) {
                     notificationsWrapper.innerHTML = data.html;
                     bindNotificationEditButtons();
                     bindNotificationPagination();
@@ -506,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function bindNotificationEditButtons() {
+        // Enlazar botones de editar notificacion desde la tabla de historial de notificaciones
         document.querySelectorAll('.js-edit-notification').forEach((button) => {
             if (button.dataset.bound === '1') {
                 return;
