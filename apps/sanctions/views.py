@@ -1395,35 +1395,6 @@ class SanctionTypeToggleView(LoginRequiredMixin, PermissionRequiredMixin, View):
 # ==========================================
 
 class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    """View to list active employees and manage their sanctions"""
-    model = Employee
-    template_name = 'sanctions/employee_sanction_list.html'
-    context_object_name = 'employees'
-    permission_required = 'sanctions.view_sanction'
-    paginate_by = 10
-
-    def get_queryset(self):
-        queryset = Employee.objects.filter(
-            is_active=True
-        ).select_related(
-            'person',
-            'area',
-            'employment_status'
-        )
-
-        # Search by names, last names or document number
-        query = self.request.GET.get('q', '').strip()
-        if query:
-            queryset = queryset.filter(
-                Q(person__first_name__icontains=query) |
-                Q(person__last_name__icontains=query) |
-                Q(person__document_number__icontains=query)
-            )
-
-        return queryset.order_by('person__last_name', 'person__first_name')
-
-
-class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """Vista para listar empleados activos y gestionar sus sanciones/notificaciones"""
     model = Employee
     template_name = 'sanctions/employee_sanction_list.html'
@@ -1561,10 +1532,20 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = SanctionNotification.objects.select_related(
-            'employee__person', 'notification_type', 'labor_regime'
-        ).prefetch_related('assignment_history__assigned_to')
+        queryset = SanctionNotification.objects.filter(status='EN_PROCESO')
 
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(
+                assignment_history__assigned_to=self.request.user,
+                assignment_history__is_current=True
+            ).select_related(
+                'employee__person',
+                'notification_type',
+                'labor_regime'
+            ).prefetch_related(
+                'assignment_history__assigned_to'
+            )
+        # 2. Aplicamos filtros de búsqueda de la UI (Mes / Año)
         month = self.request.GET.get('notifications_month')
         year = self.request.GET.get('notifications_year')
 
@@ -1573,7 +1554,7 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         if year and year.isdigit():
             queryset = queryset.filter(year=int(year))
 
-        return queryset.order_by('-updated_at')
+        return queryset.distinct().order_by('-updated_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
