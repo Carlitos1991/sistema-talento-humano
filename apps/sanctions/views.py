@@ -1,40 +1,39 @@
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
-from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db import transaction
-from django.db.models import Q
-from django.http import FileResponse, JsonResponse, HttpResponse
-from django.template.loader import render_to_string
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from datetime import datetime
-from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_http_methods
-from django.utils.html import escape
-import re
+import base64
 import html
 import json
-import base64
 import mimetypes
+import re
+from datetime import datetime
 from pathlib import Path
-from django.utils import timezone
-from django.core.files import File
-
-from core.models import User
-from core.models import SystemConfiguration
-from contract.models import LaborRegime
-from contract.models import ManagementPeriod
-from employee.models import Employee
 from types import SimpleNamespace
 
-from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, \
-    SanctionNotificationType, SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, Sanction
-from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
-from .services import build_notification_replacements, build_replacements_from_global_mappings
-from employee.models import Employee
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import transaction
+from django.db.models import Q
+from django.http import HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.utils.html import escape
+from django.views import View
+from django.views.decorators.http import require_http_methods
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+
 from budget.models import BudgetLine
-from personnel_actions.models import PersonnelAction, ActionType, ActionMovement
+from contract.models import LaborRegime
+from contract.models import ManagementPeriod
+from core.models import SystemConfiguration
+from core.models import User
+from employee.models import Employee
+from personnel_actions.models import PersonnelAction, ActionType
+from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
+from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, \
+    SanctionNotificationType, SanctionNotificationTypeRegime, SanctionType, Sanction
+from .services import build_notification_replacements, build_replacements_from_global_mappings
 
 
 # --- MIXIN FOR AJAX SEARCH (Hybrid) ---
@@ -2134,3 +2133,117 @@ class SanctionNotificationToggleResponseView(LoginRequiredMixin, View):
             'has_responded': notification.has_responded,
             'label': 'Sí' if notification.has_responded else 'No'
         })
+
+
+class AssignNotificationView(LoginRequiredMixin, View):
+    def post(self, request, notification_id):
+        new_user_id = request.POST.get('user_id')
+        obs = request.POST.get('observation')
+
+        with transaction.atomic():
+            notification = get_object_or_404(SanctionNotification, pk=notification_id)
+            new_user = get_object_or_404(User, pk=new_user_id)
+
+            # 1. Cerramos la asignación actual
+            current_assignment = SanctionAssignment.objects.filter(
+                notification=notification, is_current=True
+            ).first()
+
+            if current_assignment:
+                current_assignment.complete_assignment()
+
+            # 2. Creamos la nueva asignación
+            SanctionAssignment.objects.create(
+                notification=notification,
+                assigned_to=new_user,
+                assigned_by=request.user,
+                observation=obs
+            )
+
+            # 3. Opcional: Cambiar el estado de la notificación
+            notification.status = 'EN_PROCESO'
+            notification.save()
+
+        return JsonResponse({'success': True, 'message': f'Trámite asignado a {new_user.get_full_name()}'})
+
+
+class AssignNotificationAjaxView(LoginRequiredMixin, View):
+    def get(self, request, pk=None):
+        # El pk es opcional ahora, puede venir por query param 'ids'
+        notification_ids = request.GET.get('ids', '').split(',')
+        notification_ids = [id for id in notification_ids if id]  # Limpiar vacíos
+
+        users = User.objects.filter(is_active=True).exclude(id=request.user.id).order_by('first_name')
+
+        # Si es solo uno, podemos mostrar info del empleado, si son varios, un contador
+        count = len(notification_ids)
+
+        context = {
+            'notification_ids': ','.join(notification_ids),
+            'users': users,
+            'count': count,
+        }
+        html = render_to_string('sanctions/modals/modal_assign_notification.html', context, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, pk=None):
+        # Obtenemos los IDs del campo oculto del formulario
+        ids_raw = request.POST.get('notification_ids', '')
+        notification_ids = [id for id in ids_raw.split(',') if id]
+        user_to_id = request.POST.get('assigned_to')
+        observation = request.POST.get('observation')
+
+        if not notification_ids:
+            return JsonResponse({'success': False, 'message': 'No hay notificaciones seleccionadas.'}, status=400)
+        if not user_to_id:
+            return JsonResponse({'success': False, 'message': 'Debe seleccionar un responsable.'}, status=400)
+
+        try:
+            with transaction.atomic():
+                notifications = SanctionNotification.objects.filter(id__in=notification_ids)
+
+                for notification in notifications:
+                    # 1. Finalizar asignación actual
+                    SanctionAssignment.objects.filter(notification=notification, is_current=True).update(
+                        is_current=False,
+                        end_date=timezone.now()
+                    )
+
+                    # 2. Crear nueva asignación
+                    SanctionAssignment.objects.create(
+                        notification=notification,
+                        assigned_to_id=user_to_id,
+                        assigned_by=request.user,
+                        observation=observation,
+                        is_current=True
+                    )
+
+                    # 3. Cambiar estado
+                    notification.status = 'EN_PROCESO'
+                    notification.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Se han asignado {len(notification_ids)} notificaciones correctamente.'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class UserSearchAjaxView(LoginRequiredMixin, View):
+    def get(self, request):
+        q = request.GET.get('q', '')
+        # Buscamos usuarios activos, podemos buscar por nombre, apellido o cédula (username)
+        users = User.objects.filter(is_active=True).filter(
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
+            Q(username__icontains=q)
+        ).distinct()
+
+        results = [
+            {
+                "id": user.id,
+                "text": f"{user.get_full_name()} ({user.username})"
+            } for user in users[:15]  # Limitamos resultados por performance
+        ]
+        return JsonResponse({"results": results})

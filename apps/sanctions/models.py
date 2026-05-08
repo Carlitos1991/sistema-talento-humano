@@ -329,7 +329,8 @@ class SanctionNotification(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.sequence_number:
-            last_sequence = self.__class__.objects.order_by('-sequence_number').values_list('sequence_number', flat=True).first() or 0
+            last_sequence = self.__class__.objects.order_by('-sequence_number').values_list('sequence_number',
+                                                                                            flat=True).first() or 0
             self.sequence_number = last_sequence + 1
 
         if self.created_by and not self.user_code:
@@ -366,6 +367,11 @@ class SanctionNotification(BaseModel):
     def __str__(self):
         return f'{self.notification_type.name} - {self.employee}'
 
+    @property
+    def current_assignment(self):
+        """Retorna la asignación activa actual"""
+        return self.assignment_history.filter(is_current=True).first()
+
 
 class Sanction(models.Model):
     """
@@ -386,22 +392,22 @@ class Sanction(models.Model):
     ]
 
     employee = models.ForeignKey(
-        Employee, 
-        verbose_name='Empleado', 
-        on_delete=models.PROTECT, 
+        Employee,
+        verbose_name='Empleado',
+        on_delete=models.PROTECT,
         related_name='sanctions'
     )
     sanction_type = models.ForeignKey(
-        SanctionType, 
-        verbose_name='Tipo de Sanción', 
+        SanctionType,
+        verbose_name='Tipo de Sanción',
         on_delete=models.PROTECT
     )
 
     # Sanction details
     severity = models.CharField(
-        verbose_name='Gravedad', 
-        max_length=30, 
-        choices=SEVERITY_CHOICES, 
+        verbose_name='Gravedad',
+        max_length=30,
+        choices=SEVERITY_CHOICES,
         default='VERBAL_WARNING'
     )
     description = models.TextField(verbose_name='Descripción de la falta')
@@ -418,17 +424,17 @@ class Sanction(models.Model):
 
     # Status
     status = models.CharField(
-        verbose_name='Estado', 
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        verbose_name='Estado',
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='REGISTERED'
     )
 
     # Attachment
     attachment_file = models.FileField(
-        upload_to='documents/sanctions/%Y/%m/', 
+        upload_to='documents/sanctions/%Y/%m/',
         verbose_name='Documento adjunto',
-        blank=True, 
+        blank=True,
         null=True
     )
 
@@ -449,19 +455,19 @@ class Sanction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de registro')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Última modificación')
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
+        settings.AUTH_USER_MODEL,
         verbose_name='Registrado por',
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sanctions_created'
     )
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
+        settings.AUTH_USER_MODEL,
         verbose_name='Modificado por',
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sanctions_updated'
     )
 
@@ -478,3 +484,95 @@ class Sanction(models.Model):
         if self.personnel_action:
             return f"{self.personnel_action.number} - {self.employee}"
         return f"Sanción - {self.employee}"
+
+
+class SanctionAssignment(BaseModel):
+    """
+    Historial de asignaciones y tiempos de respuesta para notificaciones/sanciones.
+    """
+    notification = models.ForeignKey(
+        'SanctionNotification',
+        on_delete=models.CASCADE,
+        related_name='assignment_history',
+        verbose_name="Notificación Relacionada"
+    )
+    # Si se llega a sancionar, este campo se llena al final del flujo
+    sanction = models.ForeignKey(
+        'Sanction',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assignments',
+        verbose_name="Sanción Resultante"
+    )
+    assigned_to = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='received_sanction_tasks',
+        verbose_name="Responsable Actual"
+    )
+    assigned_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.PROTECT,
+        related_name='given_sanction_tasks',
+        verbose_name="Asignado por"
+    )
+    start_date = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Recepción")
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Despacho")
+    is_current = models.BooleanField(default=True, verbose_name="¿Es la asignación activa?")
+    observation = models.TextField(blank=True, null=True, verbose_name="Instrucciones/Observaciones")
+
+    class Meta:
+        verbose_name = "Asignación de Sanción"
+        verbose_name_plural = "Asignaciones de Sanciones"
+        ordering = ['created_at']
+
+    @property
+    def duration_days(self):
+        from django.utils import timezone
+        end = self.end_date or timezone.now()
+        diff = end - self.start_date
+        return diff.days
+
+    def get_status_color(self):
+        from core.models import SystemConfiguration
+        config = SystemConfiguration.get_current()
+        if not config:
+            return '#10b981'  # Verde por defecto
+
+        days = self.duration_days
+        if days <= config.sanction_green_days:
+            return '#10b981'  # Verde
+        elif days <= config.sanction_yellow_days:
+            return '#f59e0b'  # Amarillo
+        else:
+            return '#ef4444'  # Rojo
+
+    def complete_assignment(self, sanction_obj=None):
+        """Marca la asignación como terminada"""
+        from django.utils import timezone
+        self.end_date = timezone.now()
+        self.is_current = False
+        if sanction_obj:
+            self.sanction = sanction_obj
+        self.save()
+
+    def get_status_info(self):
+        """Retorna el color y los días transcurridos para el semáforo."""
+        from core.models import SystemConfiguration
+        from django.utils import timezone
+
+        config = SystemConfiguration.get_current()
+        # Valores por defecto si no hay configuración
+        green = config.sanction_green_days if config else 2
+        yellow = config.sanction_yellow_days if config else 5
+
+        end = self.end_date or timezone.now()
+        diff = end - self.start_date
+        days = diff.days
+
+        if days <= green:
+            return {'color': '#10b981', 'label': 'A tiempo', 'days': days}  # Verde
+        elif days <= yellow:
+            return {'color': '#f59e0b', 'label': 'En alerta', 'days': days}  # Amarillo
+        else:
+            return {'color': '#ef4444', 'label': 'Atrasado', 'days': days}  # Rojo

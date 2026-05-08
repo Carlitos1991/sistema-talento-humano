@@ -1,0 +1,37 @@
+<div class="modal-header-refined">
+    <h3 class="modal-title" style="color: white;">Asignar Responsable de Trámite</h3>
+    <button type="button" class="btn-close js-close-modal" style="color: white;">&times;</button>
+</div>
+<form id="assignNotificationForm" action="{% url 'sanctions:assign_notification_bulk' %}" method="POST">
+    {% csrf_token %}
+    <!-- notification_ids viene de la vista como una cadena "1,2,3" -->
+    <input type="hidden" name="notification_ids" value="{{ notification_ids }}">
+
+    <div class="modal-body-scrolled">
+        <div class="alert alert-info" style="margin-bottom: 1.2rem; font-size: 0.9rem;">
+            <i class="fa-solid fa-users"></i>
+            Estás asignando <strong>{{ count }}</strong> notificación(es) seleccionada(s).
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Buscar Responsable (Cédula o Nombre):</label>
+            <select id="select-responsible-ajax" name="assigned_to" class="form-select" required style="width: 100%;">
+                <option value="">Escriba para buscar...</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">Observaciones / Instrucciones:</label>
+            <textarea name="observation" class="form-control" rows="3"
+                      placeholder="Ej: Revisar descargos del empleado..."></textarea>
+        </div>
+    </div>
+    <div class="modal-footer-refined">
+        <button type="button" class="btn-views-action js-close-modal" style="background: #64748b; color:white;">
+            Cancelar
+        </button>
+        <button type="submit" class="btn-views-action" style="background: #2563eb; color:white;">
+            Confirmar Asignación
+        </button>
+    </div>
+</form>

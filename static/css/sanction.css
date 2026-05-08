@@ -1349,3 +1349,40 @@ select.form-select:not(.select2-hidden-accessible):disabled {
 .custom-checkbox input:indeterminate ~ .checkmark i::before {
     content: "\f068"; /* Icono fa-minus */
 }
+
+/* Semáforo de Tiempos */
+.semaphore-circle {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2px;
+}
+
+/* Tooltip simple para el semáforo */
+.semaphore-circle[title]:hover:after {
+    content: attr(title);
+    position: absolute;
+    background: #334155;
+    color: white;
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    z-index: 100;
+    white-space: nowrap;
+}
+
+.select2-container--default .select2-selection--single {
+    border: 1px solid #d1d5db !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    padding-top: 5px !important;
+}
+
+.select2-dropdown {
+    z-index: 9999 !important; /* Por encima del overlay del modal */
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+}

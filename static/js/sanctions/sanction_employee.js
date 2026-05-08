@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const tabButtons = document.querySelectorAll('.sanctions-tab-btn');
     const tabPanes = document.querySelectorAll('.sanctions-tab-pane');
     const notifSearchInput = document.getElementById('notifications-search');
-
+    const btnBulkAssign = document.getElementById('btn-bulk-assign');
     // Estado de paginación
     let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
     let totalPages = window.initialPagination ? window.initialPagination.total_pages : 1;
@@ -177,7 +177,99 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+// Delegación para el botón de asignar
+    if (notificationsWrapper) {
+        notificationsWrapper.addEventListener('click', function (e) {
+            // Detectar clic en el botón con la clase js-assign-notification
+            const assignBtn = e.target.closest('.js-assign-notification');
+            if (assignBtn) {
+                e.preventDefault();
+                const notifId = assignBtn.dataset.id;
+                openAssignModal(notifId);
+            }
+        });
+    }
+
+    function openAssignModal(ids) {
+        // Cargamos el modal (puedes usar la misma vista AssignNotificationAjaxView que creamos antes)
+        fetch(`/sanctions/notifications/assign/?ids=${ids}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.text())
+            .then(html => {
+                modalContentContainer.innerHTML = html;
+                modalOverlay.classList.remove('hidden');
+                document.body.classList.add('modal-open');
+
+                // --- CONFIGURAR SELECT2 AJAX DENTRO DEL MODAL ---
+                const $select = $('#select-responsible-ajax');
+                if ($select.length) {
+                    $select.select2({
+                        dropdownParent: $('#customModal'), // Importante para que se vea sobre el modal
+                        placeholder: 'Buscar por cédula o nombre...',
+                        minimumInputLength: 3,
+                        ajax: {
+                            url: '/sanctions/users/search/', // La URL de la vista del paso 2
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                return {q: params.term};
+                            },
+                            processResults: function (data) {
+                                return {results: data.results};
+                            },
+                            cache: true
+                        }
+                    });
+                }
+
+                // --- MANEJAR EL ENVÍO DEL FORMULARIO ---
+                const form = document.getElementById('assignNotificationForm');
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        const formData = new FormData(this);
+
+                        fetch(this.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    closeModal();
+                                    Swal.fire('¡Éxito!', data.message, 'success');
+                                    selectedNotificationIds.clear(); // Limpiamos la selección
+                                    fetchNotificationsPage(1); // Refrescamos la tabla
+                                } else {
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            });
+                    });
+                }
+            });
+    }
+
     // --- FUNCIONES ---
+    function toggleBulkButton() {
+        if (btnBulkAssign) {
+            btnBulkAssign.addEventListener('click', function () {
+                // Verificamos si hay elementos seleccionados en el Set global
+                if (selectedNotificationIds.size === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin selección',
+                        text: 'Por favor, seleccione al menos una notificación de la lista.',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                    return;
+                }
+                const ids = Array.from(selectedNotificationIds).join(',');
+                openAssignModal(ids);
+            });
+        }
+    }
 
     function openGenerateSanctionModal(employeeId) {
         const url = `/sanctions/generate/?employee_id=${employeeId}`;
@@ -340,6 +432,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         masterCheck.checked = (checkedInPage === itemChecks.length);
         masterCheck.indeterminate = (checkedInPage > 0 && checkedInPage < itemChecks.length);
+
+        toggleBulkButton();
+    }
+
+    if (btnBulkAssign) {
+        btnBulkAssign.addEventListener('click', function () {
+            const ids = Array.from(selectedNotificationIds).join(',');
+            openAssignModal(ids);
+        });
     }
 
     function handleSanctionFormSubmit(e) {

@@ -279,6 +279,17 @@ class SystemConfiguration(BaseModel):
         null=True
     )
 
+    sanction_green_days = models.PositiveIntegerField(
+        default=2,
+        verbose_name="Días para Semáforo Verde",
+        help_text="Hasta cuántos días el trámite se considera a tiempo."
+    )
+    sanction_yellow_days = models.PositiveIntegerField(
+        default=5,
+        verbose_name="Días para Semáforo Amarillo",
+        help_text="Hasta cuántos días el trámite está en alerta."
+    )
+
     # Membretes y Logo
     letterhead = models.ImageField(
         upload_to='letterheads/',
@@ -320,6 +331,7 @@ class SystemConfiguration(BaseModel):
             is_active=True,
             effective_date__lte=timezone.now().date()
         ).first()
+
 
 class Authority(BaseModel):
     """
