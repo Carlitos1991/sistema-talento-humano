@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Estado de paginación
     let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
     let totalPages = window.initialPagination ? window.initialPagination.total_pages : 1;
+    let selectedNotificationIds = new Set();
 
     // Inicializar botones de paginación con datos del servidor
     if (window.initialPagination) {
@@ -284,6 +285,63 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function initPersistentSelectAll() {
+        const masterCheck = document.getElementById('check-all-notifications');
+        const itemChecks = document.querySelectorAll('.js-notification-checkbox');
+
+        if (!masterCheck) return;
+
+        // 1. Sincronizar estado visual con el Set global
+        itemChecks.forEach(cb => {
+            if (selectedNotificationIds.has(cb.dataset.id)) {
+                cb.checked = true;
+            }
+        });
+
+        // 2. Actualizar el estado del Master Check (indeterminado o marcado)
+        updateMasterCheckState(masterCheck, itemChecks);
+
+        // 3. Evento para el Master Check
+        // Usamos onclick para asegurar que solo haya un listener activo si se re-llama
+        masterCheck.onchange = function () {
+            itemChecks.forEach(cb => {
+                cb.checked = this.checked;
+                const id = cb.dataset.id;
+                if (this.checked) {
+                    selectedNotificationIds.add(id);
+                } else {
+                    selectedNotificationIds.delete(id);
+                }
+            });
+        };
+
+        // 4. Eventos para checks individuales
+        itemChecks.forEach(cb => {
+            cb.onchange = function () {
+                const id = this.dataset.id;
+                if (this.checked) {
+                    selectedNotificationIds.add(id);
+                } else {
+                    selectedNotificationIds.delete(id);
+                }
+                updateMasterCheckState(masterCheck, itemChecks);
+            };
+        });
+    }
+
+    function updateMasterCheckState(masterCheck, itemChecks) {
+        if (itemChecks.length === 0) {
+            masterCheck.checked = false;
+            masterCheck.indeterminate = false;
+            return;
+        }
+
+        const checkedInPage = Array.from(itemChecks).filter(cb => cb.checked).length;
+
+        masterCheck.checked = (checkedInPage === itemChecks.length);
+        masterCheck.indeterminate = (checkedInPage > 0 && checkedInPage < itemChecks.length);
+    }
+
     function handleSanctionFormSubmit(e) {
         e.preventDefault();
         const form = e.target;
@@ -419,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     notificationsWrapper.innerHTML = data.html;
                     bindNotificationEditButtons();
                     bindNotificationPagination();
-                    initSelectAllLogic();
+                    initPersistentSelectAll();
                 }
             })
             .catch(err => console.error('Error al cargar notificaciones:', err));
@@ -454,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pane.hidden = !isActive;
         });
         if (tabName === 'notifications') {
-            initSelectAllLogic();
+            initPersistentSelectAll();
         }
         if (persist) {
             window.localStorage.setItem('sanctions-list-tab', tabName);
@@ -606,26 +664,5 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(context, args), wait);
         };
-    }
-
-    function initSelectAllLogic() {
-        const masterCheck = document.getElementById('check-all-notifications');
-        if (!masterCheck) return;
-
-        masterCheck.addEventListener('change', function () {
-            const itemChecks = document.querySelectorAll('.js-notification-checkbox');
-            itemChecks.forEach(cb => cb.checked = this.checked);
-        });
-
-        // Lógica para que el master cambie si se deselecciona uno individual
-        document.querySelectorAll('.js-notification-checkbox').forEach(cb => {
-            cb.addEventListener('change', function () {
-                const allChecks = document.querySelectorAll('.js-notification-checkbox');
-                const checkedCount = document.querySelectorAll('.js-notification-checkbox:checked').length;
-
-                masterCheck.checked = (checkedCount === allChecks.length);
-                masterCheck.indeterminate = (checkedCount > 0 && checkedCount < allChecks.length);
-            });
-        });
     }
 });
