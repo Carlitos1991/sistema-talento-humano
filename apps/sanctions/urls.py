@@ -60,5 +60,6 @@ urlpatterns = [
     path('templates/<int:template_id>/preview/', views.TemplatePreviewAjaxView.as_view(), name='template_preview'),
     path('notifications/<int:pk>/toggle-response/', views.SanctionNotificationToggleResponseView.as_view(),
          name='notification_toggle_response'),
-    path('users/search/', UserSearchAjaxView.as_view(), name='user_search_ajax')
+    path('users/search/', UserSearchAjaxView.as_view(), name='user_search_ajax'),
+    path('notifications/assign/', views.AssignNotificationAjaxView.as_view(), name='assign_notification_bulk'),
 ]

@@ -190,6 +190,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function toggleBulkAssignButton() {
+        if (!btnBulkAssign) return;
+
+        if (selectedNotificationIds.size > 0) {
+            // Mostrar botón y actualizar contador
+            btnBulkAssign.style.display = 'inline-flex';
+            btnBulkAssign.innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket"></i> Asignar (${selectedNotificationIds.size})`;
+        } else {
+            // Ocultar si no hay nada seleccionado
+            btnBulkAssign.style.display = 'none';
+        }
+    }
+
     function openAssignModal(ids) {
         // Cargamos el modal (puedes usar la misma vista AssignNotificationAjaxView que creamos antes)
         fetch(`/sanctions/notifications/assign/?ids=${ids}`, {
@@ -238,8 +251,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             .then(res => res.json())
                             .then(data => {
                                 if (data.success) {
-                                    closeModal();
+
                                     Swal.fire('¡Éxito!', data.message, 'success');
+                                    closeModal();
                                     selectedNotificationIds.clear(); // Limpiamos la selección
                                     fetchNotificationsPage(1); // Refrescamos la tabla
                                 } else {
@@ -383,18 +397,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!masterCheck) return;
 
-        // 1. Sincronizar estado visual con el Set global
+        // Sincronizar estado visual al cargar página/pestaña
         itemChecks.forEach(cb => {
             if (selectedNotificationIds.has(cb.dataset.id)) {
                 cb.checked = true;
             }
         });
 
-        // 2. Actualizar el estado del Master Check (indeterminado o marcado)
         updateMasterCheckState(masterCheck, itemChecks);
+        toggleBulkAssignButton();
 
-        // 3. Evento para el Master Check
-        // Usamos onclick para asegurar que solo haya un listener activo si se re-llama
+        // Evento Master Check
         masterCheck.onchange = function () {
             itemChecks.forEach(cb => {
                 cb.checked = this.checked;
@@ -403,11 +416,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     selectedNotificationIds.add(id);
                 } else {
                     selectedNotificationIds.delete(id);
+                    openAssignModal
                 }
             });
+            toggleBulkAssignButton();
         };
 
-        // 4. Eventos para checks individuales
+        // Eventos Checks Individuales
         itemChecks.forEach(cb => {
             cb.onchange = function () {
                 const id = this.dataset.id;
@@ -417,6 +432,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     selectedNotificationIds.delete(id);
                 }
                 updateMasterCheckState(masterCheck, itemChecks);
+                toggleBulkAssignButton();
             };
         });
     }
@@ -438,8 +454,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (btnBulkAssign) {
         btnBulkAssign.addEventListener('click', function () {
-            const ids = Array.from(selectedNotificationIds).join(',');
-            openAssignModal(ids);
+            if (selectedNotificationIds.size > 0) {
+                const ids = Array.from(selectedNotificationIds).join(',');
+                openAssignModal(ids);
+            }
         });
     }
 
@@ -614,6 +632,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         if (tabName === 'notifications') {
             initPersistentSelectAll();
+        } else {
+            if (btnBulkAssign) btnBulkAssign.style.display = 'none';
         }
         if (persist) {
             window.localStorage.setItem('sanctions-list-tab', tabName);

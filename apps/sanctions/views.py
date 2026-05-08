@@ -32,7 +32,7 @@ from employee.models import Employee
 from personnel_actions.models import PersonnelAction, ActionType
 from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
 from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, \
-    SanctionNotificationType, SanctionNotificationTypeRegime, SanctionType, Sanction
+    SanctionNotificationType, SanctionNotificationTypeRegime, SanctionType, Sanction, SanctionAssignment
 from .services import build_notification_replacements, build_replacements_from_global_mappings
 
 
@@ -1554,81 +1554,43 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
 
 
 class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    """View to list all sanction notifications (history)"""
     model = SanctionNotification
     template_name = 'sanctions/sanction_history.html'
-    context_object_name = 'latest_notifications_page_obj'
+    context_object_name = 'notifications'
     permission_required = 'sanctions.view_sanctionnotification'
     paginate_by = 10
 
     def get_queryset(self):
         queryset = SanctionNotification.objects.select_related(
-            'employee__person',
-            'notification_type',
-            'labor_regime',
-            'authority_1',
-            'authority_2',
-            'created_by',
-        ).order_by('-sequence_number', '-created_at')
+            'employee__person', 'notification_type', 'labor_regime'
+        ).prefetch_related('assignment_history__assigned_to')
 
-        selected_notifications_month = self.request.GET.get('notifications_month', '').strip()
-        selected_notifications_year = self.request.GET.get('notifications_year', '').strip()
+        month = self.request.GET.get('notifications_month')
+        year = self.request.GET.get('notifications_year')
 
-        if selected_notifications_month:
-            try:
-                queryset = queryset.filter(month=int(selected_notifications_month))
-            except (TypeError, ValueError):
-                pass
+        if month and month.isdigit():
+            queryset = queryset.filter(month=int(month))
+        if year and year.isdigit():
+            queryset = queryset.filter(year=int(year))
 
-        if selected_notifications_year:
-            try:
-                queryset = queryset.filter(year=int(selected_notifications_year))
-            except (TypeError, ValueError):
-                pass
-
-        return queryset
+        return queryset.order_by('-updated_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from .forms import MONTH_CHOICES
         context['notification_month_choices'] = MONTH_CHOICES[1:]
-        context['selected_notifications_month'] = self.request.GET.get('notifications_month', '').strip()
-        context['selected_notifications_year'] = self.request.GET.get('notifications_year', '').strip()
+        context['selected_notifications_month'] = self.request.GET.get('notifications_month', '')
+        context['selected_notifications_year'] = self.request.GET.get('notifications_year', '')
         return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html = render_to_string(
-                'sanctions/partials/partial_latest_notification_list.html',
+                'sanctions/partials/partial_assignments_table.html',
                 context,
                 request=self.request
             )
-            page_obj = context.get('page_obj')
-
-            if page_obj:
-                pagination_data = {
-                    'start_index': page_obj.start_index(),
-                    'end_index': page_obj.end_index(),
-                    'total_count': page_obj.paginator.count,
-                    'current_page': page_obj.number,
-                    'total_pages': page_obj.paginator.num_pages,
-                    'has_previous': page_obj.has_previous(),
-                    'has_next': page_obj.has_next(),
-                }
-            else:
-                pagination_data = {
-                    'start_index': 0,
-                    'end_index': 0,
-                    'total_count': 0,
-                    'current_page': 1,
-                    'total_pages': 1,
-                    'has_previous': False,
-                    'has_next': False,
-                }
-
-            return JsonResponse({
-                'html': html,
-                'pagination': pagination_data
-            })
+            return JsonResponse({'html': html})
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -2168,20 +2130,16 @@ class AssignNotificationView(LoginRequiredMixin, View):
 
 
 class AssignNotificationAjaxView(LoginRequiredMixin, View):
-    def get(self, request, pk=None):
-        # El pk es opcional ahora, puede venir por query param 'ids'
-        notification_ids = request.GET.get('ids', '').split(',')
-        notification_ids = [id for id in notification_ids if id]  # Limpiar vacíos
+    def get(self, request):
+        ids_str = request.GET.get('ids', '')
+        notification_ids = [id for id in ids_str.split(',') if id]
 
-        users = User.objects.filter(is_active=True).exclude(id=request.user.id).order_by('first_name')
-
-        # Si es solo uno, podemos mostrar info del empleado, si son varios, un contador
-        count = len(notification_ids)
+        if not notification_ids:
+            return HttpResponse("<div class='p-4'>No se seleccionaron registros.</div>", status=400)
 
         context = {
             'notification_ids': ','.join(notification_ids),
-            'users': users,
-            'count': count,
+            'count': len(notification_ids),
         }
         html = render_to_string('sanctions/modals/modal_assign_notification.html', context, request=request)
         return HttpResponse(html)

@@ -1386,3 +1386,37 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     border: 1px solid #d1d5db !important;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
 }
+
+/* Corrección para botones en modales */
+.modal-footer-refined .btn-views-action {
+    height: auto !important;
+    width: auto !important;
+    min-width: 120px;
+    border-radius: 8px !important; /* Asegura que no sean círculos */
+    line-height: 1.5 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modal-footer-refined .btn-views-action:hover {
+    filter: brightness(90%);
+    transform: translateY(-1px);
+}
+
+/* Estilo para el contenedor del modal dinámico */
+#modal-dynamic-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Ajuste de Select2 para que no se desborde */
+.select2-container--default .select2-selection--single {
+    border: 1px solid #d1d5db !important;
+    height: 45px !important;
+    padding: 8px !important;
+}

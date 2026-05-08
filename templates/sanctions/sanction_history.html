@@ -16,8 +16,8 @@
         <!-- Encabezado -->
         <div class="header-card">
             <div>
-                <h1>Historial de Sanciones</h1>
-                <p>Revise las últimas notificaciones registradas.</p>
+                <h1>Historial de Asignaciones</h1>
+                <p>Revise las últimas asignaciones registradas.</p>
             </div>
         </div>
 
@@ -57,13 +57,12 @@
 
 {% block extra_js %}
     <script>
-        // Inicializar paginación desde el servidor
-        {% if latest_notifications_page_obj %}
+        {% if page_obj %}
             window.initialNotificationsPagination = {
-                current_page: {{ latest_notifications_page_obj.number }},
-                total_pages: {{ latest_notifications_page_obj.paginator.num_pages }},
-                has_previous: {{ latest_notifications_page_obj.has_previous|yesno:"true,false" }},
-                has_next: {{ latest_notifications_page_obj.has_next|yesno:"true,false" }}
+                current_page: {{ page_obj.number }},
+                total_pages: {{ page_obj.paginator.num_pages }},
+                has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+                has_next: {{ page_obj.has_next|yesno:"true,false" }}
             };
         {% else %}
             window.initialNotificationsPagination = {

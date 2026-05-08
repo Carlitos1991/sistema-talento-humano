@@ -21,7 +21,8 @@
                 <p>Seleccione un empleado para generar sanciones o revise las últimas notificaciones registradas.</p>
             </div>
             <button id="btn-bulk-assign" type="button"
-                    class="btn btn-create">
+                    class="btn btn-create"
+                    style="display: none;">
                 <i class="fa-solid fa-arrow-right-to-bracket"></i> Asignar
             </button>
         </div>
@@ -93,8 +94,9 @@
 
 
 
-                                                    
-                                                    
+
+
+
                                                     {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}"
                                                    value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
                                             <span class="total-pages-badge">de {% if page_obj %}
