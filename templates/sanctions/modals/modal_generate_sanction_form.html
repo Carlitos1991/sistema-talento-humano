@@ -19,7 +19,15 @@
     </div>
 
     <!-- Formulario -->
-    <form method="post" action="{% if is_edit %}{% url 'sanctions:sanction_edit' sanction.pk %}{% else %}{% url 'sanctions:generate_sanction' %}{% endif %}" id="generateSanctionForm" enctype="multipart/form-data">
+    <form method="post" action="
+
+
+
+
+
+            
+            {% if is_edit %}{% url 'sanctions:sanction_edit' sanction.pk %}{% else %}{% url 'sanctions:generate_sanction' %}{% endif %}"
+          id="generateSanctionForm" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="employee" value="{{ employee.id }}">
 
@@ -34,7 +42,7 @@
                 <div class="mb-3">
                     <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
                         {% if employee.person.photo %}
-                            <img src="{{ employee.person.photo.url }}" 
+                            <img src="{{ employee.person.photo.url }}"
                                  alt="{{ employee.person.full_name }}"
                                  style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
                         {% else %}
@@ -57,12 +65,14 @@
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Tipo de Sanción <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Tipo de Sanción <span
+                                class="text-danger">*</span></label>
                         {{ form.sanction_type }}
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Tipo de Amonestación <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Tipo de Amonestación <span
+                                class="text-danger">*</span></label>
                         {{ form.severity }}
                         <div class="invalid-feedback"></div>
                     </div>
@@ -78,13 +88,15 @@
                     <label class="form-label font-weight-700">Documento que genera la accion</label>
                     {{ form.legal_basis }}
                     <div class="invalid-feedback"></div>
-                    <p class="form-hint">Documento que genera la acción, informes técnicos, memorandos o artículos o normativa aplicable según LOSEP.</p>
+                    <p class="form-hint">Documento que genera la acción, informes técnicos, memorandos o artículos o
+                        normativa aplicable según LOSEP.</p>
                 </div>
                 <div class="form-group">
                     <label class="form-label font-weight-700">Descripción <span class="text-danger">*</span></label>
                     {{ form.description }}
                     <div class="invalid-feedback"></div>
-                    <p class="form-hint">Describa detalladamente la falta cometida incluyendo base legal correspondiente</p>
+                    <p class="form-hint">Describa detalladamente la falta cometida incluyendo base legal
+                        correspondiente</p>
                 </div>
             </div>
 
@@ -95,12 +107,14 @@
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Elaboración <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Fecha de Elaboración <span
+                                class="text-danger">*</span></label>
                         {{ form.incident_date }}
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Vigencia <span class="text-danger">*</span></label>
+                        <label class="form-label font-weight-700">Fecha de Vigencia <span
+                                class="text-danger">*</span></label>
                         {{ form.sanction_date }}
                         <div class="invalid-feedback"></div>
                     </div>
@@ -146,57 +160,53 @@
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Primera Autoridad <span class="text-danger">*</span></label>
-                        <select name="authority_1" class="form-select select2" required>
-                            <option value="">Seleccione...</option>
-                            {% for authority in authorities %}
-                                <option value="{{ authority.id }}" {% if selected_authorities.authority_1 == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
-                            {% endfor %}
+                        <label class="form-label font-weight-700">Primera Autoridad <span
+                                class="text-danger">*</span></label>
+                        <select name="authority_1" class="js-authority-ajax" required style="width: 100%;">
+                            {% if sanction.personnel_action.authority_1 %}
+                                <option value="{{ sanction.personnel_action.authority_1.id }}"
+                                        selected>{{ sanction.personnel_action.authority_1.get_full_name }}</option>
+                            {% endif %}
                         </select>
-                        <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label font-weight-700">Segunda Autoridad</label>
-                        <select name="authority_2" class="form-select select2">
-                            <option value="">Seleccione...</option>
-                            {% for authority in authorities %}
-                                <option value="{{ authority.id }}" {% if selected_authorities.authority_2 == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
-                            {% endfor %}
+                        <select name="authority_2" class="js-authority-ajax" style="width: 100%;">
+                            {% if sanction.personnel_action.authority_2 %}
+                                <option value="{{ sanction.personnel_action.authority_2.id }}"
+                                        selected>{{ sanction.personnel_action.authority_2.get_full_name }}</option>
+                            {% endif %}
                         </select>
-                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
                 <div class="grid-2-cols">
                     <div class="form-group">
                         <label class="form-label font-weight-700">Revisado Por</label>
-                        <select name="reviewer" class="form-select select2">
-                            <option value="">Seleccione...</option>
-                            {% for authority in authorities %}
-                                <option value="{{ authority.id }}" {% if selected_authorities.reviewer == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
-                            {% endfor %}
+                        <select name="reviewer" class="js-authority-ajax" style="width: 100%;">
+                            {% if sanction.personnel_action.reviewer %}
+                                <option value="{{ sanction.personnel_action.reviewer.id }}"
+                                        selected>{{ sanction.personnel_action.reviewer.get_full_name }}</option>
+                            {% endif %}
                         </select>
-                        <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label font-weight-700">Elaborado Por</label>
-                        <select name="elaboration" class="form-select select2">
-                            <option value="">Seleccione...</option>
-                            {% for authority in authorities %}
-                                <option value="{{ authority.id }}" {% if selected_authorities.elaboration == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
-                            {% endfor %}
+                        <select name="elaboration" class="js-authority-ajax" style="width: 100%;">
+                            {% if sanction.personnel_action.elaboration %}
+                                <option value="{{ sanction.personnel_action.elaboration.id }}"
+                                        selected>{{ sanction.personnel_action.elaboration.get_full_name }}</option>
+                            {% endif %}
                         </select>
-                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label font-weight-700">Registrado Por</label>
-                    <select name="register" class="form-select select2">
-                        <option value="">Seleccione...</option>
-                        {% for authority in authorities %}
-                            <option value="{{ authority.id }}" {% if selected_authorities.register == authority.id %}selected{% endif %}>{{ authority.name }} - {{ authority.charge }}</option>
-                        {% endfor %}
+                    <select name="register" class="js-authority-ajax" style="width: 100%;">
+                        {% if sanction.personnel_action.register %}
+                            <option value="{{ sanction.personnel_action.register.id }}"
+                                    selected>{{ sanction.personnel_action.register.get_full_name }}</option>
+                        {% endif %}
                     </select>
-                    <div class="invalid-feedback"></div>
                 </div>
             </div>
 
@@ -208,7 +218,8 @@
                 <div class="form-group">
                     <label class="form-label font-weight-700">Documento Adjunto</label>
                     <div class="custom-file-upload">
-                        <input type="file" name="attachment_file" id="id_attachment_file" class="file-input" accept=".pdf">
+                        <input type="file" name="attachment_file" id="id_attachment_file" class="file-input"
+                               accept=".pdf">
                         <label for="id_attachment_file" class="file-label">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <span class="file-text">Seleccionar archivo</span>

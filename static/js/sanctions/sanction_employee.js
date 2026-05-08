@@ -285,24 +285,47 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function openGenerateSanctionModal(employeeId) {
-        const url = `/sanctions/generate/?employee_id=${employeeId}`;
+    function openGenerateSanctionModal(employeeId, notificationId = null) {
+        let url = `/sanctions/generate/?employee_id=${employeeId}`;
+        if (notificationId) url += `&notification_id=${notificationId}`;
 
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
                 modalContentContainer.innerHTML = html;
+
+                // 1. Mostrar el modal antes de inicializar nada
                 modalOverlay.classList.remove('hidden');
                 document.body.classList.add('modal-open');
 
-                initModalPlugins();
+                // 2. Usar un tiempo de espera un poco mayor para asegurar el renderizado
+                setTimeout(() => {
+                    // Destruir instancias previas si existen para evitar errores
+                    if ($('.js-authority-ajax').data('select2')) {
+                        $('.js-authority-ajax').select2('destroy');
+                    }
 
-                const form = modalContentContainer.querySelector('form');
-                if (form) form.addEventListener('submit', handleSanctionFormSubmit);
-            })
-            .catch(err => {
-                console.error('Error al abrir modal:', err);
-                Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
+                    $('.js-authority-ajax').select2({
+                        dropdownParent: $('#customModal'),
+                        placeholder: 'Buscar por nombre o cédula...',
+                        minimumInputLength: 2,
+                        width: '100%',
+                        ajax: {
+                            url: '/sanctions/users/search/',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({q: params.term}),
+                            processResults: data => ({results: data.results}),
+                            cache: true
+                        }
+                    });
+
+                    // Vincular submit
+                    const sanctionForm = document.getElementById('generateSanctionForm');
+                    if (sanctionForm) sanctionForm.addEventListener('submit', handleSanctionFormSubmit);
+
+                    initModalPlugins();
+                }, 300); // 300ms es más seguro
             });
     }
 

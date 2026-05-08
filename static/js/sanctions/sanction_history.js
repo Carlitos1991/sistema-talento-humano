@@ -96,26 +96,61 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         function openGenerateSanctionModal(employeeId, notificationId = null) {
-            // 1. Cargamos el modal de sanción normal
-            fetch(`/sanctions/generate/?employee_id=${employeeId}`)
+            let url = `/sanctions/generate/?employee_id=${employeeId}`;
+            if (notificationId) url += `&notification_id=${notificationId}`;
+
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                 .then(res => res.text())
                 .then(html => {
                     const modalContent = document.getElementById('modal-dynamic-content');
+                    const modalOverlay = document.getElementById('customModal');
+
                     modalContent.innerHTML = html;
+                    modalOverlay.classList.remove('hidden');
+                    document.body.classList.add('modal-open');
 
-                    // 2. Si venimos desde el historial, metemos el notificationId oculto en el FORM
-                    if (notificationId) {
-                        const form = modalContent.querySelector('form'); // El form de sanción
+                    // --- ESPERAR A QUE EL MODAL SEA VISIBLE PARA INICIALIZAR ---
+                    setTimeout(() => {
+                        $('.js-authority-ajax').select2({
+                            dropdownParent: $('#customModal'),
+                            placeholder: 'Escriba para buscar...',
+                            minimumInputLength: 2,
+                            width: '100%',
+                            language: {
+                                inputTooShort: () => "Escriba 2 o más caracteres...",
+                                noResults: () => "No se encontraron resultados",
+                                searching: () => "Buscando...",
+                                errorLoading: () => "Error al cargar resultados"
+                            },
+                            ajax: {
+                                url: '/sanctions/users/search/',
+                                dataType: 'json',
+                                delay: 250,
+                                data: params => ({q: params.term}),
+                                processResults: data => ({results: data.results}),
+                                cache: true
+                            }
+                        });
+
+                        // Vincular el evento de guardado
+                        const form = document.getElementById('generateSanctionForm');
                         if (form) {
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'notification_id';
-                            input.value = notificationId;
-                            form.appendChild(input);
+                            // Si tienes notificationId, lo inyectamos aquí
+                            if (notificationId) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'notification_id';
+                                input.value = notificationId;
+                                form.appendChild(input);
+                            }
+                            // IMPORTANTE: Asegúrate de tener la función handleSanctionFormSubmit definida
+                            form.addEventListener('submit', handleSanctionFormSubmit);
                         }
-                    }
 
-                    document.getElementById('customModal').classList.remove('hidden');
+                        // Inicializar acordeones si los hay
+                        if (typeof initModalPlugins === 'function') initModalPlugins();
+
+                    }, 200); // 200ms es tiempo suficiente para que el modal se muestre
                 });
         }
 

@@ -1424,3 +1424,35 @@ select.form-select:not(.select2-hidden-accessible):disabled {
 .hidden {
     display: none !important;
 }
+
+/* 1. Evitar que el select original interfiera */
+select.js-authority-ajax {
+    opacity: 0 !important;
+    position: absolute !important;
+    height: 1px !important;
+    width: 1px !important;
+    pointer-events: none !important;
+}
+
+/* 2. Forzar que Select2 se dibuje con el ancho correcto */
+.select2-container {
+    width: 100% !important;
+    display: block !important;
+}
+
+/* 3. Estilo del contenedor de Select2 para que coincida con tu diseño */
+.select2-container--default .select2-selection--single {
+    border: 1px solid #d1d5db !important;
+    height: 42px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 10px !important;
+}
+
+/* 4. Fix para el buscador dentro del modal */
+.select2-dropdown {
+    z-index: 10001 !important; /* Más alto que el modal */
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
