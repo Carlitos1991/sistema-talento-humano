@@ -1,19 +1,27 @@
-<div class="table-container">
+<div class="table-container" style="margin-bottom: 0;">
     <table>
         <thead>
         <tr>
-            <th style="width: 5%;">N°</th>
-            <th style="width: 8%;">Código</th>
-            <th style="width: 32%;">Empleado</th>
-            <th style="width: 14%;">Mes Notificación</th>
-            <th style="width: 16%;">Inconsistencias</th>
+            <th style="width: 4%;">
+                <input type="checkbox" @change="toggleAll" v-model="selectAll">
+            </th>
+            <th style="width: 4%;">N°</th>
+            <th style="width: 6%;">Código</th>
+            <th style="width: 28%;">Empleado</th>
+            <th style="width: 12%;">Mes Notificación</th>
+            <th style="width: 10%;">Inconsistencias</th>
             <th style="width: 10%;">Fecha Registro</th>
+            <th style="width: 8%;">Estado</th>
+            <th style="width: 7%;">Respuesta</th>
             <th class="text-center actions" style="width: 15%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for notification in latest_notifications_page_obj.object_list %}
             <tr>
+                <td class="text-center">
+                    <input type="checkbox" :value="bitacora.id" v-model="selectedBitacoras">
+                </td>
                 <td>{{ latest_notifications_page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
                     <strong>{{ notification.sequential_code }}</strong>
@@ -30,6 +38,14 @@
                     <small class="text-muted"><b>Inconsistencias:</b> {{ notification.regs_without_mark }}</small>
                 </td>
                 <td>{{ notification.registration_date|date:"j \d\e F \d\e Y" }}</td>
+                <td>{{ notification.status }}</td>
+                <td>
+                    <label class="modern-toggle-wrapper">
+                        <div class="modern-toggle-circle"></div>
+                        <span class="modern-toggle-text">{% if notification.has_responded %} Respuesta{% else %}
+                            No{% endif %}</span>
+                    </label>
+                </td>
                 <td class="actions">
                     <div class="actions-wrapper" style="justify-content: center;">
                         <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
@@ -61,20 +77,23 @@
     </table>
 </div>
 
-<div class="pagination-container" id="notifications-js-pagination" style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
+<div class="pagination-container" id="notifications-js-pagination"
+     style="margin-top:5px; display:flex; justify-content:space-between; align-items:center;">
     <div style="flex: 1; display: flex; align-items: center;">
         <span class="pagination-info" id="notifications-page-info">
             {% if latest_notifications_page_obj %}
-                Mostrando {{ latest_notifications_page_obj.start_index }} a {{ latest_notifications_page_obj.end_index }} de {{ latest_notifications_page_obj.paginator.count }}
+                Mostrando {{ latest_notifications_page_obj.start_index }} a
+                {{ latest_notifications_page_obj.end_index }} de {{ latest_notifications_page_obj.paginator.count }}
             {% else %}
-                Mostrando 0 a 0 registros de 0 registros
+                Mostrando 0 a 0 de 0
             {% endif %}
         </span>
     </div>
 
     {% if latest_notifications_page_obj.paginator.num_pages > 1 %}
         <div class="page-buttons-wrapper" style="flex: 1; display:flex; justify-content:center;">
-            <ul class="page-buttons pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
+            <ul class="page-buttons pagination-list"
+                style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
                 <li>
                     <button id="notifications-btn-first" class="page-btn btn-secondary"
                             {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">

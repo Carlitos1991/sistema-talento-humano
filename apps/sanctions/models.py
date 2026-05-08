@@ -235,6 +235,13 @@ class SanctionNotification(BaseModel):
         12: 'DICIEMBRE',
     }
 
+    STATUS_CHOICES = [
+        ('GENERADO', 'Generado'),
+        ('EN_PROCESO', 'En proceso'),
+        ('ARCHIVADO', 'Archivado'),
+        ('SANCIONADO', 'Sancionado'),
+    ]
+
     employee = models.ForeignKey(
         Employee,
         on_delete=models.PROTECT,
@@ -308,6 +315,16 @@ class SanctionNotification(BaseModel):
         verbose_name='Documento PDF generado',
         blank=True,
         null=True,
+    )
+    status = models.CharField(
+        verbose_name='Estado',
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='GENERADO',
+    )
+    has_responded = models.BooleanField(
+        verbose_name='¿Ha respondido?',
+        default=False,
     )
 
     def save(self, *args, **kwargs):
