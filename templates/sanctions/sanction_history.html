@@ -15,9 +15,21 @@
 
         <!-- Encabezado -->
         <div class="header-card">
-            <div>
-                <h1>Historial de Asignaciones</h1>
-                <p>Revise las últimas asignaciones registradas.</p>
+            <div class="header-content-wrapper"
+                 style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    <h1>Historial de Asignaciones</h1>
+                    <p>Revise las últimas asignaciones registradas.</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 10px;">
+                    <!-- BOTONES CORREGIDOS -->
+                    <button id="btn-massive-assign" class="btn-create hidden">
+                        <i class="fa-solid fa-user-check"></i> Asignar Seleccionados (<span id="count-assign">0</span>)
+                    </button>
+                    <button id="btn-massive-return" class="btn-search hidden" style="background-color: #f59e0b;">
+                        <i class="fa-solid fa-rotate-left"></i> Devolver Seleccionados (<span id="count-return">0</span>)
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -74,4 +86,5 @@
         {% endif %}
     </script>
     <script src="{% static 'js/sanctions/sanction_history.js' %}"></script>
+    <script src="{% static 'js/sanctions/sanction_employee.js' %}"></script>
 {% endblock %}

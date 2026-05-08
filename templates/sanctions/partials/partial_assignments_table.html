@@ -9,45 +9,30 @@
                 </label>
             </th>
             <th style="width: 3%;">N°</th>
-            <th style="width: 6%;">Código</th>
             <th style="width: 18%;">Empleado</th>
-            <th style="width: 8%;">Mes</th>
-            <th style="width: 12%;">Inconsistencias</th>
-            <th style="width: 10%;">Fecha Registro</th>
             <th style="width: 10%;">Estado</th>
-            <th style="width: 15%;">Responsable Actual</th>
+            <th style="width: 15%;">Responsable</th>
             <th style="width: 7%;" class="text-center">Tiempos</th>
-            <th style="width: 3%;">Rpta.</th>
-            <th class="text-center actions" style="width: 5%;">Acciones</th>
+            <th class="text-center actions" style="width: 12%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
-        {# Cambiamos el bucle: 'notifications' es la lista definida en la vista #}
         {% for notification in notifications %}
             {% with current_assign=notification.current_assignment %}
-                <tr>
+                <tr data-id="{{ notification.pk }}">
                     <td class="text-center">
                         <label class="custom-checkbox">
-                            <input type="checkbox" class="js-notification-checkbox" data-id="{{ notification.pk }}">
+                            <input type="checkbox" class="js-notification-checkbox" value="{{ notification.pk }}">
                             <span class="checkmark"><i class="fa-solid fa-check"></i></span>
                         </label>
                     </td>
-                    {# page_obj se usa para el conteo y paginación #}
                     <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-                    <td><strong>{{ notification.sequential_code }}</strong></td>
                     <td>
                         <span style="font-size: 0.85rem; font-weight: 600;">{{ notification.employee.person.full_name }}</span><br>
-                        <small class="text-muted">{{ notification.employee.person.document_number }}</small>
+                        <small class="text-muted">{{ notification.month_label }} {{ notification.year }}</small>
                     </td>
-                    <td><small>{{ notification.month_label }}</small></td>
                     <td>
-                        <small class="text-muted">Atr: {{ notification.minutes_late }}m |
-                            Inc: {{ notification.regs_without_mark }}</small>
-                    </td>
-                    <td><small>{{ notification.registration_date|date:"d/m/Y" }}</small></td>
-                    <td>
-                        <span class="{% if notification.status == 'GENERADO' %}payroll-value-badge{% else %}payroll-value-badge-blue{% endif %}"
-                              style="font-size: 10px;">
+                        <span class="badge-status {{ notification.status|lower }}">
                             {{ notification.get_status_display }}
                         </span>
                     </td>
@@ -58,8 +43,6 @@
                                 <small class="text-muted"
                                        style="font-size: 10px;">Desde: {{ current_assign.start_date|date:"d/m H:i" }}</small>
                             </div>
-                        {% else %}
-                            <span class="text-muted" style="font-size: 0.8rem;"><i>Sin asignar</i></span>
                         {% endif %}
                     </td>
                     <td class="text-center">
@@ -69,41 +52,28 @@
                                      title="{{ info.label }}"></div>
                                 <small style="display:block; font-size: 10px; font-weight: bold;">{{ info.days }}d</small>
                             {% endwith %}
-                        {% else %}-{% endif %}
-                    </td>
-                    <td class="text-center">
-                        <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
-                             data-id="{{ notification.pk }}" style="transform: scale(0.7); cursor: pointer;">
-                            <div class="modern-toggle-circle"></div>
-                        </div>
+                        {% endif %}
                     </td>
                     <td class="actions">
-                        <div class="actions-wrapper" style="justify-content: center; gap: 5px;">
-                            <button type="button" class="btn-list-action js-assign-notification"
-                                    data-id="{{ notification.pk }}" title="Re-asignar">
-                                <i class="fa-solid fa-user-tag" style="font-size: 0.8rem;"></i>
+                        <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
+                            <button class="btn-delete-action js-btn-sancionar" data-id="{{ notification.employee_id }}"
+                                    data-notif-id="{{ notification.pk }}" title="Sancionar">
+                                <i class="fa-solid fa-gavel text-danger"></i>
                             </button>
-                            <a href="{% url 'sanctions:notification_pdf' notification.pk %}" target="_blank"
-                               class="btn-list-action">
-                                <i class="fa-regular fa-file-pdf" style="font-size: 0.8rem;"></i>
-                            </a>
+                            <button class="btn-views-action js-btn-archive" data-id="{{ notification.pk }}"
+                                    title="Archivar">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
             {% endwith %}
-        {% empty %}
-            <tr>
-                <td colspan="12" class="text-center" style="padding: 3rem;">
-                    <i class="fa-solid fa-folder-open"
-                       style="font-size: 3rem; color: #e2e8f0; margin-bottom: 1rem;"></i>
-                    <p style="color: #64748b;">No se encontraron registros.</p>
-                </td>
-            </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
 
+<!-- PAGINADOR IDÉNTICO AL DE NOTIFICACIONES -->
 <div class="pagination-container" id="notifications-js-pagination"
      style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
     <div style="flex: 1;">
@@ -111,14 +81,16 @@
             Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
         </span>
     </div>
+
     {% if page_obj.paginator.num_pages > 1 %}
         <div style="flex: 1; display:flex; justify-content:center;">
             <div class="page-input-wrapper">
-                <input type="number" id="notifications-page-input" class="page-input" min="1"
-                       max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}">
+                <input type="number" id="notifications-page-input" class="page-input"
+                       min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}">
                 <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
             </div>
         </div>
     {% endif %}
+
     <div style="flex: 1;"></div>
 </div>

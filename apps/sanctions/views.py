@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-
+from django.db.models import Case, When, Value, IntegerField
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
@@ -1455,6 +1455,12 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
         # Definir QuerySet Base de Notificaciones
         notifications_qs = SanctionNotification.objects.select_related(
             'employee__person', 'notification_type', 'labor_regime'
+        ).annotate(
+            status_priority=Case(
+                When(status='GENERADO', then=Value(1)),
+                default=Value(2),
+                output_field=IntegerField(),
+            )
         )
 
         # Aplicar Filtro de búsqueda COD/EMP si existe
@@ -1472,7 +1478,7 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
         if selected_year:
             notifications_qs = notifications_qs.filter(year=selected_year)
 
-        notifications_qs = notifications_qs.order_by('-sequence_number', '-created_at')
+        notifications_qs = notifications_qs.order_by('status_priority', '-sequence_number', '-created_at')
 
         # Paginación manual para la segunda pestaña
         notif_paginator = Paginator(notifications_qs, 10)
@@ -1531,6 +1537,22 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     permission_required = 'sanctions.view_sanctionnotification'
     paginate_by = 10
 
+    def get(self, request, *args, **kwargs):
+        page = request.GET.get('page')
+        if page is not None:
+            try:
+                p_int = int(page)
+                if p_int < 1:
+                    q_mutable = request.GET.copy()
+                    q_mutable['page'] = '1'
+                    request.GET = q_mutable
+            except (ValueError, TypeError):
+                q_mutable = request.GET.copy()
+                q_mutable['page'] = '1'
+                request.GET = q_mutable
+
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = SanctionNotification.objects.filter(status='EN_PROCESO')
 
@@ -1562,16 +1584,28 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         context['notification_month_choices'] = MONTH_CHOICES[1:]
         context['selected_notifications_month'] = self.request.GET.get('notifications_month', '')
         context['selected_notifications_year'] = self.request.GET.get('notifications_year', '')
+
         return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(
-                'sanctions/partials/partial_assignments_table.html',
-                context,
-                request=self.request
-            )
-            return JsonResponse({'html': html})
+            # 1. Renderizamos solo el partial
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+
+            # 2. Preparamos la data de paginación idéntica a la otra vista
+            page_obj = context.get('page_obj')
+            pagination_data = {
+                'start_index': page_obj.start_index() if page_obj.object_list else 0,
+                'end_index': page_obj.end_index() if page_obj.object_list else 0,
+                'total_count': page_obj.paginator.count,
+                'current_page': page_obj.number,
+                'total_pages': page_obj.paginator.num_pages,
+                'has_previous': page_obj.has_previous(),
+                'has_next': page_obj.has_next(),
+            }
+            # 3. Retornamos JSON puro
+            return JsonResponse({'html': html, 'pagination': pagination_data})
+
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -1604,69 +1638,70 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
 
     def post(self, request):
         form = SanctionForm(request.POST, request.FILES)
+        notification_id = request.POST.get('notification_id')
 
         if form.is_valid():
-            sanction = form.save(commit=False)
-            sanction.created_by = request.user
-
-            # Create Personnel Action first
             try:
-                action_type = ActionType.objects.get(code='SANCIONES')
-            except ActionType.DoesNotExist:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Error: Tipo de acción "SANCIONES" no existe. Por favor, créelo en el admin.'
-                }, status=400)
+                # Usamos una sola transacción para que si algo falla, no se guarde nada a medias
+                with transaction.atomic():
+                    # A. Creamos el objeto sanción pero NO guardamos en DB todavía
+                    sanction = form.save(commit=False)
+                    sanction.created_by = request.user
 
-            # Generate sequential action number based on all PersonnelActions
-            year = datetime.now().year
-            last_action = PersonnelAction.objects.filter(
-                number__endswith=f'-{year}'
-            ).order_by('-created_at').first()
+                    # B. Lógica de Acción de Personal (Indispensable para el número secuencial)
+                    try:
+                        action_type = ActionType.objects.get(code='SANCIONES')
+                    except ActionType.DoesNotExist:
+                        return JsonResponse(
+                            {'success': False, 'message': 'Error: El tipo de acción "SANCIONES" no existe.'},
+                            status=400)
 
-            if last_action:
-                # Extract number from format like 0001-2026
-                try:
-                    last_num = int(last_action.number.split('-')[0])
-                    new_num = last_num + 1
-                except (ValueError, IndexError):
+                    year = datetime.now().year
+                    last_action = PersonnelAction.objects.filter(number__endswith=f'-{year}').order_by(
+                        '-created_at').first()
                     new_num = 1
-            else:
-                new_num = 1
+                    if last_action:
+                        try:
+                            new_num = int(last_action.number.split('-')[0]) + 1
+                        except:
+                            pass
 
-            action_number = f'{new_num:04d}-{year}'
+                    action_number = f'{new_num:04d}-{year}'
 
-            # Create PersonnelAction
-            personnel_action = PersonnelAction.objects.create(
-                employee=sanction.employee,
-                action_type=action_type,
-                number=action_number,
-                explanation=sanction.description,
-                motivation=sanction.legal_basis or 'Sanción disciplinaria según LOSEP',
-                date_issue=sanction.incident_date,
-                date_effective=sanction.sanction_date,
-                is_registered=False,
-                authority_1_id=request.POST.get('authority_1') or None,
-                authority_2_id=request.POST.get('authority_2') or None,
-                reviewer_id=request.POST.get('reviewer') or None,
-                elaboration=request.user,
-                register_id=request.POST.get('register') or None,
-                created_by=request.user
-            )
+                    # C. Creamos la Acción de Personal
+                    personnel_action = PersonnelAction.objects.create(
+                        employee=sanction.employee,
+                        action_type=action_type,
+                        number=action_number,
+                        explanation=sanction.description,
+                        motivation=sanction.legal_basis or 'Sanción disciplinaria según LOSEP',
+                        date_issue=sanction.incident_date,
+                        date_effective=sanction.sanction_date,
+                        created_by=request.user
+                    )
 
-            # Link sanction to personnel action and save
-            sanction.personnel_action = personnel_action
-            sanction.save()
+                    # D. Ahora sí, vinculamos y guardamos la Sanción
+                    sanction.personnel_action = personnel_action
+                    sanction.save()  # <-- Aquí se define 'sanction' oficialmente en la base de datos
 
-            return JsonResponse({
-                'success': True,
-                'message': f'Sanción registrada correctamente con número {action_number}.'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
+                    # E. SI VIENE DE LA BANDEJA: Cerramos la notificación
+                    if notification_id:
+                        notif = SanctionNotification.objects.filter(pk=notification_id).first()
+                        if notif:
+                            notif.status = 'SANCIONADO'
+                            notif.save()
+
+                            curr = notif.current_assignment
+                            if curr:
+                                # Ya no sale error porque 'sanction' ya existe arriba
+                                curr.complete_assignment(sanction_obj=sanction)
+
+                return JsonResponse({'success': True, 'message': f'Sanción registrada con éxito: {action_number}'})
+
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -2172,7 +2207,6 @@ class AssignNotificationAjaxView(LoginRequiredMixin, View):
 class UserSearchAjaxView(LoginRequiredMixin, View):
     def get(self, request):
         q = request.GET.get('q', '')
-        # Buscamos usuarios activos, podemos buscar por nombre, apellido o cédula (username)
         users = User.objects.filter(is_active=True).filter(
             Q(first_name__icontains=q) |
             Q(last_name__icontains=q) |
@@ -2182,7 +2216,88 @@ class UserSearchAjaxView(LoginRequiredMixin, View):
         results = [
             {
                 "id": user.id,
-                "text": f"{user.get_full_name()} ({user.username})"
-            } for user in users[:15]  # Limitamos resultados por performance
+                "text": f"{user.get_full_name()} ({user.username})"  # Select2 espera 'text'
+            } for user in users[:15]
         ]
         return JsonResponse({"results": results})
+
+
+class ReturnNotificationView(LoginRequiredMixin, View):
+    """Devuelve el trámite al asignador original y cambia estado a GENERADO"""
+
+    def post(self, request, pk):
+        with transaction.atomic():
+            notification = get_object_or_404(SanctionNotification, pk=pk)
+            current_assign = notification.current_assignment
+
+            if not current_assign:
+                return JsonResponse({'success': False, 'message': 'No hay una asignación activa.'}, status=400)
+
+            # 1. Finalizar asignación actual
+            current_assign.complete_assignment()
+
+            # 2. Crear nueva asignación de vuelta al que lo envió
+            SanctionAssignment.objects.create(
+                notification=notification,
+                assigned_to=current_assign.assigned_by,  # Se devuelve al originador
+                assigned_by=request.user,
+                observation=f"Trámite devuelto por: {request.user.get_full_name()}",
+                is_current=True
+            )
+
+            # 3. Cambiar estado a GENERADO (vuelve a la bandeja general)
+            notification.status = 'GENERADO'
+            notification.save()
+
+        return JsonResponse({'success': True, 'message': 'Trámite devuelto correctamente.'})
+
+
+class ArchiveNotificationView(LoginRequiredMixin, View):
+    """Cambia el estado de la notificación a ARCHIVADO"""
+
+    def post(self, request, pk):
+        reason = request.POST.get('observation', 'Sin motivo especificado')
+        with transaction.atomic():
+            notification = get_object_or_404(SanctionNotification, pk=pk)
+
+            # Finalizar asignación actual si existe
+            current_assign = notification.current_assignment
+            if current_assign:
+                current_assign.complete_assignment()
+
+            notification.status = 'ARCHIVADO'
+            notification.observations = f"{notification.observations}\n--- ARCHIVADO ---\nMotivo: {reason}"
+            notification.save()
+
+        return JsonResponse({'success': True, 'message': 'Notificación archivada.'})
+
+
+class MassiveReturnNotificationView(LoginRequiredMixin, View):
+    """Devuelve múltiples trámites al estado inicial GENERADO"""
+
+    def post(self, request):
+        ids_raw = request.POST.get('notification_ids', '')
+        notification_ids = [id for id in ids_raw.split(',') if id]
+
+        if not notification_ids:
+            return JsonResponse({'success': False, 'message': 'No hay registros seleccionados.'}, status=400)
+
+        try:
+            with transaction.atomic():
+                notifications = SanctionNotification.objects.filter(id__in=notification_ids)
+                for notification in notifications:
+                    # 1. Finalizar asignación actual
+                    current_assign = notification.current_assignment
+                    if current_assign:
+                        current_assign.complete_assignment()
+
+                    # 2. Cambiar estado a GENERADO (Estado inicial)
+                    notification.status = 'GENERADO'
+                    notification.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Se han devuelto {len(notification_ids)} trámites correctamente.'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)

@@ -1420,3 +1420,7 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     height: 45px !important;
     padding: 8px !important;
 }
+
+.hidden {
+    display: none !important;
+}

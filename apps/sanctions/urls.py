@@ -62,4 +62,7 @@ urlpatterns = [
          name='notification_toggle_response'),
     path('users/search/', UserSearchAjaxView.as_view(), name='user_search_ajax'),
     path('notifications/assign/', views.AssignNotificationAjaxView.as_view(), name='assign_notification_bulk'),
+    path('assign-ajax/', views.AssignNotificationAjaxView.as_view(), name='assign_notification_ajax'),
+    path('notifications/massive-return/', views.MassiveReturnNotificationView.as_view(),
+         name='massive_return_notifications'),
 ]
