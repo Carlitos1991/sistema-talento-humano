@@ -69,6 +69,66 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateMassiveButtons();
             };
         });
+        // 1. ACCIÓN: ARCHIVAR
+        document.querySelectorAll('.js-btn-archive').forEach(btn => {
+            btn.onclick = () => {
+                Swal.fire({
+                    title: 'Archivar Notificación',
+                    text: 'Escriba el motivo del archivo:',
+                    input: 'textarea',
+                    inputPlaceholder: 'Ej: El empleado justificó el atraso...',
+                    inputAttributes: {'aria-label': 'Escriba el motivo'},
+                    showCancelButton: true,
+                    confirmButtonText: 'Archivar Trámite',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#64748b',
+                    inputValidator: (value) => {
+                        if (!value) return '¡Debe escribir un motivo!'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const formData = new FormData();
+                        formData.append('observation', result.value);
+                        executeAction(`/sanctions/notifications/${btn.dataset.id}/archive/`, formData);
+                    }
+                });
+            };
+        });
+
+        function openGenerateSanctionModal(employeeId, notificationId = null) {
+            // 1. Cargamos el modal de sanción normal
+            fetch(`/sanctions/generate/?employee_id=${employeeId}`)
+                .then(res => res.text())
+                .then(html => {
+                    const modalContent = document.getElementById('modal-dynamic-content');
+                    modalContent.innerHTML = html;
+
+                    // 2. Si venimos desde el historial, metemos el notificationId oculto en el FORM
+                    if (notificationId) {
+                        const form = modalContent.querySelector('form'); // El form de sanción
+                        if (form) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'notification_id';
+                            input.value = notificationId;
+                            form.appendChild(input);
+                        }
+                    }
+
+                    document.getElementById('customModal').classList.remove('hidden');
+                });
+        }
+
+// 2. ACCIÓN: SANCIONAR
+        document.querySelectorAll('.js-btn-sancionar').forEach(btn => {
+            btn.onclick = () => {
+                const employeeId = btn.dataset.id;
+                const notificationId = btn.dataset.notifId;
+                if (typeof openGenerateSanctionModal === 'function') {
+                    openGenerateSanctionModal(employeeId, notificationId);
+                }
+            };
+        });
 
         // Botón regresar individual
         document.querySelectorAll('.js-btn-return').forEach(btn => {

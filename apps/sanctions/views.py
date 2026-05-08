@@ -2253,23 +2253,26 @@ class ReturnNotificationView(LoginRequiredMixin, View):
 
 
 class ArchiveNotificationView(LoginRequiredMixin, View):
-    """Cambia el estado de la notificación a ARCHIVADO"""
+    """Cambia el estado a ARCHIVADO y guarda el motivo"""
 
     def post(self, request, pk):
-        reason = request.POST.get('observation', 'Sin motivo especificado')
+        motivo = request.POST.get('observation', 'Sin motivo especificado')
         with transaction.atomic():
             notification = get_object_or_404(SanctionNotification, pk=pk)
 
-            # Finalizar asignación actual si existe
+            # Cerrar asignación actual si existe
             current_assign = notification.current_assignment
             if current_assign:
                 current_assign.complete_assignment()
 
+            # Actualizar notificación
             notification.status = 'ARCHIVADO'
-            notification.observations = f"{notification.observations}\n--- ARCHIVADO ---\nMotivo: {reason}"
+            fecha_str = timezone.now().strftime('%d/%m/%Y %H:%M')
+            nueva_obs = f"--- ARCHIVADO ({fecha_str}) ---\nMotivo: {motivo}\n"
+            notification.observations = (notification.observations or "") + nueva_obs
             notification.save()
 
-        return JsonResponse({'success': True, 'message': 'Notificación archivada.'})
+        return JsonResponse({'success': True, 'message': 'Trámite archivado correctamente.'})
 
 
 class MassiveReturnNotificationView(LoginRequiredMixin, View):

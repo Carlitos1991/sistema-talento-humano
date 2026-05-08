@@ -65,4 +65,5 @@ urlpatterns = [
     path('assign-ajax/', views.AssignNotificationAjaxView.as_view(), name='assign_notification_ajax'),
     path('notifications/massive-return/', views.MassiveReturnNotificationView.as_view(),
          name='massive_return_notifications'),
+    path('notifications/<int:pk>/archive/', views.ArchiveNotificationView.as_view(), name='notification_archive'),
 ]
