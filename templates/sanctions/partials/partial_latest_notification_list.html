@@ -2,17 +2,20 @@
     <table>
         <thead>
         <tr>
-            <th style="width: 4%;">
-                <input type="checkbox" @change="toggleAll" v-model="selectAll">
+            <th style="width: 3%;" class="text-center">
+                <label class="custom-checkbox">
+                    <input type="checkbox" id="check-all-notifications">
+                    <span class="checkmark"></span>
+                </label>
             </th>
-            <th style="width: 4%;">N°</th>
+            <th style="width: 3%;">N°</th>
             <th style="width: 6%;">Código</th>
-            <th style="width: 28%;">Empleado</th>
-            <th style="width: 12%;">Mes Notificación</th>
+            <th style="width: 33%;">Empleado</th>
+            <th style="width: 5%;">Mes</th>
             <th style="width: 10%;">Inconsistencias</th>
             <th style="width: 10%;">Fecha Registro</th>
-            <th style="width: 8%;">Estado</th>
-            <th style="width: 7%;">Respuesta</th>
+            <th style="width: 10%;">Estado</th>
+            <th style="width: 5%;">Respuesta</th>
             <th class="text-center actions" style="width: 15%;">Acciones</th>
         </tr>
         </thead>
@@ -20,7 +23,10 @@
         {% for notification in latest_notifications_page_obj.object_list %}
             <tr>
                 <td class="text-center">
-                    <input type="checkbox" :value="bitacora.id" v-model="selectedBitacoras">
+                    <label class="custom-checkbox">
+                        <input type="checkbox" class="js-notification-checkbox" data-id="{{ notification.pk }}">
+                        <span class="checkmark"></span>
+                    </label>
                 </td>
                 <td>{{ latest_notifications_page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
@@ -40,11 +46,14 @@
                 <td>{{ notification.registration_date|date:"j \d\e F \d\e Y" }}</td>
                 <td>{{ notification.status }}</td>
                 <td>
-                    <label class="modern-toggle-wrapper">
+                    <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
+                         data-id="{{ notification.pk }}"
+                         style="cursor: pointer; user-select: none;">
                         <div class="modern-toggle-circle"></div>
-                        <span class="modern-toggle-text">{% if notification.has_responded %} Respuesta{% else %}
-                            No{% endif %}</span>
-                    </label>
+                        <span class="modern-toggle-text">
+                            {% if notification.has_responded %}Sí{% else %}No{% endif %}
+                        </span>
+                    </div>
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper" style="justify-content: center;">
@@ -55,11 +64,11 @@
                             <i class="fa-regular fa-file-pdf"></i>
                         </a>
                         {% if perms.sanctions.change_sanctionnotification %}
-                            <button type="button" class="btn-edit-action js-edit-notification"
+                            <button type="button" class="btn-views-action js-edit-notification"
                                     data-notification-id="{{ notification.pk }}"
                                     data-employee-id="{{ notification.employee_id }}"
                                     title="Editar Notificación">
-                                <i class="fa-solid fa-pen"></i>
+                                <i class="fa-solid fa-pen-to-square"></i>
                             </button>
                         {% endif %}
                     </div>
@@ -67,7 +76,7 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7" class="text-center" style="padding: 2rem;">
+                <td colspan="10" class="text-center" style="padding: 2rem;">
                     <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
                     <p style="margin-top: 1rem; color: #666;">No hay notificaciones registradas</p>
                 </td>

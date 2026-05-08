@@ -195,12 +195,24 @@
 @media (max-width: 768px) {
     .sanctions-notifications-filters {
         gap: 0.4rem;
+        flex-wrap: wrap !important; /* Permite que los campos bajen a otra línea si no caben */
     }
 
     .sanctions-notifications-filters .sanctions-notification-field .input-field {
-        min-width: 80px !important;
-        width: 80px !important;
+        min-width: 120px !important;
+        width: 120px !important;
     }
+
+    /* Ajuste para móviles solo del buscador */
+    #notifications-search {
+        width: 100% !important;
+        min-width: 200px !important;
+    }
+}
+
+#notifications-search {
+    width: 250px !important; /* Ajusta este número al largo que necesites */
+    min-width: 250px !important;
 }
 
 .btn-secondary:hover {
@@ -1228,4 +1240,90 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     background-color: #f3f4f6;
     cursor: not-allowed;
     opacity: 0.6;
+}
+
+/* --- ESTILO PARA CHECKBOXES PERSONALIZADOS --- */
+
+/* Contenedor del checkbox */
+.custom-checkbox {
+    display: inline-block;
+    position: relative;
+    padding-left: 25px;
+    cursor: pointer;
+    font-size: 0; /* Oculta texto accidental */
+    user-select: none;
+}
+
+/* Ocultar el checkbox original */
+.custom-checkbox input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* El cuadro del checkbox personalizado */
+.checkmark {
+    position: absolute;
+    top: -10px; /* Ajuste para centrar verticalmente en la celda */
+    left: 0;
+    height: 18px;
+    width: 18px;
+    background-color: #fff;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+/* Color al pasar el mouse */
+.custom-checkbox:hover input ~ .checkmark {
+    border-color: #3b82f6;
+    background-color: #f8fafc;
+}
+
+/* Estilo cuando está seleccionado */
+.custom-checkbox input:checked ~ .checkmark {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+/* El check (el gancho) - oculto por defecto */
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+/* Mostrar el gancho cuando está seleccionado */
+.custom-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+/* Dibujar el gancho */
+.custom-checkbox .checkmark:after {
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Estado indeterminado (para el "seleccionar todos" parcial) */
+.custom-checkbox input:indeterminate ~ .checkmark {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.custom-checkbox input:indeterminate ~ .checkmark:after {
+    display: block;
+    left: 4px;
+    top: 6px;
+    width: 10px;
+    height: 2px;
+    border: none;
+    background-color: white;
+    transform: none;
 }

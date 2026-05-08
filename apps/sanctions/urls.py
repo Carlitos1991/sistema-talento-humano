@@ -13,10 +13,14 @@ urlpatterns = [
 
     # --- Notification Types (Configuration) ---
     path('notification-types/', views.SanctionNotificationTypeListView.as_view(), name='notification_type_list'),
-    path('notification-types/create/', views.SanctionNotificationTypeCreateView.as_view(), name='notification_type_create'),
-    path('notification-types/update/<int:pk>/', views.SanctionNotificationTypeUpdateView.as_view(), name='notification_type_update'),
-    path('notification-types/toggle/<int:pk>/', views.SanctionNotificationTypeToggleView.as_view(), name='notification_type_toggle'),
-    path('notification-types/preview/<int:pk>/', views.SanctionNotificationTypePreviewView.as_view(), name='notification_type_preview'),
+    path('notification-types/create/', views.SanctionNotificationTypeCreateView.as_view(),
+         name='notification_type_create'),
+    path('notification-types/update/<int:pk>/', views.SanctionNotificationTypeUpdateView.as_view(),
+         name='notification_type_update'),
+    path('notification-types/toggle/<int:pk>/', views.SanctionNotificationTypeToggleView.as_view(),
+         name='notification_type_toggle'),
+    path('notification-types/preview/<int:pk>/', views.SanctionNotificationTypePreviewView.as_view(),
+         name='notification_type_preview'),
     path('notification-types/help/', views.SanctionNotificationTypeHelpView.as_view(), name='notification_type_help'),
     path('notifications/generate/', views.GenerateSanctionNotificationView.as_view(), name='generate_notification'),
     path('notifications/preview/', views.SanctionNotificationPreviewView.as_view(), name='notification_preview'),
@@ -30,7 +34,7 @@ urlpatterns = [
 
     # --- Sanction Creation ---
     path('generate/', views.GenerateSanctionFormView.as_view(), name='generate_sanction'),
-    
+
     # --- Sanction Administration ---
     path('admin/', views.SanctionAdminListView.as_view(), name='sanction_admin'),
     path('admin/employee/<int:employee_id>/', views.SanctionAdminListView.as_view(), name='sanction_admin_by_employee'),
@@ -41,11 +45,18 @@ urlpatterns = [
     path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
 
     # --- Template Editor (Dynamic Templates) ---
-    path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(), name='template_editor_create'),
+    path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(),
+         name='template_editor_create'),
     path('templates/editor/<int:pk>/', views.TemplateEditorDetailView.as_view(), name='template_editor_detail'),
-    path('templates/<int:template_id>/sections/create/', views.TemplateSectionCreateAjaxView.as_view(), name='template_section_create'),
-    path('templates/sections/<int:section_id>/update/', views.TemplateSectionUpdateAjaxView.as_view(), name='template_section_update'),
-    path('templates/sections/<int:section_id>/delete/', views.TemplateSectionDeleteAjaxView.as_view(), name='template_section_delete'),
-    path('templates/<int:template_id>/sections/reorder/', views.TemplateSectionReorderAjaxView.as_view(), name='template_section_reorder'),
+    path('templates/<int:template_id>/sections/create/', views.TemplateSectionCreateAjaxView.as_view(),
+         name='template_section_create'),
+    path('templates/sections/<int:section_id>/update/', views.TemplateSectionUpdateAjaxView.as_view(),
+         name='template_section_update'),
+    path('templates/sections/<int:section_id>/delete/', views.TemplateSectionDeleteAjaxView.as_view(),
+         name='template_section_delete'),
+    path('templates/<int:template_id>/sections/reorder/', views.TemplateSectionReorderAjaxView.as_view(),
+         name='template_section_reorder'),
     path('templates/<int:template_id>/preview/', views.TemplatePreviewAjaxView.as_view(), name='template_preview'),
+    path('notifications/<int:pk>/toggle-response/', views.SanctionNotificationToggleResponseView.as_view(),
+         name='notification_toggle_response'),
 ]

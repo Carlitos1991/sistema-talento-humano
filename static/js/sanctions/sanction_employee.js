@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const notificationsYearInput = document.getElementById('notifications-year');
     const tabButtons = document.querySelectorAll('.sanctions-tab-btn');
     const tabPanes = document.querySelectorAll('.sanctions-tab-pane');
+    const notifSearchInput = document.getElementById('notifications-search');
 
     // Estado de paginación
     let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
@@ -35,7 +36,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnFirst) btnFirst.disabled = !window.initialPagination.has_previous;
         if (btnLast) btnLast.disabled = !window.initialPagination.has_next;
     }
-
+    if (notifSearchInput) {
+        notifSearchInput.addEventListener('input', debounce(function () {
+            fetchNotificationsPage(1);
+        }, 500));
+    }
     initTabs();
 
     // --- EVENTOS ---
@@ -123,10 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const editNotificationBtn = e.target.closest('.js-edit-notification');
             if (editNotificationBtn) {
                 e.preventDefault();
-                openGenerateNotificationModal(
-                    editNotificationBtn.dataset.employeeId,
-                    editNotificationBtn.dataset.notificationId || ''
-                );
+                openGenerateNotificationModal(editNotificationBtn.dataset.employeeId, editNotificationBtn.dataset.notificationId || '');
                 return;
             }
         });
@@ -178,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openGenerateSanctionModal(employeeId) {
         const url = `/sanctions/generate/?employee_id=${employeeId}`;
-        
+
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.text())
             .then(html => {
@@ -254,21 +256,20 @@ document.addEventListener('DOMContentLoaded', function () {
         // Inicializar Select2
         if (typeof $ !== 'undefined' && $.fn.select2) {
             $('.select2').select2({
-                width: '100%',
-                dropdownParent: modalOverlay
+                width: '100%', dropdownParent: modalOverlay
             });
         }
 
         // Initialize custom accordion
         const accordionToggles = document.querySelectorAll('.accordion-toggle');
         accordionToggles.forEach(toggle => {
-            toggle.addEventListener('click', function() {
+            toggle.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
                 const content = document.getElementById(targetId);
-                
+
                 if (content) {
                     const isOpen = content.style.display === 'block';
-                    
+
                     if (isOpen) {
                         content.style.display = 'none';
                         content.classList.remove('show');
@@ -292,30 +293,23 @@ document.addEventListener('DOMContentLoaded', function () {
         form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
         fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
+            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(async res => {
                 const contentType = res.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     throw new Error('Respuesta no válida del servidor');
                 }
-                
+
                 const data = await res.json();
-                
+
                 if (res.ok) {
                     closeModal();
                     const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
                     });
                     Toast.fire({
-                        icon: 'success',
-                        title: data.message || 'Sanción registrada correctamente'
+                        icon: 'success', title: data.message || 'Sanción registrada correctamente'
                     });
                 } else {
                     if (res.status === 403) {
@@ -342,9 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
         form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
         fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
+            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(async res => {
                 const data = await res.json().catch(() => ({}));
@@ -352,11 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (res.ok && data.success) {
                     closeModal();
                     const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
                     });
                     Toast.fire({icon: 'success', title: data.message || 'Notificación generada correctamente'});
 
@@ -388,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-
     function fetchEmployeesPage(page, searchQuery = null) {
         const query = searchQuery !== null ? searchQuery : (searchInput ? searchInput.value : '');
         const params = new URLSearchParams();
@@ -396,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (query) {
             params.set('q', query);
         }
-        
+
         fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
@@ -414,6 +401,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const params = new URLSearchParams();
         params.set('section', 'notifications');
         params.set('notifications_page', page);
+
+        // Agregamos el filtro de búsqueda COD/EMP
+        const q = document.getElementById('notifications-search')?.value;
+        if (q) params.set('notifications_q', q);
+
         if (notificationsMonthSelect && notificationsMonthSelect.value) {
             params.set('notifications_month', notificationsMonthSelect.value);
         }
@@ -439,9 +431,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const storedTab = window.localStorage.getItem('sanctions-list-tab');
-        const initialTab = storedTab && document.querySelector(`[data-sanctions-tab="${storedTab}"]`)
-            ? storedTab
-            : 'employees';
+        const initialTab = storedTab && document.querySelector(`[data-sanctions-tab="${storedTab}"]`) ? storedTab : 'employees';
         setActiveTab(initialTab, false);
 
         tabButtons.forEach((button) => {
@@ -483,10 +473,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             button.addEventListener('click', (event) => {
                 event.preventDefault();
-                openGenerateNotificationModal(
-                    button.dataset.employeeId || '',
-                    button.dataset.notificationId || ''
-                );
+                openGenerateNotificationModal(button.dataset.employeeId || '', button.dataset.notificationId || '');
             });
 
             button.dataset.bound = '1';
@@ -579,5 +566,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (feedback) feedback.textContent = Array.isArray(msgs) ? msgs.join(', ') : msgs;
             }
         }
+    }
+
+    document.addEventListener('click', function (e) {
+        const toggle = e.target.closest('.js-toggle-response');
+        if (toggle) {
+            const notificationId = toggle.dataset.id;
+            const csrf = document.getElementById('csrf-token').value;
+
+            // Cambiamos la URL para que use el nombre de la app si es necesario
+            fetch(`/sanctions/notifications/${notificationId}/toggle-response/`, {
+                method: 'POST', headers: {
+                    'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const textSpan = toggle.querySelector('.modern-toggle-text');
+                        textSpan.textContent = data.label;
+
+                        if (data.has_responded) {
+                            toggle.classList.add('modern-toggle-green');
+                        } else {
+                            toggle.classList.remove('modern-toggle-green');
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function () {
+            const context = this, args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
     }
 });
