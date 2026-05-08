@@ -4780,7 +4780,7 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     padding: 8px 2px;
-    flex: 1 1 0%; 
+    flex: 1 1 0%;
     min-width: 70px; /* Ligeramente más angostos para que entren todos */
     text-decoration: none;
     text-align: center;

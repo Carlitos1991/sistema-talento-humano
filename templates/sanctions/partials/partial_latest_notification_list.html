@@ -5,7 +5,8 @@
             <th style="width: 3%;" class="text-center">
                 <label class="custom-checkbox">
                     <input type="checkbox" id="check-all-notifications">
-                    <span class="checkmark"></span>
+                    <span class="checkmark">
+                    </span>
                 </label>
             </th>
             <th style="width: 3%;">N°</th>
@@ -25,7 +26,9 @@
                 <td class="text-center">
                     <label class="custom-checkbox">
                         <input type="checkbox" class="js-notification-checkbox" data-id="{{ notification.pk }}">
-                        <span class="checkmark"></span>
+                        <span class="checkmark">
+                    <i class="fa-solid fa-check"></i>
+                </span>
                     </label>
                 </td>
                 <td>{{ latest_notifications_page_obj.start_index|add:forloop.counter0 }}</td>
@@ -44,7 +47,8 @@
                     <small class="text-muted"><b>Inconsistencias:</b> {{ notification.regs_without_mark }}</small>
                 </td>
                 <td>{{ notification.registration_date|date:"j \d\e F \d\e Y" }}</td>
-                <td>{{ notification.status }}</td>
+                <td><span class="payroll-value-badge">{{ notification.status }}</span></td>
+
                 <td>
                     <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
                          data-id="{{ notification.pk }}"

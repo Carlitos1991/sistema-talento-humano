@@ -412,7 +412,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notificationsYearInput && notificationsYearInput.value) {
             params.set('notifications_year', notificationsYearInput.value);
         }
-
         fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
@@ -420,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     notificationsWrapper.innerHTML = data.html;
                     bindNotificationEditButtons();
                     bindNotificationPagination();
+                    initSelectAllLogic();
                 }
             })
             .catch(err => console.error('Error al cargar notificaciones:', err));
@@ -453,7 +453,9 @@ document.addEventListener('DOMContentLoaded', function () {
             pane.classList.toggle('is-active', isActive);
             pane.hidden = !isActive;
         });
-
+        if (tabName === 'notifications') {
+            initSelectAllLogic();
+        }
         if (persist) {
             window.localStorage.setItem('sanctions-list-tab', tabName);
         }
@@ -604,5 +606,26 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(context, args), wait);
         };
+    }
+
+    function initSelectAllLogic() {
+        const masterCheck = document.getElementById('check-all-notifications');
+        if (!masterCheck) return;
+
+        masterCheck.addEventListener('change', function () {
+            const itemChecks = document.querySelectorAll('.js-notification-checkbox');
+            itemChecks.forEach(cb => cb.checked = this.checked);
+        });
+
+        // Lógica para que el master cambie si se deselecciona uno individual
+        document.querySelectorAll('.js-notification-checkbox').forEach(cb => {
+            cb.addEventListener('change', function () {
+                const allChecks = document.querySelectorAll('.js-notification-checkbox');
+                const checkedCount = document.querySelectorAll('.js-notification-checkbox:checked').length;
+
+                masterCheck.checked = (checkedCount === allChecks.length);
+                masterCheck.indeterminate = (checkedCount > 0 && checkedCount < allChecks.length);
+            });
+        });
     }
 });

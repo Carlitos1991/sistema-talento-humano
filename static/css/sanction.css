@@ -1246,12 +1246,13 @@ select.form-select:not(.select2-hidden-accessible):disabled {
 
 /* Contenedor del checkbox */
 .custom-checkbox {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
-    padding-left: 25px;
     cursor: pointer;
-    font-size: 0; /* Oculta texto accidental */
     user-select: none;
+    vertical-align: middle;
 }
 
 /* Ocultar el checkbox original */
@@ -1265,27 +1266,39 @@ select.form-select:not(.select2-hidden-accessible):disabled {
 
 /* El cuadro del checkbox personalizado */
 .checkmark {
-    position: absolute;
-    top: -10px; /* Ajuste para centrar verticalmente en la celda */
-    left: 0;
-    height: 18px;
-    width: 18px;
+    height: 20px;
+    width: 20px;
     background-color: #fff;
     border: 2px solid #cbd5e1;
-    border-radius: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
+}
+
+.checkmark i {
+    color: white;
+    font-size: 11px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s cubic-bezier(0.12, 0.4, 0.29, 1.46);
 }
 
 /* Color al pasar el mouse */
 .custom-checkbox:hover input ~ .checkmark {
-    border-color: #3b82f6;
-    background-color: #f8fafc;
+    border-color: #94a3b8;
 }
 
 /* Estilo cuando está seleccionado */
 .custom-checkbox input:checked ~ .checkmark {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
+    background-color: #10b981; /* Verde esmeralda */
+    border-color: #10b981;
+}
+
+.custom-checkbox input:checked ~ .checkmark i {
+    opacity: 1;
+    transform: scale(1);
 }
 
 /* El check (el gancho) - oculto por defecto */
@@ -1313,8 +1326,13 @@ select.form-select:not(.select2-hidden-accessible):disabled {
 
 /* Estado indeterminado (para el "seleccionar todos" parcial) */
 .custom-checkbox input:indeterminate ~ .checkmark {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+.custom-checkbox input:indeterminate ~ .checkmark i {
+    opacity: 1;
+    transform: scale(1);
 }
 
 .custom-checkbox input:indeterminate ~ .checkmark:after {
@@ -1326,4 +1344,8 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     border: none;
     background-color: white;
     transform: none;
+}
+
+.custom-checkbox input:indeterminate ~ .checkmark i::before {
+    content: "\f068"; /* Icono fa-minus */
 }
