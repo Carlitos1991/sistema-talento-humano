@@ -1599,68 +1599,43 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     paginate_by = 10
 
     def _get_base_queryset(self):
-        """
-        Define la visibilidad base:
-        - Admin (is_staff): Ve todo.
-        - Usuario común: Solo ve lo que tiene o tuvo asignado (vía assignment_history).
-        """
+        # 1. Optimización de base de datos
         queryset = SanctionNotification.objects.select_related(
-            'employee__person',
-            'notification_type',
-            'labor_regime',
-            'authority_1',
-            'authority_2',
-            'created_by',
+            'employee__person', 'notification_type', 'labor_regime',
+            'authority_1', 'authority_2', 'created_by'
         )
-
+        # 2. PRIVACIDAD: Si no es staff, solo ve lo que tiene asignado (vía assignment_history)
         if not self.request.user.is_staff:
-            # CORRECCIÓN: Usamos 'assignment_history' que es el related_name del modelo
             queryset = queryset.filter(assignment_history__assigned_to=self.request.user).distinct()
-
         return queryset
 
     def get_queryset(self):
         queryset = self._get_base_queryset()
-
-        # 1. Estado inicial por defecto: 'EN_PROCESO'
+        # 3. Filtro inicial por defecto: 'EN_PROCESO'
         status_filter = self.request.GET.get('status_filter', 'EN_PROCESO')
         if status_filter and status_filter != 'all':
             queryset = queryset.filter(status=status_filter)
 
-        # 2. Otros filtros de búsqueda
+        # Filtros adicionales (Mes, Año, Búsqueda)
         month = self.request.GET.get('notifications_month')
         year = self.request.GET.get('notifications_year')
         search_q = self.request.GET.get('search_q', '').strip()
 
-        if month and month.isdigit():
-            queryset = queryset.filter(month=int(month))
-        if year and year.isdigit():
-            queryset = queryset.filter(year=int(year))
-
+        if month and month.isdigit(): queryset = queryset.filter(month=int(month))
+        if year and year.isdigit(): queryset = queryset.filter(year=int(year))
         if search_q:
             queryset = queryset.filter(
                 Q(employee__person__first_name__icontains=search_q) |
                 Q(employee__person__last_name__icontains=search_q) |
                 Q(employee__person__document_number__icontains=search_q)
             )
-
         return queryset.order_by('-updated_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        base_qs = self._get_base_queryset()
 
-        # Mantener filtros en la UI
-        month = self.request.GET.get('notifications_month')
-        year = self.request.GET.get('notifications_year')
-
-        if not month or not year:
-            last_notif = SanctionNotification.objects.order_by('-year', '-month').first()
-            month = month or (str(last_notif.month) if last_notif else str(timezone.now().month))
-            year = year or (str(last_notif.year) if last_notif else str(timezone.now().year))
-
-        # LÓGICA DE STATS CON ORDEN PERSONALIZADO
-        base_qs = self._get_base_queryset()  # Respeta el filtro assigned_to
-
+        # Lógica de contadores con el orden específico solicitado
         stats_data = {}
         total_count = 0
         for status, label in SanctionNotification.STATUS_CHOICES:
@@ -1668,7 +1643,6 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             total_count += count
             stats_data[status] = {'label': label, 'count': count}
 
-        # Orden solicitado: EN_PROCESO -> ARCHIVADO -> SANCIONADO -> GENERADO
         desired_order = ['EN_PROCESO', 'ARCHIVADO', 'SANCIONADO', 'GENERADO']
         status_colors = {
             'GENERADO': {'class': 'color-two', 'icon': 'fa-clipboard'},
@@ -1678,32 +1652,21 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         }
 
         stats_cards = []
-        for status_key in desired_order:
-            if status_key in stats_data:
-                info = stats_data[status_key]
-                color = status_colors.get(status_key, {'class': 'color-secondary', 'icon': 'fa-circle'})
+        for key in desired_order:
+            if key in stats_data:
+                info, color = stats_data[key], status_colors.get(key, {'class': 'color-secondary', 'icon': 'fa-circle'})
                 stats_cards.append({
-                    'label': info['label'],
-                    'count': info['count'],
-                    'filter_val': status_key,
-                    'icon': color['icon'],
-                    'class': color['class']
+                    'label': info['label'], 'count': info['count'], 'filter_val': key,
+                    'icon': color['icon'], 'class': color['class']
                 })
-
-        # TOTAL al final
-        stats_cards.append({
-            'label': 'TOTAL',
-            'count': total_count,
-            'filter_val': 'all',
-            'icon': 'fa-file-lines',
-            'class': 'color-one'
-        })
+        stats_cards.append({'label': 'TOTAL', 'count': total_count, 'filter_val': 'all', 'icon': 'fa-file-lines',
+                            'class': 'color-one'})
 
         context.update({
             'stats_cards': stats_cards,
             'notification_month_choices': MONTH_CHOICES[1:],
-            'selected_notifications_month': month,
-            'selected_notifications_year': year,
+            'selected_notifications_month': self.request.GET.get('notifications_month', ''),
+            'selected_notifications_year': self.request.GET.get('notifications_year', timezone.now().year),
             'current_status_filter': self.request.GET.get('status_filter', 'EN_PROCESO')
         })
         return context
@@ -1721,7 +1684,7 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                 'has_previous': page_obj.has_previous(),
                 'has_next': page_obj.has_next(),
             }
-            return JsonResponse({'html': html, 'pagination': pagination_data, 'stats': context.get('stats_cards', [])})
+            return JsonResponse({'html': html, 'pagination': pagination_data, 'stats': context.get('stats_cards')})
         return super().render_to_response(context, **response_kwargs)
 
 
