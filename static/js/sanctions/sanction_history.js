@@ -185,6 +185,21 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.js-assign-notification').forEach(btn => {
             btn.onclick = () => openAssignModal(btn.dataset.id);
         });
+
+        // Botones de historial
+        document.querySelectorAll('.js-btn-sanction-history').forEach(btn => {
+            btn.onclick = () => {
+                const employeeId = btn.dataset.employeeId;
+                openSanctionHistoryModal(employeeId);
+            };
+        });
+
+        document.querySelectorAll('.js-btn-actions-history').forEach(btn => {
+            btn.onclick = () => {
+                const employeeId = btn.dataset.employeeId;
+                openActionsHistoryModal(employeeId);
+            };
+        });
     }
 
     // --- 2. ABRIR MODAL E INICIALIZAR SELECT2 ---
@@ -312,6 +327,57 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
     }
+
+    // --- HISTORIAL DE SANCIONES Y ACCIONES ---
+    function openSanctionHistoryModal(employeeId) {
+        const sanctionHistoryModal = document.getElementById('sanctionHistoryModal');
+        const sanctionHistoryContent = document.getElementById('sanction-history-content');
+
+        fetch(`/sanctions/history/sanction-ajax/?employee_id=${employeeId}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    sanctionHistoryContent.innerHTML = data.html;
+                    sanctionHistoryModal.classList.remove('hidden');
+                } else {
+                    Swal.fire({icon: 'error', title: 'Error', text: data.message});
+                }
+            })
+            .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
+    }
+
+    function openActionsHistoryModal(employeeId) {
+        const actionsHistoryModal = document.getElementById('actionsHistoryModal');
+        const actionsHistoryContent = document.getElementById('actions-history-content');
+
+        fetch(`/sanctions/history/actions-ajax/?employee_id=${employeeId}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    actionsHistoryContent.innerHTML = data.html;
+                    actionsHistoryModal.classList.remove('hidden');
+                } else {
+                    Swal.fire({icon: 'error', title: 'Error', text: data.message});
+                }
+            })
+            .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
+    }
+
+    // Cerrar modales de historial
+    document.addEventListener('click', function (e) {
+        const closeBtn = e.target.closest('[data-modal]');
+        if (closeBtn) {
+            const modalId = closeBtn.dataset.modal;
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+    });
 
     bindEvents();
 });

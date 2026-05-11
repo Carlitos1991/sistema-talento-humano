@@ -2313,3 +2313,101 @@ class MassiveReturnNotificationView(LoginRequiredMixin, View):
             })
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ==========================================
+# VIEWS: HISTORIAL DE SANCIONES Y ACCIONES
+# ==========================================
+
+class SanctionHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    AJAX view para obtener el historial de sanciones de un empleado.
+    Parámetros GET:
+    - employee_id: ID del empleado
+    """
+    permission_required = 'sanctions.view_sanction'
+
+    def get(self, request):
+        employee_id = request.GET.get('employee_id')
+        if not employee_id:
+            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+
+        try:
+            employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
+        except Employee.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+
+        # Obtener todas las sanciones del empleado
+        sanctions = Sanction.objects.filter(
+            employee=employee
+        ).select_related(
+            'sanction_type', 'personnel_action'
+        ).order_by('-sanction_date', '-created_at')
+
+        context = {
+            'sanctions': sanctions,
+            'employee': employee,
+            'total_count': sanctions.count(),
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_sanction_history_table.html',
+            context,
+            request=request
+        )
+
+        return JsonResponse({'success': True, 'html': html})
+
+
+class ActionsHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    AJAX view para obtener el historial de acciones de personal de tipo SANCIONES de un empleado.
+    Parámetros GET:
+    - employee_id: ID del empleado
+    """
+    permission_required = 'sanctions.view_sanction'
+
+    def get(self, request):
+        employee_id = request.GET.get('employee_id')
+        if not employee_id:
+            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+
+        try:
+            employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
+        except Employee.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+
+        # Obtener el tipo de acción "SANCIONES"
+        try:
+            sanction_action_type = ActionType.objects.get(code='SANCIONES')
+        except ActionType.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'El tipo de acción "SANCIONES" no está configurado'
+            }, status=400)
+
+        # Obtener todas las acciones de personal de tipo SANCIONES para este empleado
+        actions = PersonnelAction.objects.filter(
+            employee=employee,
+            action_type=sanction_action_type
+        ).select_related(
+            'authority_1',
+            'authority_2',
+            'reviewer',
+            'elaboration',
+            'register'
+        ).order_by('-date_issue', '-created_at')
+
+        context = {
+            'actions': actions,
+            'employee': employee,
+            'total_count': actions.count(),
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_actions_history_table.html',
+            context,
+            request=request
+        )
+
+        return JsonResponse({'success': True, 'html': html})

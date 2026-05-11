@@ -1,0 +1,94 @@
+<div class="modal-container-large shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal" data-modal="sanctionHistoryModal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera Compacta -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-history"></i>
+            </div>
+            <h2 class="header-title-main">
+                Historial de Sanciones
+            </h2>
+        </div>
+    </div>
+
+    <!-- Cuerpo con Scroll -->
+    <div class="modal-body-scrolled">
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-user text-primary"></i> Empleado: <strong>{{ employee.person.full_name }}</strong>
+            </h4>
+            <div style="margin-top: 1.5rem;">
+                <table class="table table-striped" style="margin-bottom: 0; font-size: 0.9rem;">
+                    <thead class="table-header-style">
+                    <tr>
+                        <th style="width: 12%;">Fecha Sanción</th>
+                        <th style="width: 15%;">Tipo</th>
+                        <th style="width: 15%;">Gravedad</th>
+                        <th style="width: 20%;">Descripción</th>
+                        <th style="width: 12%;">Estado</th>
+                        <th style="width: 10%;">Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for sanction in sanctions %}
+                        <tr>
+                            <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge badge-info">{{ sanction.sanction_type.name }}</span>
+                            </td>
+                            <td>
+                                <small>{{ sanction.get_severity_display }}</small>
+                            </td>
+                            <td>
+                                <small class="text-truncate" title="{{ sanction.description }}">{{ sanction.description|truncatewords:8 }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ sanction.status|lower }}">
+                                    {{ sanction.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if sanction.attachment_file %}
+                                    <a href="{{ sanction.attachment_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Descargar">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                {% endif %}
+                                {% if sanction.personnel_action %}
+                                    <a href="{% url 'personnel_actions:action_detail' sanction.personnel_action.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver acción">
+                                        <i class="fa-solid fa-file"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                                <p>No hay sanciones registradas para este empleado</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if sanctions %}
+                    <div style="padding: 1rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; text-align: right;">
+                        <small class="text-muted"><strong>Total:</strong> {{ total_count }} sanciones</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer con botones -->
+    <div class="modal-footer-refined">
+        <button type="button" class="btn-cancel" data-modal="sanctionHistoryModal">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+</div>

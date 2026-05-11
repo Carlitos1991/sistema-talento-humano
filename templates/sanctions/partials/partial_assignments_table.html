@@ -8,12 +8,13 @@
                     <span class="checkmark"></span>
                 </label>
             </th>
-            <th style="width: 3%;">N°</th>
+            <th style="width: 2%;">N°</th>
             <th style="width: 18%;">Empleado</th>
             <th style="width: 10%;">Estado</th>
             <th style="width: 15%;">Responsable</th>
-            <th style="width: 7%;" class="text-center">Tiempos</th>
-            <th class="text-center actions" style="width: 12%;">Acciones</th>
+            <th style="width: 5%;" class="text-center">Tiempos</th>
+            <th class="text-center actions" style="width: 10%;">Historial</th>
+            <th class="text-center actions" style="width: 10%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -53,6 +54,20 @@
                                 <small style="display:block; font-size: 10px; font-weight: bold;">{{ info.days }}d</small>
                             {% endwith %}
                         {% endif %}
+                    </td>
+                    <td class="actions">
+                        <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
+                            <button class="btn-success-action js-btn-sanction-history"
+                                    data-employee-id="{{ notification.employee_id }}"
+                                    title="Historial de Sanciones" style="color: #8b5cf6;">
+                                <i class="fa-solid fa-history"></i>
+                            </button>
+                            <button class="btn-restore-action js-btn-actions-history"
+                                    data-employee-id="{{ notification.employee_id }}"
+                                    title="Historial de Acciones" style="color: #06b6d4;">
+                                <i class="fa-solid fa-list-check"></i>
+                            </button>
+                        </div>
                     </td>
                     <td class="actions">
                         <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
