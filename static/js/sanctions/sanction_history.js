@@ -19,6 +19,95 @@ document.addEventListener('DOMContentLoaded', function () {
         timerProgressBar: true
     });
 
+    // --- FUNCIÓN PARA FILTRAR POR ESTADO ---
+    window.filterSanctionsByStatus = function(status) {
+        const month = document.getElementById('notifications-month').value;
+        const year = document.getElementById('notifications-year').value;
+        const search = document.getElementById('notifications-search').value;
+        let url = `${urlList}?page=1`;
+        
+        // Agregar status_filter siempre (incluso 'all' para mostrar todos)
+        url += `&status_filter=${status}`;
+        
+        if (month) url += `&notifications_month=${month}`;
+        if (year) url += `&notifications_year=${year}`;
+        if (search) url += `&search_q=${encodeURIComponent(search)}`;
+        
+        fetch(url, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                notificationsWrapper.innerHTML = data.html;
+                bindEvents();
+                // Limpiar selección de checkboxes
+                selectedIds.clear();
+                updateMassiveButtons();
+                updatePaginationInfo(data.pagination);
+                // Actualizar stats
+                if (data.stats) {
+                    updateStatsCards(data.stats);
+                }
+            })
+            .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
+    };
+
+    // --- FUNCIÓN PARA ACTUALIZAR STATS Y TABLA CUANDO CAMBIA MES/AÑO/BÚSQUEDA ---
+    window.updateStatsAndTable = function() {
+        const month = document.getElementById('notifications-month').value;
+        const year = document.getElementById('notifications-year').value;
+        const search = document.getElementById('notifications-search').value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentStatus = urlParams.get('status_filter') || 'all';
+        
+        let url = `${urlList}?page=1&status_filter=${currentStatus}`;
+        
+        if (month) url += `&notifications_month=${month}`;
+        if (year) url += `&notifications_year=${year}`;
+        if (search) url += `&search_q=${encodeURIComponent(search)}`;
+        
+        fetch(url, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                notificationsWrapper.innerHTML = data.html;
+                bindEvents();
+                selectedIds.clear();
+                updateMassiveButtons();
+                updatePaginationInfo(data.pagination);
+                // Actualizar stats sin recargar la página
+                if (data.stats) {
+                    updateStatsCards(data.stats);
+                }
+            })
+            .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
+    };
+    
+    // --- FUNCIÓN PARA ACTUALIZAR LAS TARJETAS DE STATS EN EL DOM ---
+    function updateStatsCards(statsData) {
+        const statsRow = document.querySelector('.stats-row');
+        if (!statsRow) return;
+        
+        // Reconstruir las stats cards
+        statsRow.innerHTML = '';
+        statsData.forEach(stat => {
+            const statCard = document.createElement('div');
+            statCard.className = `stat-card ${stat.class}`;
+            statCard.onclick = function() {
+                filterSanctionsByStatus(stat.filter_val);
+            };
+            statCard.innerHTML = `
+                <div class="stat-left">
+                    <h3>${stat.label}</h3>
+                    <div class="number">${stat.count}</div>
+                </div>
+                <i class="fas ${stat.icon} stat-icon"></i>
+            `;
+            statsRow.appendChild(statCard);
+        });
+    }
+
     // --- 1. LÓGICA PARA CERRAR EL MODAL ---
     document.addEventListener('click', function (e) {
         if (e.target.closest('.js-close-modal') || e.target === customModal) {
@@ -41,13 +130,55 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function bindEvents() {
-        // Paginador
+        // Paginador - Input
         const pageInput = document.getElementById('notifications-page-input');
         if (pageInput) {
             pageInput.addEventListener('change', function () {
                 fetchHistoryPage(parseInt(this.value) || 1);
             });
         }
+
+        // Paginador - Botones
+        const btnFirst = document.getElementById('btn-first');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const btnLast = document.getElementById('btn-last');
+
+        if (btnFirst) {
+            btnFirst.onclick = () => {
+                fetchHistoryPage(1);
+            };
+        }
+
+        if (btnPrev) {
+            btnPrev.onclick = () => {
+                const current = parseInt(pageInput?.value || 1, 10);
+                if (current > 1) {
+                    fetchHistoryPage(current - 1);
+                }
+            };
+        }
+
+        if (btnNext) {
+            btnNext.onclick = () => {
+                const current = parseInt(pageInput?.value || 1, 10);
+                const total = parseInt(pageInput?.max || 1, 10);
+                if (current < total) {
+                    fetchHistoryPage(current + 1);
+                }
+            };
+        }
+
+        if (btnLast) {
+            btnLast.onclick = () => {
+                const total = parseInt(pageInput?.max || 1, 10);
+                fetchHistoryPage(total);
+            };
+        }
+
+        // Filtros de mes y año (listener una sola vez, fuera de bindEvents)
+        // Ver más abajo en el inicializador
+
 
         // Checkboxes
         const checkboxes = document.querySelectorAll('.js-notification-checkbox');
@@ -291,7 +422,17 @@ document.addEventListener('DOMContentLoaded', function () {
     function fetchHistoryPage(page) {
         const month = document.getElementById('notifications-month').value;
         const year = document.getElementById('notifications-year').value;
-        fetch(`${urlList}?page=${page}&notifications_month=${month}&notifications_year=${year}`, {
+        const search = document.getElementById('notifications-search').value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusFilter = urlParams.get('status_filter') || 'all';
+        
+        let url = `${urlList}?page=${page}&status_filter=${statusFilter}`;
+        
+        if (month) url += `&notifications_month=${month}`;
+        if (year) url += `&notifications_year=${year}`;
+        if (search) url += `&search_q=${encodeURIComponent(search)}`;
+        
+        fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
             .then(res => res.json())
@@ -299,7 +440,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 notificationsWrapper.innerHTML = data.html;
                 bindEvents();
                 updateMassiveButtons();
+                updatePaginationInfo(data.pagination);
+                // Actualizar stats también
+                if (data.stats) {
+                    updateStatsCards(data.stats);
+                }
             });
+    }
+
+    function updatePaginationInfo(paginationData) {
+        if (!paginationData) return;
+        
+        const pageInfo = document.getElementById('page-info');
+        if (pageInfo) {
+            pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
+        }
     }
 
     function executeAction(url, formData = new FormData()) {
@@ -378,6 +533,34 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    // --- EVENT LISTENERS PARA FILTROS DE MES Y AÑO ---
+    const monthFilter = document.getElementById('notifications-month');
+    const yearFilter = document.getElementById('notifications-year');
+    const searchInput = document.getElementById('notifications-search');
+    
+    let searchTimeout;
+    
+    if (monthFilter) {
+        monthFilter.addEventListener('change', function () {
+            updateStatsAndTable();
+        });
+    }
+    
+    if (yearFilter) {
+        yearFilter.addEventListener('change', function () {
+            updateStatsAndTable();
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                updateStatsAndTable();
+            }, 500);
+        });
+    }
 
     bindEvents();
 });

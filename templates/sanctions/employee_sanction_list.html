@@ -126,6 +126,19 @@
         </div>
 
         <div class="sanctions-tab-pane" data-sanctions-pane="notifications" hidden>
+            <!-- Stats de Notificaciones -->
+            <div class="stats-row">
+                {% for stat in stats_cards_notifications %}
+                    <div class="stat-card {{ stat.class }}" onclick="filterNotificationsByStatus('{{ stat.filter_val }}')">
+                        <div class="stat-left">
+                            <h3>{{ stat.label }}</h3>
+                            <div class="number">{{ stat.count }}</div>
+                        </div>
+                        <i class="fas {{ stat.icon }} stat-icon"></i>
+                    </div>
+                {% endfor %}
+            </div>
+
             <div class="content-table">
                 <div id="notifications-filter-form" class="table-controls sanctions-notifications-filters">
                     <div class="sanctions-notification-field">
@@ -144,11 +157,11 @@
                                value="{{ selected_notifications_year }}" placeholder="2026">
                     </div>
                     <div class="sanctions-notification-field">
-                        <label class="form-label" for="notifications-search">Empleado</label>
+                        <label class="form-label" for="notifications-search">Buscar Empleado</label>
                         <div class="search-box">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" id="notifications-search" class="input-field"
-                                   placeholder="Nombre o cédula." value="{{ notifications_q }}">
+                                   placeholder="Nombre, apellido o cédula." value="{{ notifications_q }}">
                         </div>
                     </div>
                 </div>

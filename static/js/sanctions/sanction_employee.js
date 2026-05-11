@@ -32,10 +32,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Inicializar botones de paginación con datos del servidor
     if (window.initialPagination) {
-        if (btnPrev) btnPrev.disabled = !window.initialPagination.has_previous;
-        if (btnNext) btnNext.disabled = !window.initialPagination.has_next;
-        if (btnFirst) btnFirst.disabled = !window.initialPagination.has_previous;
-        if (btnLast) btnLast.disabled = !window.initialPagination.has_next;
+        const btn1st = document.getElementById('btn-first');
+        const btnP = document.getElementById('btn-prev');
+        const btnN = document.getElementById('btn-next');
+        const btnL = document.getElementById('btn-last');
+        
+        if (btnP) btnP.disabled = !window.initialPagination.has_previous;
+        if (btnN) btnN.disabled = !window.initialPagination.has_next;
+        if (btn1st) btn1st.disabled = !window.initialPagination.has_previous;
+        if (btnL) btnL.disabled = !window.initialPagination.has_next;
     }
     if (notifSearchInput) {
         notifSearchInput.addEventListener('input', debounce(function () {
@@ -59,43 +64,61 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // 2. Botones de paginación
-    if (btnFirst) {
-        btnFirst.addEventListener('click', () => {
-            fetchEmployeesPage(1);
-        });
-    }
+    bindEmployeePagination();
 
-    if (btnPrev) {
-        btnPrev.addEventListener('click', () => {
-            if (currentPage > 1) {
-                fetchEmployeesPage(currentPage - 1);
-            }
-        });
-    }
+    function bindEmployeePagination() {
+        // Reasignar referencias después de cada AJAX
+        const btn1st = document.getElementById('btn-first');
+        const btnP = document.getElementById('btn-prev');
+        const btnN = document.getElementById('btn-next');
+        const btnL = document.getElementById('btn-last');
+        const pageInp = document.getElementById('page-input');
 
-    if (btnNext) {
-        btnNext.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                fetchEmployeesPage(currentPage + 1);
-            }
-        });
-    }
+        if (!btn1st && !btnP && !btnN && !btnL) {
+            // Si no encontramos los botones, salimos
+            return;
+        }
 
-    if (btnLast) {
-        btnLast.addEventListener('click', () => {
-            if (totalPages > 0) {
-                fetchEmployeesPage(totalPages);
-            }
-        });
-    }
+        if (btn1st) {
+            btn1st.onclick = () => {
+                currentPage = 1;
+                fetchEmployeesPage(1);
+            };
+        }
 
-    if (pageInput) {
-        pageInput.addEventListener('change', () => {
-            const targetPage = parseInt(pageInput.value, 10);
-            if (!Number.isNaN(targetPage)) {
-                fetchEmployeesPage(targetPage);
-            }
-        });
+        if (btnP) {
+            btnP.onclick = () => {
+                if (currentPage > 1) {
+                    fetchEmployeesPage(currentPage - 1);
+                }
+            };
+        }
+
+        if (btnN) {
+            btnN.onclick = () => {
+                if (currentPage < totalPages) {
+                    fetchEmployeesPage(currentPage + 1);
+                }
+            };
+        }
+
+        if (btnL) {
+            btnL.onclick = () => {
+                if (totalPages > 0) {
+                    fetchEmployeesPage(totalPages);
+                }
+            };
+        }
+
+        if (pageInp) {
+            pageInp.onchange = () => {
+                const targetPage = parseInt(pageInp.value, 10);
+                if (!Number.isNaN(targetPage) && targetPage >= 1 && targetPage <= totalPages) {
+                    currentPage = targetPage;
+                    fetchEmployeesPage(targetPage);
+                }
+            };
+        }
     }
 
     if (notificationsMonthSelect) {
@@ -589,6 +612,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 if (tableContainer && data.html) {
                     tableContainer.innerHTML = data.html;
+                    bindEmployeePagination();
                     if (data.pagination) {
                         updatePagination(data.pagination);
                     }
@@ -612,6 +636,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notificationsYearInput && notificationsYearInput.value) {
             params.set('notifications_year', notificationsYearInput.value);
         }
+        
+        // Agregar status_filter (default 'all' si no está presente)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentStatus = urlParams.get('status_filter') || 'all';
+        params.set('status_filter', currentStatus);
+        
         fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
@@ -620,6 +650,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     bindNotificationEditButtons();
                     bindNotificationPagination();
                     initPersistentSelectAll();
+                    updateNotificationsPaginationInfo(data.pagination);
+                    // Actualizar stats de notificaciones
+                    if (data.stats && data.stats.length > 0) {
+                        updateNotificationsStats(data.stats);
+                    }
                 }
             })
             .catch(err => console.error('Error al cargar notificaciones:', err));
@@ -738,26 +773,53 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function updateNotificationsStats(statsData) {
+        const statsRow = document.querySelector('[data-sanctions-pane="notifications"] .stats-row');
+        if (!statsRow) return;
+
+        // Reconstruir stats cards
+        statsRow.innerHTML = '';
+        statsData.forEach(stat => {
+            const statCard = document.createElement('div');
+            statCard.className = `stat-card ${stat.class}`;
+            statCard.onclick = function() {
+                filterNotificationsByStatus(stat.filter_val);
+            };
+            statCard.innerHTML = `
+                <div class="stat-left">
+                    <h3>${stat.label}</h3>
+                    <div class="number">${stat.count}</div>
+                </div>
+                <i class="fas ${stat.icon} stat-icon"></i>
+            `;
+            statsRow.appendChild(statCard);
+        });
+    }
+
     function updatePagination(paginationData) {
         currentPage = paginationData.current_page;
         totalPages = paginationData.total_pages;
 
-        if (pageInfo) {
-            pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} registros de ${paginationData.total_count} registros`;
+        // Buscar los elementos nuevamente por si se actualizaron
+        const pageInfoElement = document.getElementById('page-info');
+        const pageInputElement = document.getElementById('page-input');
+        const btnFirstElement = document.getElementById('btn-first');
+        const btnPrevElement = document.getElementById('btn-prev');
+        const btnNextElement = document.getElementById('btn-next');
+        const btnLastElement = document.getElementById('btn-last');
+
+        if (pageInfoElement) {
+            pageInfoElement.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
         }
 
-        if (currentPageDisplay) {
-            currentPageDisplay.textContent = currentPage;
-        }
+        if (btnFirstElement) btnFirstElement.disabled = !paginationData.has_previous;
+        if (btnPrevElement) btnPrevElement.disabled = !paginationData.has_previous;
+        if (btnNextElement) btnNextElement.disabled = !paginationData.has_next;
+        if (btnLastElement) btnLastElement.disabled = !paginationData.has_next;
 
-        if (btnFirst) btnFirst.disabled = !paginationData.has_previous;
-        if (btnPrev) btnPrev.disabled = !paginationData.has_previous;
-        if (btnNext) btnNext.disabled = !paginationData.has_next;
-        if (btnLast) btnLast.disabled = !paginationData.has_next;
-
-        if (pageInput) {
-            pageInput.value = currentPage;
-            pageInput.max = totalPages;
+        if (pageInputElement) {
+            pageInputElement.value = currentPage;
+            pageInputElement.max = totalPages;
         }
     }
 
@@ -808,5 +870,69 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(context, args), wait);
         };
+    }
+
+    // --- FUNCIÓN PARA FILTRAR NOTIFICACIONES POR ESTADO ---
+    window.filterNotificationsByStatus = function(status) {
+        const month = document.getElementById('notifications-month').value;
+        const year = document.getElementById('notifications-year').value;
+        const q = document.getElementById('notifications-search').value;
+        
+        let url = `${urlList}?page=1&section=notifications`;
+        
+        // Agregar status_filter siempre (incluso 'all' para mostrar todos)
+        url += `&status_filter=${status}`;
+        
+        if (month) url += `&notifications_month=${month}`;
+        if (year) url += `&notifications_year=${year}`;
+        if (q) url += `&notifications_q=${encodeURIComponent(q)}`;
+        
+        // Actualizar URL del navegador
+        window.history.replaceState({}, '', url);
+        
+        fetch(url, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (notificationsWrapper && data.html) {
+                    notificationsWrapper.innerHTML = data.html;
+                    bindNotificationEditButtons();
+                    bindNotificationPagination();
+                    initPersistentSelectAll();
+                    updateNotificationsPaginationInfo(data.pagination);
+                    // Actualizar stats de notificaciones
+                    if (data.stats && data.stats.length > 0) {
+                        updateNotificationsStats(data.stats);
+                    }
+                }
+            })
+            .catch(() => Swal.fire({icon: 'error', title: 'Error de conexión'}));
+    };
+
+    // --- FUNCIÓN PARA ACTUALIZAR INFO DE PAGINACIÓN DE NOTIFICACIONES ---
+    function updateNotificationsPaginationInfo(paginationData) {
+        const pageInfo = document.getElementById('notifications-page-info');
+        const pageInput = document.getElementById('notifications-page-input');
+        
+        if (pageInfo && paginationData) {
+            pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
+        }
+        
+        if (pageInput && paginationData) {
+            pageInput.max = paginationData.total_pages;
+            pageInput.value = paginationData.current_page;
+        }
+        
+        // Actualizar estado de botones
+        const btnFirst = document.getElementById('notifications-btn-first');
+        const btnPrev = document.getElementById('notifications-btn-prev');
+        const btnNext = document.getElementById('notifications-btn-next');
+        const btnLast = document.getElementById('notifications-btn-last');
+        
+        if (btnFirst) btnFirst.disabled = !paginationData.has_previous;
+        if (btnPrev) btnPrev.disabled = !paginationData.has_previous;
+        if (btnNext) btnNext.disabled = !paginationData.has_next;
+        if (btnLast) btnLast.disabled = !paginationData.has_next;
     }
 });
