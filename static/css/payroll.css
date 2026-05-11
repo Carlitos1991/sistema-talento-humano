@@ -22,6 +22,28 @@
     display: inline-block;
 }
 
+.payroll-value-badge-red {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.35em 0.8em;
+    border-radius: 6px;
+    background-color: #dfa9ae;
+    color: #d80f0f;
+    border: 1px solid #e8a8b7;
+    display: inline-block;
+}
+
+.payroll-value-badge-yellow {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.35em 0.8em;
+    border-radius: 6px;
+    background-color: #f37f0a;
+    color: #fffffc;
+    border: 1px solid #fad9b9;
+    display: inline-block;
+}
+
 .payroll-value-badge-gray {
     font-size: 0.9rem;
     font-weight: 600;

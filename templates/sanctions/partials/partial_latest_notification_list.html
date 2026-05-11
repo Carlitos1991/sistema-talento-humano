@@ -53,8 +53,12 @@
                 <td>
                     {% if notification.status == 'GENERADO' %}
                         <span class="payroll-value-badge">{{ notification.status }}</span>
-                    {% else %}
+                    {% elif notification.status == 'EN_PROCESO' %}
                         <span class="payroll-value-badge-blue">{{ notification.status }}</span>
+                    {% elif notification.status == 'SANCIONADO' %}
+                        <span class="payroll-value-badge-red">{{ notification.status }}</span>
+                    {% else %}
+                        <span class="payroll-value-badge-yellow">{{ notification.status }}</span>
                     {% endif %}
 
                 </td>

@@ -16,6 +16,22 @@ class SanctionType(models.Model):
     description = models.TextField(verbose_name='Descripción', blank=True, null=True)
     is_active = models.BooleanField(verbose_name='Estado', default=True)
     requires_attachment = models.BooleanField(verbose_name='¿Requiere adjunto?', default=False)
+    authority_1 = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sanction_types_auth1', verbose_name='Primera Autoridad'
+    )
+    authority_2 = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sanction_types_auth2', verbose_name='Segunda Autoridad'
+    )
+    reviewer = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sanction_types_reviewer', verbose_name='Revisado por'
+    )
+    register = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sanction_types_register', verbose_name='Registrado por'
+    )
 
     class Meta:
         ordering = ['name']

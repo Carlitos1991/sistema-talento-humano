@@ -1642,13 +1642,14 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
 
         if form.is_valid():
             try:
-                # Usamos una sola transacción para que si algo falla, no se guarde nada a medias
                 with transaction.atomic():
-                    # A. Creamos el objeto sanción pero NO guardamos en DB todavía
                     sanction = form.save(commit=False)
                     sanction.created_by = request.user
 
-                    # B. Lógica de Acción de Personal (Indispensable para el número secuencial)
+                    # 1. Obtener el tipo de sanción y sus firmas predefinidas
+                    st_type = form.cleaned_data['sanction_type']
+
+                    # 2. Lógica de Acción de Personal
                     try:
                         action_type = ActionType.objects.get(code='SANCIONES')
                     except ActionType.DoesNotExist:
@@ -1668,21 +1669,28 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
 
                     action_number = f'{new_num:04d}-{year}'
 
-                    # C. Creamos la Acción de Personal
+                    # 3. Crear Acción de Personal con firmas AUTOMÁTICAS
                     personnel_action = PersonnelAction.objects.create(
                         employee=sanction.employee,
                         action_type=action_type,
                         number=action_number,
                         explanation=sanction.description,
-                        motivation=sanction.legal_basis or 'Sanción disciplinaria según LOSEP',
+                        motivation=sanction.legal_basis or 'Sanción disciplinaria según normativa vigente',
                         date_issue=sanction.incident_date,
                         date_effective=sanction.sanction_date,
+
+                        # ASIGNACIÓN AUTOMÁTICA DESDE EL TIPO
+                        authority_1=st_type.authority_1,
+                        authority_2=st_type.authority_2,
+                        reviewer=st_type.reviewer,
+                        register=st_type.register,
+                        elaboration=request.user,  # Automatizado con el usuario actual
+
                         created_by=request.user
                     )
 
-                    # D. Ahora sí, vinculamos y guardamos la Sanción
                     sanction.personnel_action = personnel_action
-                    sanction.save()  # <-- Aquí se define 'sanction' oficialmente en la base de datos
+                    sanction.save()
 
                     # E. SI VIENE DE LA BANDEJA: Cerramos la notificación
                     if notification_id:
@@ -1697,6 +1705,7 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
                                 curr.complete_assignment(sanction_obj=sanction)
 
                 return JsonResponse({'success': True, 'message': f'Sanción registrada con éxito: {action_number}'})
+
 
             except Exception as e:
                 return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)

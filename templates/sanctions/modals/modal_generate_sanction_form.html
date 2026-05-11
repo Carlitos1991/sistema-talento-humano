@@ -152,65 +152,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Sección 6: Firmas de Responsabilidad -->
-            <div class="section-card-standard border-left-success">
-                <h4 class="section-title">
-                    <i class="fas fa-file-signature text-primary"></i> FIRMAS DE RESPONSABILIDAD
-                </h4>
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Primera Autoridad <span
-                                class="text-danger">*</span></label>
-                        <select name="authority_1" class="js-authority-ajax" required style="width: 100%;">
-                            {% if sanction.personnel_action.authority_1 %}
-                                <option value="{{ sanction.personnel_action.authority_1.id }}"
-                                        selected>{{ sanction.personnel_action.authority_1.get_full_name }}</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Segunda Autoridad</label>
-                        <select name="authority_2" class="js-authority-ajax" style="width: 100%;">
-                            {% if sanction.personnel_action.authority_2 %}
-                                <option value="{{ sanction.personnel_action.authority_2.id }}"
-                                        selected>{{ sanction.personnel_action.authority_2.get_full_name }}</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Revisado Por</label>
-                        <select name="reviewer" class="js-authority-ajax" style="width: 100%;">
-                            {% if sanction.personnel_action.reviewer %}
-                                <option value="{{ sanction.personnel_action.reviewer.id }}"
-                                        selected>{{ sanction.personnel_action.reviewer.get_full_name }}</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Elaborado Por</label>
-                        <select name="elaboration" class="js-authority-ajax" style="width: 100%;">
-                            {% if sanction.personnel_action.elaboration %}
-                                <option value="{{ sanction.personnel_action.elaboration.id }}"
-                                        selected>{{ sanction.personnel_action.elaboration.get_full_name }}</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Registrado Por</label>
-                    <select name="register" class="js-authority-ajax" style="width: 100%;">
-                        {% if sanction.personnel_action.register %}
-                            <option value="{{ sanction.personnel_action.register.id }}"
-                                    selected>{{ sanction.personnel_action.register.get_full_name }}</option>
-                        {% endif %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Sección 7: Adjunto y Observaciones -->
+            <!-- Sección 6: Adjunto y Observaciones -->
             <div class="section-card-standard">
                 <h4 class="section-title">
                     <i class="fas fa-paperclip text-primary"></i> ADJUNTO Y OBSERVACIONES

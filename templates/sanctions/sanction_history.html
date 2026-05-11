@@ -33,6 +33,38 @@
             </div>
         </div>
 
+        <!-- 2. Estadísticas (Filtros Rápidos Clicleables) -->
+        <div class="stats-row">
+            <!-- ASIGNADOS -->
+            <div class="stat-card color-one" onclick="filterPermitsByStatus('all')" id="card-filter-all">
+                <div class="stat-left">
+                    <h3>ASIGNADOS</h3>
+                    <div class="number" id="stat-total">{{ total|default:"0" }}</div>
+                </div>
+                <i class="fa-regular fa-file-lines stat-icon"></i>
+            </div>
+
+            <!-- SANCIONADOS -->
+            <div class="stat-card color-two opacity-low" onclick="filterPermitsByStatus('REQUESTED')"
+                 id="card-filter-requested">
+                <div class="stat-left">
+                    <h3>SANCIONADOS</h3>
+                    <div class="number" id="stat-pendientes">{{ pendientes|default:"0" }}</div>
+                </div>
+                <i class="fa-solid fa-gavel stat-icon"></i>
+            </div>
+
+            <!-- ARCHIVADOS -->
+            <div class="stat-card color-three opacity-low" onclick="filterPermitsByStatus('APPROVED')"
+                 id="card-filter-approved">
+                <div class="stat-left">
+                    <h3>ARCHIVADOS</h3>
+                    <div class="number" id="stat-aprobados">{{ aprobados|default:"0" }}</div>
+                </div>
+                <i class="fa-regular fa-folder-open stat-icon"></i>
+            </div>
+        </div>
+
         <div class="sanctions-tab-pane is-active" data-sanctions-pane="notifications">
             <div class="content-table">
                 <div id="notifications-filter-form" class="table-controls sanctions-notifications-filters">
@@ -85,5 +117,5 @@
             };
         {% endif %}
     </script>
-    <script src="{% static 'js/sanctions/sanction_history.js' %}"></script> 
+    <script src="{% static 'js/sanctions/sanction_history.js' %}"></script>
 {% endblock %}

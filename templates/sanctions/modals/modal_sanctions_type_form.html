@@ -1,5 +1,12 @@
 <div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
-    <form id="modalForm" method="post" action="{% if form.instance.pk %}{% url 'sanctions:sanction_type_update' form.instance.pk %}{% else %}{% url 'sanctions:sanction_type_create' %}{% endif %}">
+    <form id="modalForm" method="post" action="
+
+
+
+
+
+            
+            {% if form.instance.pk %}{% url 'sanctions:sanction_type_update' form.instance.pk %}{% else %}{% url 'sanctions:sanction_type_create' %}{% endif %}">
         {% csrf_token %}
 
         <!-- HEADER con estilo gradient -->
@@ -45,7 +52,8 @@
             <div class="grid-2-cols">
                 <!-- Toggle 1: Requiere Adjunto -->
                 <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Requiere Adjunto?</label>
+                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Requiere
+                        Adjunto?</label>
                     <label class="toggle-switch">
                         {{ form.requires_attachment }}
                         <span class="toggle-slider"></span>
@@ -60,6 +68,33 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+            </div>
+            <div class="section-title mt-3">
+                <i class="fa-solid fa-sliders"></i> Firmas Autorizadas
+            </div>
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label for="{{ form.authority_1.id_for_label }}">
+                    Firma 1
+                </label>
+                {{ form.authority_1 }}
+            </div>
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label for="{{ form.authority_2.id_for_label }}">
+                    Firma 2
+                </label>
+                {{ form.authority_2 }}
+            </div>
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label for="{{ form.authority_2.id_for_label }}">
+                    Revisado
+                </label>
+                {{ form.reviewer }}
+            </div>
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                <label for="{{ form.authority_2.id_for_label }}">
+                    Registrado
+                </label>
+                {{ form.register }}
             </div>
         </div>
 

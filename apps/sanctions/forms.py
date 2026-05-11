@@ -1,7 +1,7 @@
 from django import forms
-from .models import SanctionNotificationType, SanctionNotification, SanctionNotificationMapping, SanctionNotificationTypeMapping, SanctionType, Sanction
+from .models import SanctionNotificationType, SanctionNotification, SanctionNotificationMapping, \
+    SanctionNotificationTypeMapping, SanctionType, Sanction
 from employee.models import Employee
-
 
 MONTH_CHOICES = [
     ('', 'Seleccione...'),
@@ -23,19 +23,26 @@ MONTH_CHOICES = [
 class SanctionTypeForm(forms.ModelForm):
     class Meta:
         model = SanctionType
-        fields = ['name', 'description', 'is_active', 'requires_attachment']
+        fields = [
+            'name', 'description', 'is_active', 'requires_attachment',
+            'authority_1', 'authority_2', 'reviewer', 'register'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={
-                'class': 'input-field', 
+                'class': 'input-field',
                 'placeholder': 'Ej. Amonestación Escrita'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'input-field', 
+                'class': 'input-field',
                 'rows': 3,
                 'placeholder': 'Descripción del tipo de sanción'
             }),
             'is_active': forms.CheckboxInput(),
             'requires_attachment': forms.CheckboxInput(),
+            'authority_1': forms.Select(attrs={'class': 'form-select select2'}),
+            'authority_2': forms.Select(attrs={'class': 'form-select select2'}),
+            'reviewer': forms.Select(attrs={'class': 'form-select select2'}),
+            'register': forms.Select(attrs={'class': 'form-select select2'}),
         }
 
 
@@ -146,8 +153,10 @@ class SanctionNotificationForm(forms.ModelForm):
         if authorities is not None:
             self.fields['authority_1'].queryset = authorities
             self.fields['authority_2'].queryset = authorities
-            self.fields['authority_1'].label_from_instance = lambda obj: f"{obj.signature_name} - {obj.signature_position}"
-            self.fields['authority_2'].label_from_instance = lambda obj: f"{obj.signature_name} - {obj.signature_position}"
+            self.fields['authority_1'].label_from_instance = lambda \
+                obj: f"{obj.signature_name} - {obj.signature_position}"
+            self.fields['authority_2'].label_from_instance = lambda \
+                obj: f"{obj.signature_name} - {obj.signature_position}"
 
         self.fields['notification_type'].empty_label = 'Seleccione...'
         self.fields['authority_1'].empty_label = 'Seleccione...'
@@ -243,7 +252,7 @@ class SanctionForm(forms.ModelForm):
         self.fields['start_date'].required = False
         self.fields['end_date'].required = False
         self.fields['days'].required = False
-        
+
         # Format dates for input type="date" (YYYY-MM-DD) when editing
         if self.instance and self.instance.pk:
             if self.instance.incident_date:
