@@ -455,6 +455,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pageInfo) {
             pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
         }
+        
+        // Actualizar el input de página
+        const pageInput = document.getElementById('notifications-page-input');
+        if (pageInput) {
+            pageInput.value = paginationData.current_page;
+            pageInput.max = paginationData.total_pages;
+        }
+        
+        // Actualizar estado de botones
+        const btnFirst = document.getElementById('btn-first');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const btnLast = document.getElementById('btn-last');
+        
+        if (btnFirst) btnFirst.disabled = !paginationData.has_previous;
+        if (btnPrev) btnPrev.disabled = !paginationData.has_previous;
+        if (btnNext) btnNext.disabled = !paginationData.has_next;
+        if (btnLast) btnLast.disabled = !paginationData.has_next;
     }
 
     function executeAction(url, formData = new FormData()) {
