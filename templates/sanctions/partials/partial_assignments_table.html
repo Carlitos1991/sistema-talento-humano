@@ -33,9 +33,15 @@
                         <small class="text-muted">{{ notification.month_label }} {{ notification.year }}</small>
                     </td>
                     <td>
-                        <span class="badge-status {{ notification.status|lower }}">
-                            {{ notification.get_status_display }}
-                        </span>
+                        {% if notification.get_status_display == 'Generado' %}
+                            <span class="payroll-value-badge">{{ notification.get_status_display }}</span>
+                        {% elif notification.get_status_display == 'En proceso' %}
+                            <span class="payroll-value-badge-blue">{{ notification.get_status_display }}</span>
+                        {% elif notification.get_status_display == 'Sancionado' %}
+                            <span class="payroll-value-badge-red">{{ notification.get_status_display }}</span>
+                        {% else %}
+                            <span class="payroll-value-badge-yellow">{{ notification.get_status_display }}</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if current_assign %}
@@ -56,7 +62,8 @@
                         {% endif %}
                     </td>
                     <td class="actions">
-                        <div class="actions-wrapper" style="justify-content: center; gap: 8px; align-items: flex-start;">
+                        <div class="actions-wrapper"
+                             style="justify-content: center; gap: 8px; align-items: flex-start;">
                             <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 34px; overflow: visible;">
                                 <button type="button" class="btn-success-action js-btn-notification-history"
                                         data-employee-id="{{ notification.employee_id }}"
