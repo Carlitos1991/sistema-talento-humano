@@ -1858,7 +1858,9 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    form.save()
+                    personnel_action = form.save(commit=False)
+                    personnel_action.elaboration = request.user
+                    personnel_action.save()
                     return JsonResponse({
                         'success': True,
                         'message': f'Acción de Personal {personnel_action.number} actualizada con éxito'

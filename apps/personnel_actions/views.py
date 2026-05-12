@@ -679,8 +679,7 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        if not self.object.elaboration:
-            self.object.elaboration = self.object.created_by or self.request.user
+        self.object.elaboration = self.request.user
         self.object.save()
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -813,7 +812,8 @@ class ActionRegisterView(LoginRequiredMixin, View):
                         )
 
                 action.is_registered = True
-                action.save(update_fields=['is_registered'])
+                action.register = request.user
+                action.save(update_fields=['is_registered', 'register'])
         except Exception as e:
             return JsonResponse({
                 'success': False,
