@@ -81,9 +81,8 @@
                                         title="Archivar">
                                     <i class="fa-solid fa-box-archive"></i>
                                 </button>
-                                <button class="btn-info-action js-btn-sancionar"
-                                        data-id="{{ notification.employee_id }}"
-                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                <button type="button" class="btn-info-action js-btn-route-tramite"
+                                        data-notification-id="{{ notification.pk }}" title="Ruta del Trámite">
                                     <i class="fa-solid fa-timeline"></i>
                                 </button>
 
@@ -98,17 +97,15 @@
                                         <i class="fa-solid fa-file-circle-plus"></i>
                                     </button>
                                 {% endif %}
-                                <button class="btn-info-action js-btn-sancionar"
-                                        data-id="{{ notification.employee_id }}"
-                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                <button type="button" class="btn-info-action js-btn-route-tramite"
+                                        data-notification-id="{{ notification.pk }}" title="Ruta del Trámite">
                                     <i class="fa-solid fa-timeline"></i>
                                 </button>
                             </div>
                         {% elif notification.status == 'ARCHIVADO' %}
                             <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
-                                <button class="btn-info-action js-btn-sancionar"
-                                        data-id="{{ notification.employee_id }}"
-                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                <button type="button" class="btn-info-action js-btn-route-tramite"
+                                        data-notification-id="{{ notification.pk }}" title="Ruta del Trámite">
                                     <i class="fa-solid fa-timeline"></i>
                                 </button>
                             </div>

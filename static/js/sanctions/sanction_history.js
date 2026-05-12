@@ -126,6 +126,34 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function openRouteTramiteModal(notificationId) {
+        if (!notificationId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Trámite no disponible',
+                text: 'No se encontró la notificación para mostrar la ruta del trámite.'
+            });
+            return;
+        }
+
+        fetch(`/sanctions/notifications/${notificationId}/route/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('No se pudo cargar la ruta del trámite');
+                }
+                return res.text();
+            })
+            .then(html => {
+                if (safeSetHTML('modal-dynamic-content', html)) {
+                    openModal('customModal');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar la ruta del trámite.'});
+            });
+    }
+
     function handleSanctionFormSubmit(e) {
         e.preventDefault();
 
@@ -409,6 +437,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll('.js-btn-edit-personnel-action').forEach(btn => {
             btn.onclick = () => openEditPersonnelActionModal(btn.dataset.actionId);
+        });
+
+        document.querySelectorAll('.js-btn-route-tramite').forEach(btn => {
+            btn.onclick = () => openRouteTramiteModal(btn.dataset.notificationId);
         });
 
         document.querySelectorAll('.js-assign-notification').forEach(btn => {

@@ -2568,3 +2568,41 @@ class ActionsHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
         )
 
         return JsonResponse({'success': True, 'html': html})
+
+
+class NotificationRouteHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Devuelve el modal con la ruta del trámite de una notificación."""
+    permission_required = 'sanctions.view_sanctionnotification'
+
+    def get(self, request, pk):
+        notification = get_object_or_404(
+            SanctionNotification.objects.select_related('employee__person'),
+            pk=pk
+        )
+
+        assignments = notification.assignment_history.select_related(
+            'assigned_to',
+            'assigned_by',
+            'sanction__personnel_action'
+        ).order_by('start_date', 'created_at')
+
+        final_sanction = None
+        for assignment in assignments:
+            if assignment.sanction_id:
+                final_sanction = assignment.sanction
+
+        personnel_action = final_sanction.personnel_action if final_sanction else None
+
+        context = {
+            'notification': notification,
+            'assignments': assignments,
+            'final_sanction': final_sanction,
+            'personnel_action': personnel_action,
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_notification_route_history.html',
+            context,
+            request=request
+        )
+        return HttpResponse(html)

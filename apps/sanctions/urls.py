@@ -67,6 +67,8 @@ urlpatterns = [
     path('notifications/massive-return/', views.MassiveReturnNotificationView.as_view(),
          name='massive_return_notifications'),
     path('notifications/<int:pk>/archive/', views.ArchiveNotificationView.as_view(), name='notification_archive'),
+    path('notifications/<int:pk>/route/', views.NotificationRouteHistoryAjaxView.as_view(),
+         name='notification_route_history'),
     
     # --- History AJAX Views ---
     path('history/sanction-ajax/', views.SanctionHistoryAjaxView.as_view(), name='sanction_history_ajax'),
