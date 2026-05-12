@@ -1,0 +1,93 @@
+<div class="modal-container-large shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal" data-modal="notificationHistoryModal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera Compacta -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h2 class="header-title-main">
+                Historial de Notificaciones
+            </h2>
+        </div>
+    </div>
+
+    <!-- Cuerpo con Scroll -->
+    <div class="modal-body-scrolled">
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-user text-primary"></i> Empleado: <strong>{{ employee.person.full_name }}</strong>
+            </h4>
+            <div style="margin-top: 1.5rem;">
+                <table class="table table-striped" style="margin-bottom: 0; font-size: 0.9rem;">
+                    <thead class="table-header-style">
+                    <tr>
+                        <th style="width: 12%;">Fecha</th>
+                        <th style="width: 12%;">Período</th>
+                        <th style="width: 15%;">Concepto</th>
+                        <th style="width: 15%;">Responsable</th>
+                        <th style="width: 12%;">Estado</th>
+                        <th style="width: 10%;">Imprimir</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for notification in notifications %}
+                        <tr>
+                            <td>{{ notification.created_at|date:"d/m/Y" }}</td>
+                            <td>
+                                <small>{{ notification.month_label }} {{ notification.year }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-info">{{ notification.notification_type.name }}</span>
+                            </td>
+                            <td>
+                                {% if notification.current_assignment %}
+                                    <small>{{ notification.current_assignment.assigned_to.get_full_name }}</small>
+                                {% else %}
+                                    <small class="text-muted">Sin asignar</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status {{ notification.status|lower }}">
+                                    {{ notification.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
+                                   class="btn btn-sm btn-info-action" title="Imprimir Notificación"
+                                   target="_blank" rel="noopener noreferrer">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                                <p>No hay notificaciones registradas para este empleado</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if notifications %}
+                    <div style="padding: 1rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; text-align: right;">
+                        <small class="text-muted">Total de notificaciones: <strong>{{ notifications|length }}</strong></small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie Modal -->
+    <div class="modal-footer-refined">
+        <button type="button" class="btn-cancel" data-modal="notificationHistoryModal">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+</div>

@@ -73,4 +73,5 @@ urlpatterns = [
     # --- History AJAX Views ---
     path('history/sanction-ajax/', views.SanctionHistoryAjaxView.as_view(), name='sanction_history_ajax'),
     path('history/actions-ajax/', views.ActionsHistoryAjaxView.as_view(), name='actions_history_ajax'),
+     path('history/notifications-ajax/', views.NotificationHistoryAjaxView.as_view(), name='notification_history_ajax'),
 ]

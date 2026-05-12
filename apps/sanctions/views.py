@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, Count, OuterRef, Subquery
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
@@ -48,6 +48,46 @@ class JSONResponseMixin:
             html = render_to_string(self.partial_template_name, context, request=self.request)
             return JsonResponse({'html': html})
         return super().render_to_response(context, **response_kwargs)
+
+
+class NotificationHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    AJAX view para obtener el historial de notificaciones de un empleado.
+    Parámetros GET:
+    - employee_id: ID del empleado
+    """
+    permission_required = 'sanctions.view_sanctionnotification'
+
+    def get(self, request):
+        employee_id = request.GET.get('employee_id')
+        if not employee_id:
+            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+
+        try:
+            employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
+        except Employee.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+
+        # Obtener todas las notificaciones del empleado
+        notifications = SanctionNotification.objects.filter(
+            employee=employee
+        ).select_related(
+            'notification_type', 'employee__person'
+        ).prefetch_related('assignment_history').order_by('-created_at')
+
+        context = {
+            'notifications': notifications,
+            'employee': employee,
+            'total_count': notifications.count(),
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_notification_history_table.html',
+            context,
+            request=request
+        )
+
+        return JsonResponse({'success': True, 'html': html})
 
 
 def _notification_type_modal_context(notification_type=None, form=None):
@@ -1629,7 +1669,25 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                 Q(employee__person__last_name__icontains=search_q) |
                 Q(employee__person__document_number__icontains=search_q)
             )
-        return queryset.order_by('-updated_at')
+
+        notification_total_sq = SanctionNotification.objects.filter(
+            employee_id=OuterRef('employee_id')
+        ).values('employee_id').annotate(
+            total=Count('id')
+        ).values('total')[:1]
+
+        sanction_actions_total_sq = PersonnelAction.objects.filter(
+            employee_id=OuterRef('employee_id'),
+            action_type__code='SANCIONES',
+            is_registered=True,
+        ).values('employee_id').annotate(
+            total=Count('id')
+        ).values('total')[:1]
+
+        return queryset.annotate(
+            employee_notifications_total=Subquery(notification_total_sq),
+            employee_sanction_actions_total=Subquery(sanction_actions_total_sq),
+        ).order_by('-updated_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1824,7 +1882,7 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
     permission_required = 'sanctions.change_sanction'
 
     def dispatch(self, request, *args, **kwargs):
-        if not (request.user.has_perm('sanctions.change_sanction') or 
+        if not (request.user.has_perm('sanctions.change_sanction') or
                 request.user.has_perm('personnel_actions.change_personnelaction')):
             return JsonResponse({'success': False, 'message': 'Permiso denegado'}, status=403)
         return super().dispatch(request, *args, **kwargs)
@@ -1832,7 +1890,7 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
     def get(self, request, pk):
         """Mostrar el formulario en un modal"""
         from .forms import EditPersonnelActionSanctionForm
-        
+
         personnel_action = get_object_or_404(PersonnelAction, pk=pk)
         form = EditPersonnelActionSanctionForm(instance=personnel_action)
 
@@ -1851,7 +1909,7 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
     def post(self, request, pk):
         """Guardar los datos de la Acción de Personal"""
         from .forms import EditPersonnelActionSanctionForm
-        
+
         personnel_action = get_object_or_404(PersonnelAction, pk=pk)
         form = EditPersonnelActionSanctionForm(request.POST, instance=personnel_action)
 
@@ -1863,7 +1921,8 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
                     personnel_action.save()
 
                     if personnel_action.motivation and personnel_action.explanation:
-                        sanction = personnel_action.related_sanctions.select_related('employee').order_by('-created_at').first()
+                        sanction = personnel_action.related_sanctions.select_related('employee').order_by(
+                            '-created_at').first()
                         if sanction:
                             notification = SanctionNotification.objects.filter(
                                 assignment_history__sanction=sanction
@@ -1885,7 +1944,6 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
                 return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
 
 
 class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

@@ -246,10 +246,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    window.openSanctionHistoryModal = function (employeeId) {
+    window.openNotificationHistoryModal = function (employeeId) {
         if (!employeeId) return;
 
-        const url = `/sanctions/history/sanction-ajax/?employee_id=${employeeId}`;
+        const url = `/sanctions/history/notifications-ajax/?employee_id=${employeeId}`;
 
         fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => {
@@ -257,17 +257,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 return res.json();
             })
             .then(data => {
-                const container = document.getElementById('sanction-history-content');
+                const container = document.getElementById('notification-history-content');
                 if (container && data.success) {
                     container.innerHTML = data.html;
-                    openModal('sanctionHistoryModal');
+                    openModal('notificationHistoryModal');
+                    bindEvents();
                 }
             })
             .catch(err => {
                 console.error(err);
-                Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar el historial de sanciones.'});
+                Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar el historial de notificaciones.'});
             });
     };
+
+    window.openSanctionHistoryModal = window.openNotificationHistoryModal;
 
     window.openActionsHistoryModal = function (employeeId) {
         if (!employeeId) return;
@@ -467,8 +470,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // 2. Botones de Historiales
-        document.querySelectorAll('.js-btn-sanction-history').forEach(btn => {
-            btn.onclick = () => window.openSanctionHistoryModal(btn.dataset.employeeId);
+        document.querySelectorAll('.js-btn-notification-history').forEach(btn => {
+            btn.onclick = () => window.openNotificationHistoryModal(btn.dataset.employeeId);
         });
 
         document.querySelectorAll('.js-btn-actions-history').forEach(btn => {
