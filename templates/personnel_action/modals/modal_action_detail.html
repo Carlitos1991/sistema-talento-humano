@@ -78,28 +78,28 @@
                 <div class="form-group">
                     <label class="form-label">Motivación</label>
                     <p class="form-control-static">{{ action.motivation }}</p>
-                </div>
+                        {{ action.reviewer.signature_position }}{% endif %}</p>
             {% endif %}
             {% if action.explanation %}
                 <div class="form-group">
                     <label class="form-label">Explicación</label>
                     <p class="form-control-static" style="white-space: pre-wrap;">{{ action.explanation }}</p>
-                </div>
-            {% endif %}
+                    <p class="form-control-static">{{ action.authority_1.signature_name }}{% if action.authority_1.signature_position %} -
+                        {{ action.authority_1.signature_position }}{% endif %}</p>
         </div>
     {% endif %}
     <!-- 4. movimientos -->
     <div class="form-section-card mt-3">
         <h5 class="section-title">
-            <i class="fa-solid fa-code-compare"></i> MOVIMIENTO
-        </h5>
+                    <p class="form-control-static">{{ action.authority_2.signature_name }}{% if action.authority_2.signature_position %} -
+                        {{ action.authority_2.signature_position }}{% endif %}</p>
         <div class="grid-2-cols">
             <div class="form-group">
                 <label class="form-label">Unidad Actual</label>
                 <p class="form-control-static">
                     {{ history_action.previous_unit }}</p>
-            </div>
-            <div class="form-group">
+                    <p class="form-control-static">{{ action.register.signature_name }}{% if action.register.signature_position %} -
+                        {{ action.register.signature_position }}{% endif %}</p>
                 <label class="form-label">Unidad Propuesta</label>
                 <p class="form-control-static">
                     {{ history_action.new_unit }}</p>
@@ -136,29 +136,29 @@
             {% if action.reviewer %}
                 <div class="form-group">
                     <label class="form-label">Revisado Por</label>
-                    <p class="form-control-static">{{ action.reviewer.name }}{% if action.reviewer.position %} -
-                        {{ action.reviewer.position }}{% endif %}</p>
+                    <p class="form-control-static">{{ action.reviewer.signature_name }}{% if action.reviewer.signature_position %} -
+                        {{ action.reviewer.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.authority_1 %}
                 <div class="form-group">
                     <label class="form-label">Aprobado Por</label>
-                    <p class="form-control-static">{{ action.authority_1.name }}{% if action.authority_1.position %} -
-                        {{ action.authority_1.position }}{% endif %}</p>
+                    <p class="form-control-static">{{ action.authority_1.signature_name }}{% if action.authority_1.signature_position %} -
+                        {{ action.authority_1.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.authority_2 %}
                 <div class="form-group">
                     <label class="form-label">Autorizado Por</label>
-                    <p class="form-control-static">{{ action.authority_2.name }}{% if action.authority_2.position %} -
-                        {{ action.authority_2.position }}{% endif %}</p>
+                    <p class="form-control-static">{{ action.authority_2.signature_name }}{% if action.authority_2.signature_position %} -
+                        {{ action.authority_2.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.register %}
                 <div class="form-group">
                     <label class="form-label">Registrado Por</label>
-                    <p class="form-control-static">{{ action.register.name }}{% if action.register.position %} -
-                        {{ action.register.position }}{% endif %}</p>
+                    <p class="form-control-static">{{ action.register.signature_name }}{% if action.register.signature_position %} -
+                        {{ action.register.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
         </div>
