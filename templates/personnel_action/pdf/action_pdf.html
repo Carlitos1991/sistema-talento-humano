@@ -217,7 +217,9 @@
                             {% if action.action_type.name in standard_action_types %}
                                 [ ] OTRO (_________________________________________________________)
                             {% else %}
-                                [X] OTRO (&nbsp;<span style="display:inline-block; min-width: 240px; text-align: center; border-bottom: 1px dotted #000; line-height: 1; padding: 0 6px;">{{ action.action_type.name }}</span>&nbsp;)
+                                [X] OTRO (&nbsp;
+                                <span style="display:inline-block; min-width: 240px; text-align: center; border-bottom: 1px dotted #000; line-height: 1; padding: 0 6px;">{{ action.action_type.name }}</span>
+                                &nbsp;)
                             {% endif %}
                         </td>
                     </tr>
@@ -314,8 +316,8 @@
             <td COLSPAN="2">RESPONSABLES DE APROBACIÓN</td>
         </tr>
         <tr class="bg-gray bold text-center">
-            <td>RESPONSABLE DE TALENTO HUMANO</td>
             <td>AUTORIDAD NOMINADORA O DELEGADO</td>
+            <td>RESPONSABLE DE TALENTO HUMANO</td>
         </tr>
         <tr>
             <td style="height: 80px; vertical-align: bottom;">

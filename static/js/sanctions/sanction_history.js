@@ -86,6 +86,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 closeModal(modalId);
             }
         }
+        
+        // Manejador específico para cerrar el modal de detalle de acción
+        const closeDetailBtn = e.target.closest('.js-close-detail-modal');
+        if (closeDetailBtn) {
+            closeModal('actionDetailModal');
+        }
     });
 
     // --- ACCIONES ---
@@ -278,6 +284,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (container && data.success) {
                     container.innerHTML = data.html;
                     openModal('actionsHistoryModal');
+                    
+                    // Agregar manejador para botones de detalle dentro del modal
+                    container.querySelectorAll('.js-view-detail-action').forEach(btn => {
+                        btn.onclick = (e) => {
+                            e.preventDefault();
+                            const actionId = btn.dataset.actionId;
+                            openActionDetailModal(actionId);
+                        };
+                    });
                 }
             })
             .catch(err => {
@@ -285,6 +300,36 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar el historial de acciones.'});
             });
     };
+
+    function openActionDetailModal(actionId) {
+        if (!actionId) {
+            Swal.fire({icon: 'warning', title: 'Error', text: 'No se encontró la acción.'});
+            return;
+        }
+
+        fetch(`/personnel_actions/${actionId}/detail/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(async res => {
+                const contentType = (res.headers.get('content-type') || '').toLowerCase();
+                if (contentType.includes('application/json')) {
+                    const data = await res.json();
+                    return data && data.html ? data.html : '';
+                }
+                return await res.text();
+            })
+            .then(html => {
+                const detailModal = document.getElementById('actionDetailModal');
+                const detailContent = document.getElementById('action-detail-modal-content');
+                if (detailModal && detailContent) {
+                    detailContent.innerHTML = html;
+                    detailModal.classList.remove('hidden');
+                    document.body.classList.add('modal-open');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar el detalle de la acción.'});
+            });
+    }
 
     function initModalPlugins() {
         // ✅ FIX 4: El select en modal_assign_notification.html tiene id="select-responsible-ajax",

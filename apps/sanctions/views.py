@@ -1861,6 +1861,22 @@ class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
                     personnel_action = form.save(commit=False)
                     personnel_action.elaboration = request.user
                     personnel_action.save()
+
+                    if personnel_action.motivation and personnel_action.explanation:
+                        sanction = personnel_action.related_sanctions.select_related('employee').order_by('-created_at').first()
+                        if sanction:
+                            notification = SanctionNotification.objects.filter(
+                                assignment_history__sanction=sanction
+                            ).order_by('-created_at').first()
+
+                            if notification:
+                                current_assignment = notification.current_assignment
+                                if current_assignment:
+                                    current_assignment.complete_assignment(sanction_obj=sanction)
+
+                                notification.status = 'SANCIONADO'
+                                notification.save(update_fields=['status'])
+
                     return JsonResponse({
                         'success': True,
                         'message': f'Acción de Personal {personnel_action.number} actualizada con éxito'

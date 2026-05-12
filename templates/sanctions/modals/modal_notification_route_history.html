@@ -82,6 +82,7 @@
             <div class="p-3 bg-light rounded">
                 {% if final_sanction %}
                     <div><strong>Sanción:</strong> Registrada (ID {{ final_sanction.id }})</div>
+                    <div><strong>Estado de la notificación:</strong> {{ notification.status }}</div>
                     {% if personnel_action %}
                         <div><strong>Acción de Personal:</strong> {{ personnel_action.number }}</div>
                         <div>
@@ -92,6 +93,11 @@
                                 Pendiente de completar fechas/motivación/explicación
                             {% endif %}
                         </div>
+                        {% if notification.current_assignment %}
+                            <div><strong>Ruta:</strong> En curso</div>
+                        {% else %}
+                            <div><strong>Ruta:</strong> Cerrada</div>
+                        {% endif %}
                     {% else %}
                         <div><strong>Acción de Personal:</strong> No generada</div>
                     {% endif %}

@@ -54,10 +54,10 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <a href="{% url 'personnel_actions:action_detail' action.pk %}" target="_blank"
-                                   class="btn btn-sm btn-info-action" title="Ver detalles">
+                                <button type="button" class="btn btn-sm btn-info-action js-view-detail-action"
+                                   data-action-id="{{ action.pk }}" title="Ver detalles">
                                     <i class="fa-solid fa-eye"></i>
-                                </a>
+                                </button>
                             </td>
                         </tr>
                     {% empty %}
