@@ -246,6 +246,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const actionId = editActionBtn.dataset.actionId;
                 openEditPersonnelActionModal(actionId);
             }
+
+            // Detectar clic en el botón de ver ruta del trámite
+            const routeBtn = e.target.closest('.js-btn-route-tramite');
+            if (routeBtn) {
+                e.preventDefault();
+                openRouteTramiteModal(routeBtn.dataset.notificationId);
+            }
         });
     }
 
@@ -449,6 +456,26 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function openRouteTramiteModal(notificationId) {
+        if (!notificationId) {
+            console.error('notificationId es requerido');
+            return;
+        }
+
+        fetch(`/sanctions/notifications/${notificationId}/route/`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.text())
+            .then(html => {
+                modalContentContainer.innerHTML = html;
+                modalOverlay.classList.remove('hidden');
+                document.body.classList.add('modal-open');
+            })
+            .catch(err => {
+                console.error('Error al abrir ruta del trámite:', err);
+                Swal.fire('Error', 'No se pudo cargar la ruta del trámite', 'error');
+            });
+    }
 
     function closeModal() {
         modalOverlay.classList.add('hidden');

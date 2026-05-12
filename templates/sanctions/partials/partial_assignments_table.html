@@ -91,11 +91,24 @@
                         {% elif notification.status == 'SANCIONADO' %}
                             <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
                                 {% if current_assign and current_assign.sanction and current_assign.sanction.personnel_action_id %}
-                                    <button type="button" class="btn-create-action js-btn-edit-personnel-action"
-                                            data-action-id="{{ current_assign.sanction.personnel_action_id }}"
-                                            title="Elaborar Acción de personal">
-                                        <i class="fa-solid fa-file-circle-plus"></i>
-                                    </button>
+                                    {% if current_assign.sanction.personnel_action.motivation and current_assign.sanction.personnel_action.explanation %}
+                                        <button type="button" class="btn-create-action js-btn-edit-personnel-action"
+                                                data-action-id="{{ current_assign.sanction.personnel_action_id }}"
+                                                title="Editar Acción de Personal">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <a href="{% url 'personnel_actions:action_pdf' current_assign.sanction.personnel_action_id %}"
+                                           class="btn-info-action" title="Imprimir Acción de Personal"
+                                           target="_blank" rel="noopener noreferrer">
+                                            <i class="fa-solid fa-print"></i>
+                                        </a>
+                                    {% else %}
+                                        <button type="button" class="btn-create-action js-btn-edit-personnel-action"
+                                                data-action-id="{{ current_assign.sanction.personnel_action_id }}"
+                                                title="Elaborar Acción de personal">
+                                            <i class="fa-solid fa-file-circle-plus"></i>
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
                                 <button type="button" class="btn-info-action js-btn-route-tramite"
                                         data-notification-id="{{ notification.pk }}" title="Ruta del Trámite">

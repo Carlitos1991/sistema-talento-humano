@@ -1,0 +1,110 @@
+<div class="modal-container-large modal-compact shadow-card">
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-timeline"></i>
+            </div>
+            <h2 class="header-title-main">Ruta del Trámite</h2>
+        </div>
+    </div>
+
+    <div class="modal-body-scrolled">
+        <div class="section-card-standard border-left-primary">
+            <h4 class="section-title">
+                <i class="fas fa-user text-primary"></i> EMPLEADO
+            </h4>
+            <div class="p-3 bg-light rounded">
+                <strong>{{ notification.employee.person.full_name }}</strong><br>
+                <small class="text-muted">CI: {{ notification.employee.person.document_number }}</small>
+            </div>
+        </div>
+
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-route text-primary"></i> TRAZABILIDAD DE ASIGNACIONES
+            </h4>
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Responsable</th>
+                        <th>Asignado por</th>
+                        <th>Recepción</th>
+                        <th>Despacho</th>
+                        <th>Días</th>
+                        <th>Estado</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in assignments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.assigned_to.get_full_name }}</td>
+                            <td>{{ item.assigned_by.get_full_name }}</td>
+                            <td>{{ item.start_date|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if item.end_date %}
+                                    {{ item.end_date|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="badge badge-warning">En curso</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.duration_days }}</td>
+                            <td>
+                                {% if item.is_current %}
+                                    <span class="badge badge-info">Actual</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Cerrada</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No hay historial de asignaciones disponible.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card-standard">
+            <h4 class="section-title">
+                <i class="fas fa-file-circle-plus text-primary"></i> ESTADO FINAL
+            </h4>
+            <div class="p-3 bg-light rounded">
+                {% if final_sanction %}
+                    <div><strong>Sanción:</strong> Registrada (ID {{ final_sanction.id }})</div>
+                    {% if personnel_action %}
+                        <div><strong>Acción de Personal:</strong> {{ personnel_action.number }}</div>
+                        <div>
+                            <strong>Elaboración:</strong>
+                            {% if personnel_action.date_issue and personnel_action.date_effective %}
+                                Completada
+                            {% else %}
+                                Pendiente de completar fechas/motivación/explicación
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div><strong>Acción de Personal:</strong> No generada</div>
+                    {% endif %}
+                {% else %}
+                    <div><strong>Sanción:</strong> Aún no registrada</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer-refined">
+        <button type="button" class="btn-cancel js-close-modal">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+</div>
