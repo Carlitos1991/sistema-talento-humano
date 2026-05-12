@@ -1606,7 +1606,7 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         )
         # 2. PRIVACIDAD: Si no es staff, solo ve lo que tiene asignado (vía assignment_history)
         if not self.request.user.is_staff:
-            queryset = queryset.filter(assignment_history__assigned_to=self.request.user).distinct()
+            queryset = queryset.filter(assignment_history__assigned_to=self.request.user)
         return queryset
 
     def get_queryset(self):
@@ -1698,14 +1698,14 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
     def get(self, request):
         employee_id = request.GET.get('employee_id')
         employee = get_object_or_404(Employee, pk=employee_id)
+        notification_id = request.GET.get('notification_id', '')
 
-        form = SanctionForm(initial={'employee': employee})
-        authorities = User.objects.filter(is_active=True).order_by('username')
+        form = SanctionForm()
 
         context = {
             'form': form,
             'employee': employee,
-            'authorities': authorities
+            'notification_id': notification_id
         }
 
         html = render_to_string(
@@ -1717,18 +1717,30 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
 
     def post(self, request):
         form = SanctionForm(request.POST, request.FILES)
+        employee_id = request.POST.get('employee')
         notification_id = request.POST.get('notification_id')
+        assigned_to_id = request.POST.get('assigned_to')
+
+        if notification_id and not assigned_to_id:
+            return JsonResponse(
+                {'success': False, 'message': 'Debe seleccionar un responsable para elaborar la Acción de Personal.'},
+                status=400
+            )
 
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    # 1. Crear la Sanción con los campos básicos
                     sanction = form.save(commit=False)
+                    sanction.employee_id = employee_id
                     sanction.created_by = request.user
+                    # Los campos de fecha y descripción quedarán sin llenar por ahora
+                    sanction.save()
 
-                    # 1. Obtener el tipo de sanción y sus firmas predefinidas
-                    st_type = form.cleaned_data['sanction_type']
+                    # 2. Obtener el tipo de sanción para copiar sus firmas
+                    st_type = sanction.sanction_type
 
-                    # 2. Lógica de Acción de Personal
+                    # 3. Crear Acción de Personal con firmas predefinidas del tipo
                     try:
                         action_type = ActionType.objects.get(code='SANCIONES')
                     except ActionType.DoesNotExist:
@@ -1736,6 +1748,7 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
                             {'success': False, 'message': 'Error: El tipo de acción "SANCIONES" no existe.'},
                             status=400)
 
+                    # Generar número único de acción
                     year = datetime.now().year
                     last_action = PersonnelAction.objects.filter(number__endswith=f'-{year}').order_by(
                         '-created_at').first()
@@ -1748,48 +1761,113 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
 
                     action_number = f'{new_num:04d}-{year}'
 
-                    # 3. Crear Acción de Personal con firmas AUTOMÁTICAS
+                    # 4. Crear PersonnelAction con firmas del tipo de sanción (los demás campos quedarán pendientes)
                     personnel_action = PersonnelAction.objects.create(
-                        employee=sanction.employee,
+                        employee_id=employee_id,
                         action_type=action_type,
                         number=action_number,
-                        explanation=sanction.description,
-                        motivation=sanction.legal_basis or 'Sanción disciplinaria según normativa vigente',
-                        date_issue=sanction.incident_date,
-                        date_effective=sanction.sanction_date,
-
-                        # ASIGNACIÓN AUTOMÁTICA DESDE EL TIPO
+                        # Campos que se completarán después:
+                        date_issue=None,  # Se completará en "Elaborar Acción"
+                        date_effective=None,  # Se completará en "Elaborar Acción"
+                        motivation=None,  # Se completará en "Elaborar Acción"
+                        explanation=None,  # Se completará en "Elaborar Acción"
+                        # Firmas predefinidas del tipo de sanción
                         authority_1=st_type.authority_1,
                         authority_2=st_type.authority_2,
                         reviewer=st_type.reviewer,
                         register=st_type.register,
-                        elaboration=request.user,  # Automatizado con el usuario actual
-
+                        elaboration=request.user,
                         created_by=request.user
                     )
 
+                    # 5. Vincular la acción de personal a la sanción
                     sanction.personnel_action = personnel_action
                     sanction.save()
 
-                    # E. SI VIENE DE LA BANDEJA: Cerramos la notificación
+                    # 6. Si viene de la bandeja de notificaciones, actualizar estado
                     if notification_id:
                         notif = SanctionNotification.objects.filter(pk=notification_id).first()
                         if notif:
-                            notif.status = 'SANCIONADO'
-                            notif.save()
+                            assigned_user = get_object_or_404(User, pk=assigned_to_id)
 
                             curr = notif.current_assignment
                             if curr:
-                                # Ya no sale error porque 'sanction' ya existe arriba
                                 curr.complete_assignment(sanction_obj=sanction)
 
-                return JsonResponse({'success': True, 'message': f'Sanción registrada con éxito: {action_number}'})
+                            SanctionAssignment.objects.create(
+                                notification=notif,
+                                sanction=sanction,
+                                assigned_to=assigned_user,
+                                assigned_by=request.user,
+                                observation='Responsable asignado para elaborar la Acción de Personal.',
+                                is_current=True
+                            )
 
+                            notif.status = 'SANCIONADO'
+                            notif.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Sanción registrada con éxito: {action_number}',
+                    'sanction_id': sanction.id,
+                    'action_id': personnel_action.id
+                })
 
             except Exception as e:
                 return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class EditSanctionPersonnelActionView(LoginRequiredMixin, View):
+    """Vista para completar los datos de la Acción de Personal asociada a una Sanción"""
+    permission_required = 'sanctions.change_sanction'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.has_perm('sanctions.change_sanction') or 
+                request.user.has_perm('personnel_actions.change_personnelaction')):
+            return JsonResponse({'success': False, 'message': 'Permiso denegado'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, pk):
+        """Mostrar el formulario en un modal"""
+        from .forms import EditPersonnelActionSanctionForm
+        
+        personnel_action = get_object_or_404(PersonnelAction, pk=pk)
+        form = EditPersonnelActionSanctionForm(instance=personnel_action)
+
+        context = {
+            'form': form,
+            'personnel_action': personnel_action,
+        }
+
+        html = render_to_string(
+            'sanctions/modals/modal_edit_sanction_personnel_action.html',
+            context,
+            request=request
+        )
+        return HttpResponse(html)
+
+    def post(self, request, pk):
+        """Guardar los datos de la Acción de Personal"""
+        from .forms import EditPersonnelActionSanctionForm
+        
+        personnel_action = get_object_or_404(PersonnelAction, pk=pk)
+        form = EditPersonnelActionSanctionForm(request.POST, instance=personnel_action)
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Acción de Personal {personnel_action.number} actualizada con éxito'
+                    })
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
 
 
 class SanctionAdminListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

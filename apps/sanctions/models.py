@@ -426,12 +426,12 @@ class Sanction(models.Model):
         choices=SEVERITY_CHOICES,
         default='VERBAL_WARNING'
     )
-    description = models.TextField(verbose_name='Descripción de la falta')
+    description = models.TextField(verbose_name='Descripción de la falta', blank=True, null=True)
     legal_basis = models.TextField(verbose_name='Base legal', blank=True, null=True)
 
     # Dates
-    incident_date = models.DateField(verbose_name='Fecha del incidente')
-    sanction_date = models.DateField(verbose_name='Fecha de la sanción')
+    incident_date = models.DateField(verbose_name='Fecha del incidente', blank=True, null=True)
+    sanction_date = models.DateField(verbose_name='Fecha de la sanción', blank=True, null=True)
     start_date = models.DateField(verbose_name='Fecha de inicio', blank=True, null=True)
     end_date = models.DateField(verbose_name='Fecha de fin', blank=True, null=True)
 

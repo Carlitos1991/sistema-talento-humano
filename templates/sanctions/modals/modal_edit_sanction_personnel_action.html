@@ -1,0 +1,173 @@
+{% load static %}
+
+<div class="modal-container-large modal-compact shadow-card">
+    <!-- Botón de Cerrar (X) -->
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Cabecera Compacta -->
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle">
+                <i class="fas fa-file-circle-plus"></i>
+            </div>
+            <h2 class="header-title-main">
+                Elaborar Acción de Personal
+            </h2>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" action="{% url 'sanctions:edit_sanction_personnel_action' personnel_action.pk %}"
+          id="editPersonnelActionForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Cuerpo con Scroll -->
+        <div class="modal-body-scrolled">
+
+            <!-- Sección 1: Información del Empleado -->
+            <div class="section-card-standard border-left-primary">
+                <h4 class="section-title">
+                    <i class="fas fa-user text-primary"></i> INFORMACIÓN DEL EMPLEADO
+                </h4>
+                <div class="mb-3">
+                    <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
+                        {% if personnel_action.employee.person.photo %}
+                            <img src="{{ personnel_action.employee.person.photo.url }}"
+                                 alt="{{ personnel_action.employee.person.full_name }}"
+                                 style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-user" style="color: white;"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="font-weight-700 text-dark">{{ personnel_action.employee.person.full_name }}</div>
+                            <small class="text-muted">CI: {{ personnel_action.employee.person.document_number }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Información de la Acción -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-list-check text-primary"></i> INFORMACIÓN DE LA ACCIÓN
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Número de Acción</label>
+                        <p class="form-control-static">{{ personnel_action.number }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Tipo de Acción</label>
+                        <p class="form-control-static">{{ personnel_action.action_type.name }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 3: Fechas de la Acción -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-calendar-day text-primary"></i> FECHAS DE LA ACCIÓN
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Fecha de Elaboración <span
+                                class="text-danger">*</span></label>
+                        {{ form.date_issue }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Fecha de Vigencia <span
+                                class="text-danger">*</span></label>
+                        {{ form.date_effective }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 4: Documento y Explicación -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-file-alt text-primary"></i> DOCUMENTO Y EXPLICACIÓN
+                </h4>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Documento que genera la acción</label>
+                    {{ form.motivation }}
+                    <div class="invalid-feedback"></div>
+                    <p class="form-hint">Ej: Resolución Administrativa, Oficio, Decreto, etc.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label font-weight-700">Explicación/Motivo</label>
+                    {{ form.explanation }}
+                    <div class="invalid-feedback"></div>
+                    <p class="form-hint">Explicación detallada o motivo de la acción de personal.</p>
+                </div>
+            </div>
+
+            <!-- Sección 5: Firmas (Solo lectura) -->
+            <div class="section-card-standard">
+                <h4 class="section-title">
+                    <i class="fas fa-signature text-primary"></i> FIRMAS PREESTABLECIDAS
+                </h4>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Primera Autoridad</label>
+                        <p class="form-control-static">
+                            {% if personnel_action.authority_1 %}
+                                {{ personnel_action.authority_1.signature_name }} - {{ personnel_action.authority_1.signature_position }}
+                            {% else %}
+                                No asignada
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Segunda Autoridad</label>
+                        <p class="form-control-static">
+                            {% if personnel_action.authority_2 %}
+                                {{ personnel_action.authority_2.signature_name }} - {{ personnel_action.authority_2.signature_position }}
+                            {% else %}
+                                No asignada
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Revisado por</label>
+                        <p class="form-control-static">
+                            {% if personnel_action.reviewer %}
+                                {{ personnel_action.reviewer.signature_name }} - {{ personnel_action.reviewer.signature_position }}
+                            {% else %}
+                                No asignado
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Registrado por</label>
+                        <p class="form-control-static">
+                            {% if personnel_action.register %}
+                                {{ personnel_action.register.signature_name }} - {{ personnel_action.register.signature_position }}
+                            {% else %}
+                                No asignado
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer con botones -->
+        <div class="modal-footer-refined">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn-save">
+                <i class="fas fa-save"></i> Guardar Acción
+            </button>
+        </div>
+    </form>
+</div>

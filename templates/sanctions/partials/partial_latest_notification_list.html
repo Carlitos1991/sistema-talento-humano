@@ -16,7 +16,7 @@
             <th style="width: 15%;">Inconsistencias</th>
             <th style="width: 10%;">Fecha Registro</th>
             <th style="width: 15%;">Estado</th>
-            <th style="width: 5%;">Respuesta</th>
+            <th style="width: 5%;">Creado por:</th>
             <th class="text-center actions" style="width: 15%;">Acciones</th>
         </tr>
         </thead>
@@ -60,24 +60,10 @@
                     {% else %}
                         <span class="payroll-value-badge-yellow">{{ notification.status }}</span>
                     {% endif %}
-
                 </td>
 
                 <td>
-                    {% if notification.status == 'GENERADO' %}
-                        <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
-                             data-id="{{ notification.pk }}"
-                             style="cursor: pointer; user-select: none;">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">
-                                {% if notification.has_responded %}Sí{% else %}No{% endif %}
-                            </span>
-                        </div>
-                    {% else %}
-                        <span class="payroll-value-badge-gray">
-                            {% if notification.has_responded %}Sí{% else %}No{% endif %}
-                        </span>
-                    {% endif %}
+                    {{ notification.created_by.first_name }} {{ notification.created_by.last_name }}
                 </td>
                 <td class="actions">
                     <div class="actions-wrapper" style="justify-content: center;">
@@ -88,12 +74,14 @@
                             <i class="fa-regular fa-file-pdf"></i>
                         </a>
                         {% if perms.sanctions.change_sanctionnotification %}
-                            <button type="button" class="btn-views-action js-edit-notification"
-                                    data-notification-id="{{ notification.pk }}"
-                                    data-employee-id="{{ notification.employee_id }}"
-                                    title="Editar Notificación">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
+                            {% if notification.status == 'GENERADO' %}
+                                <button type="button" class="btn-views-action js-edit-notification"
+                                        data-notification-id="{{ notification.pk }}"
+                                        data-employee-id="{{ notification.employee_id }}"
+                                        title="Editar Notificación">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </td>

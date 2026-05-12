@@ -90,6 +90,26 @@
     display: none !important;
 }
 
+.modal-compact {
+    width: min(760px, calc(100vw - 1.5rem)) !important;
+    min-width: 0 !important;
+    max-width: 760px !important;
+}
+
+.modal-compact .modal-body-scrolled {
+    max-height: calc(100vh - 200px) !important;
+}
+
+.modal-compact .section-card-standard {
+    padding: 0.9rem 1rem;
+}
+
+.modal-compact .modal-header-refined,
+.modal-compact .modal-footer-refined {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
 .sanctions-tab-note {
     display: inline-flex;
     align-items: center;
@@ -777,6 +797,16 @@
 
 .custom-file-upload.has-file .file-label i {
     color: #10b981;
+}
+
+.custom-file-upload.has-file .file-label .file-text {
+    color: #047857;
+}
+
+.custom-file-upload.has-file .file-label .file-icon::before {
+    content: "\f15b";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
 }
 
 .custom-file-upload.has-file .file-name {

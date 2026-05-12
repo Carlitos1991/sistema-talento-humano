@@ -70,16 +70,49 @@
                         </div>
                     </td>
                     <td class="actions">
-                        <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
-                            <button class="btn-delete-action js-btn-sancionar" data-id="{{ notification.employee_id }}"
-                                    data-notif-id="{{ notification.pk }}" title="Sancionar">
-                                <i class="fa-solid fa-gavel text-danger"></i>
-                            </button>
-                            <button class="btn-views-action js-btn-archive" data-id="{{ notification.pk }}"
-                                    title="Archivar">
-                                <i class="fa-solid fa-box-archive"></i>
-                            </button>
-                        </div>
+                        {% if notification.status == 'EN_PROCESO' %}
+                            <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
+                                <button class="btn-delete-action js-btn-sancionar"
+                                        data-id="{{ notification.employee_id }}"
+                                        data-notif-id="{{ notification.pk }}" title="Sancionar">
+                                    <i class="fa-solid fa-gavel text-danger"></i>
+                                </button>
+                                <button class="btn-views-action js-btn-archive" data-id="{{ notification.pk }}"
+                                        title="Archivar">
+                                    <i class="fa-solid fa-box-archive"></i>
+                                </button>
+                                <button class="btn-info-action js-btn-sancionar"
+                                        data-id="{{ notification.employee_id }}"
+                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                    <i class="fa-solid fa-timeline"></i>
+                                </button>
+
+                            </div>
+
+                        {% elif notification.status == 'SANCIONADO' %}
+                            <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
+                                {% if current_assign and current_assign.sanction and current_assign.sanction.personnel_action_id %}
+                                    <button type="button" class="btn-create-action js-btn-edit-personnel-action"
+                                            data-action-id="{{ current_assign.sanction.personnel_action_id }}"
+                                            title="Elaborar Acción de personal">
+                                        <i class="fa-solid fa-file-circle-plus"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="btn-info-action js-btn-sancionar"
+                                        data-id="{{ notification.employee_id }}"
+                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                    <i class="fa-solid fa-timeline"></i>
+                                </button>
+                            </div>
+                        {% elif notification.status == 'ARCHIVADO' %}
+                            <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
+                                <button class="btn-info-action js-btn-sancionar"
+                                        data-id="{{ notification.employee_id }}"
+                                        data-notif-id="{{ notification.pk }}" title="Ruta del Trámite">
+                                    <i class="fa-solid fa-timeline"></i>
+                                </button>
+                            </div>
+                        {% endif %}
                     </td>
                 </tr>
             {% endwith %}

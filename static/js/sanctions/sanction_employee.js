@@ -156,6 +156,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
         });
+
+        modalContentContainer.addEventListener('change', function (e) {
+            const fileInput = e.target.closest('.file-input');
+            if (!fileInput) {
+                return;
+            }
+
+            const wrapper = fileInput.closest('.custom-file-upload');
+            const fileNameSpan = wrapper ? wrapper.querySelector('.file-name') : null;
+            if (fileNameSpan) {
+                fileNameSpan.textContent = fileInput.files.length > 0
+                    ? fileInput.files[0].name
+                    : 'Ningún archivo seleccionado';
+            }
+        });
+
+        modalContentContainer.addEventListener('submit', function (e) {
+            const sanctionForm = e.target.closest('#generateSanctionForm');
+            if (sanctionForm) {
+                handleSanctionFormSubmit(e);
+                return;
+            }
+
+            const editForm = e.target.closest('#editPersonnelActionForm');
+            if (editForm) {
+                handleEditPersonnelActionFormSubmit(e);
+            }
+        });
     }
 
     bindNotificationEditButtons();
@@ -200,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-// Delegación para el botón de asignar
+    // Delegación para el botón de asignar
     if (notificationsWrapper) {
         notificationsWrapper.addEventListener('click', function (e) {
             // Detectar clic en el botón con la clase js-assign-notification
@@ -209,6 +237,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 const notifId = assignBtn.dataset.id;
                 openAssignModal(notifId);
+            }
+
+            // Detectar clic en el botón de editar PersonnelAction
+            const editActionBtn = e.target.closest('.js-btn-edit-personnel-action');
+            if (editActionBtn) {
+                e.preventDefault();
+                const actionId = editActionBtn.dataset.actionId;
+                openEditPersonnelActionModal(actionId);
             }
         });
     }
@@ -343,12 +379,27 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
 
-                    // Vincular submit
-                    const sanctionForm = document.getElementById('generateSanctionForm');
-                    if (sanctionForm) sanctionForm.addEventListener('submit', handleSanctionFormSubmit);
-
                     initModalPlugins();
                 }, 300); // 300ms es más seguro
+            });
+    }
+
+    function openEditPersonnelActionModal(actionId) {
+        const url = `/sanctions/personnel-action/${actionId}/edit/`;
+
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.text())
+            .then(html => {
+                modalContentContainer.innerHTML = html;
+
+                // Mostrar el modal
+                modalOverlay.classList.remove('hidden');
+                document.body.classList.add('modal-open');
+
+                // Inicializar componentes
+                setTimeout(() => {
+                    initModalPlugins();
+                }, 300);
             });
     }
 
@@ -408,6 +459,24 @@ document.addEventListener('DOMContentLoaded', function () {
     function initModalPlugins() {
         // Inicializar Select2
         if (typeof $ !== 'undefined' && $.fn.select2) {
+            const $responsibleSelect = $('#select-responsible-ajax');
+            if ($responsibleSelect.length) {
+                $responsibleSelect.select2({
+                    dropdownParent: $('#customModal'),
+                    placeholder: 'Buscar responsable...',
+                    minimumInputLength: 2,
+                    width: '100%',
+                    ajax: {
+                        url: '/sanctions/users/search/',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({q: params.term}),
+                        processResults: data => ({results: data.results}),
+                        cache: true
+                    }
+                });
+            }
+
             $('.select2').select2({
                 width: '100%', dropdownParent: modalOverlay
             });
@@ -432,6 +501,31 @@ document.addEventListener('DOMContentLoaded', function () {
                         content.classList.add('show');
                         this.classList.remove('collapsed');
                     }
+                }
+            });
+        });
+
+        // Initialize file input handlers
+        const fileInputs = document.querySelectorAll('.file-input');
+        fileInputs.forEach(input => {
+            input.addEventListener('change', function(e) {
+                const wrapper = this.closest('.custom-file-upload');
+                const fileLabel = wrapper?.querySelector('.file-name');
+                const fileText = wrapper?.querySelector('.file-text');
+                const fileIcon = wrapper?.querySelector('.file-icon');
+                if (wrapper) {
+                    wrapper.classList.toggle('has-file', this.files.length > 0);
+                }
+                if (fileIcon) {
+                    fileIcon.className = this.files.length > 0
+                        ? 'fas fa-file-pdf file-icon'
+                        : 'fas fa-cloud-upload-alt file-icon';
+                }
+                if (fileLabel) {
+                    fileLabel.textContent = this.files.length > 0 ? this.files[0].name : 'Ningún archivo seleccionado';
+                }
+                if (fileText) {
+                    fileText.textContent = this.files.length > 0 ? 'Archivo seleccionado' : 'Seleccionar archivo';
                 }
             });
         });
@@ -534,6 +628,65 @@ document.addEventListener('DOMContentLoaded', function () {
                     Toast.fire({
                         icon: 'success', title: data.message || 'Sanción registrada correctamente'
                     });
+                    
+                    // Recargar la tabla y estadísticas
+                    const activeTab = getActiveTab();
+                    if (activeTab === 'notifications') {
+                        const currentPage = parseInt(document.getElementById('notifications-page-input')?.value) || 1;
+                        fetchNotificationsPage(currentPage);
+                    } else {
+                        const searchQuery = searchInput ? searchInput.value : '';
+                        fetchEmployeesPage(currentPage, searchQuery);
+                    }
+                } else {
+                    if (res.status === 403) {
+                        Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');
+                    } else if (data.errors) {
+                        showErrors(form, data.errors);
+                    } else {
+                        Swal.fire('Error', data.message || 'Ocurrió un error al guardar', 'error');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
+            });
+    }
+
+    function handleEditPersonnelActionFormSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        fetch(form.action, {
+            method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async res => {
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    closeModal();
+                    const Toast = Swal.mixin({
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'success', title: data.message || 'Acción de Personal actualizada correctamente'
+                    });
+                    // Recargar la tabla de notificaciones
+                    const activeTab = getActiveTab();
+                    if (activeTab === 'notifications') {
+                        const currentPage = parseInt(document.getElementById('notifications-page-input')?.value) || 1;
+                        fetchNotificationsPage(currentPage);
+                    }
                 } else {
                     if (res.status === 403) {
                         Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');

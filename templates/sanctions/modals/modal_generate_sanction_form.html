@@ -1,6 +1,6 @@
 {% load static %}
 
-<div class="modal-container-large shadow-card">
+<div class="modal-container-large modal-compact shadow-card">
     <!-- Botón de Cerrar (X) -->
     <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
         <i class="fas fa-times"></i>
@@ -13,23 +13,17 @@
                 <i class="fas fa-gavel"></i>
             </div>
             <h2 class="header-title-main">
-                {% if is_edit %}Editar Sanción{% else %}Generar Sanción{% endif %}
+                Generar Sanción
             </h2>
         </div>
     </div>
 
     <!-- Formulario -->
-    <form method="post" action="
-
-
-
-
-
-            
-            {% if is_edit %}{% url 'sanctions:sanction_edit' sanction.pk %}{% else %}{% url 'sanctions:generate_sanction' %}{% endif %}"
+    <form method="post" action="{% url 'sanctions:generate_sanction' %}"
           id="generateSanctionForm" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="employee" value="{{ employee.id }}">
+        {% if notification_id %}<input type="hidden" name="notification_id" value="{{ notification_id }}">{% endif %}
 
         <!-- Cuerpo con Scroll -->
         <div class="modal-body-scrolled">
@@ -79,83 +73,10 @@
                 </div>
             </div>
 
-            <!-- Sección 3: Descripción de la Falta -->
+            <!-- Sección 3: Adjunto y Observaciones -->
             <div class="section-card-standard">
                 <h4 class="section-title">
-                    <i class="fas fa-file-alt text-primary"></i> DESCRIPCIÓN DE LA FALTA
-                </h4>
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Documento que genera la accion</label>
-                    {{ form.legal_basis }}
-                    <div class="invalid-feedback"></div>
-                    <p class="form-hint">Documento que genera la acción, informes técnicos, memorandos o artículos o
-                        normativa aplicable según LOSEP.</p>
-                </div>
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Descripción <span class="text-danger">*</span></label>
-                    {{ form.description }}
-                    <div class="invalid-feedback"></div>
-                    <p class="form-hint">Describa detalladamente la falta cometida incluyendo base legal
-                        correspondiente</p>
-                </div>
-            </div>
-
-            <!-- Sección 4: Fechas -->
-            <div class="section-card-standard">
-                <h4 class="section-title">
-                    <i class="fas fa-calendar-day text-primary"></i> FECHAS
-                </h4>
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Elaboración <span
-                                class="text-danger">*</span></label>
-                        {{ form.incident_date }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha de Vigencia <span
-                                class="text-danger">*</span></label>
-                        {{ form.sanction_date }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sección 5: Suspensión Laboral (Acordeón Colapsable) -->
-            <div class="section-card-standard">
-                <div class="custom-accordion">
-                    <div class="accordion-header" id="durationHeader">
-                        <button type="button" class="accordion-toggle collapsed" data-target="durationContent">
-                            <i class="fas fa-hourglass-half text-primary"></i>
-                            <span>SUSPENSIÓN LABORAL (Si aplica)</span>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </button>
-                    </div>
-                    <div class="accordion-content" id="durationContent" style="display: none;">
-                        <div class="grid-3-cols">
-                            <div class="form-group">
-                                <label class="form-label font-weight-700">Fecha de Inicio</label>
-                                {{ form.start_date }}
-                                <div class="invalid-feedback"></div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label font-weight-700">Fecha de Fin</label>
-                                {{ form.end_date }}
-                                <div class="invalid-feedback"></div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label font-weight-700">Días de Suspensión</label>
-                                {{ form.days }}
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Sección 6: Adjunto y Observaciones -->
-            <div class="section-card-standard">
-                <h4 class="section-title">
-                    <i class="fas fa-paperclip text-primary"></i> ADJUNTO Y OBSERVACIONES
+                    <i class="fas fa-paperclip text-primary"></i> Informe Técnico
                 </h4>
                 <div class="form-group">
                     <label class="form-label font-weight-700">Documento Adjunto</label>
@@ -163,7 +84,7 @@
                         <input type="file" name="attachment_file" id="id_attachment_file" class="file-input"
                                accept=".pdf">
                         <label for="id_attachment_file" class="file-label">
-                            <i class="fas fa-cloud-upload-alt"></i>
+                            <i class="fas fa-cloud-upload-alt file-icon"></i>
                             <span class="file-text">Seleccionar archivo</span>
                             <span class="file-name">Ningún archivo seleccionado</span>
                         </label>
@@ -173,21 +94,44 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label font-weight-700">Observaciones</label>
+                    <label class="form-label font-weight-700">Número de Informe Técnico</label>
                     {{ form.observations }}
                     <div class="invalid-feedback"></div>
                 </div>
             </div>
 
+            {% if notification_id %}
+                <div class="section-card-standard">
+                    <h4 class="section-title">
+                        <i class="fas fa-user-check text-primary"></i> RESPONSABLE DE ACCIÓN DE PERSONAL
+                    </h4>
+                    <div class="alert alert-info" style="background-color: #f0f7ff; border-left: 4px solid #3b82f6; padding: 0.9rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <span style="color: #1e40af; font-size: 0.92rem;">
+                            Seleccione la persona que elaborará la Acción de Personal una vez registrada la sanción.
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">
+                            Buscar Responsable (Cédula o Nombre): <span class="text-danger">*</span>
+                        </label>
+                        <select id="select-responsible-ajax" name="assigned_to" class="form-select" required style="width: 100%;">
+                            <option value="">Escriba para buscar...</option>
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+            {% endif %}
+
         </div>
 
         <!-- Footer con botones -->
         <div class="modal-footer-refined">
-            <button type="button" class="btn-cancel js-close-modal js-close-detail-modal">
+            <button type="button" class="btn-cancel js-close-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
             <button type="submit" class="btn-save">
-                <i class="fas fa-save"></i> {% if is_edit %}Actualizar Sanción{% else %}Registrar Sanción{% endif %}
+                <i class="fas fa-save"></i> Registrar Sanción
             </button>
         </div>
     </form>

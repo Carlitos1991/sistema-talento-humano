@@ -2,6 +2,8 @@ from django import forms
 from .models import SanctionNotificationType, SanctionNotification, SanctionNotificationMapping, \
     SanctionNotificationTypeMapping, SanctionType, Sanction
 from employee.models import Employee
+from personnel_actions.models import PersonnelAction, ActionType
+from core.models import User
 
 MONTH_CHOICES = [
     ('', 'Seleccione...'),
@@ -154,9 +156,9 @@ class SanctionNotificationForm(forms.ModelForm):
             self.fields['authority_1'].queryset = authorities
             self.fields['authority_2'].queryset = authorities
             self.fields['authority_1'].label_from_instance = lambda \
-                obj: f"{obj.signature_name} - {obj.signature_position}"
+                    obj: f"{obj.signature_name} - {obj.signature_position}"
             self.fields['authority_2'].label_from_instance = lambda \
-                obj: f"{obj.signature_name} - {obj.signature_position}"
+                    obj: f"{obj.signature_name} - {obj.signature_position}"
 
         self.fields['notification_type'].empty_label = 'Seleccione...'
         self.fields['authority_1'].empty_label = 'Seleccione...'
@@ -189,18 +191,47 @@ class SanctionNotificationForm(forms.ModelForm):
 
 
 class SanctionForm(forms.ModelForm):
+    """Formulario simplificado para generar sanción inicial con campos básicos"""
+
     class Meta:
         model = Sanction
         fields = [
-            'employee', 'sanction_type', 'severity',
-            'description', 'legal_basis',
-            'incident_date', 'sanction_date', 'start_date', 'end_date',
-            'days', 'observations', 'attachment_file'
+            'sanction_type', 'severity',
+            'observations', 'attachment_file'
         ]
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-select select2'}),
             'sanction_type': forms.Select(attrs={'class': 'form-select select2'}),
             'severity': forms.Select(attrs={'class': 'form-select'}),
+            'observations': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Escriba el número de informe técnico'
+            }),
+            'attachment_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter active sanction types
+        self.fields['sanction_type'].queryset = SanctionType.objects.filter(is_active=True)
+        self.fields['observations'].required = False
+        self.fields['attachment_file'].required = False
+
+
+class SanctionDetailForm(forms.ModelForm):
+    """Formulario para completar los detalles de la sanción con descripción, fechas y duración"""
+
+    class Meta:
+        model = Sanction
+        fields = [
+            'description', 'legal_basis',
+            'incident_date', 'sanction_date', 'start_date', 'end_date',
+            'days'
+        ]
+        widgets = {
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 4,
@@ -231,27 +262,15 @@ class SanctionForm(forms.ModelForm):
                 'class': 'form-control',
                 'min': 0
             }),
-            'observations': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Observaciones adicionales'
-            }),
-            'attachment_file': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': '.pdf'
-            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter active employees
-        self.fields['employee'].queryset = Employee.objects.filter(is_active=True)
-        # Filter active sanction types
-        self.fields['sanction_type'].queryset = SanctionType.objects.filter(is_active=True)
         # Make duration fields not required
         self.fields['start_date'].required = False
         self.fields['end_date'].required = False
         self.fields['days'].required = False
+        self.fields['legal_basis'].required = False
 
         # Format dates for input type="date" (YYYY-MM-DD) when editing
         if self.instance and self.instance.pk:
@@ -263,3 +282,44 @@ class SanctionForm(forms.ModelForm):
                 self.initial['start_date'] = self.instance.start_date.strftime('%Y-%m-%d')
             if self.instance.end_date:
                 self.initial['end_date'] = self.instance.end_date.strftime('%Y-%m-%d')
+
+
+class EditPersonnelActionSanctionForm(forms.ModelForm):
+    """Formulario para completar los detalles de la Acción de Personal asociada a una Sanción"""
+
+    class Meta:
+        model = PersonnelAction
+        fields = [
+            'date_issue', 'date_effective', 'motivation', 'explanation'
+        ]
+        widgets = {
+            'date_issue': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'date_effective': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'motivation': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Documento que genera la acción (Ej: Resolución, Oficio)'
+            }),
+            'explanation': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Explicación o motivo de la acción'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['motivation'].required = False
+        self.fields['explanation'].required = False
+
+        # Format dates for input type="date" (YYYY-MM-DD) when editing
+        if self.instance and self.instance.pk:
+            if self.instance.date_issue:
+                self.initial['date_issue'] = self.instance.date_issue.strftime('%Y-%m-%d')
+            if self.instance.date_effective:
+                self.initial['date_effective'] = self.instance.date_effective.strftime('%Y-%m-%d')

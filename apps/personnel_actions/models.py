@@ -37,8 +37,8 @@ class PersonnelAction(models.Model):
     motivation = models.CharField(verbose_name='Motivación', max_length=255, blank=True, null=True)
 
     # Fechas
-    date_issue = models.DateField(verbose_name='Fecha de Emisión')
-    date_effective = models.DateField(verbose_name='Rige a partir de')
+    date_issue = models.DateField(verbose_name='Fecha de Emisión', blank=True, null=True)
+    date_effective = models.DateField(verbose_name='Rige a partir de', blank=True, null=True)
 
     # Estado del flujo
     is_registered = models.BooleanField(verbose_name='Registrada', default=False)

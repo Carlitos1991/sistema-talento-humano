@@ -44,6 +44,7 @@ urlpatterns = [
     path('admin/<int:pk>/edit/', views.EditSanctionView.as_view(), name='sanction_edit'),
     path('admin/<int:pk>/register/', views.RegisterSanctionView.as_view(), name='sanction_register'),
     path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
+    path('personnel-action/<int:pk>/edit/', views.EditSanctionPersonnelActionView.as_view(), name='edit_sanction_personnel_action'),
 
     # --- Template Editor (Dynamic Templates) ---
     path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(),

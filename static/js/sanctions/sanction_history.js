@@ -104,6 +104,114 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function openEditPersonnelActionModal(actionId) {
+        if (!actionId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Acción no disponible',
+                text: 'No se encontró la Acción de Personal asociada a esta sanción.'
+            });
+            return;
+        }
+
+        const url = `/sanctions/personnel-action/${actionId}/edit/`;
+
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.text())
+            .then(html => {
+                if (safeSetHTML('modal-dynamic-content', html)) {
+                    openModal('customModal');
+                    setTimeout(initModalPlugins, 200);
+                }
+            });
+    }
+
+    function handleSanctionFormSubmit(e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async res => {
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    closeModal('customModal');
+                    Toast.fire({icon: 'success', title: data.message || 'Sanción registrada correctamente'});
+                    fetchHistoryPage(1);
+                    return;
+                }
+
+                if (res.status === 403) {
+                    Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');
+                } else if (data.errors) {
+                    showErrors(form, data.errors);
+                } else {
+                    Swal.fire('Error', data.message || 'Ocurrió un error al guardar', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
+            });
+    }
+
+    function handleEditPersonnelActionFormSubmit(e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async res => {
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    closeModal('customModal');
+                    Toast.fire({icon: 'success', title: data.message || 'Acción de personal actualizada correctamente'});
+                    fetchHistoryPage(1);
+                    return;
+                }
+
+                if (res.status === 403) {
+                    Swal.fire('Acceso denegado', data.message || 'No tiene permisos para realizar esta acción', 'error');
+                } else if (data.errors) {
+                    showErrors(form, data.errors);
+                } else {
+                    Swal.fire('Error', data.message || 'Ocurrió un error al guardar', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
+            });
+    }
+
     window.openSanctionHistoryModal = function (employeeId) {
         if (!employeeId) return;
 
@@ -186,9 +294,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        const form = document.getElementById('generateSanctionForm');
-        if (form) form.addEventListener('submit', handleSanctionFormSubmit);
-
         // Listener para el formulario de asignación bulk
         const assignForm = document.getElementById('assignNotificationForm');
         if (assignForm) {
@@ -198,6 +303,51 @@ document.addEventListener('DOMContentLoaded', function () {
                 executeAction(assignForm.action, fd, 'customModal');
             });
         }
+    }
+
+    if (document.getElementById('modal-dynamic-content')) {
+        document.getElementById('modal-dynamic-content').addEventListener('change', function (e) {
+            const fileInput = e.target.closest('.file-input');
+            if (!fileInput) return;
+
+            const wrapper = fileInput.closest('.custom-file-upload');
+            if (wrapper) {
+                wrapper.classList.toggle('has-file', fileInput.files.length > 0);
+
+                const icon = wrapper.querySelector('.file-icon');
+                if (icon) {
+                    icon.className = fileInput.files.length > 0
+                        ? 'fas fa-file-pdf file-icon'
+                        : 'fas fa-cloud-upload-alt file-icon';
+                }
+            }
+
+            const fileNameSpan = wrapper ? wrapper.querySelector('.file-name') : null;
+            const fileTextSpan = wrapper ? wrapper.querySelector('.file-text') : null;
+            if (fileNameSpan) {
+                fileNameSpan.textContent = fileInput.files.length > 0
+                    ? fileInput.files[0].name
+                    : 'Ningún archivo seleccionado';
+            }
+            if (fileTextSpan) {
+                fileTextSpan.textContent = fileInput.files.length > 0
+                    ? 'Archivo seleccionado'
+                    : 'Seleccionar archivo';
+            }
+        });
+
+        document.getElementById('modal-dynamic-content').addEventListener('submit', function (e) {
+            const sanctionForm = e.target.closest('#generateSanctionForm');
+            if (sanctionForm) {
+                handleSanctionFormSubmit(e);
+                return;
+            }
+
+            const editForm = e.target.closest('#editPersonnelActionForm');
+            if (editForm) {
+                handleEditPersonnelActionFormSubmit(e);
+            }
+        });
     }
 
     function syncCheckboxes() {
@@ -255,6 +405,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3. Botones de Acción Individual
         document.querySelectorAll('.js-btn-sancionar').forEach(btn => {
             btn.onclick = () => openGenerateSanctionModal(btn.dataset.id, btn.dataset.notifId);
+        });
+
+        document.querySelectorAll('.js-btn-edit-personnel-action').forEach(btn => {
+            btn.onclick = () => openEditPersonnelActionModal(btn.dataset.actionId);
         });
 
         document.querySelectorAll('.js-assign-notification').forEach(btn => {
@@ -371,6 +525,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const tot = document.getElementById('history-total-pages');
         if (tot) tot.textContent = pagination.total_pages;
+    }
+
+    function updateStatsCards(statsData) {
+        const statsRow = document.querySelector('.stats-row');
+        if (!statsRow || !Array.isArray(statsData)) return;
+
+        statsRow.innerHTML = '';
+        statsData.forEach(stat => {
+            const card = document.createElement('div');
+            card.className = `stat-card ${stat.class || ''}`.trim();
+            if (stat.filter_val) {
+                card.onclick = function () {
+                    filterSanctionsByStatus(stat.filter_val);
+                };
+            }
+
+            card.innerHTML = `
+                <div class="stat-left">
+                    <h3>${stat.label}</h3>
+                    <div class="number">${stat.count}</div>
+                </div>
+                <i class="fas ${stat.icon || 'fa-circle'} stat-icon"></i>
+            `;
+            statsRow.appendChild(card);
+        });
+    }
+
+    function showErrors(form, errors) {
+        Object.entries(errors).forEach(([field, messages]) => {
+            const input = form.querySelector(`[name="${field}"]`);
+            if (!input) return;
+
+            input.classList.add('is-invalid');
+            const feedback = input.parentElement ? input.parentElement.querySelector('.invalid-feedback') : null;
+            if (feedback) {
+                feedback.textContent = Array.isArray(messages) ? messages.join(', ') : messages;
+            }
+        });
     }
 
     if (massiveReturnBtn) {

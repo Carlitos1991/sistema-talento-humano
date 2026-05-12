@@ -22,17 +22,16 @@
             <h4 class="section-title">
                 <i class="fas fa-user text-primary"></i> Empleado: <strong>{{ employee.person.full_name }}</strong>
             </h4>
-            <div style="margin-top: 1.5rem;">
-                <table class="table table-striped" style="margin-bottom: 0; font-size: 0.9rem;">
-                    <thead class="table-header-style">
+            <div class="table-container">
+                <table>
+                    <thead>
                     <tr>
-                        <th style="width: 12%;">Número</th>
-                        <th style="width: 12%;">Fecha Emisión</th>
-                        <th style="width: 12%;">Rige desde</th>
-                        <th style="width: 15%;">Motivación</th>
-                        <th style="width: 15%;">Autoridad 1</th>
-                        <th style="width: 12%;">Registrada</th>
-                        <th style="width: 10%;">Acción</th>
+                        <th style="width: 10%;">Número</th>
+                        <th style="width: 8%;">Vigente:</th>
+                        <th style="width: 8%;">Tipo Acción</th>
+                        <th style="width: 52%;">Explicación</th>
+                        <th style="width: 8%;">Registrada</th>
+                        <th style="width: 8%;">Acción</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -41,13 +40,11 @@
                             <td>
                                 <strong>{{ action.number }}</strong>
                             </td>
-                            <td>{{ action.date_issue|date:"d/m/Y" }}</td>
                             <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                            <td>{{ action.action_type }}</td>
                             <td>
-                                <small class="text-truncate" title="{{ action.motivation }}">{{ action.motivation|truncatewords:5 }}</small>
-                            </td>
-                            <td>
-                                <small>{{ action.authority_1.get_full_name }}</small>
+                                <small class="text-truncate"
+                                       title="{{ action.explanation }}">{{ action.explanation|truncatewords:35   }}</small>
                             </td>
                             <td class="text-center">
                                 {% if action.is_registered %}
@@ -57,7 +54,8 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <a href="{% url 'personnel_actions:action_detail' action.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                <a href="{% url 'personnel_actions:action_detail' action.pk %}" target="_blank"
+                                   class="btn btn-sm btn-info-action" title="Ver detalles">
                                     <i class="fa-solid fa-eye"></i>
                                 </a>
                             </td>
