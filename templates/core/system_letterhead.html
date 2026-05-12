@@ -123,6 +123,23 @@
                         {% if config_form.effective_date.errors %}<div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
                     </div>
 
+                    <div class="col-md-6">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ config_form.sanction_green_days.id_for_label }}">Días Semáforo Verde</label>
+                                {{ config_form.sanction_green_days }}
+                                {% if config_form.sanction_green_days.errors %}<div class="invalid-feedback d-block">{{ config_form.sanction_green_days.errors|join:', ' }}</div>{% endif %}
+                                <small class="form-hint">Hasta cuántos días el trámite se considera a tiempo.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ config_form.sanction_yellow_days.id_for_label }}">Días Semáforo Amarillo</label>
+                                {{ config_form.sanction_yellow_days }}
+                                {% if config_form.sanction_yellow_days.errors %}<div class="invalid-feedback d-block">{{ config_form.sanction_yellow_days.errors|join:', ' }}</div>{% endif %}
+                                <small class="form-hint">Hasta cuántos días el trámite está en alerta.</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-md-4">
                         <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC</label>
                         {{ config_form.institution_ruc }}

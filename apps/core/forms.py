@@ -190,6 +190,8 @@ class SystemConfigurationSetupForm(forms.ModelForm):
             'max_authority_position',
             'talento_humano_authority_name',
             'talento_humano_authority_position',
+            'sanction_green_days',
+            'sanction_yellow_days',
             'effective_date',
             'logo',
         ]
@@ -206,4 +208,6 @@ class SystemConfigurationSetupForm(forms.ModelForm):
             'talento_humano_authority_position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cargo autoridad TTHH (opcional)'}),
             'effective_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': '.png,.jpg,.jpeg,.webp'}),
+            'sanction_green_days': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Días semáforo verde'}),
+            'sanction_yellow_days': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Días semáforo amarillo'}),
         }

@@ -398,7 +398,8 @@
                         <i class="fa-solid fa-gavel"></i>
                         <span class="menu-text">Sanciones</span>
                         {% if sanctions_pending_assignments_count > 0 %}
-                            <span class="sidebar-badge" style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
+                            <span class="sidebar-badge"
+                                  style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
                         {% endif %}
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
@@ -422,7 +423,8 @@
                                     <i class="fa-solid fa-clock-rotate-left"></i>
                                     <span class="menu-text">Asignaciones</span>
                                     {% if sanctions_pending_assignments_count > 0 %}
-                                        <span class="sidebar-badge" style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
+                                        <span class="sidebar-badge"
+                                              style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
                                     {% endif %}
                                 </a>
                             </li>
@@ -664,8 +666,8 @@
                         {% if perms.core.change_systemconfiguration or perms.core.view_systemconfiguration %}
                             <li>
                                 <a href="{% url 'core:system_letterhead' %}">
-                                    <i class="fa-solid fa-file-image"></i>
-                                    <span class="menu-text">Hoja Membretada</span>
+                                    <i class="fa-solid fa-gears"></i>
+                                    <span class="menu-text">Configuraciones Generales</span>
                                 </a>
                             </li>
                         {% endif %}
