@@ -44,7 +44,8 @@ urlpatterns = [
     path('admin/<int:pk>/edit/', views.EditSanctionView.as_view(), name='sanction_edit'),
     path('admin/<int:pk>/register/', views.RegisterSanctionView.as_view(), name='sanction_register'),
     path('admin/<int:pk>/pdf/', views.SanctionPDFView.as_view(), name='sanction_pdf'),
-    path('personnel-action/<int:pk>/edit/', views.EditSanctionPersonnelActionView.as_view(), name='edit_sanction_personnel_action'),
+    path('personnel-action/<int:pk>/edit/', views.EditSanctionPersonnelActionView.as_view(),
+         name='edit_sanction_personnel_action'),
 
     # --- Template Editor (Dynamic Templates) ---
     path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(),
@@ -69,9 +70,10 @@ urlpatterns = [
     path('notifications/<int:pk>/archive/', views.ArchiveNotificationView.as_view(), name='notification_archive'),
     path('notifications/<int:pk>/route/', views.NotificationRouteHistoryAjaxView.as_view(),
          name='notification_route_history'),
-    
+
     # --- History AJAX Views ---
     path('history/sanction-ajax/', views.SanctionHistoryAjaxView.as_view(), name='sanction_history_ajax'),
     path('history/actions-ajax/', views.ActionsHistoryAjaxView.as_view(), name='actions_history_ajax'),
-     path('history/notifications-ajax/', views.NotificationHistoryAjaxView.as_view(), name='notification_history_ajax'),
+    path('history/notifications-ajax/', views.NotificationHistoryAjaxView.as_view(), name='notification_history_ajax'),
+    path('notifications/<int:pk>/set-date/', views.SetNotificationDateView.as_view(), name='set_notification_date'),
 ]

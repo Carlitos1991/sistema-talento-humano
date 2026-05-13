@@ -253,10 +253,13 @@ class SanctionNotification(BaseModel):
 
     STATUS_CHOICES = [
         ('GENERADO', 'Generado'),
+        ('NOTIFICADO', 'Notificado'),
         ('EN_PROCESO', 'En proceso'),
         ('ARCHIVADO', 'Archivado'),
         ('SANCIONADO', 'Sancionado'),
     ]
+    is_notified = models.BooleanField(verbose_name='¿Fue notificado?', default=False)
+    notification_date = models.DateField(verbose_name='Fecha de notificación', blank=True, null=True)
 
     employee = models.ForeignKey(
         Employee,
@@ -387,6 +390,7 @@ class SanctionNotification(BaseModel):
     def current_assignment(self):
         """Retorna la asignación activa actual"""
         return self.assignment_history.filter(is_current=True).first()
+
     @property
     def get_related_sanction(self):
         """

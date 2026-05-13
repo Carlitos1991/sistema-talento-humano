@@ -30,7 +30,8 @@ from core.models import SystemConfiguration
 from core.models import User
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction, ActionType
-from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, MONTH_CHOICES
+from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, \
+    MONTH_CHOICES, NotificationDateForm
 from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, \
     SanctionNotificationType, SanctionNotificationTypeRegime, SanctionType, Sanction, SanctionAssignment
 from .services import build_notification_replacements, build_replacements_from_global_mappings
@@ -1549,8 +1550,9 @@ class EmployeeSanctionListView(LoginRequiredMixin, PermissionRequiredMixin, List
             'employee__person', 'notification_type', 'labor_regime'
         ).annotate(
             status_priority=Case(
-                When(status='GENERADO', then=Value(1)),
-                default=Value(2),
+                When(status='NOTIFICADO', then=Value(1)),
+                When(status='GENERADO', then=Value(2)),
+                default=Value(3),
                 output_field=IntegerField(),
             )
         )
@@ -2649,6 +2651,32 @@ class ActionsHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
         )
 
         return JsonResponse({'success': True, 'html': html})
+
+
+class SetNotificationDateView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        notification = get_object_or_404(SanctionNotification, pk=pk)
+        form = NotificationDateForm(initial={'notification_date': timezone.now().date()})
+
+        context = {
+            'form': form,
+            'notification': notification,
+        }
+        html = render_to_string('sanctions/modals/modal_set_notification_date.html', context, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, pk):
+        notification = get_object_or_404(SanctionNotification, pk=pk)
+        notification_date = request.POST.get('notification_date')
+
+        if notification_date:
+            notification.notification_date = notification_date
+            notification.is_notified = True
+            notification.status = 'NOTIFICADO'  # Cambiamos el estado
+            notification.save()
+            return JsonResponse({'success': True, 'message': 'Empleado notificado correctamente.'})
+
+        return JsonResponse({'success': False, 'message': 'Debe seleccionar una fecha.'}, status=400)
 
 
 class NotificationRouteHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):

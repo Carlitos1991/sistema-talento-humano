@@ -4,6 +4,7 @@ from .models import SanctionNotificationType, SanctionNotification, SanctionNoti
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction, ActionType
 from core.models import User
+from django.utils import timezone
 
 MONTH_CHOICES = [
     ('', 'Seleccione...'),
@@ -188,6 +189,14 @@ class SanctionNotificationForm(forms.ModelForm):
             self.add_error('authority_2', 'La segunda firma debe ser distinta a la primera.')
 
         return cleaned_data
+
+
+class NotificationDateForm(forms.Form):
+    notification_date = forms.DateField(
+        label='Fecha de Notificación',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        initial=timezone.now().date()
+    )
 
 
 class SanctionForm(forms.ModelForm):

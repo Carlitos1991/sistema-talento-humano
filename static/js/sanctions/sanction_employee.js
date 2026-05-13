@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const btnP = document.getElementById('btn-prev');
         const btnN = document.getElementById('btn-next');
         const btnL = document.getElementById('btn-last');
-        
+
         if (btnP) btnP.disabled = !window.initialPagination.has_previous;
         if (btnN) btnN.disabled = !window.initialPagination.has_next;
         if (btn1st) btn1st.disabled = !window.initialPagination.has_previous;
@@ -478,9 +478,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeModal() {
-        modalOverlay.classList.add('hidden');
-        modalContentContainer.innerHTML = '';
-        document.body.classList.remove('modal-open');
+        $('#customModal').addClass('hidden');
+        $('#modal-dynamic-content').html('');
+        $('body').removeClass('modal-open');
     }
 
     function initModalPlugins() {
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Initialize file input handlers
         const fileInputs = document.querySelectorAll('.file-input');
         fileInputs.forEach(input => {
-            input.addEventListener('change', function(e) {
+            input.addEventListener('change', function (e) {
                 const wrapper = this.closest('.custom-file-upload');
                 const fileLabel = wrapper?.querySelector('.file-name');
                 const fileText = wrapper?.querySelector('.file-text');
@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     Toast.fire({
                         icon: 'success', title: data.message || 'Sanción registrada correctamente'
                     });
-                    
+
                     // Recargar la tabla y estadísticas
                     const activeTab = getActiveTab();
                     if (activeTab === 'notifications') {
@@ -816,12 +816,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notificationsYearInput && notificationsYearInput.value) {
             params.set('notifications_year', notificationsYearInput.value);
         }
-        
+
         // Agregar status_filter (default 'all' si no está presente)
         const urlParams = new URLSearchParams(window.location.search);
         const currentStatus = urlParams.get('status_filter') || 'all';
         params.set('status_filter', currentStatus);
-        
+
         fetch(`${urlList}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
             .then(data => {
@@ -962,7 +962,7 @@ document.addEventListener('DOMContentLoaded', function () {
         statsData.forEach(stat => {
             const statCard = document.createElement('div');
             statCard.className = `stat-card ${stat.class}`;
-            statCard.onclick = function() {
+            statCard.onclick = function () {
                 filterNotificationsByStatus(stat.filter_val);
             };
             statCard.innerHTML = `
@@ -1052,24 +1052,76 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    $(document).on('click', '.js-btn-set-notified', function () {
+        const url = $(this).data('url');
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                $('#modal-dynamic-content').html(html);
+                $('#customModal').removeClass('hidden');
+                $('body').addClass('modal-open'); // Bloquea el scroll
+            });
+    });
+
+    $(document).on('submit', '#form-set-notified', function (e) {
+        e.preventDefault();
+        const $form = $(this);
+        $.ajax({
+            url: $form.attr('data-url'),
+            method: 'POST',
+            data: $form.serialize(),
+            success: function (response) {
+                if (response.success) {
+                    closeModal();
+                    Swal.fire('¡Éxito!', response.message, 'success');
+
+                    // IMPORTANTE: Recargar la página 1 de notificaciones
+                    // Esto actualiza la tabla Y los stats (contadores superiores)
+                    fetchNotificationsPage(1);
+                }
+            },
+            error: function (err) {
+                Swal.fire('Error', 'No se pudo guardar la fecha', 'error');
+            }
+        });
+    });
+
+    // Función para abrir el modal (donde haces el fetch del botón verde)
+    function openNotificationModal(url) {
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                $('#modal-dynamic-content').html(html);
+                $('#customModal').removeClass('hidden');
+                $('body').addClass('modal-open'); // <--- BLOQUEA EL SCROLL
+            });
+    }
+
+// Función para cerrar el modal (closeModal)
+    function closeModal() {
+        $('#customModal').addClass('hidden');
+        $('#modal-dynamic-content').html('');
+        $('body').removeClass('modal-open'); // <--- ACTIVA EL SCROLL DE NUEVO
+    }
+
     // --- FUNCIÓN PARA FILTRAR NOTIFICACIONES POR ESTADO ---
-    window.filterNotificationsByStatus = function(status) {
+    window.filterNotificationsByStatus = function (status) {
         const month = document.getElementById('notifications-month').value;
         const year = document.getElementById('notifications-year').value;
         const q = document.getElementById('notifications-search').value;
-        
+
         let url = `${urlList}?page=1&section=notifications`;
-        
+
         // Agregar status_filter siempre (incluso 'all' para mostrar todos)
         url += `&status_filter=${status}`;
-        
+
         if (month) url += `&notifications_month=${month}`;
         if (year) url += `&notifications_year=${year}`;
         if (q) url += `&notifications_q=${encodeURIComponent(q)}`;
-        
+
         // Actualizar URL del navegador
         window.history.replaceState({}, '', url);
-        
+
         fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
@@ -1094,22 +1146,22 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateNotificationsPaginationInfo(paginationData) {
         const pageInfo = document.getElementById('notifications-page-info');
         const pageInput = document.getElementById('notifications-page-input');
-        
+
         if (pageInfo && paginationData) {
             pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count}`;
         }
-        
+
         if (pageInput && paginationData) {
             pageInput.max = paginationData.total_pages;
             pageInput.value = paginationData.current_page;
         }
-        
+
         // Actualizar estado de botones
         const btnFirst = document.getElementById('notifications-btn-first');
         const btnPrev = document.getElementById('notifications-btn-prev');
         const btnNext = document.getElementById('notifications-btn-next');
         const btnLast = document.getElementById('notifications-btn-last');
-        
+
         if (btnFirst) btnFirst.disabled = !paginationData.has_previous;
         if (btnPrev) btnPrev.disabled = !paginationData.has_previous;
         if (btnNext) btnNext.disabled = !paginationData.has_next;

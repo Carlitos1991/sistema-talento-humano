@@ -1,0 +1,55 @@
+{% load static %}
+
+<div class="modal-container-small shadow-card" style="border: none; outline: none;">
+    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <div class="modal-header-refined">
+        <div class="header-content-group">
+            <div class="header-icon-circle" style="background: #10b981; color: white;">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h2 class="header-title-main">
+                Registrar Notificación
+            </h2>
+        </div>
+    </div>
+
+    <form id="form-set-notified" data-url="{{ request.path }}">
+        {% csrf_token %}
+        <div class="modal-body">
+            <div  style="margin-bottom: 0; border: none; padding: 0;">
+                <h4 class="section-title">
+                    <i class="fas fa-user-check text-primary"></i> RECEPCIÓN DE DOCUMENTO
+                </h4>
+
+                <p style="margin-bottom: 20px; color: #4b5563; font-size: 0.9rem; line-height: 1.5;">
+                    Indique la fecha en la que el empleado <br>
+                    <strong style="color: #1f2937;">{{ notification.employee.person.full_name }}</strong> <br>
+                    firmó la recepción de la notificación.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label font-weight-700" style="color: #374151;">
+                        {{ form.notification_date.label }}
+                    </label>
+                    {{ form.notification_date }}
+                    {% if form.notification_date.errors %}
+                        <small class="text-danger"
+                               style="display:block; margin-top:5px;">{{ form.notification_date.errors.0 }}</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-refined">
+            <button type="button" class="btn-cancel js-close-modal">
+                <i class="fas fa-times-circle"></i> CANCELAR
+            </button>
+            <button type="submit" class="btn-create" style="background: #10b981; border: none; color: white;">
+                <i class="fas fa-check-circle"></i> CONFIRMAR
+            </button>
+        </div>
+    </form>
+</div>
