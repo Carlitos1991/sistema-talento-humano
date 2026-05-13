@@ -106,29 +106,39 @@
                                 </button>
 
                             </div>
-
                         {% elif notification.status == 'SANCIONADO' %}
                             <div class="actions-wrapper" style="justify-content: center; gap: 4px;">
-                                {% if current_assign and current_assign.sanction and current_assign.sanction.personnel_action_id %}
-                                    {% if current_assign.sanction.personnel_action.motivation and current_assign.sanction.personnel_action.explanation %}
-                                        <button type="button" class="btn-create-action js-btn-edit-personnel-action"
-                                                data-action-id="{{ current_assign.sanction.personnel_action_id }}"
-                                                title="Editar Acción de Personal">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <a href="{% url 'personnel_actions:action_pdf' current_assign.sanction.personnel_action_id %}"
-                                           class="btn-info-action" title="Imprimir Acción de Personal"
-                                           target="_blank" rel="noopener noreferrer">
-                                            <i class="fa-solid fa-print"></i>
-                                        </a>
-                                    {% else %}
-                                        <button type="button" class="btn-create-action js-btn-edit-personnel-action"
-                                                data-action-id="{{ current_assign.sanction.personnel_action_id }}"
-                                                title="Elaborar Acción de personal">
-                                            <i class="fa-solid fa-file-circle-plus"></i>
-                                        </button>
+                                {% with action=notification.linked_action %}
+                                    {% if action %}
+
+                                        {# CASO 1: Faltan datos (No tiene motivación o no tiene explicación) #}
+                                        {% if not action.motivation or not action.explanation %}
+                                            <button type="button" class="btn-create-action js-btn-edit-personnel-action"
+                                                    data-action-id="{{ action.id }}"
+                                                    title="Elaborar Acción de personal">
+                                                <i class="fa-solid fa-file-circle-plus"></i>
+                                            </button>
+                                            {# CASO 2: Acción Completa (Tiene motivación y explicación) #}
+                                        {% else %}
+                                            {# Botón de EDITAR: Solo si NO está registrada #}
+                                            {% if not action.is_registered %}
+                                                <button type="button"
+                                                        class="btn-views-action js-btn-edit-personnel-action"
+                                                        data-action-id="{{ action.id }}"
+                                                        title="Editar Acción de Personal">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                            {% endif %}
+                                            {# Botón de IMPRIMIR: Siempre se muestra si ya está completa #}
+                                            <a href="{% url 'personnel_actions:action_pdf' action.id %}"
+                                               class="btn-success-action" title="Imprimir Acción de Personal"
+                                               target="_blank" rel="noopener noreferrer" style="color: #6366f1;">
+                                                <i class="fa-solid fa-print"></i>
+                                            </a>
+                                        {% endif %}
+
                                     {% endif %}
-                                {% endif %}
+                                {% endwith %}
                                 <button type="button" class="btn-info-action js-btn-route-tramite"
                                         data-notification-id="{{ notification.pk }}" title="Ruta del Trámite">
                                     <i class="fa-solid fa-timeline"></i>

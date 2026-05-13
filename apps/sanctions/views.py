@@ -1639,12 +1639,17 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
     paginate_by = 10
 
     def _get_base_queryset(self):
-        # 1. Optimización de base de datos
         queryset = SanctionNotification.objects.select_related(
-            'employee__person', 'notification_type', 'labor_regime',
-            'authority_1', 'authority_2', 'created_by'
+            'employee__person',
+            'notification_type',
+            'labor_regime',
+            'authority_1',
+            'authority_2',
+            'created_by'
+        ).prefetch_related(
+            'assignment_history__sanction__personnel_action'
         )
-        # 2. PRIVACIDAD: Si no es staff, solo ve lo que tiene asignado (vía assignment_history)
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(assignment_history__assigned_to=self.request.user)
         return queryset

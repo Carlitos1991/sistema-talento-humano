@@ -387,6 +387,26 @@ class SanctionNotification(BaseModel):
     def current_assignment(self):
         """Retorna la asignación activa actual"""
         return self.assignment_history.filter(is_current=True).first()
+    @property
+    def get_related_sanction(self):
+        """
+        Busca la sanción asociada en cualquier registro del historial
+        de asignaciones de esta notificación.
+        """
+        assignment = self.assignment_history.filter(sanction__isnull=False).select_related(
+            'sanction__personnel_action').first()
+        if assignment:
+            return assignment.sanction
+        return None
+
+    @property
+    def linked_action(self):
+        """Retorna la Acción de Personal asociada a través de la sanción en el historial"""
+        assignment = self.assignment_history.filter(sanction__isnull=False).select_related(
+            'sanction__personnel_action').first()
+        if assignment and assignment.sanction:
+            return assignment.sanction.personnel_action
+        return None
 
 
 class Sanction(models.Model):
