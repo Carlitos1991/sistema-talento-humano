@@ -97,6 +97,10 @@
                                     title="Marcar como Notificado" style="color: #10b981;">
                                 <i class="fa-solid fa-envelope-circle-check"></i>
                             </button>
+                            <button class="btn-delete-action js-btn-archive" data-id="{{ notification.pk }}"
+                                    title="Archivar">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </button>
                         {% endif %}
                         {% if perms.sanctions.change_sanctionnotification %}
                             {% if notification.status == 'GENERADO' %}
