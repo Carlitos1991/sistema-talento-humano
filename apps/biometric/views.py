@@ -22,7 +22,7 @@ from django.db import transaction, models
 logger = logging.getLogger(__name__)
 ENABLE_SHIFT_COLLAPSE = False  # desactivar colapso automático hasta afinar reglas
 # Configurables para el emparejador (ajustables según pruebas)
-DEDUPE_WINDOW_MINUTES = 5
+DEDUPE_WINDOW_MINUTES = 3  # 3 minutos no acepta duplicados dentro de los primeros 3 minutos
 IN_TOLERANCE_SECONDS = 60  # 1 minuto de tolerancia para in
 OUT_MAX_SECONDS = 90 * 60  # 30 minutos para aceptar out antes del evento si no hay after
 IN_MAX_SECONDS = 60 * 60 * 2  # 2 horas máximo para emparejar despues en in
@@ -163,10 +163,10 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     if not p.get('matched_event'):
                         continue
                     ev_label = p.get('matched_event')
-    
+
                     if ev_label in events_skipped:
                         continue
-    
+
                     ev = events_map.get(ev_label)
                     if not ev:
                         continue
@@ -175,7 +175,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                         ev_dt = ev.get('dt')
                     except Exception:
                         continue
-    
+
                     # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
                     if ev.get('type') == 'in':
                         # Entrada tardía: punch llegó después de la hora esperada
@@ -183,10 +183,20 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                         if diff >= 60:
                             minutos_atraso += int(diff // 60)
                     elif ev.get('type') == 'out':
-                        # Salida anticipada: punch salió antes de la hora esperada
-                        diff = (ev_dt - p_dt).total_seconds()
-                        if diff >= 60:
-                            minutos_atraso += int(diff // 60)
+                        # Early departure: only penalize if the mark is BEFORE the (adjusted) expected time
+                        diff_seconds = (ev_dt - p_dt).total_seconds()
+                        if diff_seconds >= 60:
+                            # Check if the punch itself fell inside any permit window to avoid unfair penalties
+                            is_inside_permit = False
+                            for perm in day_obj_local.get('permits', []):
+                                ps = perm.get('start_time')
+                                pe = perm.get('end_time')
+                                if ps and pe and ps <= p_dt.time() <= pe:
+                                    is_inside_permit = True
+                                    break
+
+                            if not is_inside_permit:
+                                minutos_atraso += int(diff_seconds // 60)
 
     return {'inconsistencias': inconsistencias, 'dias_sin_marcar': dias_sin_marcar,
             'minutos_atraso': minutos_atraso}
@@ -268,12 +278,34 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                         elif pe and not ps and ev_time <= pe:
                             ev['dt'] = datetime.combine(ev['dt'].date(), pe)
                     elif ev['type'] == 'out':
-                        if ps and pe and ps <= ev_time <= pe:
-                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                        elif ps and not pe and ev_time >= ps:
-                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                        elif pe and not ps and ev_time <= pe:
-                            is_covered = True
+                        # 1. Identify all permits for this day that have start and end times
+                        valid_permits = [p for p in permits_day if p.get('start_time') and p.get('end_time')]
+                        # Sort them backwards (from latest to earliest)
+                        valid_permits.sort(key=lambda x: x['start_time'], reverse=True)
+
+                        adjusted_time = ev['dt']
+
+                        # 2. "Chain" contiguous permits backwards from the scheduled departure
+                        # This fixes the Feb 10th issue (15:00-16:00 + 16:00-17:00)
+                        for perm in valid_permits:
+                            ps = perm.get('start_time')
+                            pe = perm.get('end_time')
+                            current_out_time = adjusted_time.time()
+
+                            # If the permit covers the current adjusted exit time or ends exactly when it starts
+                            if (ps <= current_out_time <= pe) or (pe == current_out_time):
+                                adjusted_time = datetime.combine(adjusted_time.date(), ps)
+
+                        ev['dt'] = adjusted_time
+
+                        # 3. Final check for full coverage
+                        for perm in permits_day:
+                            ps = perm.get('start_time')
+                            pe = perm.get('end_time')
+                            if not ps and not pe:  # Full day permit
+                                is_covered = True
+                            if pe and not ps and ev['dt'].time() <= pe:  # Permit from start of day to PE
+                                is_covered = True
 
                 if is_covered:
                     events_skipped.append(ev['label'])
@@ -323,7 +355,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 if ordered_candidates:
                     candidates = ordered_candidates
                 if not candidates:
-                    break
+                    continue
 
                 try:
                     idx = events.index(ev)
@@ -402,7 +434,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
             day_obj_local['no_marks_all_day'] = no_marks
-            day_obj_local['has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday and not no_marks
+            day_obj_local[
+                'has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday and not no_marks
 
             day_obj_local['punches'] = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
 
@@ -1122,6 +1155,10 @@ def generate_monthly_report_pdf(request):
                 punches = day_obj.get('punches', [])
                 # Ordenar copias de marcaciones (asegurarnos que están ordenadas) usando 'dt_norm'
                 punches_sorted = sorted(punches, key=lambda x: x.get('dt_norm') or x.get('dt'))
+                if debug_punches:
+                    msg_raw = f"[punch-debug] emp={emp_id} day={d} TOTAL_PUNCHES_DB={len(punches_sorted)} LISTA={[(p.get('time'), p.get('dt')) for p in punches_sorted]}"
+                    with open(os.path.join(os.getcwd(), 'punch_debug.log'), 'a', encoding='utf-8') as _f:
+                        _f.write(msg_raw + '\n')
 
                 # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
                 last_p_dt = datetime.min
@@ -1223,7 +1260,7 @@ def generate_monthly_report_pdf(request):
                         prev_assigned_dt = datetime.min
                         # No emparejar con marcas extremadamente lejanas: umbral en segundos
                         MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
-                        for ev in events_active:  # solo eventos NO cubiertos por permiso
+                        for ev in events_active:
                             # candidatos sin asignar
                             candidates = [p for p in punches_sorted if
                                           not p.get('assigned') and not p.get('is_duplicate')]
@@ -1236,7 +1273,7 @@ def generate_monthly_report_pdf(request):
                             if ordered_candidates:
                                 candidates = ordered_candidates
                             if not candidates:
-                                break
+                                continue
                             # Ventana del evento: entre evento anterior y siguiente (si existen)
                             try:
                                 idx = events.index(ev)
@@ -1496,7 +1533,7 @@ def generate_monthly_report_pdf(request):
                             continue
                         if M is None:
                             continue
-    
+
                         # ════════════════════════════════════════════════════════
                         # RAMA NO  → 2 GUARDADOS (horario de una sola jornada)
                         # Nodos según diagrama: SI G1 → M>E1 → M=G1 → ATR=M-E1
@@ -1504,7 +1541,7 @@ def generate_monthly_report_pdf(request):
                         #                       SI G2 → G2≥S2 → FIN
                         # ════════════════════════════════════════════════════════
                         if not is_4_jornadas:
-    
+
                             # ── Slot G1 vacío → primera marca del día ──────────
                             if g_regs['G1'] is None:
                                 g_regs['G1'] = M
@@ -1515,7 +1552,7 @@ def generate_monthly_report_pdf(request):
                                     g_atr['G1'] = max(0, mins)
                                 # M <= E1 → llegó a tiempo, ATR no cambia
                                 continue
-    
+
                             # ── G1 lleno, G2 vacío → segunda marca (salida) ────
                             if g_regs['G2'] is None:
                                 g_regs['G2'] = M
@@ -1526,10 +1563,10 @@ def generate_monthly_report_pdf(request):
                                     ATR += max(0, mins)
                                     g_atr['G2'] = max(0, mins)
                                 continue
-    
+
                             # G1 y G2 ya llenos → marcas extra ignoradas en ruta 2
                             continue
-    
+
                         # ════════════════════════════════════════════════════════
                         # RAMA SÍ  → 4 GUARDADOS (horario con dos jornadas)
                         # El diagrama sigue este orden para cada marcación M:
@@ -1554,7 +1591,7 @@ def generate_monthly_report_pdf(request):
                         #      M ≥ S2? SÍ → G4 = M  (salida a tiempo, TEMP ya = 0)
                         #              NO → G4 = M ; TEMP = S2 - G4 ; ATR = ATR + TEMP
                         # ════════════════════════════════════════════════════════
-    
+
                         # ── Slot G1 ─────────────────────────────────────────────
                         if g_regs['G1'] is None:
                             # Diagrama: M > E1 → asignar G1 y calcular ATR
@@ -1566,7 +1603,7 @@ def generate_monthly_report_pdf(request):
                             # M <= E1: llegó antes de la entrada esperada → no asignar todavía
                             # (el diagrama muestra "NO" volviendo al inicio del loop)
                             continue
-    
+
                         # ── Slot G2 ─────────────────────────────────────────────
                         if g_regs['G2'] is None:
                             g_regs['G2'] = M
@@ -1580,7 +1617,7 @@ def generate_monthly_report_pdf(request):
                                 ATR += max(0, TEMP)
                                 g_atr['G2'] = max(0, TEMP)
                             continue
-    
+
                         # ── Slot G3 ─────────────────────────────────────────────
                         if g_regs['G3'] is None:
                             # Diagrama: G2 ≥ S2 → rama de cortocircuito (no debería llegar
@@ -1600,7 +1637,7 @@ def generate_monthly_report_pdf(request):
                                     g_atr['G3'] = mins
                             # M <= E2 → antes de la entrada J2 → ignorar (diagrama "NO")
                             continue
-    
+
                         # ── Slot G4 ─────────────────────────────────────────────
                         if g_regs['G4'] is None:
                             g_regs['G4'] = M
@@ -1613,7 +1650,7 @@ def generate_monthly_report_pdf(request):
                                 ATR += max(0, TEMP)
                                 g_atr['G4'] = max(0, TEMP)
                             continue
-    
+
                         # G1..G4 ya llenos → marcas extra se ignoran
                         continue
 
