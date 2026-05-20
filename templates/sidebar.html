@@ -459,6 +459,9 @@
                     <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-solid fa-file-contract"></i>
                         <span class="menu-text">Gestión Laboral</span>
+                        {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
+                            <span class="sidebar-badge">{{ contract_expiring_count }}</span>
+                        {% endif %}
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
