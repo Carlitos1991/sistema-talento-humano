@@ -1,35 +1,38 @@
 <div class="table-container">
-
-
-    <table>
+    <table id="permitAdminTable"
+           class="managed-table exportable-table"
+           data-title="Gestión de Permisos"
+           data-filename="Gestion_Permisos"
+           data-list-url="{% url 'permissions:permit_admin' %}"
+           data-external-pagination="true"
+           data-external-search="true">
         <thead>
         <tr>
-            <th><i class="fas fa-user"></i> FOTO</th>
-            <th><i class="fas fa-user"></i> EMPLEADO</th>
-            <th><i class="fas fa-id-card"></i> CÉDULA</th>
-            <th><i class="fas fa-list-check"></i> TIPO DE PERMISO</th>
-            <th><i class="fas fa-calendar-day"></i> FECHA INICIO</th>
-            <th><i class="fas fa-calendar-check"></i> FECHA FIN</th>
+            <th data-field="employee" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-user"></i> EMPLEADO <span class="sort-icon">⇅</span>
+            </th>
+            <th data-field="document_number" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-id-card"></i> CÉDULA <span class="sort-icon">⇅</span>
+            </th>
+            <th data-field="permit_type" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-list-check"></i> TIPO DE PERMISO <span class="sort-icon">⇅</span>
+            </th>
+            <th data-field="start_date" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-calendar-day"></i> FECHA INICIO <span class="sort-icon">⇅</span>
+            </th>
+            <th data-field="end_date" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-calendar-check"></i> FECHA FIN <span class="sort-icon">⇅</span>
+            </th>
             <th><i class="fas fa-hourglass-half"></i> DURACIÓN</th>
-            <th><i class="fas fa-info-circle"></i> ESTADO</th>
+            <th data-field="status" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-info-circle"></i> ESTADO <span class="sort-icon">⇅</span>
+            </th>
             <th><i class="fas fa-cog"></i> ACCIONES</th>
         </tr>
         </thead>
         <tbody>
         {% for permit in permits %}
             <tr>
-                <td>
-                    <div class="user-cell">
-                        {% if permit.employee.person.photo %}
-                            <img src="{{ permit.employee.person.photo.url }}"
-                                 alt="{{ permit.employee.person.full_name }}" class="user-avatar">
-                        {% else %}
-                            <div class="user-avatar-placeholder">
-                                <i class="fas fa-user"></i>
-                            </div>
-                        {% endif %}
-                    </div>
-                </td>
                 <td>
                     <div class="user-cell">
                         <span>{{ permit.employee.person.name_and_last_name }}</span>
@@ -89,7 +92,7 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="9" class="text-center">
+                <td colspan="8" class="text-center">
                     <div style="padding: 2rem; color: #6c757d;">
                         <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
                         <p style="margin-top: 1rem;">No se encontraron permisos</p>

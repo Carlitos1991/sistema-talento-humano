@@ -4,79 +4,278 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+    <style>
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Toolbar y botones estilo 'Acciones de Personal' */
+        .pa-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pa-toolbar-left {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pa-toolbar-center {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pa-toolbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .pa-toolbar-left,
+        .pa-toolbar-right {
+            flex: 1;
+        }
+
+        .pa-toolbar-right {
+            justify-content: flex-end;
+        }
+
+        .pa-btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 22px;
+            border-radius: 6px;
+            font-size: .875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            min-width: 110px;
+            justify-content: center;
+            transition: opacity .15s;
+        }
+
+        .pa-btn-action:hover { opacity: .85; }
+
+        .pa-btn-primary { background: #3b82f6; color: #fff; }
+        .pa-btn-secondary { background: #64748b; color: #fff; }
+
+        .table-export-btns {
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .table-export-btns .btn-export-excel,
+        .table-export-btns .btn-export-pdf {
+            border: 0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: .875rem;
+            font-weight: 600;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .table-export-btns .btn-export-excel {
+            background: #059669;
+        }
+
+        .table-export-btns .btn-export-pdf {
+            background: #dc2626;
+        }
+
+        /* ─── Caja de filtros ─────────────────────── */
+        .pa-filter-box {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px 20px 12px;
+            margin-bottom: 12px;
+        }
+
+        .pa-filter-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .pa-filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .pa-input {
+            flex: 1 1 190px;
+            max-width: 255px;
+            padding: 8px 11px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: .875rem;
+            background: #fff;
+            color: #374151;
+            outline: none;
+            transition: border-color .15s;
+        }
+
+        .pa-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, .15);
+        }
+
+        /* ─── Paginación (vive en el partial) ────── */
+        .pagination-container {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pagination-info {
+            font-size: .875rem;
+            color: #64748b;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .page-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .page-input {
+            width: 58px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: .875rem;
+        }
+
+        .total-pages-badge {
+            font-size: .875rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        /* ─── Sort inline con el nombre ──────────── */
+        th a.sortable {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: inherit;
+            white-space: nowrap;
+        }
+
+        th a.sortable .sort-icon {
+            font-size: .68rem;
+            opacity: .45;
+            transition: opacity .1s;
+        }
+
+        th a.sortable.asc .sort-icon,
+        th a.sortable.desc .sort-icon {
+            opacity: 1;
+        }
+
+        .sort-icon {
+            font-size: .72rem;
+            opacity: .5;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-    <!-- 1. Header -->
     <div class="header-card">
         <div>
             <h1>Gestión de Permisos</h1>
             <p>Administra los permisos del personal de la institución</p>
         </div>
     </div>
-
-    <!-- 2. Estadísticas (Filtros Rápidos Clicleables) -->
-    <div class="stats-row">
-        <!-- TOTAL -->
-        <div class="stat-card color-one" onclick="filterPermitsByStatus('all')" id="card-filter-all">
-            <div class="stat-left">
-                <h3>TOTAL</h3>
-                <div class="number" id="stat-total">{{ total|default:"0" }}</div>
-            </div>
-            <i class="fas fa-clipboard-list stat-icon"></i>
-        </div>
-
-        <!-- PENDIENTES -->
-        <div class="stat-card color-two opacity-low" onclick="filterPermitsByStatus('REQUESTED')" id="card-filter-requested">
-            <div class="stat-left">
-                <h3>PENDIENTES</h3>
-                <div class="number" id="stat-pendientes">{{ pendientes|default:"0" }}</div>
-            </div>
-            <i class="fas fa-clock stat-icon"></i>
-        </div>
-
-        <!-- APROBADOS -->
-        <div class="stat-card color-three opacity-low" onclick="filterPermitsByStatus('APPROVED')" id="card-filter-approved">
-            <div class="stat-left">
-                <h3>APROBADOS</h3>
-                <div class="number" id="stat-aprobados">{{ aprobados|default:"0" }}</div>
-            </div>
-            <i class="fas fa-check-circle stat-icon"></i>
-        </div>
-
-        <!-- RECHAZADOS -->
-        <div class="stat-card color-four opacity-low" onclick="filterPermitsByStatus('REJECTED')" id="card-filter-rejected">
-            <div class="stat-left">
-                <h3>RECHAZADOS</h3>
-                <div class="number" id="stat-rechazados">{{ rechazados|default:"0" }}</div>
-            </div>
-            <i class="fas fa-times-circle stat-icon"></i>
-        </div>
-    </div>
-
-    <!-- 3. Tabla AJAX -->
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search-permits" class="input-field"
-                           placeholder="Buscar por empleado, tipo de permiso o estado...">
-                </div>
-                <select id="filter-status" class="input-field" style="max-width: 200px;">
-                    <option value="">Todos los estados</option>
-                    <option value="REQUESTED">Pendientes</option>
-                    <option value="APPROVED">Aprobados</option>
-                    <option value="REJECTED">Rechazados</option>
-                </select>
-            </div>
+            <div class="pa-filter-box">
+                <form id="filtersForm" onsubmit="return false;">
+                    <div class="pa-filter-row">
+                        <input type="text" id="table-search-permits" name="q" class="pa-input"
+                               placeholder="Nombres/Apellidos/Cédula" value="{{ current_filters.q }}">
 
-            <!-- Contenedor donde se inyecta el HTML parcial -->
+                        <input type="date" id="filter_date_from" name="date_from" class="pa-input datepicker"
+                               value="{{ current_filters.date_from }}" placeholder="Vigencia Desde">
+                        <input type="date" id="filter_date_to" name="date_to" class="pa-input datepicker"
+                               value="{{ current_filters.date_to }}" placeholder="Vigencia Hasta">
+                    </div>
+                    <div class="pa-filter-row">
+                        <select id="filter_area" name="area" class="pa-input select2" data-ajax-url="/institution/api/unit-children/" data-placeholder="Dependencia" data-minimum-input-length="1">
+                            <option value="">Dependencia</option>
+                            {% for area in areas %}
+                                <option value="{{ area.id }}" {% if current_filters.area == area.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ area.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <select id="filter_permit_type" name="permit_type" class="pa-input select2">
+                            <option value="">Tipo de Permiso</option>
+                            {% for t in permit_types %}
+                                <option value="{{ t.id }}" {% if current_filters.permit_type == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <select id="filter_status" name="status" class="pa-input select2">
+                            <option value="">Estado</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- botones movidos a toolbar para mantener estilo consistente -->
+                </form>
+            </div>
+        </div>
+        <div class="content-table">
+            <div class="pa-toolbar">
+                <div class="pa-toolbar-left">
+                    <div class="table-controls"></div>
+                </div>
+                <div class="pa-toolbar-center">
+                    <button id="btn-search-permits" class="pa-btn-action pa-btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button id="btn-clear-permits" class="pa-btn-action pa-btn-secondary">
+                        <i class="fas fa-eraser"></i> Limpiar
+                    </button>
+                </div>
+                <div class="pa-toolbar-right"><!-- espacio --></div>
+            </div>
             <div id="table-content-wrapper">
                 {% include 'permissions/partials/partial_permit_admin_table.html' %}
             </div>
 
-            <!-- PAGINACIÓN — server-side, navegación via Vue fetchPeople() -->
             <div class="pagination-container">
                 <span class="pagination-info">
                     Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
@@ -130,5 +329,6 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/table-export.js' %}"></script>
     <script src="{% static 'js/permissions/permit_admin.js' %}"></script>
 {% endblock %}

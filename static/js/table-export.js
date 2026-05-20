@@ -282,24 +282,28 @@ function addExportButtonsToTables() {
             '<button type="button" class="btn-export-pdf" title="PDF">' +
             '<i class="fas fa-file-pdf"></i> PDF</button>';
 
-        // Closure sobre la tabla actual — no buscar en el DOM de nuevo
-        (function (t) {
-            const excelBtn = btnContainer.querySelector('.btn-export-excel');
-            const pdfBtn = btnContainer.querySelector('.btn-export-pdf');
-            if (excelBtn) {
-                excelBtn.addEventListener('click', function (e) {
-                    exportTableToExcel(t);
-                });
-            }
-            if (pdfBtn) {
-                pdfBtn.addEventListener('click', function (e) {
-                    exportTableToPDF(t);
-                });
-            }
-        })(table);
+        const resolveCurrentTable = () => {
+            const currentWrapper = table.closest('.content-table');
+            return currentWrapper ? currentWrapper.querySelector('.exportable-table') : table;
+        };
+
+        const excelBtn = btnContainer.querySelector('.btn-export-excel');
+        const pdfBtn = btnContainer.querySelector('.btn-export-pdf');
+        if (excelBtn) {
+            excelBtn.addEventListener('click', function () {
+                exportTableToExcel(resolveCurrentTable());
+            });
+        }
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', function () {
+                exportTableToPDF(resolveCurrentTable());
+            });
+        }
         controls.insertBefore(btnContainer, controls.firstChild);
     });
 }
+
+window.addExportButtonsToTables = addExportButtonsToTables;
 
 // Try to initialize export buttons safely: if DOMContentLoaded already passed, call immediately.
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

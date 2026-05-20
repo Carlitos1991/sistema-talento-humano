@@ -21,8 +21,20 @@ from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
 from employee.models import Employee
 from budget.models import BudgetLine
+from institution.models import AdministrativeUnit
 
 PERMIT_PUBLIC_TOKEN_SALT = 'permitrequest.public.validation'
+
+PERMIT_ADMIN_SORT_FIELDS = {
+    'employee': 'employee__person__last_name',
+    'document_number': 'employee__person__document_number',
+    'area': 'employee__area__name',
+    'permit_type': 'permit_type__name',
+    'created_at': 'created_at',
+    'start_date': 'start_date',
+    'end_date': 'end_date',
+    'status': 'status',
+}
 
 
 def build_public_permit_token(permit_id):
@@ -37,6 +49,75 @@ def parse_public_permit_token(token):
     if not permit_id:
         raise signing.BadSignature('Token sin permit_id')
     return int(permit_id)
+
+
+def clamp_page_number(request, paginator):
+    try:
+        page_number = int(request.GET.get('page', 1))
+    except (TypeError, ValueError):
+        page_number = 1
+    return max(1, min(page_number, paginator.num_pages or 1))
+
+
+def build_permit_admin_queryset(request):
+    queryset = PermitRequest.objects.select_related(
+        'employee__person',
+        'employee__area',
+        'permit_type',
+        'permit_type__parent',
+    )
+
+    query = (request.GET.get('q') or '').strip()
+    area_id = (request.GET.get('area') or '').strip()
+    permit_type_id = (request.GET.get('permit_type') or '').strip()
+    permit_subtype_id = (request.GET.get('permit_subtype') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+    date_from = (request.GET.get('date_from') or '').strip()
+    date_to = (request.GET.get('date_to') or '').strip()
+
+    if query:
+        tokens = [token for token in query.split() if token]
+        for token in tokens:
+            queryset = queryset.filter(
+                Q(employee__person__first_name__icontains=token) |
+                Q(employee__person__last_name__icontains=token) |
+                Q(employee__person__document_number__icontains=token) |
+                Q(employee__area__name__icontains=token) |
+                Q(permit_type__name__icontains=token)
+            )
+
+    if area_id:
+        queryset = queryset.filter(employee__area_id=area_id)
+
+    if permit_type_id:
+        queryset = queryset.filter(
+            Q(permit_type_id=permit_type_id) |
+            Q(permit_type__parent_id=permit_type_id)
+        )
+
+    if permit_subtype_id:
+        queryset = queryset.filter(permit_type_id=permit_subtype_id)
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    if date_from:
+        queryset = queryset.filter(start_date__gte=date_from)
+
+    if date_to:
+        queryset = queryset.filter(start_date__lte=date_to)
+
+    # Excluir permisos cuyo tipo esté desactivado (is_active=False)
+    queryset = queryset.filter(permit_type__is_active=True)
+
+    # Orden por defecto: registros más recientes (created_at)
+    sort_field = request.GET.get('sort_field', 'created_at')
+    sort_dir = request.GET.get('sort_dir', 'desc')
+    order_field = PERMIT_ADMIN_SORT_FIELDS.get(sort_field, 'start_date')
+    if sort_dir == 'desc':
+        order_field = f'-{order_field}'
+
+    return queryset.order_by(order_field)
 
 
 # --- MIXIN PARA BÚSQUEDA AJAX (Híbrido) ---
@@ -543,29 +624,65 @@ class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespo
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related(
-            'employee__person',
-            'permit_type'
-        ).order_by('-created_at')
+        return build_permit_admin_queryset(self.request)
 
-        query = self.request.GET.get('q')
-        status = self.request.GET.get('status')
+    def paginate_queryset(self, queryset, page_size):
+        paginator = self.get_paginator(queryset, page_size)
+        page_number = clamp_page_number(self.request, paginator)
+        page = paginator.page(page_number)
+        return paginator, page, page.object_list, page.has_other_pages()
 
-        if query:
-            queryset = queryset.filter(
-                Q(employee__person__first_name__icontains=query) |
-                Q(employee__person__last_name__icontains=query) |
-                Q(employee__person__document_number__icontains=query) |
-                Q(permit_type__name__icontains=query)
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' and request.GET.get('export') == 'true':
+            html = render_to_string(
+                self.partial_template_name,
+                {
+                    'permits': queryset,
+                },
+                request=request,
             )
+            return HttpResponse(html)
 
-        if status:
-            queryset = queryset.filter(status=status)
+        return super().get(request, *args, **kwargs)
 
-        return queryset
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            page_obj = context.get('page_obj')
+            paginator = context.get('paginator')
+            pagination_data = {
+                'start_index': page_obj.start_index() if page_obj and paginator and paginator.count else 0,
+                'end_index': page_obj.end_index() if page_obj and paginator and paginator.count else 0,
+                'total_count': paginator.count if paginator else 0,
+                'page': page_obj.number if page_obj else 1,
+                'total_pages': paginator.num_pages if paginator else 1,
+                'has_previous': bool(page_obj and page_obj.has_previous()),
+                'has_next': bool(page_obj and page_obj.has_next()),
+            }
+            return JsonResponse({'success': True, 'html': html, 'pagination': pagination_data})
+        return super().render_to_response(context, **response_kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        context['areas'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
+        context['permit_types'] = PermitType.objects.filter(parent__isnull=True, is_active=True).order_by('name')
+        context['permit_subtypes'] = PermitType.objects.filter(is_active=True, parent__isnull=False).select_related('parent').order_by('parent__name', 'name')
+        context['status_choices'] = PermitRequest.STATUS_CHOICES
+
+        context['current_filters'] = {
+            'q': (self.request.GET.get('q') or '').strip(),
+            'area': (self.request.GET.get('area') or '').strip(),
+            'permit_type': (self.request.GET.get('permit_type') or '').strip(),
+            'permit_subtype': (self.request.GET.get('permit_subtype') or '').strip(),
+            'status': (self.request.GET.get('status') or '').strip(),
+            'date_from': (self.request.GET.get('date_from') or '').strip(),
+            'date_to': (self.request.GET.get('date_to') or '').strip(),
+            'sort_field': self.request.GET.get('sort_field', 'start_date'),
+            'sort_dir': self.request.GET.get('sort_dir', 'desc'),
+        }
 
         # Estadísticas para las cards
         all_permits = PermitRequest.objects.all()
