@@ -623,21 +623,33 @@ def level_toggle_status(request, pk):
 
 def api_get_administrative_children(request):
     parent_id = request.GET.get('parent_id')
+    term = (request.GET.get('term') or '').strip()
     # Si se provee parent_id, traer hijos de ese padre.
     # Si no, limitar a raíces que sean de nivel 1 (nivel jerárquico superior).
     if parent_id:
         filters = {'parent_id': parent_id}
     else:
-        filters = {'parent__isnull': True, 'level__level_order': 1}
+        # Sin parent_id: por compatibilidad devolvemos raíces.
+        # Si hay búsqueda por término, permitimos buscar en todas las unidades activas.
+        filters = {} if term else {'parent__isnull': True, 'level__level_order': 1}
     filters['is_active'] = True
 
     units = AdministrativeUnit.objects.filter(**filters).order_by('name')
+    if term:
+        units = units.filter(
+            Q(name__icontains=term) |
+            Q(code__icontains=term)
+        )
+    units = units[:30]
+
     data = []
     for u in units:
         has_children = u.children.filter(is_active=True).exists()
         data.append({'id': u.id, 'name': u.name, 'has_children': has_children})
 
-    return JsonResponse({'success': True, 'units': data})
+    # Formato dual para compatibilidad: `units` (existente) + `results` (Select2)
+    results = [{'id': str(item['id']), 'text': item['name']} for item in data]
+    return JsonResponse({'success': True, 'units': data, 'results': results})
 
 
 class DeliverableListJsonView(LoginRequiredMixin, View):

@@ -67,21 +67,52 @@
         const paginationInfo = document.querySelector('.pagination-info');
         const paginationControls = document.querySelector('.pagination-controls');
         const pageInput = document.querySelector('.page-input');
+        const totalPagesBadge = document.querySelector('.total-pages-badge');
+        const pageButtons = document.querySelectorAll('.pagination-controls .page-btn');
         if (!paginationData) {
             return;
         }
+
+        const current = parseInt(paginationData.page || 1, 10) || 1;
+        const totalPages = parseInt(paginationData.total_pages || 1, 10) || 1;
+        currentPage = current;
 
         if (paginationInfo) {
             paginationInfo.textContent = `Mostrando ${paginationData.start_index || 0}-${paginationData.end_index || 0} de ${paginationData.total_count || 0}`;
         }
 
         if (pageInput) {
-            pageInput.value = paginationData.page || 1;
-            pageInput.max = paginationData.total_pages || 1;
+            pageInput.value = current;
+            pageInput.max = totalPages;
+        }
+
+        if (totalPagesBadge) {
+            totalPagesBadge.textContent = `de ${totalPages}`;
         }
 
         if (paginationControls) {
-            paginationControls.style.visibility = (paginationData.total_pages || 1) <= 1 ? 'hidden' : 'visible';
+            paginationControls.style.visibility = totalPages <= 1 ? 'hidden' : 'visible';
+        }
+
+        // Botones: [0]=primera [1]=anterior [2]=siguiente [3]=ultima
+        if (pageButtons.length >= 4) {
+            const firstBtn = pageButtons[0];
+            const prevBtn = pageButtons[1];
+            const nextBtn = pageButtons[2];
+            const lastBtn = pageButtons[3];
+
+            const hasPrevious = Boolean(paginationData.has_previous);
+            const hasNext = Boolean(paginationData.has_next);
+
+            firstBtn.disabled = !hasPrevious;
+            prevBtn.disabled = !hasPrevious;
+            nextBtn.disabled = !hasNext;
+            lastBtn.disabled = !hasNext;
+
+            firstBtn.setAttribute('onclick', 'changePage(1)');
+            prevBtn.setAttribute('onclick', `changePage(${hasPrevious ? current - 1 : 1})`);
+            nextBtn.setAttribute('onclick', `changePage(${hasNext ? current + 1 : totalPages})`);
+            lastBtn.setAttribute('onclick', `changePage(${totalPages})`);
         }
     }
 
@@ -269,7 +300,17 @@
                                 return {term: params.term};
                             },
                             processResults: function (data) {
-                                return {results: data.results || []};
+                                if (Array.isArray(data.results)) {
+                                    return {results: data.results};
+                                }
+                                if (Array.isArray(data.units)) {
+                                    return {
+                                        results: data.units.map(function (unit) {
+                                            return {id: String(unit.id), text: unit.name};
+                                        })
+                                    };
+                                }
+                                return {results: []};
                             },
                             cache: true
                         },

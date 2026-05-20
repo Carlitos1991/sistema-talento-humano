@@ -59,6 +59,33 @@ def clamp_page_number(request, paginator):
     return max(1, min(page_number, paginator.num_pages or 1))
 
 
+def get_unit_tree_ids(root_unit_id):
+    """Obtiene IDs de una unidad y todas sus subdependencias (recursivo por niveles)."""
+    try:
+        root_id = int(root_unit_id)
+    except (TypeError, ValueError):
+        return []
+
+    all_ids = {root_id}
+    frontier = [root_id]
+
+    # Recorrido por niveles para evitar recursión profunda en Python.
+    while frontier:
+        child_ids = list(
+            AdministrativeUnit.objects.filter(
+                parent_id__in=frontier,
+                is_active=True,
+            ).values_list('id', flat=True)
+        )
+        next_frontier = [child_id for child_id in child_ids if child_id not in all_ids]
+        if not next_frontier:
+            break
+        all_ids.update(next_frontier)
+        frontier = next_frontier
+
+    return list(all_ids)
+
+
 def build_permit_admin_queryset(request):
     queryset = PermitRequest.objects.select_related(
         'employee__person',
@@ -87,7 +114,11 @@ def build_permit_admin_queryset(request):
             )
 
     if area_id:
-        queryset = queryset.filter(employee__area_id=area_id)
+        unit_ids = get_unit_tree_ids(area_id)
+        if unit_ids:
+            queryset = queryset.filter(employee__area_id__in=unit_ids)
+        else:
+            queryset = queryset.filter(employee__area_id=area_id)
 
     if permit_type_id:
         queryset = queryset.filter(
@@ -107,8 +138,8 @@ def build_permit_admin_queryset(request):
     if date_to:
         queryset = queryset.filter(start_date__lte=date_to)
 
-    # Excluir permisos cuyo tipo esté desactivado (is_active=False)
-    queryset = queryset.filter(permit_type__is_active=True)
+    # Excluir permisos cuyo tipo esté desactivado y estados inactivos heredados
+    queryset = queryset.filter(permit_type__is_active=True).exclude(status='INACTIVE')
 
     # Orden por defecto: registros más recientes (created_at)
     sort_field = request.GET.get('sort_field', 'created_at')
