@@ -9,6 +9,8 @@ from django.template.loader import render_to_string
 from django.core import signing
 from django.http import Http404
 from django.utils import timezone
+from calendar import monthrange
+from datetime import date
 from io import BytesIO
 import base64
 from django.core.paginator import Paginator, EmptyPage
@@ -86,6 +88,13 @@ def get_unit_tree_ids(root_unit_id):
     return list(all_ids)
 
 
+def get_current_month_date_bounds():
+    today = date.today()
+    first_day = today.replace(day=1)
+    last_day = today.replace(day=monthrange(today.year, today.month)[1])
+    return first_day, last_day
+
+
 def build_permit_admin_queryset(request):
     queryset = PermitRequest.objects.select_related(
         'employee__person',
@@ -99,8 +108,9 @@ def build_permit_admin_queryset(request):
     permit_type_id = (request.GET.get('permit_type') or '').strip()
     permit_subtype_id = (request.GET.get('permit_subtype') or '').strip()
     status = (request.GET.get('status') or '').strip()
-    date_from = (request.GET.get('date_from') or '').strip()
-    date_to = (request.GET.get('date_to') or '').strip()
+    default_date_from, default_date_to = get_current_month_date_bounds()
+    date_from = (request.GET.get('date_from') or default_date_from.isoformat()).strip()
+    date_to = (request.GET.get('date_to') or default_date_to.isoformat()).strip()
 
     if query:
         tokens = [token for token in query.split() if token]
@@ -698,6 +708,10 @@ class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespo
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        default_date_from, default_date_to = get_current_month_date_bounds()
+        selected_date_from = (self.request.GET.get('date_from') or default_date_from.isoformat()).strip()
+        selected_date_to = (self.request.GET.get('date_to') or default_date_to.isoformat()).strip()
+
         context['areas'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
         context['permit_types'] = PermitType.objects.filter(parent__isnull=True, is_active=True).order_by('name')
         context['permit_subtypes'] = PermitType.objects.filter(is_active=True, parent__isnull=False).select_related('parent').order_by('parent__name', 'name')
@@ -709,8 +723,8 @@ class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespo
             'permit_type': (self.request.GET.get('permit_type') or '').strip(),
             'permit_subtype': (self.request.GET.get('permit_subtype') or '').strip(),
             'status': (self.request.GET.get('status') or '').strip(),
-            'date_from': (self.request.GET.get('date_from') or '').strip(),
-            'date_to': (self.request.GET.get('date_to') or '').strip(),
+            'date_from': selected_date_from,
+            'date_to': selected_date_to,
             'sort_field': self.request.GET.get('sort_field', 'start_date'),
             'sort_dir': self.request.GET.get('sort_dir', 'desc'),
         }
