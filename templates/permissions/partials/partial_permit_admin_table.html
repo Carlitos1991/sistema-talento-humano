@@ -23,7 +23,9 @@
             <th data-field="end_date" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
                 <i class="fas fa-calendar-check"></i> FECHA FIN <span class="sort-icon">⇅</span>
             </th>
-            <th><i class="fas fa-hourglass-half"></i> DURACIÓN</th>
+            <th data-field="area" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
+                <i class="fas fa-building"></i> DEPENDENCIA <span class="sort-icon">⇅</span>
+            </th>
             <th data-field="status" onclick="sortPermitAdminTable(this)" class="sortable-header" style="cursor: pointer;">
                 <i class="fas fa-info-circle"></i> ESTADO <span class="sort-icon">⇅</span>
             </th>
@@ -46,12 +48,7 @@
                 </td>
                 <td>{{ permit.start_date|date:"d/m/Y" }} {{ permit.start_time|time:"H:i"|default:"--" }}</td>
                 <td>{{ permit.end_date|date:"d/m/Y"|default:"--" }} {{ permit.end_time|time:"H:i"|default:"--" }}</td>
-                <td>
-                    {% if permit.days > 0 %}{{ permit.days }}d {% endif %}
-                    {% if permit.hours > 0 %}{{ permit.hours }}h {% endif %}
-                    {% if permit.minutes > 0 %}{{ permit.minutes }}m{% endif %}
-                    {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}--{% endif %}
-                </td>
+                <td>{{ permit.employee.area.name|default:"--" }}</td>
                 <td>
                     {% if permit.status == 'REQUESTED' %}
                         <span class="badge badge-warning">PENDIENTE</span>

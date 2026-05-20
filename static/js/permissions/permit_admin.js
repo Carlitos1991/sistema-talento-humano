@@ -19,8 +19,6 @@
     let currentPage = 1;
     let currentSortField = 'start_date';
     let currentSortDir = 'desc';
-    let searchTimeout = null;
-
     function getSearchValue() {
         return searchInput && searchInput.value ? searchInput.value.trim() : '';
     }
@@ -184,6 +182,19 @@
         fetchTableData();
     }
 
+    function clearSelect2Field(selectElement) {
+        if (!selectElement) {
+            return;
+        }
+
+        if (window.$ && $.fn.select2 && $(selectElement).hasClass('select2-hidden-accessible')) {
+            $(selectElement).val(null).trigger('change');
+            return;
+        }
+
+        selectElement.value = '';
+    }
+
     window.changePage = function (page) {
         const targetPage = parseInt(page, 10) || 1;
         currentPage = targetPage < 1 ? 1 : targetPage;
@@ -238,32 +249,8 @@
 
     if (btnClear) {
         btnClear.addEventListener('click', function () {
-            if (filtersForm) {
-                filtersForm.reset();
-            }
-            currentPage = 1;
-            fetchTableData();
+            window.location.reload();
         });
-    }
-
-    if (permitTypeSelect) {
-        permitTypeSelect.addEventListener('change', handleFilterChange);
-    }
-
-    if (areaSelect) {
-        areaSelect.addEventListener('change', handleFilterChange);
-    }
-
-    if (statusSelect) {
-        statusSelect.addEventListener('change', handleFilterChange);
-    }
-
-    if (dateFromInput) {
-        dateFromInput.addEventListener('change', handleFilterChange);
-    }
-
-    if (dateToInput) {
-        dateToInput.addEventListener('change', handleFilterChange);
     }
 
     if (filtersForm) {
@@ -292,6 +279,18 @@
                         placeholder: placeholder,
                         allowClear: true,
                         minimumInputLength: minLen,
+                        language: {
+                            inputTooShort: function (args) {
+                                const remaining = args.minimum - args.input.length;
+                                return `Por favor ingrese ${remaining} carácter${remaining !== 1 ? 'es' : ''} más`;
+                            },
+                            noResults: function () {
+                                return 'No se encontraron resultados';
+                            },
+                            searching: function () {
+                                return 'Buscando...';
+                            }
+                        },
                         ajax: {
                             url: ajaxUrl,
                             dataType: 'json',
@@ -317,7 +316,16 @@
                         width: '100%'
                     });
                 } else {
-                    $(sel).select2({placeholder: placeholder, allowClear: true, width: '100%'});
+                    $(sel).select2({
+                        placeholder: placeholder,
+                        allowClear: true,
+                        width: '100%',
+                        language: {
+                            noResults: function () {
+                                return 'No se encontraron resultados';
+                            }
+                        }
+                    });
                 }
             });
         }
