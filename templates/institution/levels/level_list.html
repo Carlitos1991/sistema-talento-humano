@@ -12,37 +12,28 @@
             <p>Definición de la estructura de mando (Direcciones, Jefaturas, etc).</p>
         </div>
         {% if perms.institution.add_organizationallevel %}
-            <button id="btn-add-level" type="button" class="btn btn-create">
+            <button id="btn-add-level" type="button">
                 <i class="fas fa-plus"></i> Nuevo Nivel
             </button>
         {% endif %}
     </div>
-
-    {# Estadísticas removidas por requerimiento - se muestra solo el switch centrado #}
-
-    <div id="table-app">
-        <div class="content-table">
-            <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
-
-                <div style="display: flex; justify-content: center;">
-                    <input class="modern-toggle-input" type="checkbox" id="toggleInactiveLevels"
-                           onchange="toggleInactiveLevels(this.checked)">
-
-                    <label class="modern-toggle-wrapper mb-0" for="toggleInactiveLevels">
-                        <div class="modern-toggle-circle"></div>
-                        <span class="modern-toggle-text">Mostrar Niveles Inactivos</span>
-                    </label>
-                </div>
-
-                <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="table-search" class="table-search-input" placeholder="Buscar nivel...">
-                </div>
+    <div class="content-table">
+        <div class="table-controls">
+            <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveLevels"
+                   onchange="toggleInactiveLevels(this.checked)">
+            <label class="toggle-status-red-wrapper" for="toggleInactiveLevels">
+                <div class="toggle-status-red-circle"></div>
+                <span class="toggle-status-red-text">Mostrar Niveles Inactivos</span>
+            </label>
+            <div class="search-box">
+                <input type="text" class="table-search-input" placeholder="Buscar por nombre">
+                <button type="submit" class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
-            <div id="table-content-wrapper">
-                {% include 'institution/levels/partials/partial_level_table.html' %}
-            </div>
-            <!-- Paginación: se usa el control del partial (el paginador principal) -->
+        </div>
+        <div id="table-content-wrapper">
+            {% include 'institution/levels/partials/partial_level_table.html' %}
         </div>
     </div>
 {% endblock %}

@@ -3,8 +3,8 @@
     <table class="managed-table exportable-table"
            data-title="Reporte Estructura Organizacional"
            data-filename="reporte_estructura_organizacional"
-            data-page-size="10"
-            data-external-search="true">
+           data-page-size="10"
+           data-external-search="true">
         <thead>
         <tr>
             <th><i class="fa-solid fa-list-ol"></i> Código</th>
@@ -87,14 +87,14 @@
                             {% if perms.institution.change_administrativeunit %}
                                 {# Solo mostrar si NO es el último nivel #}
                                 {% with max_level=level_stats|last %}
-                                {% if unit.level.level_order < max_level.order %}
-                                <button type="button"
-                                        class="btn-icon btn-success-action"
-                                        onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
-                                        title="Crear Dependencia">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                                {% endif %}
+                                    {% if unit.level.level_order < max_level.order %}
+                                        <button type="button"
+                                                class="btn-icon btn-success-action"
+                                                onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
+                                                title="Crear Dependencia">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    {% endif %}
                                 {% endwith %}
                                 <button type="button"
                                         class="btn-icon btn-list-action"
@@ -110,7 +110,7 @@
                                 <i class="fas fa-pencil"></i>
                             </button>
                             <a href="{% url 'institution:unit_detail_view' unit.id %}"
-                               class="btn-icon btn-detail-action"
+                               class="btn-icon btn-info-action"
                                title="Ver Detalle">
                                 <i class="fas fa-eye"></i>
                             </a>
@@ -122,7 +122,7 @@
                                     <i class="fas fa-power-off"></i>
                                 </button>
                             {% else %}
-                                <button class="btn-icon btn-create-action"
+                                <button class="btn-icon btn-success-action"
                                         onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
                                         title="Activar">
                                     <i class="fas fa-toggle-on"></i>

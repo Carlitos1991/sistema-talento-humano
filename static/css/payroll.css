@@ -303,16 +303,16 @@
 }
 
 /* =====================================================================
-   SWITCH PERSONALIZADO TIPO BOTÓN (Exacto a las referencias)
+   SWITCH PERSONALIZADO TIPO BOTÓN 
    ===================================================================== */
 
 /* Ocultamos el checkbox real */
-.modern-toggle-input {
+.toggle-status-red-input {
     display: none !important;
 }
 
 /* El label actúa como el botón contenedor (Inactivo por defecto) */
-.modern-toggle-wrapper {
+.toggle-status-red-wrapper {
     display: inline-flex;
     align-items: center;
     gap: 12px;
@@ -327,7 +327,7 @@
 }
 
 /* El círculo indicador (Inactivo: Borde gris, fondo vacío) */
-.modern-toggle-wrapper .modern-toggle-circle {
+.toggle-status-red-wrapper .toggle-status-red-circle {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -337,7 +337,7 @@
 }
 
 /* Texto del botón (Inactivo: Color oscuro) */
-.modern-toggle-wrapper .modern-toggle-text {
+.toggle-status-red-wrapper .toggle-status-red-text {
     font-weight: 600;
     color: #1e293b;
     font-size: 0.9rem;
@@ -345,9 +345,9 @@
 }
 
 /* Scoped toggle styles inside managed tables to avoid collisions with other libraries */
-.managed-table .modern-toggle-wrapper,
-.managed-table .modern-toggle-wrapper.modern-toggle-green,
-.managed-table .modern-toggle-wrapper.modern-toggle-yellow {
+.managed-table .toggle-status-red-wrapper,
+.managed-table .toggle-status-red-wrapper.toggle-status-red-green,
+.managed-table .toggle-status-red-wrapper.toggle-status-red-yellow {
     box-sizing: border-box;
     padding: 6px 10px !important;
     height: 34px !important;
@@ -356,29 +356,29 @@
     gap: 8px !important;
 }
 
-.managed-table .modern-toggle-wrapper .modern-toggle-text {
+.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
     display: inline-block;
     line-height: 1 !important;
     font-size: 0.85rem !important;
 }
 
-.managed-table .modern-toggle-wrapper .modern-toggle-circle {
+.managed-table .toggle-status-red-wrapper .toggle-status-red-circle {
     width: 14px !important;
     height: 14px !important;
 }
 
 /* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
-.managed-table .modern-toggle-wrapper {
+.managed-table .toggle-status-red-wrapper {
     background-clip: padding-box !important;
     min-width: 100px !important;
 }
 
 /* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
-.managed-table .modern-toggle-wrapper {
+.managed-table .toggle-status-red-wrapper {
     justify-content: center !important;
 }
 
-.managed-table .modern-toggle-wrapper .modern-toggle-text {
+.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
     width: 88px !important; /* fixed width to accommodate longest label */
     text-align: center !important;
     white-space: nowrap !important;
@@ -538,62 +538,62 @@
 /* ==========================================================
    ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
    ========================================================== */
-.modern-toggle-input:checked + .modern-toggle-wrapper {
+.toggle-status-red-input:checked + .toggle-status-red-wrapper {
     background-color: #f87171; /* Rojo claro moderno */
     border-color: #f87171;
     box-shadow: 0 4px 10px rgba(248, 113, 113, 0.3);
 }
 
 /* Círculo (Activo: Se rellena de blanco brillante) */
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
+.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-circle {
     border-color: #ffffff;
     background-color: #ffffff;
 }
 
 /* Texto (Activo: Pasa a color blanco) */
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
+.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-text {
     color: #ffffff;
 }
 
 /* Estilo amarillo para toggles de retención en filas */
-.modern-toggle-wrapper.modern-toggle-yellow {
+.toggle-status-red-wrapper.toggle-status-red-yellow {
     background-color: #f59e0b !important; /* amarillo anaranjado */
     border-color: #f59e0b !important;
     box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
 }
 
-.modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-circle {
+.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-circle {
     border-color: #ffffff !important;
     background-color: #ffffff !important;
 }
 
-.modern-toggle-wrapper.modern-toggle-yellow .modern-toggle-text {
+.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-text {
     color: #ffffff !important;
 }
 
 /* Variante verde para estados activos tipo 'ON' (usada en Fondos de Reserva / Mensualiza) */
-.modern-toggle-wrapper.modern-toggle-green {
+.toggle-status-red-wrapper.toggle-status-red-green {
     background: linear-gradient(180deg, #10b981, #059669) !important;
     border-color: #059669 !important;
     /* Keep box-shadow subtle to avoid perceived size change */
     box-shadow: 0 1px 3px rgba(6, 95, 70, 0.12) !important;
 }
 
-.modern-toggle-wrapper.modern-toggle-green .modern-toggle-circle {
+.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-circle {
     border-color: #ffffff !important;
     background-color: #ffffff !important;
 }
 
-.modern-toggle-wrapper.modern-toggle-green .modern-toggle-text {
+.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-text {
     color: #ffffff !important;
 }
 
 /* Force consistent min-width so label doesn't grow when active */
-.modern-toggle-wrapper {
+.toggle-status-red-wrapper {
     min-width: 110px;
 }
 
-.modern-toggle-wrapper .modern-toggle-circle {
+.toggle-status-red-wrapper .toggle-status-red-circle {
     flex: 0 0 auto;
     margin-right: 10px;
 }
@@ -654,7 +654,7 @@
 }
 
 /* Center the toggle visually when placed in the top controls */
-.modern-toggle-wrapper {
+.toggle-status-red-wrapper {
     margin: 0 auto;
 }
 
@@ -703,10 +703,6 @@
 
 .btn-search {
     background: linear-gradient(180deg, #06b6d4, #0ea5a4);
-}
-
-.btn-info-action {
-    background: linear-gradient(180deg, #7c3aed, #6d28d9);
 }
 
 .btn-primary-action {

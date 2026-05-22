@@ -42,7 +42,7 @@
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 {% else %}
-                                    <button class="btn-icon btn-create-action"
+                                    <button class="btn-icon btn-success-action"
                                             onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
                                             title="Activar">
                                         <i class="fas fa-toggle-on"></i>

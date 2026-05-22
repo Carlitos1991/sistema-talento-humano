@@ -38,11 +38,11 @@
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" 
-                               id="table-search" 
-                               class="input-field"
+                        <input type="text" id="table-search" class="input-field"
                                placeholder="Buscar por nombre, apellido o cédula">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -55,14 +55,16 @@
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">
                         {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} empleados
+                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de
+                            {{ page_obj.paginator.count }} empleados
                         {% else %}
                             Mostrando 0 a 0 de 0 empleados
                         {% endif %}
                     </span>
                     <ul class="pagination-list">
                         <li>
-                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <button id="btn-prev" class="page-btn"
+                                    {% if not page_obj.has_previous %}disabled{% endif %}>
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         </li>
@@ -84,7 +86,8 @@
 
     <!-- Modal de Creación de Acción -->
     <div id="modal-create-action" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;" id="modal-body-content">
+        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;"
+             id="modal-body-content">
             <!-- Contenido dinámico del formulario -->
         </div>
     </div>
@@ -94,19 +97,19 @@
     <script>
         // Inicializar paginación desde el servidor
         {% if page_obj %}
-        window.initialPagination = {
-            current_page: {{ page_obj.number }},
-            total_pages: {{ page_obj.paginator.num_pages }},
-            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
-            has_next: {{ page_obj.has_next|yesno:"true,false" }}
-        };
+            window.initialPagination = {
+                current_page: {{ page_obj.number }},
+                total_pages: {{ page_obj.paginator.num_pages }},
+                has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
+                has_next: {{ page_obj.has_next|yesno:"true,false" }}
+            };
         {% else %}
-        window.initialPagination = {
-            current_page: 1,
-            total_pages: 1,
-            has_previous: false,
-            has_next: false
-        };
+            window.initialPagination = {
+                current_page: 1,
+                total_pages: 1,
+                has_previous: false,
+                has_next: false
+            };
         {% endif %}
     </script>
     <script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>

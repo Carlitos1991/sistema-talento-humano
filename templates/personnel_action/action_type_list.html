@@ -17,40 +17,16 @@
                 <i class="fas fa-plus"></i> NUEVO TIPO
             </button>
         </div>
-
-        <!-- 2. Estadísticas (Estáticas o calculadas por Django) -->
-        <div class="stats-row">
-            <div class="stat-card color-one" id="card-filter-all" onclick="filterList('')">
-                <div class="stat-left">
-                    <h3>TOTAL</h3>
-                    <div class="number" id="stat-total">{{ stats_total }}</div>
-                </div>
-                <i class="fas fa-layer-group stat-icon"></i>
-            </div>
-            <div class="stat-card color-two opacity-low" id="card-filter-true" onclick="filterList('true')">
-                <div class="stat-left">
-                    <h3>ACTIVOS</h3>
-                    <div class="number" id="stat-active">{{ stats_active }}</div>
-                </div>
-                <i class="fas fa-check-circle stat-icon"></i>
-            </div>
-            <div class="stat-card color-three opacity-low" id="card-filter-false" onclick="filterList('false')">
-                <div class="stat-left">
-                    <h3>INACTIVOS</h3>
-                    <div class="number" id="stat-inactive">{{ stats_inactive }}</div>
-                </div>
-                <i class="fas fa-times-circle stat-icon"></i>
-            </div>
-        </div>
-
         <!-- 3. Tabla -->
         <div class="table-app">
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
                         <input type="text" id="searchInput" onkeyup="debouncedSearch()"
-                               class="input-field" placeholder="Buscar...">
+                               class="input-field" placeholder="Buscar">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
 

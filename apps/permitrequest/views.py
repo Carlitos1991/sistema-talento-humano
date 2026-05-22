@@ -39,6 +39,41 @@ PERMIT_ADMIN_SORT_FIELDS = {
 }
 
 
+def _parse_permit_admin_sort_list(request):
+    raw_fields = (request.GET.get('sort_field') or 'created_at').strip()
+    raw_dirs = (request.GET.get('sort_dir') or 'desc').strip().lower()
+
+    sort_fields = [item.strip() for item in raw_fields.split(',') if item.strip()] or ['created_at']
+    sort_dirs = [item.strip().lower() for item in raw_dirs.split(',') if item.strip()] or ['desc']
+
+    if len(sort_dirs) < len(sort_fields):
+        sort_dirs.extend([sort_dirs[-1]] * (len(sort_fields) - len(sort_dirs)))
+    elif len(sort_dirs) > len(sort_fields):
+        sort_dirs = sort_dirs[:len(sort_fields)]
+
+    order_by = []
+    for index, sort_field in enumerate(sort_fields):
+        mapped_field = PERMIT_ADMIN_SORT_FIELDS.get(sort_field)
+        if not mapped_field:
+            continue
+
+        direction = sort_dirs[index] if index < len(sort_dirs) else 'asc'
+        if direction == 'desc' and not mapped_field.startswith('-'):
+            mapped_field = f'-{mapped_field}'
+        elif direction == 'asc' and mapped_field.startswith('-'):
+            mapped_field = mapped_field[1:]
+
+        order_by.append(mapped_field)
+
+    if not order_by:
+        order_by = ['-created_at']
+
+    if 'pk' not in {field.lstrip('-') for field in order_by}:
+        order_by.append('-pk')
+
+    return order_by
+
+
 def build_public_permit_token(permit_id):
     """Genera un token firmado para validación pública de permisos."""
     return signing.dumps({'permit_id': permit_id}, salt=PERMIT_PUBLIC_TOKEN_SALT)
@@ -151,14 +186,8 @@ def build_permit_admin_queryset(request):
     # Excluir permisos cuyo tipo esté desactivado y estados inactivos heredados
     queryset = queryset.filter(permit_type__is_active=True).exclude(status='INACTIVE')
 
-    # Orden por defecto: registros más recientes (created_at)
-    sort_field = request.GET.get('sort_field', 'created_at')
-    sort_dir = request.GET.get('sort_dir', 'desc')
-    order_field = PERMIT_ADMIN_SORT_FIELDS.get(sort_field, 'start_date')
-    if sort_dir == 'desc':
-        order_field = f'-{order_field}'
-
-    return queryset.order_by(order_field)
+    order_by = _parse_permit_admin_sort_list(request)
+    return queryset.order_by(*order_by)
 
 
 # --- MIXIN PARA BÚSQUEDA AJAX (Híbrido) ---

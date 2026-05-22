@@ -19,6 +19,42 @@
     let currentPage = 1;
     let currentSortField = 'start_date';
     let currentSortDir = 'desc';
+    let sortStack = [{field: currentSortField, dir: currentSortDir}];
+
+    function normalizeSortStack() {
+        sortStack = sortStack
+            .filter((item) => item && item.field)
+            .map((item) => ({
+                field: String(item.field),
+                dir: item.dir === 'desc' ? 'desc' : 'asc'
+            }));
+
+        if (!sortStack.length) {
+            sortStack = [{field: currentSortField, dir: currentSortDir}];
+        }
+
+        currentSortField = sortStack[0].field;
+        currentSortDir = sortStack[0].dir;
+    }
+
+    function getSortQueryParams() {
+        normalizeSortStack();
+        return {
+            sort_field: sortStack.map((item) => item.field).join(','),
+            sort_dir: sortStack.map((item) => item.dir).join(',')
+        };
+    }
+
+    function upsertSortCriterion(field, dir) {
+        const existingIndex = sortStack.findIndex((item) => item.field === field);
+        if (existingIndex >= 0) {
+            sortStack[existingIndex].dir = dir;
+        } else {
+            sortStack.push({field, dir});
+        }
+
+        normalizeSortStack();
+    }
     function getSearchValue() {
         return searchInput && searchInput.value ? searchInput.value.trim() : '';
     }
@@ -27,6 +63,7 @@
     function syncSubtypeOptions() { return; }
 
     function collectFilters() {
+        const sortParams = getSortQueryParams();
         return {
             q: getSearchValue(),
             area: areaSelect ? areaSelect.value : '',
@@ -34,8 +71,8 @@
             status: statusSelect ? statusSelect.value : '',
             date_from: dateFromInput ? dateFromInput.value : '',
             date_to: dateToInput ? dateToInput.value : '',
-            sort_field: currentSortField,
-            sort_dir: currentSortDir,
+            sort_field: sortParams.sort_field,
+            sort_dir: sortParams.sort_dir,
         };
     }
 
@@ -52,10 +89,12 @@
             if (icon) {
                 icon.textContent = '⇅';
             }
-            if (field === currentSortField) {
-                th.classList.add(currentSortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            const sortIndex = sortStack.findIndex((item) => item.field === field);
+            if (sortIndex >= 0) {
+                const sortItem = sortStack[sortIndex];
+                th.classList.add(sortItem.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
                 if (icon) {
-                    icon.textContent = currentSortDir === 'asc' ? '↑' : '↓';
+                    icon.textContent = `${sortItem.dir === 'asc' ? '↑' : '↓'}${sortIndex + 1}`;
                 }
             }
         });
@@ -207,12 +246,15 @@
         }
 
         const field = thElement.dataset.field;
-        if (currentSortField === field) {
-            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        const existingIndex = sortStack.findIndex((item) => item.field === field);
+        if (existingIndex >= 0) {
+            const existing = sortStack[existingIndex];
+            existing.dir = existing.dir === 'asc' ? 'desc' : 'asc';
         } else {
-            currentSortField = field;
-            currentSortDir = 'asc';
+            upsertSortCriterion(field, 'asc');
         }
+
+        normalizeSortStack();
 
         currentPage = 1;
         updateSortIndicators();
