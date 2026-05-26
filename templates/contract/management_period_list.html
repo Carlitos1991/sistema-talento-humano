@@ -14,32 +14,6 @@
                 <i class="fas fa-plus"></i> NUEVO INICIO
             </button>
         </div>
-
-        <!-- 2. Estadísticas (Filtros Rápidos) -->
-        <div class="stats-row" v-if="stats.regimes">
-            <!-- Tarjeta Fija: Total -->
-            <div class="stat-card color-one"
-                 @click="clearSearch"
-                 :class="{'opacity-low': isAdvancedSearch}">
-                <div class="stat-left">
-                    <h3>TOTAL ACTIVOS</h3>
-                    <div class="number">[[ stats.total ]]</div>
-                </div>
-                <i class="fas fa-users-check stat-icon"></i>
-            </div>
-
-            <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
-            <div v-for="(regime, index) in stats.regimes"
-                 :key="regime.code"
-                 class="stat-card"
-                 :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.regime_code !== regime.code}]"
-                 @click="filterByRegime(regime.code)">
-                <div class="stat-left">
-                    <h3>[[ regime.name ]]</h3>
-                    <div class="number">[[ regime.count ]]</div>
-                </div>
-                <i class="fas fa-gavel stat-icon"></i>
-            </div>
         </div>
 
         <!-- Tabla de Inicios -->
@@ -47,11 +21,14 @@
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                           <i class="fas fa-search search-icon"></i>
-                           <input type="text" id="table-search-input" name="contract_search"
+                        <input type="text" id="table-search-input" name="contract_search"
                                class="form-control with-icon"
                                placeholder="Buscar por cédula o nombre..."
-                               v-model="searchTerm" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                               v-model="searchTerm" autocomplete="off" autocapitalize="off" autocorrect="off"
+                               spellcheck="false">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                     <button type="button" class="btn-search btn-secondary-search ms-2" @click="openSearchModal">
                         <i class="fas fa-filter"></i> Búsqueda Avanzada
