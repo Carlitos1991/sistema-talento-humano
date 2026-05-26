@@ -1,9 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Niveles Jerárquicos | SIGETH{% endblock %}
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-{% endblock %}
 
 {% block content %}
     <div class="header-card">
@@ -17,23 +14,25 @@
             </button>
         {% endif %}
     </div>
-    <div class="content-table">
-        <div class="table-controls">
-            <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveLevels"
-                   onchange="toggleInactiveLevels(this.checked)">
-            <label class="toggle-status-red-wrapper" for="toggleInactiveLevels">
-                <div class="toggle-status-red-circle"></div>
-                <span class="toggle-status-red-text">Mostrar Niveles Inactivos</span>
-            </label>
-            <div class="search-box">
-                <input type="text" class="table-search-input" placeholder="Buscar por nombre">
-                <button type="submit" class="search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls">
+                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveLevels"
+                       onchange="toggleInactiveLevels(this.checked)">
+                <label class="toggle-status-red-wrapper" for="toggleInactiveLevels">
+                    <div class="toggle-status-red-circle"></div>
+                    <span class="toggle-status-red-text">Mostrar Niveles Inactivos</span>
+                </label>
+                <div class="search-box">
+                    <input type="text" class="table-search-input" placeholder="Buscar por nombre">
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-        <div id="table-content-wrapper">
-            {% include 'institution/levels/partials/partial_level_table.html' %}
+            <div id="table-content-wrapper">
+                {% include 'institution/levels/partials/partial_level_table.html' %}
+            </div>
         </div>
     </div>
 {% endblock %}

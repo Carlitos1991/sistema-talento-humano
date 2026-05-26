@@ -1701,6 +1701,148 @@ input:checked + .toggle-slider:before {
     transform: translateX(calc(100% - 21px));
 }
 
+/* Ocultamos el checkbox real */
+.toggle-status-red-input {
+    display: none !important;
+}
+
+/* El label actúa como el botón contenedor (Inactivo por defecto) */
+.toggle-status-red-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 18px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    user-select: none;
+}
+
+/* El círculo indicador (Inactivo: Borde gris, fondo vacío) */
+.toggle-status-red-wrapper .toggle-status-red-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+/* Texto del botón (Inactivo: Color oscuro) */
+.toggle-status-red-wrapper .toggle-status-red-text {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.managed-table .toggle-status-red-wrapper,
+.managed-table .toggle-status-red-wrapper.toggle-status-red-green,
+.managed-table .toggle-status-red-wrapper.toggle-status-red-yellow {
+    box-sizing: border-box;
+    padding: 6px 10px !important;
+    height: 34px !important;
+    align-items: center;
+    display: inline-flex !important;
+    gap: 8px !important;
+}
+
+.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
+    display: inline-block;
+    line-height: 1 !important;
+    font-size: 0.85rem !important;
+}
+
+.managed-table .toggle-status-red-wrapper .toggle-status-red-circle {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+/* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
+.managed-table .toggle-status-red-wrapper {
+    background-clip: padding-box !important;
+    min-width: 100px !important;
+}
+
+/* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
+.managed-table .toggle-status-red-wrapper {
+    justify-content: center !important;
+}
+
+.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
+    width: 88px !important; /* fixed width to accommodate longest label */
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* ==========================================================
+   ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
+   ========================================================== */
+.toggle-status-red-input:checked + .toggle-status-red-wrapper {
+    background-color: #f87171; /* Rojo claro moderno */
+    border-color: #f87171;
+    box-shadow: 0 4px 10px rgba(248, 113, 113, 0.3);
+}
+
+/* Círculo (Activo: Se rellena de blanco brillante) */
+.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-circle {
+    border-color: #ffffff;
+    background-color: #ffffff;
+}
+
+/* Texto (Activo: Pasa a color blanco) */
+.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-text {
+    color: #ffffff;
+}
+
+/* Estilo amarillo para toggles de retención en filas */
+.toggle-status-red-wrapper.toggle-status-red-yellow {
+    background-color: #f59e0b !important; /* amarillo anaranjado */
+    border-color: #f59e0b !important;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
+}
+
+.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-circle {
+    border-color: #ffffff !important;
+    background-color: #ffffff !important;
+}
+
+.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-text {
+    color: #ffffff !important;
+}
+
+/* Variante verde para estados activos tipo 'ON' (usada en Fondos de Reserva / Mensualiza) */
+.toggle-status-red-wrapper.toggle-status-red-green {
+    background: linear-gradient(180deg, #10b981, #059669) !important;
+    border-color: #059669 !important;
+    /* Keep box-shadow subtle to avoid perceived size change */
+    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.12) !important;
+}
+
+.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-circle {
+    border-color: #ffffff !important;
+    background-color: #ffffff !important;
+}
+
+.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-text {
+    color: #ffffff !important;
+}
+
+/* Force consistent min-width so label doesn't grow when active */
+.toggle-status-red-wrapper {
+    min-width: 110px;
+}
+
+.toggle-status-red-wrapper .toggle-status-red-circle {
+    flex: 0 0 auto;
+    margin-right: 10px;
+}
+
 /* Photo uploader */
 .photo-uploader-wrapper {
     width: 120px;
@@ -4252,7 +4394,7 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 
 .search-box .table-search-input {
     width: 100%;
-    padding: 0.7rem 3.5rem 0.7rem 1rem;
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
     font-size: 0.9rem;
     color: #1e293b;
     background-color: #ffffff;
@@ -4261,38 +4403,17 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     transition: all 0.3s ease;
 }
 
-.search-box {
-    position: relative;
-    width: 100%;
-    max-width: 350px;
-    display: flex;
-    align-items: center;
-}
-
-.search-box .table-search-input {
-    width: 100%;
-    padding: 0.7rem 3.5rem 0.7rem 1rem;
-    font-size: 0.9rem;
-    border: 1px solid #e2e8f0;
-    /* 1. Definimos un radio claro (ej. 10px) */
-    border-radius: 10px;
-    background-color: white;
-    transition: all 0.3s ease;
-}
-
 .search-box .search-btn {
     position: absolute;
-    /* 2. Ajustamos un margen interno uniforme (ej. 4px) */
-    right: 0px;
-    top: 0px;
-    bottom: 0px;
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
     width: 45px;
 
     background: #10b981;
     color: white;
     border: none;
 
-    /* 3. El truco: Radio menor para que la curva "encaje" dentro de la otra */
     border-radius: 0 10px 10px 0;
 
     display: flex;
@@ -4303,7 +4424,6 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     transition: all 0.2s ease;
 }
 
-/* Hover: un ligero cambio de color y sombra */
 .search-box .search-btn:hover {
     background: #059669;
 }

@@ -60,6 +60,17 @@
                     <input type="number" id="notifications-year" class="input-field"
                            value="{{ selected_notifications_year }}" onchange="updateStatsAndTable()">
                 </div>
+                <div class="sanctions-notification-field">
+                    <label class="form-label">Empleado</label>
+                    <div class="search-box">
+
+                        <input type="text" id="notifications-search" class="input-field"
+                               placeholder="Nombres o cédula">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search search-icon"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div id="latest-notifications-wrapper">

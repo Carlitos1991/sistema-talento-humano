@@ -44,11 +44,18 @@
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls">
+                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveUnits"
+                       onchange="filterStructureByStatus('inactive')">
+                <label class="toggle-status-red-wrapper" for="toggleInactiveUnits">
+                    <div class="toggle-status-red-circle"></div>
+                    <span class="toggle-status-red-text">Mostrar Unidades Inactivas</span>
+                </label>
                 <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <!-- Input de búsqueda -->
-                    <input type="text" id="table-search-budget" class="input-field"
+                    <input type="text" id="table-search-budget" class="table-search-input"
                            placeholder="Buscar por nombre">
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
 

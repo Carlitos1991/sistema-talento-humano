@@ -31,7 +31,7 @@
             <button type="button" class="sanctions-tab-btn is-active" data-sanctions-tab="employees">
                 Empleados
             </button>
-            <button type="button" class="sanctions-tab-btn" data-sanctions-tab="notifications">
+                <button type="button" class="sanctions-tab-btn" data-sanctions-tab="notifications">
                 Notificaciones recientes
             </button>
         </div>
@@ -41,7 +41,7 @@
                 <div class="content-table">
                     <div class="table-controls">
                         <div class="search-box">
-                            <input type="text" id="table-search" class="input-field"
+                            <input type="text" id="table-search" class="table-search-input"
                                    placeholder="Buscar por nombre, apellido o cédula">
                             <button type="submit" class="search-btn">
                                 <i class="fas fa-search"></i>
@@ -133,10 +133,10 @@
                                value="{{ selected_notifications_year }}" placeholder="2026">
                     </div>
                     <div class="sanctions-notification-field">
-                        <label class="form-label" for="notifications-search">Buscar Empleado</label>
+                        <label class="form-label" for="notifications-search">Empleado</label>
                         <div class="search-box">
-                            <input type="text" id="notifications-search" class="input-field"
-                                   placeholder="Nombre, apellido o cédula." value="{{ notifications_q }}">
+                            <input type="text" id="notifications-search" class="table-search-input"
+                                   placeholder="Nombres o cédula." value="{{ notifications_q }}">
                             <button type="submit" class="search-btn">
                                 <i class="fas fa-search"></i>
                             </button>
