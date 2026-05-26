@@ -1,0 +1,9 @@
+{% for stat in stats_cards %}
+    <div class="stat-card {{ stat.class }}" onclick="quickFilterStatus('{{ stat.filter_val }}')">
+        <div class="stat-left">
+            <h3>{{ stat.label }}</h3>
+            <div class="number">{{ stat.count }}</div>
+        </div>
+        <i class="fas {{ stat.icon }} stat-icon"></i>
+    </div>
+{% endfor %}

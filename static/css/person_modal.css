@@ -2,6 +2,250 @@
    MODAL BÚSQUEDA AVANZADA - PERSONAS
    ======================================== */
 
+/* ========================================
+   FILTROS INLINE - LISTADO DE PERSONAS
+   ======================================== */
+
+.person-filter-controls {
+    padding: 0;
+}
+
+.person-filter-form {
+    width: 100%;
+}
+
+.person-toolbar {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    margin: 10px 0 8px;
+}
+
+.person-toolbar .table-controls.person-filter-controls {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+}
+
+.person-filter-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.person-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+    width: min(100%, 860px);
+    justify-content: center;
+}
+
+.person-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.person-filter-field label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    letter-spacing: 0.01em;
+}
+
+.person-search-box {
+    margin: 0;
+    width: 100%;
+}
+
+.person-search-box .input-field,
+.person-filter-field .input-field {
+    width: 100%;
+    height: 44px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.person-filter-field select.input-field:not(.select2-hidden-accessible) {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    padding-right: 2.35rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23111827' d='M2.1 4.2a.75.75 0 0 1 1.05.03L6 7.35l2.85-3.12a.75.75 0 1 1 1.08 1.04L6.55 8.94a.75.75 0 0 1-1.1 0L2.07 5.27a.75.75 0 0 1 .03-1.05Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 12px 12px;
+}
+
+.person-filter-field select.input-field:not(.select2-hidden-accessible)::-ms-expand {
+    display: none;
+}
+
+.person-search-box .input-field {
+    padding-left: 2.25rem;
+}
+
+.person-filter-field .select2-container {
+    width: 100% !important;
+}
+
+.person-filter-field .select2-container--default .select2-selection--single {
+    height: 44px !important;
+    border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    border-radius: 10px !important;
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    background: #ffffff;
+}
+
+.person-filter-field .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 44px !important;
+    color: #0f172a;
+    padding-left: 10px;
+    padding-right: 28px;
+}
+
+.person-filter-field .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px !important;
+    right: 8px;
+}
+
+.person-filter-field .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #111827 transparent transparent transparent !important;
+}
+
+.person-search-box .search-icon {
+    color: #64748b;
+    left: 12px;
+}
+
+.person-search-box .input-field:focus,
+.person-filter-field .input-field:focus {
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+    outline: none;
+}
+
+.person-filter-actions {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: max-content;
+    flex: 0 0 auto;
+    margin-left: 0;
+}
+
+.person-filter-actions .btn {
+    min-height: 42px;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.person-filter-actions .btn-search {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    color: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.person-filter-actions .btn-search:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(30, 64, 175, 0.18);
+}
+
+.person-filter-actions .btn-secondary {
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.person-filter-actions .btn-secondary:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 1200px) {
+    .person-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(100%, 760px);
+    }
+
+    .person-toolbar {
+        display: flex;
+        justify-content: center;
+        min-height: auto;
+    }
+
+    .person-toolbar .table-controls.person-filter-controls {
+        position: static;
+        transform: none;
+        justify-content: flex-start;
+    }
+
+    .person-filter-actions {
+        position: static;
+        transform: none;
+        justify-content: center;
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .person-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .person-toolbar {
+        display: flex;
+        justify-content: center;
+        min-height: auto;
+    }
+
+    .person-filter-actions {
+        position: static;
+        transform: none;
+        justify-content: center;
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .person-filter-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* Modal Overlay */
 .modal-overlay {
     position: fixed;

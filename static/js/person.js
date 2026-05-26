@@ -3,77 +3,87 @@
 let vueApp = null;
 
 // --- FUNCIONES GLOBALES (Accesibles desde HTML) ---
-window.toggleSearchModal = (show) => {
-    const el = document.getElementById('modalAdvancedSearch');
-    if (el) {
-        show ? el.classList.remove('hidden') : el.classList.add('hidden');
-        document.body.classList.toggle('no-scroll', show);
-    } else {
-        console.warn('El modal modalAdvancedSearch no existe en el DOM.');
-    }
-};
+window.toggleSearchModal = () => {};
 
 window.applyAdvancedSearch = () => {
-    if (vueApp) vueApp.handleAdvancedSearch();
-    window.toggleSearchModal(false);
+    if (vueApp && typeof vueApp.submitPersonFilters === 'function') {
+        vueApp.submitPersonFilters();
+    }
 };
 
 window.resetAdvancedSearch = () => {
-    document.getElementById('advancedSearchForm')?.reset();
-    $('.select2-field').val(null).trigger('change');
-    if (vueApp) vueApp.resetFilters();
-};
-
-window.closeModalOnOutsideClick = (event) => {
-    if (event.target.id === 'modalAdvancedSearch') {
-        window.toggleSearchModal(false);
+    if (vueApp && typeof vueApp.resetFilters === 'function') {
+        vueApp.resetFilters();
     }
 };
 
+window.closeModalOnOutsideClick = () => {};
+
 window.initializeSelect2 = () => {
-    // Usar MutationObserver para inicializar Select2 cuando el modal esté visible
-    const modal = document.getElementById('modalAdvancedSearch');
-    if (!modal) return;
-
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                const isVisible = !modal.classList.contains('hidden');
-                if (isVisible) {
-                    // Inicializar Select2 para los campos del modal
-                    $('#areaSearchSelect').select2({
-                        dropdownParent: $('#modalAdvancedSearch'),
-                        allowClear: true,
-                        placeholder: 'Seleccione...',
-                        language: 'es'
-                    });
-
-                    $('#statusSearchSelect').select2({
-                        dropdownParent: $('#modalAdvancedSearch'),
-                        allowClear: true,
-                        placeholder: 'Seleccione...',
-                        language: 'es'
-                    });
-
-                    $('#civilStatusSearchSelect').select2({
-                        dropdownParent: $('#modalAdvancedSearch'),
-                        allowClear: true,
-                        placeholder: 'Seleccione...',
-                        language: 'es'
-                    });
-
-                    $('#genderSearchSelect').select2({
-                        dropdownParent: $('#modalAdvancedSearch'),
-                        allowClear: true,
-                        placeholder: 'Seleccione...',
-                        language: 'es'
-                    });
+    const init = () => {
+        if (!window.$ || !$.fn.select2) return;
+        const areaSelect = $('#filter_area');
+        areaSelect.each(function () {
+            try {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
                 }
+            } catch (error) {
+                console.warn('No se pudo reinicializar Select2', error);
             }
         });
-    });
 
-    observer.observe(modal, {attributes: true});
+        if (!areaSelect.length) return;
+
+        areaSelect.select2({
+            width: '100%',
+            allowClear: true,
+            placeholder: areaSelect.data('placeholder') || 'Dependencia',
+            minimumInputLength: parseInt(areaSelect.data('minimum-input-length') || '1', 10) || 1,
+            language: {
+                inputTooShort: function (args) {
+                    const remaining = args.minimum - args.input.length;
+                    return `Por favor ingrese ${remaining} carácter${remaining !== 1 ? 'es' : ''} más`;
+                },
+                noResults: function () {
+                    return 'No se encontraron resultados';
+                },
+                searching: function () {
+                    return 'Buscando...';
+                }
+            },
+            ajax: {
+                url: areaSelect.data('ajax-url'),
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {term: params.term};
+                },
+                processResults: function (data) {
+                    if (Array.isArray(data.results)) {
+                        return {results: data.results};
+                    }
+                    if (Array.isArray(data.units)) {
+                        return {
+                            results: data.units.map(function (unit) {
+                                return {id: String(unit.id), text: unit.name};
+                            })
+                        };
+                    }
+                    return {results: []};
+                },
+                cache: true
+            }
+        });
+
+        const arrow = document.querySelector('#filter_area + .select2 .select2-selection__arrow b');
+        if (arrow) {
+            arrow.style.borderColor = '#111827 transparent transparent transparent';
+        }
+    };
+
+    init();
+    setTimeout(init, 0);
 };
 
 window.changePage = (page) => {
@@ -359,81 +369,50 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. BÚSQUEDA RÁPIDA EN BACKEND (como usuarios)
             // ----------------------------------------------------
             const initQuickSearch = () => {
-                const input = document.getElementById('searchInput');
-                if (!input) return;
+                const form = document.getElementById('personFiltersForm');
+                if (!form) return;
 
-                const normalizeSearchText = (value) => {
-                    return (value || '')
-                        .toString()
-                        .toLowerCase()
-                        .normalize('NFD')
-                        .replace(/[\u0300-\u036f]/g, '')
-                        .trim();
+                const searchInput = form.querySelector('input[name="q"]');
+                const areaSelect = form.querySelector('select[name="area"]');
+                const statusSelect = form.querySelector('select[name="status"]');
+                const clearButton = document.getElementById('personFiltersClear');
+
+                const readFiltersFromForm = () => {
+                    const nextFilters = {};
+                    const q = (searchInput?.value || '').trim();
+                    const area = areaSelect?.value || '';
+                    const status = statusSelect?.value || '';
+
+                    if (q) nextFilters.q = q;
+                    if (area) nextFilters.area = area;
+                    if (status) nextFilters.status = status;
+
+                    return nextFilters;
                 };
 
-                const filterVisibleRows = () => {
-                    const terms = normalizeSearchText(input.value)
-                        .split(/\s+/)
-                        .filter(Boolean);
-
-                    const tableContainer = document.getElementById('tableContainer');
-                    if (!tableContainer) return;
-
-                    const dataRows = Array.from(tableContainer.querySelectorAll('tbody tr[data-search-text]'));
-                    let visibleRows = 0;
-
-                    dataRows.forEach((row) => {
-                        const rowText = normalizeSearchText(row.dataset.searchText || row.textContent || '');
-                        const matches = terms.length === 0 || terms.every((term) => rowText.includes(term));
-                        row.style.display = matches ? '' : 'none';
-                        if (matches) visibleRows += 1;
-                    });
-
-                    const noResultsRow = tableContainer.querySelector('#client-no-results');
-                    if (noResultsRow) {
-                        noResultsRow.style.display = dataRows.length > 0 && visibleRows === 0 ? '' : 'none';
-                    }
+                const submitFilters = () => {
+                    activeFilters.value = readFiltersFromForm();
+                    fetchPeople(1);
                 };
 
-                // Exponer para reutilizar después de renderizados AJAX.
-                window.applyPersonClientSearchFilter = filterVisibleRows;
+                window.applyPersonFilters = submitFilters;
 
-                // Debounce para búsqueda mientras escribe
-                let searchTimeout;
-                input.addEventListener('input', (e) => {
-                    filterVisibleRows();
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        const term = e.target.value.trim();
-                                // Al buscar rápido, mantener los filtros activos y solo actualizar la clave `q`
-                                const current = Object.assign({}, activeFilters.value || {});
-                                if (term) {
-                                    current.q = term;
-                                } else {
-                                    delete current.q;
-                                }
-                                activeFilters.value = current;
-                        fetchPeople(1);
-                    }, 500);
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    submitFilters();
                 });
 
-                input.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        const term = input.value.trim();
-                        const current = Object.assign({}, activeFilters.value || {});
-                        if (term) {
-                            current.q = term;
-                        } else {
-                            delete current.q;
-                        }
-                        activeFilters.value = current;
-                        fetchPeople(1);
+                clearButton?.addEventListener('click', () => {
+                    form.reset();
+                    const areaSelect = $('#filter_area');
+                    if (areaSelect.length) {
+                        areaSelect.val(null).trigger('change');
                     }
+                    activeFilters.value = {};
+                    fetchPeople(1);
                 });
 
-                // Aplicar al cargar por primera vez.
-                filterVisibleRows();
+                activeFilters.value = readFiltersFromForm();
             };
 
             // ----------------------------------------------------
@@ -465,6 +444,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const container = document.getElementById('tableContainer');
                         if (container) {
                             container.innerHTML = data.html;
+                            if (data.stats_html) {
+                                const statsRow = document.getElementById('statsRow');
+                                if (statsRow) {
+                                    statsRow.innerHTML = data.stats_html;
+                                }
+                            }
                             // Mantener el valor del input si hay búsqueda activa
                             if (typeof addExportButtonsToTables === 'function') {
                                 addExportButtonsToTables();
@@ -503,19 +488,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
                                 }
                             }
-                            const searchInput = document.getElementById('searchInput');
-                            if (searchInput) {
-                                // Si el usuario no ha modificado el campo desde que se lanzó
-                                // la petición (o está vacío), podemos restablecerlo al valor
-                                // de la query de la petición. Evitar sobrescribir si el
-                                // valor actual difiere (usuario escribió más texto).
-                                const currentVal = searchInput.value || '';
-                                if (requestQuery === '' ) {
-                                    // Si la petición no llevaba q, no hacemos overwrite
-                                } else if (currentVal === '' || currentVal === requestQuery) {
-                                    searchInput.value = requestQuery;
-                                }
-                            }
                             // Reinsertar botones Excel/PDF sobre la nueva tabla
                             if (typeof addExportButtonsToTables === 'function') {
                                 addExportButtonsToTables();
@@ -537,21 +509,26 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const handleAdvancedSearch = () => {
-                const formData = new FormData(document.getElementById('advancedSearchForm'));
-                activeFilters.value = Object.fromEntries(formData.entries());
-                fetchPeople(1);
+                if (typeof window.applyPersonFilters === 'function') {
+                    window.applyPersonFilters();
+                }
             };
 
             const resetFilters = () => {
                 activeFilters.value = {};
-                // Limpiar el input de búsqueda al resetear filtros
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) searchInput.value = '';
+                const form = document.getElementById('personFiltersForm');
+                if (form) form.reset();
                 fetchPeople(1);
             };
 
             const applyQuickFilter = (statusId) => {
-                activeFilters.value = {'status': statusId};
+                const nextFilters = Object.assign({}, activeFilters.value || {});
+                if (statusId) {
+                    nextFilters.status = String(statusId);
+                } else {
+                    delete nextFilters.status;
+                }
+                activeFilters.value = nextFilters;
                 fetchPeople(1);
             };
 
@@ -1113,6 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 initQuickSearch();
                 initTableListeners();
                 bindPersonFormValidationListeners();
+                window.initializeSelect2();
                 if (typeof addExportButtonsToTables === 'function') {
                     addExportButtonsToTables();
                 }
@@ -1120,10 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.initTableHorizontalScroll === 'function') {
                     window.initTableHorizontalScroll();
                 }
-                // Select2 para el modal de búsqueda avanzada (independiente)
-                $('.select2-field', '#modalAdvancedSearch').select2({
-                    dropdownParent: $('#modalAdvancedSearch')
-                });
             });
 
             return {
@@ -1132,6 +1106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 openCreateModal, openEditModal, submitPersonForm,
                 openCredsModal, submitCredsForm, closeModal,
                 openQuickView, closeQuickView,
+                submitPersonFilters: () => {
+                    if (typeof window.applyPersonFilters === 'function') {
+                        window.applyPersonFilters();
+                    }
+                },
 
                 // Estado Reactivo
                 activeFilters,

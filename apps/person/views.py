@@ -269,37 +269,44 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 10
     permission_required = 'person.view_person'
 
-    def paginate_queryset(self, queryset, page_size):
-        """Nunca lanza EmptyPage — corrige page fuera de rango."""
-        paginator = self.get_paginator(queryset, page_size)
+    def get_unit_tree_ids(self, unit_id):
+        """Retorna la unidad seleccionada y todas sus subdependencias activas."""
         try:
-            page_num = int(self.request.GET.get('page', 1))
-        except (ValueError, TypeError):
-            page_num = 1
-        # Clamp: nunca menor que 1, nunca mayor que el total
-        page_num = max(1, min(page_num, paginator.num_pages or 1))
-        page = paginator.page(page_num)
-        return paginator, page, page.object_list, page.has_other_pages()
+            root_unit = AdministrativeUnit.objects.get(pk=unit_id, is_active=True)
+        except AdministrativeUnit.DoesNotExist:
+            return []
 
-    def get_queryset(self):
-        # 1. Base Query con optimización y ANOTACIÓN de Nombre Completo
+        unit_ids = [root_unit.id]
+        frontier = [root_unit.id]
+
+        while frontier:
+            children_ids = list(
+                AdministrativeUnit.objects.filter(
+                    parent_id__in=frontier,
+                    is_active=True
+                ).values_list('id', flat=True)
+            )
+            if not children_ids:
+                break
+            unit_ids.extend(children_ids)
+            frontier = children_ids
+
+        return unit_ids
+
+    def get_filtered_people_queryset(self):
+        """Construye el queryset de personas con los filtros actuales de la solicitud."""
         qs = Person.objects.select_related(
             'document_type',
             'user',
             'employee_profile__area',
             'employee_profile__employment_status',
-            'marital_status'  # Agregamos esto para optimizar
+            'marital_status'
         ).annotate(
             full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('-pk')
 
-        # --- BÚSQUEDA RÁPIDA (Parámetro 'q' como en usuarios) ---
         q = self.request.GET.get('q')
-        # Filtro por nivel de instrucción desde dashboard
         education_level_code = self.request.GET.get('education_level')
-
-        # --- BÚSQUEDA AVANZADA (Filtros Backend) ---
-        # Recogemos parámetros
         cedula = self.request.GET.get('cedula')
         nombres = self.request.GET.get('nombres')
         area_id = self.request.GET.get('area')
@@ -307,16 +314,12 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         marital_id = self.request.GET.get('marital_status')
         gender_id = self.request.GET.get('gender')
 
-        # Detectar si hay búsqueda avanzada activa
         has_advanced_search = any([cedula, nombres, area_id, status_id, marital_id, gender_id])
 
-        # --- FILTRO BASE: Solo empleados activos si NO hay búsqueda avanzada ---
         if not has_advanced_search and not q:
             qs = qs.filter(employee_profile__is_active=True)
 
-        # Búsqueda rápida
         if q:
-            # Soporta búsquedas por términos no contiguos, ej: "carlos chacha".
             terms = [t.strip() for t in q.split() if t.strip()]
             for term in terms:
                 qs = qs.filter(
@@ -327,12 +330,10 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                     Q(full_name_str__icontains=term)
                 )
 
-        # Aplicamos filtros avanzados si existen
         if cedula:
             qs = qs.filter(document_number__icontains=cedula)
 
         if nombres:
-            # Busca por términos para soportar combinaciones nombre+apellido no contiguas.
             terms = [t.strip() for t in nombres.split() if t.strip()]
             for term in terms:
                 qs = qs.filter(
@@ -342,9 +343,12 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 )
 
         if area_id:
-            qs = qs.filter(employee_profile__area_id=area_id)
+            unit_ids = self.get_unit_tree_ids(area_id)
+            if unit_ids:
+                qs = qs.filter(employee_profile__area_id__in=unit_ids)
+            else:
+                qs = qs.filter(employee_profile__area_id=area_id)
 
-        # Filtrar por nivel de instrucción (acepta un código o lista separada por comas)
         if education_level_code:
             codes = [c.strip() for c in education_level_code.split(',') if c.strip()]
             if len(codes) > 1:
@@ -360,6 +364,23 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if gender_id:
             qs = qs.filter(gender_id=gender_id)
+
+        return qs
+
+    def paginate_queryset(self, queryset, page_size):
+        """Nunca lanza EmptyPage — corrige page fuera de rango."""
+        paginator = self.get_paginator(queryset, page_size)
+        try:
+            page_num = int(self.request.GET.get('page', 1))
+        except (ValueError, TypeError):
+            page_num = 1
+        # Clamp: nunca menor que 1, nunca mayor que el total
+        page_num = max(1, min(page_num, paginator.num_pages or 1))
+        page = paginator.page(page_num)
+        return paginator, page, page.object_list, page.has_other_pages()
+
+    def get_queryset(self):
+        qs = self.get_filtered_people_queryset()
 
         # Aplicar ordenamiento personalizado desde parámetros GET (solo campos permitidos)
         sort_field = self.request.GET.get('sort_field')
@@ -393,14 +414,17 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['status_list'] = CatalogItem.objects.filter(catalog__code='EMPLOYMENT_STATUS').order_by('name')
         context['gender_list'] = CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True)
 
-        # --- 3. ESTADÍSTICAS DINÁMICAS (Solo Estados Activos) ---
+        # --- 3. ESTADÍSTICAS DINÁMICAS (con el filtro actual) ---
         from employee.models import Employee
 
         # Códigos de estados activos
         active_status_codes = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
 
-        # Estadísticas solo de empleados activos
+        filtered_people = getattr(self, 'object_list', None) or self.get_filtered_people_queryset()
+
+        # Estadísticas sobre el resultado filtrado actual
         active_employees = Employee.objects.filter(
+            person__in=filtered_people,
             employment_status__code__in=active_status_codes,
             is_active=True
         )
@@ -472,7 +496,8 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 context = self.get_context_data()
 
             html = render_to_string('person/partials/partial_person_table.html', context, request=request)
-            return JsonResponse({'success': True, 'html': html})
+            stats_html = render_to_string('person/partials/partial_person_stats.html', context, request=request)
+            return JsonResponse({'success': True, 'html': html, 'stats_html': stats_html})
 
         return super().get(request, *args, **kwargs)
 

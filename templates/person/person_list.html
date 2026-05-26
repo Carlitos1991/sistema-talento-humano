@@ -5,7 +5,6 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
     <style>
-        /* ── Persona: avatar + nombre en misma celda ── */
         .person-info {
             display: flex;
             align-items: center;
@@ -28,21 +27,17 @@
             color: inherit;
         }
 
-        .person-name-info {
+        .person-details {
             display: flex;
             flex-direction: column;
             line-height: 1.3;
         }
 
-        .person-full-name {
+        .person-details h4 {
             font-weight: 600;
             font-size: 0.875rem;
             color: #1e293b;
-        }
-
-        .person-doc {
-            font-size: 0.75rem;
-            color: #64748b;
+            margin: 0;
         }
     </style>
 {% endblock %}
@@ -71,16 +66,8 @@
         </div>
 
         <!-- 2. Estadísticas -->
-        <div class="stats-row">
-            {% for stat in stats_cards %}
-                <div class="stat-card {{ stat.class }}" onclick="quickFilterStatus('{{ stat.filter_val }}')">
-                    <div class="stat-left">
-                        <h3>{{ stat.label }}</h3>
-                        <div class="number">{{ stat.count }}</div>
-                    </div>
-                    <i class="fas {{ stat.icon }} stat-icon"></i>
-                </div>
-            {% endfor %}
+        <div class="stats-row" id="statsRow">
+            {% include 'person/partials/partial_person_stats.html' %}
         </div>
         <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
@@ -94,16 +81,55 @@
                         };
                     }
                 </script>
-                <div class="table-controls">
-                    <button type="button" class="btn btn-search" onclick="toggleSearchModal(true)">
-                        <i class="fas fa-search"></i> Búsqueda Avanzada
-                    </button>
-                    <div class="search-box">
-                        <input type="text" id="searchInput" name="person_search" class="table-search-input"
-                               placeholder="Buscar por cédula o nombre" autocomplete="off" autocapitalize="off"
-                               autocorrect="off" spellcheck="false">
-                        <button type="submit" class="search-btn">
-                            <i class="fas fa-search"></i>
+                <form id="personFiltersForm" class="person-filter-form" onsubmit="return false;">
+                    <div class="person-filter-panel">
+                        <div class="person-filter-grid">
+                            <div class="person-filter-field search-field">
+                                <div class="search-box person-search-box">
+                                    <input type="text" id="searchInput" name="q" class="input-field"
+                                           placeholder="Buscar por nombre o cédula" autocomplete="off"
+                                           autocapitalize="off" autocorrect="off" spellcheck="false"
+                                           value="{{ current_filters.q|default:'' }}">
+                                </div>
+                            </div>
+
+                            <div class="person-filter-field">
+                                <select id="filter_area" name="area" class="input-field select2"
+                                        data-ajax-url="{% url 'institution:api_unit_children' %}"
+                                        data-placeholder="Dependencia"
+                                        data-minimum-input-length="1">
+                                    <option value="">Todas las dependencias</option>
+                                    {% for area in areas %}
+                                        <option value="{{ area.id }}"
+                                                {% if current_filters.area == area.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ area.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="person-filter-field">
+                                <select id="filter_status" name="status" class="input-field">
+                                    <option value="">Todos los estados</option>
+                                    {% for st in status_list %}
+                                        <option value="{{ st.id }}"
+                                                {% if current_filters.status == st.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ st.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="person-toolbar">
+                    <div class="table-controls person-filter-controls"></div>
+                    <div class="person-filter-actions">
+                        <button type="submit" form="personFiltersForm" class="btn btn-search">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button type="button" id="personFiltersClear" class="btn btn-secondary">
+                            <i class="fas fa-eraser"></i> Limpiar
                         </button>
                     </div>
                 </div>
@@ -116,7 +142,6 @@
         {% include 'person/modals/modal_person_form.html' %}
         {% include 'person/modals/modal_credentials.html' %}
         {% include 'person/modals/modal_person_quick_view.html' %}
-        {% include 'person/modals/modal_person_advanced_search.html' %}
         {% include 'person/modals/modal_relocate_employee.html' %}
     </div>
 
@@ -124,5 +149,4 @@
 
 {% block extra_js %}
     <script src="{% static 'js/person.js' %}"></script>
-    <script src="{% static 'js/person_table_scroll.js' %}"></script>
 {% endblock %}
