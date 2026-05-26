@@ -62,7 +62,6 @@
         </div>
         <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
             <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
-            <i class="fas fa-search search-icon"></i>
             <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o usuario" value="{{ request.GET.q }}">
         </form>
     </div>

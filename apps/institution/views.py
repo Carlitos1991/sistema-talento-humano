@@ -301,33 +301,54 @@ class UnitUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        # DEBUG: Log de datos recibidos
-        print(f"\n[DEBUG UnitUpdateView] POST data recibido:")
-        print(f"  - parent: {request.POST.get('parent', 'VACÍO')}")
-        print(f"  - level: {request.POST.get('level', 'VACÍO')}")
-        print(f"  - name: {request.POST.get('name', 'VACÍO')}")
-        print(f"  - Unidad a actualizar: {self.object.id} ({self.object.name})")
-        print(f"  - Parent actual en DB: {self.object.parent_id}")
+        original_parent = self.object.parent
+        original_level = self.object.level
+        original_boss = self.object.boss
         
         form = self.get_form()
         if form.is_valid():
-            selected_boss = form.cleaned_data.get('boss')
+            selected_boss = form.cleaned_data.get('boss') or original_boss
             reassigned_from = _get_reassigned_unit_names_for_boss(selected_boss, exclude_unit_id=self.object.id)
 
-            print(f"  - Form válido")
-            print(f"  - Cleaned data parent: {form.cleaned_data.get('parent')}")
-            print(f"  - Cleaned data level: {form.cleaned_data.get('level')}")
-            form.save()
-            print(f"  - Parent en DB después de guardar: {self.object.parent_id}")
+            # Guardar explícitamente usando commit=False para asegurar que
+            # los campos ocultos (parent/level) se apliquen correctamente.
+            unit = form.save(commit=False)
+
+            # Si el formulario no trajo algún campo, conservar el valor existente.
+            if 'parent' in request.POST:
+                unit.parent = form.cleaned_data.get('parent')
+            else:
+                unit.parent = original_parent
+
+            if 'level' in request.POST and form.cleaned_data.get('level'):
+                unit.level = form.cleaned_data.get('level')
+            else:
+                unit.level = original_level
+
+            if 'boss' in request.POST:
+                unit.boss = form.cleaned_data.get('boss')
+            else:
+                unit.boss = original_boss
+
+            old_boss = original_boss
+            unit.save()
+            new_boss = unit.boss
+
+            # Marcar nuevo jefe como tal
+            if new_boss:
+                new_boss.is_boss = True
+                new_boss.save(update_fields=['is_boss'])
+
+            # Si existía un jefe anterior distinto y ya no maneja unidades, desmarcarlo
+            if old_boss and old_boss != new_boss and not old_boss.managed_units.exists():
+                old_boss.is_boss = False
+                old_boss.save(update_fields=['is_boss'])
 
             message = 'Unidad actualizada correctamente.'
             if reassigned_from:
                 message += f" El jefe fue reasignado automáticamente desde: {', '.join(reassigned_from)}."
 
             return JsonResponse({'success': True, 'message': message})
-        else:
-            print(f"  - Form INVÁLIDO")
-            print(f"  - Errores: {form.errors}")
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
@@ -338,11 +359,6 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request, pk):
         unit = get_object_or_404(AdministrativeUnit, pk=pk)
         new_parent_id = request.POST.get('parent')
-        
-        print(f"\n[DEBUG UnitChangeParentView] POST data recibido:")
-        print(f"  - Unidad a reubicar: {unit.id} ({unit.name})")
-        print(f"  - Padre actual: {unit.parent_id}")
-        print(f"  - Nuevo padre en request: {new_parent_id}")
         
         try:
             # Validar que el nuevo padre sea válido (si no es vacío)
@@ -371,7 +387,6 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 unit.parent = None
             
             unit.save()
-            print(f"  - Nuevo padre guardado: {unit.parent_id}")
             
             return JsonResponse({
                 'success': True,
@@ -379,14 +394,12 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
             })
         
         except AdministrativeUnit.DoesNotExist:
-            print(f"  - ERROR: Padre no encontrado o no activo")
             return JsonResponse({
                 'success': False,
                 'message': 'La unidad padre seleccionada no existe o no está activa.',
                 'errors': {'parent': ['Padre no válido.']}
             }, status=400)
         except Exception as e:
-            print(f"  - ERROR: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Error al reubicar la unidad: {str(e)}',

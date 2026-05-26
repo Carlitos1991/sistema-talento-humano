@@ -26,16 +26,15 @@
         <div class="table-controls managed-table" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem; margin-bottom:12px;">
             <div></div>
             <div style="display:flex; justify-content: center;">
-                <input class="modern-toggle-input" type="checkbox" id="toggleInactiveBiometrics"
+                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveBiometrics"
                        onchange="toggleInactiveBiometrics(this.checked)">
 
-                <label class="modern-toggle-wrapper mb-0" for="toggleInactiveBiometrics">
-                    <div class="modern-toggle-circle"></div>
+                <label class="toggle-status-red-wrapper" for="toggleInactiveBiometrics">
+                    <div class="toggle-status-red-circle"></div>
                     <span class="modern-toggle-text">Mostrar Biométricos Inactivos</span>
                 </label>
             </div>
             <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 420px;">
-                <i class="fas fa-search search-icon"></i>
                 <input type="text" v-model="searchQuery" @input="search"
                        placeholder="Buscar por nombre o IP...">
             </div>

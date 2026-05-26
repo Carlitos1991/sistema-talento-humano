@@ -541,6 +541,22 @@
     gap: 4px;
 }
 
+.quick-view-info-grid .info-group,
+.quick-view-info-grid .info-value {
+    min-width: 0;
+}
+
+.person-address-badge {
+    display: inline-flex;
+    align-items: flex-start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: left;
+    line-height: 1.35;
+    max-width: 100%;
+}
+
 /* ========================================
    VALIDACION MODAL PERSONA
    ======================================== */

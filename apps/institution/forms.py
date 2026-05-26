@@ -33,7 +33,8 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         # Validación de unicidad manual para mensaje personalizado
         if code:
             # Excluimos la propia instancia si estamos editando
-            qs = AdministrativeUnit.objects.filter(code=code)
+            # Solo considerar unidades activas para la validación
+            qs = AdministrativeUnit.objects.filter(code=code, is_active=True)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
 

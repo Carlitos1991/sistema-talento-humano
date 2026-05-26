@@ -65,6 +65,11 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'Inter', 'Roboto', sans-serif;
     font-size: 0.9rem; /* reducción global de escala */
@@ -152,6 +157,7 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: var(--sidebar-width) 1fr;
     min-height: 100vh;
     transition: grid-template-columns 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow-x: hidden;
 }
 
 .layout-wrapper.is-collapsed {
@@ -163,6 +169,7 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     background-color: var(--bg-light);
     min-height: 100vh;
+    min-width: 0;
     width: 100%;
     transition: all 0.3s ease;
     overflow-x: hidden;
@@ -174,6 +181,7 @@ h1, h2, h3, h4, h5, h6 {
     padding: 1rem;
     padding-bottom: 3rem;
     flex: 1 1 auto;
+    min-width: 0;
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
@@ -3532,7 +3540,7 @@ th.sorted-desc .sort-arrow {
     scroll-behavior: smooth;
     padding-bottom: 0.5rem;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 0.5rem;
 }
 
 .stat-card {
@@ -3749,6 +3757,7 @@ th.sorted-desc .sort-arrow {
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-card);
+    position: relative;
 }
 
 /* Header de modal */
@@ -3764,6 +3773,7 @@ th.sorted-desc .sort-arrow {
     align-items: center;
     border-top-left-radius: 0.75rem;
     border-top-right-radius: 0.75rem;
+    position: relative;
 }
 
 .modal-header-gradient {

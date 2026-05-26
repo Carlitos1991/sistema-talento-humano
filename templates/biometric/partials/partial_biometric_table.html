@@ -2,22 +2,22 @@
 <div class="table-container">
     <table class="custom-table biometric-table">
         <colgroup>
+            <col style="width:15%">
             <col style="width:12%">
+            <col style="width:9%">
+            <col style="width:9%">
             <col style="width:16%">
-            <col style="width:9%">
-            <col style="width:9%">
             <col style="width:12%">
-            <col style="width:7%">
-            <col style="width:35%">
+            <col style="width:25%">
         </colgroup>
         <thead>
         <tr>
-            <th data-field="name" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fas fa-clock header-icon"></i>Nombre <span class="sort-arrow">⇅</span></th>
-            <th data-field="ip_address" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fas fa-server header-icon"></i>IP/Puerto <span class="sort-arrow">⇅</span></th>
-            <th data-field="serial_number" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fa-solid fa-barcode header-icon"></i> N° Serie <span class="sort-arrow">⇅</span></th>
-            <th data-field="model_name" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fa-solid fa-microchip header-icon"></i> Modelo <span class="sort-arrow">⇅</span></th>
-            <th data-field="location" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fas fa-map-location header-icon"></i>Ubicación <span class="sort-arrow">⇅</span></th>
-            <th data-field="is_active" onclick="sortBiometricTable(this)" class="sortable-header"> <i class="fas fa-toggle-on header-icon"></i>Estado <span class="sort-arrow">⇅</span></th>
+            <th data-field="name" onclick="sortBiometricTable(this)" class="sortable-header">Nombre <span class="sort-arrow">⇅</span></th>
+            <th data-field="ip_address" onclick="sortBiometricTable(this)" class="sortable-header">IP <span class="sort-arrow">⇅</span></th>
+            <th data-field="serial_number" onclick="sortBiometricTable(this)" class="sortable-header">  N° Serie <span class="sort-arrow">⇅</span></th>
+            <th data-field="model_name" onclick="sortBiometricTable(this)" class="sortable-header">  Modelo <span class="sort-arrow">⇅</span></th>
+            <th data-field="location" onclick="sortBiometricTable(this)" class="sortable-header"> Ubicación <span class="sort-arrow">⇅</span></th>
+            <th data-field="is_active" onclick="sortBiometricTable(this)" class="sortable-header"> Estado <span class="sort-arrow">⇅</span></th>
             <th><i class="fas fa-bars header-icon"></i> Acciones</th>
         </tr>
         </thead>
@@ -27,8 +27,6 @@
                 <td class="device-name-cell">{{ device.name }}</td>
                 <td>
                     <span class="pill pill-ip">{{ device.ip_address }}</span>
-                    <span class="pill-separator">:</span>
-                    <span class="pill pill-port">{{ device.port }}</span>
                 </td>
                 <td>{{ device.serial_number|default:'—' }}</td>
                 <td>{{ device.model_name|default:'—' }}</td>
