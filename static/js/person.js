@@ -374,18 +374,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const searchInput = form.querySelector('input[name="q"]');
                 const areaSelect = form.querySelector('select[name="area"]');
-                const statusSelect = form.querySelector('select[name="status"]');
+                const statusSelect = form.querySelector('select[name="is_active"]');
                 const clearButton = document.getElementById('personFiltersClear');
 
                 const readFiltersFromForm = () => {
                     const nextFilters = {};
                     const q = (searchInput?.value || '').trim();
                     const area = areaSelect?.value || '';
-                    const status = statusSelect?.value || '';
+                    const isActive = statusSelect?.value || '';
 
                     if (q) nextFilters.q = q;
                     if (area) nextFilters.area = area;
-                    if (status) nextFilters.status = status;
+                    if (isActive) nextFilters.is_active = isActive;
 
                     return nextFilters;
                 };

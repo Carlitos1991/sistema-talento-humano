@@ -311,10 +311,11 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         nombres = self.request.GET.get('nombres')
         area_id = self.request.GET.get('area')
         status_id = self.request.GET.get('status')
+        is_active_param = self.request.GET.get('is_active')
         marital_id = self.request.GET.get('marital_status')
         gender_id = self.request.GET.get('gender')
 
-        has_advanced_search = any([cedula, nombres, area_id, status_id, marital_id, gender_id])
+        has_advanced_search = any([cedula, nombres, area_id, is_active_param, status_id, marital_id, gender_id])
 
         if not has_advanced_search and not q:
             qs = qs.filter(employee_profile__is_active=True)
@@ -358,6 +359,11 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if status_id:
             qs = qs.filter(employee_profile__employment_status_id=status_id)
+
+        if is_active_param in ('true', 'false'):
+            qs = qs.filter(employee_profile__is_active=(is_active_param == 'true'))
+        elif is_active_param in ('1', '0'):
+            qs = qs.filter(employee_profile__is_active=(is_active_param == '1'))
 
         if marital_id:
             qs = qs.filter(marital_status_id=marital_id)
@@ -413,6 +419,12 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         # Heredar todos los estados del catálogo EMPLOYMENT_STATUS
         context['status_list'] = CatalogItem.objects.filter(catalog__code='EMPLOYMENT_STATUS').order_by('name')
         context['gender_list'] = CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True)
+        context['current_filters'] = {
+            'q': self.request.GET.get('q', ''),
+            'area': self.request.GET.get('area', ''),
+            'is_active': self.request.GET.get('is_active', ''),
+            'status': self.request.GET.get('status', ''),
+        }
 
         # --- 3. ESTADÍSTICAS DINÁMICAS (con el filtro actual) ---
         from employee.models import Employee

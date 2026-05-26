@@ -109,14 +109,10 @@
                             </div>
 
                             <div class="person-filter-field">
-                                <select id="filter_status" name="status" class="input-field">
+                                <select id="filter_is_active" name="is_active" class="input-field">
                                     <option value="">Todos los estados</option>
-                                    {% for st in status_list %}
-                                        <option value="{{ st.id }}"
-                                                {% if current_filters.status == st.id|stringformat:"s" %}selected{% endif %}>
-                                            {{ st.name }}
-                                        </option>
-                                    {% endfor %}
+                                    <option value="true" {% if current_filters.is_active == 'true' %}selected{% endif %}>Activo</option>
+                                    <option value="false" {% if current_filters.is_active == 'false' %}selected{% endif %}>Inactivo</option>
                                 </select>
                             </div>
                         </div>
