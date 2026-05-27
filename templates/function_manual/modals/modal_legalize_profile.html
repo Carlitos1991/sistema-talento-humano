@@ -1,5 +1,5 @@
 {% load static %}
-<div class="modal-overlay">
+<div id="legalizeProfileModal" class="modal-overlay">
     <div class="modal-container" style="width: 600px; margin: auto;">
         <div class="modal-header-gradient"
              style="background: linear-gradient(to right, #475569, #64748b); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -20,40 +20,57 @@
                 <!-- ELABORADO POR -->
                 <div class="form-group mb-3">
                     <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Elaborado por (Analista):</label>
-                    <select name="prepared_by" id="select-prepared" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                    <select name="prepared_by" id="select-prepared" class="form-select-premium select-authority"
+                            data-ajax-url="{% url 'function_manual:api_user_search' %}"
+                            data-placeholder="Buscar por nombres, apellidos o cédula"
+                            data-minimum-input-length="1"
+                            onchange="validateLegalizeSelects()">
                         <option value="">--- Seleccione ---</option>
-                        {% for auth in authorities %}
-                            <option value="{{ auth.id }}" {% if profile.prepared_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.signature_name }} - {{ auth.signature_position }}
+                        {% if profile.prepared_by %}
+                            <option value="{{ profile.prepared_by_id }}" selected>
+                                {{ profile.prepared_by.signature_name }}{% if profile.prepared_by.signature_position %} - {{ profile.prepared_by.signature_position }}{% endif %}
                             </option>
-                        {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
 
                 <!-- REVISADO POR -->
                 <div class="form-group mb-3">
                     <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Revisado por (Jefe Inmediato):</label>
-                    <select name="reviewed_by" id="select-reviewed" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                    <select name="reviewed_by" id="select-reviewed" class="form-select-premium select-authority"
+                            data-ajax-url="{% url 'function_manual:api_user_search' %}"
+                            data-placeholder="Buscar por nombres, apellidos o cédula"
+                            data-minimum-input-length="1"
+                            onchange="validateLegalizeSelects()">
                         <option value="">--- Seleccione ---</option>
-                        {% for auth in authorities %}
-                            <option value="{{ auth.id }}" {% if profile.reviewed_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.signature_name }} - {{ auth.signature_position }}
+                        {% if profile.reviewed_by %}
+                            <option value="{{ profile.reviewed_by_id }}" selected>
+                                {{ profile.reviewed_by.signature_name }}{% if profile.reviewed_by.signature_position %} - {{ profile.reviewed_by.signature_position }}{% endif %}
                             </option>
-                        {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
 
                 <!-- AUTORIZADO POR -->
                 <div class="form-group mb-3">
                     <label style="font-weight:700; display:block; margin-bottom:5px; color:#334155;">Autorizado por (Máxima Autoridad):</label>
-                    <select name="approved_by" id="select-approved" class="form-select-premium select-authority" onchange="validateLegalizeSelects()">
+                    <select name="approved_by" id="select-approved" class="form-select-premium select-authority"
+                            data-ajax-url="{% url 'function_manual:api_user_search' %}"
+                            data-placeholder="Buscar por nombres, apellidos o cédula"
+                            data-minimum-input-length="1"
+                            onchange="validateLegalizeSelects()">
                         <option value="">--- Seleccione ---</option>
-                        {% for auth in authorities %}
-                            <option value="{{ auth.id }}" {% if profile.approved_by_id == auth.id %}selected{% endif %}>
-                                {{ auth.signature_name }} - {{ auth.signature_position }}
+                        {% if profile.approved_by %}
+                            <option value="{{ profile.approved_by_id }}" selected>
+                                {{ profile.approved_by.signature_name }}{% if profile.approved_by.signature_position %} - {{ profile.approved_by.signature_position }}{% endif %}
                             </option>
-                        {% endfor %}
+                        {% endif %}
                     </select>
+                </div>
+
+                <div id="legalize-duplicate-warning" class="mb-3"
+                     style="display:none; padding: 10px; background: #fef2f2; color: #b91c1c; border-radius: 8px; border: 1px solid #fecaca; font-size: 0.9rem;">
+                    <i class="fas fa-triangle-exclamation me-1"></i> Una misma persona no puede ocupar más de un rol de firma.
                 </div>
 
             </div>
@@ -69,7 +86,3 @@
         </form>
     </div>
 </div>
-<script>
-    // Initialize validation on load after a brief delay to ensure DOM is ready inside modal
-    setTimeout(validateLegalizeSelects, 100);
-</script>

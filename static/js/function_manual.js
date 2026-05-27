@@ -1924,6 +1924,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.closeManualModal = () => {
             const container = document.getElementById('modal-inject-container');
             if (container) {
+                if (typeof window.destroyLegalizeProfileSelect2 === 'function') {
+                    window.destroyLegalizeProfileSelect2();
+                }
                 container.innerHTML = '';
                 document.body.classList.remove('no-scroll');
             }
@@ -2150,6 +2153,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(html => {
                     const container = document.getElementById('modal-inject-container');
                     if (container) {
+                        if (typeof window.destroyLegalizeProfileSelect2 === 'function') {
+                            window.destroyLegalizeProfileSelect2();
+                        }
                         container.innerHTML = html;
                         const overlay = container.querySelector('.modal-overlay');
                         if (overlay) {
@@ -2159,34 +2165,125 @@ document.addEventListener('DOMContentLoaded', () => {
                             overlay.style.zIndex = '999999';
                         }
                         document.body.classList.add('no-scroll');
-                        setTimeout(validateLegalizeSelects, 200);
+                        if (typeof window.initLegalizeProfileSelect2 === 'function') {
+                            window.initLegalizeProfileSelect2();
+                        }
+                        validateLegalizeSelects();
                     }
                 });
         };
 
         window.validateLegalizeSelects = () => {
             const selects = document.querySelectorAll('.select-authority');
+            const btn = document.getElementById('btn-submit-legalize');
+            const warning = document.getElementById('legalize-duplicate-warning');
             const selectedValues = Array.from(selects).map(s => s.value).filter(v => v);
+            const hasDuplicates = new Set(selectedValues).size !== selectedValues.length;
+
+            if (warning) {
+                warning.style.display = hasDuplicates ? 'block' : 'none';
+            }
+
+            if (btn) {
+                btn.disabled = hasDuplicates;
+            }
+
+            return !hasDuplicates;
+        };
+
+        window.destroyLegalizeProfileSelect2 = () => {
+            if (!window.$ || !$.fn.select2) return;
+
+            document.querySelectorAll('.select-authority').forEach(select => {
+                try {
+                    const $select = $(select);
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                } catch (err) {
+                    console.warn('Error destruyendo Select2 de legalización:', err);
+                }
+            });
+        };
+
+        window.initLegalizeProfileSelect2 = () => {
+            if (!window.$ || !$.fn.select2) return;
+
+            const modal = document.getElementById('legalizeProfileModal');
+            const selects = document.querySelectorAll('.select-authority');
 
             selects.forEach(select => {
-                const currentVal = select.value;
-                Array.from(select.options).forEach(opt => {
-                    if (!opt.value) return; // Skip placeholder
+                try {
+                    const $select = $(select);
+                    const ajaxUrl = select.dataset.ajaxUrl;
+                    const placeholder = select.dataset.placeholder || 'Seleccione un usuario';
+                    const minimumInputLength = parseInt(select.dataset.minimumInputLength || '1', 10) || 1;
 
-                    // Si el valor está en la lista de seleccionados y NO es el valor de este select
-                    if (selectedValues.includes(opt.value) && opt.value !== currentVal) {
-                        opt.disabled = true;
-                        opt.textContent = opt.textContent.replace(' (Seleccionado)', '') + ' (Seleccionado)';
-                    } else {
-                        opt.disabled = false;
-                        opt.textContent = opt.textContent.replace(' (Seleccionado)', '');
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
                     }
-                });
+
+                    $select.select2({
+                        dropdownParent: modal ? $(modal) : $(document.body),
+                        width: '100%',
+                        placeholder,
+                        allowClear: true,
+                        minimumInputLength,
+                        language: {
+                            errorLoading: function () {
+                                return 'No se pudieron cargar los resultados';
+                            },
+                            inputTooShort: function (args) {
+                                const remaining = args.minimum - args.input.length;
+                                return `Por favor ingrese ${remaining} caracter${remaining !== 1 ? 'es' : ''} más`;
+                            },
+                            noResults: function () {
+                                return 'No se encontraron usuarios';
+                            },
+                            searching: function () {
+                                return 'Buscando usuarios...';
+                            }
+                        },
+                        ajax: {
+                            url: ajaxUrl,
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                return {term: params.term};
+                            },
+                            processResults: function (data) {
+                                const currentValue = String(select.value || '');
+                                const takenValues = Array.from(document.querySelectorAll('.select-authority'))
+                                    .map(item => String(item.value || ''))
+                                    .filter(Boolean);
+
+                                const results = (data.results || []).filter(item => {
+                                    const itemId = String(item.id || '');
+                                    return !takenValues.includes(itemId) || itemId === currentValue;
+                                });
+
+                                return {results};
+                            },
+                            cache: true
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error inicializando Select2 de legalización:', err);
+                }
             });
         };
 
         window.submitLegalizeProfile = async (e, pk) => {
             e.preventDefault();
+            if (!validateLegalizeSelects()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Validación requerida',
+                    text: 'Una misma persona no puede ocupar más de un rol de firma.'
+                });
+                return;
+            }
+
             const form = e.target;
             const btn = document.getElementById('btn-submit-legalize');
 

@@ -22,11 +22,14 @@
                     <label for="authority-select" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">
                         Usuario que Autoriza:
                     </label>
-                    <select id="authority-select" class="select2" style="width: 100%;">
+                    <select id="authority-select" class="select2" style="width: 100%;"
+                            data-ajax-url="{% url 'function_manual:api_user_search' %}"
+                            data-placeholder="Buscar por nombres, apellidos o cédula"
+                            data-minimum-input-length="1">
                         <option value="">-- Seleccione un usuario --</option>
-                        {% for authority in authorities %}
-                            <option value="{{ authority.id }}">{{ authority.signature_name }} - {{ authority.signature_position }}</option>
-                        {% endfor %}
+                        {% if authorities and authorities|length == 1 %}
+                            <option value="{{ authorities.0.id }}" selected>{{ authorities.0.signature_name }}</option>
+                        {% endif %}
                     </select>
                 </div>
 
@@ -52,14 +55,49 @@
 </div>
 
 <script>
-    // Inicializar Select2 para el select de autoridad
+    // Inicializar Select2 AJAX para el select de autoridad
     (function() {
         const selectElement = document.getElementById('authority-select');
         if (selectElement && window.$ && $.fn.select2) {
+            const modal = document.querySelector('.modal-overlay');
+
+            if ($(selectElement).hasClass('select2-hidden-accessible')) {
+                $(selectElement).select2('destroy');
+            }
+
             $(selectElement).select2({
-                placeholder: 'Seleccione un usuario',
+                dropdownParent: modal ? $(modal) : $(document.body),
+                width: '100%',
+                placeholder: selectElement.dataset.placeholder || 'Seleccione un usuario',
                 allowClear: true,
-                language: 'es'
+                minimumInputLength: parseInt(selectElement.dataset.minimumInputLength || '1', 10) || 1,
+                language: {
+                    errorLoading: function () {
+                        return 'No se pudieron cargar los resultados';
+                    },
+                    inputTooShort: function (args) {
+                        const remaining = args.minimum - args.input.length;
+                        return 'Por favor ingrese ' + remaining + ' carácter' + (remaining !== 1 ? 'es' : '') + ' más';
+                    },
+                    noResults: function () {
+                        return 'No se encontraron usuarios';
+                    },
+                    searching: function () {
+                        return 'Buscando usuarios...';
+                    }
+                },
+                ajax: {
+                    url: selectElement.dataset.ajaxUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {term: params.term};
+                    },
+                    processResults: function (data) {
+                        return {results: data.results || []};
+                    },
+                    cache: true
+                }
             });
         }
     })();

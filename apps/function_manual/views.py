@@ -1,6 +1,7 @@
 # apps/function_manual/views.py
 import openpyxl
 from django.db import models, transaction
+from django.db.models import Q
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
@@ -1547,10 +1548,8 @@ class JobProfileLegalizeView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile, pk=pk)
-        authorities = User.objects.filter(is_active=True).order_by('username')
         return render(request, 'function_manual/modals/modal_legalize_profile.html', {
             'profile': profile,
-            'authorities': authorities
         })
 
     def post(self, request, pk):
@@ -1828,6 +1827,53 @@ class GetReportPdfModalView(LoginRequiredMixin, View):
             'profile': profile,
             'authorities': authorities
         })
+
+
+@login_required
+def user_search_json(request):
+    """JSON endpoint para buscar usuarios activos para Select2 AJAX."""
+    term = request.GET.get('term', '').strip()
+
+    users = User.objects.filter(is_active=True).select_related('person')
+    if term:
+        for part in [token for token in term.split() if token]:
+            users = users.filter(
+                Q(person__first_name__icontains=part)
+                | Q(person__last_name__icontains=part)
+                | Q(person__document_number__icontains=part)
+                | Q(username__icontains=part)
+                | Q(email__icontains=part)
+                | Q(custom_name__icontains=part)
+                | Q(custom_position__icontains=part)
+            )
+
+    users = users.order_by('person__first_name', 'person__last_name', 'username')[:20]
+    results = []
+    for user in users:
+        person = getattr(user, 'person', None)
+        full_name = ''
+        document_number = ''
+        if person:
+            full_name = f'{person.first_name or ""} {person.last_name or ""}'.strip()
+            document_number = person.document_number or ''
+
+        label = user.custom_name or full_name or user.get_full_name().strip() or user.username
+        position = user.custom_position or ''
+
+        if not position and person and getattr(person, 'employee_profile', None):
+            budget_line = person.employee_profile.current_budget_line.select_related('position_item').first()
+            if budget_line and budget_line.position_item:
+                position = budget_line.position_item.name or ''
+
+        if position:
+            label = f'{label} - {position}'
+
+        results.append({
+            'id': str(user.id),
+            'text': label
+        })
+
+    return JsonResponse({'results': results})
 
 
 class JobActivityReportPdfView(LoginRequiredMixin, View):
