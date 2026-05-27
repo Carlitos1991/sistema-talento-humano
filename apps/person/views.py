@@ -398,13 +398,24 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'email': 'email',
             'phone_number': 'phone_number',
             'employee_profile__area__name': 'employee_profile__area__name',
+            'employee_profile__area': 'employee_profile__area__name',
+            'administrative_unit__name': 'employee_profile__area__name',
+            'administrative_unit': 'employee_profile__area__name',
             'employee_profile__employment_status__name': 'employee_profile__employment_status__name'
         }
         if sort_field in allowed:
             field = allowed[sort_field]
+            if field == 'last_name':
+                secondary = ['first_name', 'pk']
+            elif field == 'employee_profile__area__name':
+                secondary = ['last_name', 'first_name', 'pk']
+            else:
+                secondary = ['last_name', 'first_name', 'pk']
+
             if sort_dir == 'desc':
-                field = '-' + field
-            qs = qs.order_by(field)
+                qs = qs.order_by(f'-{field}', *[f'-{value}' for value in secondary])
+            else:
+                qs = qs.order_by(field, *secondary)
             # Orden aplicado correctamente (sin logs de depuración)
 
         return qs
