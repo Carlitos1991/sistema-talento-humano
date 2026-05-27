@@ -1807,9 +1807,9 @@ class GetReportPdfModalView(LoginRequiredMixin, View):
     """
 
     def get(self, request, pk):
-        # Permisos: permitir a quien tenga view OR change OR can_admin
+        # Permisos: permitir a quien tenga view OR change OR add OR can_admin
         if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm(
-                'function_manual.change_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+            'function_manual.change_jobprofile') or request.user.has_perm('function_manual.add_jobprofile') or request.user.has_perm('function_manual.can_admin')):
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
 
         profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
