@@ -114,7 +114,7 @@
 
             <div class="section-card-standard">
                 <h4 class="section-title"><i class="fas fa-list-ol text-primary"></i> DATOS NUMÉRICOS</h4>
-                <div class="grid-2-cols">
+                <div class="grid-3-cols">
                     <div class="form-group">
                         <label class="form-label font-weight-700">Minutos de Atraso</label>
                         {{ form.minutes_late }}
@@ -123,6 +123,11 @@
                     <div class="form-group">
                         <label class="form-label font-weight-700">Regs. sin marcar</label>
                         {{ form.regs_without_mark }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Dias sin marcar</label>
+                        {{ form.days_without_mark }}
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>

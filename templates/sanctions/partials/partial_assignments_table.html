@@ -55,9 +55,9 @@
                     <td class="text-center">
                         {% if current_assign %}
                             {% with info=current_assign.get_status_info %}
-                                <div class="semaphore-circle" style="background-color: {{ info.color }};"
-                                     title="{{ info.label }}"></div>
-                                <small style="display:block; font-size: 10px; font-weight: bold;">{{ info.days }}d</small>
+                                  <div class="semaphore-circle" style="background-color: {{ info.color }};"
+                                      title="{{ info.label }}"></div>
+                                  <small class="semaphore-time">{{ info.days }}d {{ info.hours }}h</small>
                             {% endwith %}
                         {% endif %}
                     </td>

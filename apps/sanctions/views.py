@@ -292,6 +292,7 @@ def _build_notification_data_context(employee, regime_context, notification_type
         'authority_2': form.cleaned_data.get('authority_2'),
         'minutes_late': form.cleaned_data.get('minutes_late') or 0,
         'regs_without_mark': form.cleaned_data.get('regs_without_mark') or 0,
+        'days_without_mark': form.cleaned_data.get('days_without_mark') or 0,
         'observations': form.cleaned_data.get('observations') or '',
     }
 
@@ -426,6 +427,7 @@ def _build_notification_form_like_object(notification):
             'authority_2': notification.authority_2,
             'minutes_late': notification.minutes_late or 0,
             'regs_without_mark': notification.regs_without_mark or 0,
+            'days_without_mark': notification.days_without_mark or 0,
             'observations': notification.observations or '',
         },
         initial={
@@ -807,6 +809,7 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
         notification.authority_2 = form.cleaned_data.get('authority_2') or None
         notification.minutes_late = form.cleaned_data.get('minutes_late') or 0
         notification.regs_without_mark = form.cleaned_data.get('regs_without_mark') or 0
+        notification.days_without_mark = form.cleaned_data.get('days_without_mark') or 0
         notification.observations = form.cleaned_data.get('observations') or ''
         notification.updated_by = request.user
         notification.save()
@@ -1786,12 +1789,6 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
         notification_id = request.POST.get('notification_id')
         assigned_to_id = request.POST.get('assigned_to')
 
-        if notification_id and not assigned_to_id:
-            return JsonResponse(
-                {'success': False, 'message': 'Debe seleccionar un responsable para elaborar la Acción de Personal.'},
-                status=400
-            )
-
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -1853,9 +1850,14 @@ class GenerateSanctionFormView(LoginRequiredMixin, View):
                     if notification_id:
                         notif = SanctionNotification.objects.filter(pk=notification_id).first()
                         if notif:
-                            assigned_user = get_object_or_404(User, pk=assigned_to_id)
-
                             curr = notif.current_assignment
+                            if assigned_to_id:
+                                assigned_user = get_object_or_404(User, pk=assigned_to_id)
+                            elif curr and curr.assigned_to:
+                                assigned_user = curr.assigned_to
+                            else:
+                                assigned_user = request.user
+
                             if curr:
                                 curr.complete_assignment(sanction_obj=sanction)
 

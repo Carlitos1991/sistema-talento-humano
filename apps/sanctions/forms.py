@@ -123,6 +123,10 @@ class SanctionNotificationForm(forms.ModelForm):
         choices=MONTH_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
+    registration_date = forms.DateField(
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+    )
 
     class Meta:
         model = SanctionNotification
@@ -135,17 +139,19 @@ class SanctionNotificationForm(forms.ModelForm):
             'authority_2',
             'minutes_late',
             'regs_without_mark',
+            'days_without_mark',
             'observations',
         ]
         widgets = {
             'notification_type': forms.Select(attrs={'class': 'form-select select2'}),
             'month': forms.Select(attrs={'class': 'form-select'}),
             'year': forms.NumberInput(attrs={'class': 'form-control', 'min': 2000, 'max': 2100}),
-            'registration_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'registration_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'authority_1': forms.Select(attrs={'class': 'form-select select2'}),
             'authority_2': forms.Select(attrs={'class': 'form-select select2'}),
             'minutes_late': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'regs_without_mark': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'days_without_mark': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -167,6 +173,7 @@ class SanctionNotificationForm(forms.ModelForm):
         self.fields['authority_1'].required = True
         self.fields['minutes_late'].required = False
         self.fields['regs_without_mark'].required = False
+        self.fields['days_without_mark'].required = False
         self.fields['authority_2'].required = False
         self.fields['observations'].required = False
 
@@ -179,6 +186,8 @@ class SanctionNotificationForm(forms.ModelForm):
         if not self.initial.get('registration_date'):
             from django.utils import timezone
             self.initial['registration_date'] = timezone.now().date()
+        if self.instance and self.instance.pk and self.instance.registration_date:
+            self.initial['registration_date'] = self.instance.registration_date.strftime('%Y-%m-%d')
 
     def clean(self):
         cleaned_data = super().clean()

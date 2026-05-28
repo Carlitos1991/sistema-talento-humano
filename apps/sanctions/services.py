@@ -22,6 +22,7 @@ PLACEHOLDER_KEYS = [
     'AUTHORITY_2_POSITION',
     'MINUTES_LATE',
     'REGS_WITHOUT_MARK',
+    'DAYS_WITHOUT_MARK',
     'OBSERVATIONS',
 ]
 
@@ -52,9 +53,11 @@ def build_notification_replacements(data):
     registration_date = data.get('registration_date', '')
     minutes_late = data.get('minutes_late')
     regs_without_mark = data.get('regs_without_mark')
+    days_without_mark = data.get('days_without_mark')
 
     minutes_late_text = '0' if minutes_late is None else str(minutes_late)
     regs_without_mark_text = '0' if regs_without_mark is None else str(regs_without_mark)
+    days_without_mark_text = '0' if days_without_mark is None else str(days_without_mark)
 
     replacements = {
         '[FULL_NAME]': data.get('employee_full_name', ''),
@@ -96,6 +99,8 @@ def build_notification_replacements(data):
         '[MINUTES_LATE]': minutes_late_text,
         '[MINUTOS]': minutes_late_text,
         '[REGS_WITHOUT_MARK]': regs_without_mark_text,
+        '[DAYS_WITHOUT_MARK]': days_without_mark_text,
+        '[DIAS_SIN_MARCAR]': days_without_mark_text,
         '[OBSERVATIONS]': data.get('observations', ''),
     }
     return replacements

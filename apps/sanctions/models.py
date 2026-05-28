@@ -89,6 +89,7 @@ class SanctionNotificationTypeMapping(models.Model):
         ('authority_2_position', 'Cargo de la autoridad 2'),
         ('minutes_late', 'Minutos de atraso'),
         ('regs_without_mark', 'Registros sin marcar'),
+        ('days_without_mark', 'Dias sin marcar'),
         ('observations', 'Observaciones'),
     ]
 
@@ -312,6 +313,12 @@ class SanctionNotification(BaseModel):
     )
     regs_without_mark = models.PositiveIntegerField(
         verbose_name='Regs. sin marcar',
+        default=0,
+        blank=True,
+        null=True,
+    )
+    days_without_mark = models.PositiveIntegerField(
+        verbose_name='Dias sin marcar',
         default=0,
         blank=True,
         null=True,
@@ -568,10 +575,52 @@ class SanctionAssignment(BaseModel):
 
     @property
     def duration_days(self):
+        from datetime import timedelta
         from django.utils import timezone
+
+        if not self.start_date:
+            return 0
+
         end = self.end_date or timezone.now()
-        diff = end - self.start_date
-        return diff.days
+        diff_days = (end - self.start_date).days
+        if diff_days <= 0:
+            return 0
+
+        start_date = self.start_date.date()
+        end_limit = start_date + timedelta(days=diff_days)
+        holiday_dates = self._get_holiday_dates(start_date + timedelta(days=1), end_limit)
+
+        working_days = 0
+        for offset in range(1, diff_days + 1):
+            current = start_date + timedelta(days=offset)
+            if current.weekday() < 5 and current not in holiday_dates:
+                working_days += 1
+
+        return working_days
+
+    def _get_holiday_dates(self, start_date, end_date):
+        from datetime import timedelta
+        from schedule.models import ScheduleObservation
+
+        if not start_date or not end_date or end_date < start_date:
+            return set()
+
+        holidays = ScheduleObservation.objects.filter(
+            is_holiday=True,
+            is_active=True,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+        ).values_list('start_date', 'end_date')
+
+        holiday_dates = set()
+        for holiday_start, holiday_end in holidays:
+            current = max(holiday_start, start_date)
+            end_limit = min(holiday_end, end_date)
+            while current <= end_limit:
+                holiday_dates.add(current)
+                current += timedelta(days=1)
+
+        return holiday_dates
 
     def get_status_color(self):
         from core.models import SystemConfiguration
@@ -608,11 +657,13 @@ class SanctionAssignment(BaseModel):
 
         end = self.end_date or timezone.now()
         diff = end - self.start_date
-        days = diff.days
+        total_hours = int(diff.total_seconds() // 3600) if diff.total_seconds() > 0 else 0
+        hours = total_hours % 24
+        days = self.duration_days
 
         if days <= green:
-            return {'color': '#10b981', 'label': 'A tiempo', 'days': days}  # Verde
+            return {'color': '#10b981', 'label': 'A tiempo', 'days': days, 'hours': hours}  # Verde
         elif days <= yellow:
-            return {'color': '#f59e0b', 'label': 'En alerta', 'days': days}  # Amarillo
+            return {'color': '#f59e0b', 'label': 'En alerta', 'days': days, 'hours': hours}  # Amarillo
         else:
-            return {'color': '#ef4444', 'label': 'Atrasado', 'days': days}  # Rojo
+            return {'color': '#ef4444', 'label': 'Atrasado', 'days': days, 'hours': hours}  # Rojo

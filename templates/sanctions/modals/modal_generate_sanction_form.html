@@ -105,17 +105,22 @@
                     <h4 class="section-title">
                         <i class="fas fa-user-check text-primary"></i> RESPONSABLE DE ACCIÓN DE PERSONAL
                     </h4>
-                    <div class="alert alert-info" style="background-color: #f0f7ff; border-left: 4px solid #3b82f6; padding: 0.9rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div class="alert alert-info" style="background-color: #f0f7ff; border-left: 4px solid #3b82f6; padding: 0.9rem 1rem; border-radius: 8px; margin-bottom: 0.6rem;">
                         <span style="color: #1e40af; font-size: 0.92rem;">
                             Seleccione la persona que elaborará la Acción de Personal una vez registrada la sanción.
+                        </span>
+                    </div>
+                    <div class="alert alert-warning" style="background-color: #fff7ed; border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <span style="color: #9a3412; font-size: 0.9rem;">
+                            Si no selecciona un responsable, se mantendra como responsable el usuario actual.
                         </span>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label font-weight-700">
-                            Buscar Responsable (Cédula o Nombre): <span class="text-danger">*</span>
+                            Buscar Responsable (Cédula o Nombre):
                         </label>
-                        <select id="select-responsible-ajax" name="assigned_to" class="form-select" required style="width: 100%;">
+                        <select id="select-responsible-ajax" name="assigned_to" class="form-select" style="width: 100%;">
                             <option value="">Escriba para buscar...</option>
                         </select>
                         <div class="invalid-feedback"></div>
