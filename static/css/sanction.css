@@ -1466,6 +1466,65 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     border: 1px solid #cbd5e1;
 }
 
+.route-thread.compact .route-item {
+    padding: 10px 14px !important;
+    margin-bottom: 8px;
+}
+
+.route-thread.compact .route-meta {
+    margin-bottom: 4px;
+    font-size: 0.78rem;
+}
+
+.route-meta-inline {
+    width: 100%;
+}
+
+.route-thread.compact .route-body {
+    display: block !important;
+    white-space: normal !important;
+    margin-top: 6px !important;
+    padding-top: 6px !important;
+    border-top: 1px dashed #e2e8f0;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.route-body-label {
+    display: inline !important;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: none;
+    margin-right: 4px;
+    margin-bottom: 0 !important;
+}
+
+.route-body-content {
+    display: inline !important;
+    color: #1f2937;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.route-body-text {
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    display: inline !important;
+}
+
+.route-total {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    text-align: center;
+}
+
 /* Tooltip simple para el semáforo */
 .semaphore-circle[title]:hover:after {
     content: attr(title);

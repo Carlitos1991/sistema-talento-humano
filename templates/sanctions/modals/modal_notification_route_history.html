@@ -1,4 +1,4 @@
-<div class="modal-container-large modal-compact shadow-card">
+<div class="modal-container-medium modal-compact shadow-card">
     <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
         <i class="fas fa-times"></i>
     </button>
@@ -28,7 +28,7 @@
                 <i class="fas fa-route text-primary"></i> TRAZABILIDAD DE ASIGNACIONES
             </h4>
             {% if assignments %}
-                <div class="route-thread">
+                <div class="route-thread compact">
                     {% for item in assignments %}
                         <div class="route-item {% if item.is_current %}is-current{% endif %}">
                             <div class="route-meta">
@@ -45,7 +45,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="route-meta">
+                            <div class="route-meta route-meta-inline">
                                 <div>Recepcion: {{ item.start_date|date:"d/m/Y H:i" }}</div>
                                 <div>
                                     Despacho:
@@ -55,13 +55,16 @@
                                         En curso
                                     {% endif %}
                                 </div>
-                                <div>Tiempo: {{ item.duration_days }}d</div>
+                                <div>Tiempo: {{ item.duration_days }}d {{ item.get_status_info.hours }}h</div>
                             </div>
-                            <div class="route-body">
-                                {{ item.observation|default:"Sin observaciones registradas." }}
+                            <div class="route-body"><span class="route-body-label">Observaciones:</span> <span
+                                    class="route-body-content">{{ item.observation|default:"Sin observaciones registradas." }}</span>
                             </div>
                         </div>
                     {% endfor %}
+                </div>
+                <div class="route-total">
+                    Tiempo total: {{ total_duration.days }}d {{ total_duration.hours }}h laborales
                 </div>
             {% else %}
                 <div class="text-center text-muted py-4">No hay historial de asignaciones disponible.</div>

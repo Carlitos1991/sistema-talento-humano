@@ -3,7 +3,7 @@ import html
 import json
 import mimetypes
 import re
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from django.db.models import Case, When, Value, IntegerField, Count, OuterRef, Subquery
@@ -30,6 +30,7 @@ from core.models import SystemConfiguration
 from core.models import User
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction, ActionType
+from schedule.models import ScheduleObservation
 from .forms import SanctionNotificationForm, SanctionNotificationTypeForm, SanctionTypeForm, SanctionForm, \
     MONTH_CHOICES, NotificationDateForm
 from .models import NotificationTemplate, TemplateSection, SanctionNotification, SanctionNotificationMapping, \
@@ -342,6 +343,71 @@ def _normalize_template_section_content(content):
     text = text.replace('\\r\\n', '\n').replace('\\n', '\n').replace('\\r', '\n').replace('\\t', '\t')
     text = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), text)
     return text.strip()
+
+
+def _get_holiday_dates_between(start_date, end_date):
+    if not start_date or not end_date or end_date < start_date:
+        return set()
+
+    holidays = ScheduleObservation.objects.filter(
+        is_holiday=True,
+        is_active=True,
+        start_date__lte=end_date,
+        end_date__gte=start_date,
+    ).values_list('start_date', 'end_date')
+
+    holiday_dates = set()
+    for holiday_start, holiday_end in holidays:
+        current = max(holiday_start, start_date)
+        end_limit = min(holiday_end, end_date)
+        while current <= end_limit:
+            holiday_dates.add(current)
+            current += timedelta(days=1)
+
+    return holiday_dates
+
+
+def _calculate_business_duration(start_dt, end_dt):
+    if not start_dt or not end_dt:
+        return {'days': 0, 'hours': 0}
+
+    if timezone.is_naive(start_dt):
+        start_dt = timezone.make_aware(start_dt, timezone.get_current_timezone())
+    if timezone.is_naive(end_dt):
+        end_dt = timezone.make_aware(end_dt, timezone.get_current_timezone())
+
+    start_local = timezone.localtime(start_dt)
+    end_local = timezone.localtime(end_dt)
+    if end_local <= start_local:
+        return {'days': 0, 'hours': 0}
+
+    start_date = start_local.date()
+    end_date = end_local.date()
+    holiday_dates = _get_holiday_dates_between(start_date, end_date)
+
+    total_seconds = 0
+    current_date = start_date
+    tzinfo = start_local.tzinfo
+    while current_date <= end_date:
+        if current_date.weekday() < 5 and current_date not in holiday_dates:
+            day_start = datetime.combine(current_date, time.min)
+            day_end = datetime.combine(current_date, time.max)
+            if timezone.is_naive(day_start):
+                day_start = timezone.make_aware(day_start, tzinfo)
+                day_end = timezone.make_aware(day_end, tzinfo)
+
+            interval_start = max(start_local, day_start)
+            interval_end = min(end_local, day_end)
+            if interval_end > interval_start:
+                total_seconds += (interval_end - interval_start).total_seconds()
+
+        current_date += timedelta(days=1)
+
+    total_hours = int(total_seconds // 3600)
+    return {
+        'days': total_hours // 24,
+        'hours': total_hours % 24,
+    }
 
 
 def _get_letterhead_resource(request):
@@ -709,8 +775,6 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
                     'sequence_number': next_sequence,
                     'sequence_code': f'{next_sequence:04d}',
                     'user_code': _build_user_code(request.user),
-                    'notification_type': default_notification_type.pk if default_notification_type else None,
-                    'authority_1': default_authority.pk if default_authority else None,
                 },
             )
 
@@ -820,7 +884,7 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
                 notification=notification,
                 assigned_to=request.user,
                 assigned_by=request.user,
-                observation='Notificacion registrada.',
+                observation=notification.observations or 'Notificación registrada.',
                 is_current=True,
             )
 
@@ -2696,7 +2760,7 @@ class SetNotificationDateView(LoginRequiredMixin, View):
                     notification=notification,
                     assigned_to=request.user,
                     assigned_by=request.user,
-                    observation='Notificacion marcada como notificada.',
+                    observation=notification.observations or 'Notificación marcada como notificada.',
                     is_current=True,
                 )
             return JsonResponse({'success': True, 'message': 'Empleado notificado correctamente.'})
@@ -2714,11 +2778,18 @@ class NotificationRouteHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMix
             pk=pk
         )
 
-        assignments = notification.assignment_history.select_related(
+        assignments_qs = notification.assignment_history.select_related(
             'assigned_to',
             'assigned_by',
             'sanction__personnel_action'
         ).order_by('start_date', 'created_at')
+
+        assignments = list(assignments_qs)
+        total_duration = {'days': 0, 'hours': 0}
+        if assignments:
+            start_dt = assignments[0].start_date
+            end_dt = assignments[-1].end_date or timezone.now()
+            total_duration = _calculate_business_duration(start_dt, end_dt)
 
         final_sanction = None
         for assignment in assignments:
@@ -2732,6 +2803,7 @@ class NotificationRouteHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMix
             'assignments': assignments,
             'final_sanction': final_sanction,
             'personnel_action': personnel_action,
+            'total_duration': total_duration,
         }
 
         html = render_to_string(
