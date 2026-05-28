@@ -1526,7 +1526,7 @@ select.js-authority-ajax {
 
 /* Modal Mediano (Para la mayoría de formularios y detalles) */
 .modal-container-medium {
-    width: min(750px, 95vw) !important;
+    width: min(920px, 95vw) !important;
     background: white !important;
     border-radius: 12px !important;
     display: flex;
