@@ -11,38 +11,34 @@
         <div class="institution-detail-container">
 
             <!-- Header  -->
-            <div class="institution-header institution-header-flex">
+            <div class="header-card institution-header-card">
                 <div class="header-left">
                     <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
-                    <button class="btn btn-back-custom btn-back-large btn-header-back" onclick="window.history.back()">
+                    <button class="btn btn-header-back" onclick="window.history.back()">
                         <i class="fa-solid fa-arrow-left"></i> Regresar
                     </button>
                 </div>
                 <div class="header-center">
                     <span class="title title-wide">{{ unit.name }}</span>
-                    <div class="info-card-single info-card-compact header-data-card"
-                         style="position: relative; margin-top: 8px; padding-top: 14px;">
+                    <div class="info-card-single info-card-compact header-data-card">
                         <div class="info-green-grid">
                             <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
                             <div><b>Nivel:</b> <span>{{ unit.level.name|default:'-' }}</span></div>
                             <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
                             <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
                             {% if perms.institution.change_administrativeunit %}
-                                <div>
+                                <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
                                     <button type="button"
                                             class="btn-primary"
                                             onclick="openEditUnit({{ unit.id }})"
                                             title="Editar Unidad">
                                         <i class="fas fa-pencil"></i> Editar
                                     </button>
-                                </div>
-                                <div>
                                     {% if unit.level.level_order > 1 %}
                                         <button type="button"
-                                                class="btn-primary"
+                                                class="btn-primary btn-relocate-unit"
                                                 onclick="openRelocateUnit({{ unit.id }})"
-                                                title="Cambiar Unidad Padre"
-                                                style="background-color: #17a2b8; border-color: #17a2b8;">
+                                                title="Cambiar Unidad Padre">
                                             <i class="fas fa-arrows-alt-v"></i> Reubicar
                                         </button>
                                     {% endif %}
@@ -87,15 +83,17 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
-                            <h2 class="boss-name" style="font-size: 14px"><i
-                                    class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
-                            <button type="button"
-                                    class="btn-icon btn-list-action"
-                                    onclick="openAssignBoss({{ unit.id }})"
-                                    title="Asignar Jefe Inmediato">
-                                <i class="fas fa-user-tie"></i>
-                            </button>
+                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card boss-card-empty">
+                            <div class="boss-empty-content">
+                                <h2 class="boss-name boss-empty-title"><i
+                                        class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
+                                <button type="button"
+                                        class="btn-icon btn-list-action"
+                                        onclick="openAssignBoss({{ unit.id }})"
+                                        title="Asignar Jefe Inmediato">
+                                    <i class="fas fa-user-tie"></i>
+                                </button>
+                            </div>
                         </div>
                     {% endif %}
                 </div>
@@ -157,67 +155,74 @@
                     <span><i class="fa-solid fa-box"></i> Entregables</span>
                     <i :class="showDeliverables ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"
                        style="margin-left:6px;"></i>
-                    <button class="btn btn-nuevo-entregable" @click.stop="openModal()">
+                    <button class="btn btn-nuevo-entregable btn-cta-action" @click.stop="openModal()">
                         <i class="fa-solid fa-plus"></i> Nuevo Entregable
                     </button>
                 </div>
                 <transition name="fade">
-                    <div v-show="showDeliverables" class="card-section-content" style="margin-top:10px;">
-                        <table class="table table-striped table-bordered"
-                               style="background:#fff;border-radius:12px;overflow:hidden;">
-                            <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Descripción</th>
-                                <th>Acciones</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr v-for="d in deliverables" :key="d.id">
-                                <td>[[ d.name ]]</td>
-                                <td>[[ d.description ]]</td>
-                                <td>
-                                    <button class="btn btn-outline-primary btn-sm" @click="openModal(d)">Editar</button>
-                                </td>
-                            </tr>
-                            <tr v-if="deliverables.length === 0">
-                                <td colspan="3" class="text-center text-muted">Sin entregables registrados.</td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div v-show="showDeliverables" class="card-section-content">
+                        <div class="table-container deliverables-table-container">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th><i class="fa-solid fa-box"></i> Nombre</th>
+                                    <th><i class="fa-solid fa-align-left"></i> Descripción</th>
+                                    <th class="actions"><i class="fa-solid fa-gears"></i> Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="d in deliverables" :key="d.id">
+                                    <td>[[ d.name ]]</td>
+                                    <td>[[ d.description ]]</td>
+                                    <td class="actions">
+                                        <div class="actions-wrapper">
+                                            <button class="btn-views-action" type="button" @click="openModal(d)" title="Editar Entregable">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="deliverables.length === 0">
+                                    <td colspan="3" class="text-center text-muted">Sin entregables registrados.</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </transition>
             </div>
 
             <!-- Modal Vue para nuevo/edit entregable -->
-            <div v-if="showModal" class="custom-modal-overlay"
-                 style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:1000;display:flex;align-items:center;justify-content:center;">
-                <div class="custom-modal-dialog"
-                     style="background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.13);padding:32px 24px;min-width:340px;max-width:420px;width:100%;">
-                    <div class="modal-header"
-                         style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-                        <h5 class="modal-title" style="font-weight:600;font-size:1.15rem;color:#198754;">
-                            <i class="fa-solid fa-box"></i>
-                            <span v-if="editingId">Editar Entregable</span>
-                            <span v-else>Nuevo Entregable</span>
-                        </h5>
-                        <button type="button" class="btn-close" @click="closeModal"
-                                style="background:none;border:none;font-size:1.2rem;color:#888;">&times;
-                        </button>
-                    </div>
+            <div class="modal-overlay" :class="{ hidden: !showModal }" role="dialog" aria-modal="true">
+                <div class="modal-container-medium animate-scale-in deliverable-modal-container">
                     <form @submit.prevent="saveDeliverable">
-                        <div class="mb-3">
-                            <label>Nombre</label>
-                            <input type="text" v-model="form.name" class="form-control" required>
+                        <div class="modal-header-medium modal-header-gradient">
+                            <h3 class="modal-title text-white">
+                                <i class="fa-solid fa-box me-2"></i>
+                                <span v-if="editingId">Editar Entregable</span>
+                                <span v-else>Nuevo Entregable</span>
+                            </h3>
+                            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
                         </div>
-                        <div class="mb-3">
-                            <label>Descripción</label>
-                            <textarea v-model="form.description" class="form-control"></textarea>
+
+                        <div class="modal-body-content modal-body-custom deliverable-modal-body">
+                            <div class="form-section-card">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                    <input type="text" v-model="form.name" class="form-control" required>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Descripción</label>
+                                    <textarea v-model="form.description" class="form-control" rows="4"></textarea>
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-footer"
-                             style="display:flex;justify-content:flex-end;gap:12px;margin-top:18px;">
-                            <button type="button" class="btn btn-secondary" @click="closeModal">Cancelar</button>
-                            <button type="submit" class="btn btn-success">Guardar</button>
+
+                        <div class="modal-footer-medium modal-footer-spaced">
+                            <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                            <button type="submit" class="btn-save">
+                                <i class="fa-solid fa-save me-2"></i> Guardar
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -242,6 +247,7 @@
                                         </div>
                                     {% endif %}
                                     <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
+                                    <span class="nomina-document">CI: {{ emp.person.document_number|default:'-' }}</span>
                                     <span class="nomina-role">
                                         {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
                                             {{ emp.current_budget_line.first.position_item.name }}
@@ -269,8 +275,8 @@
                             {% endif %}
                         {% endfor %}
                     {% else %}
-                        <div class="nomina-card">
-                            <span class="nomina-name">Sin personal registrado.</span>
+                        <div class="nomina-empty-row">
+                            <span class="nomina-empty-message">Sin personal registrado directamente en esta dependencia.</span>
                         </div>
                     {% endif %}
                 </div>
@@ -279,12 +285,11 @@
             <!-- Subdependencias -->
             <div class="subdependencias-section">
 
-                <div class="institution-section-title"
-                     style="margin-bottom:12px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="institution-section-title section-title-row">
                     <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                     {% if perms.institution.add_administrativeunit %}
-                        <button class="btn btn-nuevo-entregable" onclick="window.openCreateUnit('{{ unit.id }}')">
+                        <button class="btn btn-nuevo-entregable btn-cta-action" onclick="window.openCreateUnit('{{ unit.id }}')">
                             <i class="fa-solid fa-plus"></i> Crear Dependencia
                         </button>
                     {% endif %}

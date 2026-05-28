@@ -4,15 +4,18 @@
     flex-wrap: wrap;
     gap: 18px;
     margin-bottom: 24px;
+    align-items: stretch;
 }
 
 .subdependencia-card-blue {
     background: #183a7a;
     border-radius: 10px;
     color: #fff;
-    min-width: 270px;
-    max-width: 340px;
-    flex: 1 1 270px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: 128px;
+    flex: 0 0 calc((100% - 54px) / 4);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,6 +28,7 @@
     box-shadow: 0 1px 6px rgba(24, 58, 122, 0.08);
     cursor: pointer;
     transition: box-shadow 0.18s, background 0.18s;
+    overflow: hidden;
 }
 
 .subdependencia-card-blue:hover {
@@ -37,6 +41,14 @@
     margin-bottom: 4px;
 }
 
+.subdependencia-card-blue .sub-name {
+    width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
 .subdependencia-card-empty {
     background: #f8fafc;
     color: #198754;
@@ -47,29 +59,25 @@
 
 /* Tarjeta suave tipo acordeón para entregables */
 .card-section {
-    background: transparent;
-    border-radius: 12px;
-    box-shadow: none;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
     margin-bottom: 24px;
-    padding: 0;
-    border: none;
+    padding: 0 0 18px 0;
 }
 
 .card-section-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 1.08rem;
+    font-size: 1.15rem;
     font-weight: 600;
     color: #212529;
     background: #f8fafc;
-    border-radius: 10px;
-    padding: 14px 22px 14px 18px;
-    margin-bottom: 0;
-    box-shadow: none;
+    border-radius: 14px 14px 0 0;
+    padding: 16px 24px 12px 24px;
     cursor: pointer;
     user-select: none;
-    border: 1.5px solid #e9f7ef;
     transition: box-shadow 0.18s;
 }
 
@@ -77,7 +85,6 @@
     box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
 }
 
-/* Estilo global para botones de acción verde */
 .btn-nuevo-entregable {
     background: #198754;
     color: #fff;
@@ -101,16 +108,13 @@
     box-shadow: 0 2px 6px rgba(25, 135, 84, 0.15);
 }
 
-.card-section-header .btn-nuevo-entregable {
-    margin-left: auto;
-}
-
+.card-section-header .btn-nuevo-entregable,
 .card-section-header .btn {
     margin-left: auto;
 }
 
 .card-section-content {
-    padding: 0 0 0 0;
+    padding: 0 24px 12px 24px;
 }
 
 .card-section-content table {
@@ -121,13 +125,17 @@
 }
 
 .card-section-content table thead tr {
-    background: #e9f7ef;
+    background: linear-gradient(180deg, #0f6ea1 0%, #0d4d78 100%);
 }
 
 .card-section-content table thead th {
-    color: #198754;
+    color: #ffffff;
     font-weight: 700;
-    border-bottom: 2px solid #19875422;
+    border-bottom: 0;
+}
+
+.card-section-content table thead th i {
+    color: #d7f0ff;
 }
 
 .card-section-content table tbody tr {
@@ -140,48 +148,6 @@
 
 .card-section-content table tbody tr:hover {
     box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
-}
-
-/* Color de fondo para la fila de títulos de la tabla de entregables */
-.card-section-content table thead tr {
-    background: #e9f7ef;
-}
-
-.card-section-content table thead th {
-    color: #198754;
-    font-weight: 700;
-    border-bottom: 2px solid #19875422;
-}
-
-/* Estilos para sección tipo tarjeta/acordeón (entregables, nómina, subdependencias) */
-.card-section {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    margin-bottom: 24px;
-    padding: 0 0 18px 0;
-}
-
-.card-section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #212529;
-    background: #f8fafc;
-    border-radius: 14px 14px 0 0;
-    padding: 16px 24px 12px 24px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.card-section-header .btn {
-    margin-left: auto;
-}
-
-.card-section-content {
-    padding: 0 24px 12px 24px;
 }
 
 .fade-enter-active, .fade-leave-active {
@@ -200,187 +166,435 @@
     transform: scaleY(1);
 }
 
-.header-boss-card .boss-name {
-    font-size: 0.50rem;
-    text-align: center;
+.institution-header-card {
+    align-items: stretch;
+    background: linear-gradient(135deg, #123764 0%, #0f2e56 100%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    box-shadow: 0 12px 20px -8px rgba(15, 23, 42, 0.45);
 }
 
-.header-boss-card .boss-role-gray {
-    font-size: 0.50rem;
-    text-align: center;
+.institution-header-card .header-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-width: 130px;
 }
 
-.header-boss-card .btn-boss-profile {
-    font-size: 0.65rem;
-    text-align: center;
-    padding: 4px 10px;
+.institution-header-card .header-center {
+    display: flex;
+    flex: 1;
+    min-width: 300px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
-.title-wide {
+.institution-header-card .header-right {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    min-width: 280px;
+    max-width: 360px;
+}
+
+.institution-header-card .title-wide {
     text-align: center;
     display: block;
-    font-size: 1.25rem;
+    font-size: clamp(1.1rem, 2vw, 1.45rem);
     font-weight: 700;
     max-width: 900px;
     width: 100%;
     overflow-wrap: break-word;
+    color: #f8fafc;
+    margin-bottom: 0;
 }
 
-.btn-header-back {
+.institution-header-card .btn-header-back {
     background: #f3f4f6 !important;
-    color: #198754 !important;
+    color: #0f2e56 !important;
     border: none;
     font-weight: 600;
-    border-radius: 8px;
+    border-radius: 10px;
     box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
     transition: background 0.2s, color 0.2s;
+    margin: 0;
 }
 
-.btn-header-back:hover {
-    background: #198754;
-    color: #fff;
+.institution-header-card .btn-header-back:hover {
+    background: #0f2e56;
+    color: #fff !important;
 }
 
-/* --- Header layout y utilidades --- */
-.institution-header {
-    background: #fff;
-    border-radius: 12px;
-    padding: 10px 14px 0.1px 14px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    margin-bottom: 10px;
+.institution-header-card .btn-relocate-unit {
+    background: linear-gradient(135deg, #0d6ea4 0%, #0f4d7a 100%);
+    border-color: #2b80b1;
+}
+
+.institution-header-card .unit-actions {
+    grid-column: 1 / -1;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.header-left {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
-    min-width: 120px;
-}
-
-.header-center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    min-width: 200px;
-    max-width: 900px;
-    width: 100%;
-}
-
-.header-data-card {
-    margin-top: 16px !important;
-    margin-bottom: 8px !important;
-}
-
-.header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 220px;
-    max-width: 340px;
-    height: 100%;
-}
-
-.header-boss-card {
-    background: #e9f7ef;
-    border-radius: 10px;
-    padding: 4px 8px 2px 8px;
-    margin-bottom: 4px;
-    gap: 8px;
-    height: 100%;
-    max-width: 320px;
-}
-
-.boss-photo-initials {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #fff;
-    color: #198754;
-    font-weight: 700;
-    font-size: 2rem;
-}
-
-.boss-info {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: 10px;
 }
 
-
-.boss-role-gray {
-    color: #55585c;
-    font-weight: 600;
-    font-size: 0.90rem;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-boss-profile {
-    background: #fff;
-    color: #198754;
-    border: 1px solid #198754;
-    font-weight: 600;
+.institution-header-card .unit-actions .btn-primary {
+    margin-top: 0;
+    width: auto;
+    min-width: 160px;
+    padding: 0.6rem 1rem;
     border-radius: 8px;
-    padding: 6px 16px;
-    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
-    transition: background 0.2s, color 0.2s, border 0.2s;
+    background: linear-gradient(135deg, #1b4f86 0%, #0f2e56 100%);
+    border: 1px solid #2c69a8;
 }
 
-.btn-boss-profile:hover {
-    background: #198754;
-    color: #fff;
-    border: 1px solid #198754;
+.institution-header-card .unit-actions.unit-actions-single .btn-primary {
+    width: 100%;
+    max-width: 240px;
 }
 
-/* --- Ajustes compactos tarjeta de datos y botón perfil --- */
-.info-card-compact {
-    max-width: 420px !important;
+.institution-header-card .unit-actions .btn-primary:hover {
+    background: linear-gradient(135deg, #2363a5 0%, #124273 100%);
+}
+
+.institution-header-card .icon-circle-large {
+    background: #eaf1ff;
+    color: #0f2e56;
+    border: 1px solid #cddcf4;
+}
+
+.institution-header-card .header-data-card {
+    margin: 6px 0 0 0 !important;
+}
+
+.institution-header-card .info-card-compact {
+    width: 100%;
+    max-width: 620px !important;
     min-width: 320px !important;
     margin: 0 auto !important;
-    padding: 14px 20px !important;
-    background: #e9f7ef;
+    padding: 14px 18px !important;
+    background: linear-gradient(180deg, #eef4ff 0%, #e7f0ff 100%);
     border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.08);
+    border: 1px solid #cfe0f8;
+    box-shadow: 0 1px 4px rgba(15, 46, 86, 0.08);
     display: flex !important;
     justify-content: center;
     align-items: center;
     flex-direction: row !important;
 }
 
-.info-green-grid {
+.institution-header-card .info-green-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px 12px;
     width: 100%;
 }
 
-.info-green-grid div {
-    color: #198754;
-    font-size: 0.95rem;
+.institution-header-card .info-green-grid div {
+    color: #0f2e56;
+    font-size: 0.92rem;
 }
 
-.info-green-grid div b {
-    font-weight: 600;
+.institution-header-card .info-green-grid div b {
+    font-weight: 700;
     margin-right: 4px;
 }
 
-.info-green-grid div span {
+.institution-header-card .info-green-grid div span {
     font-weight: 500;
+}
+
+.institution-header-card .header-boss-card {
+    background: linear-gradient(180deg, #eef4ff 0%, #e8f1ff 100%);
+    border-radius: 10px;
+    padding: 12px;
+    width: 100%;
+    max-width: 340px;
+    margin: 0;
+    gap: 10px;
+    border: 1px solid #cfe0f8;
+}
+
+.institution-header-card .boss-photo-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #0f2e56;
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+.institution-header-card .boss-info {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.institution-header-card .header-boss-card .boss-name {
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.institution-header-card .boss-role-gray {
+    color: #55585c;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.2px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.institution-header-card .btn-boss-profile {
+    background: #fff;
+    color: #0f2e56;
+    border: 1px solid #2c69a8;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 6px 12px;
+    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
+    transition: background 0.2s, color 0.2s, border 0.2s;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+.institution-header-card .btn-boss-profile:hover {
+    background: #0f2e56;
+    color: #fff;
+    border: 1px solid #0f2e56;
+}
+
+.institution-header-card .header-boss-card .nomina-actions {
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+}
+
+.institution-header-card .boss-card-empty {
+    min-height: 168px;
+}
+
+.institution-header-card .boss-empty-content {
+    width: 100%;
+    height: 100%;
+    min-height: 142px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.institution-header-card .boss-empty-content .btn-list-action {
+    margin: 0;
+}
+
+.institution-header-card .boss-empty-title {
+    font-size: 0.82rem;
+    text-align: center;
+    margin: 0;
+}
+
+.institution-header-card + .stats-buttons-container {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.institution-detail-container .stats-buttons-container {
+    justify-content: center;
+    align-items: center;
+    max-width: none;
+    margin: 18px 0 24px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.institution-detail-container .stat-btn {
+    flex: 0 1 180px;
+    justify-content: center;
+}
+
+.institution-detail-container .stat-btn-content {
+    align-items: center;
+}
+
+.institution-detail-container {
+    background: linear-gradient(180deg, #f7fbff 0%, #f8fafc 35%, #f8fafc 100%);
+    border: 1px solid #dbe7f5;
+}
+
+.institution-detail-container .card-section,
+.institution-detail-container .nomina-section {
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border: 1px solid #d5e3f5;
+    box-shadow: 0 10px 18px -14px rgba(15, 46, 86, 0.35);
+}
+
+.institution-detail-container .card-section-header {
+    background: linear-gradient(180deg, #edf4ff 0%, #f8fbff 100%);
+    border-bottom: 1px solid #dde8f8;
+    color: #0f2e56;
+}
+
+.institution-detail-container .card-section-content {
+    padding: 0 16px 12px;
+}
+
+.institution-detail-container .nomina-title {
+    color: #0f2e56;
+    font-weight: 700;
+}
+
+.institution-detail-container .section-title-row {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.institution-detail-container .btn-nuevo-entregable,
+.institution-detail-container .btn-cta-action {
+    background: linear-gradient(135deg, #1b4f86 0%, #0f2e56 100%);
+    border: 1px solid #2c69a8;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 16px;
+    box-shadow: 0 8px 16px -10px rgba(15, 46, 86, 0.7);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.institution-detail-container .btn-nuevo-entregable:hover,
+.institution-detail-container .btn-cta-action:hover {
+    background: linear-gradient(135deg, #2363a5 0%, #124273 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px rgba(15, 46, 86, 0.8);
+}
+
+.institution-detail-container .btn-nuevo-entregable i,
+.institution-detail-container .btn-cta-action i {
+    font-size: 0.9rem;
+}
+
+.institution-detail-container .deliverables-table-container {
+    min-height: auto;
+    margin-top: 10px;
+    border: 1px solid #d7e2f2;
+}
+
+.institution-detail-container .deliverables-table-container table {
+    min-width: 100%;
+}
+
+.institution-detail-container .deliverables-table-container tbody td.actions,
+.institution-detail-container .deliverables-table-container tbody td:last-child {
+    min-width: 90px;
+}
+
+.institution-detail-container .deliverable-modal-container {
+    max-width: 620px;
+}
+
+.institution-detail-container .deliverable-modal-body {
+    max-height: calc(90vh - 220px);
+}
+
+.nomina-section,
+.subdependencias-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 14px -10px rgba(15, 23, 42, 0.2);
+}
+
+.nomina-title {
+    color: #0f2e56;
+    font-weight: 700;
+}
+
+.institution-section-title {
+    color: #0f6f4c;
+}
+
+.card-section {
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.25);
+}
+
+@media (max-width: 992px) {
+    .institution-header-card {
+        gap: 1rem;
+    }
+
+    .institution-header-card .header-left {
+        min-width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .institution-header-card .header-center,
+    .institution-header-card .header-right {
+        min-width: 100%;
+        max-width: none;
+    }
+
+    .institution-header-card .header-right {
+        justify-content: center;
+    }
+
+    .institution-detail-container .stats-buttons-container {
+        max-width: 100%;
+    }
+
+    .subdependencia-card-blue {
+        flex-basis: calc((100% - 18px) / 2);
+    }
+}
+
+@media (max-width: 768px) {
+    .institution-header-card .header-left {
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .institution-header-card .info-card-compact {
+        min-width: 100% !important;
+        padding: 12px !important;
+    }
+
+    .institution-header-card .info-green-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .institution-detail-container .section-title-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .institution-detail-container .section-title-row .btn-nuevo-entregable {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .institution-detail-container .stat-btn {
+        flex: 1 1 140px;
+    }
 }
 
 .info-green-content {
@@ -788,20 +1002,43 @@
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
+    align-items: stretch;
+}
+
+.nomina-empty-row {
+    width: 100%;
+    min-height: 176px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #e5edf8;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
+.nomina-empty-message {
+    color: #0f2e56;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 0 1rem;
 }
 
 .nomina-card {
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    padding: 16px 20px;
-    min-width: 180px;
-    max-width: 260px;
-    flex: 1 1 180px;
+    padding: 12px 14px;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 calc((100% - 80px) / 6);
+    min-height: 176px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
 }
 
 .nomina-card .nomina-photo {
@@ -817,13 +1054,23 @@
     font-weight: 600;
     color: #212529;
     text-align: center;
-    font-size: 0.70rem;
+    font-size: 0.78rem;
+    line-height: 1.22;
+}
+
+.nomina-card .nomina-document {
+    color: #0f2e56;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .nomina-card .nomina-role {
     color: #6c757d;
-    font-size: 0.60rem;
+    font-size: 0.67rem;
     text-align: center;
+    line-height: 1.2;
 }
 
 .subdependencias-section {
@@ -833,20 +1080,23 @@
 .subdependencias-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 18px;
+    align-items: stretch;
 }
 
 .subdependencia-card {
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    padding: 16px 20px;
-    min-width: 180px;
-    max-width: 260px;
-    flex: 1 1 180px;
+    padding: 16px 18px;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 calc((100% - 54px) / 4);
+    min-height: 128px;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
     cursor: pointer;
     transition: box-shadow 0.2s;
@@ -860,6 +1110,11 @@
 .subdependencia-card .sub-name {
     font-weight: 600;
     color: #198754;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
 }
 
 .subdependencia-card .sub-code {
@@ -1046,5 +1301,29 @@
     
     .stat-btn-count {
         font-size: 1.25rem;
+    }
+
+    .nomina-card,
+    .subdependencia-card {
+        min-width: 100%;
+        max-width: 100%;
+        flex-basis: 100%;
+    }
+
+    .subdependencia-card-blue {
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 1200px) {
+    .nomina-card {
+        flex-basis: calc((100% - 32px) / 3);
+    }
+}
+
+@media (max-width: 900px) {
+    .nomina-card,
+    .subdependencia-card-blue {
+        flex-basis: 100%;
     }
 }
