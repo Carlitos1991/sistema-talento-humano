@@ -1304,7 +1304,7 @@
     }
 
     .nomina-card,
-    .subdependencia-card {
+    .subdependencia-card-blue {
         min-width: 100%;
         max-width: 100%;
         flex-basis: 100%;
@@ -1317,7 +1317,7 @@
 
 @media (max-width: 1200px) {
     .nomina-card {
-        flex-basis: calc((100% - 32px) / 3);
+    .subdependencia-card-blue {
     }
 }
 
