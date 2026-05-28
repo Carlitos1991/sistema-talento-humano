@@ -788,7 +788,8 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
                     'notification_type': ['No existe template dinámico con secciones activas para el régimen actual.']}
             }, status=400)
 
-        if notification is None:
+        is_new_notification = notification is None
+        if is_new_notification:
             next_sequence = _get_next_notification_sequence()
             user_code = _build_user_code(request.user)
             notification = SanctionNotification(
@@ -813,6 +814,15 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
         notification.observations = form.cleaned_data.get('observations') or ''
         notification.updated_by = request.user
         notification.save()
+
+        if is_new_notification:
+            SanctionAssignment.objects.create(
+                notification=notification,
+                assigned_to=request.user,
+                assigned_by=request.user,
+                observation='Notificacion registrada.',
+                is_current=True,
+            )
 
         message = 'Notificación actualizada correctamente.' if notification_id else 'Notificación registrada correctamente. La vista previa queda disponible en pantalla.'
 
@@ -2670,12 +2680,25 @@ class SetNotificationDateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         notification = get_object_or_404(SanctionNotification, pk=pk)
         notification_date = request.POST.get('notification_date')
+        was_notified = notification.status == 'NOTIFICADO'
 
         if notification_date:
             notification.notification_date = notification_date
             notification.is_notified = True
             notification.status = 'NOTIFICADO'  # Cambiamos el estado
             notification.save()
+            if not was_notified:
+                current_assignment = notification.current_assignment
+                if current_assignment:
+                    current_assignment.complete_assignment()
+
+                SanctionAssignment.objects.create(
+                    notification=notification,
+                    assigned_to=request.user,
+                    assigned_by=request.user,
+                    observation='Notificacion marcada como notificada.',
+                    is_current=True,
+                )
             return JsonResponse({'success': True, 'message': 'Empleado notificado correctamente.'})
 
         return JsonResponse({'success': False, 'message': 'Debe seleccionar una fecha.'}, status=400)

@@ -1410,6 +1410,62 @@ select.form-select:not(.select2-hidden-accessible):disabled {
     font-weight: 700;
 }
 
+/* Ruta del tramite: conversacion/seguimiento */
+.route-thread {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.route-item {
+    border: 1px solid #dde5f2;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.route-item.is-current {
+    border-color: #c5dbff;
+    background: #eef5ff;
+}
+
+.route-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    color: #50607a;
+}
+
+.route-body {
+    white-space: pre-wrap;
+    color: #213047;
+}
+
+.route-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.route-badge.current {
+    background: #ecfeff;
+    color: #155e75;
+    border: 1px solid #a5f3fc;
+}
+
+.route-badge.closed {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
 /* Tooltip simple para el semáforo */
 .semaphore-circle[title]:hover:after {
     content: attr(title);

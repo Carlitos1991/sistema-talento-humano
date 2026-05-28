@@ -355,7 +355,7 @@ class ManagementPeriod(BaseModel):
         if self.personnel_action_id:
             return
 
-        if (getattr(self.contract_type, 'contract_type_category', '') or '').upper() != ContractType.TYPE_ACCION_PERSONAL:
+        if not self._should_auto_create_personnel_action():
             return
 
         action_type = self._resolve_personnel_action_type()
@@ -407,6 +407,22 @@ class ManagementPeriod(BaseModel):
         )
 
         self.personnel_action = action
+
+    def _should_auto_create_personnel_action(self):
+        contract_type = self.contract_type
+        if not contract_type:
+            return False
+
+        contract_category = (contract_type.contract_type_category or '').upper()
+        if contract_category == ContractType.TYPE_ACCION_PERSONAL:
+            return False
+
+        contract_code = (contract_type.code or '').upper()
+        contract_name = (contract_type.name or '').upper()
+        if 'NOMBRAMIENTO' in contract_code or 'NOMBRAMIENTO' in contract_name:
+            return False
+
+        return True
 
     def _generate_document_number(self):
         year = self.start_date.year if self.start_date else timezone.now().year

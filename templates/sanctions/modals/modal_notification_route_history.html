@@ -27,52 +27,45 @@
             <h4 class="section-title">
                 <i class="fas fa-route text-primary"></i> TRAZABILIDAD DE ASIGNACIONES
             </h4>
-            <div class="table-container">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Responsable</th>
-                        <th>Asignado por</th>
-                        <th>Recepción</th>
-                        <th>Despacho</th>
-                        <th>Días</th>
-                        <th>Estado</th>
-                    </tr>
-                    </thead>
-                    <tbody>
+            {% if assignments %}
+                <div class="route-thread">
                     {% for item in assignments %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ item.assigned_to.get_full_name }}</td>
-                            <td>{{ item.assigned_by.get_full_name }}</td>
-                            <td>{{ item.start_date|date:"d/m/Y H:i" }}</td>
-                            <td>
-                                {% if item.end_date %}
-                                    {{ item.end_date|date:"d/m/Y H:i" }}
-                                {% else %}
-                                    <span class="badge badge-warning">En curso</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ item.duration_days }}</td>
-                            <td>
-                                {% if item.is_current %}
-                                    <span class="badge badge-info">Actual</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">Cerrada</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                No hay historial de asignaciones disponible.
-                            </td>
-                        </tr>
+                        <div class="route-item {% if item.is_current %}is-current{% endif %}">
+                            <div class="route-meta">
+                                <div>
+                                    <strong>{{ forloop.counter }}.</strong>
+                                    {{ item.assigned_by.get_full_name }}
+                                    &rarr; {{ item.assigned_to.get_full_name }}
+                                </div>
+                                <div>
+                                    {% if item.is_current %}
+                                        <span class="route-badge current">Actual</span>
+                                    {% else %}
+                                        <span class="route-badge closed">Cerrada</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="route-meta">
+                                <div>Recepcion: {{ item.start_date|date:"d/m/Y H:i" }}</div>
+                                <div>
+                                    Despacho:
+                                    {% if item.end_date %}
+                                        {{ item.end_date|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        En curso
+                                    {% endif %}
+                                </div>
+                                <div>Tiempo: {{ item.duration_days }}d</div>
+                            </div>
+                            <div class="route-body">
+                                {{ item.observation|default:"Sin observaciones registradas." }}
+                            </div>
+                        </div>
                     {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                </div>
+            {% else %}
+                <div class="text-center text-muted py-4">No hay historial de asignaciones disponible.</div>
+            {% endif %}
         </div>
 
         <div class="section-card-standard">
