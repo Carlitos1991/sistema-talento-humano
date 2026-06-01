@@ -1,6 +1,6 @@
 # apps/person/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
@@ -801,6 +801,7 @@ def person_audit_history_partial(request, pk):
     return HttpResponse(html)
 
 
+@permission_required('person.view_person')
 def person_quick_view_partial(request, pk):
     """
     Retorna un fragmento HTML con la información resumida de una persona.

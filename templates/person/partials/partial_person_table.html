@@ -34,7 +34,7 @@
                 onclick="sortPersonTable(this)" style="cursor: pointer;"> Estado
                 <span class="sort-arrow">⇅</span>
             </th>
-            {% if perms.person.change_person or perms.person.delete_person %}
+            {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                 <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
             {% endif %}
         </tr>
@@ -93,37 +93,43 @@
                     {% endwith %}
                 </td>
 
-                {% if perms.person.change_person or perms.person.delete_person %}
+                {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                     <td>
                         <div class="actions-wrapper">
-                            <button type="button"
-                                    class="btn-info-action"
-                                    title="Reubicar Empleado"
-                                    onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ unit.name }}')">
-                                <i class="fa-solid fa-sitemap"></i>
-                            </button>
+                            {% if perms.person.change_person %}
+                                <button type="button"
+                                        class="btn-info-action"
+                                        title="Reubicar Empleado"
+                                        onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ unit.name }}')">
+                                    <i class="fa-solid fa-sitemap"></i>
+                                </button>
+                            {% endif %}
+
+                            {% if perms.person.view_person %}
                             <button type="button"
                                     class="btn-views-action btn-quick-view"
                                     data-id="{{ person.id }}"
                                     title="Vista Rápida">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
+                            {% endif %}
 
-                            <a href="{% url 'employee:employee_detail' person.id %}"
-                               class="btn-list-action"
-                               title="Ver Detalle Completo">
-                                <i class="fa-solid fa-user-gear"></i>
-                            </a>
-
+                            {% if perms.person.change_person or perms.person.delete_person %}
+                                <a href="{% url 'employee:employee_detail' person.id %}"
+                                   class="btn-list-action"
+                                   title="Ver Detalle Completo">
+                                    <i class="fa-solid fa-user-gear"></i>
+                                </a>
+                            {% endif %}
                         </div>
                     </td>
                 {% endif %}
             </tr>
         {% empty %}
             <tr>
-                {% if perms.person.change_person or perms.person.delete_person %}
+                {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                     <td colspan="8">
-                        {% else %}
+                {% else %}
                     <td colspan="7">
                 {% endif %}
                 <div class="empty-state-container">
@@ -134,9 +140,9 @@
             </tr>
         {% endfor %}
         <tr id="client-no-results" style="display: none;">
-            {% if perms.person.change_person or perms.person.delete_person %}
+            {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                 <td colspan="8">
-                    {% else %}
+            {% else %}
                 <td colspan="7">
             {% endif %}
             <div class="empty-state-container">
