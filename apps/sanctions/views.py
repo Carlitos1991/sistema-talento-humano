@@ -156,23 +156,32 @@ def _get_employee_current_regime_context(employee):
     position_name = ''
     unit_name = ''
 
+    # Dato prioritario: en migraciones es común que el contrato no tenga partida asociada.
+    # Para el cargo, usamos la última partida presupuestaria asignada al empleado.
+    latest_budget_line = employee.current_budget_line.select_related(
+        'regime_item',
+        'position_item',
+    ).filter(is_active=True).order_by('-updated_at', '-created_at', '-id').first()
+
     if period and period.contract_type and period.contract_type.labor_regime:
         regime = period.contract_type.labor_regime
-        if period.budget_line and period.budget_line.position_item:
-            position_name = period.budget_line.position_item.name
-        elif period.manual_position:
-            position_name = period.manual_position
         if period.administrative_unit:
             unit_name = period.administrative_unit.name
 
-    if regime is None:
-        budget_line = employee.current_budget_line.select_related('regime_item', 'position_item').first()
-        if budget_line:
-            regime = budget_line.regime_item
-            if budget_line.position_item:
-                position_name = budget_line.position_item.name
-        if not unit_name and employee.area:
-            unit_name = employee.area.name
+    # Cargo: última partida asignada -> partida del contrato -> cargo manual
+    if latest_budget_line and latest_budget_line.position_item:
+        position_name = latest_budget_line.position_item.name
+    elif period and period.budget_line and period.budget_line.position_item:
+        position_name = period.budget_line.position_item.name
+    elif period and period.manual_position:
+        position_name = period.manual_position
+
+    # Régimen: si el contrato no lo trae, usar el de la última partida.
+    if regime is None and latest_budget_line:
+        regime = latest_budget_line.regime_item
+
+    if not unit_name and employee.area:
+        unit_name = employee.area.name
 
     return {
         'regime': regime,
