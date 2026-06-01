@@ -33,14 +33,13 @@
         </div>
 
         <!-- Tabla de empleados -->
-        <script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>
         <div id="table-app">
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <input type="text" id="table-search" class="input-field"
+                        <input type="text" id="table-search" class="input-field table-search-input"
                                placeholder="Buscar por nombre, apellido o cédula">
-                        <button type="submit" class="search-btn">
+                        <button type="button" class="search-btn" id="table-search-btn" title="Buscar">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
@@ -61,24 +60,36 @@
                             Mostrando 0 a 0 de 0 empleados
                         {% endif %}
                     </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"
-                                    {% if not page_obj.has_previous %}disabled{% endif %}>
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
-                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
+
+                    <div class="pagination-controls" id="pagination-controls"
+                         style="{% if not page_obj or page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+                        <button id="btn-first" class="page-btn" title="Primera"
+                                {% if not page_obj or not page_obj.has_previous %}disabled{% endif %}>
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button id="btn-prev" class="page-btn" title="Anterior"
+                                {% if not page_obj or not page_obj.has_previous %}disabled{% endif %}>
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+
+                        <div class="page-input-wrapper">
+                            <input type="number" id="page-input" class="page-input" min="1"
+                                   max="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}"
+                                   value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
+                            <span class="total-pages-badge" id="total-pages-display">
+                                de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}
                             </span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
+                        </div>
+
+                        <button id="btn-next" class="page-btn" title="Siguiente"
+                                {% if not page_obj or not page_obj.has_next %}disabled{% endif %}>
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button id="btn-last" class="page-btn" title="Última"
+                                {% if not page_obj or not page_obj.has_next %}disabled{% endif %}>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

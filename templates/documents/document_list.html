@@ -18,12 +18,10 @@
     <!-- 2. Estadísticas (Filtros Rápidos) -->
     <div id="documents-app" v-cloak data-current-user="{{ user.get_full_name }}"
          data-can-delete="{% if user.is_superuser or perms.documents.delete_document %}1{% else %}0{% endif %}">
-    {# Inyectar stats inicial para evitar parpadeo y mostrar 0 correctamente al cargar #}
     {% if stats %}
         {{ stats|json_script:"initial-doc-stats" }}
     {% endif %}
     <div class="stats-row" v-if="stats.regimes">
-        <!-- Tarjeta Fija: Total -->
         <div class="stat-card color-one"
              @click="clearSearch"
              :class="{'opacity-low': isAdvancedSearch}">
@@ -33,8 +31,6 @@
             </div>
             <i class="fas fa-users-check stat-icon"></i>
         </div>
-
-        <!-- Tarjetas Dinámicas: Una por cada Régimen en la DB -->
         <div v-for="(regime, index) in stats.regimes"
              :key="regime.code"
              class="stat-card"
@@ -53,9 +49,7 @@
             <div class="table-controls"
                  style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:6px;">
                 <div class="table-controls-left" style="flex:1; display:flex; align-items:center;">
-                    <!-- espacio izquierdo disponible para botones u otros controles -->
                 </div>
-
                 <div class="table-controls-center"
                      style="width:40%; display:flex; align-items:center; justify-content:center; gap:12px; margin-top:-10px; transform:translateX(-90px);">
                     {% now "Y" as current_year %}
@@ -88,8 +82,6 @@
             <div id="table-content-wrapper">
                 {% include 'documents/partials/partial_document_table.html' %}
             </div>
-
-            <!-- Paginación (estilo compartido con person_list) -->
             <div class="pagination-container">
                 <span class="pagination-info">
                     Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}

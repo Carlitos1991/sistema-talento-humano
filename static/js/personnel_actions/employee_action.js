@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- REFERENCIAS ---
     const tableContainer = document.getElementById('table-content-wrapper');
     const searchInput = document.getElementById('table-search');
+    const searchButton = document.getElementById('table-search-btn');
     const csrfToken = document.getElementById('csrf-token').value;
     const urlList = document.getElementById('url-list').value;
 
@@ -12,9 +13,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Referencias de paginación
     const pageInfo = document.getElementById('page-info');
+    const paginationControls = document.getElementById('pagination-controls');
+    const btnFirst = document.getElementById('btn-first');
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
-    const currentPageDisplay = document.getElementById('current-page-display');
+    const btnLast = document.getElementById('btn-last');
+    const pageInput = document.getElementById('page-input');
+    const totalPagesDisplay = document.getElementById('total-pages-display');
 
     // Estado de paginación
     let currentPage = window.initialPagination ? window.initialPagination.current_page : 1;
@@ -22,31 +27,80 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Inicializar botones de paginación con datos del servidor
     if (window.initialPagination) {
+        if (btnFirst) btnFirst.disabled = !window.initialPagination.has_previous;
         if (btnPrev) btnPrev.disabled = !window.initialPagination.has_previous;
         if (btnNext) btnNext.disabled = !window.initialPagination.has_next;
+        if (btnLast) btnLast.disabled = !window.initialPagination.has_next;
+
+        if (pageInput) {
+            pageInput.value = window.initialPagination.current_page || 1;
+            pageInput.max = window.initialPagination.total_pages || 1;
+        }
+
+        if (totalPagesDisplay) {
+            totalPagesDisplay.textContent = `de ${window.initialPagination.total_pages || 1}`;
+        }
+
+        if (paginationControls) {
+            paginationControls.style.visibility = (window.initialPagination.total_pages || 1) <= 1 ? 'hidden' : 'visible';
+        }
     }
 
     // --- EVENTOS ---
 
-    // 1. Buscador
-    let timeout = null;
+    function getSearchQuery() {
+        return searchInput ? (searchInput.value || '').trim() : '';
+    }
+
+    function buildListUrl(page, query) {
+        const safePage = Number(page) || 1;
+        const safeQuery = (query || '').trim();
+        if (safeQuery) {
+            return urlList + `?page=${safePage}&q=${encodeURIComponent(safeQuery)}`;
+        }
+        return urlList + `?page=${safePage}`;
+    }
+
+    function triggerSearch() {
+        currentPage = 1;
+        fetchTableData(buildListUrl(1, getSearchQuery()));
+    }
+
+    function goToPage(page) {
+        const targetPage = Math.max(1, Math.min(Number(page) || 1, totalPages || 1));
+        fetchTableData(buildListUrl(targetPage, getSearchQuery()));
+    }
+
+    // 1. Buscador: solo Enter o click en lupa
     if (searchInput) {
-        searchInput.addEventListener('keyup', (e) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                currentPage = 1;
-                fetchTableData(urlList + `?q=${e.target.value}&page=1`);
-            }, 300);
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerSearch();
+            }
+        });
+    }
+
+    if (searchButton) {
+        searchButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerSearch();
         });
     }
 
     // 2. Botones de paginación
+    if (btnFirst) {
+        btnFirst.addEventListener('click', () => {
+            if (currentPage !== 1) {
+                goToPage(1);
+            }
+        });
+    }
+
     if (btnPrev) {
         btnPrev.addEventListener('click', () => {
             if (currentPage > 1) {
-                const searchQuery = searchInput ? searchInput.value : '';
-                const url = urlList + `?page=${currentPage - 1}${searchQuery ? '&q=' + searchQuery : ''}`;
-                fetchTableData(url);
+                goToPage(currentPage - 1);
             }
         });
     }
@@ -54,9 +108,29 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnNext) {
         btnNext.addEventListener('click', () => {
             if (currentPage < totalPages) {
-                const searchQuery = searchInput ? searchInput.value : '';
-                const url = urlList + `?page=${currentPage + 1}${searchQuery ? '&q=' + searchQuery : ''}`;
-                fetchTableData(url);
+                goToPage(currentPage + 1);
+            }
+        });
+    }
+
+    if (btnLast) {
+        btnLast.addEventListener('click', () => {
+            if (currentPage !== totalPages) {
+                goToPage(totalPages);
+            }
+        });
+    }
+
+    if (pageInput) {
+        const commitPageInput = () => {
+            goToPage(pageInput.value);
+        };
+
+        pageInput.addEventListener('change', commitPageInput);
+        pageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                commitPageInput();
             }
         });
     }
@@ -186,8 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).then(() => {
                     closeModal();
                     // Recargar la tabla
-                    const searchQuery = searchInput ? searchInput.value : '';
-                    fetchTableData(urlList + `?page=${currentPage}${searchQuery ? '&q=' + searchQuery : ''}`);
+                    fetchTableData(buildListUrl(currentPage, getSearchQuery()));
                 });
             } else if (data.errors) {
                 showFormErrors(form, data.errors);
@@ -265,15 +338,30 @@ document.addEventListener('DOMContentLoaded', function () {
             pageInfo.textContent = `Mostrando ${paginationData.start_index} a ${paginationData.end_index} de ${paginationData.total_count} empleados`;
         }
 
-        if (currentPageDisplay) {
-            currentPageDisplay.textContent = currentPage;
+        if (totalPagesDisplay) {
+            totalPagesDisplay.textContent = `de ${totalPages}`;
         }
 
+        if (pageInput) {
+            pageInput.value = currentPage;
+            pageInput.max = totalPages;
+        }
+
+        if (paginationControls) {
+            paginationControls.style.visibility = totalPages <= 1 ? 'hidden' : 'visible';
+        }
+
+        if (btnFirst) {
+            btnFirst.disabled = !paginationData.has_previous;
+        }
         if (btnPrev) {
             btnPrev.disabled = !paginationData.has_previous;
         }
         if (btnNext) {
             btnNext.disabled = !paginationData.has_next;
+        }
+        if (btnLast) {
+            btnLast.disabled = !paginationData.has_next;
         }
     }
 });
