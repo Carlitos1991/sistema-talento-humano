@@ -46,17 +46,29 @@
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
                 <td>
                     <div class="person-info">
-                        <a href="{% url 'employee:employee_detail' person.id %}"
-                           class="person-avatar-link"
-                           title="Ver perfil completo de {{ person.full_name }}">
-                            {% if person.photo %}
-                                <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
-                            {% else %}
-                                <div class="person-avatar-placeholder">
-                                    {{ person.first_name|first }}{{ person.last_name|first }}
-                                </div>
-                            {% endif %}
-                        </a>
+                        {% if perms.person.change_person %}
+                            <a href="{% url 'employee:employee_detail' person.id %}"
+                               class="person-avatar-link"
+                               title="Ver perfil completo de {{ person.full_name }}">
+                                {% if person.photo %}
+                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                                {% else %}
+                                    <div class="person-avatar-placeholder">
+                                        {{ person.first_name|first }}{{ person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                            </a>
+                        {% else %}
+                            <div class="person-avatar-link" style="cursor: default;">
+                                {% if person.photo %}
+                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                                {% else %}
+                                    <div class="person-avatar-placeholder">
+                                        {{ person.first_name|first }}{{ person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                         <div class="person-details">
                             <h4>{{ person.last_name }} {{ person.first_name }}</h4>
                         </div>
