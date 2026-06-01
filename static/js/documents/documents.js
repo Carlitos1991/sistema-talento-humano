@@ -103,10 +103,29 @@ const documentsApp = createApp({
         };
         bindDateChange(dateFromInput);
         bindDateChange(dateToInput);
+
+        // Exponer filtros para el script de exportación
+        window._personExport = {
+            getFilters: this.getExportFilters.bind(this)
+        };
+
         // Finalmente, cargar tabla (después de inicializar statsYear y canDelete)
         this.fetchTable();
     },
     methods: {
+        getExportFilters() {
+            const paramsObj = {
+                q: this.advancedFilters.q || '',
+                documents: this.advancedFilters.documents || '',
+            };
+            if (this.dateFrom) paramsObj.date_from = this.dateFrom;
+            if (this.dateTo) paramsObj.date_to = this.dateTo;
+            if (this.sortField) {
+                paramsObj.sort_field = this.sortField;
+                paramsObj.sort_dir = this.sortAsc ? 'asc' : 'desc';
+            }
+            return paramsObj;
+        },
         initDelegatedListeners() {
             const searchInput = document.getElementById('table-search-document');
             if (searchInput) {

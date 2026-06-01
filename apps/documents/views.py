@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.db.models import Count, Q
@@ -96,85 +96,71 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return queryset
 
     def get(self, request, *args, **kwargs):
-        # Si es petición AJAX, devolvemos solo la tabla parcial
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            is_export = request.GET.get('export') == 'true'
+
+            if is_export:
+                self.object_list = self.get_queryset()
+                # Calcular índice global para la exportación
+                global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+                rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
+                for o in self.object_list:
+                    o.global_index = rank_map.get(o.id)
+                
+                html = render_to_string(
+                    'documents/partials/partial_document_table.html',
+                    {'documents': self.object_list},
+                    request=request
+                )
+                return HttpResponse(html)
+
+            # --- Lógica para peticiones AJAX normales (no exportación) ---
             self.object_list = self.get_queryset()
-            # Aplicar paginación al resultado antes de renderizar el partial
-            page = request.GET.get('page') or 1
-            try:
-                page = int(page)
-            except (ValueError, TypeError):
-                page = 1
             paginator, page_obj, object_list, is_paginated = self.paginate_queryset(self.object_list, self.paginate_by)
-            # Calcular índice global (secuencia numérica) sobre TODOS los documentos activos
+
+            # Calcular índice global para la página actual
             global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
             rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
-            # Anotar cada objeto de la página con su índice global para mostrar en la tabla
             for o in object_list:
-                try:
-                    o.global_index = rank_map.get(o.id)
-                except Exception:
-                    o.global_index = None
+                o.global_index = rank_map.get(o.id)
 
             html = render_to_string(
                 'documents/partials/partial_document_table.html',
                 {'documents': object_list},
                 request=request
             )
-            # Estadísticas por tipo de documento (rango de fechas o año por defecto)
+
+            # Estadísticas
             date_from = request.GET.get('date_from')
             date_to = request.GET.get('date_to')
+            stats_qs_filter = Q(documents__is_active=True)
+            stats_total_filter = Q(is_active=True)
+
             if date_from and date_to:
                 try:
                     d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
                     d_to = datetime.strptime(date_to, '%Y-%m-%d').date()
-                    types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                        count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to))),
-                        user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to), documents__created_by=request.user))
-                    ).order_by('name')
-
-                    stats = {
-                        'total': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to)).count(),
-                        'total_user': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to), created_by=request.user).count(),
-                        'regimes': [
-                            {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
-                            for t in types_qs
-                        ]
-                    }
+                    stats_qs_filter &= Q(documents__registration_date__date__range=(d_from, d_to))
+                    stats_total_filter &= Q(registration_date__date__range=(d_from, d_to))
                 except Exception:
-                    # Fallback a año actual
                     year = timezone.now().year
-                    types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                        count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-                        user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=request.user))
-                    ).order_by('name')
-
-                    stats = {
-                        'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-                        'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=request.user).count(),
-                        'regimes': [
-                            {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
-                            for t in types_qs
-                        ]
-                    }
+                    stats_qs_filter &= Q(documents__registration_date__year=year)
+                    stats_total_filter &= Q(registration_date__year=year)
             else:
-                try:
-                    year = int(request.GET.get('year') or timezone.now().year)
-                except (TypeError, ValueError):
-                    year = timezone.now().year
-                types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=request.user))
-                ).order_by('name')
+                year = timezone.now().year
+                stats_qs_filter &= Q(documents__registration_date__year=year)
+                stats_total_filter &= Q(registration_date__year=year)
 
-                stats = {
-                    'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-                    'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=request.user).count(),
-                    'regimes': [
-                        {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
-                        for t in types_qs
-                    ]
-                }
+            types_qs = DocumentType.objects.filter(is_active=True).annotate(
+                count=Count('documents', filter=stats_qs_filter),
+                user_count=Count('documents', filter=stats_qs_filter & Q(documents__created_by=request.user))
+            ).order_by('name')
+
+            stats = {
+                'total': Document.objects.filter(stats_total_filter).count(),
+                'total_user': Document.objects.filter(stats_total_filter, created_by=request.user).count(),
+                'regimes': [{'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count} for t in types_qs]
+            }
 
             pagination = {
                 'current_page': page_obj.number,
@@ -182,6 +168,7 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 'total_items': paginator.count
             }
             return JsonResponse({'html': html, 'stats': stats, 'pagination': pagination})
+
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
