@@ -21,22 +21,24 @@
         <div class="table-controls archive-controls archive-controls-row" data-manual-export="true">
 
             <div class="archive-export-actions">
-                <button type="button" class="btn-export-excel" onclick="exportTableToExcel(document.querySelector('.archive-employee-list-table'))">
+                <button type="button" class="btn-export-excel"
+                        onclick="exportTableToExcel(document.querySelector('.archive-employee-list-table'))">
                     <i class="fas fa-file-excel"></i> Excel
                 </button>
-                <button type="button" class="btn-export-pdf" onclick="exportTableToPDF(document.querySelector('.archive-employee-list-table'))">
+                <button type="button" class="btn-export-pdf"
+                        onclick="exportTableToPDF(document.querySelector('.archive-employee-list-table'))">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
             </div>
 
             <div class="archive-toggle-notify">
-                <input class="modern-toggle-input archive-toggle-blue" type="checkbox" id="toggleLoanedExpedients"
+                <input class="toggle-status-red-input" type="checkbox" id="toggleLoanedExpedients"
                        {% if request.GET.show_loaned == 'true' %}checked{% endif %}
                        onchange="toggleLoanedExpedients(this.checked)">
 
-                <label class="modern-toggle-wrapper mb-0" for="toggleLoanedExpedients">
-                    <div class="modern-toggle-circle"></div>
-                    <span class="modern-toggle-text">Mostrar Expedientes Prestados</span>
+                <label class="toggle-status-red-wrapper" for="toggleLoanedExpedients">
+                    <div class="toggle-status-red-circle"></div>
+                    <span class="toggle-status-red-text">Mostrar Expedientes Prestados</span>
                 </label>
 
                 {% if total_loaned_count > 0 %}
@@ -44,14 +46,16 @@
                 {% endif %}
             </div>
 
-            <form method="get" class="search-box archive-search-box archive-search-right" id="archiveEmployeeSearchForm">
+            <form method="get" class="search-box archive-search-box archive-search-right"
+                  id="archiveEmployeeSearchForm">
 
                 <input type="text" name="q" class="table-search-input"
-                      placeholder="Busca por nombre, apellido, cédula o expediente"
+                       placeholder="Busca por nombre, apellido, cédula o expediente"
                        value="{{ request.GET.q }}">
                 <input type="hidden" name="sort_field" value="{{ request.GET.sort_field|default:'employee' }}">
                 <input type="hidden" name="sort_dir" value="{{ request.GET.sort_dir|default:'asc' }}">
-                <input type="hidden" name="show_loaned" value="{{ request.GET.show_loaned|default:'false' }}" id="archiveShowLoanedInput">
+                <input type="hidden" name="show_loaned" value="{{ request.GET.show_loaned|default:'false' }}"
+                       id="archiveShowLoanedInput">
             </form>
         </div>
 
@@ -60,7 +64,8 @@
                    data-title="Archivo Digital por Empleado">
                 <thead>
                 <tr>
-                    <th class="sortable-header archive-col-employee" style="cursor: pointer;" onclick="archiveSortBy('employee')">
+                    <th class="sortable-header archive-col-employee" style="cursor: pointer;"
+                        onclick="archiveSortBy('employee')">
                         Empleado
                         <span class="sort-arrow">
                             {% if request.GET.sort_field|default:'employee' == 'employee' and request.GET.sort_dir|default:'asc' == 'asc' %}
@@ -68,7 +73,8 @@
                                 ↓{% else %}⇅{% endif %}
                         </span>
                     </th>
-                    <th class="sortable-header archive-col-document" style="cursor: pointer;" onclick="archiveSortBy('document')">
+                    <th class="sortable-header archive-col-document" style="cursor: pointer;"
+                        onclick="archiveSortBy('document')">
                         Cédula
                         <span class="sort-arrow">
                             {% if request.GET.sort_field == 'document' and request.GET.sort_dir|default:'asc' == 'asc' %}
@@ -458,12 +464,12 @@
                     dataType: 'json',
                     delay: 300,
                     data: function (params) {
-                        return { term: params.term };
+                        return {term: params.term};
                     },
                     processResults: function (data) {
-                        return { results: data.results || [] };
+                        return {results: data.results || []};
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         console.error('Select2 error:', status, error);
                     },
                     cache: true

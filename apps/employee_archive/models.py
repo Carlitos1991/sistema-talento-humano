@@ -78,14 +78,18 @@ def ensure_predefined_document_types():
 
         item = code_item or name_item
         if item:
-            item.code = desired_code
-            item.name = desired_name
-            item.description = type_data['description']
-            item.is_required = type_data['is_required']
-            item.has_expiration = type_data['has_expiration']
-            item.max_size_mb = type_data['max_size_mb']
-            item.is_active = True
-            item.save()
+            # NOTA: estos tipos base deben existir, pero sus campos configurables
+            # (p.ej. max_size_mb) pueden ser editados por el usuario. Por eso,
+            # solo forzamos codigo/nombre y no reescribimos el resto.
+            update_fields = []
+            if item.code != desired_code:
+                item.code = desired_code
+                update_fields.append('code')
+            if item.name != desired_name:
+                item.name = desired_name
+                update_fields.append('name')
+            if update_fields:
+                item.save(update_fields=update_fields)
         else:
             item = EmployeeDocumentType.objects.create(
                 code=desired_code,
@@ -96,7 +100,8 @@ def ensure_predefined_document_types():
                 max_size_mb=type_data['max_size_mb'],
                 is_active=True,
             )
-        type_map[item.code] = item
+        # Clave estable por codigo predefinido.
+        type_map[desired_code] = item
     return type_map
 
 
