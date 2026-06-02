@@ -2,10 +2,10 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
-<link rel="stylesheet" href="{% static 'css/vacations.css' %}">
-<link rel="stylesheet" href="{% static 'css/permission.css' %}">
-<link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
     <style>
         .profile-avatar-trigger {
             cursor: pointer;
@@ -53,6 +53,7 @@
             color: #0f172a;
             font-weight: 700;
         }
+
         .mini-check {
             position: absolute;
             top: 5px;
@@ -67,6 +68,7 @@
             justify-content: center;
             cursor: pointer;
         }
+
         .mini-check.visible {
             background-color: #28a745;
             color: white;
@@ -78,10 +80,10 @@
          data-person-id="{{ person.id }}"
          data-tab-visibilities='{{ tab_visibilities|safe }}'
          data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
-            {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
-            data-titles="{{ curriculum_titles_count|default:0 }}"
-            data-experiences="{{ curriculum_experiences_count|default:0 }}"
-            data-courses="{{ curriculum_courses_count|default:0 }}">
+         {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
+         data-titles="{{ curriculum_titles_count|default:0 }}"
+         data-experiences="{{ curriculum_experiences_count|default:0 }}"
+         data-courses="{{ curriculum_courses_count|default:0 }}">
 
         <!-- 1. BANNER -->
         <div class="banner-employee-detail">
@@ -109,10 +111,10 @@
                 </button>
 
                 {% if can_edit_person %}
-                <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
-                        style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
-                    <i class="fa-solid fa-user-pen"></i> Editar Perfil
-                </button>
+                    <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
+                            style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
+                        <i class="fa-solid fa-user-pen"></i> Editar Perfil
+                    </button>
                 {% endif %}
             </div>
         </div>
@@ -197,6 +199,14 @@
             <div v-if="activeTab === 'vacations'">
                 {% include 'employee/partials/wizard/tab_vacations_data.html' %}
             </div>
+            <!-- PESTAÑA: HORARIO -->
+            <div v-if="activeTab === 'schedule'">
+                {% include 'employee/partials/wizard/tab_schedule.html' %}
+            </div>
+            <!-- PESTAÑA: TELETRABAJO -->
+            <div v-if="activeTab === 'telework'">
+                {% include 'employee/partials/wizard/tab_telework.html' %}
+            </div>
 
         </div>
         {% include 'employee/modals/modal_person_edit_wizard.html' %}
@@ -205,24 +215,24 @@
         {% include 'employee/modals/modal_work_experience.html' %}
         {% include 'employee/modals/modal_training.html' %}
         {% include 'employee/modals/modal_cv_generic_list.html' %}
-        
-    </div>
-        {# Incluir modal de detalle de contrato y una pequeña instancia Vue para manejarlo fuera del main Vue root #}
-        <div id="period-app-employee">
-            {% include 'contract/modals/modal_management_period_detail.html' %}
-        </div>
-        <div id="permission-modal-employee"></div>
-        <div id="action-modal-employee"></div>
 
-        <!-- Placeholders para modales de Vacaciones (usados por static/js/vacation/vacation_detail.js) -->
-        <div id="modalNewVacation" class="modal-overlay hidden"></div>
-        <div id="modalHourPermit" class="modal-overlay hidden"></div>
-        <div id="modalDayPermit" class="modal-overlay hidden"></div>
-        <div id="modalPermitList" class="modal-overlay hidden"></div>
-        <div id="liquidationListModalContainer"></div>
-        <div id="vacationHistoryModalContainer"></div>
-        <div id="permitHistoryModalContainer"></div>
-        <div id="permitReportModalContainer"></div>
+    </div>
+    {# Incluir modal de detalle de contrato y una pequeña instancia Vue para manejarlo fuera del main Vue root #}
+    <div id="period-app-employee">
+        {% include 'contract/modals/modal_management_period_detail.html' %}
+    </div>
+    <div id="permission-modal-employee"></div>
+    <div id="action-modal-employee"></div>
+
+    <!-- Placeholders para modales de Vacaciones (usados por static/js/vacation/vacation_detail.js) -->
+    <div id="modalNewVacation" class="modal-overlay hidden"></div>
+    <div id="modalHourPermit" class="modal-overlay hidden"></div>
+    <div id="modalDayPermit" class="modal-overlay hidden"></div>
+    <div id="modalPermitList" class="modal-overlay hidden"></div>
+    <div id="liquidationListModalContainer"></div>
+    <div id="vacationHistoryModalContainer"></div>
+    <div id="permitHistoryModalContainer"></div>
+    <div id="permitReportModalContainer"></div>
 
 {% endblock %}
 

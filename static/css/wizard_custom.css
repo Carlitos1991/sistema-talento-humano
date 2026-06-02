@@ -196,10 +196,10 @@
     max-width: 240px;
     padding: 8px 16px;
     border-radius: 8px;
-    background: linear-gradient(90deg,#f97316 0%,#ea580c 100%);
+    background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
     color: #fff;
     border: none;
-    box-shadow: 0 6px 18px rgba(234,88,12,0.12);
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.12);
 }
 
 .institutional-header .btn-institutional-action:hover {
@@ -386,31 +386,48 @@
 .info-box-styled .content-table {
     width: 100%;
 }
+
 .info-box-styled .table-controls {
-    display:flex;
-    align-items:center;
-    justify-content:flex-start; /* ensure items start at left; search will use margin-left:auto */
-    gap:12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* ensure items start at left; search will use margin-left:auto */
+    gap: 12px;
     margin-bottom: 10px;
     width: 100%;
 }
+
 .info-box-styled .table-controls .table-export-btns {
-    display:flex; gap:8px;
+    display: flex;
+    gap: 8px;
 }
+
 .info-box-styled .table-search-input {
-    width: 380px; max-width: 40%; border-radius: 999px; padding: 10px 16px;
+    width: 380px;
+    max-width: 40%;
+    border-radius: 999px;
+    padding: 10px 16px;
 }
+
 .info-box-styled .managed-table {
-    width:100%; border-collapse: separate; border-spacing:0; table-layout: fixed;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
 }
+
 .info-box-styled .managed-table thead th {
-    font-weight:700; font-size:0.95rem; vertical-align:middle; background:transparent; color:#0f172a;
+    font-weight: 700;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    background: transparent;
+    color: #0f172a;
 }
+
 /* Header color and centered content (modern, compact) */
 .info-box-styled .managed-table thead th {
     background: linear-gradient(90deg, #eef2ff 0%, #f4f9ff 100%);
     color: #1e3a8a;
-    border-bottom: 1px solid rgba(30,58,138,0.08);
+    border-bottom: 1px solid rgba(30, 58, 138, 0.08);
     text-align: center;
     font-size: 0.88rem;
     padding: 8px 8px;
@@ -421,6 +438,7 @@
 .info-box-styled .managed-table tbody td {
     font-size: 0.92rem;
 }
+
 .info-box-styled .managed-table thead th,
 .info-box-styled .managed-table tbody td {
     text-align: center;
@@ -440,19 +458,47 @@
 }
 
 /* Search box: wider and aligned to the right */
-.info-box-styled .table-controls { display:flex; align-items:center; gap:12px; }
-.info-box-styled .table-controls .table-export-btns { order: 1; }
-.info-box-styled .table-controls .search-box { order: 2; margin-left: auto; }
+.info-box-styled .table-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-box-styled .table-controls .table-export-btns {
+    order: 1;
+}
+
+.info-box-styled .table-controls .search-box {
+    order: 2;
+    margin-left: auto;
+}
+
 .info-box-styled .table-search-input {
-    width: 420px; max-width: 55%; border-radius: 999px; padding: 8px 16px; font-size: 0.95rem;
+    width: 420px;
+    max-width: 55%;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
 }
 
 @media (max-width: 900px) {
-    .info-box-styled .table-search-input { width: 260px; max-width: 60%; }
+    .info-box-styled .table-search-input {
+        width: 260px;
+        max-width: 60%;
+    }
 }
-.info-box-styled .managed-table tbody td { vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.info-box-styled .managed-table tbody td {
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .info-box-styled .table-export-btns .btn-export-excel,
-.info-box-styled .table-export-btns .btn-export-pdf { height:38px; }
+.info-box-styled .table-export-btns .btn-export-pdf {
+    height: 38px;
+}
 
 /* Column and action button tweaks for personnel actions table */
 .info-box-styled .managed-table th.col-number,
@@ -482,29 +528,48 @@
 .info-box-styled .btn-action-view {
     background: #0d6efd;
     color: #fff;
-    border: 1px solid rgba(13,110,253,0.9);
+    border: 1px solid rgba(13, 110, 253, 0.9);
 }
-.info-box-styled .btn-action-view:hover { filter: brightness(0.95); }
+
+.info-box-styled .btn-action-view:hover {
+    filter: brightness(0.95);
+}
 
 .info-box-styled .btn-action-download {
     background: #fff;
     color: #dc3545;
-    border: 1px solid rgba(220,53,69,0.15);
+    border: 1px solid rgba(220, 53, 69, 0.15);
 }
-.info-box-styled .btn-action-download i { color: #dc3545; }
 
-.info-box-styled .btn-label { display: inline-block; }
+.info-box-styled .btn-action-download i {
+    color: #dc3545;
+}
+
+.info-box-styled .btn-label {
+    display: inline-block;
+}
 
 /* On very small screens hide labels to save space */
 @media (max-width: 540px) {
-    .info-box-styled .btn-label { display: none; }
+    .info-box-styled .btn-label {
+        display: none;
+    }
+
     .info-box-styled .managed-table th.col-number,
-    .info-box-styled .managed-table td.col-number { width: 56px; }
+    .info-box-styled .managed-table td.col-number {
+        width: 56px;
+    }
 }
 
 /* Make only the inner container scrollable to avoid body jump */
-.info-box-styled > .p-3.bg-light.rounded { overflow: hidden; }
-.info-box-styled > .p-3.bg-light.rounded .content-table { max-height: 320px; overflow-y: auto; }
+.info-box-styled > .p-3.bg-light.rounded {
+    overflow: hidden;
+}
+
+.info-box-styled > .p-3.bg-light.rounded .content-table {
+    max-height: 320px;
+    overflow-y: auto;
+}
 
 .budget-history-item {
     display: flex;
@@ -813,6 +878,7 @@
 .info-box-styled .p-3.bg-light.rounded {
     max-height: 320px;
 }
+
 .budget-history-rem {
     font-weight: 600;
     color: #0f172a;
@@ -844,4 +910,154 @@
    ========================================= */
 .vacation-metric-card {
     min-height: 195px;
+}
+
+/* --- Estilo para HORARIO (Violeta) --- */
+.employee-detail-button-schedule {
+    border: 1px solid #e2e8f0;
+    border-top: 3px solid transparent; /* Reservamos el espacio del borde */
+}
+
+.employee-detail-button-schedule .employee-detail-button-icon {
+    background: #8b5cf6 !important; /* Cuadrado del icono violeta */
+    border-radius: 8px;
+}
+
+.employee-detail-button-schedule .employee-detail-button-icon i {
+    color: white !important;
+}
+
+/* ESTADO ACTIVO (Igual a Datos Personales) */
+.employee-detail-button-schedule.active {
+    background-color: #f5f3ff !important;
+    border: 1px solid #ddd !important;
+    border-top: 3px solid #8b5cf6 !important; /* Borde superior pintado */
+    color: #7c3aed !important;
+}
+
+/* --- Estilo para TELETRABAJO (Cian) --- */
+.employee-detail-button-telework {
+    border: 1px solid #e2e8f0;
+    border-top: 3px solid transparent;
+}
+
+.employee-detail-button-telework .employee-detail-button-icon {
+    background: #06b6d4 !important; /* Cuadrado del icono cian */
+    border-radius: 8px;
+}
+
+.employee-detail-button-telework .employee-detail-button-icon i {
+    color: white !important;
+}
+
+/* ESTADO ACTIVO */
+.employee-detail-button-telework.active {
+    background-color: #ecfeff !important;
+    border: 1px solid #ddd !important;
+    border-top: 3px solid #06b6d4 !important;
+    color: #0891b2 !important;
+}
+
+/* Contenedor principal del contenido del tab */
+.schedule-container {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* La rejilla de 7 días */
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 columnas iguales */
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* Estilo de cada tarjeta de día */
+.day-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 15px 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 120px;
+}
+
+.day-card:hover {
+    border-color: #8b5cf6;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+}
+
+/* Días no laborables o fin de semana */
+.day-card.weekend {
+    background-color: #f8fafc;
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+/* Etiquetas dentro de la tarjeta */
+.day-label {
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.time-slot {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.time-sub {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* Responsive: si la pantalla es pequeña, se rompe en 2 o 3 columnas */
+@media (max-width: 1200px) {
+    .schedule-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.day-card {
+    min-height: 140px; /* Aumentamos un poco la altura mínima */
+    justify-content: space-between;
+}
+
+.time-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Espacio entre jornada 1 y jornada 2 */
+    margin-bottom: 8px;
+}
+
+.time-slot.afternoon {
+    color: #8b5cf6; /* Color violeta suave para la segunda jornada */
+    border-top: 1px solid #f1f5f9;
+    padding-top: 4px;
+    margin-top: 2px;
+}
+
+/* Si el texto es muy largo, bajamos un poco el tamaño */
+.time-slot {
+    font-size: 0.85rem;
 }

@@ -513,6 +513,20 @@ const app = createApp({
                 class: 'employee-detail-button-payments',
                 isVisible: getSavedVisibility('payments')
             },
+            {
+                id: 'schedule',
+                name: 'Horario',
+                icon: 'fa-solid fa-clock',
+                class: 'employee-detail-button-schedule',
+                isVisible: getSavedVisibility('schedule')
+            },
+            {
+                id: 'telework',
+                name: 'Teletrabajo',
+                icon: 'fa-solid fa-house-laptop',
+                class: 'employee-detail-button-telework',
+                isVisible: getSavedVisibility('telework')
+            },
         ];
 
         const tabs = ref(tabsBase.filter(tab => !hiddenTabIds.has(tab.id)));
@@ -1441,6 +1455,62 @@ const app = createApp({
                 window.Toast.fire({icon: 'error', title: 'Error de conexión'});
             }
         };
+        // Dentro de la función setup() en employee_wizard.js
+
+        const openScheduleChangeModal = (empId) => {
+            // La URL debe coincidir con la de tu urls.py: name='employee_schedule_change_modal'
+            const url = `/schedule/assignment/change-modal/${empId}/`;
+            const modalPlaceholder = document.getElementById('action-modal-employee');
+
+            if (!modalPlaceholder) return;
+
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar el modal');
+                    return response.text();
+                })
+                .then(html => {
+                    modalPlaceholder.innerHTML = `
+                <div class="modal-overlay" style="display:flex; align-items:center; justify-content:center;">
+                    <div class="animate__animated animate__fadeInDown" 
+                         style="max-width:650px; width:100%; background:transparent;"> 
+                        ${html}
+                    </div>
+                </div>
+            `;
+                    document.body.classList.add('no-scroll');
+
+                    // Si el modal tiene un botón de cerrar manual con clase 'js-close-modal'
+                    const closeBtn = modalPlaceholder.querySelector('.btn-cancel, .btn-close-modal');
+                    if (closeBtn) {
+                        closeBtn.onclick = () => {
+                            modalPlaceholder.innerHTML = '';
+                            document.body.classList.remove('no-scroll');
+                        };
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire("Error", "No se pudo cargar el formulario de horarios.", "error");
+                });
+        };
+        $(document).on('submit', '#action-modal-employee form', function (e) {
+            e.preventDefault();
+            const $form = $(this);
+            $.ajax({
+                url: $form.attr('action'),
+                method: 'POST',
+                data: $form.serialize(),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("¡Éxito!", res.message, "success");
+                        $('#action-modal-employee').empty(); // Cerramos el modal
+                        document.body.classList.remove('no-scroll');
+                        location.reload();
+                    }
+                }
+            });
+        });
 
         const saveInstitutionalData = async (personId) => {
             if (isSaving.value) return;
@@ -1526,7 +1596,7 @@ const app = createApp({
             listItems,
             filteredItems,
             currentListType,
-
+            openScheduleChangeModal,
             // Métodos Persona
             openEditPersonModal,
             closeEditModal,

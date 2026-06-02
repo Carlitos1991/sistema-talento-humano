@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 import json
 
 # Vista para reubicar empleado (relocate_employee)
-
+from schedule.models import EmployeeScheduleHistory
 # apps/employee/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
@@ -139,7 +139,11 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         institutional_data = None
         if employee:
             institutional_data, _ = InstitutionalData.objects.get_or_create(employee=employee)
-
+            current_schedule_assignment = EmployeeScheduleHistory.objects.filter(
+                employee=employee,
+                is_current=True
+            ).select_related('schedule').first()
+        context['current_schedule_assignment'] = current_schedule_assignment
         context['curriculum_titles_count'] = 0
         context['curriculum_experiences_count'] = 0
         context['curriculum_courses_count'] = 0
