@@ -27,6 +27,7 @@ class PersonnelAction(models.Model):
     """
     Cabecera de la Acción de Personal. Contiene metadatos, fechas y firmas.
     """
+    is_active = models.BooleanField(verbose_name='Activo', default=True)
     employee = models.ForeignKey(Employee, verbose_name='Empleado', on_delete=models.PROTECT,
                                  related_name='personnel_actions')
     action_type = models.ForeignKey(ActionType, verbose_name='Tipo de Acción', on_delete=models.PROTECT)
