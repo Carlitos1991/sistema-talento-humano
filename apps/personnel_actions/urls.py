@@ -10,10 +10,11 @@ urlpatterns = [
 
     # --- Generar Acción (Lista de Empleados) ---
     path('employees/', views.EmployeeActionListView.as_view(), name='action_employee_list'),
-    
+
     # --- Historial de Acciones por Empleado ---
     path('history/<int:employee_id>/', views.ActionHistoryView.as_view(), name='action_history'),
-    
+    path('<int:pk>/inactivate/', views.ActionInactivateView.as_view(), name='action_inactivate'),
+
     # --- Detalle, Editar, Registrar, PDF ---
     path('<int:pk>/detail/', views.ActionDetailView.as_view(), name='action_detail'),
     path('<int:pk>/edit/', views.ActionUpdateView.as_view(), name='action_update'),

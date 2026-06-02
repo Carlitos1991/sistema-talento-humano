@@ -75,6 +75,14 @@
                                 <i class="fa-solid fa-edit"></i>
                             </button>
                         {% endif %}
+                        {% if not action.is_registered %}
+                            <button class="btn-icon btn-delete-action js-inactivate-action"
+                                    data-action-id="{{ action.pk }}"
+                                    data-number="{{ action.number }}"
+                                    title="Anular Acción">
+                                <i class="fa-solid fa-ban"></i>
+                            </button>
+                        {% endif %}
                         {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
                             <button class="btn-icon btn-success-action js-register-action"
                                     data-action-id="{{ action.pk }}" title="Registrar Acción">

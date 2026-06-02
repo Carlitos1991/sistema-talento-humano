@@ -105,7 +105,7 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related('employee__person', 'action_type')
+        qs = super().get_queryset().filter(is_active=True).select_related('employee__person', 'action_type')
         # Filtros básicos y avanzados
         q = self.request.GET.get('q', '').strip()
         action_type = self.request.GET.get('action_type', '').strip()
@@ -248,7 +248,6 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
         })
 
     def form_valid(self, form):
-        # Lógica transaccional para guardar Cabecera + Detalle
         with transaction.atomic():
             self.object = form.save(commit=False)
             self.object.created_by = self.request.user
@@ -258,20 +257,27 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             if not self.object.number or self.object.number.strip() == '':
                 from datetime import datetime
                 year = datetime.now().year
+
+                # Buscamos la última acción creada en el año, sea activa o no
                 last_action = PersonnelAction.objects.filter(
                     number__endswith=f'-{year}'
                 ).order_by('-created_at').first()
 
                 if last_action:
                     try:
-                        last_num = int(last_action.number.split('-')[0])
-                        new_num = last_num + 1
+                        last_num_int = int(last_action.number.split('-')[0])
+
+                        if not last_action.is_active:
+                            new_num = last_num_int
+                        else:
+                            new_num = last_num_int + 1
                     except (ValueError, IndexError):
                         new_num = 1
                 else:
                     new_num = 1
 
                 self.object.number = f'{new_num:04d}-{year}'
+                # ----------------------------------
 
             self.object.save()
 
@@ -334,6 +340,23 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             }, status=400)
 
         return super().form_invalid(form)
+
+
+class ActionInactivateView(LoginRequiredMixin, View):
+    """Cambia el estado is_active a False (Anulación)"""
+
+    def post(self, request, pk):
+        action = get_object_or_404(PersonnelAction, pk=pk)
+
+        if not request.user.has_perm('personnel_actions.delete_personnelaction'):
+            return JsonResponse({'success': False, 'message': 'No tienes permiso'}, status=403)
+        action.is_active = False
+        action.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Acción {action.number} inactivada correctamente.'
+        })
 
 
 class ActionTypeListView(LoginRequiredMixin, ListView):

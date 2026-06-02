@@ -71,7 +71,7 @@ window.fetchTableData = function (page) {
                 if (newTable && window.TableManager) {
                     new window.TableManager(newTable);
                 }
-                
+
                 // Aplicar estado visual del sort a los headers
                 var ths = container.querySelectorAll('thead th');
                 ths.forEach(function (th) {
@@ -118,11 +118,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var detailContent = document.getElementById('modal-detail-content');
 
     // ── BÚSQUEDA RÁPIDA (Client-side filtering) ────────────────────────
-    var initQuickSearch = function() {
+    var initQuickSearch = function () {
         var filterNameInput = document.getElementById('filter_name');
         if (!filterNameInput) return;
 
-        var normalizeSearchText = function(value) {
+        var normalizeSearchText = function (value) {
             return (value || '')
                 .toString()
                 .toLowerCase()
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .trim();
         };
 
-        var filterVisibleRows = function() {
+        var filterVisibleRows = function () {
             var terms = normalizeSearchText(filterNameInput.value)
                 .split(/\s+/)
                 .filter(Boolean);
@@ -141,9 +141,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var dataRows = Array.from(tableContainer.querySelectorAll('tbody tr[data-search-text]'));
             var visibleRows = 0;
 
-            dataRows.forEach(function(row) {
+            dataRows.forEach(function (row) {
                 var rowText = normalizeSearchText(row.dataset.searchText || row.textContent || '');
-                var matches = terms.length === 0 || terms.every(function(term) {
+                var matches = terms.length === 0 || terms.every(function (term) {
                     return rowText.includes(term);
                 });
                 row.style.display = matches ? '' : 'none';
@@ -161,10 +161,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Debounce para búsqueda en el backend
         var searchTimeout;
-        filterNameInput.addEventListener('input', function() {
+        filterNameInput.addEventListener('input', function () {
             filterVisibleRows();
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function() {
+            searchTimeout = setTimeout(function () {
                 var term = filterNameInput.value.trim();
                 if (term) {
                     state.currentPage = 1;
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Presionar Enter para buscar inmediatamente
-        filterNameInput.addEventListener('keydown', function(event) {
+        filterNameInput.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 filterVisibleRows();
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Event listener para cambios en Tipo de Acción
     if (filterActionType) {
-        filterActionType.addEventListener('change', function() {
+        filterActionType.addEventListener('change', function () {
             state.currentPage = 1;
             window.fetchTableData(1);
         });
@@ -227,13 +227,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var filterDateFrom = document.getElementById('filter_date_from');
     var filterDateTo = document.getElementById('filter_date_to');
     if (filterDateFrom) {
-        filterDateFrom.addEventListener('change', function() {
+        filterDateFrom.addEventListener('change', function () {
             state.currentPage = 1;
             window.fetchTableData(1);
         });
     }
     if (filterDateTo) {
-        filterDateTo.addEventListener('change', function() {
+        filterDateTo.addEventListener('change', function () {
             state.currentPage = 1;
             window.fetchTableData(1);
         });
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var filterPrevPos = document.getElementById('filter_prev_pos');
     var filterNewPos = document.getElementById('filter_new_pos');
 
-    var onFilterTextChange = function() {
+    var onFilterTextChange = function () {
         state.currentPage = 1;
         window.fetchTableData(1);
     };
@@ -309,6 +309,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.open('/personnel_actions/' + printBtn.dataset.actionId + '/pdf/', '_blank');
                 return;
             }
+
+            var inactivateBtn = e.target.closest('.js-inactivate-action');
+            if (inactivateBtn) {
+                e.preventDefault();
+                _confirmInactivate(inactivateBtn.dataset.actionId, inactivateBtn.dataset.number, csrfToken);
+                return;
+            }
         });
     }
 
@@ -333,15 +340,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var btnExportPdf = document.getElementById('btn-export-pdf');
 
     // Función global para exportar a CSV
-    window.exportTableToCSV = function(table) {
+    window.exportTableToCSV = function (table) {
         var filename = (table && table.dataset.filename) || 'acciones_personal';
         var csv = [];
         var rows = table.querySelectorAll('tr');
 
-        rows.forEach(function(row) {
+        rows.forEach(function (row) {
             var cols = row.querySelectorAll('td, th');
             var rowData = [];
-            cols.forEach(function(col) {
+            cols.forEach(function (col) {
                 rowData.push('"' + (col.innerText || '').replace(/"/g, '""') + '"');
             });
             csv.push(rowData.join(','));
@@ -355,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Función global para exportar a PDF
-    window.exportTableToPDF = function(table) {
+    window.exportTableToPDF = function (table) {
         var filename = (table && table.dataset.filename) || 'acciones_personal';
         var html = '<html><head><meta charset="utf-8"><title>' + filename + '</title>' +
             '<style>table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background-color:#f2f2f2;}</style>' +
@@ -368,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         w.document.write(html);
         w.document.close();
         w.focus();
-        setTimeout(function() {
+        setTimeout(function () {
             w.print();
         }, 600);
     };
@@ -521,6 +528,57 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(function (err) {
                 console.error('Edit modal error:', err);
                 if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo abrir el formulario', 'error');
+            });
+    }
+
+    function _confirmInactivate(actionId, number, csrf) {
+        if (typeof Swal === 'undefined') {
+            if (confirm('¿Está seguro de inactivar la acción ' + number + '? El número será reutilizado en la siguiente creación.')) {
+                _doInactivate(actionId, csrf);
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: '¿Inactivar Acción?',
+            text: 'La acción ' + number + ' será marcada como inactiva y su número podrá ser reutilizado si es la última creada.',
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, inactivar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                _doInactivate(actionId, csrf);
+            }
+        });
+    }
+
+    function _doInactivate(actionId, csrf) {
+        fetch('/personnel_actions/' + actionId + '/inactivate/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrf,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(res => {
+                // Validamos si la respuesta es JSON antes de procesar
+                if (!res.ok) throw new Error('Error en el servidor');
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('¡Anulada!', data.message, 'success');
+                    window.fetchTableData(); // Recarga la tabla para reflejar los cambios
+                } else {
+                    Swal.fire('Atención', data.message || 'No se pudo inactivar', 'warning');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                Swal.fire('Error', 'Hubo un problema al procesar la solicitud.', 'error');
             });
     }
 
