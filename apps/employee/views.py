@@ -1,4 +1,8 @@
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.views import View
+from django.utils.decorators import method_decorator
+import json
 
 # Vista para reubicar empleado (relocate_employee)
 
@@ -7,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.db import transaction
 from django.http import JsonResponse, HttpResponse, Http404
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
@@ -19,7 +23,7 @@ from person.models import Person
 from person.models import PersonAuditLog
 from person.utils import log_person_audit, PERSON_AUDIT_SECTIONS
 from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
-from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData
+from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData, EmployeeProfileVisibility
 from budget.models import BudgetLine
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
@@ -169,9 +173,26 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             self.request.user.has_perm('permitrequest.add_permitrequest') or
             (user_person and user_person.id == self.object.id)
         )
-        # Por defecto, el wizard completo mantiene todas las secciones visibles.
+        
+        # Recuperar visibilidad de pestañas
+        visibilities = EmployeeProfileVisibility.objects.filter(user=self.object.user).values_list('tab_id', 'is_visible') if hasattr(self.object, 'user') and self.object.user else []
+        visibility_dict = {v[0]: str(v[1]).lower() for v in visibilities}
+        
+        # Ocultar pestañas si es self_dashboard
+        if hasattr(self, 'is_self_dashboard') and self.is_self_dashboard:
+            restricted = ['budget', 'contracts', 'actions', 'sanctions', 'permissions', 'vacations', 'payments']
+            # Para el dashboard del empleado, todas las pestañas se rigen por visibility_dict
+            for r in restricted:
+                if r not in visibility_dict:
+                    visibility_dict[r] = 'false'
+        
+        # Enviar al contexto como string JSON para Vue
+        import json
+        context['tab_visibilities'] = json.dumps(visibility_dict)
+        
         context['can_view_restricted_tabs'] = True
         context['restricted_tab_ids'] = ''
+        
         # Catálogos para los modales del Wizard
         context['education_levels'] = CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS', is_active=True)
         context['banks_list'] = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True)
@@ -499,22 +520,24 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
         user_person = _safe_related(self.request.user, 'person', None)
         if not user_person:
             raise Http404("El usuario no tiene persona asociada.")
+        self.is_self_dashboard = True
         return user_person
 
     def get_context_data(self, **kwargs):
-        try:
-            context = super().get_context_data(**kwargs)
-        except Exception:
-            logger.exception('Error en self_dashboard para user_id=%s', self.request.user.id)
-            person = self.get_object()
-            curriculum, _ = Curriculum.objects.get_or_create(person=person)
-            context = {
+        # We let the parent class generate the context and handle tab visibilities
+        context = super().get_context_data(**kwargs)
+        
+        # We need to make sure the self dashboard context matches the standard output if there's any errors
+        if not context.get('person'):
+             person = self.get_object()
+             curriculum, _ = Curriculum.objects.get_or_create(person=person)
+             context.update({
                 'person': person,
                 'employee_profile': _safe_related(person, 'employee_profile', None),
                 'curriculum_obj': curriculum,
-                'curriculum_titles_count': 0,
-                'curriculum_experiences_count': 0,
-                'curriculum_courses_count': 0,
+                'curriculum_titles_count': curriculum.academic_titles.count() if curriculum else 0,
+                'curriculum_experiences_count': curriculum.work_experiences.count() if curriculum else 0,
+                'curriculum_courses_count': curriculum.trainings.count() if curriculum else 0,
                 'employee_area_name': 'SIN AREA ASIGNADA',
                 'can_generate_self_permit': False,
                 'can_insist_rejected_permits': False,
@@ -545,15 +568,8 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
                 'bank_account': None,
                 'payroll_info': None,
                 'institutional_data': None,
-            }
+             })
 
-            context['curriculum_titles_count'] = curriculum.academic_titles.count()
-            context['curriculum_experiences_count'] = curriculum.work_experiences.count()
-            context['curriculum_courses_count'] = curriculum.trainings.count()
-
-        # Ocultar temporalmente pestañas sensibles en el self-dashboard
-        context['restricted_tab_ids'] = 'budget,contracts,actions,sanctions,permissions,vacations,payments'
-        context['can_view_restricted_tabs'] = False
         return context
 
 
@@ -630,29 +646,41 @@ def add_bank_account(request, person_id):
 
 @transaction.atomic
 def update_payroll_info(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        economic_data, created = EconomicData.objects.get_or_create(person=person)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
 
-        instance = getattr(economic_data, 'payroll_info', None)
-        form = PayrollInfoForm(request.POST, instance=instance)
+    person = get_object_or_404(Person, pk=person_id)
+    economic_data, _ = EconomicData.objects.get_or_create(person=person)
 
-        if form.is_valid():
-            payroll = form.save(commit=False)
-            payroll.economic_data = economic_data
-            payroll.save()
-            return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
-            # Debug: return posted data and form errors to help client-side troubleshooting
-            try:
-                posted = dict(request.POST)
-            except Exception:
-                posted = {}
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.debug('update_payroll_info invalid form errors: %s', form.errors)
-            logger.debug('update_payroll_info POST data: %s', posted)
-            return JsonResponse({'success': False, 'errors': form.errors, 'posted': posted}, status=400)
-    return None
+    instance = getattr(economic_data, 'payroll_info', None)
+    post_data = request.POST.copy()
+
+    # Permite actualizaciones parciales desde toggles JS sin romper validaciones del ModelForm.
+    if 'family_dependents' not in post_data:
+        post_data['family_dependents'] = str(getattr(instance, 'family_dependents', 0) or 0)
+    if 'education_dependents' not in post_data:
+        post_data['education_dependents'] = str(getattr(instance, 'education_dependents', 0) or 0)
+    if 'roles_count' not in post_data:
+        post_data['roles_count'] = str(getattr(instance, 'roles_count', 0) or 0)
+    if 'roles_entry_date' not in post_data:
+        entry_date = getattr(instance, 'roles_entry_date', None)
+        post_data['roles_entry_date'] = entry_date.isoformat() if entry_date else ''
+
+    form = PayrollInfoForm(post_data, instance=instance)
+    if form.is_valid():
+        payroll = form.save(commit=False)
+        payroll.economic_data = economic_data
+        payroll.save()
+        log_person_audit(
+            request,
+            person,
+            PersonAuditLog.Action.UPDATE,
+            PERSON_AUDIT_SECTIONS['economic'],
+            'Actualizó información de nómina'
+        )
+        return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
+
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 @login_required
@@ -704,156 +732,19 @@ def upload_cv_pdf(request, person_id):
 
 
 @transaction.atomic
-def add_academic_title(request, person_id):
+def add_academic_title_api(request, person_id):
     if request.method == 'POST':
         person = get_object_or_404(Person, pk=person_id)
-        curriculum, created = Curriculum.objects.get_or_create(person=person)
+        curriculum, _ = Curriculum.objects.get_or_create(person=person)
 
         form = AcademicTitleForm(request.POST)
         if form.is_valid():
             title = form.save(commit=False)
             title.curriculum = curriculum
             title.save()
-            return JsonResponse({'success': True, 'message': 'Título académico registrado.'})
+            return JsonResponse({'success': True, 'message': 'Título registrado correctamente'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     return None
-
-
-from .models import EconomicData, BankAccount, PayrollInfo
-from .forms import BankAccountForm, PayrollInfoForm
-
-
-@transaction.atomic
-def add_bank_account(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        # Aseguramos que existan los datos económicos
-        economic_data, created = EconomicData.objects.get_or_create(person=person)
-
-        # Si ya tiene una cuenta, la editamos, si no, creamos una nueva
-        instance = getattr(economic_data, 'bank_account', None)
-        form = BankAccountForm(request.POST, instance=instance)
-
-        if form.is_valid():
-            bank_acc = form.save(commit=False)
-            bank_acc.economic_data = economic_data
-            bank_acc.save()
-            return JsonResponse({'success': True, 'message': 'Cuenta bancaria registrada con éxito.'})
-
-        # Debug: log errors and return posted data to help trace client-side issues
-        import logging
-        logger = logging.getLogger(__name__)
-        try:
-            posted = dict(request.POST)
-        except Exception:
-            posted = {}
-        logger.debug('add_bank_account invalid form errors: %s', form.errors)
-        logger.debug('add_bank_account POST data: %s', posted)
-        return JsonResponse({'success': False, 'errors': form.errors, 'posted': posted}, status=400)
-    return None
-
-
-@transaction.atomic
-def update_payroll_info(request, person_id):
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
-
-    person = get_object_or_404(Person, pk=person_id)
-    economic_data, _ = EconomicData.objects.get_or_create(person=person)
-
-    instance = getattr(economic_data, 'payroll_info', None)
-    post_data = request.POST.copy()
-
-    # Permite actualizaciones parciales desde toggles JS sin romper validaciones del ModelForm.
-    if 'family_dependents' not in post_data:
-        post_data['family_dependents'] = str(getattr(instance, 'family_dependents', 0) or 0)
-    if 'education_dependents' not in post_data:
-        post_data['education_dependents'] = str(getattr(instance, 'education_dependents', 0) or 0)
-    if 'roles_count' not in post_data:
-        post_data['roles_count'] = str(getattr(instance, 'roles_count', 0) or 0)
-    if 'roles_entry_date' not in post_data:
-        entry_date = getattr(instance, 'roles_entry_date', None)
-        post_data['roles_entry_date'] = entry_date.isoformat() if entry_date else ''
-
-    form = PayrollInfoForm(post_data, instance=instance)
-    if form.is_valid():
-        payroll = form.save(commit=False)
-        payroll.economic_data = economic_data
-        payroll.save()
-        log_person_audit(
-            request,
-            person,
-            PersonAuditLog.Action.UPDATE,
-            PERSON_AUDIT_SECTIONS['economic'],
-            'Actualizó información de nómina'
-        )
-        return JsonResponse({'success': True, 'message': 'Información de nómina actualizada.'})
-
-    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-@login_required
-@require_POST
-def upload_cv_api(request, person_id):
-    """API para subir la hoja de vida en PDF"""
-    try:
-        person = get_object_or_404(Person, pk=person_id)
-        # Obtenemos o creamos el objeto Curriculum vinculado a la persona
-        curriculum, created = Curriculum.objects.get_or_create(person=person)
-
-        pdf_file = request.FILES.get('pdf_file')
-
-        if not pdf_file:
-            return JsonResponse({'success': False, 'message': 'No se seleccionó ningún archivo.'}, status=400)
-
-        # Validación Senior: Tipo de archivo y tamaño (ej: 5MB)
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'success': False, 'message': 'Solo se permiten archivos PDF.'}, status=400)
-
-        if pdf_file.size > 5 * 1024 * 1024:
-            return JsonResponse({'success': False, 'message': 'El archivo es muy pesado (máximo 5MB).'}, status=400)
-
-        # Guardar el archivo
-        curriculum.pdf_file = pdf_file
-        curriculum.save()
-        log_person_audit(
-            request,
-            person,
-            PersonAuditLog.Action.UPDATE,
-            PERSON_AUDIT_SECTIONS['curriculum'],
-            'Actualizó el archivo de hoja de vida'
-        )
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Hoja de vida actualizada correctamente.',
-            'file_url': curriculum.pdf_file.url
-        })
-
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-
-@login_required
-def curriculum_tab_partial(request, person_id):
-    """Retorna únicamente el fragmento HTML de la pestaña de Currículum"""
-    person = get_object_or_404(Person, pk=person_id)
-    # Reutilizamos el mismo template parcial
-    html = render_to_string('employee/partials/wizard/tab_curriculum.html', {'person': person}, request=request)
-    return HttpResponse(html)
-
-
-@transaction.atomic
-def add_academic_title_api(request, person_id):
-    person = get_object_or_404(Person, pk=person_id)
-    curriculum, _ = Curriculum.objects.get_or_create(person=person)
-    form = AcademicTitleForm(request.POST)
-    if form.is_valid():
-        title = form.save(commit=False)
-        title.curriculum = curriculum
-        title.save()
-        return JsonResponse({'success': True, 'message': 'Título registrado correctamente'})
-    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 @require_POST
@@ -1187,3 +1078,39 @@ def relocate_employee(request):
         return JsonResponse({'success': True, 'message': 'Empleado reubicado correctamente.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@method_decorator(require_POST, name='dispatch')
+class UpdateProfileVisibilityView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            person_id = data.get('user_id')
+            tab_id = data.get('tab_id')
+            is_visible = data.get('is_visible')
+
+            if not all([person_id, tab_id, isinstance(is_visible, bool)]):
+                return JsonResponse({'success': False, 'message': 'Faltan datos o son incorrectos.'}, status=400)
+
+            person = get_object_or_404(Person, pk=person_id)
+            user = person.user
+            
+            if not user:
+                 return JsonResponse({'success': False, 'message': 'La persona no tiene un usuario asociado.'}, status=400)
+
+            visibility, created = EmployeeProfileVisibility.objects.get_or_create(
+                user=user,
+                tab_id=tab_id,
+                defaults={'is_visible': is_visible}
+            )
+            
+            if not created:
+                visibility.is_visible = is_visible
+                visibility.save()
+
+            return JsonResponse({'success': True, 'message': 'Visibilidad actualizada correctamente.'})
+        except Exception as e:
+            logger.exception("Error al actualizar visibilidad")
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)

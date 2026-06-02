@@ -30,7 +30,9 @@
     <div class="employee-standalone-wrapper container-custom">
            <div id="employeeWizardApp"
                v-cloak
+               data-is-dashboard="true"
                data-person-id="{{ person.id }}"
+               data-tab-visibilities='{{ tab_visibilities|safe }}'
                data-photo-url="{% if person.photo %}{{ person.photo.url }}{% endif %}"
                data-titles="{{ curriculum_titles_count|default:0 }}"
                data-experiences="{{ curriculum_experiences_count|default:0 }}"

@@ -35,6 +35,7 @@ const app = createApp({
         // --- 1. CONFIGURACIÓN Y ESTADOS CORE ---
         const appElement = document.getElementById('employeeWizardApp');
         const personId = appElement ? appElement.dataset.personId : null;
+        const isDashboard = appElement ? appElement.dataset.isDashboard === 'true' : false;
 
         // Recuperar el tab activo de localStorage o por defecto 'personal'
         const savedPersonId = localStorage.getItem('wizardPersonId');
@@ -399,75 +400,149 @@ const app = createApp({
                 .filter(Boolean)
         );
 
+        let visibilities = {};
+        try {
+             visibilities = JSON.parse(appElement?.dataset.tabVisibilities || '{}');
+        } catch (e) {
+             console.error("Error parsing tab visibilities", e);
+        }
+
+        const getSavedVisibility = (tabId) => {
+            // Por defecto, todas son verdaderas a menos que explícitamente se hayan guardado como falsas.
+            return visibilities[tabId] !== 'false';
+        };
+
         const tabsBase = [
             {
                 id: 'personal',
                 name: 'Datos Personales',
                 icon: 'fa-solid fa-user',
-                class: 'employee-detail-button-personal'
+                class: 'employee-detail-button-personal',
+                isVisible: getSavedVisibility('personal')
             },
             {
                 id: 'curriculum',
                 name: 'Currículum Vitae',
                 icon: 'fa-solid fa-file-invoice',
-                class: 'employee-detail-button-curriculum'
+                class: 'employee-detail-button-curriculum',
+                isVisible: getSavedVisibility('curriculum')
             },
             {
                 id: 'institutional',
                 name: 'Datos Inst.',
                 icon: 'fa-solid fa-building',
-                class: 'employee-detail-button-institutional'
+                class: 'employee-detail-button-institutional',
+                isVisible: getSavedVisibility('institutional')
             },
             {
                 id: 'economic',
                 name: 'Datos Económicos',
                 icon: 'fa-solid fa-money-bill-1-wave',
-                class: 'employee-detail-button-economic'
+                class: 'employee-detail-button-economic',
+                isVisible: getSavedVisibility('economic')
             },
             {
                 id: 'budget',
                 name: 'Partida Presup.',
                 icon: 'fa-solid fa-address-book',
-                class: 'employee-detail-button-budget'
+                class: 'employee-detail-button-budget',
+                isVisible: getSavedVisibility('budget')
             },
             {
                 id: 'contracts',
                 name: 'Historia Lab.',
                 icon: 'fa-solid fa-clock-rotate-left',
-                class: 'employee-detail-button-history'
+                class: 'employee-detail-button-history',
+                isVisible: getSavedVisibility('contracts')
             },
             {
                 id: 'permissions',
                 name: 'Permisos',
                 icon: 'fa-solid fa-calendar-check',
-                class: 'employee-detail-button-permissions'
+                class: 'employee-detail-button-permissions',
+                isVisible: getSavedVisibility('permissions')
             },
             {
                 id: 'actions',
                 name: 'Acciones Pers.',
                 icon: 'fa-solid fa-file-invoice',
-                class: 'employee-detail-button-actions'
+                class: 'employee-detail-button-actions',
+                isVisible: getSavedVisibility('actions')
             },
             {
                 id: 'sanctions',
                 name: 'Sanciones',
                 icon: 'fa-solid fa-gavel',
-                class: 'employee-detail-button-sanctions'
+                class: 'employee-detail-button-sanctions',
+                isVisible: getSavedVisibility('sanctions')
             },
-            {id: 'vacations', name: 'Vacaciones', icon: 'fa-solid fa-plane', class: 'employee-detail-button-vacations'},
+            {
+                id: 'vacations',
+                name: 'Vacaciones',
+                icon: 'fa-solid fa-plane',
+                class: 'employee-detail-button-vacations',
+                isVisible: getSavedVisibility('vacations')
+            },
             {
                 id: 'payments',
                 name: 'Roles de pago',
                 icon: 'fa-solid fa-money-bill',
-                class: 'employee-detail-button-payments'
+                class: 'employee-detail-button-payments',
+                isVisible: getSavedVisibility('payments')
             },
         ];
 
-        const tabs = tabsBase.filter(tab => !hiddenTabIds.has(tab.id));
+        const tabs = ref(tabsBase.filter(tab => !hiddenTabIds.has(tab.id)));
 
-        if (!tabs.some(tab => tab.id === activeTab.value)) {
-            activeTab.value = tabs.length ? tabs[0].id : 'personal';
+        // If it's the dashboard view, filter out the tabs that are not visible
+        if (isDashboard) {
+             tabs.value = tabs.value.filter(tab => tab.isVisible);
         }
+
+        if (!tabs.value.some(tab => tab.id === activeTab.value)) {
+            activeTab.value = tabs.value.length ? tabs.value[0].id : 'personal';
+        }
+
+        const toggleTabVisibility = async (tab) => {
+            const action = tab.isVisible ? 'deshabilitar' : 'habilitar';
+            const result = await Swal.fire({
+                title: `¿Está seguro?`,
+                text: `Está a punto de ${action} la pestaña "${tab.name}" para el usuario en su perfil.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: `Sí, ${action}`,
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                const newVisibility = !tab.isVisible;
+                try {
+                    const response = await fetch('/employee/api/profile-visibility/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            user_id: personId, 
+                            tab_id: tab.id,
+                            is_visible: newVisibility
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        tab.isVisible = newVisibility;
+                        Swal.fire('¡Hecho!', `La pestaña ha sido ${action}da.`, 'success');
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo guardar el cambio.', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error', 'Hubo un problema de conexión.', 'error');
+                }
+            }
+        };
 
         // Inicializar estadísticas del CV al montar
         onMounted(() => {
@@ -661,7 +736,7 @@ const app = createApp({
             results.innerHTML = '<div class="py-4 text-center text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Cargando movimientos...</div>';
 
             try {
-                const params = new URLSearchParams();
+                const params = newSearchParams();
                 params.set('page', String(page));
                 if (query) params.set('q', query);
 
@@ -1437,6 +1512,8 @@ const app = createApp({
             openInstitutionalModal,
             saveInstitutionalData,
             refreshInstitutionalTab,
+            
+            toggleTabVisibility,
         };
     }
 });

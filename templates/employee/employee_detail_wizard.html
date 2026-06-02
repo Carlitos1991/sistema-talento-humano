@@ -53,10 +53,30 @@
             color: #0f172a;
             font-weight: 700;
         }
+        .mini-check {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .mini-check.visible {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
     </style>
     <div id="employeeWizardApp"
          v-cloak
          data-person-id="{{ person.id }}"
+         data-tab-visibilities='{{ tab_visibilities|safe }}'
             {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
             data-titles="{{ curriculum_titles_count|default:0 }}"
             data-experiences="{{ curriculum_experiences_count|default:0 }}"
@@ -109,6 +129,9 @@
                         <i :class="tab.icon"></i>
                     </div>
                     <span class="employee-detail-button-label">[[ tab.name ]]</span>
+                    <span class="mini-check" :class="{ visible: tab.isVisible }" @click.stop="toggleTabVisibility(tab)">
+                        <i v-if="tab.isVisible" class="fa fa-check"></i>
+                    </span>
                 </div>
             </div>
         </div>

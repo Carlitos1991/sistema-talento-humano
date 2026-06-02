@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from core.models import BaseModel, CatalogItem
+from core.models import BaseModel, CatalogItem, User
 from person.models import Person
 from institution.models import AdministrativeUnit
 from datetime import date
@@ -248,3 +248,26 @@ class PayrollInfo(BaseModel):
     class Meta:
         verbose_name = 'Información de Nómina'
         verbose_name_plural = 'Información de Nómina'
+
+
+class EmployeeProfileVisibility(BaseModel):
+    """
+    Guarda las preferencias de visibilidad de los tabs del perfil (wizard)
+    para un usuario (empleado) específico. Si no existe un registro para
+    un usuario y tab, se asume False.
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile_tab_visibilities'
+    )
+    tab_id = models.CharField(max_length=50, verbose_name='ID de la pestaña')
+    is_visible = models.BooleanField(default=False, verbose_name='Es visible')
+
+    class Meta:
+        unique_together = ('user', 'tab_id')
+        verbose_name = 'Visibilidad de Pestaña de Perfil'
+        verbose_name_plural = 'Visibilidades de Pestañas de Perfil'
+
+    def __str__(self):
+        return f"{self.user.username} - {self.tab_id}: {'Visible' if self.is_visible else 'Oculto'}"
