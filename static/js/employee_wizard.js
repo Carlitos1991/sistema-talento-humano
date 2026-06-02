@@ -528,44 +528,76 @@ const app = createApp({
 
         const toggleTabVisibility = async (tab) => {
             const action = tab.isVisible ? 'deshabilitar' : 'habilitar';
-            const result = await Swal.fire({
-                title: `¿Está seguro?`,
-                text: `Está a punto de ${action} la pestaña "${tab.name}" para el usuario en su perfil.`,
-                icon: 'warning',
+
+            const {value: selection} = await Swal.fire({
+                title: `¿Cómo desea ${action} la pestaña "${tab.name}"?`,
+                icon: 'question',
+                showDenyButton: true,
                 showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: `Sí, ${action}`,
-                cancelButtonText: 'Cancelar'
+                confirmButtonText: 'Solo para este empleado',
+                denyButtonText: 'Para TODOS los empleados',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#3b82f6', // Azul
+                denyButtonColor: '#10b981',    // Verde
             });
 
-            if (result.isConfirmed) {
-                const newVisibility = !tab.isVisible;
-                try {
-                    const response = await fetch('/employee/api/profile-visibility/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            user_id: personId,
-                            tab_id: tab.id,
-                            is_visible: newVisibility
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        tab.isVisible = newVisibility;
-                        Swal.fire('¡Hecho!', `La pestaña ha sido ${action}da.`, 'success');
-                    } else {
-                        Swal.fire('Error', data.message || 'No se pudo guardar el cambio.', 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Error', 'Hubo un problema de conexión.', 'error');
-                }
+            // 1. CASO: SOLO PARA ESTE EMPLEADO (Botón Principal)
+            if (selection === true) {
+                IndividualChange(tab);
+            }
+            // 2. CASO: PARA TODOS (Botón "Deny" que usamos como masivo)
+            else if (selection === false) {
+                MassiveChange(tab);
             }
         };
+        const IndividualChange = async (tab) => {
+            const newVisibility = !tab.isVisible;
+            try {
+                const response = await fetch('/employee/api/profile-visibility/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify({
+                        user_id: personId,
+                        tab_id: tab.id,
+                        is_visible: newVisibility
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    tab.isVisible = newVisibility;
+                    window.Toast.fire({icon: 'success', title: 'Actualizado para este usuario'});
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Problema de conexión', 'error');
+            }
+        };
+
+// Función nueva para el cambio masivo
+        const MassiveChange = async (tab) => {
+            const newVisibility = !tab.isVisible;
+            const actionText = newVisibility ? 'habilitado' : 'deshabilitado';
+
+            try {
+                const formData = new FormData();
+                formData.append('tab_id', tab.id);
+                formData.append('is_visible', newVisibility);
+
+                const response = await fetch('/employee/api/bulk-visibility/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    tab.isVisible = newVisibility; // Actualizamos la vista actual
+                    Swal.fire('¡Éxito Masivo!', `Se ha ${actionText} la pestaña para todos los empleados.`, 'success');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'No se pudo realizar la acción masiva', 'error');
+            }
+        };
+
 
         // Inicializar estadísticas del CV al montar
         onMounted(() => {
@@ -759,7 +791,7 @@ const app = createApp({
             results.innerHTML = '<div class="py-4 text-center text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Cargando movimientos...</div>';
 
             try {
-                const params = newSearchParams();
+                const params = new URLSearchParams();
                 params.set('page', String(page));
                 if (query) params.set('q', query);
 

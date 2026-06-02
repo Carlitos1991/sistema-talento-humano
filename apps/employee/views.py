@@ -564,6 +564,29 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         return context
 
 
+@require_POST
+def bulk_update_tab_visibility(request):
+    tab_id = request.POST.get('tab_id')
+    is_visible = request.POST.get('is_visible') == 'true'
+
+    if not tab_id:
+        return JsonResponse({'success': False, 'message': 'ID de pestaña no válido.'})
+
+    with transaction.atomic():
+        EmployeeProfileVisibility.objects.filter(tab_id=tab_id).delete()
+        users = User.objects.filter(person__isnull=False)
+        new_configs = [
+            EmployeeProfileVisibility(user=u, tab_id=tab_id, is_visible=is_visible)
+            for u in users
+        ]
+        EmployeeProfileVisibility.objects.bulk_create(new_configs)
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Pestaña "{tab_id}" actualizada para {len(new_configs)} empleados.'
+    })
+
+
 class EmployeeSelfDashboardView(EmployeeDetailWizardView):
     template_name = 'employee/employee_dashboard.html'
     permission_required = ()
