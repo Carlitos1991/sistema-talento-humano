@@ -209,7 +209,7 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
 class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ScheduleObservation
     template_name = 'schedule/observation_list.html'
-    permission_required = 'schedule.can_manage_observations'
+    permission_required = 'schedule.view_scheduleobservation'
     context_object_name = 'observations'
     paginate_by = 10
 
