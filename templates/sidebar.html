@@ -207,8 +207,11 @@
                     </ul>
                 </li>
             {% endif %}
+
+            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
             <li class="sidebar-section-title">Gestion</li>
-            {% if perms.budget.view_budgetline or perms.budget.view_program %}
+
+            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget %}
                 <li class="has-submenu">
                     <a href="#">
                         <i class="fa-solid fa-circle-dollar-to-slot"></i>
@@ -311,7 +314,7 @@
                 </li>
             {% endif %}
             <!-- MÓDULO DE PERMISOS -->
-            {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype %}
+            {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest %}
                 <li class="has-submenu">
                     <a href="#" class="{% if 'permissions' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-solid fa-file-signature"></i>
@@ -392,7 +395,7 @@
                 </li>
             {% endif %}
             <!-- MÓDULO DE SANCIONES -->
-            {% if perms.sanctions.view_sanction or perms.sanctions.view_sanctiontype %}
+            {% if perms.sanctions.view_sanction or perms.sanctions.view_sanctiontype or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctionnotificationtype %}
                 <li class="has-submenu">
                     <a href="#" class="{% if 'sanctions' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-solid fa-gavel"></i>
@@ -498,7 +501,7 @@
                     </ul>
                 </li>
             {% endif %}
-            {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation %}
+            {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule %}
                 <li class="has-submenu">
                     <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-regular fa-clock"></i>
@@ -536,7 +539,7 @@
                     </ul>
                 </li>
             {% endif %}
-            {% if perms.payroll.view_payrollperiod or perms.payroll.view_payslip %}
+            {% if perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution %}
                 <li class="has-submenu">
                     <a href="#" class="{% if 'payroll' in request.resolver_match.app_name %}active{% endif %}">
                         <i class="fa-solid fa-money-check-dollar"></i>
@@ -638,6 +641,8 @@
                     </ul>
                 </li>
             {% endif %}
+            {% endif %}
+
             <li class="sidebar-section-title">Configuracion</li>
             <!--  Ajustes -->
             {% if perms.core.view_user or perms.auth.view_group or perms.core.view_catalog or perms.core.view_location or perms.core.change_systemconfiguration or perms.core.view_systemconfiguration %}

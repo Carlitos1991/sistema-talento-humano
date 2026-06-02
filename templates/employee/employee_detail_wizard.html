@@ -77,6 +77,7 @@
          v-cloak
          data-person-id="{{ person.id }}"
          data-tab-visibilities='{{ tab_visibilities|safe }}'
+         data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
             {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
             data-titles="{{ curriculum_titles_count|default:0 }}"
             data-experiences="{{ curriculum_experiences_count|default:0 }}"
@@ -107,10 +108,12 @@
                     <i class="fa-solid fa-shield-halved"></i> Auditoría
                 </button>
 
+                {% if can_edit_person %}
                 <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
                         style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
                     <i class="fa-solid fa-user-pen"></i> Editar Perfil
                 </button>
+                {% endif %}
             </div>
         </div>
 

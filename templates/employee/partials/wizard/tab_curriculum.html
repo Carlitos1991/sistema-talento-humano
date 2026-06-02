@@ -15,20 +15,24 @@
             <!-- BOTÓN VER: Abre en pestaña nueva -->
             <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
                class="btn-header-premium" style="background: #3b82f6; color: white;">
-                <i class="fa-solid fa-eye"></i> VER DOCUMENTO
+                <i class="fa-solid fa-file-pdf"></i>
             </a>
 
             <!-- BOTÓN REEMPLAZAR -->
-            <button class="btn-header-premium" style="background: #10b981; color: white;"
-                    onclick="document.getElementById('pdfInput').click()">
-                <i class="fa-solid fa-arrows-rotate"></i> ACTUALIZAR
-            </button>
+            {% if can_edit_person %}
+                <button class="btn-header-premium" style="background: #10b981; color: white;"
+                        onclick="document.getElementById('pdfInput').click()">
+                    <i class="fa-solid fa-file-arrow-up"></i>
+                </button>
+            {% endif %}
         {% else %}
             <!-- BOTÓN SUBIR (Cuando no existe archivo) -->
-            <button class="btn-header-premium" style="background: #10b981; color: white;"
-                    onclick="document.getElementById('pdfInput').click()">
-                <i class="fa-solid fa-cloud-arrow-up"></i> SUBIR HOJA DE VIDA
-            </button>
+            {% if can_edit_person %}
+                <button class="btn-header-premium" style="background: #10b981; color: white;"
+                        onclick="document.getElementById('pdfInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> SUBIR HOJA DE VIDA
+                </button>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -43,36 +47,37 @@
             <div class="cv-stat-label">Registrados</div>
         </div>
         <div class="cv-buttons-centered">
-            <!-- Usamos onclick con una función global o capturada por el listener -->
-            {% if can_view_restricted_tabs %}
-            <button class="btn-cv-pill new" onclick="handleCvAction('academic', 'new')">
-                <i class="fa-solid fa-plus"></i> Nuevo
-            </button>
+            {% if can_edit_person %}
+                <button class="btn-cv-pill new" @click="handleCvAction('academic', 'new')">
+                    <i class="fa-solid fa-plus"></i> Nuevo
+                </button>
             {% endif %}
-            <button class="btn-cv-pill list" onclick="handleCvAction('academic', 'list')">
-    <i class="fa-solid fa-list"></i> Listado
-</button>
-        </div>
-    </div>
-
-    <!-- TARJETA: EXPERIENCIA LABORAL -->
-    {% if can_view_restricted_tabs %}
-    <div class="info-box-styled medical-border shadow-sm">
-        <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
-        <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-success">[[ personStats.experienceYears ]] años [[ personStats.experienceMonths ]] meses</div>
-            <div class="cv-stat-label">Experiencia Total</div>
-        </div>
-        <div class="cv-buttons-centered">
-            <button class="btn-cv-pill new" onclick="handleCvAction('experience', 'new')">
-                <i class="fa-solid fa-plus"></i> Nuevo
-            </button>
-            <button class="btn-cv-pill list" onclick="handleCvAction('experience', 'list')">
+            <button class="btn-cv-pill list" @click="handleCvAction('academic', 'list')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
         </div>
     </div>
-    {% endif %}
+
+    <!-- TARJETA: EXPERIENCIA LABORAL -->
+    <div class="info-box-styled medical-border shadow-sm">
+        <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
+        <div class="cv-stat-inner-container">
+            <div class="cv-stat-number text-success">[[ personStats.experienceYears ]] años [[
+                personStats.experienceMonths ]] meses
+            </div>
+            <div class="cv-stat-label">Experiencia Total</div>
+        </div>
+        <div class="cv-buttons-centered">
+            {% if can_edit_person %}
+                <button class="btn-cv-pill new" @click="handleCvAction('experience', 'new')">
+                    <i class="fa-solid fa-plus"></i> Nuevo
+                </button>
+            {% endif %}
+            <button class="btn-cv-pill list" @click="handleCvAction('experience', 'list')">
+                <i class="fa-solid fa-list"></i> Listado
+            </button>
+        </div>
+    </div>
 
     <!-- TARJETA: CURSOS -->
     <div class="info-box-styled location-border shadow-sm">
@@ -82,12 +87,12 @@
             <div class="cv-stat-label">Capacitaciones</div>
         </div>
         <div class="cv-buttons-centered">
-            {% if can_view_restricted_tabs %}
-            <button class="btn-cv-pill new" onclick="handleCvAction('training', 'new')">
-                <i class="fa-solid fa-plus"></i> Nuevo
-            </button>
+            {% if can_edit_person %}
+                <button class="btn-cv-pill new" @click="handleCvAction('training', 'new')">
+                    <i class="fa-solid fa-plus"></i> Nuevo
+                </button>
             {% endif %}
-            <button class="btn-cv-pill list" onclick="handleCvAction('training', 'list')">
+            <button class="btn-cv-pill list" @click="handleCvAction('training', 'list')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
         </div>

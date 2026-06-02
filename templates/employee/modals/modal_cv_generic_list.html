@@ -1,4 +1,4 @@
-<div id="modalCVListOverlay" class="modal-overlay hidden" v-cloak>
+<div id="modalCVListOverlay" class="modal-overlay" :class="{ 'hidden': !isListModalVisible }" v-cloak>
     <div class="modal-container modal-cv-list-large animate__animated animate__zoomIn">
 
         <!-- Header del Modal -->
@@ -32,14 +32,14 @@
                             <th>NOMBRE</th>
                             <th>CÓDIGO</th>
                             <th>ESTADO</th>
-                            <th class="text-center">ACCIONES</th>
+                            <th v-if="canEditPerson" class="text-center">ACCIONES</th>
                         </tr>
                         <tr v-else>
                             <th>NOMBRE</th>
                             <th>FECHA DESDE</th>
                             <th>FECHA HASTA</th>
                             <th>TIEMPO</th>
-                            <th class="text-center">ACCIONES</th>
+                            <th v-if="canEditPerson" class="text-center">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -48,7 +48,7 @@
                                 <td>[[ item.name ]]</td>
                                 <td><span class="badge-code">[[ item.code ]]</span></td>
                                 <td><span class="badge-status-active">Activo</span></td>
-                                <td class="text-center" >
+                                <td v-if="canEditPerson" class="text-center" >
                                     <div class="action-buttons-group">
                                         <button @click="editItem(item)" class="btn-action-edit" title="Editar">
                                             <i class="fa-solid fa-pen"></i>
@@ -64,7 +64,7 @@
                                 <td>[[ formatDate(item.start_date) ]]</td>
                                 <td>[[ item.is_current ? 'Presente' : formatDate(item.end_date) ]]</td>
                                 <td>[[ durationBetween(item.start_date, item.end_date, item.is_current) ]]</td>
-                                <td class="text-center" >
+                                <td v-if="canEditPerson" class="text-center" >
                                     <div class="action-buttons-group">
                                         <button @click="editItem(item)" class="btn-action-edit" title="Editar">
                                             <i class="fa-solid fa-pen"></i>
@@ -77,7 +77,7 @@
                             </template>
                         </tr>
                         <tr v-if="filteredItems.length === 0">
-                            <td :colspan="currentListType === 'experience' ? 5 : 4" class="text-center text-muted py-4">
+                            <td :colspan="canEditPerson ? (currentListType === 'experience' ? 5 : 4) : (currentListType === 'experience' ? 4 : 3)" class="text-center text-muted py-4">
                                 <i class="fa-solid fa-inbox fa-2x mb-2"></i>
                                 <p>No se encontraron registros</p>
                             </td>

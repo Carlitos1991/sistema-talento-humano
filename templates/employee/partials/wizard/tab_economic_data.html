@@ -29,7 +29,7 @@
             </div>
 
             <!-- Footer con botón centrado -->
-            {% if can_view_restricted_tabs %}
+            {% if can_edit_person %}
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
@@ -42,9 +42,11 @@
                     <i class="fa-solid fa-building-columns fa-2x"></i>
                 </div>
                 <p class="text-muted small mb-3">No hay cuenta bancaria registrada</p>
+                {% if can_edit_person %}
                 <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
                     <i class="fa-solid fa-plus tiny-icon"></i> Agregar
                 </button>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -84,7 +86,7 @@
             </div>
 
             <!-- Footer con botón centrado -->
-            {% if can_view_restricted_tabs %}
+            {% if can_edit_person %}
             <div class="info-box-footer">
                 <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
                     <i class="fa-solid fa-pen-to-square"></i> Actualizar
@@ -97,9 +99,11 @@
                     <i class="fa-regular fa-calendar-check fa-2x"></i>
                 </div>
                 <p class="text-muted small mb-3">Sin configuración de nómina</p>
+                {% if can_edit_person %}
                 <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
                     <i class="fa-solid fa-plus tiny-icon"></i> Configurar
                 </button>
+                {% endif %}
             </div>
         {% endif %}
     </div>

@@ -36,6 +36,7 @@ const app = createApp({
         const appElement = document.getElementById('employeeWizardApp');
         const personId = appElement ? appElement.dataset.personId : null;
         const isDashboard = appElement ? appElement.dataset.isDashboard === 'true' : false;
+        const canEditPerson = appElement ? appElement.dataset.canEditPerson === 'true' : false;
 
         // Recuperar el tab activo de localStorage o por defecto 'personal'
         const savedPersonId = localStorage.getItem('wizardPersonId');
@@ -259,6 +260,7 @@ const app = createApp({
             }, 300);
         };
         // --- 2. GESTIÓN DE MODALES ---
+        const isListModalVisible = ref(false);
         const openModal = (type, action) => {
             const map = {
                 academic: '#modalTitleOverlay',
@@ -578,7 +580,7 @@ const app = createApp({
             try {
                 const res = await (await fetch(`/employee/api/cv/detail/${type}/${id}/`)).json();
                 if (res.success) {
-                    $('#modalCVListOverlay').addClass('hidden');
+                    isListModalVisible.value = false;
 
                     if (type === 'academic') {
                         titleForm.value = res.data;
@@ -1083,9 +1085,7 @@ const app = createApp({
             currentListType.value = type;
             loadingList.value = true;
             listItems.value = [];
-
-            // Show the modal
-            $('#modalCVListOverlay').removeClass('hidden');
+            isListModalVisible.value = true;
 
             // Configure headers
             if (type === 'academic') listModalTitle.value = 'Mis Títulos Académicos';
@@ -1134,9 +1134,8 @@ const app = createApp({
         };
 
         const closeListModal = () => {
-            $('#modalCVListOverlay').addClass('hidden');
+            isListModalVisible.value = false;
             currentListType.value = '';
-            // Asegurar que el body recupere scroll si el modal de edición quedó abierto
             document.body.classList.remove('no-scroll');
         };
 
@@ -1178,9 +1177,10 @@ const app = createApp({
             }
         };
 
-        window.handleCvAction = (type, action) => openModal(type, action);
-        window.handleEditCvItem = (type, id) => handleEditCvItem(type, id);
-        window.handleDeleteCvItem = (type, id) => handleDeleteCvItem(type, id);
+        const handleCvAction = (type, action) => {
+            if (action === 'new' && !canEditPerson) return;
+            openModal(type, action);
+        };
 
         // --- 8. MÉTODOS: DATOS ECONÓMICOS ---
 
@@ -1406,7 +1406,7 @@ const app = createApp({
                 const response = await fetch(`/employee/person/${pid}/save-institutional-data/`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': window.getCookie('csrftoken')
+                        'X-CSRFToken': getCookie('csrftoken')
                     },
                     body: formData
                 });
@@ -1439,6 +1439,8 @@ const app = createApp({
             detailPhotoPreviewUrl,
             detailPhotoHasFile,
             personStats,
+            canEditPerson,
+            isListModalVisible,
             refreshSelect2,
             initSelect2,
             openModal,
@@ -1495,6 +1497,7 @@ const app = createApp({
             deleteItem,
             formatDate,
             durationBetween,
+            handleCvAction,
 
             // Métodos Bancos
             openBankModal,

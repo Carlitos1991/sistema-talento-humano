@@ -33,6 +33,7 @@
                data-is-dashboard="true"
                data-person-id="{{ person.id }}"
                data-tab-visibilities='{{ tab_visibilities|safe }}'
+               data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
                data-photo-url="{% if person.photo %}{{ person.photo.url }}{% endif %}"
                data-titles="{{ curriculum_titles_count|default:0 }}"
                data-experiences="{{ curriculum_experiences_count|default:0 }}"
@@ -57,7 +58,7 @@
                 </div>
                 <div class="header-actions-wrapper">
                     <!-- botón duplicado en la cabecera superior para mayor accesibilidad -->
-                    {% if can_view_restricted_tabs %}
+                    {% if can_edit_person %}
                         <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
                                 style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
                             <i class="fa-solid fa-user-pen"></i> Editar Perfil
@@ -119,14 +120,14 @@
 
                 </div>
             </div>
-        </div>
 
-        {% include 'employee/modals/modal_person_edit_wizard.html' %}
-        {% include 'employee/modals/modal_academic_title.html' %}
-        {% include 'employee/modals/modal_work_experience.html' %}
-        {% include 'employee/modals/modal_training.html' %}
-        {% include 'employee/modals/modal_cv_generic_list.html' %}
-    </div>
+            {% include 'employee/modals/modal_person_edit_wizard.html' %}
+            {% include 'employee/modals/modal_academic_title.html' %}
+            {% include 'employee/modals/modal_work_experience.html' %}
+            {% include 'employee/modals/modal_training.html' %}
+            {% include 'employee/modals/modal_cv_generic_list.html' %}
+        </div> <!-- Cierre correcto de employeeWizardApp movido aquí -->
+    </div> <!-- Cierre de employee-standalone-wrapper -->
 
     <div id="period-app-employee">
         {% include 'contract/modals/modal_management_period_detail.html' %}
@@ -142,7 +143,6 @@
     <div id="vacationHistoryModalContainer"></div>
     <div id="permitHistoryModalContainer"></div>
     <div id="permitReportModalContainer"></div>
-    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -153,5 +153,4 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
     <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
-    <script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
 {% endblock %}

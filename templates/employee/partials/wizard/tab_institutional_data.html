@@ -4,7 +4,7 @@
         <h4><i class="fa-solid fa-building-user me-2"></i>Información Institucional</h4>
         <p>Datos del expediente y ubicación organizacional del empleado</p>
     </div>
-    {% if can_view_restricted_tabs %}
+    {% if can_edit_person %}
     <button class="btn-institutional-action" @click="openInstitutionalModal({{ person.id }})">
         <i class="fa-solid fa-pen-to-square me-1"></i> Actualizar
     </button>
@@ -98,7 +98,7 @@
 </div>
 
 <!-- Observaciones -->
-{% if can_view_restricted_tabs %}
+{% if can_edit_person %}
 <div class="grid-info-personal mt-3">
     <div class="info-box-styled" style="border-left: 4px solid #64748b; grid-column: span 3;">
         <h6 class="section-title"><i class="fa-solid fa-comment-dots"></i> Observaciones</h6>

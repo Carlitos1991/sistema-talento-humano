@@ -3,17 +3,18 @@
     <form id="detailPhotoForm" action="{% url 'person:person_photo_update' person.id %}" method="post" enctype="multipart/form-data" class="profile-photo-form">
         {% csrf_token %}
         <label id="detailPhotoPreviewWrapper"
-             for="detailPhotoInput"
-             class="profile-avatar-wrapper-small profile-avatar-trigger"
+             {% if can_edit_person %}for="detailPhotoInput"{% endif %}
+             class="profile-avatar-wrapper-small {% if can_edit_person %}profile-avatar-trigger{% endif %}"
              role="button"
              tabindex="0"
-             title="Clic para cambiar la foto">
+             title="{% if can_edit_person %}Clic para cambiar la foto{% else %}Foto de perfil{% endif %}">
             <img v-if="detailPhotoPreviewUrl" :src="detailPhotoPreviewUrl" class="profile-avatar-img-small">
             <div v-else class="profile-avatar-img-small bg-light d-flex align-items-center justify-content-center">
                 <i class="fa-solid fa-user fa-3x text-secondary"></i>
             </div>
         </label>
 
+        {% if can_edit_person %}
         <input id="detailPhotoInput"
                type="file"
                name="photo"
@@ -29,6 +30,7 @@
             <i class="fa-solid fa-floppy-disk"></i>
             <span class="ms-2">[[ isPhotoSaving ? 'Actualizando...' : 'Actualizar Foto' ]]</span>
         </button>
+        {% endif %}
     </form>
 
     <!-- INFORMACIÓN A LA DERECHA -->

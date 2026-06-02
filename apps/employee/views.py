@@ -193,6 +193,9 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['can_view_restricted_tabs'] = True
         context['restricted_tab_ids'] = ''
         
+        # Permiso para editar
+        context['can_edit_person'] = self.request.user.has_perm('person.change_person')
+
         # Catálogos para los modales del Wizard
         context['education_levels'] = CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS', is_active=True)
         context['banks_list'] = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True)
