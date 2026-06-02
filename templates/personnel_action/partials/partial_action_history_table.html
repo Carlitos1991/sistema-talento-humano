@@ -32,7 +32,7 @@
                     <div class="actions-wrapper">
                         <!-- Ver Detalle -->
                         {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-restore-action js-view-detail"
+                            <button class="btn-icon btn-info-action js-view-detail"
                                     data-url="{% url 'personnel_actions:action_detail' action.pk %}"
                                     title="Ver Detalle">
                                 <i class="fa-solid fa-eye"></i>
@@ -59,7 +59,7 @@
 
                         <!-- Imprimir PDF -->
                         {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-detail-action js-print-action"
+                            <button class="btn-icon btn-list-action js-print-action"
                                     data-action-id="{{ action.pk }}"
                                     title="Imprimir PDF">
                                 <i class="fa-solid fa-print"></i>
