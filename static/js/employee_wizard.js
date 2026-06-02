@@ -103,7 +103,7 @@ const app = createApp({
             if (personId) {
                 refreshCvTab(personId);
             }
-            
+
             if (activeTab.value === 'actions') {
                 Vue.nextTick(() => {
                     initActionsLocalPagination();
@@ -119,7 +119,7 @@ const app = createApp({
 
             const updateTable = () => {
                 // Filtramos las filas si hay búsqueda
-                const $filteredRows = $allRows.filter(function() {
+                const $filteredRows = $allRows.filter(function () {
                     if (!searchQuery) return true;
                     const text = $(this).text().toLowerCase();
                     return text.includes(searchQuery);
@@ -127,7 +127,7 @@ const app = createApp({
 
                 const totalRows = $filteredRows.length;
                 const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-                
+
                 if (currentPage > totalPages) currentPage = totalPages;
                 if (currentPage < 1) currentPage = 1;
 
@@ -169,10 +169,22 @@ const app = createApp({
             };
 
             // Eventos de botones
-            $('[data-action-next]').off('click').on('click', () => { currentPage++; updateTable(); });
-            $('[data-action-prev]').off('click').on('click', () => { currentPage--; updateTable(); });
-            $('[data-action-first]').off('click').on('click', () => { currentPage = 1; updateTable(); });
-            $('[data-action-last]').off('click').on('click', () => { currentPage = 99999; updateTable(); });
+            $('[data-action-next]').off('click').on('click', () => {
+                currentPage++;
+                updateTable();
+            });
+            $('[data-action-prev]').off('click').on('click', () => {
+                currentPage--;
+                updateTable();
+            });
+            $('[data-action-first]').off('click').on('click', () => {
+                currentPage = 1;
+                updateTable();
+            });
+            $('[data-action-last]').off('click').on('click', () => {
+                currentPage = 99999;
+                updateTable();
+            });
 
             $('[data-action-page-input]').off('change').on('change', function () {
                 let val = parseInt($(this).val());
@@ -181,15 +193,15 @@ const app = createApp({
                     updateTable();
                 }
             });
-            
+
             // Eventos de búsqueda
-            $('#action-search-input').off('input').on('input', function() {
+            $('#action-search-input').off('input').on('input', function () {
                 searchQuery = $(this).val().toLowerCase();
                 currentPage = 1;
                 updateTable();
             });
-            
-            $('#action-clear-btn').off('click').on('click', function() {
+
+            $('#action-clear-btn').off('click').on('click', function () {
                 $('#action-search-input').val('');
                 searchQuery = '';
                 currentPage = 1;
@@ -404,14 +416,23 @@ const app = createApp({
 
         let visibilities = {};
         try {
-             visibilities = JSON.parse(appElement?.dataset.tabVisibilities || '{}');
+            visibilities = JSON.parse(appElement?.dataset.tabVisibilities || '{}');
         } catch (e) {
-             console.error("Error parsing tab visibilities", e);
+            console.error("Error parsing tab visibilities", e);
         }
 
         const getSavedVisibility = (tabId) => {
-            // Por defecto, todas son verdaderas a menos que explícitamente se hayan guardado como falsas.
-            return visibilities[tabId] !== 'false';
+            // 1. Definimos cuáles son los 4 IDs que queremos activos por defecto
+            const defaultTabs = ['personal', 'curriculum', 'institutional', 'economic'];
+
+            // 2. Si el tab existe en el objeto 'visibilities' (porque ya se guardó en BD)
+            if (visibilities.hasOwnProperty(tabId)) {
+                return visibilities[tabId] === 'true';
+            }
+
+            // 3. Si no existe en la base de datos (es la primera vez),
+            // devolvemos true solo si está en nuestra lista de "4 primeros"
+            return defaultTabs.includes(tabId);
         };
 
         const tabsBase = [
@@ -498,7 +519,7 @@ const app = createApp({
 
         // If it's the dashboard view, filter out the tabs that are not visible
         if (isDashboard) {
-             tabs.value = tabs.value.filter(tab => tab.isVisible);
+            tabs.value = tabs.value.filter(tab => tab.isVisible);
         }
 
         if (!tabs.value.some(tab => tab.id === activeTab.value)) {
@@ -528,7 +549,7 @@ const app = createApp({
                             'X-CSRFToken': getCookie('csrftoken')
                         },
                         body: JSON.stringify({
-                            user_id: personId, 
+                            user_id: personId,
                             tab_id: tab.id,
                             is_visible: newVisibility
                         })
@@ -1515,7 +1536,7 @@ const app = createApp({
             openInstitutionalModal,
             saveInstitutionalData,
             refreshInstitutionalTab,
-            
+
             toggleTabVisibility,
         };
     }

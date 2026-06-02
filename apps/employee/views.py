@@ -23,7 +23,8 @@ from person.models import Person
 from person.models import PersonAuditLog
 from person.utils import log_person_audit, PERSON_AUDIT_SECTIONS
 from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
-from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData, EmployeeProfileVisibility
+from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData, \
+    EmployeeProfileVisibility
 from budget.models import BudgetLine
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
@@ -36,7 +37,6 @@ from decimal import Decimal
 from datetime import datetime, time
 from django.urls import reverse
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -92,12 +92,17 @@ def search_employee_by_cedula(request):
                 emp = p.employee_profile
                 existing_assignment = BudgetLine.objects.filter(current_employee=emp).first()
                 if existing_assignment:
-                    return JsonResponse({'success': False, 'message': f'La persona {emp.person.full_name} ya tiene asignada la partida {existing_assignment.code}.'})
-                return JsonResponse({'success': True, 'id': emp.id, 'full_name': emp.person.full_name, 'email': emp.person.email or 'Sin correo registrado', 'photo_url': emp.person.photo.url if emp.person.photo else None})
+                    return JsonResponse({'success': False,
+                                         'message': f'La persona {emp.person.full_name} ya tiene asignada la partida {existing_assignment.code}.'})
+                return JsonResponse({'success': True, 'id': emp.id, 'full_name': emp.person.full_name,
+                                     'email': emp.person.email or 'Sin correo registrado',
+                                     'photo_url': emp.person.photo.url if emp.person.photo else None})
             else:
-                return JsonResponse({'success': False, 'message': 'Se encontró la Persona pero no tiene perfil de Empleado. Cree el perfil de Empleado antes de asignar la partida.'})
+                return JsonResponse({'success': False,
+                                     'message': 'Se encontró la Persona pero no tiene perfil de Empleado. Cree el perfil de Empleado antes de asignar la partida.'})
         except Person.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'No se encontró un registro de Persona o Empleado con esa cédula.'})
+            return JsonResponse(
+                {'success': False, 'message': 'No se encontró un registro de Persona o Empleado con esa cédula.'})
 
 
 class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -165,19 +170,29 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         )
         context['can_generate_self_permit'] = bool(
             context.get('person') and employee and (
-                self.request.user.has_perm('permitrequest.add_permitrequest') or
-                (user_person and user_person.id == self.object.id)
+                    self.request.user.has_perm('permitrequest.add_permitrequest') or
+                    (user_person and user_person.id == self.object.id)
             )
         )
         context['can_insist_rejected_permits'] = bool(
             self.request.user.has_perm('permitrequest.add_permitrequest') or
             (user_person and user_person.id == self.object.id)
         )
-        
+        default_enabled_tabs = ['personal', 'curriculum', 'economic', 'institutional']
         # Recuperar visibilidad de pestañas
-        visibilities = EmployeeProfileVisibility.objects.filter(user=self.object.user).values_list('tab_id', 'is_visible') if hasattr(self.object, 'user') and self.object.user else []
-        visibility_dict = {v[0]: str(v[1]).lower() for v in visibilities}
-        
+        visibilities = []
+        if hasattr(self.object, 'user') and self.object.user:
+            visibilities = EmployeeProfileVisibility.objects.filter(
+                user=self.object.user
+            ).values_list('tab_id', 'is_visible')
+
+        visibility_dict = {v[0]: v[1] for v in visibilities}
+
+        all_tabs = [
+            'personal', 'curriculum', 'economic', 'institutional',
+            'budget', 'contracts', 'actions', 'permissions',
+            'payments', 'sanctions', 'vacations'
+        ]
         # Ocultar pestañas si es self_dashboard
         if hasattr(self, 'is_self_dashboard') and self.is_self_dashboard:
             restricted = ['budget', 'contracts', 'actions', 'sanctions', 'permissions', 'vacations', 'payments']
@@ -185,14 +200,22 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             for r in restricted:
                 if r not in visibility_dict:
                     visibility_dict[r] = 'false'
-        
-        # Enviar al contexto como string JSON para Vue
+
+        final_visibility = {}
+        for tab_id in all_tabs:
+            if tab_id in visibility_dict:
+                # Si ya existe en BD, usamos lo que diga la BD (true o false)
+                final_visibility[tab_id] = str(visibility_dict[tab_id]).lower()
+            else:
+                # Si no existe en BD, activamos solo si está en la lista de los 4 primeros
+                is_visible = tab_id in default_enabled_tabs
+                final_visibility[tab_id] = str(is_visible).lower()
         import json
-        context['tab_visibilities'] = json.dumps(visibility_dict)
-        
+        context['tab_visibilities'] = json.dumps(final_visibility)
+
         context['can_view_restricted_tabs'] = True
         context['restricted_tab_ids'] = ''
-        
+
         # Permiso para editar
         context['can_edit_person'] = self.request.user.has_perm('person.change_person')
 
@@ -269,30 +292,42 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     context['current_contract'] = {
                         'id': current_contract.id,
                         'document_number': current_contract.document_number,
-                        'position_name': current_contract.budget_line.position_item.name if getattr(current_contract, 'budget_line', None) and getattr(current_contract.budget_line, 'position_item', None) else '',
-                        'contract_type_name': str(current_contract.contract_type) if current_contract.contract_type else '',
-                        'start_date': current_contract.start_date.strftime('%d/%m/%Y') if current_contract.start_date else '',
+                        'position_name': current_contract.budget_line.position_item.name if getattr(current_contract,
+                                                                                                    'budget_line',
+                                                                                                    None) and getattr(
+                            current_contract.budget_line, 'position_item', None) else '',
+                        'contract_type_name': str(
+                            current_contract.contract_type) if current_contract.contract_type else '',
+                        'start_date': current_contract.start_date.strftime(
+                            '%d/%m/%Y') if current_contract.start_date else '',
                         'end_date': current_contract.end_date.strftime('%d/%m/%Y') if current_contract.end_date else '',
                         'administrative_unit': current_contract.administrative_unit.name if current_contract.administrative_unit else '',
                         'status_name': current_contract.status.name if current_contract.status else '',
-                        'signed_document_url': current_contract.signed_document.url if getattr(current_contract, 'signed_document', None) else None
+                        'signed_document_url': current_contract.signed_document.url if getattr(current_contract,
+                                                                                               'signed_document',
+                                                                                               None) else None
                     }
                 else:
                     context['current_contract'] = None
 
-                periods = ManagementPeriod.objects.filter(employee=employee).select_related('contract_type', 'status', 'administrative_unit').order_by('-start_date')[:50]
+                periods = ManagementPeriod.objects.filter(employee=employee).select_related('contract_type', 'status',
+                                                                                            'administrative_unit').order_by(
+                    '-start_date')[:50]
                 ch = []
                 for per in periods:
                     ch.append({
                         'id': per.id,
                         'document_number': per.document_number,
-                        'position_name': per.budget_line.position_item.name if getattr(per, 'budget_line', None) and getattr(per.budget_line, 'position_item', None) else '',
+                        'position_name': per.budget_line.position_item.name if getattr(per, 'budget_line',
+                                                                                       None) and getattr(
+                            per.budget_line, 'position_item', None) else '',
                         'contract_type_name': str(per.contract_type) if per.contract_type else '',
                         'start_date': per.start_date.strftime('%d/%m/%Y') if per.start_date else '',
                         'end_date': per.end_date.strftime('%d/%m/%Y') if per.end_date else '',
                         'administrative_unit': per.administrative_unit.name if per.administrative_unit else '',
                         'status_name': per.status.name if per.status else '',
-                        'signed_document_url': per.signed_document.url if getattr(per, 'signed_document', None) else None
+                        'signed_document_url': per.signed_document.url if getattr(per, 'signed_document',
+                                                                                  None) else None
                     })
                 context['contract_history'] = ch
             else:
@@ -313,25 +348,30 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         default_permissions_month_label = f"{month_names.get(now.month, '')} de {now.year}"
         try:
             if employee:
-                latest_perm = PermitRequest.objects.filter(employee=employee).order_by('-start_date', '-created_at').first()
+                latest_perm = PermitRequest.objects.filter(employee=employee).order_by('-start_date',
+                                                                                       '-created_at').first()
                 if latest_perm:
                     context['current_permission'] = {
                         'id': latest_perm.id,
-                        'permit_type': latest_perm.permit_type.name if latest_perm.permit_type else str(latest_perm.permit_type),
+                        'permit_type': latest_perm.permit_type.name if latest_perm.permit_type else str(
+                            latest_perm.permit_type),
                         'start_date': latest_perm.start_date if latest_perm.start_date else None,
                         'end_date': latest_perm.end_date if latest_perm.end_date else None,
                         'status': dict(PermitRequest.STATUS_CHOICES).get(latest_perm.status, latest_perm.status),
                         'status_code': latest_perm.status,
                         'days': latest_perm.days,
                         'hours': latest_perm.hours,
-                        'justification_file_url': latest_perm.justification_file.url if getattr(latest_perm, 'justification_file', None) else None
+                        'justification_file_url': latest_perm.justification_file.url if getattr(latest_perm,
+                                                                                                'justification_file',
+                                                                                                None) else None
                     }
                 else:
                     context['current_permission'] = None
 
                 perms = PermitRequest.objects.filter(
                     employee=employee,
-                ).exclude(status__in=['CANCELED', 'INACTIVE']).select_related('permit_type').order_by('-start_date', '-created_at')
+                ).exclude(status__in=['CANCELED', 'INACTIVE']).select_related('permit_type').order_by('-start_date',
+                                                                                                      '-created_at')
 
                 type_ids = list(
                     perms.values_list('permit_type_id', flat=True).distinct()
@@ -382,7 +422,8 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                         'minutes': duration_minutes,
                         'duration_text': ' | '.join(duration_parts),
                         'response_note': p.response_note or '',
-                        'justification_file_url': p.justification_file.url if getattr(p, 'justification_file', None) else None
+                        'justification_file_url': p.justification_file.url if getattr(p, 'justification_file',
+                                                                                      None) else None
                     })
                 context['permissions_history'] = ph
             else:
@@ -399,7 +440,8 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Acciones de personal (historial)
         try:
             if employee:
-                actions_qs = PersonnelAction.objects.filter(employee=employee).select_related('action_type').order_by('-date_issue')[:50]
+                actions_qs = PersonnelAction.objects.filter(employee=employee).select_related('action_type').order_by(
+                    '-date_issue')[:50]
                 actions_list = []
                 for a in actions_qs:
                     mv = a.movement.first() if hasattr(a, 'movement') else None
@@ -424,7 +466,8 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Roles de pago (historial)
         try:
             if employee:
-                payslips_qs = Payslip.objects.filter(employee=employee).select_related('period').order_by('-period__year', '-period__id')[:12]
+                payslips_qs = Payslip.objects.filter(employee=employee).select_related('period').order_by(
+                    '-period__year', '-period__id')[:12]
                 roles_history = []
                 for payslip in payslips_qs:
                     period = payslip.period
@@ -446,14 +489,16 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Historial de sanciones
         try:
             if employee:
-                sanctions_qs = Sanction.objects.filter(employee=employee).select_related('sanction_type').order_by('-sanction_date')[:50]
+                sanctions_qs = Sanction.objects.filter(employee=employee).select_related('sanction_type').order_by(
+                    '-sanction_date')[:50]
                 sh = []
                 for s in sanctions_qs:
                     sh.append({
                         'type': s.sanction_type.name if s.sanction_type else '',
                         'description': s.description,
                         'reason': s.legal_basis,
-                        'severity': dict(Sanction.SEVERITY_CHOICES).get(s.severity, s.severity) if hasattr(Sanction, 'SEVERITY_CHOICES') else s.severity,
+                        'severity': dict(Sanction.SEVERITY_CHOICES).get(s.severity, s.severity) if hasattr(Sanction,
+                                                                                                           'SEVERITY_CHOICES') else s.severity,
                         'severity_code': s.severity,
                         'date': s.sanction_date
                     })
@@ -467,7 +512,8 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         try:
             if employee:
                 # Traer balances (lista) para mostrar en la UI
-                balances_qs = EmployeeVacationBalance.objects.filter(employee=employee).select_related('period').order_by('-created_at')[:50]
+                balances_qs = EmployeeVacationBalance.objects.filter(employee=employee).select_related(
+                    'period').order_by('-created_at')[:50]
                 vb = []
                 for b in balances_qs:
                     total_with_previous = (Decimal(str(b.total_days or 0)) + Decimal(str(b.additional_days or 0)))
@@ -485,13 +531,16 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     })
 
                 # Calcular totales para el gráfico circular usando EL ÚLTIMO período creado
-                last_balance = EmployeeVacationBalance.objects.filter(employee=employee).order_by('-created_at').select_related('period').first()
+                last_balance = EmployeeVacationBalance.objects.filter(employee=employee).order_by(
+                    '-created_at').select_related('period').first()
                 if last_balance:
-                    total_capacity = Decimal(str(last_balance.total_days or 0)) + Decimal(str(last_balance.additional_days or 0))
+                    total_capacity = Decimal(str(last_balance.total_days or 0)) + Decimal(
+                        str(last_balance.additional_days or 0))
                     permits_used = Decimal(str(last_balance.permit_days or 0))
                     vacations_used = Decimal(str(last_balance.vacation_days or 0))
                     # saldo esperado (por seguridad usar balance_days de la BD si existe)
-                    saldo_db = Decimal(str(last_balance.balance_days or (total_capacity - (permits_used + vacations_used))))
+                    saldo_db = Decimal(
+                        str(last_balance.balance_days or (total_capacity - (permits_used + vacations_used))))
                 else:
                     total_capacity = Decimal('0.0')
                     permits_used = Decimal('0.0')
@@ -529,12 +578,12 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
     def get_context_data(self, **kwargs):
         # We let the parent class generate the context and handle tab visibilities
         context = super().get_context_data(**kwargs)
-        
+
         # We need to make sure the self dashboard context matches the standard output if there's any errors
         if not context.get('person'):
-             person = self.get_object()
-             curriculum, _ = Curriculum.objects.get_or_create(person=person)
-             context.update({
+            person = self.get_object()
+            curriculum, _ = Curriculum.objects.get_or_create(person=person)
+            context.update({
                 'person': person,
                 'employee_profile': _safe_related(person, 'employee_profile', None),
                 'curriculum_obj': curriculum,
@@ -571,7 +620,7 @@ class EmployeeSelfDashboardView(EmployeeDetailWizardView):
                 'bank_account': None,
                 'payroll_info': None,
                 'institutional_data': None,
-             })
+            })
 
         return context
 
@@ -1099,16 +1148,17 @@ class UpdateProfileVisibilityView(LoginRequiredMixin, PermissionRequiredMixin, V
 
             person = get_object_or_404(Person, pk=person_id)
             user = person.user
-            
+
             if not user:
-                 return JsonResponse({'success': False, 'message': 'La persona no tiene un usuario asociado.'}, status=400)
+                return JsonResponse({'success': False, 'message': 'La persona no tiene un usuario asociado.'},
+                                    status=400)
 
             visibility, created = EmployeeProfileVisibility.objects.get_or_create(
                 user=user,
                 tab_id=tab_id,
                 defaults={'is_visible': is_visible}
             )
-            
+
             if not created:
                 visibility.is_visible = is_visible
                 visibility.save()

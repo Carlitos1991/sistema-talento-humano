@@ -14,7 +14,7 @@
         {% for item in employees_data %}
             <tr>
                 <td style="font-weight: 500; padding-left: 8px;">
-                    <strong>{{ item.employee.person.full_name }}</strong><br>
+                    <strong>{{ item.employee.person.name_and_last_name }}</strong><br>
                     <small class="text-muted">{{ item.employee.person.document_number }}</small>
                 </td>
                 <td>{{ item.position_name }}</td>
