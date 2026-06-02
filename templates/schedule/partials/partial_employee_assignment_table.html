@@ -3,11 +3,11 @@
     <table class="managed-table exportable-table" data-title="Asignación de Horarios" data-filename="Asignacion_Horarios" data-external-pagination="true" data-external-search="true">
         <thead>
         <tr>
-            <th style="width: 38%;">Nombres y Apellidos</th>
-            <th style="width: 20%;">Cargo</th>
-            <th style="width: 16%;">Tipo</th>
-            <th style="width: 18%;">Área</th>
-            <th class="text-center actions" style="width: 8%;">Acciones</th>
+            <th class="sortable" data-sort-field="person__last_name" style="width: 30%;">Nombres y Apellidos</th>
+            <th class="sortable" data-sort-field="position_name" style="width: 18%;">Cargo</th>
+            <th class="sortable" data-sort-field="area_name" style="width: 15%;">Área</th>
+            <th style="width: 15%;">Horario Actual</th>
+            <th class="text-center actions" style="width: 12%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -18,21 +18,37 @@
                     <small class="text-muted">{{ item.employee.person.document_number }}</small>
                 </td>
                 <td>{{ item.position_name }}</td>
-                <td>{{ item.type_name }}</td>
                 <td>{{ item.area_name }}</td>
+                <td>
+                    {% if item.current_schedule %}
+                        <span class="badge bg-success">{{ item.current_schedule.name }}</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Sin Asignar</span>
+                    {% endif %}
+                </td>
                 <td class="actions">
                     <div class="actions-wrapper" style="justify-content:center; gap: 8px;">
-                        <button type="button" class="btn-list-action js-view-schedule-history"
-                                data-employee-id="{{ item.employee.pk }}"
-                                title="Historial de Horarios">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                        </button>
-                        {% if perms.schedule.change_schedule %}
-                            <button type="button" class="btn-create-action js-change-schedule"
+                        {% if item.current_schedule %}
+                            <button type="button" class="btn-list-action js-view-schedule-history"
                                     data-employee-id="{{ item.employee.pk }}"
-                                    title="Cambiar Horario">
-                                <i class="fa-solid fa-right-left"></i>
+                                    title="Historial de Horarios">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>
+                            {% if perms.schedule.change_schedule %}
+                                <button type="button" class="btn-create-action js-change-schedule"
+                                        data-employee-id="{{ item.employee.pk }}"
+                                        title="Cambiar Horario">
+                                    <i class="fa-solid fa-right-left"></i>
+                                </button>
+                            {% endif %}
+                        {% else %}
+                            {% if perms.schedule.change_schedule %}
+                                <button type="button" class="btn-create-action js-change-schedule"
+                                        data-employee-id="{{ item.employee.pk }}"
+                                        title="Asignar Horario">
+                                    <i class="fa-solid fa-calendar-plus"></i>
+                                </button>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </td>

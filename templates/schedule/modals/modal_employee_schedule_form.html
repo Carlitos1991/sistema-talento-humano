@@ -8,7 +8,7 @@
             <div class="header-icon-circle">
                 <i class="fas fa-right-left"></i>
             </div>
-            <h2 class="header-title-main">Cambiar Horario - {{ employee.person.full_name }}</h2>
+            <h2 class="header-title-main">{{ modal_title }} - {{ employee.person.full_name }}</h2>
         </div>
     </div>
         <script>
@@ -50,7 +50,7 @@
                 <select id="schedule_id" name="schedule_id" class="form-control select2" required>
                     <option value="">-- Seleccione --</option>
                     {% for schedule in schedules %}
-                        <option value="{{ schedule.pk }}">{{ schedule.name }}</option>
+                        <option value="{{ schedule.pk }}" {% if current_row and current_row.schedule.pk == schedule.pk %}selected{% endif %}>{{ schedule.name }}</option>
                     {% endfor %}
                 </select>
             </div>

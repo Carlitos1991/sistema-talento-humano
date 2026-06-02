@@ -354,9 +354,9 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
     paginate_by = 10
 
     def get_queryset(self):
-        qs = Employee.objects.select_related('person', 'area', 'employment_status').prefetch_related(
+        qs = Employee.objects.filter(is_active=True).select_related('person', 'area', 'employment_status').prefetch_related(
             Prefetch('current_budget_line', queryset=BudgetLine.objects.select_related('position_item'))
-        ).order_by('person__last_name', 'person__first_name')
+        )
 
         query = (self.request.GET.get('q') or '').strip()
         if query:
@@ -368,6 +368,22 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
                 | Q(employment_status__name__icontains=query)
                 | Q(current_budget_line__position_item__name__icontains=query)
             ).distinct()
+
+        sort_field = self.request.GET.get('sort_field', 'person__last_name')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        
+        allowed_sort_fields = {
+            'person__last_name': 'person__last_name',
+            'position_name': 'current_budget_line__position_item__name',
+            'area_name': 'area__name',
+        }
+
+        if sort_field in allowed_sort_fields:
+            order = f"{'-' if sort_dir == 'desc' else ''}{allowed_sort_fields[sort_field]}"
+            qs = qs.order_by(order, 'person__first_name')
+        else:
+            qs = qs.order_by('person__last_name', 'person__first_name')
+            
         return qs
 
     def get_context_data(self, **kwargs):
@@ -388,9 +404,9 @@ class EmployeeScheduleAssignmentTablePartialView(LoginRequiredMixin, PermissionR
         query = (request.GET.get('q') or '').strip()
         page_number = request.GET.get('page', 1)
 
-        qs = Employee.objects.select_related('person', 'area', 'employment_status').prefetch_related(
+        qs = Employee.objects.filter(is_active=True).select_related('person', 'area', 'employment_status').prefetch_related(
             Prefetch('current_budget_line', queryset=BudgetLine.objects.select_related('position_item'))
-        ).order_by('person__last_name', 'person__first_name')
+        )
 
         if query:
             qs = qs.filter(
@@ -401,6 +417,21 @@ class EmployeeScheduleAssignmentTablePartialView(LoginRequiredMixin, PermissionR
                 | Q(employment_status__name__icontains=query)
                 | Q(current_budget_line__position_item__name__icontains=query)
             ).distinct()
+
+        sort_field = self.request.GET.get('sort_field', 'person__last_name')
+        sort_dir = self.request.GET.get('sort_dir', 'asc')
+        
+        allowed_sort_fields = {
+            'person__last_name': 'person__last_name',
+            'position_name': 'current_budget_line__position_item__name',
+            'area_name': 'area__name',
+        }
+
+        if sort_field in allowed_sort_fields:
+            order = f"{'-' if sort_dir == 'desc' else ''}{allowed_sort_fields[sort_field]}"
+            qs = qs.order_by(order, 'person__first_name')
+        else:
+            qs = qs.order_by('person__last_name', 'person__first_name')
 
         paginator = Paginator(qs, 10)
         page_obj = paginator.get_page(page_number)
@@ -445,14 +476,17 @@ class EmployeeScheduleChangeModalView(LoginRequiredMixin, PermissionRequiredMixi
 
     def get(self, request, employee_id):
         employee = get_object_or_404(Employee.objects.select_related('person', 'area', 'employment_status'), pk=employee_id)
-        schedules = Schedule.objects.all().order_by('name')
+        schedules = Schedule.objects.filter(is_active=True).order_by('name')
         current_row = _get_employee_current_schedule_row(employee)
+        modal_title = "Asignar Horario" if not current_row else "Cambiar Horario"
+        
         html = render_to_string('schedule/modals/modal_employee_schedule_form.html', {
             'employee': employee,
             'schedules': schedules,
             'current_row': current_row,
             'today': date.today(),
             'action_url': reverse('schedule:employee_schedule_assign', args=[employee_id]),
+            'modal_title': modal_title,
         }, request=request)
         from django.http import HttpResponse
         return HttpResponse(html)

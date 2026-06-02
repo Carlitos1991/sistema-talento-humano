@@ -3,6 +3,38 @@
 
 {% block title %}Asignar Horario | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <style>
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+        .sortable::after,
+        .sortable::before {
+            content: "";
+            position: absolute;
+            right: 5px;
+            opacity: 0.3;
+            border: 4px solid transparent;
+        }
+        .sortable::before {
+            bottom: 50%;
+            margin-bottom: -2px;
+            border-bottom-color: currentColor;
+        }
+        .sortable::after {
+            top: 50%;
+            margin-top: -2px;
+            border-top-color: currentColor;
+        }
+        .sort-asc::before,
+        .sort-desc::after {
+            opacity: 1;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
     <div id="employee-schedule-app"
          data-query="{{ query|default:'' }}"
@@ -16,7 +48,7 @@
         <div class="header-card">
             <div>
                 <h1><i class="fa-regular fa-clock"></i> Asignar Horario</h1>
-                <p>Seleccione un empleado para revisar su historial o cambiar su horario.</p>
+                <p>Seleccione un empleado activo para revisar su historial o cambiar su horario.</p>
             </div>
         </div>
 
@@ -38,7 +70,7 @@
                     {% if page_obj %}
                         Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} registros
                     {% else %}
-                        Mostrando 0 a 0 registros de 0 registros
+                        Mostrando 0 a 0 de 0 registros
                     {% endif %}
                 </span>
                 <ul class="pagination-list" style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">

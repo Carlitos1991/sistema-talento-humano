@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPage = parseInt(app.dataset.currentPage || '1', 10);
     let totalPages = parseInt(app.dataset.totalPages || '1', 10);
     let searchTimer = null;
+    let currentSort = { field: 'person__last_name', dir: 'asc' };
 
     const getCookie = (name) => {
         const cookies = document.cookie ? document.cookie.split('; ') : [];
@@ -63,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams();
         params.set('page', page);
         if (q) params.set('q', q);
+        params.set('sort_field', currentSort.field);
+        params.set('sort_dir', currentSort.dir);
 
         try {
             const response = await fetch(`${partialUrl}?${params.toString()}`, {
@@ -73,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableContainer.innerHTML = data.table_html;
                 bindTableManager();
                 updatePagination(data.pagination);
+                updateSortUI();
             }
         } catch (error) {
             console.error('Error cargando tabla de asignación de horarios', error);
@@ -148,6 +152,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const updateSortUI = () => {
+        document.querySelectorAll('.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.sortField === currentSort.field) {
+                th.classList.add(currentSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    };
+
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimer);
@@ -180,6 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (changeBtn) {
             e.preventDefault();
             openChangeModal(changeBtn.dataset.employeeId);
+            return;
+        }
+
+        const sortableHeader = e.target.closest('.sortable');
+        if (sortableHeader) {
+            const field = sortableHeader.dataset.sortField;
+            if (currentSort.field === field) {
+                currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.dir = 'asc';
+            }
+            fetchTable(1);
         }
     });
 
@@ -190,4 +216,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     bindTableManager();
+    updateSortUI();
 });
