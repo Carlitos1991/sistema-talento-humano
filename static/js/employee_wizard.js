@@ -224,15 +224,36 @@ const app = createApp({
         });
 
         const fetchTeleworkData = async () => {
-            const res = await (await fetch(`/employee/api/telework/data/${personId}/`)).json();
-            if (res.success) {
-                teleworkData.value = res;
+            try {
+                const res = await (await fetch(`/employee/api/telework/data/${personId}/`)).json();
+                if (res.success) {
+                    teleworkData.value = res;
+                }
+            } catch (e) {
+                console.error("Error cargando teletrabajo", e);
             }
         };
 
         const markTelework = async (type) => {
+            let lat = 0, lon = 0;
+            if ("geolocation" in navigator) {
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true, timeout: 5000
+                        });
+                    });
+                    lat = position.coords.latitude;
+                    lon = position.coords.longitude;
+                } catch (error) {
+                    console.warn("GPS falló:", error.message);
+                }
+            }
+
             const formData = new FormData();
             formData.append('punch_type', type);
+            formData.append('latitude', lat);
+            formData.append('longitude', lon);
 
             const res = await (await fetch(`/employee/api/telework/mark/${personId}/`, {
                 method: 'POST',
@@ -269,6 +290,7 @@ const app = createApp({
                 fetchTeleworkData();
             }
         });
+
 
         const isSaving = ref(false);
         const isPhotoSaving = ref(false);

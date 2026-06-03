@@ -266,7 +266,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     ps = perm.get('start_time')
                     pe = perm.get('end_time')
 
-                    if not ps and not pe:
+                    if not ps and not pe:  # Permiso de día completo
                         is_covered = True
                         break
 
@@ -278,39 +278,33 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                         elif pe and not ps and ev_time <= pe:
                             ev['dt'] = datetime.combine(ev['dt'].date(), pe)
                     elif ev['type'] == 'out':
-                        # 1. Identify all permits for this day that have start and end times
                         valid_permits = [p for p in permits_day if p.get('start_time') and p.get('end_time')]
-                        # Sort them backwards (from latest to earliest)
                         valid_permits.sort(key=lambda x: x['start_time'], reverse=True)
 
                         adjusted_time = ev['dt']
 
-                        # 2. "Chain" contiguous permits backwards from the scheduled departure
-                        # This fixes the Feb 10th issue (15:00-16:00 + 16:00-17:00)
                         for perm in valid_permits:
                             ps = perm.get('start_time')
                             pe = perm.get('end_time')
                             current_out_time = adjusted_time.time()
 
-                            # If the permit covers the current adjusted exit time or ends exactly when it starts
                             if (ps <= current_out_time <= pe) or (pe == current_out_time):
                                 adjusted_time = datetime.combine(adjusted_time.date(), ps)
 
                         ev['dt'] = adjusted_time
 
-                        # 3. Final check for full coverage
                         for perm in permits_day:
                             ps = perm.get('start_time')
                             pe = perm.get('end_time')
-                            if not ps and not pe:  # Full day permit
+                            if not ps and not pe:
                                 is_covered = True
-                            if pe and not ps and ev['dt'].time() <= pe:  # Permit from start of day to PE
+                            if pe and not ps and ev['dt'].time() <= pe:
                                 is_covered = True
 
+                # Solución Punto 1: El evento SIEMPRE queda activo para permitir emparejar marcas reales
+                events_active.append(ev)
                 if is_covered:
                     events_skipped.append(ev['label'])
-                else:
-                    events_active.append(ev)
 
             to_remove = []
             for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
@@ -330,7 +324,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
-            # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
+            # Deduplicar marcaciones cercanas
             last_p_dt = datetime.min
             for p in punches_sorted:
                 try:
@@ -347,7 +341,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
             annotated = []
             prev_assigned_dt = datetime.min
-            max_match_seconds = 60 * 60 * 4
+            max_match_seconds = 60 * 60 * 7
 
             for ev in events_active:
                 candidates = [p for p in punches_sorted if not p.get('assigned') and not p.get('is_duplicate')]
@@ -378,7 +372,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 else:
                     best = select_out_candidate(candidates, ev['dt'], prev_ev_dt=prev_ev_dt, next_ev_dt=next_ev_dt)
                 if not best and ev['type'] == 'out':
-                    # Buscar el punch anterior más cercano sin restricción de OUT_MAX_SECONDS
                     before_all = [p for p in candidates if _p_dt(p) < ev['dt']]
                     if before_all:
                         best = max(before_all, key=lambda p: _p_dt(p))
@@ -394,7 +387,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 best['matched_event_dt'] = ev['dt']
                 best['assigned'] = True
 
-                # determinar si es tardanza/anticipada
                 row_class = ''
                 if is_workday and not is_holiday:
                     try:
@@ -961,33 +953,13 @@ def generate_monthly_report_pdf(request):
     year = int(request.GET.get('year', 2026))
     inst_data = get_object_or_404(InstitutionalData, employee_id=emp_id)
     debug_punches = request.GET.get('debug_punches') == '1'
-    if debug_punches:
-        try:
-            emp_obj = inst_data.employee
-            msg = f"[punch-debug] emp_obj pk={getattr(emp_obj, 'pk', None)} repr={repr(emp_obj)}"
-            print(msg);
-            logger.debug(msg)
-            try:
-                from schedule.models import EmployeeScheduleHistory
-                rows = list(
-                    EmployeeScheduleHistory.objects.filter(employee=emp_obj).values('pk', 'start_date', 'end_date',
-                                                                                    'is_current', 'schedule_id'))
-                msg2 = f"[punch-debug] schedule_history rows={rows}"
-                print(msg2);
-                logger.debug(msg2)
-            except Exception as e:
-                print(f"[punch-debug] schedule_history lookup failed: {e}")
-        except Exception as e:
-            print(f"[punch-debug] inst_data.employee access failed: {e}")
 
-    # Query de marcaciones (Naive)
     punches = AttendanceRegistry.objects.filter(
         employee_id=emp_id, registry_date__year=year, registry_date__month=month
     ).order_by('registry_date')
 
     punches_map = {}
     for p in punches:
-        # Normalizar datetime a hora local sin tz para comparaciones fiables
         try:
             if timezone.is_aware(p.registry_date):
                 dt_norm = timezone.localtime(p.registry_date).replace(tzinfo=None)
@@ -1017,10 +989,10 @@ def generate_monthly_report_pdf(request):
 
     months_es = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE",
                  "NOVIEMBRE", "DICIEMBRE"]
-    # --- Permits (aprobados) ---
     month_start = date(year, month, 1)
     month_end = date(year, month, calendar.monthrange(year, month)[1])
 
+    # Carga de Permisos Aprobados
     permits_qs = PermitRequest.objects.filter(employee_id=emp_id, status='APPROVED').filter(
         Q(start_date__lte=month_end, end_date__gte=month_start) |
         Q(start_date__range=(month_start, month_end)) |
@@ -1028,13 +1000,11 @@ def generate_monthly_report_pdf(request):
     )
     permits_map = {}
     for pr in permits_qs:
-        # Normalizar rango dentro del mes
         start_date = pr.start_date if pr.start_date >= month_start else month_start
         end_date = (pr.end_date or pr.start_date)
         if end_date > month_end:
             end_date = month_end
 
-        # Detectar si el permiso cruza la medianoche (end_time <= start_time)
         crosses_midnight = False
         try:
             if pr.start_time and pr.end_time and pr.end_time <= pr.start_time:
@@ -1048,38 +1018,26 @@ def generate_monthly_report_pdf(request):
             if d not in permits_map:
                 permits_map[d] = []
 
-            # Casos:
-            # - permiso dentro del mismo día: mostrar start_time/end_time
-            # - permiso multi-día (no cruza medianoche): primer día mostrar start->23:59,
-            #   días intermedios 00:00->23:59, último día 00:00->end
-            # - permiso que cruza medianoche: primer día start->00:00, siguiente día 00:00->end
             entry = {'type': pr.permit_type.name, 'note': pr.response_note or ''}
-
             if not pr.start_time and not pr.end_time:
                 entry['start_time'] = None
                 entry['end_time'] = None
             else:
-                # permiso single-day (start_date == end_date and no cross)
                 if (pr.start_date == (pr.end_date or pr.start_date)) and not crosses_midnight:
                     entry['start_time'] = pr.start_time
                     entry['end_time'] = pr.end_time
                 else:
-                    # multi-day or crossing
                     if crosses_midnight:
-                        # si es el primer día (día de inicio real)
                         if cur == pr.start_date:
                             entry['start_time'] = pr.start_time
                             entry['end_time'] = dtime(0, 0)
-                        # si es el día final (día donde termina)
                         elif cur == (pr.end_date or pr.start_date):
                             entry['start_time'] = dtime(0, 0)
                             entry['end_time'] = pr.end_time
                         else:
-                            # días intermedios en permisos largos: mostrar full-day
                             entry['start_time'] = dtime(0, 0)
                             entry['end_time'] = dtime(23, 59)
                     else:
-                        # no cruza medianoche pero abarca varios días
                         if cur == pr.start_date:
                             entry['start_time'] = pr.start_time
                             entry['end_time'] = dtime(23, 59)
@@ -1093,9 +1051,9 @@ def generate_monthly_report_pdf(request):
             permits_map[d].append(entry)
             cur = cur + timedelta(days=1)
 
-    # --- Feriados (is_holiday=True y activos) y Observaciones (is_holiday=False y activos) ---
-    holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True,
-                                                     start_date__lte=month_end, end_date__gte=month_start)
+    # Carga de Feriados y Observaciones
+    holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True, start_date__lte=month_end,
+                                                     end_date__gte=month_start)
     holidays_map = {}
     for obs in holidays_qs:
         start = obs.start_date if obs.start_date >= month_start else month_start
@@ -1105,24 +1063,18 @@ def generate_monthly_report_pdf(request):
             holidays_map[cur.day] = obs.name
             cur = cur + timedelta(days=1)
 
-    notes_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=False,
-                                                  start_date__lte=month_end, end_date__gte=month_start)
+    notes_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=False, start_date__lte=month_end,
+                                                  end_date__gte=month_start)
     observations_list = []
     for obs in notes_qs:
-        # Mostrar la fecha inicial de la observación (si está dentro del mes)
         disp_date = obs.start_date if (month_start <= obs.start_date <= month_end) else obs.start_date
-        # Formatear: "13 de Marzo de 2026 - NOMBRE"
-        months_es = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE",
-                     "OCTUBRE",
-                     "NOVIEMBRE", "DICIEMBRE"]
         disp = f"{disp_date.day} de {months_es[disp_date.month].capitalize()} de {disp_date.year} - {obs.name.upper()}"
         observations_list.append(disp)
 
-    # Añadir flags de permisos y feriados por día (facilita el template)
-    for widx, week in enumerate(calendar_data):
-        for didx, day_obj in enumerate(week):
+    # Inyectar metadatos base iniciales por día
+    for week in calendar_data:
+        for day_obj in week:
             d = day_obj.get('day')
-            # conservar conteo inicial de marcaciones crudas para métricas
             day_obj['raw_punches_count'] = len(day_obj.get('punches', []))
             if not d:
                 day_obj['is_holiday'] = False
@@ -1132,646 +1084,149 @@ def generate_monthly_report_pdf(request):
                 day_obj['is_holiday'] = d in holidays_map
                 day_obj['holi_name'] = holidays_map.get(d, '')
                 day_obj['permits'] = permits_map.get(d, [])
-                # Evaluar tardanzas / salidas anticipadas según horario asignado
-                try:
-                    from schedule.models import get_employee_schedule_for_date
-                    cur_date = date(year, month, int(d))
-                    is_workday = cur_date.weekday() < 5
-                    schedule = get_employee_schedule_for_date(inst_data.employee, cur_date)
-                    if debug_punches:
-                        msg = f"[punch-debug] emp={emp_id} day={d} schedule={getattr(schedule, 'name', None)}"
-                        logger.debug(msg)
-                        print(msg)
-                        try:
-                            with open(os.path.join(os.getcwd(), 'punch_debug.log'), 'a', encoding='utf-8') as _f:
-                                _f.write(msg + '\n')
-                        except Exception:
-                            pass
-                except Exception:
-                    schedule = None
-                    if debug_punches:
-                        logger.debug("[punch-debug] emp=%s day=%s schedule lookup failed", emp_id, d)
 
-                punches = day_obj.get('punches', [])
-                # Ordenar copias de marcaciones (asegurarnos que están ordenadas) usando 'dt_norm'
-                punches_sorted = sorted(punches, key=lambda x: x.get('dt_norm') or x.get('dt'))
-                if debug_punches:
-                    msg_raw = f"[punch-debug] emp={emp_id} day={d} TOTAL_PUNCHES_DB={len(punches_sorted)} LISTA={[(p.get('time'), p.get('dt')) for p in punches_sorted]}"
-                    with open(os.path.join(os.getcwd(), 'punch_debug.log'), 'a', encoding='utf-8') as _f:
-                        _f.write(msg_raw + '\n')
+    # Solución Punto 2: Ejecutamos el anotador centralizado común para blindar consistencia total de datos
+    annotate_attendance_calendar_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
 
-                # Deduplicar marcaciones cercanas (intervalo <= DEDUPE_WINDOW_MINUTES)
-                last_p_dt = datetime.min
-                for p in punches_sorted:
+    # Segundo recorrido para procesar la visualización y Máquina de Estados G1..G4 en el reporte individual
+    for week in calendar_data:
+        for day_obj in week:
+            d = day_obj.get('day')
+            if not d:
+                continue
+
+            cur_date = date(year, month, int(d))
+            is_workday = cur_date.weekday() < 5
+
+            g_regs = {'G1': None, 'G2': None, 'G3': None, 'G4': None}
+            g_atr = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
+
+            events_list = day_obj.get('events', []) or []
+            events_map = {ev.get('label'): ev for ev in events_list}
+            E1 = events_map.get('J1_in', {}).get('dt')
+            S1 = events_map.get('J1_out', {}).get('dt')
+            E2 = events_map.get('J2_in', {}).get('dt')
+            S2 = events_map.get('J2_out', {}).get('dt')
+
+            day_punches = [p for p in day_obj.get('punches', []) if not p.get('is_duplicate')]
+            TEMP = 0
+            ATR = 0
+            is_4_jornadas = (E2 is not None and S2 is not None)
+
+            if is_workday and not day_obj.get('is_holiday', False):
+                for p in day_punches:
                     try:
-                        p_dt = p.get('dt_norm') or p.get('dt')
-                        if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
-                            p['is_duplicate'] = True
-                        else:
-                            last_p_dt = p_dt
+                        M = p.get('dt_norm') or p.get('dt')
                     except Exception:
-                        pass
+                        continue
+                    if M is None:
+                        continue
 
-                annotated = []
-                events = []
-                events_active = []
-                events_skipped = []
-                if schedule:
-                    # Construir eventos esperados en datetime, incluso si no hay marcaciones
-                    cur_date = date(year, month, int(d))
-                    if schedule.morning_start:
-                        ev_dt = datetime.combine(cur_date, schedule.morning_start)
-                        events.append({'label': 'J1_in', 'type': 'in', 'dt': ev_dt})
-                    if schedule.morning_end:
-                        ev_dt = datetime.combine(cur_date, schedule.morning_end)
-                        if schedule.morning_crosses_midnight and schedule.morning_end <= schedule.morning_start:
-                            ev_dt = ev_dt + timedelta(days=1)
-                        events.append({'label': 'J1_out', 'type': 'out', 'dt': ev_dt})
-                    if schedule.afternoon_start:
-                        ev_dt = datetime.combine(cur_date, schedule.afternoon_start)
-                        events.append({'label': 'J2_in', 'type': 'in', 'dt': ev_dt})
-                    if schedule.afternoon_end:
-                        ev_dt = datetime.combine(cur_date, schedule.afternoon_end)
-                        if schedule.afternoon_crosses_midnight and schedule.afternoon_end <= (
-                                schedule.afternoon_start or schedule.morning_start):
-                            ev_dt = ev_dt + timedelta(days=1)
-                        events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
-
-                    # Suprimir eventos cubiertos por permiso ANTES del emparejamiento.
-                    permits_day = day_obj.get('permits', []) or []
-                    for ev in events:
-                        is_covered = False
-                        try:
-                            ev_time = ev['dt'].time()
-                        except Exception:
-                            events_active.append(ev)
-                            continue
-
-                        for perm in permits_day:
-                            ps = perm.get('start_time')
-                            pe = perm.get('end_time')
-
-                            if not ps and not pe:
-                                is_covered = True
-                                break
-
-                            if ev['type'] == 'in':
-                                if ps and pe and ps <= ev_time <= pe:
-                                    ev['dt'] = datetime.combine(ev['dt'].date(), pe)
-                                elif ps and not pe and ev_time >= ps:
-                                    is_covered = True
-                                elif pe and not ps and ev_time <= pe:
-                                    ev['dt'] = datetime.combine(ev['dt'].date(), pe)
-                            elif ev['type'] == 'out':
-                                if ps and pe:
-                                    if ps <= ev_time <= pe:
-                                        ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                    elif ps <= ev_time and ev['label'] in ('J1_out', 'J2_out'):
-                                        ev_dt_tmp = datetime.combine(ev['dt'].date(), ev_time)
-                                        pe_dt_tmp = datetime.combine(ev['dt'].date(), pe)
-                                        if (ev_dt_tmp - pe_dt_tmp).total_seconds() <= 2.5 * 3600:
-                                            ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                elif ps and not pe and ev_time >= ps:
-                                    ev['dt'] = datetime.combine(ev['dt'].date(), ps)
-                                elif pe and not ps and ev_time <= pe:
-                                    is_covered = True
-
-                        if is_covered:
-                            events_skipped.append(ev['label'])
-                        else:
-                            events_active.append(ev)
-
-                    to_remove = []
-                    for in_lbl, out_lbl in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
-                        ev_in = next((e for e in events_active if e['label'] == in_lbl), None)
-                        ev_out = next((e for e in events_active if e['label'] == out_lbl), None)
-                        if ev_in and ev_out and ev_in['dt'] >= ev_out['dt']:
-                            to_remove.extend([in_lbl, out_lbl])
-
-                    events_skipped.extend(to_remove)
-                    events_active = [e for e in events_active if e['label'] not in to_remove]
-
-                day_obj['events'] = events
-                day_obj['events_skipped'] = events_skipped
-
-                if schedule and punches_sorted:
-                    try:
-                        # Emparejamiento greedy por proximidad manteniendo orden
-                        prev_assigned_dt = datetime.min
-                        # No emparejar con marcas extremadamente lejanas: umbral en segundos
-                        MAX_MATCH_SECONDS = 60 * 60 * 2  # 2 horas
-                        for ev in events_active:
-                            # candidatos sin asignar
-                            candidates = [p for p in punches_sorted if
-                                          not p.get('assigned') and not p.get('is_duplicate')]
-
-                            # Preferir candidatos que mantengan orden cronológico respecto a la última asignación
-                            def get_dt(p):
-                                return p.get('dt_norm') or p.get('dt')
-
-                            ordered_candidates = [p for p in candidates if get_dt(p) >= prev_assigned_dt]
-                            if ordered_candidates:
-                                candidates = ordered_candidates
-                            if not candidates:
-                                continue
-                            # Ventana del evento: entre evento anterior y siguiente (si existen)
-                            try:
-                                idx = events.index(ev)
-                                prev_ev_dt = events[idx - 1]['dt'] if idx > 0 else ev['dt'] - timedelta(hours=24)
-                                next_ev_dt = events[idx + 1]['dt'] if idx + 1 < len(events) else ev['dt'] + timedelta(
-                                    hours=24)
-                            except Exception:
-                                prev_ev_dt = ev['dt'] - timedelta(hours=24)
-                                next_ev_dt = ev['dt'] + timedelta(hours=24)
-                            windowed = [p for p in candidates if (get_dt(p) >= prev_ev_dt and get_dt(p) <= next_ev_dt)]
-                            if windowed:
-                                candidates = windowed
-                            # limitar candidatos a una distancia razonable del evento
-                            MAX_MATCH_SECONDS = 60 * 60 * 4  # 2 horas
-
-                            def get_dt(p):
-                                return p.get('dt_norm') or p.get('dt')
-
-                            candidates = [p for p in candidates if
-                                          abs((get_dt(p) - ev['dt']).total_seconds()) <= MAX_MATCH_SECONDS]
-                            if not candidates:
-                                # no hay candidatos cercanos -> no asignar este evento
-                                continue
-
-                            # filtrar candidatos extremadamente lejanos respecto al evento
-                            def get_dt(p):
-                                return p.get('dt_norm') or p.get('dt')
-
-                            candidates = [p for p in candidates if
-                                          abs((get_dt(p) - ev['dt']).total_seconds()) <= MAX_MATCH_SECONDS]
-                            if not candidates:
-                                # si no quedan candidatos cercanos, no asignar este evento
-                                continue
-                            # Selección preferente usando helpers configurables
-                            ev_dt = ev['dt']
-                            try:
-                                idx = events.index(ev)
-                                prev_ev_dt = events[idx - 1]['dt'] if idx > 0 else None
-                                next_ev_dt = events[idx + 1]['dt'] if idx + 1 < len(events) else None
-                            except Exception:
-                                prev_ev_dt = None
-                                next_ev_dt = None
-                            if ev['type'] == 'in':
-                                best = select_in_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
-                                                           next_ev_dt=next_ev_dt)
-                            else:
-                                best = select_out_candidate(candidates, ev_dt, prev_ev_dt=prev_ev_dt,
-                                                            next_ev_dt=next_ev_dt)
-                            if not best and ev['type'] == 'out':
-                                # Buscar el punch anterior más cercano sin restricción de OUT_MAX_SECONDS
-                                before_all = [p for p in candidates if _p_dt(p) < ev['dt']]
-                                if before_all:
-                                    best = max(before_all, key=lambda p: _p_dt(p))
-                            if not best:
-                                # no hubo candidato válido según las reglas
-                                continue
-                            # marcar la asignación y etiquetar qué evento cubre
-                            try:
-                                prev_assigned_dt = _p_dt(best)
-                            except Exception:
-                                pass
-                            # registrar evento emparejado en la marcación
-                            try:
-                                best['matched_event'] = ev['label']
-                                best['matched_event_dt'] = ev_dt
-                            except Exception:
-                                pass
-                            best['assigned'] = True
-                            # añadir motivo de emparejamiento para debugging
-                            try:
-                                best_dt = best.get('dt_norm') or best.get('dt')
-                                try:
-                                    diff = (best_dt - ev['dt']).total_seconds()
-                                except Exception:
-                                    diff = None
-                            except Exception:
-                                best_dt = None
-                                diff = None
-                            reason = []
-                            try:
-                                if _p_dt(best) < ev_dt:
-                                    reason.append('before')
-                                elif _p_dt(best) > ev_dt:
-                                    reason.append('after')
-                                if diff is None:
-                                    reason.append('no-diff')
-                                else:
-                                    if abs(diff) > IN_MAX_SECONDS:
-                                        reason.append('far')
-                            except Exception:
-                                pass
-                            best['match_reason'] = ','.join(reason)
-                            if debug_punches:
-                                msg = f"[punch-debug] emp={emp_id} day={d} ev={ev['label']} ev_dt={ev['dt']} best_dt={best_dt} diff_s={diff} reason={best.get('match_reason')} best_raw={best}"
-                                logger.debug(msg)
-                                print(msg)
-                                try:
-                                    with open(os.path.join(os.getcwd(), 'punch_debug.log'), 'a',
-                                              encoding='utf-8') as _f:
-                                        _f.write(msg + '\n')
-                                except Exception:
-                                    pass
-                            # determinar si es tardanza/anticipada
-                            row_class = ''
-                            if is_workday and not day_obj.get('is_holiday', False):
-                                try:
-                                    best_dt = best.get('dt_norm') or best.get('dt')
-                                    # Comparar truncando segundos: 08:00:30 NO es tardanza,
-                                    # solo se marca 'late' si el MINUTO es posterior al esperado.
-                                    if ev['type'] == 'in' and best_dt:
-                                        cutoff = ev['dt'].replace(second=0, microsecond=0)
-                                        best_min = best_dt.replace(second=0, microsecond=0)
-                                        if best_min > cutoff:
-                                            row_class = 'late'
-                                    if ev['type'] == 'out' and best_dt:
-                                        cutoff = ev['dt'].replace(second=0, microsecond=0)
-                                        best_min = best_dt.replace(second=0, microsecond=0)
-                                        if best_min < cutoff:
-                                            row_class = 'late'
-                                except Exception:
-                                    row_class = ''
-                            if debug_punches:
-                                msg = f"[punch-debug] emp={emp_id} day={d} ev={ev['label']} result_row_class={row_class}"
-                                logger.debug(msg)
-                                print(msg)
-                                try:
-                                    with open(os.path.join(os.getcwd(), 'punch_debug.log'), 'a',
-                                              encoding='utf-8') as _f:
-                                        _f.write(msg + '\n')
-                                except Exception:
-                                    pass
-                            newp = best.copy()
-                            newp['row_class'] = row_class
-                            annotated.append(newp)
-
-                        # añadir marcaciones no asignadas (si las hay) en orden cronológico
-                        remaining = [p for p in punches_sorted if not p.get('assigned')]
-                        for r in remaining:
-                            r_new = r.copy()
-                            r_new['row_class'] = r_new.get('row_class', '')
-                            annotated.append(r_new)
-
-                        # El filtrado de duplicados se realiza más abajo en el bloque
-                        # de G-registers, que usa matched_event para decidir qué mostrar.
-                        # No se aplica ningún filtro adicional aquí.
-
-                        # Post-proceso: por cada jornada (J1, J2) colapsar múltiples marcaciones
-                        if ENABLE_SHIFT_COLLAPSE:
-                            try:
-                                def dt_of(p):
-                                    return p.get('dt_norm') or p.get('dt')
-
-                                # pares de jornadas esperadas: (J1_in,J1_out), (J2_in,J2_out)
-                                for in_label, out_label in [('J1_in', 'J1_out'), ('J2_in', 'J2_out')]:
-                                    ev_in = next((e for e in events if e.get('label') == in_label), None)
-                                    ev_out = next((e for e in events if e.get('label') == out_label), None)
-                                    if not ev_in or not ev_out:
-                                        continue
-                                    start_window = ev_in['dt'] - timedelta(hours=2)
-                                    end_window = ev_out['dt'] + timedelta(hours=2)
-                                    in_shift = [p for p in annotated if
-                                                dt_of(p) >= start_window and dt_of(p) <= end_window]
-                                    if len(in_shift) > 1:
-                                        earliest = min(in_shift, key=dt_of)
-                                        latest = max(in_shift, key=dt_of)
-                                        # mantener el resto fuera del shift
-                                        new_annot = [p for p in annotated if p not in in_shift]
-                                        e_copy = earliest.copy();
-                                        e_copy['matched_event'] = in_label;
-                                        e_copy['assigned'] = True
-                                        l_copy = latest.copy();
-                                        l_copy['matched_event'] = out_label;
-                                        l_copy['assigned'] = True
-                                        new_annot.extend([e_copy, l_copy])
-                                        annotated = sorted(new_annot, key=lambda x: x.get('dt'))
-                            except Exception:
-                                pass
-                        # Antes: eliminábamos marcaciones no asignadas cuando había más
-                        # marcaciones crudas que eventos esperados. Eso ocultaba
-                        # marcaciones válidas en casos ruidosos. Ahora conservamos
-                        # todas las marcaciones y añadimos flags por día para que
-                        # la plantilla decida cómo resaltarlas.
-                        try:
-                            raw_cnt = day_obj.get('raw_punches_count', len(punches_sorted))
-                            expected_cnt = len(events)
-                            # contar asignadas (matched)
-                            matched_cnt = sum(1 for p in annotated if p.get('assigned') and p.get('matched_event'))
-                            day_obj['expected_cnt'] = expected_cnt
-                            day_obj['matched_cnt'] = matched_cnt
-                            day_obj['extra_cnt'] = max(0, raw_cnt - expected_cnt)
-                            # flag: si no hubo marcaciones crudas y no hay permisos/feriado
-                            no_marks = (raw_cnt == 0 and not day_obj.get('permits') and not day_obj.get('is_holiday',
-                                                                                                        False))
-                            day_obj['no_marks_all_day'] = no_marks
-                            # flag: si hay menos marcaciones asignadas que eventos esperados
-                            day_obj['has_inconsistency'] = (expected_cnt > matched_cnt) and not no_marks
-                        except Exception:
-                            day_obj['expected_cnt'] = 0
-                            day_obj['matched_cnt'] = 0
-                            day_obj['extra_cnt'] = 0
-                            day_obj['no_marks_all_day'] = False
-                            day_obj['has_inconsistency'] = False
-                    except Exception:
-                        # si algo falla, fallback: no marcar
-                        annotated = []
-                        for p in punches_sorted:
-                            np = p.copy()
-                            np['row_class'] = ''
-                            annotated.append(np)
-                else:
-                    # Sin horario o sin marcaciones: devolver tal cual
-                    for p in punches_sorted:
-                        np = p.copy()
-                        np['row_class'] = ''
-                        annotated.append(np)
-
-                # ordenar por fecha para la presentación
-                annotated = sorted(annotated, key=lambda x: x.get('dt'))
-
-                # ---------------------------------------------------------------
-                # MÁQUINA DE ESTADOS DE MARCACIONES  (fiel al diagrama de flujo)
-                # Variables del diagrama:
-                #   G1..G4  = datetime de cada marcación guardada (None = vacío)
-                #   E1,S1   = Hora entrada / salida Jornada 1
-                #   E2,S2   = Hora entrada / salida Jornada 2  (None si no aplica)
-                #   ATR     = acumulador de minutos de atraso
-                #   TEMP    = atraso temporal (salida anticipada J1 pendiente de confirmar)
-                #   INC     = contador de inconsistencias (marcas sin slot válido)
-                #   DIAS    = contador días sin marcar (se lleva a nivel superior)
-                # ---------------------------------------------------------------
-                g_regs = {'G1': None, 'G2': None, 'G3': None, 'G4': None}
-                g_atr = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
-
-                # Mapear eventos del horario del día
-                events_list = day_obj.get('events', []) or []
-                events_map = {ev.get('label'): ev for ev in events_list}
-                E1 = events_map.get('J1_in', {}).get('dt')
-                S1 = events_map.get('J1_out', {}).get('dt')
-                E2 = events_map.get('J2_in', {}).get('dt')
-                S2 = events_map.get('J2_out', {}).get('dt')
-
-                day_punches = punches_sorted  # lista cronológica de marcas del día
-
-                # Contadores del diagrama
-                TEMP = 0
-                ATR = 0
-                INC = 0
-
-                # ── Decisión raíz: ¿HORARIO 4 JORNADAS? ─────────────────────
-                is_4_jornadas = (E2 is not None and S2 is not None)
-
-                if is_workday and not day_obj.get('is_holiday', False):
-                    for p in day_punches:
-                        try:
-                            M = p.get('dt_norm') or p.get('dt')
-                        except Exception:
-                            continue
-                        if M is None:
-                            continue
-
-                        # ════════════════════════════════════════════════════════
-                        # RAMA NO  → 2 GUARDADOS (horario de una sola jornada)
-                        # Nodos según diagrama: SI G1 → M>E1 → M=G1 → ATR=M-E1
-                        #                                      ↓ NO
-                        #                       SI G2 → G2≥S2 → FIN
-                        # ════════════════════════════════════════════════════════
-                        if not is_4_jornadas:
-
-                            # ── Slot G1 vacío → primera marca del día ──────────
-                            if g_regs['G1'] is None:
-                                g_regs['G1'] = M
-                                # Diagrama: M > E1  →  ATR = M - E1
-                                if E1 and M > E1:
-                                    mins = int((M - E1).total_seconds() // 60)
-                                    ATR += max(0, mins)
-                                    g_atr['G1'] = max(0, mins)
-                                # M <= E1 → llegó a tiempo, ATR no cambia
-                                continue
-
-                            # ── G1 lleno, G2 vacío → segunda marca (salida) ────
-                            if g_regs['G2'] is None:
-                                g_regs['G2'] = M
-                                # Diagrama: G2 ≥ S2 → FIN (salida ok)
-                                #           G2 < S2 → salida anticipada → ATR = ATR + (S1 - G2)
-                                if S1 and M < S1:
-                                    mins = int((S1 - M).total_seconds() // 60)
-                                    ATR += max(0, mins)
-                                    g_atr['G2'] = max(0, mins)
-                                continue
-
-                            # G1 y G2 ya llenos → marcas extra ignoradas en ruta 2
-                            continue
-
-                        # ════════════════════════════════════════════════════════
-                        # RAMA SÍ  → 4 GUARDADOS (horario con dos jornadas)
-                        # El diagrama sigue este orden para cada marcación M:
-                        #
-                        #  SI G1 vacío:
-                        #      M > E1? SÍ → M = G1 ;  ATR = M - E1
-                        #              NO → (marca antes de E1, no asignar G1)
-                        #
-                        #  SI G1 lleno, G2 vacío:
-                        #      M ≥ S1? SÍ → G2 = M  (salida a tiempo, sin TEMP)
-                        #              NO → G2 = M ; TEMP = S1 - G2 ; ATR = ATR + TEMP
-                        #
-                        #  SI G2 lleno, G3 vacío:
-                        #      G2 ≥ S2?  SÍ → [nunca ocurre si hay J2, rama de seguridad → FIN]
-                        #      SI G3:
-                        #          M > E2? SÍ → G3 = M
-                        #                       ATR = ATR - TEMP ; TEMP = 0
-                        #                       M > E2? → ATR = ATR + (M - E2)
-                        #                  NO → (antes de E2, ignorar o marcar INC)
-                        #
-                        #  SI G3 lleno, G4 vacío:
-                        #      M ≥ S2? SÍ → G4 = M  (salida a tiempo, TEMP ya = 0)
-                        #              NO → G4 = M ; TEMP = S2 - G4 ; ATR = ATR + TEMP
-                        # ════════════════════════════════════════════════════════
-
-                        # ── Slot G1 ─────────────────────────────────────────────
+                    if not is_4_jornadas:
                         if g_regs['G1'] is None:
-                            # Diagrama: M > E1 → asignar G1 y calcular ATR
+                            g_regs['G1'] = M
                             if E1 and M > E1:
-                                g_regs['G1'] = M
                                 mins = int((M - E1).total_seconds() // 60)
                                 ATR += max(0, mins)
                                 g_atr['G1'] = max(0, mins)
-                            # M <= E1: llegó antes de la entrada esperada → no asignar todavía
-                            # (el diagrama muestra "NO" volviendo al inicio del loop)
                             continue
-
-                        # ── Slot G2 ─────────────────────────────────────────────
                         if g_regs['G2'] is None:
                             g_regs['G2'] = M
-                            if S1 and M >= S1:
-                                # Salida a tiempo o tardía → sin penalidad por salida anticipada
-                                # (TEMP permanece en 0)
-                                pass
-                            elif S1 and M < S1:
-                                # Salida anticipada J1: TEMP = S1 - G2 ; ATR += TEMP
-                                TEMP = int((S1 - M).total_seconds() // 60)
-                                ATR += max(0, TEMP)
-                                g_atr['G2'] = max(0, TEMP)
+                            if S1 and M < S1:
+                                mins = int((S1 - M).total_seconds() // 60)
+                                ATR += max(0, mins)
+                                g_atr['G2'] = max(0, mins)
                             continue
-
-                        # ── Slot G3 ─────────────────────────────────────────────
-                        if g_regs['G3'] is None:
-                            # Diagrama: G2 ≥ S2 → rama de cortocircuito (no debería llegar
-                            # aquí si la segunda jornada arrancó antes de S1; protección)
-                            if S1 and g_regs['G2'] >= S1 and E2 and M <= E2:
-                                # marca entre S1 y E2 → no es entrada J2 todavía; ignorar
-                                continue
-                            if E2 and M > E2:
-                                g_regs['G3'] = M
-                                # Revertir TEMP (salida anticipada J1 quedó cubierta por llegada J2)
-                                ATR = max(0, ATR - TEMP)
-                                TEMP = 0
-                                # Nuevo atraso: llegada J2 después de E2
-                                mins = int((M - E2).total_seconds() // 60)
-                                if mins > 0:
-                                    ATR += mins
-                                    g_atr['G3'] = mins
-                            # M <= E2 → antes de la entrada J2 → ignorar (diagrama "NO")
-                            continue
-
-                        # ── Slot G4 ─────────────────────────────────────────────
-                        if g_regs['G4'] is None:
-                            g_regs['G4'] = M
-                            if S2 and M >= S2:
-                                # Salida J2 a tiempo o tardía → sin penalidad adicional
-                                pass
-                            elif S2 and M < S2:
-                                # Salida anticipada J2: TEMP = S2 - G4 ; ATR += TEMP
-                                TEMP = int((S2 - M).total_seconds() // 60)
-                                ATR += max(0, TEMP)
-                                g_atr['G4'] = max(0, TEMP)
-                            continue
-
-                        # G1..G4 ya llenos → marcas extra se ignoran
                         continue
 
-                # ── Exponer resultados del día ───────────────────────────────
-                day_obj['g_regs'] = g_regs
-                day_obj['g_atr'] = g_atr
-                day_obj['atr_dia'] = ATR
-                day_obj['temp'] = TEMP
+                    if g_regs['G1'] is None:
+                        if E1 and M > E1:
+                            g_regs['G1'] = M
+                            mins = int((M - E1).total_seconds() // 60)
+                            ATR += max(0, mins)
+                            g_atr['G1'] = max(0, mins)
+                        continue
 
-                # ── Filtrado final: mostrar solo las marcaciones que cubren un evento ──
-                #
-                # CRITERIO: una marcación es visible si tiene matched_event asignado
-                # por el emparejador (assigned=True + matched_event != None).
-                # Las marcaciones extra sin evento emparejado se marcan filtered=True.
-                #
-                # Esto reemplaza el bloque anterior que buscaba por proximidad ciega
-                # a los G-registers, lo que causaba que marcaciones correctamente
-                # emparejadas (ej. 07:59 → J1_in) quedaran ocultas porque la
-                # máquina de estados G asignaba su slot a una marca posterior.
-                try:
-                    def dt_of(p):
-                        return p.get('dt_norm') or p.get('dt')
+                    if g_regs['G2'] is None:
+                        g_regs['G2'] = M
+                        if S1 and M >= S1:
+                            pass
+                        elif S1 and M < S1:
+                            TEMP = int((S1 - M).total_seconds() // 60)
+                            ATR += max(0, TEMP)
+                            g_atr['G2'] = max(0, TEMP)
+                        continue
 
-                    # Mapeo inverso: evento → marcación asignada
-                    # (un evento solo puede tener UNA marcación asignada)
-                    event_to_punch = {}
-                    for p in annotated:
-                        ev_label = p.get('matched_event')
-                        if p.get('assigned') and ev_label:
-                            # Si hay duplicados para el mismo evento, quedarse
-                            # con la cronológicamente más cercana al horario esperado
-                            if ev_label not in event_to_punch:
-                                event_to_punch[ev_label] = p
-                            else:
-                                # Resolver conflicto: preferir la ya registrada
-                                # (el emparejador greedy ya eligió la mejor)
-                                pass
+                    if g_regs['G3'] is None:
+                        if S1 and g_regs['G2'] >= S1 and E2 and M <= E2:
+                            continue
+                        if E2 and M > E2:
+                            g_regs['G3'] = M
+                            ATR = max(0, ATR - TEMP)
+                            TEMP = 0
+                            mins = int((M - E2).total_seconds() // 60)
+                            if mins > 0:
+                                ATR += mins
+                                g_atr['G3'] = mins
+                        continue
 
-                    # Construir el set de ids visibles
-                    visible_ids = {id(p) for p in event_to_punch.values()}
+                    if g_regs['G4'] is None:
+                        g_regs['G4'] = M
+                        if S2 and M >= S2:
+                            pass
+                        elif S2 and M < S2:
+                            TEMP = int((S2 - M).total_seconds() // 60)
+                            ATR += max(0, TEMP)
+                            g_atr['G4'] = max(0, TEMP)
+                        continue
 
-                    for p in annotated:
-                        if 'selected_slot' in p:
-                            del p['selected_slot']
-                        if id(p) in visible_ids:
-                            p['filtered'] = False
-                            # Anotar qué slot cubre para el template
-                            ev_label = p.get('matched_event', '')
-                            slot_map = {
-                                'J1_in': 'G1', 'J1_out': 'G2',
-                                'J2_in': 'G3', 'J2_out': 'G4',
-                            }
-                            p['selected_slot'] = slot_map.get(ev_label, '')
-                        else:
-                            # Marcación extra sin evento: ocultar
-                            p['filtered'] = True
+            day_obj['g_regs'] = g_regs
+            day_obj['g_atr'] = g_atr
+            day_obj['atr_dia'] = ATR
+            day_obj['temp'] = TEMP
 
-                    # mantener orden cronológico
-                    annotated = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
-                except Exception:
-                    pass
+            # Mapear visibilidad en base al emparejamiento unificado
+            try:
+                event_to_punch = {}
+                for p in day_obj.get('punches', []):
+                    ev_label = p.get('matched_event')
+                    if p.get('assigned') and ev_label:
+                        if ev_label not in event_to_punch:
+                            event_to_punch[ev_label] = p
 
-                # Flags de resumen
-                try:
-                    # events_skipped = labels de eventos cubiertos por permiso (no requieren marca)
-                    skipped_labels = set(day_obj.get('events_skipped', []))
-                    # Solo cuentan como obligatorios los eventos NO cubiertos por permiso
-                    expected_slots = sum(1 for ev in events_list if ev.get('label') not in skipped_labels)
-                    # Solo cuentan como cubiertos los emparejados a eventos obligatorios
-                    assigned_slots = sum(
-                        1 for p in annotated
-                        if p.get('assigned') and p.get('matched_event') not in skipped_labels
-                    )
-                    raw_cnt = day_obj.get('raw_punches_count', len(day_punches))
-                    is_holiday = day_obj.get('is_holiday', False)
-                    has_permits = bool(day_obj.get('permits'))
-                    cur_date_tmp = date(year, month, int(d))
-                    is_workday_tmp = cur_date_tmp.weekday() < 5
+                visible_ids = {id(p) for p in event_to_punch.values()}
 
-                    # Dia sin marcar: laborable, sin feriado, sin ninguna marca (y con turnos esperados)
-                    no_marks = (
-                            raw_cnt == 0
-                            and not is_holiday
-                            and is_workday_tmp
-                            and expected_slots > 0
-                    )
-                    # Inconsistencia: faltan marcaciones obligatorias (ya descontados los permisos completos)
-                    missing_slots = expected_slots > assigned_slots
-                    day_obj['has_inconsistency'] = (
-                            missing_slots
-                            and is_workday_tmp
-                            and not is_holiday
-                            and not no_marks
-                    )
-                    day_obj['no_marks_all_day'] = no_marks
-                except Exception:
-                    day_obj['has_inconsistency'] = day_obj.get('has_inconsistency', False)
-                    day_obj['no_marks_all_day'] = day_obj.get('no_marks_all_day', False)
+                for p in day_obj.get('punches', []):
+                    if 'selected_slot' in p:
+                        del p['selected_slot']
+                    if id(p) in visible_ids:
+                        p['filtered'] = False
+                        ev_label = p.get('matched_event', '')
+                        slot_map = {'J1_in': 'G1', 'J1_out': 'G2', 'J2_in': 'G3', 'J2_out': 'G4'}
+                        p['selected_slot'] = slot_map.get(ev_label, '')
+                    else:
+                        p['filtered'] = True
 
-                day_obj['punches'] = annotated
-                # Etiqueta de fecha: 01 de enero
-                try:
-                    months_es_local = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
-                                       "septiembre", "octubre", "noviembre", "diciembre"]
-                    day_obj['day_label'] = f"{int(d):02d} de {months_es_local[month]}"
-                except Exception:
-                    day_obj['day_label'] = str(d)
+                day_obj['punches'] = sorted(day_obj.get('punches', []), key=lambda x: x.get('dt') or x.get('dt_norm'))
+            except Exception:
+                pass
 
-    # --- Membrete (configuración del sistema) embebido como data URI para xhtml2pdf ---
+            try:
+                months_es_local = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                                   "septiembre", "octubre", "noviembre", "diciembre"]
+                day_obj['day_label'] = f"{int(d):02d} de {months_es_local[month]}"
+            except Exception:
+                day_obj['day_label'] = str(d)
+
     config = SystemConfiguration.get_current()
     letterhead_data = None
-    # Permitir desactivar membrete vía parámetro para pruebas
     no_letterhead = request.GET.get('no_letterhead') == '1'
     if not no_letterhead and config and getattr(config, 'letterhead', None):
         try:
-            # Preferir siempre la URL pública del archivo (funciona mejor con xhtml2pdf)
             try:
                 letterhead_data = request.build_absolute_uri(config.letterhead.url)
             except Exception:
                 letterhead_data = config.letterhead.url
-            # Si no hay URL válida y existe en disco, usar data URI como fallback
             if not letterhead_data:
                 file_path = getattr(config.letterhead, 'path', None)
                 if file_path and os.path.exists(file_path):
@@ -1783,7 +1238,6 @@ def generate_monthly_report_pdf(request):
             letterhead_data = None
 
     template = get_template('biometric/reports/pdf_attendance_calendar.html')
-
     summary = build_attendance_summary_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
 
     html = template.render({
@@ -1800,7 +1254,6 @@ def generate_monthly_report_pdf(request):
         'observations_list': observations_list,
     })
 
-    # Usar WeasyPrint si está disponible, si no, intentar pisa como fallback
     if HTML:
         base_url = request.build_absolute_uri('/')
         pdf = HTML(string=html, base_url=base_url).write_pdf(

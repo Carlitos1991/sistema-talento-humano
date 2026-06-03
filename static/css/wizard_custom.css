@@ -382,6 +382,15 @@
     gap: 8px;
 }
 
+.budget-history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.budget-history-list::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
 /* Styles for managed tables inside wizard info boxes */
 .info-box-styled .content-table {
     width: 100%;
@@ -958,12 +967,11 @@
 
 /* Etiquetas dentro de la tarjeta */
 .day-label {
-    font-weight: 800;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: #64748b;
-    margin-bottom: 10px;
     display: block;
+    font-weight: 800;
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
 }
 
 .time-slot {
@@ -1018,11 +1026,22 @@
 
 /* Estilos para Teletrabajo */
 .btn-attendance {
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: bold;
+    font-weight: 800;
     color: white;
-    transition: all 0.2s;
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-attendance:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.btn-attendance:active {
+    transform: translateY(0);
 }
 
 .btn-attendance.income {

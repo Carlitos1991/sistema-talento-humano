@@ -1,115 +1,138 @@
 <div v-if="activeTab === 'telework'" class="animate__animated animate__fadeIn">
 
-    <!-- Encabezado Estilizado (Copia exacta de Horarios) -->
+    <!-- Encabezado Estilizado -->
     <div class="institutional-header"
-         style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-left: 4px solid #8b5cf6; margin-bottom: 20px;">
+         style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-left: 4px solid #8b5cf6; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div class="institutional-header-content">
             <span class="level-name"
-                  style="color: #8b5cf6; font-weight: 700; font-size: 0.7rem; text-transform: uppercase;">Módulo de Asistencia Remota</span>
+                  style="color: #8b5cf6; font-weight: 700; font-size: 0.7rem; text-transform: uppercase;">Asistencia Remota</span>
             <h4 style="color: #4c1d95; font-weight: 800; margin: 5px 0;">
-                <i class="fa-solid fa-house-laptop me-2"></i> TELETRABAJO ACTIVO
+                <i class="fa-solid fa-house-laptop me-2"></i> GESTIÓN DE TELETRABAJO
             </h4>
             <p style="color: #6b21a8; font-size: 0.85rem; margin-bottom: 0;">
-                Gestione sus marcaciones de jornada y reporte sus actividades realizadas durante el día.
+                Registre su jornada y reporte sus avances diarios.
             </p>
         </div>
 
-        <div class="flex gap-2">
-            <button @click="markTelework('INCOME')"
-                    class="btn-institutional-action"
-                    style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700;">
-                <i class="fa-solid fa-sign-in me-2"></i> Registrar Entrada
-            </button>
-            <button @click="markTelework('EXIT')"
-                    class="btn-institutional-action"
-                    style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700;">
-                <i class="fa-solid fa-sign-out me-2"></i> Registrar Salida
-            </button>
+        <div v-if="teleworkData.needs_update"
+             class="animate__animated animate__pulse animate__infinite"
+             style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-triangle-exclamation"></i> Actividad pendiente
         </div>
     </div>
 
-    <!-- Alerta de 2 horas (Estilo Horarios/Aviso) -->
-    <div v-if="teleworkData.needs_update"
-         class="animate__animated animate__pulse animate__infinite mb-4"
-         style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 15px;">
-        <i class="fa-solid fa-triangle-exclamation fa-2x" style="color: #f59e0b;"></i>
-        <div>
-            <b style="color: #92400e; display: block;">Reporte Pendiente</b>
-            <span style="color: #b45309; font-size: 0.9rem;">Han pasado más de 2 horas desde su último reporte de actividad. Por favor, registre su avance actual.</span>
-        </div>
-    </div>
+    <!-- CONTENEDOR DE DOS COLUMNAS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start" style="width: 100%;">
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        <!-- Panel Izquierdo: Marcaciones (Similar a cards de días) -->
-        <div class="lg:col-span-4">
-            <div class="schedule-container" style="height: 100%;">
-                <h5 class="section-title-accent-gold mb-3" style="font-size: 1rem; color: #4c1d95 !important;">
-                    <i class="fa-solid fa-fingerprint me-2"></i> Historial de Hoy
+        <!-- COLUMNA IZQUIERDA: ASISTENCIA -->
+        <div class="schedule-container" style="border-top: 4px solid #3b82f6; height: 100%;">
+            <div class="flex justify-between items-center mb-4">
+                <h5 class="section-title-accent-gold" style="color: #1e3a8a !important; font-size: 0.9rem; margin: 0;">
+                    <i class="fa-solid fa-fingerprint me-2"></i> MARCACIONES DE HOY
                 </h5>
-                <div class="flex flex-col gap-3">
-                    <div v-for="punch in teleworkData.punches"
-                         class="day-card"
-                         style="min-height: auto; padding: 12px; flex-direction: row; justify-content: space-between; align-items: center;">
-                        <span class="day-label" style="margin:0;">[[ punch.type ]]</span>
-                        <div class="time-slot" style="margin:0; font-size: 1.1rem;">[[ punch.time ]]</div>
+                <div class="flex gap-2">
+                    <button @click="markTelework('INCOME')" class="btn-attendance income"
+                            style="background: #10b981; padding: 8px 16px; border-radius: 10px;">
+                        <i class="fa-solid fa-sign-in me-1"></i> ENTRADA
+                    </button>
+                    <button @click="markTelework('EXIT')" class="btn-attendance exit"
+                            style="background: #ef4444; padding: 8px 16px; border-radius: 10px;">
+                        <i class="fa-solid fa-sign-out me-1"></i> SALIDA
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3" style="max-height: 480px; overflow-y: auto; padding: 5px;">
+                <!-- Card de Marcación -->
+                <div v-for="punch in teleworkData.punches" :key="punch.time"
+                     class="day-card"
+                     style="min-height: auto; padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-left: 4px solid #3b82f6; background: #fff;">
+                    <div style="flex: 1;">
+                        <span class="day-label">EVENTO</span>
+                        <div :class="punch.type === 'Ingreso' ? 'text-green-600' : 'text-red-600'"
+                             style="font-weight: 800; font-size: 0.9rem;">
+                            [[ punch.type.toUpperCase() ]]
+                        </div>
                     </div>
-                    <div v-if="teleworkData.punches.length === 0" class="text-center py-5 text-muted">
-                        <i class="fa-solid fa-clock-rotate-left fa-2x mb-2" style="opacity: 0.3;"></i>
-                        <p style="font-size: 0.8rem;">No hay marcaciones registradas hoy.</p>
+                    <div style="flex: 1; text-center">
+                        <span class="day-label">HORA REGISTRADA</span>
+                        <div class="time-slot" style="margin:0; font-size: 1.1rem; color: #1e293b;">[[ punch.time ]]
+                        </div>
                     </div>
+                    <div style="flex: 1; text-align: right;">
+                        <span class="day-label">ESTADO</span>
+                        <div style="color: #64748b; font-size: 0.75rem; font-weight: 700;">
+                            <i class="fa-solid fa-location-dot text-danger"></i> GPS ACTIVO
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado Vacío -->
+                <div v-if="teleworkData.punches && teleworkData.punches.length === 0"
+                     class="text-center py-12 bg-white rounded-4 border-2 border-dashed border-gray-200">
+                    <i class="fa-solid fa-clock-rotate-left fa-3x text-gray-200 mb-3"></i>
+                    <p class="text-gray-400 font-bold">No hay registros de asistencia hoy</p>
                 </div>
             </div>
         </div>
 
-        <!-- Panel Derecho: Actividades -->
-        <div class="lg:col-span-8">
-            <div class="schedule-container">
-                <h5 class="section-title-accent-gold mb-3" style="font-size: 1rem; color: #4c1d95 !important;">
-                    <i class="fa-solid fa-list-check me-2"></i> Reporte de Actividades
-                </h5>
+        <!-- COLUMNA DERECHA: ACTIVIDADES -->
+        <div class="schedule-container" style="border-top: 4px solid #8b5cf6; height: 100%;">
+            <h5 class="section-title-accent-gold mb-4" style="color: #4c1d95 !important; font-size: 0.9rem; margin: 0;">
+                <i class="fa-solid fa-list-check me-2"></i> REPORTE DE ACTIVIDADES
+            </h5>
 
-                <!-- Formulario -->
-                <form @submit.prevent="submitActivity" class="bg-light p-4 rounded-4 mb-4 border">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                        <input v-model="teleworkForm.title" type="text" class="form-control"
-                               placeholder="¿Qué actividad realizó?" required style="border-radius: 10px;">
-                        <div class="flex items-center gap-3 bg-white p-2 border rounded-3">
-                            <span class="text-xs font-bold text-gray-400">PROGRESO</span>
-                            <input type="range" v-model="teleworkForm.percentage" class="flex-grow">
-                            <span class="badge bg-purple-600 text-white">[[ teleworkForm.percentage ]]%</span>
+            <!-- Formulario mejorado -->
+            <form @submit.prevent="submitActivity" class="bg-gray-50 p-4 rounded-4 border border-gray-200 mb-4">
+                <div class="mb-3">
+                    <label class="day-label">Título de la actividad</label>
+                    <input v-model="teleworkForm.title" type="text" class="form-control"
+                           placeholder="Ej: Atención al usuario vía correo" required style="border-radius: 8px;">
+                </div>
+                <div class="mb-3">
+                    <label class="day-label">Detalles</label>
+                    <textarea v-model="teleworkForm.detail" class="form-control" placeholder="Escriba un resumen..."
+                              rows="2" style="border-radius: 8px;"></textarea>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-3 border rounded-3 mb-3">
+                    <span class="day-label" style="margin:0">PROGRESO:</span>
+                    <input type="range" v-model="teleworkForm.percentage" class="flex-grow">
+                    <span class="badge bg-purple-600 text-white" style="padding: 5px 12px; font-size: 0.8rem;">[[ teleworkForm.percentage ]]%</span>
+                </div>
+                <div class="text-right">
+                    <button type="submit" class="btn-header-premium"
+                            style="background: #8b5cf6; padding: 10px 20px; border-radius: 8px;">
+                        REGISTRAR ACTIVIDAD <i class="fa-solid fa-paper-plane ms-2"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Lista de Actividades -->
+            <div class="budget-history-list" style="max-height: 250px; overflow-y: auto;">
+                <div v-for="act in teleworkData.activities" :key="act.id"
+                     class="budget-history-item"
+                     style="border-left: 4px solid #8b5cf6; background: #fff; margin-bottom: 10px;">
+                    <div class="budget-history-left">
+                        <div class="budget-history-title" style="font-size: 0.85rem; font-weight: 700;">[[ act.title
+                            ]]
+                        </div>
+                        <div class="budget-history-sub" style="font-size: 0.75rem; background: #f8fafc;">[[ act.detail
+                            ]]
                         </div>
                     </div>
-                    <textarea v-model="teleworkForm.detail" class="form-control mb-3" placeholder="Descripción breve..."
-                              rows="2" style="border-radius: 10px;"></textarea>
-                    <div class="text-end">
-                        <button type="submit" class="btn-header-premium"
-                                style="background: #8b5cf6; padding: 10px 25px; border-radius: 10px;">
-                            Registrar Actividad <i class="fa-solid fa-paper-plane ms-2"></i>
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Listado tipo Timeline (Estilo Historia Lab) -->
-                <div class="budget-history-list" style="max-height: 350px; overflow-y: auto; padding-right: 10px;">
-                    <div v-for="act in teleworkData.activities" class="budget-history-item"
-                         style="border-left: 4px solid #8b5cf6;">
-                        <div class="budget-history-left">
-                            <div class="budget-history-title">[[ act.title ]]</div>
-                            <div class="budget-history-sub" style="background: #f5f3ff; color: #6b21a8;">[[ act.detail
-                                ]]
-                            </div>
-                        </div>
-                        <div class="budget-history-right">
-                            <div class="budget-history-rem">[[ act.time ]]</div>
-                            <div class="w-24 bg-gray-200 rounded-full h-1.5 mt-2">
-                                <div class="bg-purple-600 h-1.5 rounded-full"
-                                     :style="{width: act.percentage + '%'}"></div>
-                            </div>
+                    <div class="budget-history-right" style="min-width: 80px;">
+                        <span class="text-xs font-bold text-purple-700">[[ act.time ]]</span>
+                        <div class="w-full bg-gray-100 rounded-full h-1 mt-1">
+                            <div class="bg-purple-600 h-1 rounded-full" :style="{width: act.percentage + '%'}"></div>
                         </div>
                     </div>
                 </div>
+                <div v-if="teleworkData.activities && teleworkData.activities.length === 0"
+                     class="text-center py-5 text-gray-400">
+                    <p style="font-size: 0.8rem;">Sin actividades reportadas aún.</p>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
