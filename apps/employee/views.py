@@ -1204,79 +1204,99 @@ def get_telework_data_api(request, person_id):
     employee = person.employee_profile
     today = timezone.now().date()
 
-    # Obtener marcaciones de hoy
+    is_own_profile = (request.user == person.user)
+
     punches = OfflineAttendanceRegistry.objects.filter(
         employee=employee,
         captured_at__date=today
     ).order_by('captured_at')
 
-    # Obtener actividades de hoy
+    # Lógica de control: ¿Tiene al menos un ingreso hoy?
+    has_income = punches.filter(punch_type='INCOME').exists()
+
     activities = TeleworkActivity.objects.filter(
         employee=employee,
         created_at__date=today
     ).order_by('-created_at')
 
-    # Lógica de 2 horas (Alerta)
-    last_activity = activities.first()
-    needs_update = False
-    if last_activity:
-        diff = timezone.now() - last_activity.created_at
-        if diff.total_seconds() > 7200:  # 2 horas
-            needs_update = True
-
     return JsonResponse({
         'success': True,
+        'is_own_profile': is_own_profile,
+        'has_income': has_income,
         'punches': [{
             'type': p.get_punch_type_display(),
             'time': p.captured_at.strftime('%H:%M:%S'),
-            'status': p.sync_status
         } for p in punches],
         'activities': [{
             'id': a.id,
             'title': a.title,
             'detail': a.detail,
-            'status': a.get_status_display(),
             'percentage': a.percentage,
             'time': a.created_at.strftime('%H:%M')
         } for a in activities],
-        'needs_update': needs_update
+        'needs_update': activities.first() and (timezone.now() - activities.first().created_at).total_seconds() > 7200
     })
 
 
 @require_POST
 def add_telework_activity_api(request, person_id):
     person = get_object_or_404(Person, pk=person_id)
+
+    # 1. CONTROL DE IDENTIDAD
+    if request.user != person.user:
+        return JsonResponse({'success': False, 'message': 'No autorizado para registrar actividades en este perfil.'},
+                            status=403)
+
     employee = person.employee_profile
+    today = timezone.now().date()
 
-    title = request.POST.get('title')
-    detail = request.POST.get('detail')
-    percentage = request.POST.get('percentage', 0)
+    # 2. CONTROL: ¿Marcó ingreso?
+    has_income = OfflineAttendanceRegistry.objects.filter(
+        employee=employee, punch_type='INCOME', captured_at__date=today
+    ).exists()
 
-    activity = TeleworkActivity.objects.create(
+    if not has_income:
+        return JsonResponse(
+            {'success': False, 'message': 'Debe marcar su INGRESO de jornada antes de reportar actividades.'},
+            status=400)
+
+    TeleworkActivity.objects.create(
         employee=employee,
-        title=title,
-        detail=detail,
-        percentage=percentage,
-        status='COMPLETED' if int(percentage) == 100 else 'IN_PROGRESS'
+        title=request.POST.get('title'),
+        detail=request.POST.get('detail'),
+        percentage=request.POST.get('percentage', 0),
+        status='IN_PROGRESS'
     )
-
     return JsonResponse({'success': True, 'message': 'Actividad registrada'})
 
 
 @require_POST
 def mark_telework_attendance_api(request, person_id):
     person = get_object_or_404(Person, pk=person_id)
-    employee = person.employee_profile
-    punch_type = request.POST.get('punch_type')  # INCOME o EXIT
 
-    # En teletrabajo web, si no hay GPS real, usamos 0,0 o coordenadas de oficina
+    # 1. CONTROL DE IDENTIDAD
+    if request.user != person.user:
+        return JsonResponse({'success': False, 'message': 'No autorizado. Solo el titular puede marcar asistencia.'},
+                            status=403)
+
+    employee = person.employee_profile
+    punch_type = request.POST.get('punch_type')
+    today = timezone.now().date()
+
+    # 2. CONTROL DE SECUENCIA (Salida sin Ingreso)
+    if punch_type == 'EXIT':
+        has_income = OfflineAttendanceRegistry.objects.filter(
+            employee=employee, punch_type='INCOME', captured_at__date=today
+        ).exists()
+        if not has_income:
+            return JsonResponse(
+                {'success': False, 'message': 'No puede marcar SALIDA sin haber registrado un INGRESO previo.'},
+                status=400)
+
+    # Registro
     OfflineAttendanceRegistry.objects.create(
-        employee=employee,
-        punch_type=punch_type,
-        captured_at=timezone.now(),
-        latitude=0,
-        longitude=0,
-        source='WEB',
-        sync_status='SYNCED'
+        employee=employee, punch_type=punch_type, captured_at=timezone.now(),
+        latitude=request.POST.get('latitude', 0), longitude=request.POST.get('longitude', 0),
+        source='WEB', sync_status='SYNCED'
     )
-    return JsonResponse({'success': True, 'message': f'Marcación de {punch_type} exitosa'})
+    return JsonResponse({'success': True, 'message': 'Marcación registrada correctamente.'})

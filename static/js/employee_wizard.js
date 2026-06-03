@@ -214,7 +214,9 @@ const app = createApp({
         const teleworkData = ref({
             punches: [],
             activities: [],
-            needs_update: false
+            needs_update: false,
+            is_own_profile: false,
+            has_income: false
         });
 
         const teleworkForm = ref({
