@@ -211,6 +211,65 @@ const app = createApp({
             updateTable();
         };
 
+        const teleworkData = ref({
+            punches: [],
+            activities: [],
+            needs_update: false
+        });
+
+        const teleworkForm = ref({
+            title: '',
+            detail: '',
+            percentage: 0
+        });
+
+        const fetchTeleworkData = async () => {
+            const res = await (await fetch(`/employee/api/telework/data/${personId}/`)).json();
+            if (res.success) {
+                teleworkData.value = res;
+            }
+        };
+
+        const markTelework = async (type) => {
+            const formData = new FormData();
+            formData.append('punch_type', type);
+
+            const res = await (await fetch(`/employee/api/telework/mark/${personId}/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                body: formData
+            })).json();
+
+            if (res.success) {
+                window.Toast.fire({icon: 'success', title: res.message});
+                fetchTeleworkData();
+            }
+        };
+
+        const submitActivity = async () => {
+            const formData = new FormData();
+            formData.append('title', teleworkForm.value.title);
+            formData.append('detail', teleworkForm.value.detail);
+            formData.append('percentage', teleworkForm.value.percentage);
+
+            const res = await (await fetch(`/employee/api/telework/add-activity/${personId}/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                body: formData
+            })).json();
+
+            if (res.success) {
+                teleworkForm.value = {title: '', detail: '', percentage: 0};
+                fetchTeleworkData();
+                window.Toast.fire({icon: 'success', title: 'Actividad registrada'});
+            }
+        };
+        Vue.watch(activeTab, (newTab) => {
+            if (newTab === 'telework') {
+                fetchTeleworkData();
+            }
+        });
+
         const isSaving = ref(false);
         const isPhotoSaving = ref(false);
         const loadingList = ref(false);
@@ -1455,7 +1514,6 @@ const app = createApp({
                 window.Toast.fire({icon: 'error', title: 'Error de conexión'});
             }
         };
-        // Dentro de la función setup() en employee_wizard.js
 
         const openScheduleChangeModal = (empId) => {
             // La URL debe coincidir con la de tu urls.py: name='employee_schedule_change_modal'
@@ -1640,6 +1698,11 @@ const app = createApp({
             refreshInstitutionalTab,
 
             toggleTabVisibility,
+            teleworkData,
+            teleworkForm,
+            markTelework,
+            submitActivity,
+            fetchTeleworkData,
         };
     }
 });

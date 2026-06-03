@@ -5101,6 +5101,26 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     --button-color: #44a641;
     --button-color-rgb: 255, 152, 0;
 }
+.employee-detail-button-schedule {
+    --button-color: #8b5cf6;
+    --button-color-rgb: 139, 92, 246;
+}
+.employee-detail-button-telework {
+    --button-color: #06b6d4;
+    --button-color-rgb: 6, 182, 212;
+}
+
+.employee-detail-button-schedule .employee-detail-button-icon i,
+.employee-detail-button-telework .employee-detail-button-icon i {
+    color: #ffffff !important;
+}
+.employee-detail-button-schedule .employee-detail-button-icon {
+    background-color: var(--button-color) !important;
+}
+
+.employee-detail-button-telework .employee-detail-button-icon {
+    background-color: var(--button-color) !important;
+}
 
 /* Layout detalle */
 .container-custom {

@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.core.exceptions import ValidationError
 from core.models import BaseModel, CatalogItem, User
@@ -271,3 +272,29 @@ class EmployeeProfileVisibility(BaseModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.tab_id}: {'Visible' if self.is_visible else 'Oculto'}"
+
+
+class TeleworkActivity(BaseModel):
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pendiente'
+        IN_PROGRESS = 'IN_PROGRESS', 'En Progreso'
+        COMPLETED = 'COMPLETED', 'Completado'
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='telework_activities')
+    title = models.CharField(max_length=200, verbose_name="Título de la Actividad")
+    detail = models.TextField(verbose_name="Detalle/Descripción")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    percentage = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(100)])
+    evidence = models.FileField(
+        upload_to='documents/telework_activities/generated/%Y/%m/',
+        verbose_name='Documento PDF generado',
+        blank=True,
+        null=True, )
+
+    class Meta:
+        verbose_name = "Actividad de Teletrabajo"
+        verbose_name_plural = "Actividades de Teletrabajo"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.employee}"

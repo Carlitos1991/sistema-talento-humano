@@ -3,7 +3,9 @@ from django.contrib.auth.models import User
 from django.views import View
 from django.utils.decorators import method_decorator
 import json
-
+from django.utils import timezone
+from .models import TeleworkActivity
+from biometric.models import OfflineAttendanceRegistry
 # Vista para reubicar empleado (relocate_employee)
 from schedule.models import EmployeeScheduleHistory
 # apps/employee/views.py
@@ -1194,3 +1196,87 @@ class UpdateProfileVisibilityView(LoginRequiredMixin, PermissionRequiredMixin, V
         except Exception as e:
             logger.exception("Error al actualizar visibilidad")
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@login_required
+def get_telework_data_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    employee = person.employee_profile
+    today = timezone.now().date()
+
+    # Obtener marcaciones de hoy
+    punches = OfflineAttendanceRegistry.objects.filter(
+        employee=employee,
+        captured_at__date=today
+    ).order_by('captured_at')
+
+    # Obtener actividades de hoy
+    activities = TeleworkActivity.objects.filter(
+        employee=employee,
+        created_at__date=today
+    ).order_by('-created_at')
+
+    # Lógica de 2 horas (Alerta)
+    last_activity = activities.first()
+    needs_update = False
+    if last_activity:
+        diff = timezone.now() - last_activity.created_at
+        if diff.total_seconds() > 7200:  # 2 horas
+            needs_update = True
+
+    return JsonResponse({
+        'success': True,
+        'punches': [{
+            'type': p.get_punch_type_display(),
+            'time': p.captured_at.strftime('%H:%M:%S'),
+            'status': p.sync_status
+        } for p in punches],
+        'activities': [{
+            'id': a.id,
+            'title': a.title,
+            'detail': a.detail,
+            'status': a.get_status_display(),
+            'percentage': a.percentage,
+            'time': a.created_at.strftime('%H:%M')
+        } for a in activities],
+        'needs_update': needs_update
+    })
+
+
+@require_POST
+def add_telework_activity_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    employee = person.employee_profile
+
+    title = request.POST.get('title')
+    detail = request.POST.get('detail')
+    percentage = request.POST.get('percentage', 0)
+
+    activity = TeleworkActivity.objects.create(
+        employee=employee,
+        title=title,
+        detail=detail,
+        percentage=percentage,
+        status='COMPLETED' if int(percentage) == 100 else 'IN_PROGRESS'
+    )
+
+    return JsonResponse({'success': True, 'message': 'Actividad registrada'})
+
+
+@require_POST
+def mark_telework_attendance_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    employee = person.employee_profile
+    punch_type = request.POST.get('punch_type')  # INCOME o EXIT
+
+    # En teletrabajo web, si no hay GPS real, usamos 0,0 o coordenadas de oficina
+    OfflineAttendanceRegistry.objects.create(
+        employee=employee,
+        punch_type=punch_type,
+        captured_at=timezone.now(),
+        latitude=0,
+        longitude=0,
+        source='WEB',
+        sync_status='SYNCED'
+    )
+    return JsonResponse({'success': True, 'message': f'Marcación de {punch_type} exitosa'})

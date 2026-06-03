@@ -41,4 +41,7 @@ urlpatterns = [
 
     # VISIBILIDAD DE PERFIL
     path('api/profile-visibility/', views.UpdateProfileVisibilityView.as_view(), name='api_update_profile_visibility'),
+    path('api/telework/data/<int:person_id>/', views.get_telework_data_api, name='api_telework_data'),
+    path('api/telework/add-activity/<int:person_id>/', views.add_telework_activity_api, name='api_telework_add'),
+    path('api/telework/mark/<int:person_id>/', views.mark_telework_attendance_api, name='api_telework_mark'),
 ]

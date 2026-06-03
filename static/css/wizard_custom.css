@@ -912,52 +912,6 @@
     min-height: 195px;
 }
 
-/* --- Estilo para HORARIO (Violeta) --- */
-.employee-detail-button-schedule {
-    border: 1px solid #e2e8f0;
-    border-top: 3px solid transparent; /* Reservamos el espacio del borde */
-}
-
-.employee-detail-button-schedule .employee-detail-button-icon {
-    background: #8b5cf6 !important; /* Cuadrado del icono violeta */
-    border-radius: 8px;
-}
-
-.employee-detail-button-schedule .employee-detail-button-icon i {
-    color: white !important;
-}
-
-/* ESTADO ACTIVO (Igual a Datos Personales) */
-.employee-detail-button-schedule.active {
-    background-color: #f5f3ff !important;
-    border: 1px solid #ddd !important;
-    border-top: 3px solid #8b5cf6 !important; /* Borde superior pintado */
-    color: #7c3aed !important;
-}
-
-/* --- Estilo para TELETRABAJO (Cian) --- */
-.employee-detail-button-telework {
-    border: 1px solid #e2e8f0;
-    border-top: 3px solid transparent;
-}
-
-.employee-detail-button-telework .employee-detail-button-icon {
-    background: #06b6d4 !important; /* Cuadrado del icono cian */
-    border-radius: 8px;
-}
-
-.employee-detail-button-telework .employee-detail-button-icon i {
-    color: white !important;
-}
-
-/* ESTADO ACTIVO */
-.employee-detail-button-telework.active {
-    background-color: #ecfeff !important;
-    border: 1px solid #ddd !important;
-    border-top: 3px solid #06b6d4 !important;
-    color: #0891b2 !important;
-}
-
 /* Contenedor principal del contenido del tab */
 .schedule-container {
     background: white;
@@ -1060,4 +1014,63 @@
 /* Si el texto es muy largo, bajamos un poco el tamaño */
 .time-slot {
     font-size: 0.85rem;
+}
+
+/* Estilos para Teletrabajo */
+.btn-attendance {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    color: white;
+    transition: all 0.2s;
+}
+
+.btn-attendance.income {
+    background: #10b981;
+}
+
+.btn-attendance.exit {
+    background: #ef4444;
+}
+
+.timeline-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-left: 10px;
+}
+
+.timeline-item {
+    border-left: 2px solid #8b5cf6;
+    padding: 10px 0 10px 15px;
+    position: relative;
+    margin-bottom: 5px;
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: #8b5cf6;
+    font-weight: bold;
+}
+
+.alert-warning-custom {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #92400e;
+}
+
+.progress-bar-mini {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin-top: 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #8b5cf6;
+    border-radius: 2px;
 }
