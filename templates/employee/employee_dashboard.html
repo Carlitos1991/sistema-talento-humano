@@ -28,17 +28,17 @@
     </script>
 
     <div class="employee-standalone-wrapper container-custom">
-           <div id="employeeWizardApp"
-               v-cloak
-               data-is-dashboard="true"
-               data-person-id="{{ person.id }}"
-               data-tab-visibilities='{{ tab_visibilities|safe }}'
-               data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
-               data-photo-url="{% if person.photo %}{{ person.photo.url }}{% endif %}"
-               data-titles="{{ curriculum_titles_count|default:0 }}"
-               data-experiences="{{ curriculum_experiences_count|default:0 }}"
-               data-courses="{{ curriculum_courses_count|default:0 }}"
-               data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
+        <div id="employeeWizardApp"
+             v-cloak
+             data-is-dashboard="true"
+             data-person-id="{{ person.id }}"
+             data-tab-visibilities='{{ tab_visibilities|safe }}'
+             data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
+             data-photo-url="{% if person.photo %}{{ person.photo.url }}{% endif %}"
+             data-titles="{{ curriculum_titles_count|default:0 }}"
+             data-experiences="{{ curriculum_experiences_count|default:0 }}"
+             data-courses="{{ curriculum_courses_count|default:0 }}"
+             data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
 
             <!-- Banner informativo (mantener diseño previo bajo la cabecera) -->
             <div class="banner-employee-detail">
@@ -115,6 +115,13 @@
 
                         <div v-if="activeTab === 'vacations'">
                             {% include 'employee/partials/wizard/tab_vacations_data.html' %}
+                        </div>
+                        <div v-if="activeTab === 'schedule'">
+                            {% include 'employee/partials/wizard/tab_schedule.html' %}
+                        </div>
+                        <!-- PESTAÑA: TELETRABAJO -->
+                        <div v-if="activeTab === 'telework'">
+                            {% include 'employee/partials/wizard/tab_telework.html' %}
                         </div>
                     </div>
 

@@ -1214,7 +1214,7 @@ def get_telework_data_api(request, person_id):
     punches = OfflineAttendanceRegistry.objects.filter(
         employee=employee,
         captured_at__date=today
-    ).order_by('captured_at')
+    ).order_by('-captured_at')
 
     last_punch = punches.last()
     last_punch_type = last_punch.punch_type if last_punch else None
@@ -1289,7 +1289,7 @@ def mark_telework_attendance_api(request, person_id):
     today = timezone.now().date()
     last_punch = OfflineAttendanceRegistry.objects.filter(
         employee=employee, captured_at__date=today
-    ).order_by('captured_at').last()
+    ).order_by('-captured_at').last()
 
     if last_punch and last_punch.punch_type == punch_type:
         tipo_str = "ENTRADA" if punch_type == 'INCOME' else "SALIDA"
