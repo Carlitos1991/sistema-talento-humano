@@ -1,0 +1,59 @@
+<div v-if="isActivityModalVisible" class="modal-overlay" style="display:flex; z-index: 1050;" role="dialog" aria-modal="true">
+    <div class="modal-container animate-scale-in" style="max-width:500px; width:calc(100% - 40px);">
+
+        <!-- HEADER -->
+        <div class="modal-header modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-list-check me-2"></i> Registrar Actividad
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" @click="isActivityModalVisible = false">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <!-- FORM WRAPPER (includes body + footer) -->
+        <form @submit.prevent="submitActivity" style="display: flex; flex-direction: column; height: 100%;">
+            
+            <!-- BODY -->
+            <div class="modal-body modal-body-custom p-4">
+                <div class="form-group mb-3">
+                    <label class="form-label">
+                        <i class="fa-solid fa-heading"></i> Título de la actividad
+                    </label>
+                    <input v-model="teleworkForm.title" type="text" class="form-control input-field"
+                           placeholder="Ej. Revisión de documentos" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="form-label">
+                        <i class="fa-solid fa-note-sticky"></i> Detalles adicionales
+                    </label>
+                    <textarea v-model="teleworkForm.detail" class="form-control input-field"
+                              placeholder="Escriba aquí los detalles..." rows="3"></textarea>
+                </div>
+
+                <div class="form-group mb-0">
+                    <label class="form-label w-100 flex justify-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span><i class="fa-solid fa-bars-progress"></i> Avance de la tarea</span>
+                        <span class="badge" style="background-color: var(--primary-color, #4361ee); color: white; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px;">[[ teleworkForm.percentage ]]%</span>
+                    </label>
+                    <div class="flex items-center gap-3 bg-gray-50 border rounded-3 p-2 input-field" style="display: flex; align-items: center; justify-content: space-between;">
+                        <span class="day-label" style="margin:0; font-size: 0.7rem; color: #64748b; font-weight: 700;">AVANCE:</span>
+                        <input type="range" v-model="teleworkForm.percentage" class="flex-grow form-range" min="0" max="100" step="5" style="margin: 0 10px; width: 100%;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer modal-footer-spaced mt-3 border-t">
+                <button type="button" class="btn-cancel" @click="isActivityModalVisible = false">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-check me-1"></i> Guardar
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
