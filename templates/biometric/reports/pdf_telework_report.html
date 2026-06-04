@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Actividades de Teletrabajo</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 10px;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10px;
+            color: #333;
+            padding: 2.5cm 1.5cm 1.5cm 1.5cm;
+            box-sizing: border-box;
+        }
+
+        {% if letterhead_data %}
+        body {
+            background-image: url('{{ letterhead_data }}');
+            background-repeat: no-repeat;
+            background-position: top center;
+            background-size: 100% auto;
+        }
+        {% endif %}
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        .header h3 {
+            margin: 2px 0;
+            font-size: 12px;
+            font-weight: normal;
+            color: #444;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-bottom: 15px;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        .info-table td {
+            padding: 4px 0;
+        }
+
+        .info-table strong {
+            color: #000;
+        }
+
+        .activities-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 9px;
+        }
+
+        .activities-table th,
+        .activities-table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+
+        .activities-table thead th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #222;
+        }
+
+        .activity-date-row {
+            background-color: #eef2f7;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+
+        .activity-date-row td {
+            padding: 8px;
+        }
+
+        .footer-info {
+            width: 100%;
+            margin-top: 20px;
+            text-align: right;
+            font-size: 9px;
+            color: #777;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>REPORTE DE ACTIVIDADES DE TELETRABAJO</h2>
+        <h3>Periodo del {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }}</h3>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td style="width: 60%;"><strong>EMPLEADO:</strong> {{ employee.person.full_name }}</td>
+            <td style="width: 40%; text-align: right;"><strong>CÉDULA:</strong> {{ employee.person.document_number }}</td>
+        </tr>
+    </table>
+
+    <table class="activities-table">
+        <thead>
+            <tr>
+                <th style="width: 15%;">Hora</th>
+                <th style="width: 30%;">Actividad</th>
+                <th style="width: 45%;">Detalle</th>
+                <th style="width: 10%; text-align: center;">Avance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for date, activities in activities_by_date.items %}
+                <tr class="activity-date-row">
+                    <td colspan="4">{{ date|date:"l, d" }} de {{ date|date:"F" }} de {{ date|date:"Y" }}</td>
+                </tr>
+                {% for activity in activities %}
+                    <tr style="page-break-inside: avoid;">
+                        <td>{{ activity.created_at|time:"H:i" }}</td>
+                        <td>{{ activity.title }}</td>
+                        <td>{{ activity.detail|default:"-" }}</td>
+                        <td style="text-align: center;">{{ activity.percentage }}%</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 10px; color: #888;">No hay actividades registradas en esta fecha.</td>
+                    </tr>
+                {% endfor %}
+            {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 20px; color: #888;">No se encontraron actividades en el rango de fechas seleccionado.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-info">
+        <strong>FECHA IMPRESIÓN:</strong> {{ today|date:"d/m/Y" }}
+    </div>
+
+</body>
+</html>

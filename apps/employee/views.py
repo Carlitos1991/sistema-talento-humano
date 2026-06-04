@@ -17,12 +17,17 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
-
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from django.http import HttpResponse
+from io import BytesIO
+from datetime import datetime
+import base64
 from biometric.models import OfflineAttendanceRegistry
 from budget.models import BudgetAssignmentHistory
 from budget.models import BudgetLine
 from contract.models import ManagementPeriod
-from core.models import CatalogItem, Location
+from core.models import CatalogItem, Location, SystemConfiguration
 from payroll.models import Payslip
 from permitrequest.models import PermitRequest, PermitType
 from person.models import Person
@@ -1279,7 +1284,7 @@ def add_telework_activity_api(request, person_id):
     # 3. CONTROL DE DATOS FALTANTES: Asegurar que título y detalle estén presentes
     title = request.POST.get('title')
     if not title:
-         return JsonResponse({'success': False, 'message': 'El título de la actividad es obligatorio.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'El título de la actividad es obligatorio.'}, status=400)
 
     try:
         TeleworkActivity.objects.create(
@@ -1333,3 +1338,64 @@ def mark_telework_attendance_api(request, person_id):
         source='WEB', sync_status='SYNCED'
     )
     return JsonResponse({'success': True, 'message': 'Marcación registrada correctamente.'})
+
+
+@login_required
+def generate_telework_report_pdf(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    employee = person.employee_profile
+
+    start_date_str = request.GET.get('start')
+    end_date_str = request.GET.get('end')
+
+    if not all([start_date_str, end_date_str]):
+        return HttpResponse("Fechas de inicio y fin son requeridas.", status=400)
+
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    activities = TeleworkActivity.objects.filter(
+        employee=employee,
+        created_at__date__range=(start_date, end_date)
+    ).order_by('created_at')
+
+    activities_by_date = {}
+    for activity in activities:
+        date = activity.created_at.date()
+        if date not in activities_by_date:
+            activities_by_date[date] = []
+        activities_by_date[date].append(activity)
+
+    # Obtener el membrete activo
+    letterhead = SystemConfiguration.objects.filter(is_active=True).first()
+    letterhead_data = None
+    if letterhead and letterhead.header_img:
+        try:
+            with open(letterhead.header_img.path, "rb") as image_file:
+                letterhead_data = "data:image/png;base64," + base64.b64encode(image_file.read()).decode('utf-8')
+        except FileNotFoundError:
+            letterhead_data = None
+
+    context = {
+        'employee': employee,
+        'start_date': start_date,
+        'end_date': end_date,
+        'activities_by_date': activities_by_date,
+        'today': timezone.now().date(),
+        'letterhead_data': letterhead_data,
+    }
+
+    template_path = 'biometric/reports/pdf_telework_report.html'
+    template = get_template(template_path)
+    html = template.render(context)
+
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        filename = f"reporte_teletrabajo_{employee.person.document_number}_{start_date_str}_a_{end_date_str}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+
+    return HttpResponse("Error al generar el PDF", status=500)
