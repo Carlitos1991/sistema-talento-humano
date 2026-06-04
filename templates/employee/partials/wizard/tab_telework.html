@@ -34,7 +34,7 @@
                 <div v-for="punch in teleworkData.punches" :key="punch.time" class="day-card-compact">
                     <div style="flex: 1;">
                         <span class="day-label">EVENTO</span>
-                        <div :class="punch.type === 'Ingreso' ? 'text-green-600' : 'text-red-600'"
+                        <div :class="punch.type_code === 'INCOME' ? 'text-green-600' : 'text-red-600'"
                              style="font-weight: 800; font-size: 0.8rem; line-height: 1.2;">
                             [[ punch.type.toUpperCase() ]]
                         </div>
@@ -71,39 +71,25 @@
                 </h5>
             </div>
 
-            <div v-if="teleworkData.is_own_profile" style="flex-shrink: 0;">
-                <div v-if="!teleworkData.has_income" class="text-center py-3 bg-yellow-50 border border-yellow-200 mb-3"
+            <div v-if="teleworkData.is_own_profile" class="attendance-btn-group-centered" style="padding: 10px;">
+                <div v-if="teleworkData.last_punch_type === 'EXIT'" class="text-center py-3 bg-red-50 border border-red-200 w-100"
+                     style="border-radius: 10px;">
+                    <i class="fa-solid fa-lock text-red-600 mb-1"></i>
+                    <p class="text-red-800 font-bold m-0" style="font-size: 0.75rem;">Usted ya ha marcado su SALIDA. No puede registrar más actividades hoy.</p>
+                </div>
+                <div v-else-if="!teleworkData.has_income" class="text-center py-3 bg-yellow-50 border border-yellow-200 w-100"
                      style="border-radius: 10px;">
                     <i class="fa-solid fa-lock text-yellow-600 mb-1"></i>
-                    <p class="text-yellow-800 font-bold m-0" style="font-size: 0.75rem;">Debe registrar su ENTRADA para
-                        habilitar el reporte.</p>
+                    <p class="text-yellow-800 font-bold m-0" style="font-size: 0.75rem;">Debe registrar su ENTRADA para habilitar el reporte.</p>
                 </div>
-
-                <form v-else @submit.prevent="submitActivity" class="bg-gray-50 p-3 border mb-3"
-                      style="border-radius: 12px;">
-                    <input v-model="teleworkForm.title" type="text" class="form-control mb-2"
-                           placeholder="¿Qué actividad realizó?" required
-                           style="border-radius: 8px; padding: 6px 10px; font-size: 0.85rem;">
-                    <textarea v-model="teleworkForm.detail" class="form-control mb-2"
-                              placeholder="Detalles de la actividad..." rows="1"
-                              style="border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; min-height: 45px;"></textarea>
-
-                    <div class="flex items-center gap-3 bg-white p-2 border rounded-3 mb-2"
-                         style="border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span class="day-label" style="margin:0; font-size: 0.6rem; color: #94a3b8; font-weight: 800;">AVANCE:</span>
-                        <input type="range" v-model="teleworkForm.percentage" class="flex-grow" style="margin: 0 10px;">
-                        <span class="badge bg-purple-600 text-white"
-                              style="padding: 3px 8px; font-size: 0.75rem; border-radius: 6px;">[[ teleworkForm.percentage ]]%</span>
-                    </div>
-
-                    <div class="text-right">
-                        <button type="submit" class="btn-header-premium"
-                                style="background: #10b981; padding: 6px 16px; border-radius: 8px; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 0.8rem;">
-                            GUARDAR AVANCE <i class="fa-solid fa-check ms-1"></i>
-                        </button>
-                    </div>
-                </form>
+                <button v-else @click="isActivityModalVisible = true" class="btn-attendance income">
+                    <i class="fa-solid fa-plus me-1"></i> Registrar Actividad
+                </button>
+                <button @click="isReportModalVisible = true" class="btn-attendance exit">
+                    <i class="fa-solid fa-file-pdf me-1"></i> Reporte PDF
+                </button>
             </div>
+
             <div v-else class="text-center py-6 text-gray-400" style="flex-shrink: 0;">
                 <i class="fa-solid fa-eye mb-1"></i>
                 <p class="small m-0">Vista de solo lectura</p>
@@ -134,4 +120,65 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para crear actividad -->
+    <div v-if="isActivityModalVisible" class="modal-overlay" style="display:flex; z-index: 1050;">
+        <div class="modal-container-medium animate-scale-in shadow-card animate__animated animate__fadeInDown"
+             style="max-width:500px; background:#fff; border-radius:12px; display:flex; flex-direction:column;">
+
+            <div class="modal-header-premium" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon-container" style="background: rgba(255,255,255,0.1);">
+                        <i class="fa-solid fa-list-check" style="color: white;"></i>
+                    </div>
+                    <div>
+                        <h4 class="modal-title-premium text-white">Registrar Actividad</h4>
+                        <p class="modal-subtitle-premium text-gray-300">Describa la tarea realizada</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-modal" @click="isActivityModalVisible = false">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-body p-4">
+                <form @submit.prevent="submitActivity">
+                    <div class="mb-3">
+                        <label class="form-label font-bold text-sm text-gray-700">Título de la actividad</label>
+                        <input v-model="teleworkForm.title" type="text" class="form-control"
+                               placeholder="Ej. Revisión de documentos" required
+                               style="border-radius: 8px;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label font-bold text-sm text-gray-700">Detalles adicionales</label>
+                        <textarea v-model="teleworkForm.detail" class="form-control"
+                                  placeholder="Escriba aquí los detalles..." rows="3"
+                                  style="border-radius: 8px;"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label font-bold text-sm text-gray-700 w-100 flex justify-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span>Avance de la tarea</span>
+                            <span class="badge bg-purple-600 text-white" style="padding: 3px 8px; font-size: 0.75rem; border-radius: 6px;">[[ teleworkForm.percentage ]]%</span>
+                        </label>
+                        <div class="flex items-center gap-3 bg-gray-50 border rounded-3 p-2" style="border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <span class="day-label" style="margin:0; font-size: 0.6rem; color: #94a3b8; font-weight: 800;">AVANCE:</span>
+                            <input type="range" v-model="teleworkForm.percentage" class="flex-grow" min="0" max="100" step="5" style="margin: 0 10px; width: 100%;">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-4 pt-3 border-t" style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; margin-top: 15px; padding-top: 15px;">
+                        <button type="button" class="btn btn-light" @click="isActivityModalVisible = false" style="border-radius: 8px;">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-save" style="background: linear-gradient(to right, #10b981, #059669); color: white; border-radius: 8px;">
+                            <i class="fa-solid fa-check me-1"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% include 'employee/modals/modal_telework_report.html' %}
 </div>

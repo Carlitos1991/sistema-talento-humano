@@ -1216,8 +1216,15 @@ def get_telework_data_api(request, person_id):
         captured_at__date=today
     ).order_by('-captured_at')
 
-    last_punch = punches.last()
+    last_punch = punches.first()  # Use first() because of the descending order
     last_punch_type = last_punch.punch_type if last_punch else None
+
+    # Check if there's an 'INCOME' punch for today, regardless of what the last punch was.
+    has_income_today = OfflineAttendanceRegistry.objects.filter(
+        employee=employee,
+        captured_at__date=today,
+        punch_type='INCOME'
+    ).exists()
 
     activities = TeleworkActivity.objects.filter(
         employee=employee,
@@ -1228,7 +1235,9 @@ def get_telework_data_api(request, person_id):
         'success': True,
         'is_own_profile': is_own_profile,
         'last_punch_type': last_punch_type,
+        'has_income': has_income_today,  # Use the new reliable flag
         'punches': [{
+            'type_code': p.punch_type,
             'type': p.get_punch_type_display(),
             'time': p.captured_at.strftime('%H:%M:%S'),
         } for p in punches],
@@ -1255,24 +1264,35 @@ def add_telework_activity_api(request, person_id):
     employee = person.employee_profile
     today = timezone.now().date()
 
-    # 2. CONTROL: ¿Marcó ingreso?
-    has_income = OfflineAttendanceRegistry.objects.filter(
-        employee=employee, punch_type='INCOME', captured_at__date=today
-    ).exists()
+    # 2. CONTROL DE SECUENCIA: Obtener la última marcación del día
+    last_punch = OfflineAttendanceRegistry.objects.filter(
+        employee=employee, captured_at__date=today
+    ).order_by('-captured_at').first()
 
-    if not has_income:
+    # Si no hay marcaciones o la última fue una salida, no permitir
+    if not last_punch or last_punch.punch_type == 'EXIT':
         return JsonResponse(
-            {'success': False, 'message': 'Debe marcar su INGRESO de jornada antes de reportar actividades.'},
+            {'success': False,
+             'message': 'No puede registrar actividades. Debe tener una marcación de ENTRADA activa para este día.'},
             status=400)
 
-    TeleworkActivity.objects.create(
-        employee=employee,
-        title=request.POST.get('title'),
-        detail=request.POST.get('detail'),
-        percentage=request.POST.get('percentage', 0),
-        status='IN_PROGRESS'
-    )
-    return JsonResponse({'success': True, 'message': 'Actividad registrada'})
+    # 3. CONTROL DE DATOS FALTANTES: Asegurar que título y detalle estén presentes
+    title = request.POST.get('title')
+    if not title:
+         return JsonResponse({'success': False, 'message': 'El título de la actividad es obligatorio.'}, status=400)
+
+    try:
+        TeleworkActivity.objects.create(
+            employee=employee,
+            title=title,
+            detail=request.POST.get('detail', ''),
+            percentage=request.POST.get('percentage', 0),
+            status='IN_PROGRESS'
+        )
+        return JsonResponse({'success': True, 'message': 'Actividad registrada'})
+    except Exception as e:
+        logger.error(f"Error saving telework activity: {e}")
+        return JsonResponse({'success': False, 'message': 'Error interno al guardar la actividad.'}, status=500)
 
 
 @require_POST
@@ -1289,7 +1309,7 @@ def mark_telework_attendance_api(request, person_id):
     today = timezone.now().date()
     last_punch = OfflineAttendanceRegistry.objects.filter(
         employee=employee, captured_at__date=today
-    ).order_by('-captured_at').last()
+    ).order_by('-captured_at').first()
 
     if last_punch and last_punch.punch_type == punch_type:
         tipo_str = "ENTRADA" if punch_type == 'INCOME' else "SALIDA"

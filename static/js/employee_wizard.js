@@ -101,17 +101,7 @@ const app = createApp({
                 }).catch(err => console.error('Error auditoría:', err));
             }
         });
-        onMounted(() => {
-            if (personId) {
-                refreshCvTab(personId);
-            }
 
-            if (activeTab.value === 'actions') {
-                Vue.nextTick(() => {
-                    initActionsLocalPagination();
-                });
-            }
-        });
         // --- LÓGICA DE PAGINACIÓN LOCAL PARA ACCIONES ---
         const initActionsLocalPagination = () => {
             const rowsPerPage = 10;
@@ -213,6 +203,10 @@ const app = createApp({
             updateTable();
         };
 
+        const isActivityModalVisible = ref(false);
+        const isReportModalVisible = ref(false);
+        const reportDates = ref({ start: '', end: '' });
+
         const teleworkData = ref({
             punches: [],
             activities: [],
@@ -285,12 +279,36 @@ const app = createApp({
 
             if (res.success) {
                 teleworkForm.value = {title: '', detail: '', percentage: 0};
+                isActivityModalVisible.value = false;
                 fetchTeleworkData();
                 window.Toast.fire({icon: 'success', title: 'Actividad registrada'});
             }
         };
+
+        const generateTeleworkReport = async () => {
+            // Por ahora, solo una alerta. La lógica de PDF se añadirá después.
+            alert(`Generando reporte desde ${reportDates.value.start} hasta ${reportDates.value.end}`);
+            isReportModalVisible.value = false;
+        };
+
         Vue.watch(activeTab, (newTab) => {
             if (newTab === 'telework') {
+                fetchTeleworkData();
+            }
+        });
+
+        onMounted(() => {
+            if (personId) {
+                refreshCvTab(personId);
+            }
+
+            if (activeTab.value === 'actions') {
+                Vue.nextTick(() => {
+                    initActionsLocalPagination();
+                });
+            }
+
+            if (activeTab.value === 'telework') {
                 fetchTeleworkData();
             }
         });
@@ -501,22 +519,20 @@ const app = createApp({
 
         let visibilities = {};
         try {
-            visibilities = JSON.parse(appElement?.dataset.tabVisibilities || '{}');
+            const dataScript = document.getElementById('tab-visibilities-data');
+            if(dataScript) {
+                 visibilities = JSON.parse(dataScript.textContent);
+            }
         } catch (e) {
             console.error("Error parsing tab visibilities", e);
         }
 
         const getSavedVisibility = (tabId) => {
-            // 1. Definimos cuáles son los 4 IDs que queremos activos por defecto
-            const defaultTabs = ['personal', 'curriculum', 'institutional', 'economic'];
-
-            // 2. Si el tab existe en el objeto 'visibilities' (porque ya se guardó en BD)
             if (visibilities.hasOwnProperty(tabId)) {
-                return visibilities[tabId] === 'true';
+                return Boolean(visibilities[tabId]);
             }
-
-            // 3. Si no existe en la base de datos (es la primera vez),
-            // devolvemos true solo si está en nuestra lista de "4 primeros"
+            // Fallback for default tabs if not in the dataset
+            const defaultTabs = ['personal', 'curriculum', 'institutional', 'economic'];
             return defaultTabs.includes(tabId);
         };
 
@@ -697,13 +713,6 @@ const app = createApp({
             }
         };
 
-
-        // Inicializar estadísticas del CV al montar
-        onMounted(() => {
-            if (personId) {
-                refreshCvTab(personId);
-            }
-        });
 
         const loadLocations = async (parentId, targetId, selectedValue = null) => {
             const target = document.getElementById(targetId);
@@ -1729,6 +1738,10 @@ const app = createApp({
             markTelework,
             submitActivity,
             fetchTeleworkData,
+            isActivityModalVisible,
+            isReportModalVisible,
+            reportDates,
+            generateTeleworkReport,
         };
     }
 });

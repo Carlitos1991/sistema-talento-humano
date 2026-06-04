@@ -1,0 +1,44 @@
+<div v-if="isReportModalVisible" class="modal-overlay" style="display:flex; z-index: 1050;">
+    <div class="modal-container-medium animate-scale-in shadow-card animate__animated animate__fadeInDown"
+         style="max-width:500px; background:#fff; border-radius:12px; display:flex; flex-direction:column;">
+
+        <div class="modal-header-premium" style="background: linear-gradient(135deg, #6b21a8 0%, #9d174d 100%);">
+            <div class="modal-title-wrapper">
+                <div class="modal-icon-container" style="background: rgba(255,255,255,0.1);">
+                    <i class="fa-solid fa-file-pdf" style="color: white;"></i>
+                </div>
+                <div>
+                    <h4 class="modal-title-premium text-white">Generar Reporte PDF</h4>
+                    <p class="modal-subtitle-premium text-gray-300">Informe de Actividades de Teletrabajo</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close-modal" @click="isReportModalVisible = false">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-body p-4">
+            <form @submit.prevent="generateTeleworkReport">
+                <div class="grid-2-cols grid-compact mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold text-sm text-gray-700">Desde</label>
+                        <input type="date" v-model="reportDates.start" class="form-control" required style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold text-sm text-gray-700">Hasta</label>
+                        <input type="date" v-model="reportDates.end" class="form-control" required style="border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 pt-3 border-t" style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; margin-top: 15px; padding-top: 15px;">
+                    <button type="button" class="btn btn-light" @click="isReportModalVisible = false" style="border-radius: 8px;">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-save" style="background: linear-gradient(to right, #9d174d, #6b21a8); color: white; border-radius: 8px;">
+                        <i class="fa-solid fa-file-arrow-down me-1"></i> Generar PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
