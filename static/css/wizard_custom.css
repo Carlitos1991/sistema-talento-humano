@@ -1024,32 +1024,186 @@
     font-size: 0.85rem;
 }
 
-/* Estilos para Teletrabajo */
-.btn-attendance {
+/* =====================================================================
+   MÓDULO DE TELETRABAJO - 50/50 ESTRICTO Y SIMÉTRICO
+   ===================================================================== */
+
+/* Contenedor principal: Fila estricta que no se rompe */
+.telework-dashboard-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 20px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+/* Paneles idénticos: Obligados a ocupar el 50% exacto */
+.telework-panel {
+    flex: 1 1 50% !important;
+    width: 50% !important;
+    max-width: calc(50% - 10px) !important; /* El -10px descuenta el espacio del gap */
+
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 560px; /* Alto idéntico predefinido */
+    box-sizing: border-box;
+    overflow: hidden; /* Evita que el contenido interno desborde la caja */
+}
+
+/* Cabecera centrada verticalmente (Título arriba, elementos abajo) */
+.telework-panel-header-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+.telework-panel-title-centered {
+    font-size: 0.95rem;
     font-weight: 800;
-    color: white;
-    border: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #1e3a8a;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.3px;
 }
 
-.btn-attendance:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
+/* Grupo de botones perfectamente centrado debajo del título */
+.attendance-btn-group-centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
 }
 
-.btn-attendance:active {
-    transform: translateY(0);
+/* Botones Cuadrados Modernos */
+.btn-attendance {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 72px !important;
+    height: 72px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    font-size: 0.65rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
+}
+
+.btn-attendance i {
+    font-size: 1.35rem !important;
+    margin: 0 0 4px 0 !important;
+    display: block !important;
+    line-height: 1 !important;
+}
+
+.btn-attendance span {
+    display: block !important;
+    margin: 0 !important;
+    line-height: 1 !important;
 }
 
 .btn-attendance.income {
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 }
 
 .btn-attendance.exit {
-    background: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.btn-attendance:hover:not(:disabled) {
+    transform: translateY(-2px) !important;
+    filter: brightness(1.06) !important;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.18) !important;
+}
+
+.btn-attendance:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(0.4) !important;
+}
+
+/* Contenedor de Listas con Scroll */
+.telework-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* Evita scrolls horizontales indeseados */
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Separación compacta */
+}
+
+.telework-scroll-area::-webkit-scrollbar {
+    width: 5px;
+}
+
+.telework-scroll-area::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* Filas Ultra Compactas Reestilizadas */
+.day-card-compact {
+    min-height: auto !important;
+    padding: 8px 14px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-left: 4px solid #3b82f6 !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.day-card-compact .day-label {
+    display: block !important;
+    font-size: 0.6rem !important;
+    color: #94a3b8 !important;
+    font-weight: 800 !important;
+    margin-bottom: 1px !important;
+    text-transform: uppercase !important;
+}
+
+/* Adaptación para pantallas pequeñas: Poner uno debajo del otro si no hay espacio */
+@media (max-width: 900px) {
+    .telework-dashboard-grid {
+        flex-direction: column !important;
+    }
+
+    .telework-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
 }
 
 .timeline-container {

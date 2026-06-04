@@ -84,7 +84,9 @@ const app = createApp({
                     sanctions: 'Sanciones',
                     vacations: 'Vacaciones',
                     payments: 'Roles de pago',
-                    curriculum: 'Curriculum'
+                    curriculum: 'Curriculum',
+                    telework: 'Teletrabajo',
+                    schedule: 'Horario'
                 };
                 fetch(`/person/audit-log/${personId}/`, {
                     method: 'POST',

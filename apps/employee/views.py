@@ -1,44 +1,42 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
-from django.views import View
-from django.utils.decorators import method_decorator
 import json
-from django.utils import timezone
-from .models import TeleworkActivity
-from biometric.models import OfflineAttendanceRegistry
-# Vista para reubicar empleado (relocate_employee)
-from schedule.models import EmployeeScheduleHistory
-# apps/employee/views.py
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db import transaction
-from django.http import JsonResponse, HttpResponse, Http404
+import logging
+from datetime import datetime, time
+from decimal import Decimal
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, render
-from django.template.loader import render_to_string
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
+from django.http import JsonResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
-from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
 
+from biometric.models import OfflineAttendanceRegistry
+from budget.models import BudgetAssignmentHistory
+from budget.models import BudgetLine
+from contract.models import ManagementPeriod
 from core.models import CatalogItem, Location
+from payroll.models import Payslip
+from permitrequest.models import PermitRequest, PermitType
 from person.models import Person
 from person.models import PersonAuditLog
 from person.utils import log_person_audit, PERSON_AUDIT_SECTIONS
-from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
-from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, EconomicData, \
-    EmployeeProfileVisibility
-from budget.models import BudgetLine
-from budget.models import BudgetAssignmentHistory
-from contract.models import ManagementPeriod
-from permitrequest.models import PermitRequest, PermitType
 from personnel_actions.models import PersonnelAction
-from payroll.models import Payslip
 from sanctions.models import Sanction
+# Vista para reubicar empleado (relocate_employee)
+from schedule.models import EmployeeScheduleHistory
 from vacation.models import EmployeeVacationBalance
-from decimal import Decimal
-from datetime import datetime, time
-from django.urls import reverse
-import logging
+from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
+from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, \
+    EmployeeProfileVisibility
+from .models import TeleworkActivity
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +195,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         all_tabs = [
             'personal', 'curriculum', 'economic', 'institutional',
             'budget', 'contracts', 'actions', 'permissions',
-            'payments', 'sanctions', 'vacations'
+            'payments', 'sanctions', 'vacations', 'schedule', 'telework'
         ]
         # Ocultar pestañas si es self_dashboard
         if hasattr(self, 'is_self_dashboard') and self.is_self_dashboard:
@@ -573,24 +571,31 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 @require_POST
 def bulk_update_tab_visibility(request):
     tab_id = request.POST.get('tab_id')
-    is_visible = request.POST.get('is_visible') == 'true'
+    is_visible_str = request.POST.get('is_visible')
+
+    is_visible = is_visible_str == 'true'
 
     if not tab_id:
         return JsonResponse({'success': False, 'message': 'ID de pestaña no válido.'})
 
-    with transaction.atomic():
-        EmployeeProfileVisibility.objects.filter(tab_id=tab_id).delete()
-        users = User.objects.filter(person__isnull=False)
-        new_configs = [
-            EmployeeProfileVisibility(user=u, tab_id=tab_id, is_visible=is_visible)
-            for u in users
-        ]
-        EmployeeProfileVisibility.objects.bulk_create(new_configs)
+    try:
+        with transaction.atomic():
+            users = User.objects.filter(person__isnull=False)
 
-    return JsonResponse({
-        'success': True,
-        'message': f'Pestaña "{tab_id}" actualizada para {len(new_configs)} empleados.'
-    })
+            for u in users:
+                EmployeeProfileVisibility.objects.update_or_create(
+                    user=u,
+                    tab_id=tab_id,
+                    defaults={'is_visible': is_visible}
+                )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Pestaña "{tab_id}" actualizada para todos los empleados.'
+        })
+    except Exception as e:
+        print(f"Error en bulk visibility: {str(e)}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 class EmployeeSelfDashboardView(EmployeeDetailWizardView):
@@ -684,7 +689,7 @@ def add_academic_title(request, person_id):
     return None
 
 
-from .models import EconomicData, BankAccount, PayrollInfo
+from .models import EconomicData
 from .forms import BankAccountForm, PayrollInfoForm
 
 
@@ -1211,8 +1216,8 @@ def get_telework_data_api(request, person_id):
         captured_at__date=today
     ).order_by('captured_at')
 
-    # Lógica de control: ¿Tiene al menos un ingreso hoy?
-    has_income = punches.filter(punch_type='INCOME').exists()
+    last_punch = punches.last()
+    last_punch_type = last_punch.punch_type if last_punch else None
 
     activities = TeleworkActivity.objects.filter(
         employee=employee,
@@ -1222,7 +1227,7 @@ def get_telework_data_api(request, person_id):
     return JsonResponse({
         'success': True,
         'is_own_profile': is_own_profile,
-        'has_income': has_income,
+        'last_punch_type': last_punch_type,
         'punches': [{
             'type': p.get_punch_type_display(),
             'time': p.captured_at.strftime('%H:%M:%S'),
@@ -1282,6 +1287,14 @@ def mark_telework_attendance_api(request, person_id):
     employee = person.employee_profile
     punch_type = request.POST.get('punch_type')
     today = timezone.now().date()
+    last_punch = OfflineAttendanceRegistry.objects.filter(
+        employee=employee, captured_at__date=today
+    ).order_by('captured_at').last()
+
+    if last_punch and last_punch.punch_type == punch_type:
+        tipo_str = "ENTRADA" if punch_type == 'INCOME' else "SALIDA"
+        return JsonResponse({'success': False, 'message': f'Ya existe una {tipo_str} registrada como último evento.'},
+                            status=400)
 
     # 2. CONTROL DE SECUENCIA (Salida sin Ingreso)
     if punch_type == 'EXIT':
