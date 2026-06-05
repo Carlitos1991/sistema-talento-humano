@@ -1229,3 +1229,67 @@
 }
 
 /* Fin: estilos modal detalle de rol */
+/* =====================================================================
+   SWITCH "Mostrar Periodos Cerrados" - modern-toggle
+   ===================================================================== */
+
+/* Ocultamos el checkbox real */
+.modern-toggle-input {
+    display: none !important;
+}
+
+/* Label contenedor del switch (estado OFF por defecto) */
+.modern-toggle-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    user-select: none;
+}
+
+.modern-toggle-wrapper:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Círculo indicador (OFF: borde gris, vacío) */
+.modern-toggle-wrapper .modern-toggle-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background-color: transparent;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* Texto del switch */
+.modern-toggle-wrapper .modern-toggle-text {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+    transition: color 0.3s ease;
+    white-space: nowrap;
+}
+
+/* Estado ON (checkbox marcado) */
+.modern-toggle-input:checked + .modern-toggle-wrapper {
+    background-color: #f0fdf4;
+    border-color: #86efac;
+    box-shadow: 0 1px 4px rgba(5, 150, 105, 0.12);
+}
+
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
+    color: #065f46;
+}
