@@ -70,6 +70,10 @@ class Deduction(models.Model):
     credit_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
                                        related_name='deduction_credits',
                                        verbose_name=_('Cuenta HABER (Retención a Pagar)'))
+    income_account = models.ForeignKey('accounting.Account', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='deduction_incomes',
+                                       verbose_name=_('Cuenta HABER (Ingreso para Devengado)'),
+                                       help_text=_('Si se llena, generará un asiento de devengado automático.'))
 
     def __str__(self):
         return self.name

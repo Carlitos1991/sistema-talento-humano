@@ -210,10 +210,11 @@ class DeductionForm(BaseRubroForm):
     class Meta:
         model = Deduction
         # Incluimos 'priority' para que el campo esté disponible en el formulario/modal
-        fields = ['name', 'code', 'order', 'priority', 'description', 'is_active', 'debit_account', 'credit_account',
-                  'abbreviation']
+        fields = ['name', 'code', 'order', 'priority', 'description', 'is_active', 'debit_account', 'income_account',
+                  'credit_account', 'abbreviation']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Cooperativa Municipal'}),
+            'income_account': forms.Select(attrs={'class': 'form-select'}),
             'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Coop. Mun.'}),
             'code': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Código del sistema (Ej: IESS_PER)'}),
@@ -232,6 +233,8 @@ class DeductionForm(BaseRubroForm):
             self.fields['debit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
         if 'credit_account' in self.fields:
             self.fields['credit_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
+        if 'income_account' in self.fields:
+            self.fields['income_account'].queryset = Account.objects.filter(is_active=True).order_by('code')
 
 
 class InstitutionalContributionForm(BaseRubroForm):

@@ -675,12 +675,33 @@ class PayrollCalculatorService:
                     aggregation[(it.income_ref.credit_account_id, budget_code, 'credit')] = aggregation.get(
                         (it.income_ref.credit_account_id, budget_code, 'credit'), Decimal('0.0')) + val
             elif it.item_type == 'DEDUCTION' and it.deduction_ref:
+                # ==========================================
+                # MOMENTO 1: RECAUDACIÓN (Descuento vía Rol)
+                # ==========================================
+                # DEBE: Reduce la cuenta por pagar al personal (Ej: 2.1.3.51)
                 if it.deduction_ref.debit_account_id:
-                    aggregation[(it.deduction_ref.debit_account_id, None, 'debit')] = aggregation.get(
-                        (it.deduction_ref.debit_account_id, None, 'debit'), Decimal('0.0')) + val
+                    key_debit = (it.deduction_ref.debit_account_id, None, 'debit')
+                    aggregation[key_debit] = aggregation.get(key_debit, Decimal('0.0')) + val
+
+                # HABER: Cancela transitoriamente la cuenta por cobrar (Ej: 1.1.3.19)
                 if it.deduction_ref.credit_account_id:
-                    aggregation[(it.deduction_ref.credit_account_id, None, 'credit')] = aggregation.get(
-                        (it.deduction_ref.credit_account_id, None, 'credit'), Decimal('0.0')) + val
+                    key_credit = (it.deduction_ref.credit_account_id, None, 'credit')
+                    aggregation[key_credit] = aggregation.get(key_credit, Decimal('0.0')) + val
+
+                # ==========================================
+                # MOMENTO 2: DEVENGADO AUTOMÁTICO (Espejo)
+                # ==========================================
+                # Solo se ejecuta si el rubro tiene configurada una cuenta de ingreso (Ej: 6.2.5.24)
+                if getattr(it.deduction_ref, 'income_account_id', None):
+
+                    # DEBE: Registra el derecho de cobro inicial en la CxC (Ej: 1.1.3.19)
+                    if it.deduction_ref.credit_account_id:
+                        key_dev_debit = (it.deduction_ref.credit_account_id, None, 'debit')
+                        aggregation[key_dev_debit] = aggregation.get(key_dev_debit, Decimal('0.0')) + val
+
+                    # HABER: Reconoce el ingreso real de la institución (Ej: 6.2.5.24)
+                    key_dev_credit = (it.deduction_ref.income_account_id, None, 'credit')
+                    aggregation[key_dev_credit] = aggregation.get(key_dev_credit, Decimal('0.0')) + val
             elif it.item_type == 'CONTRIBUTION' and getattr(it, 'contribution_ref', None):
                 if it.contribution_ref.debit_account_id:
                     aggregation[(it.contribution_ref.debit_account_id, None, 'debit')] = aggregation.get(
@@ -782,14 +803,33 @@ def rebuild_accounting_for_period(period_id):
                     aggregation.setdefault(key_credit, Decimal('0.0'))
                     aggregation[key_credit] += val
             elif it.item_type == 'DEDUCTION' and it.deduction_ref:
-                if it.deduction_ref.debit_account:
-                    key_debit = (it.deduction_ref.debit_account.id, None, 'debit')
-                    aggregation.setdefault(key_debit, Decimal('0.0'))
-                    aggregation[key_debit] += val
-                if it.deduction_ref.credit_account:
-                    key_credit = (it.deduction_ref.credit_account.id, None, 'credit')
-                    aggregation.setdefault(key_credit, Decimal('0.0'))
-                    aggregation[key_credit] += val
+                # ==========================================
+                # MOMENTO 1: RECAUDACIÓN (Descuento vía Rol)
+                # ==========================================
+                # DEBE: Reduce la cuenta por pagar al personal (Ej: 2.1.3.51)
+                if it.deduction_ref.debit_account_id:
+                    key_debit = (it.deduction_ref.debit_account_id, None, 'debit')
+                    aggregation[key_debit] = aggregation.get(key_debit, Decimal('0.0')) + val
+
+                # HABER: Cancela transitoriamente la cuenta por cobrar (Ej: 1.1.3.19)
+                if it.deduction_ref.credit_account_id:
+                    key_credit = (it.deduction_ref.credit_account_id, None, 'credit')
+                    aggregation[key_credit] = aggregation.get(key_credit, Decimal('0.0')) + val
+
+                # ==========================================
+                # MOMENTO 2: DEVENGADO AUTOMÁTICO (Espejo)
+                # ==========================================
+                # Solo se ejecuta si el rubro tiene configurada una cuenta de ingreso (Ej: 6.2.5.24)
+                if getattr(it.deduction_ref, 'income_account_id', None):
+
+                    # DEBE: Registra el derecho de cobro inicial en la CxC (Ej: 1.1.3.19)
+                    if it.deduction_ref.credit_account_id:
+                        key_dev_debit = (it.deduction_ref.credit_account_id, None, 'debit')
+                        aggregation[key_dev_debit] = aggregation.get(key_dev_debit, Decimal('0.0')) + val
+
+                    # HABER: Reconoce el ingreso real de la institución (Ej: 6.2.5.24)
+                    key_dev_credit = (it.deduction_ref.income_account_id, None, 'credit')
+                    aggregation[key_dev_credit] = aggregation.get(key_dev_credit, Decimal('0.0')) + val
             elif it.item_type == 'CONTRIBUTION' and getattr(it, 'contribution_ref', None):
                 if it.contribution_ref.debit_account:
                     key_debit = (it.contribution_ref.debit_account.id, None, 'debit')

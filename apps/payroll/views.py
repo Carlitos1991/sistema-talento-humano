@@ -48,7 +48,6 @@ from .models import PendingDebt
 from .services import PayrollCalculatorService
 from .services import rebuild_accounting_for_period
 
-
 PAYSLIP_PUBLIC_TOKEN_SALT = 'payroll.public.validation'
 
 
@@ -116,7 +115,7 @@ class PeriodListView(ListView):
                 period.has_scope_changes = has_changes
             except (ValueError, TypeError):
                 period.has_scope_changes = False
-            
+
         return context
 
     def get_queryset(self):
@@ -1303,6 +1302,16 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                         'order': cuenta_haber.order or 99999
                     })
                     grupo_data['contabilidad'][cta_haber]['haber'] += val
+                    cuenta_ingreso = getattr(obj_ref, 'income_account', None)
+                    if it.item_type == 'DEDUCTION' and cuenta_ingreso:
+                        grupo_data['contabilidad'][cta_haber]['debe'] += val
+                        cta_ingreso_code = cuenta_ingreso.code
+                        grupo_data['contabilidad'].setdefault(cta_ingreso_code, {
+                            'debe': Decimal(0), 'haber': Decimal(0),
+                            'nombre': cuenta_ingreso.name,
+                            'order': cuenta_ingreso.order or 99999
+                        })
+                        grupo_data['contabilidad'][cta_ingreso_code]['haber'] += val
 
             if it.item_type == 'CONTRIBUTION' and obj_ref and 'PATRONAL' in getattr(obj_ref, 'code', '').upper():
                 grupo_data['contabilidad'].setdefault('2.1.3.51', {
@@ -1400,7 +1409,7 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 g_data['presupuesto'].items(),
                 key=lambda item: (int(item[1].get('order', 99999)), str(item[1].get('concepto', '')))
             ))
-            
+
             # Ordenar empleados de la A a la Z por apellido
             g_data['empleados'] = dict(sorted(
                 g_data['empleados'].items(),
@@ -1913,7 +1922,7 @@ class PrintablePayslipView(DetailView):
         pk = self.kwargs.get('pk')
         token = self.request.GET.get('token')
         payslip = get_object_or_404(Payslip, pk=pk)
-        
+
         # Si hay token, validamos que sea válido para este payslip
         if token:
             try:
@@ -1922,7 +1931,7 @@ class PrintablePayslipView(DetailView):
                     raise Http404('Código de validación no coincide con el rol')
             except (signing.BadSignature, ValueError, TypeError):
                 raise Http404('Código de validación inválido o expirado')
-        
+
         return payslip
 
     def get_context_data(self, **kwargs):
