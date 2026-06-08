@@ -27,11 +27,15 @@
                         {% if not p.is_closed %}
                             <button type="button" class="btn-icon btn-info-action" title="Editar Período y Recalcular Días"
                                     onclick="openPayrollModal('{% url 'payroll:period_edit' pk=p.id %}')"><i class="fas fa-edit"></i></button>
-                            <button type="button" class="btn-icon btn-views-action ms-2" title="Procesar / Recalcular" data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}"><i class="fas fa-cogs"></i></button>
+                            <button type="button" class="btn-icon btn-views-action ms-2" title="Procesar / Recalcular" data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}" data-has-scope-changes="{{ p.has_scope_changes|yesno:'true,false' }}"><i class="fas fa-cogs"></i></button>
                             <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}" class="btn-icon btn-success-action ms-2" title="Cargar Novedades al Periodo"><i class="fas fa-file-excel"></i></a>
                         {% endif %}
 
                         <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}" class="btn-icon btn-views-action ms-2" title="Ver Roles Generados"><i class="fas fa-list"></i></a>
+
+                        {% if p.has_scope_changes %}
+                            <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}&scope=true" class="btn-icon btn-warning-action ms-2" style="background-color: #f59e0b; color: white;" title="Ver Roles Generados de Alcance"><i class="fas fa-code-branch"></i></a>
+                        {% endif %}
 
                         <button class="btn-icon btn-info-action ms-2" title="Generar Reportes y Alcances" data-report-id="{{ p.id }}" data-report-name="{{ p.month }} {{ p.year }}" data-report-closed="{{ p.is_closed|yesno:'true,false' }}"><i class="fas fa-university"></i></button>
                     </div>

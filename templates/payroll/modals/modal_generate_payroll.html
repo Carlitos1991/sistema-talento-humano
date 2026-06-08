@@ -29,8 +29,15 @@
                     <button onclick="submitGenerate('all')" class="action-card action-card-red">
                         <i class="fas fa-sync-alt fa-2x"></i>
                         <div>
-                            <strong>Recalcular Todo</strong>
-                            <span class="muted">Borra y genera de cero (se pierden manuales).</span>
+                            <strong>Recalcular Todo (Normal)</strong>
+                            <span class="muted">Borra y genera el rol principal (corte al día 25).</span>
+                        </div>
+                    </button>
+                    <button id="btn-generate-scope" onclick="submitGenerate('scope')" class="action-card action-card-blue" style="display: none;">
+                        <i class="fas fa-code-branch fa-2x"></i>
+                        <div>
+                            <strong>Generar Rol de Alcance</strong>
+                            <span class="muted">Incluye movimientos posteriores al día 25.</span>
                         </div>
                     </button>
                 </div>

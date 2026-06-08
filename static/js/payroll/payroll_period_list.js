@@ -55,6 +55,20 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleClosedBtn.addEventListener('change', () => loadPeriods(1));
     }
 
+    // Event Delegation para atrapar los clics en los botones de "Procesar / Recalcular"
+    tableContainer.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[data-generate-id]');
+        if (btn) {
+            const id = btn.getAttribute('data-generate-id');
+            const name = btn.getAttribute('data-generate-name');
+            const hasScopeChanges = btn.getAttribute('data-has-scope-changes') === 'true';
+            
+            if (window.openGenerateModal) {
+                window.openGenerateModal(id, name, hasScopeChanges);
+            }
+        }
+    });
+
     // Exponemos la función de paginación al objeto window
     // para que los botones del partial puedan llamarla
     window.loadTablePage = function (pageNum) {

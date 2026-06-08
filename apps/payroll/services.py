@@ -1,8 +1,9 @@
+import copy
 import traceback
 import logging
 import time
 from decimal import Decimal, ROUND_HALF_UP
-from datetime import timedelta
+from datetime import timedelta, date
 from django.db import transaction
 from django.db.models import Q
 
@@ -19,9 +20,20 @@ logger = logging.getLogger(__name__)
 
 
 class PayrollCalculatorService:
-    def __init__(self, period, employees):
+    def __init__(self, period, employees, is_scope_run=False):
         self.period = period
         self.employees = employees
+        self.is_scope_run = is_scope_run
+
+        # Determine the cutoff date based on the run type
+        if self.is_scope_run:
+            self.cutoff_date = self.period.end_date
+        else:
+            # Cutoff is the 25th of the period's month
+            try:
+                self.cutoff_date = self.period.start_date.replace(day=25)
+            except ValueError:  # Handles months with less than 25 days, though unlikely
+                self.cutoff_date = self.period.end_date
 
         constants = PayrollConstant.objects.filter(is_active=True).values('code', 'value')
         self.config = {c['code']: c['value'] for c in constants}
@@ -83,10 +95,22 @@ class PayrollCalculatorService:
         """Filtra empleados activos con asignaciones presupuestarias válidas en el período."""
         candidate_ids = [emp.id for emp in employees if
                          emp.is_active and getattr(emp, 'person', None) and emp.person.is_active]
-        valid_history_emp_ids = set(
-            BudgetAssignmentHistory.objects.filter(employee_id__in=candidate_ids, start_date__lte=self.period.end_date)
-            .filter(Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)).values_list('employee_id',
-                                                                                                    flat=True))
+
+        all_assignments_qs = BudgetAssignmentHistory.objects.filter(
+            employee_id__in=candidate_ids,
+            start_date__lte=self.period.end_date
+        ).filter(
+            Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
+        )
+
+        if self.is_scope_run:
+            valid_history_emp_ids = set(all_assignments_qs.values_list('employee_id', flat=True))
+        else:
+            valid_history_emp_ids = set()
+            for a in all_assignments_qs:
+                if a.start_date <= self.cutoff_date:
+                    valid_history_emp_ids.add(a.employee_id)
+
         return [emp for emp in employees if emp.id in valid_history_emp_ids]
 
     def generate_bulk(self):
@@ -153,16 +177,21 @@ class PayrollCalculatorService:
             contrib_map = {c.code.strip().upper(): c for c in InstitutionalContribution.objects.filter(is_active=True)
                            if c.code}
 
-            assignments_qs = BudgetAssignmentHistory.objects.filter(employee_id__in=emp_ids,
-                                                                    start_date__lte=self.period.end_date) \
-                .filter(Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)).select_related(
-                'budget_line', 'budget_line__activity__project__subprogram__program')
+            all_assignments_qs = BudgetAssignmentHistory.objects.filter(
+                employee_id__in=emp_ids,
+                start_date__lte=self.period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
+            ).select_related('budget_line', 'budget_line__activity__project__subprogram__program')
 
             assignment_map = {}
-            for a in assignments_qs: assignment_map.setdefault(a.employee_id, []).append(a)
+            for a in all_assignments_qs:
+                assignment_map.setdefault(a.employee_id, []).append(a)
 
             mp_map = {}
-            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related('contract_type__labor_regime', 'status').order_by('employee_id', 'start_date'):
+            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related('contract_type__labor_regime',
+                                                                                               'status').order_by(
+                    'employee_id', 'start_date'):
                 curr = mp_map.get(mp.employee_id)
                 if not curr:
                     mp_map[mp.employee_id] = mp
@@ -179,10 +208,12 @@ class PayrollCalculatorService:
             novelties_map = {}
             for nov in PayrollNovelty.objects.filter(period=self.period, employee_id__in=emp_ids).select_related(
                     'income_ref', 'deduction_ref'):
-                if nov.employee_id not in novelties_map: novelties_map[nov.employee_id] = {'incomes': [],
-                                                                                           'deductions': []}
-                if nov.income_ref: novelties_map[nov.employee_id]['incomes'].append(nov)
-                if nov.deduction_ref: novelties_map[nov.employee_id]['deductions'].append(nov)
+                if nov.employee_id not in novelties_map:
+                    novelties_map[nov.employee_id] = {'incomes': [], 'deductions': []}
+                if nov.income_ref:
+                    novelties_map[nov.employee_id]['incomes'].append(nov)
+                if nov.deduction_ref:
+                    novelties_map[nov.employee_id]['deductions'].append(nov)
 
             existing_pending_debts_map = {}
             old_debts_qs = PendingDebt.objects.filter(
@@ -195,7 +226,24 @@ class PayrollCalculatorService:
 
             for slip in created_payslips:
                 try:
-                    emp_assignments = assignment_map.get(slip.employee_id, [])
+                    all_emp_assignments = assignment_map.get(slip.employee_id, [])
+
+                    if self.is_scope_run:
+                        emp_assignments = all_emp_assignments
+                    else:
+                        emp_assignments = []
+                        for a in all_emp_assignments:
+                            if a.start_date > self.cutoff_date:
+                                continue
+
+                            # Create a shallow copy to avoid modifying the cached object
+                            assignment_copy = copy.copy(a)
+
+                            if assignment_copy.end_date and assignment_copy.end_date > self.cutoff_date:
+                                assignment_copy.end_date = None
+
+                            emp_assignments.append(assignment_copy)
+
                     tramos = []
 
                     if emp_assignments:
@@ -247,7 +295,8 @@ class PayrollCalculatorService:
                                     })
                                     total_dias_mes += dias_reales
 
-                    if not tramos: continue
+                    if not tramos:
+                        continue
 
                     effective_days = 0
                     emp_absences = absent_dates_map.get(slip.employee_id, set())
@@ -278,7 +327,7 @@ class PayrollCalculatorService:
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     anios_servicio = (
-                                (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
+                                         (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
                     regime_code = mp.contract_type.labor_regime.code.strip().upper() if mp and mp.contract_type and mp.contract_type.labor_regime else ''
 
                     emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
@@ -329,14 +378,14 @@ class PayrollCalculatorService:
                         elif code_clean == 'DECIMO_TERCERO' and mensualiza_decimos and self.period.working_days:
                             base_decimo_tercero = salary + hours_income_total
                             val = (base_decimo_tercero / Decimal('12.0')) * (
-                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
-                                        Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
-                        elif code_clean == 'FONDOS_RESERVA' and anios_servicio > 1 and mensualiza_fr:
+                                    Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                        elif code_clean == 'FONDOS_RESERVA' and mensualiza_fr:
                             val = (salary * (
-                                        Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
-                                              Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                    Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
+                                          Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and anios_servicio >= 1:
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
                                 str(effective_days_prev))
@@ -345,7 +394,7 @@ class PayrollCalculatorService:
                                 str(effective_days_prev))
                         elif code_clean == 'SUBSIDIO_FAMILIAR' and regime_code == 'CT' and anios_servicio >= 1 and num_hijos_validos > 0:
                             val = Decimal(str(self.config.get('SBU', '460.00'))) * (
-                                        Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
+                                    Decimal('1.00') / Decimal('100.0')) * Decimal(str(num_hijos_validos))
                         elif code_clean == 'ANTIGUEDAD' and regime_code == 'CT' and anios_servicio >= 1:
                             val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(anios_servicio)))
 
@@ -416,8 +465,9 @@ class PayrollCalculatorService:
                     for nov in deduction_novelties:
                         if nov.value > 0:
                             val_original = Decimal(str(nov.value))
-                            real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(val_original,
-                                                                                                           available_balance)
+                            real_discount = Decimal('0.0') if available_balance <= Decimal('0.0') else min(
+                                val_original,
+                                available_balance)
                             debt = val_original - real_discount
                             items_buffer.append(
                                 PayslipItem(payslip=slip, deduction_ref=nov.deduction_ref, item_type='DEDUCTION',
@@ -482,7 +532,7 @@ class PayrollCalculatorService:
                 base_parts = base_bl.code.split('.')
                 suffix_parts = mapping.dynamic_suffix.split('.')
                 new_code = (f"{'.'.join(base_parts[:-len(suffix_parts)])}.{mapping.dynamic_suffix}"
-                           if len(base_parts) > len(suffix_parts) else mapping.dynamic_suffix)
+                            if len(base_parts) > len(suffix_parts) else mapping.dynamic_suffix)
             payslip_item.budget_line, payslip_item.budget_line_code = base_bl, new_code
             return payslip_item
 
@@ -800,5 +850,3 @@ def rebuild_accounting_for_period(period_id):
                                                    credit=Decimal('0.0'))
 
     return True
-
-

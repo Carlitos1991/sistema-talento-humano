@@ -2,12 +2,17 @@
 
 let currentGenPeriodId = null;
 
-window.openGenerateModal = function (id, name) {
+window.openGenerateModal = function (id, name, hasScopeChanges) {
     currentGenPeriodId = id;
     const modal = document.getElementById('modalGeneratePayroll');
     if (modal) {
         const nameEl = document.getElementById('gen-period-name');
         if (nameEl && name) nameEl.innerText = name;
+
+        const scopeButton = document.getElementById('btn-generate-scope');
+        if (scopeButton) {
+            scopeButton.style.display = hasScopeChanges ? 'flex' : 'none';
+        }
 
         // Forzamos la visibilidad y bloqueamos el scroll del fondo
         modal.setAttribute('style', 'display: flex !important;');

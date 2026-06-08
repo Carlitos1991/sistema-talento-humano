@@ -3,7 +3,7 @@ import io
 import json
 import os
 import base64
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from accounting.models import Account
 
@@ -103,6 +103,20 @@ class PeriodListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = PayrollPeriodForm()  # Formulario vacío para el modal
+
+        # Check for budget changes after the 25th for each period
+        for period in context['periods']:
+            try:
+                cutoff_date = date(int(period.year), period.month_number, 25)
+                end_of_month = period.end_date
+                has_changes = BudgetAssignmentHistory.objects.filter(
+                    Q(start_date__gt=cutoff_date, start_date__lte=end_of_month) |
+                    Q(end_date__gt=cutoff_date, end_date__lte=end_of_month)
+                ).exists()
+                period.has_scope_changes = has_changes
+            except (ValueError, TypeError):
+                period.has_scope_changes = False
+            
         return context
 
     def get_queryset(self):
@@ -189,6 +203,8 @@ class PeriodCreateView(View):
 class GeneratePayrollView(View):
     def post(self, request):
         period_id = request.POST.get('period_id')
+        is_scope_run = request.POST.get('is_scope_run', 'false').lower() == 'true'
+
         try:
             period = PayrollPeriod.objects.get(pk=period_id)
             if period.is_closed:
@@ -200,12 +216,14 @@ class GeneratePayrollView(View):
                 person__is_active=True
             ).select_related('person', 'person__economic_data', 'person__economic_data__payroll_info')
 
-            service = PayrollCalculatorService(period, employees)
+            service = PayrollCalculatorService(period, employees, is_scope_run=is_scope_run)
             # Recibimos el resultado del servicio
             result = service.generate_bulk()
 
             warnings = result.get('warnings', [])
             msg = 'Cálculo completado exitosamente.'
+            if is_scope_run:
+                msg = 'Cálculo de alcance completado exitosamente.'
 
             if warnings:
                 msg += ' (Se generaron advertencias contables, revisa los reportes)'
@@ -280,6 +298,7 @@ class GeneratePayrollUIView(View):
 class GeneratePayrollSelectedView(View):
     def post(self, request):
         period_id = request.POST.get('period_id')
+        is_scope_run = request.POST.get('is_scope_run', 'false').lower() == 'true'
         selected = request.POST.getlist('employee')
         worked_map = {}
         for k, v in request.POST.items():
@@ -304,7 +323,7 @@ class GeneratePayrollSelectedView(View):
             wd = worked_map.get(emp.id, period.working_days)
             employees_with_days.append((emp, wd))
 
-        svc = PayrollCalculatorService(period, [e for e, d in employees_with_days])
+        svc = PayrollCalculatorService(period, [e for e, d in employees_with_days], is_scope_run=is_scope_run)
         svc.generate_for_selected(employees_with_days)
         messages.success(request, 'Rol generado para empleados seleccionados.')
         return redirect(request.META.get('HTTP_REFERER', '/'))
@@ -402,6 +421,21 @@ class PayslipListView(LoginRequiredMixin, ListView):
         queryset = Payslip.objects.filter(period_id=period_id).select_related(
             'employee__person', 'period'
         ).order_by('employee__person__last_name')
+
+        # Filtro para roles de alcance
+        is_scope_view = self.request.GET.get('scope', 'false').lower() == 'true'
+        if is_scope_view:
+            period = get_object_or_404(PayrollPeriod, pk=period_id)
+            cutoff_date = date(int(period.year), period.month_number, 25)
+            end_of_month = period.end_date
+
+            # Empleados con cambios después del corte
+            employees_with_changes = BudgetAssignmentHistory.objects.filter(
+                Q(start_date__gt=cutoff_date, start_date__lte=end_of_month) |
+                Q(end_date__gt=cutoff_date, end_date__lte=end_of_month)
+            ).values_list('employee_id', flat=True).distinct()
+
+            queryset = queryset.filter(employee_id__in=employees_with_changes)
 
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -1075,7 +1109,7 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         if regime_filter:
             payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
-        show_withheld = (request.GET.get('show_withheld') or '').lower()
+        show_withheld = (self.request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
             payslips_qs = payslips_qs.filter(is_withheld=True)
         else:
@@ -1630,7 +1664,7 @@ class BankTransferReportView(LoginRequiredMixin, View):
 
         # 2. Filtros de Retención (Liberados vs Retenidos)
         # Soporte para parámetro `show_withheld` enviado por el frontend
-        show_withheld = (request.GET.get('show_withheld') or '').lower()
+        show_withheld = (self.request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
             payslips_qs = payslips_qs.filter(is_withheld=True)
         else:

@@ -22,7 +22,7 @@
         {% for p in payslips %}
             <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 12px;">
-                    <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.full_name }}</div>
+                    <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.name_and_last_name }}</div>
                     <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
                 </td>
                 <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
