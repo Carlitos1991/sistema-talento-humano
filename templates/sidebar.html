@@ -547,7 +547,7 @@
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-                        {% if perms.payroll.view_payrollperiod %}
+                        {% if perms.payroll.view_payrollperiod or request.user.is_staff %}
                             <li>
                                 <a href="{% url 'payroll:period_list' %}"
                                    class="{% if request.resolver_match.app_name == 'payroll' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
@@ -568,7 +568,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.accounting.view_account %}
+                        {% if perms.accounting.view_account or request.user.is_staff %}
                             <li>
                                 <a href="{% url 'accounting:account_list' %}"
                                    class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
