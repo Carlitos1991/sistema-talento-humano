@@ -382,7 +382,7 @@ class PayrollCalculatorService:
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
                                     Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
-                        elif code_clean == 'FONDOS_RESERVA' and anios_servicio > 1 and mensualiza_fr:
+                        elif code_clean == 'FONDOS_RESERVA' and mensualiza_fr or anios_servicio > 1:
                             val = (salary * (
                                     Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
                                           Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
