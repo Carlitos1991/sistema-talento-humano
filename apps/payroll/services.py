@@ -15,7 +15,6 @@ from schedule.models import ScheduleObservation
 from .models import Payslip, PayslipItem, PayrollConstant, Income, Deduction, InstitutionalContribution, PendingDebt, \
     PayrollPeriod, PayrollNovelty, RubroBudgetMapping
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -189,9 +188,10 @@ class PayrollCalculatorService:
                 assignment_map.setdefault(a.employee_id, []).append(a)
 
             mp_map = {}
-            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related('contract_type__labor_regime',
-                                                                                               'status').order_by(
-                    'employee_id', 'start_date'):
+            for mp in ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
+                    'contract_type__labor_regime',
+                    'status').order_by(
+                'employee_id', 'start_date'):
                 curr = mp_map.get(mp.employee_id)
                 if not curr:
                     mp_map[mp.employee_id] = mp
@@ -327,7 +327,7 @@ class PayrollCalculatorService:
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     anios_servicio = (
-                                         (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
+                            (self.period.end_date - mp.start_date).days / 365.25) if mp and mp.start_date else 0
                     regime_code = mp.contract_type.labor_regime.code.strip().upper() if mp and mp.contract_type and mp.contract_type.labor_regime else ''
 
                     emp_novelties = novelties_map.get(slip.employee_id, {'incomes': [], 'deductions': []})
@@ -341,19 +341,19 @@ class PayrollCalculatorService:
 
                         if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
                             sueldo_dia = (salary / Decimal('30.0')).quantize(Decimal('0.01'),
-                                                                              rounding=ROUND_HALF_UP)
+                                                                             rounding=ROUND_HALF_UP)
                             sueldo_hora = (sueldo_dia / Decimal('8.0')).quantize(Decimal('0.01'),
-                                                                                  rounding=ROUND_HALF_UP)
+                                                                                 rounding=ROUND_HALF_UP)
                             val_nov = (sueldo_hora * Decimal('1.50') * val_nov).quantize(Decimal('0.01'),
-                                                                                           rounding=ROUND_HALF_UP)
+                                                                                         rounding=ROUND_HALF_UP)
                             hours_income_total += val_nov
                         elif 'SUPLEMENTARIAS' in code_up or 'SUPLEMENTARIA' in code_up:
                             sueldo_dia = (salary / Decimal('30.0')).quantize(Decimal('0.01'),
-                                                                              rounding=ROUND_HALF_UP)
+                                                                             rounding=ROUND_HALF_UP)
                             sueldo_hora = (sueldo_dia / Decimal('8.0')).quantize(Decimal('0.01'),
-                                                                                  rounding=ROUND_HALF_UP)
+                                                                                 rounding=ROUND_HALF_UP)
                             val_nov = (sueldo_hora * Decimal('2.00') * val_nov).quantize(Decimal('0.01'),
-                                                                                           rounding=ROUND_HALF_UP)
+                                                                                         rounding=ROUND_HALF_UP)
                             hours_income_total += val_nov
 
                         prepared_income_novelties.append((nov, val_nov))
@@ -382,10 +382,14 @@ class PayrollCalculatorService:
                         elif code_clean == 'DECIMO_CUARTO' and mensualiza_decimos and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
                                     Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
-                        elif code_clean == 'FONDOS_RESERVA' and mensualiza_fr or code_clean == 'FONDOS_RESERVA' and anios_servicio > 1:
-                            val = (salary * (
-                                    Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0'))) * (
-                                          Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                        elif code_clean == 'FONDOS_RESERVA':
+                            if not mensualiza_fr or (anios_servicio > 1):
+                                if not mensualiza_fr:
+                                    val = (salary * (
+                                            Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal(
+                                        '100.0'))) * (
+                                                  Decimal(str(slip.worked_days)) / Decimal(
+                                              str(self.period.working_days)))
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and anios_servicio >= 1:
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
                                 str(effective_days_prev))
@@ -688,9 +692,9 @@ class PayrollCalculatorService:
                     cta_gp = get_special_account('2.1.3.51')
                     if cta_gp:
                         aggregation[(cta_gp.id, None, 'debit')] = aggregation.get((cta_gp.id, None, 'debit'),
-                                                                                   Decimal('0.0')) + val
+                                                                                  Decimal('0.0')) + val
                         aggregation[(cta_gp.id, None, 'credit')] = aggregation.get((cta_gp.id, None, 'credit'),
-                                                                                    Decimal('0.0')) + val
+                                                                                   Decimal('0.0')) + val
 
         if aggregation or total_net_pay > 0:
             desc_asiento = f"Nómina {self.period.month} {self.period.year}"

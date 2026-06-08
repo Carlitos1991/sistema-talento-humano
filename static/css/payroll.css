@@ -409,7 +409,7 @@
 .recalc-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #4ade80 0%, #10b981 60%, #06b6d4 100%);
+    background: linear-gradient(90deg, #142e1d 0%, #083326 60%, #030f49 100%);
     border-radius: 999px;
     transition: width 400ms ease;
 }
