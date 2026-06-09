@@ -209,438 +209,422 @@
             {% endif %}
 
             {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
-            <li class="sidebar-section-title">Gestion</li>
+                <li class="sidebar-section-title">Gestion</li>
 
-            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget %}
-                <li class="has-submenu">
-                    <a href="#">
-                        <i class="fa-solid fa-circle-dollar-to-slot"></i>
-                        <span class="menu-text">Partidas Presupuestarias</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.budget.view_budgetline %}
-                            <li>
-                                <a href="{% url 'budget:budget_list' %}"
-                                   class="{% if 'budget' in request.resolver_match.app_name %}active{% endif %}">
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-                                    <span class="menu-text">Partidas </span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.budget.view_program %}
-                            <li>
-                                <a href="{% url 'budget:program_list' %}">
-                                    <i class="fa-solid fa-sitemap"></i>
-                                    <span class="menu-text">Estructura</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.budget.view_groups_budget %}
-                            <li>
-                                <a href="{% url 'budget:budget_group_list' %}"
-                                   class="sidebar-link {% if request.resolver_match.url_name == 'budget_group_list' %}active{% endif %}">
-                                    <i class="fas fa-layer-group sidebar-icon"></i>
-                                    <span class="sidebar-text">Agrupaciones</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
-                <!-- Manual de Funciones -->
-                <li class="has-submenu">
-                    <a href="#" class="submenu-toggle">
-                        <i class="fa-solid fa-book"></i>
-                        <span class="menu-text">Manual de Funciones</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.function_manual.view_jobprofile %}
-                            <li>
-                                <a href="{% url 'function_manual:profile_list' %}">
-                                    <i class="fa-solid fa-id-badge"></i>
-                                    <span class="menu-text">Perfiles de Puestos</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget %}
+                    <li class="has-submenu">
+                        <a href="#">
+                            <i class="fa-solid fa-circle-dollar-to-slot"></i>
+                            <span class="menu-text">Partidas Presupuestarias</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.budget.view_budgetline %}
+                                <li>
+                                    <a href="{% url 'budget:budget_list' %}"
+                                       class="{% if 'budget' in request.resolver_match.app_name %}active{% endif %}">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                                        <span class="menu-text">Partidas </span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.budget.view_program %}
+                                <li>
+                                    <a href="{% url 'budget:program_list' %}">
+                                        <i class="fa-solid fa-sitemap"></i>
+                                        <span class="menu-text">Estructura</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.budget.view_groups_budget %}
+                                <li>
+                                    <a href="{% url 'budget:budget_group_list' %}"
+                                       class="sidebar-link {% if request.resolver_match.url_name == 'budget_group_list' %}active{% endif %}">
+                                        <i class="fas fa-layer-group sidebar-icon"></i>
+                                        <span class="sidebar-text">Agrupaciones</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
+                    <!-- Manual de Funciones -->
+                    <li class="has-submenu">
+                        <a href="#" class="submenu-toggle">
+                            <i class="fa-solid fa-book"></i>
+                            <span class="menu-text">Manual de Funciones</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.function_manual.view_jobprofile %}
+                                <li>
+                                    <a href="{% url 'function_manual:profile_list' %}">
+                                        <i class="fa-solid fa-id-badge"></i>
+                                        <span class="menu-text">Perfiles de Puestos</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- Sub-sección Administración -->
-                        {% if perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
-                            <li class="has-inner-submenu" id="adminSubmenu">
-                                <a href="javascript:void(0)" class="inner-toggle">
-                                    <i class="fa-solid fa-gears"></i>
-                                    <span class="menu-text">Administración</span>
-                                    <i class="fa-solid fa-chevron-right inner-chevron"></i>
-                                </a>
-                                <ul class="inner-submenu">
-                                    {% if perms.function_manual.view_manualcatalog or perms.function_manual.can_admin %}
-                                        <li>
-                                            <a href="{% url 'function_manual:catalog_list' %}">
-                                                <i class="fa-solid fa-list-ul"></i>
-                                                <span class="menu-text">Catálogo</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                    {% if perms.function_manual.view_occupationalmatrix or perms.function_manual.can_admin %}
-                                        <li>
-                                            <a href="{% url 'function_manual:matrix_list' %}">
-                                                <i class="fa-solid fa-table-list"></i>
-                                                <span class="menu-text">Matriz Ocupacional</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                    {% if perms.function_manual.view_valuationnode or perms.function_manual.can_admin %}
-                                        <li>
-                                            <a href="{% url 'function_manual:valuation_list' %}">
-                                                <i class="fa-solid fa-chart-line"></i>
-                                                <span class="menu-text">Valoración</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                    {% if perms.function_manual.view_competency or perms.function_manual.can_admin %}
-                                        <li>
-                                            <a href="{% url 'function_manual:competency_list' %}">
-                                                <i class="fa-solid fa-brain"></i>
-                                                <span class="menu-text">Competencias</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            <!-- MÓDULO DE PERMISOS -->
-            {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest %}
-                <li class="has-submenu">
-                    <a href="#" class="{% if 'permissions' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-solid fa-file-signature"></i>
-                        <span class="menu-text">Permisos</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
+                            <!-- Sub-sección Administración -->
+                            {% if perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency %}
+                                <li class="has-inner-submenu" id="adminSubmenu">
+                                    <a href="javascript:void(0)" class="inner-toggle">
+                                        <i class="fa-solid fa-gears"></i>
+                                        <span class="menu-text">Administración</span>
+                                        <i class="fa-solid fa-chevron-right inner-chevron"></i>
+                                    </a>
+                                    <ul class="inner-submenu">
+                                        {% if perms.function_manual.view_manualcatalog or perms.function_manual.can_admin %}
+                                            <li>
+                                                <a href="{% url 'function_manual:catalog_list' %}">
+                                                    <i class="fa-solid fa-list-ul"></i>
+                                                    <span class="menu-text">Catálogo</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% if perms.function_manual.view_occupationalmatrix or perms.function_manual.can_admin %}
+                                            <li>
+                                                <a href="{% url 'function_manual:matrix_list' %}">
+                                                    <i class="fa-solid fa-table-list"></i>
+                                                    <span class="menu-text">Matriz Ocupacional</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% if perms.function_manual.view_valuationnode or perms.function_manual.can_admin %}
+                                            <li>
+                                                <a href="{% url 'function_manual:valuation_list' %}">
+                                                    <i class="fa-solid fa-chart-line"></i>
+                                                    <span class="menu-text">Valoración</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% if perms.function_manual.view_competency or perms.function_manual.can_admin %}
+                                            <li>
+                                                <a href="{% url 'function_manual:competency_list' %}">
+                                                    <i class="fa-solid fa-brain"></i>
+                                                    <span class="menu-text">Competencias</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                <!-- MÓDULO DE PERMISOS -->
+                {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'permissions' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-file-signature"></i>
+                            <span class="menu-text">Permisos</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
 
-                        <!-- 1. Administrar Permisos (Listado General) -->
-                        {% if perms.permitrequest.change_permitrequest %}
-                            <li>
-                                <a href="{% url 'permissions:permit_admin' %}"
-                                   class="{% if request.resolver_match.url_name == 'permit_admin' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-list-check"></i>
-                                    <span class="menu-text">Administrar</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- 1. Administrar Permisos (Listado General) -->
+                            {% if perms.permitrequest.change_permitrequest %}
+                                <li>
+                                    <a href="{% url 'permissions:permit_admin' %}"
+                                       class="{% if request.resolver_match.url_name == 'permit_admin' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                        <span class="menu-text">Administrar</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- 2. Generar Permisos (Listado de Empleados) -->
-                        {% if perms.permitrequest.add_permitrequest %}
-                            <li>
-                                <a href="{% url 'permissions:permit_employee_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'permissions' and request.resolver_match.url_name == 'permit_employee_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-plus-circle"></i>
-                                    <span class="menu-text">{% if perms.permitrequest.change_permitrequest %}
-                                        Permisos{% else %}Bitácora{% endif %}</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- 2. Generar Permisos (Listado de Empleados) -->
+                            {% if perms.permitrequest.add_permitrequest %}
+                                <li>
+                                    <a href="{% url 'permissions:permit_employee_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'permissions' and request.resolver_match.url_name == 'permit_employee_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                        <span class="menu-text">{% if perms.permitrequest.change_permitrequest %}
+                                            Permisos{% else %}Bitácora{% endif %}</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- 3. Tipos de Permisos (Configuración) -->
-                        {% if perms.permitrequest.view_permittype %}
-                            <li>
-                                <a href="{% url 'permissions:permit_type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'permit_type_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-sliders"></i>
-                                    <span class="menu-text">Tipos de Permiso</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod %}
-                <li class="has-submenu">
-                    <!-- El enlace principal activa la clase 'active' si estamos dentro de la app 'vacation' -->
-                    <a href="#" class="{% if 'vacation' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-solid fa-umbrella-beach"></i>
-                        <span class="menu-text">Vacaciones</span>
-                        <!-- Usamos la misma flecha que el resto del menú para que tu JS la rote automáticamente -->
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
+                            <!-- 3. Tipos de Permisos (Configuración) -->
+                            {% if perms.permitrequest.view_permittype %}
+                                <li>
+                                    <a href="{% url 'permissions:permit_type_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'permit_type_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span class="menu-text">Tipos de Permiso</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod %}
+                    <li class="has-submenu">
+                        <!-- El enlace principal activa la clase 'active' si estamos dentro de la app 'vacation' -->
+                        <a href="#" class="{% if 'vacation' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-umbrella-beach"></i>
+                            <span class="menu-text">Vacaciones</span>
+                            <!-- Usamos la misma flecha que el resto del menú para que tu JS la rote automáticamente -->
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
 
-                    <ul class="submenu">
-                        <!-- 1. Administrar Solicitudes -->
-                        {% if perms.vacation.view_vacationrequest %}
-                            <li>
-                                <a href="{% url 'vacation:request_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-list-check"></i>
-                                    <span class="menu-text">Administrar Solicitudes</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                        <ul class="submenu">
+                            <!-- 1. Administrar Solicitudes -->
+                            {% if perms.vacation.view_vacationrequest %}
+                                <li>
+                                    <a href="{% url 'vacation:request_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                        <span class="menu-text">Administrar Solicitudes</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- 2. Periodos y Saldos -->
-                        {% if perms.vacation.view_vacationperiod %}
-                            <li>
-                                <a href="{% url 'vacation:period_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                    <span class="menu-text">Periodos y Saldos</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            <!-- MÓDULO DE SANCIONES -->
-            {% if perms.sanctions.view_sanction or perms.sanctions.view_sanctiontype or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctionnotificationtype %}
-                <li class="has-submenu">
-                    <a href="#" class="{% if 'sanctions' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-solid fa-gavel"></i>
-                        <span class="menu-text">Sanciones</span>
-                        {% if sanctions_pending_assignments_count > 0 %}
-                            <span class="sidebar-badge"
-                                  style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
-                        {% endif %}
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        <!-- 1. Generar Sanciones -->
-                        {% if perms.sanctions.add_sanction %}
-                            <li>
-                                <a href="{% url 'sanctions:sanction_employee_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_employee_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-plus-circle"></i>
-                                    <span class="menu-text">Sanciones/Notificaciones</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- 2. Periodos y Saldos -->
+                            {% if perms.vacation.view_vacationperiod %}
+                                <li>
+                                    <a href="{% url 'vacation:period_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                        <span class="menu-text">Periodos y Saldos</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                <!-- MÓDULO DE SANCIONES -->
+                {% if perms.sanctions.view_sanction or perms.sanctions.view_sanctiontype or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctionnotificationtype %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'sanctions' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-gavel"></i>
+                            <span class="menu-text">Sanciones</span>
+                            {% if sanctions_pending_assignments_count > 0 %}
+                                <span class="sidebar-badge"
+                                      style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
+                            {% endif %}
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            <!-- 1. Generar Sanciones -->
+                            {% if perms.sanctions.add_sanction %}
+                                <li>
+                                    <a href="{% url 'sanctions:sanction_employee_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_employee_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                        <span class="menu-text">Sanciones/Notificaciones</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- 2. Historial de Sanciones -->
-                        {% if perms.sanctions.view_sanctionnotification %}
-                            <li>
-                                <a href="{% url 'sanctions:sanction_history' %}"
-                                   class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_history' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-clock-rotate-left"></i>
-                                    <span class="menu-text">Asignaciones</span>
-                                    {% if sanctions_pending_assignments_count > 0 %}
-                                        <span class="sidebar-badge"
-                                              style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- 2. Historial de Sanciones -->
+                            {% if perms.sanctions.view_sanctionnotification %}
+                                <li>
+                                    <a href="{% url 'sanctions:sanction_history' %}"
+                                       class="{% if request.resolver_match.app_name == 'sanctions' and request.resolver_match.url_name == 'sanction_history' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                        <span class="menu-text">Asignaciones</span>
+                                        {% if sanctions_pending_assignments_count > 0 %}
+                                            <span class="sidebar-badge"
+                                                  style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- 3. Tipos de Sanciones -->
-                        {% if perms.sanctions.view_sanctiontype %}
-                            <li>
-                                <a href="{% url 'sanctions:sanction_type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'sanction_type_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-sliders"></i>
-                                    <span class="menu-text">Tipos de Sanción</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- 3. Tipos de Sanciones -->
+                            {% if perms.sanctions.view_sanctiontype %}
+                                <li>
+                                    <a href="{% url 'sanctions:sanction_type_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'sanction_type_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span class="menu-text">Tipos de Sanción</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        {% if perms.sanctions.view_sanctionnotificationtype %}
-                            <li>
-                                <a href="{% url 'sanctions:notification_type_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'notification_type_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-bell"></i>
-                                    <span class="menu-text">Tipos de Notificaciones</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            {% if perms.sanctions.view_sanctionnotificationtype %}
+                                <li>
+                                    <a href="{% url 'sanctions:notification_type_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'notification_type_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-bell"></i>
+                                        <span class="menu-text">Tipos de Notificaciones</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                    </ul>
-                </li>
-            {% endif %}
-            {% if perms.contract.view_laborregime or perms.contract.view_managementperiod %}
-                <li class="has-submenu">
-                    <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-solid fa-file-contract"></i>
-                        <span class="menu-text">Gestión Laboral</span>
-                        {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
-                            <span class="sidebar-badge">{{ contract_expiring_count }}</span>
-                        {% endif %}
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.contract.view_managementperiod %}
-                            <li>
-                                <a href="{% url 'contract:period_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-file-signature"></i>
-                                    <span class="menu-text">Inicios de Gestión</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.contract.view_laborregime %}
-                            <li>
-                                <a href="{% url 'contract:regime_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'regime_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-briefcase"></i>
-                                    <span class="menu-text">Regímenes Laborales</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.contract.view_managementperiod %}
-                            <li>
-                                <a href="{% url 'contract:period_notification_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_notification_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-bell"></i>
-                                    <span class="menu-text">Notificaciones</span>
-                                    {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
-                                        <span class="sidebar-badge">{{ contract_expiring_count }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule %}
-                <li class="has-submenu">
-                    <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-regular fa-clock"></i>
-                        <span class="menu-text">Horarios</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.schedule.can_manage_schedules or perms.schedule.view_schedule %}
-                            <li>
-                                <a href="{% url 'schedule:schedule_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'schedule_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                    <span class="menu-text">Horarios</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.schedule.can_manage_observations or perms.schedule.view_scheduleobservation %}
-                            <li>
-                                <a href="{% url 'schedule:observation_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'observation_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-umbrella-beach"></i>
-                                    <span class="menu-text">Feriados y Obs.</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.schedule.view_schedule or perms.schedule.change_schedule %}
-                            <li>
-                                <a href="{% url 'schedule:assignment_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'assignment_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-right-left"></i>
-                                    <span class="menu-text">Asignar horario</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution %}
-                <li class="has-submenu">
-                    <a href="#" class="{% if 'payroll' in request.resolver_match.app_name %}active{% endif %}">
-                        <i class="fa-solid fa-money-check-dollar"></i>
-                        <span class="menu-text">Nómina</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.payroll.view_payrollperiod or request.user.is_staff %}
-                            <li>
-                                <a href="{% url 'payroll:period_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'payroll' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-calendar-check"></i>
-                                    <span class="menu-text">Gestión de Roles</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if perms.contract.view_laborregime or perms.contract.view_managementperiod %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'contract' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-file-contract"></i>
+                            <span class="menu-text">Gestión Laboral</span>
+                            {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
+                                <span class="sidebar-badge">{{ contract_expiring_count }}</span>
+                            {% endif %}
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.contract.view_managementperiod %}
+                                <li>
+                                    <a href="{% url 'contract:period_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-file-signature"></i>
+                                        <span class="menu-text">Inicios de Gestión</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.contract.view_laborregime %}
+                                <li>
+                                    <a href="{% url 'contract:regime_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'regime_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-briefcase"></i>
+                                        <span class="menu-text">Regímenes Laborales</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.contract.view_managementperiod %}
+                                <li>
+                                    <a href="{% url 'contract:period_notification_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'contract' and request.resolver_match.url_name == 'period_notification_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-bell"></i>
+                                        <span class="menu-text">Notificaciones</span>
+                                        {% if contract_show_expiring_counter and contract_expiring_count > 0 %}
+                                            <span class="sidebar-badge">{{ contract_expiring_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'schedule' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-regular fa-clock"></i>
+                            <span class="menu-text">Horarios</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.schedule.can_manage_schedules or perms.schedule.view_schedule %}
+                                <li>
+                                    <a href="{% url 'schedule:schedule_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'schedule_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                        <span class="menu-text">Horarios</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.schedule.can_manage_observations or perms.schedule.view_scheduleobservation %}
+                                <li>
+                                    <a href="{% url 'schedule:observation_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'observation_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-umbrella-beach"></i>
+                                        <span class="menu-text">Feriados y Obs.</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.schedule.view_schedule or perms.schedule.change_schedule %}
+                                <li>
+                                    <a href="{% url 'schedule:assignment_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'assignment_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-right-left"></i>
+                                        <span class="menu-text">Asignar horario</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
+                {% if perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'payroll' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-money-check-dollar"></i>
+                            <span class="menu-text">Nómina</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.payroll.view_payrollperiod or request.user.is_staff %}
+                                <li>
+                                    <a href="{% url 'payroll:period_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'payroll' and request.resolver_match.url_name == 'period_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-calendar-check"></i>
+                                        <span class="menu-text">Gestión de Roles</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        <!-- Enlace directo al Admin para las Constantes (SBU, IESS) por ahora -->
-                        {% if perms.payroll.view_payrollconstant %}
-                            <li>
-                                <!-- URL apuntando a nuestra nueva vista CBV -->
-                                <a href="{% url 'payroll:constant_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'constant_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-sliders"></i>
-                                    <span class="menu-text">Constantes (SBU)</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.accounting.view_account or request.user.is_staff %}
-                            <li>
-                                <a href="{% url 'accounting:account_list' %}"
-                                   class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-book-open"></i>
-                                    <span class="menu-text">Cuentas contables</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.payroll.view_income %}
-                            <li>
-                                <a href="{% url 'payroll:income_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'income_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-coins"></i>
-                                    <span class="menu-text">Ingresos</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.payroll.view_deduction %}
-                            <li>
-                                <a href="{% url 'payroll:deduction_list' %}"
-                                   class="{% if request.resolver_match.url_name == 'deduction_list' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-                                    <span class="menu-text">Descuentos</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% if perms.payroll.view_institutionalcontribution %}
-                            <li>
-                                <a href="{% url 'payroll:contribution_list' %}">
-                                    <i class="fas fa-building"></i> <span class="menu-text">Aportes Inst.</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            <!-- Enlace directo al Admin para las Constantes (SBU, IESS) por ahora -->
+                            {% if perms.payroll.view_payrollconstant %}
+                                <li>
+                                    <!-- URL apuntando a nuestra nueva vista CBV -->
+                                    <a href="{% url 'payroll:constant_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'constant_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span class="menu-text">Constantes (SBU)</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.accounting.view_account or request.user.is_staff %}
+                                <li>
+                                    <a href="{% url 'accounting:account_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'accounting' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-book-open"></i>
+                                        <span class="menu-text">Cuentas contables</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if perms.payroll.view_payrollrubric %}
+                                <li>
+                                    <a href="{% url 'payroll:rubric_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'rubric_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                        <span class="menu-text">Mapeo de Rubros</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                        {% if perms.payroll.view_payslip %}
-                            <li>
-                                <a href="{% url 'payroll:reserve_funds' %}"
-                                   class="{% if request.resolver_match.url_name == 'reserve_funds' %}active-child{% endif %}">
-                                    <i class="fa-solid fa-piggy-bank"></i>
-                                    <span class="menu-text">Fondos de Reserva</span>
-                                </a>
-                            </li>
-                        {% endif %}
+                            {% if perms.payroll.view_payslip %}
+                                <li>
+                                    <a href="{% url 'payroll:reserve_funds' %}"
+                                       class="{% if request.resolver_match.url_name == 'reserve_funds' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-piggy-bank"></i>
+                                        <span class="menu-text">Fondos de Reserva</span>
+                                    </a>
+                                </li>
+                            {% endif %}
 
-                    </ul>
-                </li>
-            {% endif %}
-            <!--  Biométricos -->
-            {% if perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
-                <li class="has-submenu">
-                    <a href="#" class="nav-link">
-                        <i class="fa-solid fa-fingerprint"></i>
-                        <span class="menu-text">Biométricos</span>
-                        <i class="fa-solid fa-chevron-right chevron-icon"></i>
-                    </a>
-                    <ul class="submenu">
-                        {% if perms.biometric.view_biometricdevice %}
+                        </ul>
+                    </li>
+                {% endif %}
+                <!--  Biométricos -->
+                {% if perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
+                    <li class="has-submenu">
+                        <a href="#" class="nav-link">
+                            <i class="fa-solid fa-fingerprint"></i>
+                            <span class="menu-text">Biométricos</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% if perms.biometric.view_biometricdevice %}
+                                <li>
+                                    <a href="{% url 'biometric:biometric_list' %}">
+                                        <i class="fa-solid fa-list-check"></i> Dispositivos
+                                    </a>
+                                </li>
+                            {% endif %}
                             <li>
-                                <a href="{% url 'biometric:biometric_list' %}">
-                                    <i class="fa-solid fa-list-check"></i> Dispositivos
+                                <a href="{% url 'biometric:employee_report_list' %}"
+                                   class="{% if 'reportes' in request.path %}active-child{% endif %}">
+                                    <i class="fa-regular fa-file-lines"></i> Reportes
                                 </a>
                             </li>
-                        {% endif %}
-                        <li>
-                            <a href="{% url 'biometric:employee_report_list' %}"
-                               class="{% if 'reportes' in request.path %}active-child{% endif %}">
-                                <i class="fa-regular fa-file-lines"></i> Reportes
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            {% endif %}
+                        </ul>
+                    </li>
+                {% endif %}
             {% endif %}
 
             <li class="sidebar-section-title">Configuracion</li>

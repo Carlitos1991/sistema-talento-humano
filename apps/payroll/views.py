@@ -1,10 +1,10 @@
+import base64
 import calendar
 import io
 import json
-import os
-import base64
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+
 from accounting.models import Account
 
 try:
@@ -30,8 +30,6 @@ from django.template.loader import render_to_string, get_template
 from django.urls import reverse_lazy, reverse
 from django.utils.html import strip_tags
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from xhtml2pdf import pisa
 
 from accounting.models import JournalItem
@@ -39,11 +37,8 @@ from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
 from core.models import CatalogItem
 from employee.models import Employee
-from payroll.models import RubroBudgetMapping
-from .forms import PayrollPeriodForm, PayrollConstantForm, RubroBudgetMappingForm, IncomeForm, DeductionForm, \
-    InstitutionalContributionForm
-from .models import Income, Deduction
-from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, InstitutionalContribution
+from .forms import PayrollPeriodForm, PayrollConstantForm, PayrollRubricForm
+from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, PayrollRubric
 from .models import PendingDebt
 from .services import PayrollCalculatorService
 from .services import rebuild_accounting_for_period
@@ -235,6 +230,39 @@ class GeneratePayrollView(View):
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+class RubricListView(ListView):
+    model = PayrollRubric
+    template_name = 'payroll/rubric_list.html'
+    context_object_name = 'rubrics'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        tipo = self.request.GET.get('tipo')  # Para que puedas filtrar en la tabla si quieres
+        if tipo:
+            qs = qs.filter(rubric_type=tipo)
+        return qs
+
+
+class RubricCreateView(CreateView):
+    model = PayrollRubric
+    form_class = PayrollRubricForm
+    template_name = 'payroll/modals/modal_rubric_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Rubro creado correctamente.'})
+
+
+class RubricUpdateView(UpdateView):
+    model = PayrollRubric
+    form_class = PayrollRubricForm
+    template_name = 'payroll/modals/modal_rubric_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Rubro actualizado correctamente.'})
 
 
 class PayrollGenerateForm(forms.Form):
@@ -510,122 +538,23 @@ class PayslipListView(LoginRequiredMixin, ListView):
 
 
 class PayslipDetailView(DetailView):
-    """Para el Modal de Detalle (reemplaza a rol_detalle antiguo)"""
     model = Payslip
     template_name = 'payroll/modals/modal_payslip_detail.html'
     context_object_name = 'payslip'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # FIX: Agregamos order_by para que respete tu configuración de "Orden"
         context['incomes'] = self.object.items.filter(
             item_type='INCOME'
-        ).order_by('income_ref__order')
+        ).order_by('rubric__order')
 
         context['deductions'] = self.object.items.filter(
             item_type='DEDUCTION'
         ).exclude(
-            deduction_ref__code__icontains='PATRONAL'
-        ).order_by('deduction_ref__order')
+            rubric__code__icontains='PATRONAL'
+        ).order_by('rubric__order')
 
         return context
-
-
-class IncomeListView(ListView):
-    model = Income
-    template_name = 'payroll/income_list.html'
-    context_object_name = 'incomes'
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        show_inactive = self.request.GET.get('show_inactive')
-        if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
-            return qs.all()
-        return qs.filter(is_active=True)
-
-    def get(self, request, *args, **kwargs):
-        # Si es petición AJAX devolvemos solo las filas (partial)
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            incomes = self.get_queryset()
-            html = render_to_string('payroll/partials/partial_income_table.html', {'incomes': incomes})
-            from django.http import HttpResponse
-            return HttpResponse(html)
-        return super().get(request, *args, **kwargs)
-
-
-class IncomeCreateView(CreateView):
-    model = Income
-    form_class = IncomeForm
-    template_name = 'payroll/modals/modal_income_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Ingreso creado correctamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
-
-class IncomeUpdateView(UpdateView):
-    model = Income
-    form_class = IncomeForm
-    template_name = 'payroll/modals/modal_income_form.html'
-    success_url = reverse_lazy('payroll:income_list')
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Ingreso actualizado correctamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
-
-class DeductionListView(ListView):
-    model = Deduction
-    template_name = 'payroll/deduction_list.html'
-    context_object_name = 'deductions'
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        show_inactive = self.request.GET.get('show_inactive')
-        if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
-            return qs.all()
-        return qs.filter(is_active=True)
-
-    def get(self, request, *args, **kwargs):
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            deductions = self.get_queryset()
-            html = render_to_string('payroll/partials/partial_deduction_table.html', {'deductions': deductions})
-            from django.http import HttpResponse
-            return HttpResponse(html)
-        return super().get(request, *args, **kwargs)
-
-
-class DeductionCreateView(CreateView):
-    model = Deduction
-    form_class = DeductionForm
-    template_name = 'payroll/modals/modal_deduction_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Descuento creado correctamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
-
-class DeductionUpdateView(UpdateView):
-    model = Deduction
-    form_class = DeductionForm
-    template_name = 'payroll/modals/modal_deduction_form.html'
-    success_url = reverse_lazy('payroll:deduction_list')
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Descuento actualizado correctamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 class FondosReservaListView(LoginRequiredMixin, ListView):
@@ -699,11 +628,8 @@ class InstitutionalReportView(TemplateView):
         period_id = self.kwargs.get('period_id')
         period = get_object_or_404(PayrollPeriod, pk=period_id)
 
-        # ==========================================
-        # 1. JORNALIZACIÓN (Desde la Contabilidad)
-        # ==========================================
+        # 1. JORNALIZACIÓN
         jornalizacion_items = JournalItem.objects.filter(reference=str(period))
-
         jornalizacion = []
         total_debe = 0
         total_haber = 0
@@ -711,85 +637,29 @@ class InstitutionalReportView(TemplateView):
         if jornalizacion_items.exists():
             jornalizacion = jornalizacion_items.values(
                 'account__code', 'account__name'
-            ).annotate(
-                total_debe=Sum('debit'),
-                total_haber=Sum('credit')
-            ).order_by('account__code')
-
+            ).annotate(total_debe=Sum('debit'), total_haber=Sum('credit')).order_by('account__code')
             total_debe = sum(item['total_debe'] for item in jornalizacion)
             total_haber = sum(item['total_haber'] for item in jornalizacion)
 
-            # ==========================================
-            # 2. DETALLE PRESUPUESTACIÓN (Desde la Nómina)
-            # ==========================================
+            # 2. DETALLE PRESUPUESTACIÓN (Mucha más rápida)
             presupuesto_list = []
 
-            # 1. Buscamos qué IDs están explícitamente configurados en la tabla de Mapeo usando las Claves Foráneas
-            mapped_income_ids = list(
-                RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True))
-            mapped_deduction_ids = list(
-                RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id', flat=True))
-            mapped_contribution_ids = list(
-                RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list('contribution_id', flat=True))
-
-            # Aseguramos que la "Remuneración Base" pase al reporte aunque no tenga mapeo explícito
-            remun = Income.objects.filter(code__iexact='REMUNERACION').first()
-            if remun and remun.id not in mapped_income_ids:
-                mapped_income_ids.append(remun.id)
-
-            # 2. Agrupamos los INGRESOS
-            ingresos = PayslipItem.objects.filter(
+            rubros_presupuestarios = PayslipItem.objects.filter(
                 payslip__period=period,
-                budget_line_code__isnull=False,
-                item_type='INCOME',
-                income_ref_id__in=mapped_income_ids
+                budget_line_code__isnull=False
+            ).filter(
+                Q(rubric__has_mapping=True) | Q(rubric__code__iexact='REMUNERACION')
             ).values(
-                'budget_line_code', 'income_ref__name'
+                'budget_line_code', 'rubric__name'
             ).annotate(total=Sum('value'))
 
-            # 3. Agrupamos los EGRESOS (Esto oculta al IESS Personal del presupuesto porque no está mapeado)
-            egresos = PayslipItem.objects.filter(
-                payslip__period=period,
-                budget_line_code__isnull=False,
-                item_type='DEDUCTION',
-                deduction_ref_id__in=mapped_deduction_ids
-            ).values(
-                'budget_line_code', 'deduction_ref__name'
-            ).annotate(total=Sum('value'))
-
-            # 4. Agrupamos los APORTES INSTITUCIONALES (El nuevo Patronal)
-            aportes = PayslipItem.objects.filter(
-                payslip__period=period,
-                budget_line_code__isnull=False,
-                item_type='CONTRIBUTION',
-                contribution_ref_id__in=mapped_contribution_ids
-            ).values(
-                'budget_line_code', 'contribution_ref__name'
-            ).annotate(total=Sum('value'))
-
-            # Unificamos las tres listas en el reporte final
-            for item in ingresos:
+            for item in rubros_presupuestarios:
                 presupuesto_list.append({
                     'partida': item['budget_line_code'],
-                    'concepto': item['income_ref__name'],
+                    'concepto': item['rubric__name'],
                     'monto': item['total']
                 })
 
-            for item in egresos:
-                presupuesto_list.append({
-                    'partida': item['budget_line_code'],
-                    'concepto': item['deduction_ref__name'],
-                    'monto': item['total']
-                })
-
-            for item in aportes:
-                presupuesto_list.append({
-                    'partida': item['budget_line_code'],
-                    'concepto': item['contribution_ref__name'],
-                    'monto': item['total']
-                })
-
-            # Ordenamos por código de partida
             presupuesto_list = sorted(presupuesto_list, key=lambda x: x['partida'])
 
         context.update({
@@ -802,291 +672,127 @@ class InstitutionalReportView(TemplateView):
         return context
 
 
-class MappingListView(ListView):
-    model = RubroBudgetMapping
-    template_name = 'payroll/mapping_list.html'
-    context_object_name = 'mappings'
-    ordering = ['rubro_type', 'rubro_code']
-
-
-class MappingCreateView(CreateView):
-    model = RubroBudgetMapping
-    form_class = RubroBudgetMappingForm
-    template_name = 'payroll/mapping_form.html'
-    success_url = reverse_lazy('payroll:mapping_list')
-
-
-class MappingUpdateView(UpdateView):
-    model = RubroBudgetMapping
-    form_class = RubroBudgetMappingForm
-    template_name = 'payroll/mapping_form.html'
-    success_url = reverse_lazy('payroll:mapping_list')
-
-
-class MappingDeleteView(DeleteView):
-    model = RubroBudgetMapping
-    template_name = 'payroll/mapping_confirm_delete.html'
-    success_url = reverse_lazy('payroll:mapping_list')
-
-
 class NoveltyMassLoadView(TemplateView):
-    """Vista principal para la pantalla de carga de novedades"""
     template_name = 'payroll/novelty_mass_load.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['periods'] = PayrollPeriod.objects.filter(is_closed=False)
-        context['incomes'] = Income.objects.filter(is_active=True)
-        context['deductions'] = Deduction.objects.filter(is_active=True)
-
-        # Capturamos el periodo de la URL (si existe) y lo pasamos al HTML
+        context['incomes'] = PayrollRubric.objects.filter(rubric_type='INCOME', is_active=True)
+        context['deductions'] = PayrollRubric.objects.filter(rubric_type='DEDUCTION', is_active=True)
         context['selected_period_id'] = self.request.GET.get('period_id', '')
-
         return context
 
 
 class ParseNoveltyExcelView(View):
-    """Lee el Excel temporalmente y lo devuelve como JSON para la tabla editable"""
-
     def post(self, request):
         excel_file = request.FILES.get('file')
         rubro_type = request.POST.get('rubro_type')
         rubro_id = request.POST.get('rubro_id')
-        if not excel_file:
-            return JsonResponse({'status': 'error', 'message': 'No se subió ningún archivo'})
+        if not excel_file: return JsonResponse({'status': 'error', 'message': 'Sin archivo'})
 
         try:
-            # data_only=True asegura que si hay fórmulas, lea el resultado
             wb = openpyxl.load_workbook(excel_file, data_only=True)
             sheet = wb.active
+            data_map, not_found, income_code = {}, set(), ''
 
-            data_map = {}
-            not_found = set()
-
-            income_code = ''
             if rubro_type == 'INCOME' and rubro_id:
-                income = Income.objects.filter(pk=rubro_id).only('code').first()
-                income_code = (income.code or '').strip().upper() if income else ''
+                rubric = PayrollRubric.objects.filter(pk=rubro_id).only('code').first()
+                income_code = (rubric.code or '').strip().upper() if rubric else ''
 
             is_hours_extra = ('HORAS_EXTRAS' in income_code or 'HORA_EXTRA' in income_code)
             is_hours_supp = ('SUPLEMENTARIAS' in income_code or 'SUPLEMENTARIA' in income_code)
             is_hours_mode = is_hours_extra or is_hours_supp
-
-            # Para formato en 2 filas por cédula: 1ra fila = horas extra, 2da fila = suplementarias
             occurrence_by_cedula = {}
 
             def to_decimal(value):
-                if value is None:
-                    return Decimal('0.00')
                 try:
-                    return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                except Exception:
+                    return Decimal(str(value or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                except:
                     return Decimal('0.00')
 
-            # Empezamos desde la FILA 1 (así no importa si el usuario olvidó poner encabezados)
             for row in sheet.iter_rows(min_row=1, values_only=True):
-                if not row[0]: continue  # Si la celda está vacía, saltar
-
+                if not row[0]: continue
                 raw_cedula = str(row[0]).strip()
-
-                # 1. Si la celda tiene letras (ej: dice "CEDULA" o "Identificación"), es un encabezado, lo saltamos
-                if not raw_cedula.replace('.', '').isdigit():
-                    continue
-
-                # 2. Limpiar si Excel lo transformó a float (ej: "1104898679.0" -> "1104898679")
-                if raw_cedula.endswith('.0'):
-                    raw_cedula = raw_cedula[:-2]
-
-                # 3. Las cédulas ecuatorianas son de 10 dígitos. Si Excel borró el 0 inicial, lo reponemos
+                if not raw_cedula.replace('.', '').isdigit(): continue
+                if raw_cedula.endswith('.0'): raw_cedula = raw_cedula[:-2]
                 cedula = raw_cedula.zfill(10)
 
-                col_2 = to_decimal(row[1] if len(row) > 1 else None)
-                col_3 = to_decimal(row[2] if len(row) > 2 else None)
+                col_2, col_3 = to_decimal(row[1] if len(row) > 1 else 0), to_decimal(row[2] if len(row) > 2 else 0)
 
                 if is_hours_mode:
-                    # Formato A: Cedula | Horas Extra | Horas Suplementarias
                     if len(row) > 2:
                         valor = col_2 if is_hours_extra else col_3
                     else:
-                        # Formato B: 2 filas por cédula
                         occ = occurrence_by_cedula.get(cedula, 0) + 1
                         occurrence_by_cedula[cedula] = occ
-                        if is_hours_extra:
-                            valor = col_2 if occ == 1 else Decimal('0.00')
-                        else:
-                            valor = col_2 if occ == 2 else Decimal('0.00')
+                        valor = col_2 if (is_hours_extra and occ == 1) or (
+                                not is_hours_extra and occ == 2) else Decimal('0.00')
                 else:
                     valor = col_2
 
-                # Buscamos al empleado por la cédula (usamos document_number que es como lo tienes en DB)
                 emp = Employee.objects.filter(person__document_number=cedula, is_active=True).first()
                 if emp:
                     if emp.id not in data_map:
-                        data_map[emp.id] = {
-                            'emp_id': emp.id,
-                            'cedula': cedula,
-                            'nombres': f"{emp.person.last_name} {emp.person.first_name}",
-                            'valor': Decimal('0.00')
-                        }
+                        data_map[emp.id] = {'emp_id': emp.id, 'cedula': cedula,
+                                            'nombres': f"{emp.person.last_name} {emp.person.first_name}",
+                                            'valor': Decimal('0.00')}
                     data_map[emp.id]['valor'] += valor
                 else:
                     not_found.add(cedula)
 
-            data = []
-            for item in data_map.values():
-                item['valor'] = float(item['valor'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-                data.append(item)
-
-            data = sorted(data, key=lambda x: x['nombres'])
+            data = sorted([dict(item, valor=float(item['valor'])) for item in data_map.values()],
+                          key=lambda x: x['nombres'])
             return JsonResponse({'status': 'success', 'data': data, 'not_found': sorted(list(not_found))})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 
 class GetNoveltiesView(View):
-    """Obtiene las novedades ya guardadas en base de datos para mostrarlas en la tabla"""
-
     def get(self, request):
         period_id = request.GET.get('period_id')
-        rubro_type = request.GET.get('rubro_type')
         rubro_id = request.GET.get('rubro_id')
-
-        if not all([period_id, rubro_type, rubro_id]):
-            return JsonResponse({'status': 'error', 'message': 'Faltan parámetros'})
+        if not all([period_id, rubro_id]): return JsonResponse({'status': 'error', 'message': 'Faltan parámetros'})
 
         try:
-            if rubro_type == 'INCOME':
-                novelties = PayrollNovelty.objects.filter(period_id=period_id, income_ref_id=rubro_id,
-                                                          value__gt=0).select_related('employee__person')
-            else:
-                novelties = PayrollNovelty.objects.filter(period_id=period_id, deduction_ref_id=rubro_id,
-                                                          value__gt=0).select_related('employee__person')
-
-            data = []
-            for nov in novelties:
-                data.append({
-                    'emp_id': nov.employee.id,
-                    'cedula': nov.employee.person.document_number,
-                    'nombres': f"{nov.employee.person.last_name} {nov.employee.person.first_name}",
-                    'valor': float(nov.value)
-                })
-
-            # Ordenar alfabéticamente
-            data = sorted(data, key=lambda x: x['nombres'])
+            novelties = PayrollNovelty.objects.filter(period_id=period_id, rubric_id=rubro_id,
+                                                      value__gt=0).select_related('employee__person')
+            data = sorted([{
+                'emp_id': nov.employee.id, 'cedula': nov.employee.person.document_number,
+                'nombres': f"{nov.employee.person.last_name} {nov.employee.person.first_name}",
+                'valor': float(nov.value)
+            } for nov in novelties], key=lambda x: x['nombres'])
             return JsonResponse({'status': 'success', 'data': data})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 
 class SaveNoveltiesView(View):
-    """Recibe la tabla editada y guarda (sobrescribe) en la base de datos"""
-
     def post(self, request):
         try:
             payload = json.loads(request.body)
             period_id = payload.get('period_id')
-            rubro_type = payload.get('rubro_type')
             rubro_id = payload.get('rubro_id')
             items = payload.get('items', [])
 
             period = PayrollPeriod.objects.get(pk=period_id)
-
             with transaction.atomic():
-                # ==============================================================
-                # 1. TIERRA ARRASADA: Borramos todo lo anterior de ESTE rubro y periodo
-                # ==============================================================
-                if rubro_type == 'INCOME':
-                    PayrollNovelty.objects.filter(period=period, income_ref_id=rubro_id).delete()
-                else:
-                    PayrollNovelty.objects.filter(period=period, deduction_ref_id=rubro_id).delete()
-
-                # ==============================================================
-                # 2. INSERTAR LO NUEVO (Evitando crear registros en 0.00)
-                # ==============================================================
+                PayrollNovelty.objects.filter(period=period, rubric_id=rubro_id).delete()
                 novelties_to_create = []
                 for item in items:
-                    val = Decimal(str(item.get('valor', 0)))
-                    emp_id = item.get('emp_id')
-
+                    val, emp_id = Decimal(str(item.get('valor', 0))), item.get('emp_id')
                     if val > Decimal('0.00'):
-                        if rubro_type == 'INCOME':
-                            novelties_to_create.append(PayrollNovelty(
-                                period=period, employee_id=emp_id, income_ref_id=rubro_id, value=val
-                            ))
-                        else:
-                            novelties_to_create.append(PayrollNovelty(
-                                period=period, employee_id=emp_id, deduction_ref_id=rubro_id, value=val
-                            ))
-
-                # Guardado masivo ultra-rápido
+                        novelties_to_create.append(
+                            PayrollNovelty(period=period, employee_id=emp_id, rubric_id=rubro_id, value=val))
                 PayrollNovelty.objects.bulk_create(novelties_to_create)
-
-            return JsonResponse({'status': 'success', 'message': 'Novedades sobrescritas y guardadas exitosamente'})
+            return JsonResponse({'status': 'success', 'message': 'Novedades guardadas exitosamente'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 
-class ContributionListView(ListView):
-    model = InstitutionalContribution
-    template_name = 'payroll/contribution_list.html'
-    context_object_name = 'contributions'
-
-    def get_queryset(self):
-        qs = InstitutionalContribution.objects.all().order_by('code')
-        # Filtramos si no nos piden explícitamente ver los inactivos
-        if self.request.GET.get('show_inactive') != 'true':
-            qs = qs.filter(is_active=True)
-        return qs
-
-    def get(self, request, *args, **kwargs):
-        self.object_list = self.get_queryset()
-        context = self.get_context_data()
-
-        # MAGIA AJAX: Si la petición viene por JS, devolvemos solo el fragmento de la tabla
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return render(request, 'payroll/partials/partial_contribution_table.html', context)
-
-        # Si es una carga normal del navegador, devolvemos la página completa
-        return super().get(request, *args, **kwargs)
-
-
-class ContributionCreateView(CreateView):
-    model = InstitutionalContribution
-    form_class = InstitutionalContributionForm
-    template_name = 'payroll/modals/modal_contribution_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        # Respondemos con JSON para que el modal sepa que debe cerrarse
-        return JsonResponse({'status': 'success', 'message': 'Aporte creado exitosamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
-
-class ContributionUpdateView(UpdateView):
-    model = InstitutionalContribution
-    form_class = InstitutionalContributionForm
-    template_name = 'payroll/modals/modal_contribution_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Aporte actualizado exitosamente.'})
-
-    def form_invalid(self, form):
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
-
 class GroupedPayrollReportView(LoginRequiredMixin, View):
-    """
-    Motor de Generación de los 3 Reportes Financieros agrupados por Partida Presupuestaria.
-    100% Dinámico con prevención de Colisión de IDs (DED_ vs CON_)
-    """
-
     def get(self, request, pk):
         period = get_object_or_404(PayrollPeriod, pk=pk)
-
-        # 1. CAPTURA DE FILTROS DESDE LA URL
         search_query = request.GET.get('q', '').strip()
         group_filter = request.GET.get('group', '').strip()
         regime_filter = request.GET.get('regime', '').strip()
@@ -1094,72 +800,42 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
 
         payslips_qs = Payslip.objects.filter(period=period)
 
-        if search_query:
-            payslips_qs = payslips_qs.filter(
-                Q(employee__person__first_name__icontains=search_query) |
-                Q(employee__person__last_name__icontains=search_query) |
-                Q(employee__person__document_number__icontains=search_query) |
-                Q(items__budget_line__budget_group__short_code__icontains=search_query)
-            ).distinct()
-
-        if group_filter:
-            payslips_qs = payslips_qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
-
-        if regime_filter:
-            payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
+        if search_query: payslips_qs = payslips_qs.filter(Q(employee__person__first_name__icontains=search_query) | Q(
+            employee__person__last_name__icontains=search_query) | Q(
+            employee__person__document_number__icontains=search_query) | Q(
+            items__budget_line__budget_group__short_code__icontains=search_query)).distinct()
+        if group_filter: payslips_qs = payslips_qs.filter(
+            items__budget_line__budget_group__short_code=group_filter).distinct()
+        if regime_filter: payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         show_withheld = (self.request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
             payslips_qs = payslips_qs.filter(is_withheld=True)
         else:
-            if tipo_filtro == 'NORMAL':
-                payslips_qs = payslips_qs.filter(is_withheld=False)
-            elif tipo_filtro == 'REZAGADOS':
-                payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
+            payslips_qs = payslips_qs.filter(is_withheld=False) if tipo_filtro == 'NORMAL' else payslips_qs.filter(
+                is_withheld=False, is_paid=False)
 
         valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
 
-        mapped_incomes = set(
-            int(x) for x in RubroBudgetMapping.objects.filter(income__isnull=False).values_list('income_id', flat=True)
-            if x)
-        mapped_deductions = set(int(x) for x in
-                                RubroBudgetMapping.objects.filter(deduction__isnull=False).values_list('deduction_id',
-                                                                                                       flat=True) if x)
-        mapped_contributions = set(int(x) for x in
-                                   RubroBudgetMapping.objects.filter(contribution__isnull=False).values_list(
-                                       'contribution_id', flat=True) if x)
-
-        items = PayslipItem.objects.filter(
-            payslip_id__in=valid_payslip_ids
-        ).select_related(
-            'payslip__employee__person',
-            'budget_line__budget_group',
-            'income_ref__debit_account', 'income_ref__credit_account',
-            'deduction_ref__debit_account', 'deduction_ref__credit_account',
-            'contribution_ref__debit_account', 'contribution_ref__credit_account'
-        ).prefetch_related(
-            'payslip__employee__person__economic_data__bank_account__bank',
-            'payslip__employee__person__economic_data__bank_account__account_type'
-        ).distinct()
+        items = PayslipItem.objects.filter(payslip_id__in=valid_payslip_ids).select_related(
+            'payslip__employee__person', 'budget_line__budget_group', 'rubric__debit_account', 'rubric__credit_account',
+            'rubric__debit_account_prod', 'rubric__credit_account_prod', 'rubric__debit_account_inv',
+            'rubric__credit_account_inv', 'rubric__income_account'
+        ).prefetch_related('payslip__employee__person__economic_data__bank_account__bank',
+                           'payslip__employee__person__economic_data__bank_account__account_type').distinct()
 
         report_data = {}
 
         for it in items:
             val = Decimal(str(it.value))
-
             grupo_obj = it.budget_line.budget_group if it.budget_line else None
             grupo_key = grupo_obj.short_code if grupo_obj else 'SIN_AGRUPAR'
 
             if grupo_key not in report_data:
                 report_data[grupo_key] = {
-                    'group_obj': grupo_obj,
-                    'group_name': grupo_obj.name if grupo_obj else 'Registros sin agrupación',
-                    'empleados': {},
-                    'contabilidad': {},
-                    'presupuesto': {},
-                    'ingresos_headers': {},
-                    'descuentos_headers': {},
-                    'aportes_headers': {}
+                    'group_obj': grupo_obj, 'group_name': grupo_obj.name if grupo_obj else 'Sin agrupación',
+                    'empleados': {}, 'contabilidad': {}, 'presupuesto': {}, 'ingresos_headers': {},
+                    'descuentos_headers': {}, 'aportes_headers': {}
                 }
 
             grupo_data = report_data[grupo_key]
@@ -1169,63 +845,45 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 banco_nombre, cuenta_tipo, cuenta_numero = "NO REGISTRADO", "", ""
                 try:
                     bank_acc = it.payslip.employee.person.economic_data.bank_account
-                    banco_nombre = bank_acc.bank.name if bank_acc.bank else "Banco Desconocido"
-                    cuenta_tipo = bank_acc.account_type.name if bank_acc.account_type else ""
-                    cuenta_numero = bank_acc.account_number
-                except Exception:
+                    banco_nombre, cuenta_tipo, cuenta_numero = bank_acc.bank.name if bank_acc.bank else "Desconocido", bank_acc.account_type.name if bank_acc.account_type else "", bank_acc.account_number
+                except:
                     pass
 
                 grupo_data['empleados'][emp_id] = {
-                    'persona': it.payslip.employee.person,
-                    'empleado': it.payslip.employee,
-                    'banco': banco_nombre,
-                    'tipo_cuenta': cuenta_tipo,
-                    'numero_cuenta': cuenta_numero,
-
-                    'ingresos': Decimal(0),
-                    'descuentos': Decimal(0),
-                    'liquido': Decimal(0),
-
-                    'ingresos_dict': {},
-                    'descuentos_dict': {},
-                    'aportes_dict': {},
+                    'persona': it.payslip.employee.person, 'empleado': it.payslip.employee, 'banco': banco_nombre,
+                    'tipo_cuenta': cuenta_tipo, 'numero_cuenta': cuenta_numero,
+                    'ingresos': Decimal(0), 'descuentos': Decimal(0), 'liquido': Decimal(0), 'ingresos_dict': {},
+                    'descuentos_dict': {}, 'aportes_dict': {},
                 }
 
             emp_dict = grupo_data['empleados'][emp_id]
+            ref = it.rubric
 
-            # A. LLENADO DINÁMICO CON BLINDAJE DE KEYS (Ej: INC_1, DED_1, CON_1)
-            if it.item_type == 'INCOME' and it.income_ref:
-                ref = it.income_ref
-                key = f"INC_{ref.id}"
-                order_val = ref.order if ref.order is not None else 999
+            # A. LLENADO DEL ROL
+            if it.item_type == 'INCOME':
+                key, order_val = f"INC_{ref.id}", ref.order if ref.order is not None else 999
                 grupo_data['ingresos_headers'][key] = {'key': key, 'name': ref.name, 'abbreviation': ref.abbreviation,
                                                        'order': order_val}
                 emp_dict['ingresos_dict'][key] = emp_dict['ingresos_dict'].get(key, Decimal(0)) + val
                 emp_dict['ingresos'] += val
                 emp_dict['liquido'] += val
 
-            elif it.item_type == 'DEDUCTION' and it.deduction_ref:
-                ref = it.deduction_ref
-                key = f"DED_{ref.id}"
-                order_val = ref.order if ref.order is not None else 999
-                code_up = (ref.code or '').upper()
-
+            elif it.item_type == 'DEDUCTION':
+                key, order_val, code_up = f"DED_{ref.id}", ref.order if ref.order is not None else 999, (
+                        ref.code or '').upper()
                 if 'IESS_PER' in code_up or ('APORTE' in code_up and 'PATRONAL' not in code_up):
                     grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
                                                           'abbreviation': ref.abbreviation}
                     emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
                 else:
                     grupo_data['descuentos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
-                                                             'abbreviation': ref.abbreviation, }
+                                                             'abbreviation': ref.abbreviation}
                     emp_dict['descuentos_dict'][key] = emp_dict['descuentos_dict'].get(key, Decimal(0)) + val
-
                 emp_dict['descuentos'] += val
                 emp_dict['liquido'] -= val
 
-            elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
-                ref = it.contribution_ref
-                key = f"CON_{ref.id}"
-                order_val = ref.order if ref.order is not None else 999
+            elif it.item_type == 'CONTRIBUTION':
+                key, order_val = f"CON_{ref.id}", ref.order if ref.order is not None else 999
                 grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
                                                       'abbreviation': ref.abbreviation}
                 emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
@@ -1233,116 +891,69 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             # B. PRESUPUESTO
             b_code = getattr(it, 'budget_line_code', None)
             if b_code and str(b_code).strip():
-                afecta_presupuesto, nombre_rubro = False, ""
-                obj_ref = None
-
-                if it.item_type == 'INCOME' and it.income_ref:
-                    obj_ref = it.income_ref
-                    inc_id = it.income_ref.id
-                    code_up = (it.income_ref.code or '').upper()
-                    if (inc_id in mapped_incomes) or ('REMUNERACION' in code_up):
-                        afecta_presupuesto, nombre_rubro = True, it.income_ref.name
-
-                elif it.item_type == 'DEDUCTION' and it.deduction_ref:
-                    obj_ref = it.deduction_ref
-                    if it.deduction_ref.id in mapped_deductions:
-                        afecta_presupuesto, nombre_rubro = True, it.deduction_ref.name
-
-                elif it.item_type == 'CONTRIBUTION' and it.contribution_ref:
-                    obj_ref = it.contribution_ref
-                    if it.contribution_ref.id in mapped_contributions:
-                        afecta_presupuesto, nombre_rubro = True, it.contribution_ref.name
-
-                if afecta_presupuesto:
-                    nombre_rubro = nombre_rubro or "Rubro Desconocido"
-                    key_presup = f"{b_code}_{nombre_rubro}"
-
-                    # 🟢 BÚSQUEDA EXHAUSTIVA DEL ORDEN
-                    orden_rubro = 99999
-                    if hasattr(obj_ref, 'order') and obj_ref.order is not None:
-                        orden_rubro = obj_ref.order
-                    elif hasattr(it, 'order') and it.order is not None:
-                        orden_rubro = it.order
-
+                if ref.has_mapping or (it.item_type == 'INCOME' and 'REMUNERACION' in (ref.code or '').upper()):
+                    key_presup = f"{b_code}_{ref.name}"
                     if key_presup not in grupo_data['presupuesto']:
-                        grupo_data['presupuesto'][key_presup] = {
-                            'partida': b_code,
-                            'concepto': nombre_rubro,
-                            'monto': Decimal(0),
-                            'order': orden_rubro
-                        }
+                        grupo_data['presupuesto'][key_presup] = {'partida': b_code, 'concepto': ref.name,
+                                                                 'monto': Decimal(0), 'order': ref.order or 99999}
                     grupo_data['presupuesto'][key_presup]['monto'] += val
 
-            # C. CONTABILIDAD
-            obj_ref = None
-            if it.item_type == 'INCOME':
-                obj_ref = it.income_ref
-            elif it.item_type == 'DEDUCTION':
-                obj_ref = it.deduction_ref
-            elif it.item_type == 'CONTRIBUTION':
-                obj_ref = it.contribution_ref
+            # C. CONTABILIDAD MATRICIAL
+            tipo_gasto = it.budget_line.budget_group.spending_type.code if (
+                    it.budget_line and hasattr(it.budget_line, 'budget_group') and hasattr(
+                it.budget_line.budget_group, 'spending_type') and it.budget_line.budget_group.spending_type) else ''
 
-            if obj_ref:
-                cuenta_debe = getattr(obj_ref, 'debit_account', None)
-                if cuenta_debe:
-                    cta_debe = cuenta_debe.code
-                    grupo_data['contabilidad'].setdefault(cta_debe, {
-                        'debe': Decimal(0), 'haber': Decimal(0),
-                        'nombre': cuenta_debe.name,
-                        'order': cuenta_debe.order or 99999
-                    })
-                    grupo_data['contabilidad'][cta_debe]['debe'] += val
+            if tipo_gasto.startswith('7'):
+                cuenta_debe, cuenta_haber, grupo_data[
+                    'es_inversion'] = ref.debit_account_inv, ref.credit_account_inv, True
+            elif tipo_gasto.startswith('6'):
+                cuenta_debe, cuenta_haber = ref.debit_account_prod, ref.credit_account_prod
+            else:
+                cuenta_debe, cuenta_haber = ref.debit_account, ref.credit_account
 
-                cuenta_haber = getattr(obj_ref, 'credit_account', None)
-                if cuenta_haber:
-                    cta_haber = cuenta_haber.code
-                    grupo_data['contabilidad'].setdefault(cta_haber, {
-                        'debe': Decimal(0), 'haber': Decimal(0),
-                        'nombre': cuenta_haber.name,
-                        'order': cuenta_haber.order or 99999
-                    })
-                    grupo_data['contabilidad'][cta_haber]['haber'] += val
-                    cuenta_ingreso = getattr(obj_ref, 'income_account', None)
-                    if it.item_type == 'DEDUCTION' and cuenta_ingreso:
-                        grupo_data['contabilidad'][cta_haber]['debe'] += val
-                        cta_ingreso_code = cuenta_ingreso.code
-                        grupo_data['contabilidad'].setdefault(cta_ingreso_code, {
-                            'debe': Decimal(0), 'haber': Decimal(0),
-                            'nombre': cuenta_ingreso.name,
-                            'order': cuenta_ingreso.order or 99999
-                        })
-                        grupo_data['contabilidad'][cta_ingreso_code]['haber'] += val
+            if cuenta_debe:
+                grupo_data['contabilidad'].setdefault(cuenta_debe.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                         'nombre': cuenta_debe.name,
+                                                                         'order': cuenta_debe.order or 99999})
+                grupo_data['contabilidad'][cuenta_debe.code]['debe'] += val
 
-            if it.item_type == 'CONTRIBUTION' and obj_ref and 'PATRONAL' in getattr(obj_ref, 'code', '').upper():
-                grupo_data['contabilidad'].setdefault('2.1.3.51', {
-                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': 'GASTOS DE PERSONAL', 'order': 99999
-                })
-                grupo_data['contabilidad']['2.1.3.51']['debe'] += val
-                grupo_data['contabilidad']['2.1.3.51']['haber'] += val
+            if cuenta_haber:
+                grupo_data['contabilidad'].setdefault(cuenta_haber.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                          'nombre': cuenta_haber.name,
+                                                                          'order': cuenta_haber.order or 99999})
+                grupo_data['contabilidad'][cuenta_haber.code]['haber'] += val
+                if it.item_type == 'DEDUCTION' and ref.income_account:
+                    grupo_data['contabilidad'][cuenta_haber.code]['debe'] += val
+                    grupo_data['contabilidad'].setdefault(ref.income_account.code,
+                                                          {'debe': Decimal(0), 'haber': Decimal(0),
+                                                           'nombre': ref.income_account.name,
+                                                           'order': ref.income_account.order or 99999})
+                    grupo_data['contabilidad'][ref.income_account.code]['haber'] += val
 
-        # ==============================================================
-        # POST-PROCESO: Ordenamiento y Conversión a Listas
-        # ==============================================================
+            if it.item_type == 'CONTRIBUTION' and 'PATRONAL' in (ref.code or '').upper():
+                cta_p = '2.1.3.71.01' if tipo_gasto.startswith('7') else '2.1.3.51'
+                nom_p = 'GASTOS EN EL PERSONAL DE INVERSION' if tipo_gasto.startswith('7') else 'GASTOS DE PERSONAL'
+                grupo_data['contabilidad'].setdefault(cta_p, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_p,
+                                                              'order': 99999})
+                grupo_data['contabilidad'][cta_p]['debe'] += val
+                grupo_data['contabilidad'][cta_p]['haber'] += val
 
-        cta_gp = Account.objects.filter(code='2.1.3.51').first()
-        nombre_gp = cta_gp.name if cta_gp else 'GASTOS DE PERSONAL'
-        orden_gp = cta_gp.order if cta_gp and cta_gp.order else 99999
-        cta_banco = Account.objects.filter(code='1.1.1.03.01').first()
-        nombre_banco = cta_banco.name if cta_banco else 'Banco Central'
-        orden_banco = cta_banco.order if cta_banco and cta_banco.order else 99999
+        # POST-PROCESO
         for g_key, g_data in report_data.items():
             total_net_pay = sum((emp['liquido'] for emp in g_data['empleados'].values()), Decimal(0))
-
             if total_net_pay > 0:
-                g_data['contabilidad'].setdefault('2.1.3.51', {
-                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_gp, 'order': orden_gp
-                })
-                g_data['contabilidad']['2.1.3.51']['debe'] += total_net_pay
+                es_inversion = g_data.get('es_inversion', False)
+                cta_gp = '2.1.3.71.01' if es_inversion else '2.1.3.51'
+                nom_gp = 'GASTOS EN EL PERSONAL DE INVERSION' if es_inversion else 'GASTOS DE PERSONAL'
+                cta_bco = '1.1.1.15' if es_inversion else '1.1.1.03.01'
+                nom_bco = 'BANCOS (INVERSION)' if es_inversion else 'BANCO CENTRAL'
 
-                g_data['contabilidad'].setdefault('1.1.1.03.01', {
-                    'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nombre_banco, 'order': orden_banco
-                })
-                g_data['contabilidad']['1.1.1.03.01']['haber'] += total_net_pay
+                g_data['contabilidad'].setdefault(cta_gp, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_gp,
+                                                           'order': 99999})
+                g_data['contabilidad'][cta_gp]['debe'] += total_net_pay
+                g_data['contabilidad'].setdefault(cta_bco, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_bco,
+                                                            'order': 99999})
+                g_data['contabilidad'][cta_bco]['haber'] += total_net_pay
 
             g_data['ingresos_headers'] = {k: v for k, v in g_data['ingresos_headers'].items() if sum(
                 emp['ingresos_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
@@ -1371,7 +982,6 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                 'total_descuentos': sum((e['descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
                 'total_aportes': sum((e['total_aportes'] for e in g_data['empleados'].values()), Decimal(0)),
                 'liquido': sum((e['liquido'] for e in g_data['empleados'].values()), Decimal(0)),
-
                 'ingresos_list': [
                     sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()),
                         Decimal(0)) for h in g_data['ingresos_headers']],
@@ -1393,28 +1003,19 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             for cta, c_data in g_data['contabilidad'].items():
                 if c_data['debe'] > 0 or c_data['haber'] > 0:
                     lista_cuentas.append({
-                        'codigo': cta,
-                        'nombre': c_data['nombre'],
-                        'debe': c_data['debe'],
-                        'haber': c_data['haber'],
-                        'order': c_data.get('order', 99999)  # Si no tiene orden, se va al final
+                        'codigo': cta, 'nombre': c_data['nombre'], 'debe': c_data['debe'], 'haber': c_data['haber'],
+                        'order': c_data.get('order', 99999)
                     })
 
             g_data['contabilidad_ordenada'] = sorted(lista_cuentas, key=lambda x: (x['order'], x['codigo']))
-
             g_data['total_contabilidad_debe'] = sum((c['debe'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_contabilidad_haber'] = sum((c['haber'] for c in g_data['contabilidad_ordenada']), Decimal(0))
             g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
-            g_data['presupuesto'] = dict(sorted(
-                g_data['presupuesto'].items(),
-                key=lambda item: (int(item[1].get('order', 99999)), str(item[1].get('concepto', '')))
-            ))
-
-            # Ordenar empleados de la A a la Z por apellido
-            g_data['empleados'] = dict(sorted(
-                g_data['empleados'].items(),
-                key=lambda item: (item[1]['persona'].last_name or "").lower()
-            ))
+            g_data['presupuesto'] = dict(sorted(g_data['presupuesto'].items(),
+                                                key=lambda item: (int(item[1].get('order', 99999)),
+                                                                  str(item[1].get('concepto', '')))))
+            g_data['empleados'] = dict(
+                sorted(g_data['empleados'].items(), key=lambda item: (item[1]['persona'].last_name or "").lower()))
 
         sorted_reports = dict(sorted(report_data.items()))
         context = {
@@ -1789,13 +1390,12 @@ def export_negative_balances_report(request, period_id):
     """
     period = get_object_or_404(PayrollPeriod, id=period_id)
 
-    # Consultamos y ordenamos primero por el nombre del descuento, luego por empleado
     debts = PendingDebt.objects.filter(
         period=period,
         pending_balance__gt=0
     ).select_related(
-        'employee__person', 'deduction_ref'
-    ).order_by('deduction_ref__name', 'employee__person__last_name')
+        'employee__person', 'rubric'
+    ).order_by('rubric__name', 'employee__person__last_name')
 
     # Diccionario para agrupar los datos y calcular subtotales
     grouped_data = {}
@@ -1804,7 +1404,7 @@ def export_negative_balances_report(request, period_id):
     total_pendiente = Decimal('0.0')
 
     for debt in debts:
-        concept_name = debt.deduction_ref.name
+        concept_name = debt.rubric.name
         if concept_name not in grouped_data:
             grouped_data[concept_name] = {
                 'items': [],
@@ -1950,8 +1550,8 @@ class PrintablePayslipView(DetailView):
             context['net_pay_words'] = f"{payslip.net_pay} (Instalar num2words)"
 
         # Ordenamos igual que en el modal
-        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
-        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
+        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('rubric__order')
+        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('rubric__order')
 
         validation_token = build_public_payslip_token(payslip.id)
         validation_url = self.request.build_absolute_uri(
@@ -2008,8 +1608,8 @@ class PublicPayslipValidationView(DetailView):
         else:
             context['net_pay_words'] = f"{payslip.net_pay} (Instalar num2words)"
 
-        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('income_ref__order')
-        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order')
+        context['incomes'] = self.object.items.filter(item_type='INCOME').order_by('rubric__order')
+        context['deductions'] = self.object.items.filter(item_type='DEDUCTION').order_by('rubric__order')
         validation_url = self.request.build_absolute_uri(
             reverse('payroll:payslip_public_validate', kwargs={'token': token})
         )
@@ -2070,8 +1670,8 @@ class SendPayslipEmailView(LoginRequiredMixin, View):
             # Preparar el contexto igual que PrintablePayslipView
             context = {
                 'payslip': payslip,
-                'incomes': payslip.items.filter(item_type='INCOME').order_by('income_ref__order'),
-                'deductions': payslip.items.filter(item_type='DEDUCTION').order_by('deduction_ref__order'),
+                'incomes': payslip.items.filter(item_type='INCOME').order_by('rubric__order'),
+                'deductions': payslip.items.filter(item_type='DEDUCTION').order_by('rubric__order'),
             }
 
             # Generar números en letras

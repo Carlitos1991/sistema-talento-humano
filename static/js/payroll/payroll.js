@@ -930,3 +930,140 @@ function sellarComoPagados() {
         Swal.fire('Error', 'Fallo de comunicación', 'error');
     });
 }
+
+function openRubricModal(url) {
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('modal-root').innerHTML = html;
+            const modalOverlay = document.getElementById('rubricModalOverlay');
+            if (modalOverlay) {
+                modalOverlay.style.display = 'flex';
+                initRubricModalLogic(); // <-- Aquí arrancamos Select2
+            }
+        })
+        .catch(error => console.error('Error cargando el modal:', error));
+}
+
+function closeRubricModal() {
+    const modalOverlay = document.getElementById('rubricModalOverlay');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    document.getElementById('modal-root').innerHTML = '';
+}
+
+function initRubricModalLogic() {
+    // Inicializar Select2 con el parent del modal oficial
+    $('#rubricForm select').select2({
+        dropdownParent: $('#rubricModalOverlay'),
+        width: '100%'
+    });
+
+    function toggleFields() {
+        // Captura del valor del Select2 mediante jQuery
+        const type = $('#rubricForm select[name="rubric_type"]').val();
+
+        if (type === 'DEDUCTION') {
+            $('#divPriority').show();
+            $('#divIncomeAccount').css('display', 'flex'); // Mantiene el orden de columna vertical
+        } else {
+            $('#divPriority').hide();
+            $('#divIncomeAccount').hide();
+        }
+    }
+
+    function toggleBudget() {
+        if ($('#id_has_mapping').is(':checked')) {
+            $('#budgetMappingFields').css('display', 'grid');
+        } else {
+            $('#budgetMappingFields').hide();
+        }
+    }
+
+    // Escucha de eventos unificada para Select2 y Checkboxes nativos
+    $('#rubricForm select[name="rubric_type"]').on('change', toggleFields);
+    $('#id_has_mapping').on('change', toggleBudget);
+
+    // Inicialización del estado en la carga del modal
+    toggleFields();
+    toggleBudget();
+}
+
+function submitRubricForm(event) {
+    event.preventDefault();
+    const form = document.getElementById('rubricForm');
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(async response => {
+            // 1. Detectar el tipo de contenido de la respuesta
+            const contentType = response.headers.get('content-type');
+
+            // 2. Si es JSON, el guardado fue exitoso
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    closeRubricModal();
+                    Swal.fire({title: 'Éxito', text: data.message || 'Rubro guardado.', icon: 'success'})
+                        .then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'Ocurrió un problema al guardar.', 'error');
+                }
+            }
+            // 3. Si es HTML, Django rechazó el formulario (errores de validación)
+            else {
+                const html = await response.text();
+
+                // Re-inyectamos el modal con los errores nativos de Django
+                document.getElementById('modal-root').innerHTML = html;
+
+                const modalOverlay = document.getElementById('rubricModalOverlay');
+                if (modalOverlay) {
+                    modalOverlay.style.display = 'flex';
+                    initRubricModalLogic(); // Reactivamos Select2 y toggles en el nuevo HTML
+                }
+
+                // Avisamos al usuario que revise el formulario
+                Swal.fire({
+                    title: 'Datos Inválidos',
+                    text: 'Revise los campos del formulario. Es posible que falte un dato obligatorio o el nombre ya exista.',
+                    icon: 'warning'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error en la petición:', error);
+            Swal.fire('Error de Red', 'No se pudo comunicar con el servidor.', 'error');
+        });
+}
+
+function filterRubrics() {
+    // Al usar Select2, capturamos el valor mediante jQuery
+    const typeFilter = $('#filterRubricType').val() || '';
+    const showInactive = document.getElementById('toggleInactiveRubrics')?.checked || false;
+    const rows = document.querySelectorAll('.rubric-row');
+
+    rows.forEach(row => {
+        const matchesType = !typeFilter || row.getAttribute('data-type') === typeFilter;
+        const matchesStatus = showInactive || row.getAttribute('data-active') === 'true';
+        row.style.display = (matchesType && matchesStatus) ? '' : 'none';
+    });
+}
+
+function searchRubricTable() {
+    const input = document.getElementById('searchRubric')?.value.toLowerCase() || '';
+    const rows = document.querySelectorAll('.rubric-row');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(input)) {
+            // Evaluamos filtros de tipo y estado si hay texto que coincide
+            filterRubrics();
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}

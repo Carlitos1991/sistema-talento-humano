@@ -1294,3 +1294,83 @@
 .modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
     color: #065f46;
 }
+
+/* =====================================================================
+   MÓDULO DE RUBROS (MAPEO CONTABLE)
+   ===================================================================== */
+/* Controles de la tabla */
+.rubric-table-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    width: 100%;
+    gap: 1rem;
+}
+
+/* Modal de Rubros */
+.rubric-modal-container {
+    background: white;
+    width: 85%;
+    max-width: 900px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.rubric-section-card {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.rubric-section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 5px;
+}
+
+/* Columnas de la Matriz Contable */
+.rubric-matrix-col {
+    padding: 0 15px;
+}
+
+.rubric-matrix-col.bordered {
+    border-right: 1px solid #e2e8f0;
+}
+
+.rubric-col-header {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-align: center;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.rubric-col-corriente {
+    color: #0f4c81;
+    background: #e0f2fe;
+}
+
+.rubric-col-produccion {
+    color: #d97706;
+    background: #fef3c7;
+}
+
+.rubric-col-inversion {
+    color: #047857;
+    background: #d1fae5;
+}
+
+.rubric-devengado-section {
+    border-top: 1px dashed #cbd5e1;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}

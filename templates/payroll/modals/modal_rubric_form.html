@@ -1,0 +1,199 @@
+<div class="modal-overlay" id="rubricModalOverlay" role="dialog"
+     style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050;">
+    <div class="modal-container-medium animate-scale-in" style="max-width: 950px; width: 95%;">
+
+        <form method="post" id="rubricForm" action="{{ request.path }}" onsubmit="submitRubricForm(event)">
+            {% csrf_token %}
+
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-sliders-h me-2"></i>
+                    {% if form.instance.pk %}Editar Rubro Contable{% else %}Nuevo Rubro Contable{% endif %}
+                </h3>
+                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeRubricModal()">&times;
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom" style="max-height: 75vh; overflow-y: auto;">
+                {% if form.errors %}
+                    <div class="alert alert-danger mb-3"
+                         style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; padding: 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;">
+                        <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 5px;">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i> Errores de Validación:
+                        </div>
+                        <ul style="margin: 0; padding-left: 20px; line-height: 1.4;">
+                            {% for field, errors in form.errors.items %}
+                                <li><strong>{{ field|upper }}:</strong> {{ errors|striptags }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <div class="form-section-card mb-3">
+                    <h4 style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
+                        <i class="fa-solid fa-info-circle me-1"></i> Información General
+                    </h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Rubro <span class="text-danger">*</span></label>
+                            {{ form.rubric_type }}
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label class="form-label">Nombre del Rubro <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Abreviación</label>
+                            {{ form.abbreviation }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Código de Sistema</label>
+                            {{ form.code }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Orden (Rol)</label>
+                            {{ form.order }}
+                        </div>
+                        <div class="form-group" id="divPriority">
+                            <label class="form-label">Prioridad Cobro</label>
+                            {{ form.priority }}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3" style="display: flex; align-items: center; gap: 10px;">
+                        {{ form.is_salary }}
+                        <label class="toggle-status-red-wrapper" for="id_is_salary" style="margin:0;">
+                            <div class="toggle-status-red-circle"></div>
+                            <span class="toggle-status-red-text"
+                                  style="font-size: 0.9rem; font-weight: 500; color: #475569;">¿Este rubro representa el Sueldo / Remuneración Base Mensual?</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group mt-4 pt-3" id="divIncomeAccount"
+                     style="border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px;">
+                    <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-exchange-alt"></i> Cuenta
+                        Devengado (Haber)</label>
+                    {{ form.income_account }}
+                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Para asiento de ingreso
+                        (Opcional)</small>
+
+                </div>
+
+
+                <div class="form-section-card mb-3">
+                    <h4 style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
+                        <i class="fa-solid fa-table me-1"></i> Matriz de Enrutamiento Contable
+                    </h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #0f4c81; font-weight: 700; font-size: 0.9rem; background: #e0f2fe; padding: 6px; border-radius: 4px; margin: 0;">
+                                5.1 - CORRIENTE</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account }}
+                            </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account }}
+                            </div>
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #d97706; font-weight: 700; font-size: 0.9rem; background: #fef3c7; padding: 6px; border-radius: 4px; margin: 0;">
+                                6.1 - PRODUCCIÓN</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account_prod }}
+                            </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account_prod }}
+                            </div>
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #047857; font-weight: 700; font-size: 0.9rem; background: #d1fae5; padding: 6px; border-radius: 4px; margin: 0;">
+                                7.1 - INVERSIÓN</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account_inv }}
+                            </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account_inv }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4 pt-3" id="divIncomeAccount"
+                         style="border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px;">
+                        <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-exchange-alt"></i>
+                            Cuenta de Ingreso para Devengado Automático (Ej: 6.2.5.24)</label>
+                        {{ form.income_account }}
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+
+                    <div class="form-section-card mb-0">
+                        <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                {{ form.has_mapping }}
+                                <label class="toggle-status-red-wrapper" for="id_has_mapping" style="margin:0;">
+                                    <div class="toggle-status-red-circle"></div>
+                                    <span class="toggle-status-red-text"
+                                          style="font-weight: 700; color: var(--primary-color); font-size: 1rem;"><i
+                                            class="fa-solid fa-coins"></i> ¿Afecta al Presupuesto Institucional?</span>
+                                </label>
+                            </div>
+                            <small style="color: #64748b; font-size: 0.8rem; margin-top: 8px; margin-left: 5px;">Marque
+                                esta casilla si este rubro debe generar una afectación presupuestaria.</small>
+                        </div>
+
+                        <div id="budgetMappingFields"
+                             style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div class="form-group">
+                                <label class="form-label">Sufijo Presupuestario (Ej: 5.1.06.01)</label>
+                                {{ form.dynamic_suffix }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">¿Partida Fija?</label>
+                                <div style="display: flex; align-items: center; margin-top: 8px; gap: 10px;">
+                                    {{ form.is_fixed }}
+                                    <label class="toggle-status-red-wrapper" for="id_is_fixed" style="margin:0;">
+                                        <div class="toggle-status-red-circle"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card mb-0"
+                         style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px;">
+                        <h4 style="font-size: 1rem; font-weight: 700; margin: 0;">Estado del Rubro</h4>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            {{ form.is_active }}
+                            <label class="toggle-status-red-wrapper" for="id_is_active"
+                                   style="margin:0; transform: scale(1.1);">
+                                <div class="toggle-status-red-circle"></div>
+                                <span class="toggle-status-red-text">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-header-medium modal-footer-fixed"
+                 style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 15px 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn-cancel" onclick="closeRubricModal()">Cancelar</button>
+                <button type="submit" class="btn-save shadow-md"><i class="fa-solid fa-save me-2"></i> Guardar Rubro
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>

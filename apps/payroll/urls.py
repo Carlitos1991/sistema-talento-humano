@@ -5,14 +5,12 @@ from .views import (
     ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
     PayrollListView, PayslipListView, PayslipDetailView,
     FondosReservaListView,
-    IncomeListView, IncomeCreateView, IncomeUpdateView, DeductionListView, DeductionCreateView, DeductionUpdateView,
-    InstitutionalReportView, MappingListView,
-    MappingCreateView, MappingUpdateView, MappingDeleteView, NoveltyMassLoadView, ParseNoveltyExcelView,
-    SaveNoveltiesView, GetNoveltiesView, ContributionListView, ContributionCreateView, ContributionUpdateView,
-    GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView, MarkPeriodAsPaidAPIView,
+    InstitutionalReportView, NoveltyMassLoadView, ParseNoveltyExcelView,
+    SaveNoveltiesView, GetNoveltiesView, GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView,
+    MarkPeriodAsPaidAPIView,
     GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days,
     RecalculatePayslipsView, export_negative_balances_report, MassUpdateReserveFundsView, PrintablePayslipView,
-    SendPayslipEmailView, PublicPayslipValidationView
+    SendPayslipEmailView, PublicPayslipValidationView, RubricListView, RubricCreateView, RubricUpdateView
 )
 
 app_name = 'payroll'
@@ -34,28 +32,18 @@ urlpatterns = [
     path('payslips/', PayslipListView.as_view(), name='payslip_list'),
     path('payslips/detail/<int:pk>/', PayslipDetailView.as_view(), name='payslip_detail'),
     # Mapeos contables para rubros
-    path('incomes/', IncomeListView.as_view(), name='income_list'),
-    path('incomes/create/', IncomeCreateView.as_view(), name='income_create'),
-    path('incomes/<int:pk>/edit/', IncomeUpdateView.as_view(), name='income_edit'),
-    path('deductions/', DeductionListView.as_view(), name='deduction_list'),
-    path('deductions/create/', DeductionCreateView.as_view(), name='deduction_create'),
-    path('deductions/<int:pk>/edit/', DeductionUpdateView.as_view(), name='deduction_edit'),
+
     path('reports/institutional/<int:period_id>/', InstitutionalReportView.as_view(), name='report_institutional'),
     path('reports/grouped/<int:pk>/', GroupedPayrollReportView.as_view(), name='grouped_report'),
-    # Rutas para el Mapeo Presupuestario
-    path('mappings/', MappingListView.as_view(), name='mapping_list'),
-    path('mappings/create/', MappingCreateView.as_view(), name='mapping_create'),
-    path('mappings/<int:pk>/edit/', MappingUpdateView.as_view(), name='mapping_edit'),
-    path('mappings/<int:pk>/delete/', MappingDeleteView.as_view(), name='mapping_delete'),
     # --- NOVEDADES DE NÓMINA ---
     path('novelties/mass-load/', NoveltyMassLoadView.as_view(), name='novelty_mass_load'),
     path('novelties/parse-excel/', ParseNoveltyExcelView.as_view(), name='parse_novelty_excel'),
     path('novelties/save/', SaveNoveltiesView.as_view(), name='save_novelties'),
     path('novelties/get-existing/', GetNoveltiesView.as_view(), name='get_novelties'),
 
-    path('contributions/', ContributionListView.as_view(), name='contribution_list'),
-    path('contributions/create/', ContributionCreateView.as_view(), name='contribution_create'),
-    path('contributions/<int:pk>/update/', ContributionUpdateView.as_view(), name='contribution_update'),
+    path('rubrics/', RubricListView.as_view(), name='rubric_list'),
+    path('rubrics/create/', RubricCreateView.as_view(), name='rubric_create'),
+    path('rubrics/<int:pk>/edit/', RubricUpdateView.as_view(), name='rubric_edit'),
     # API para Retener/Liberar el pago
     path('payslip/<int:pk>/toggle-withhold/', PayslipToggleWithholdView.as_view(),
          name='payslip_toggle_withhold'),

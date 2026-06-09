@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Mapeo de Rubros | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-list-check"></i> Mapeo de Rubros</h1>
+            <p>Configuración unificada de la matriz contable y presupuestaria.</p>
+        </div>
+        {% if perms.payroll.add_payrollrubric %}
+            <button id="btn-add-rubric" type="button" onclick="openRubricModal('{% url 'payroll:rubric_create' %}')">
+                <i class="fas fa-plus"></i> Nuevo Rubro
+            </button>
+        {% endif %}
+    </div>
+
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div style="min-width: 250px;">
+                        <select id="filterRubricType" class="form-control select2" onchange="filterRubrics()">
+                            <option value="">-- Filtrar por Tipo --</option>
+                            <option value="INCOME">Ingresos</option>
+                            <option value="DEDUCTION">Descuentos</option>
+                            <option value="CONTRIBUTION">Aportes Institucionales</option>
+                        </select>
+                    </div>
+
+                    <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveRubrics" onchange="filterRubrics()">
+                    <label class="toggle-status-red-wrapper" for="toggleInactiveRubrics" style="margin: 0;">
+                        <div class="toggle-status-red-circle"></div>
+                        <span class="toggle-status-red-text">Mostrar Inactivos</span>
+                    </label>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="searchRubric" class="table-search-input" placeholder="Buscar rubro o código..." onkeyup="searchRubricTable()">
+                    <button type="button" class="search-btn"><i class="fas fa-search"></i></button>
+                </div>
+
+            </div>
+            
+            <div id="table-content-wrapper">
+                {% include 'payroll/partials/partial_rubric_table.html' %}
+            </div>
+        </div>
+    </div>
+    
+    <div id="modal-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            $('#filterRubricType').select2({
+                minimumResultsForSearch: Infinity,
+                width: '100%'
+            });
+        });
+    </script>
+{% endblock %}
