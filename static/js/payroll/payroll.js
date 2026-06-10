@@ -957,6 +957,42 @@ function initRubricModalLogic() {
         dropdownParent: $('#rubricModalOverlay'),
         width: '100%'
     });
+    $('#id_spending_context').on('change', function () {
+        const val = $(this).val();
+
+        // Ocultar todos primero
+        $('.grupo-contable').hide();
+
+        // El bloque '#grupo-base' contiene debit_account y credit_account
+        // Se muestra para TODOS (como global) y para 5.1 (como específico)
+        if (val === 'TODOS' || val === '5.1') {
+            $('#grupo-base').fadeIn(200);
+            if (val === 'TODOS') {
+                $('#labelContexto').text('CONFIGURACIÓN GLOBAL (Universal)').css('background', '#475569');
+            } else {
+                $('#labelContexto').text('ESPECÍFICO: CORRIENTE (5.1)').css('background', '#2563eb');
+            }
+        } else if (val === '7.1') {
+            $('#grupo-inversion').fadeIn(200);
+        } else if (val === '6.1') {
+            $('#grupo-produccion').fadeIn(200);
+        }
+    });
+    $('#selectContextoContable').on('change', function () {
+        const contexto = $(this).val();
+
+        // Ocultar todos los grupos
+        $('.grupo-contable').hide();
+
+        // Mostrar el seleccionado
+        if (contexto === 'todos') {
+            $('#grupo-todos').fadeIn(200);
+        } else if (contexto === 'inversion') {
+            $('#grupo-inversion').fadeIn(200);
+        } else if (contexto === 'produccion') {
+            $('#grupo-produccion').fadeIn(200);
+        }
+    });
 
     function toggleFields() {
         // Captura del valor del Select2 mediante jQuery

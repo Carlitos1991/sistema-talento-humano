@@ -498,12 +498,6 @@ class History(models.Model):
         blank=True,
         null=True
     )
-    type = models.CharField(
-        verbose_name='Tipo Historial',
-        max_length=100,
-        blank=True,
-        null=True
-    )
     date_register = models.DateTimeField(
         verbose_name='Fecha Registro',
         auto_now_add=True

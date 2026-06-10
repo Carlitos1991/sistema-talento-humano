@@ -2,71 +2,83 @@
     <table class="managed-table exportable-table" id="rubricsTable">
         <thead>
         <tr>
-            <th><i class="fa-solid fa-tag"></i> Tipo</th>
-            <th><i class="fa-solid fa-barcode"></i> Código</th>
-            <th><i class="fa-solid fa-file-signature"></i> Nombre del Rubro</th>
-            <th><i class="fa-solid fa-book"></i> Matriz (Corriente)</th>
-            <th class="text-center"><i class="fa-solid fa-coins"></i> Presupuesto</th>
-            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
-            <th class="text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+            <th>Tipo</th>
+            <th>Nombre del Rubro</th>
+            <th>Matriz de Cuentas Mapeadas</th>
+            <th>Cod. Presupuesto</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
         </tr>
         </thead>
         <tbody>
-        {% if rubrics %}
-            {% for r in rubrics %}
-                <tr class="rubric-row" data-type="{{ r.rubric_type }}"
-                    data-active="{{ r.is_active|yesno:'true,false' }}">
-                    <td class="fw-bold">
-                        {% if r.rubric_type == 'INCOME' %}
-                            <span style="color: #059669;"><i class="fa-solid fa-arrow-up"></i> Ingreso</span>
-                        {% elif r.rubric_type == 'DEDUCTION' %}
-                            <span style="color: #dc2626;"><i class="fa-solid fa-arrow-down"></i> Descuento</span>
+        {% for r in rubrics %}
+            <tr class="rubric-row" data-type="{{ r.rubric_type }}" data-active="{{ r.is_active|yesno:'true,false' }}">
+                <td class="fw-bold">
+                    {% if r.rubric_type == 'INCOME' %}
+                        <span style="color: #059669;"><i class="fa-solid fa-arrow-up"></i> Ingreso</span>
+                    {% elif r.rubric_type == 'DEDUCTION' %}
+                        <span style="color: #dc2626;"><i class="fa-solid fa-arrow-down"></i> Descuento</span>
+                    {% else %}
+                        <span style="color: #2563eb;"><i class="fa-solid fa-building"></i> Aporte</span>
+                    {% endif %}
+                    <br><small class="text-muted">{{ r.get_spending_context_display }}</small>
+                </td>
+                <td>
+                    {{ r.name }}
+                    {% if r.abbreviation %}<br><small style="color: #64748b;">({{ r.abbreviation }})</small>{% endif %}
+                </td>
+                <td>
+                    <div style="font-size: 0.8rem; line-height: 1.4;">
+                        {# BLOQUE INVERSIÓN #}
+                        {% if r.spending_context == '7.1' %}
+                            {% if r.debit_account_inv %}
+                                <div class="text-success"><b>Inv Debe:</b> {{ r.debit_account_inv.code }}</div>
+                            {% endif %}
+                            {% if r.credit_account_inv %}
+                                <div class="text-danger"><b>Inv Haber:</b> {{ r.credit_account_inv.code }}</div>
+                            {% endif %}
+
+                            {# BLOQUE PRODUCCIÓN #}
+                        {% elif r.spending_context == '6.1' %}
+                            {% if r.debit_account_prod %}
+                                <div class="text-warning"><b>Prod Debe:</b> {{ r.debit_account_prod.code }}</div>
+                            {% endif %}
+                            {% if r.credit_account_prod %}
+                                <div class="text-danger"><b>Prod Haber:</b> {{ r.credit_account_prod.code }}</div>
+                            {% endif %}
+
+                            {# BLOQUE CORRIENTE O TODOS #}
                         {% else %}
-                            <span style="color: #2563eb;"><i class="fa-solid fa-building"></i> Aporte</span>
+                            {% if r.debit_account %}
+                                <div class="text-primary"><b>Debe:</b> {{ r.debit_account.code }}</div>{% endif %}
+                            {% if r.credit_account %}
+                                <div class="text-danger"><b>Haber:</b> {{ r.credit_account.code }}</div>{% endif %}
                         {% endif %}
-                    </td>
-                    <td style="font-family: monospace; font-weight: bold; color: #475569;">{{ r.code }}</td>
-                    <td>
-                        {{ r.name }}
-                        {% if r.abbreviation %}<br>
-                            <small style="color: #64748b; font-weight: 500;">({{ r.abbreviation }})</small>{% endif %}
-                    </td>
-                    <td>
-                        <div style="font-size: 0.85rem;">
-                            {% if r.debit_account %}<span style="color: #16a34a; font-weight: bold;">D:</span>
-                                {{ r.debit_account.code }}<br>{% endif %}
-                            {% if r.credit_account %}<span style="color: #dc2626; font-weight: bold;">H:</span>
-                                {{ r.credit_account.code }}{% endif %}
-                            {% if not r.debit_account and not r.credit_account %}
-                                <span style="color: #94a3b8;">Sin mapear</span>{% endif %}
-                        </div>
-                    </td>
-                    <td class="text-center fw-bold text-secondary">
-                        {% if r.has_mapping %}{{ r.dynamic_suffix }}{% else %}-{% endif %}
-                    </td>
-                    <td>
-                        <span class="status-badge {% if r.is_active %}active{% else %}inactive{% endif %}">
-                            {% if r.is_active %}Activo{% else %}Inactivo{% endif %}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn-views-action" title="Editar"
-                                onclick="openRubricModal('{% url 'payroll:rubric_edit' r.pk %}')">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                    </td>
-                </tr>
-            {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="7">
-                    <div class="no-results-content show">
-                        <i class="fa-solid fa-list-check no-results-icon"></i>
-                        <p class="no-results-text">No existen rubros registrados.</p>
+
+                        {# BANCO (Devengado) #}
+                        {% if r.income_account %}
+                            <div style="color: #0891b2; font-weight: bold; border-top: 1px solid #e2e8f0; margin-top: 2px;">
+                                <i class="fa-solid fa-university"></i> Banco: {{ r.income_account.code }}
+                            </div>
+                        {% endif %}
                     </div>
                 </td>
+                <td class="text-center fw-bold text-secondary">
+                    {% if r.has_mapping %}{{ r.dynamic_suffix }}{% else %}-{% endif %}
+                </td>
+                <td class="text-center">
+            <span class="status-badge {% if r.is_active %}active{% else %}inactive{% endif %}">
+                {% if r.is_active %}Activo{% else %}Inactivo{% endif %}
+            </span>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn-views-action" title="Editar"
+                            onclick="openRubricModal('{% url 'payroll:rubric_edit' r.pk %}')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </td>
             </tr>
-        {% endif %}
+        {% endfor %}
         </tbody>
     </table>
 </div>

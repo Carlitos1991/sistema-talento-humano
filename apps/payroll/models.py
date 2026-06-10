@@ -29,13 +29,21 @@ class PayrollRubric(models.Model):
         ('DEDUCTION', 'Descuento/Egreso'),
         ('CONTRIBUTION', 'Aportes Institucionales'),
     )
+    CONTEXT_CHOICES = (
+        ('TODOS', '1. Todos (Universal)'),
+        ('5.1', '2. Corriente (5.1)'),
+        ('7.1', '3. Inversión (7.1)'),
+        ('6.1', '4. Producción (6.1)'),
+    )
 
     rubric_type = models.CharField(max_length=15, choices=RUBRIC_TYPES, verbose_name="Tipo de Rubro")
-    name = models.CharField(max_length=255, unique=True, verbose_name="Nombre")
+    name = models.CharField(max_length=255, verbose_name="Nombre")
     code = models.CharField(max_length=50, unique=True)
     is_salary = models.BooleanField(default=False, verbose_name="¿Es Sueldo / Remuneración Base?",
                                     help_text="Marque esta casilla solo para el rubro que represente el Sueldo Mensual Base.")
     description = models.TextField(null=True, blank=True)
+    spending_context = models.CharField(max_length=10, choices=CONTEXT_CHOICES, default='TODOS',
+                                        verbose_name="Contexto de Gasto")
     abbreviation = models.CharField(max_length=30, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=100)
