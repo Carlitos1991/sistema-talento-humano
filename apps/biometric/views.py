@@ -1412,6 +1412,9 @@ def generate_department_report_pdf(request):
 
     results_by_unit = {}
     for inst in inst_qs:
+        active_period = inst.employee.management_periods.filter(status__code='ACTIVO').first()
+        regimen_name = active_period.contract_type.labor_regime.name if active_period and active_period.contract_type.labor_regime else "N/A"
+
         emp_id = inst.employee_id
         # Marcaciones del mes
         punches = AttendanceRegistry.objects.filter(
@@ -1518,6 +1521,7 @@ def generate_department_report_pdf(request):
             unit_name = inst.employee.area.name if inst.employee and inst.employee.area else 'Sin Unidad'
             results_by_unit.setdefault(unit_name, []).append({
                 'employee': inst.employee,
+                'regimen': regimen_name,  # <--- Agregamos esto al diccionario
                 'inconsistencias': inconsistencias,
                 'dias_sin_marcar': dias_sin_marcar,
                 'minutos_atraso': minutos_atraso,

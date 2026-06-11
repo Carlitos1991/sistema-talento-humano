@@ -57,7 +57,8 @@
         <tr>
             <th>Nro.</th>
             <th>Empleado</th>
-            <th>CÉDULA</th>
+            <th>Cédula</th>
+            <th>Régimen</th>
             <th>Inconsistencias</th>
             <th>Días sin marcar</th>
             <th>Minutos atraso</th>
@@ -69,6 +70,7 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ r.employee.person.name_and_last_name }}</td>
                 <td>{{ r.employee.person.document_number }}</td>
+                <td>{{ r.regimen }}</td>
                 <td>{{ r.inconsistencias }}</td>
                 <td>{{ r.dias_sin_marcar }}</td>
                 <td>{{ r.minutos_atraso }}</td>
