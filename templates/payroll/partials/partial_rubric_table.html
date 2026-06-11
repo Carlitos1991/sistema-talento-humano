@@ -60,12 +60,11 @@
                         {% endif %}
 
                     </div>
-                    {# BANCO / DEVENGADO: siempre visible sin importar el contexto #}
                     {% if r.income_account %}
-                        <div style="font-size: 0.8rem; color: #0891b2; font-weight: bold;
-                                    border-top: 1px solid #e2e8f0; margin-top: 3px; padding-top: 3px;">
+                        <div style="font-size:0.8rem; color:#0891b2; font-weight:bold;
+                                    border-top:1px solid #e2e8f0; margin-top:3px; padding-top:3px;">
                             <i class="fa-solid fa-university"></i>
-                            Devengado / Banco: {{ r.income_account.code }} - {{ r.income_account.name }}
+                            Devengado: {{ r.income_account.code }} - {{ r.income_account.name }}
                         </div>
                     {% endif %}
                 </td>

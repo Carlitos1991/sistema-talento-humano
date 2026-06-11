@@ -1,20 +1,21 @@
-from django.db.models import Q
-from django.http import JsonResponse
-from django.template.loader import render_to_string
-from django.urls import reverse_lazy
-from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.shortcuts import render, get_object_or_404
+import json
+from datetime import timedelta
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
-from datetime import timedelta
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from django.template.loader import render_to_string
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView
 
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetModificationHistory
 from core.models import CatalogItem, User
 from institution.models import AdministrativeUnit
+from .forms import PersonnelActionForm, ActionTypeForm
 from .models import PersonnelAction, ActionMovement, ActionType
-from .forms import PersonnelActionForm, ActionMovementForm, ActionTypeForm
 
 
 def _flatten_unit_descendants(unit, depth=0):
@@ -398,34 +399,36 @@ class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
     """Maneja Crear (POST sin ID) y Actualizar (POST con ID) de Tipos de Acción"""
 
     def post(self, request, pk=None):
-        # DETECCIÓN DE JSON: Si Vue envía datos como JSON, los cargamos desde el cuerpo
-        if request.content_type == 'application/json':
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
-        else:
-            data = request.POST
+        try:
+            # 1. Leer el JSON enviado por Vue
+            data = json.loads(request.body)
 
-        if pk:
-            instance = get_object_or_404(ActionType, pk=pk)
-            form = ActionTypeForm(data, instance=instance)
-        else:
-            form = ActionTypeForm(data)
+            # 2. LIMPIEZA VITAL: Convertir strings vacíos a None
+            firmas_fields = ['default_authority_1', 'default_authority_2', 'default_reviewer', 'default_register']
+            for field in firmas_fields:
+                if data.get(field) == '':
+                    data[field] = None
 
-        if form.is_valid():
-            form.save()
-            # Renderizamos la tabla actualizada para devolverla
-            types = ActionType.objects.all().order_by('name')
-            html_table = render_to_string(
-                'personnel_action/partials/partial_action_type_list.html',
-                {'types': types},
-                request=request
-            )
-            return JsonResponse({'success': True, 'html': html_table})
-        else:
-            # Si hay errores de validación, los devolvemos en formato JSON
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            # 3. Instanciar el formulario (Editar si hay PK, Crear si no hay)
+            if pk:
+                instance = get_object_or_404(ActionType, pk=pk)
+                form = ActionTypeForm(data, instance=instance)
+            else:
+                form = ActionTypeForm(data)
+
+            # 4. Validar y Guardar
+            if form.is_valid():
+                form.save()
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'El formato JSON enviado es inválido.'}, status=400)
+
+        except Exception as e:
+            print(f"🔥 ERROR CRÍTICO EN ActionTypeCreateOrUpdateView: {str(e)}")
+            return JsonResponse({'success': False, 'message': f"Error interno: {str(e)}"}, status=500)
 
 
 class ActionTypeDetailJsonView(LoginRequiredMixin, View):

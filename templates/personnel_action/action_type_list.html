@@ -6,8 +6,8 @@
 
         <div class="header-card">
             <div>
-                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>\n <p>Catálogo de movimientos de
-                personal.</p>
+                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>
+                <p>Catálogo de movimientos de personal.</p>
             </div>
             <button class="btn-create" onclick="window.openActionTypeModal()">
                 <i class="fas fa-plus"></i> NUEVO TIPO
@@ -18,9 +18,9 @@
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <input type="text" id="searchInput" onkeyup=\"window.debouncedSearch()\"
-                               class="input-field" placeholder="Buscar">
-                        <button type="button" class="search-btn">
+                        <input type="text" id="searchInput" onkeyup="window.debouncedSearch()"
+                               class="table-search-input" placeholder="Buscar por nombre">
+                        <button type="button" class="search-btn" onclick="window.debouncedSearch()">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
@@ -29,24 +29,9 @@
                 <div id="table-content-wrapper">
                     {% include 'personnel_action/partials/partial_action_type_list.html' %}
                 </div>
-
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </div>
-
+        <div class="pagination-container" id="js-pagination"></div>
     </div>
 
     {% include 'personnel_action/modals/modal_action_type_form.html' %}

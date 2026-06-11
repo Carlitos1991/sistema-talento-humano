@@ -1,20 +1,6 @@
-/* static/js/personnel_action/action_type.js */
-
 document.addEventListener('DOMContentLoaded', () => {
 
-    // =========================================================
-    // 1. LÓGICA DE TABLA (FILTROS Y PAGINACIÓN LOCAL)
-    // =========================================================
-    let tableState = {
-        status: '',
-        q: '',
-        page: 1,
-        pageSize: 10
-    };
-
-    let allRows = [];
-    let filteredRows = [];
-
+    let tableState = {status: '', q: '', page: 1, pageSize: 10};
     initTableLogic();
 
     async function loadTableData() {
@@ -22,19 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tableState.status) params.append('status', tableState.status);
         if (tableState.q) params.append('q', tableState.q);
         if (tableState.page) params.append('page', tableState.page);
-        const url = `${window.location.pathname}?${params.toString()}`;
 
+        const url = `${window.location.pathname}?${params.toString()}`;
         try {
             const response = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
             if (response.ok) {
                 const html = await response.text();
                 const wrapper = document.getElementById('table-content-wrapper');
-                if (wrapper) {
-                    wrapper.innerHTML = html;
-                }
+                if (wrapper) wrapper.innerHTML = html;
             }
         } catch (error) {
-            console.error("Error al cargar la tabla:", error);
+            console.error("Error al cargar:", error);
         }
     }
 
@@ -43,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('searchInput');
             if (input) {
                 tableState.q = input.value;
-                tableState.page = 1; // Al buscar texto, siempre volvemos a la página 1
+                tableState.page = 1;
                 loadTableData();
             }
         };
@@ -53,13 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // =========================================================
-    // 2. LOGICA DEL MODAL (VUE.JS + SELECT2 AJAX)
-    // =========================================================
-
-    // Variable global local al DOMContentLoaded para guardar la instancia montada de Vue
     let modalInstance = null;
-
     const {createApp} = Vue;
 
     const actionTypeModalApp = createApp({
@@ -71,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loading: false,
                 errors: {},
                 formData: {
+                    id: null, // <--- VITAL PARA ACTUALIZAR
                     code: '',
                     name: '',
                     is_active: true,
@@ -90,36 +69,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.$nextTick(() => {
                     const self = this;
                     const $selects = $('.action-type-user-select');
+
                     if ($selects.hasClass('select2-hidden-accessible')) {
                         $selects.select2('destroy').off('change');
                     }
-                    // Limpiar inicializaciones anteriores por seguridad
-                    $('.action-type-user-select').select2('destroy').off('change');
 
-                    // Configurar el Select2 con tu API de búsqueda existente
-                    $('.action-type-user-select').select2({
-                        width: '100%',
-                        dropdownParent: $('#action-type-modal-app'), // Clave para renderizar dentro de Vue
-                        placeholder: 'Empiece a escribir para buscar... (Mín. 3 letras)',
-                        allowClear: true,
-                        minimumInputLength: 3,
-                        ajax: {
-                            url: '/personnel_actions/api/users/search/', // Tu URL oficial configurada
-                            dataType: 'json',
-                            delay: 250,
-                            data: function (params) {
-                                return {q: params.term};
-                            },
-                            processResults: function (data) {
-                                // Mapea los resultados retornados por user_search_json
-                                return {results: data.results || data};
+                    $selects.each(function () {
+                        $(this).select2({
+                            width: '100%',
+                            dropdownParent: $('#action-type-modal-app .modal-container'),
+                            placeholder: 'Escriba para buscar...',
+                            allowClear: true,
+                            minimumInputLength: 3,
+                            ajax: {
+                                url: '/personnel_actions/api/users/search/',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                    return {
+                                        q: params.term || '',
+                                        term: params.term || '',
+                                        search: params.term || ''
+                                    };
+                                },
+                                processResults: function (data) {
+                                    return {results: data.results || data};
+                                }
                             }
-                        }
-                    }).on('change', function () {
-                        // Capturar el ID del elemento modificado por jQuery y enviarlo a Vue
-                        const elementId = $(this).attr('id');
-                        const modelKey = elementId.replace('id_', ''); // default_authority_1
-                        self.formData[modelKey] = $(this).val();
+                        }).on('change', function () {
+                            const elementId = $(this).attr('id');
+                            const modelKey = elementId.replace('id_', '');
+                            self.formData[modelKey] = $(this).val();
+                        });
+                    });
+
+                    $selects.on('select2:open', function () {
+                        $('#action-type-modal-app .modal-body-scrolled').css('overflow-y', 'hidden');
+
+                        setTimeout(() => {
+                            const searchInput = document.querySelector('.select2-container--open .select2-search__field');
+                            if (searchInput) searchInput.focus();
+                        }, 50);
+                    });
+
+
+                    $selects.on('select2:close', function () {
+                        $('#action-type-modal-app .modal-body-scrolled').css('overflow-y', 'auto');
                     });
                 });
             },
@@ -141,13 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.isEdit = false;
                 this.errors = {};
                 this.formData = {
+                    id: null, // Limpiamos ID
                     code: '', name: '', is_active: true,
                     default_authority_1: null, default_authority_2: null,
                     default_reviewer: null, default_register: null
                 };
                 this.isVisible = true;
 
-                // Inicializar controles vacíos
                 this.initSelect2AJAX();
                 this.setSelect2Value('id_default_authority_1', null, '');
                 this.setSelect2Value('id_default_authority_2', null, '');
@@ -165,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
 
                     this.formData = {
+                        id: data.id, // <--- AHORA SÍ RECOGE EL ID PARA EDITAR
                         code: data.code,
                         name: data.name,
                         is_active: data.is_active,
@@ -174,16 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         default_register: data.register_id
                     };
 
-                    // Inicializar e inyectar valores guardados
                     this.initSelect2AJAX();
                     this.setSelect2Value('id_default_authority_1', data.auth1_id, data.auth1_text);
                     this.setSelect2Value('id_default_authority_2', data.auth2_id, data.auth2_text);
                     this.setSelect2Value('id_default_reviewer', data.reviewer_id, data.reviewer_text);
                     this.setSelect2Value('id_default_register', data.register_id, data.register_text);
-
                 } catch (error) {
-                    console.error("Error al cargar detalles de tipo:", error);
-                    Swal.fire('Error', 'No se pudieron cargar los datos del registro', 'error');
+                    Swal.fire('Error', 'No se pudieron cargar los datos', 'error');
                 }
             },
 
@@ -191,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.loading = true;
                 this.errors = {};
 
-                // Determinar si es alta o modificación
+                // Como ya tenemos this.formData.id, el servidor sabrá exactamente a quién actualizar
                 const url = this.isEdit
                     ? `/personnel_actions/types/api/save/${this.formData.id}/`
                     : '/personnel_actions/types/api/save/';
@@ -216,12 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             showConfirmButton: false
                         });
                         this.closeModal();
-                        loadTableData(); // Recargar la lista visual
+                        loadTableData();
                     } else {
                         this.errors = res.errors || {};
                     }
                 } catch (error) {
-                    Swal.fire('Error', 'Sucedió un fallo inesperado al guardar', 'error');
+                    Swal.fire('Error', 'Fallo al guardar la petición.', 'error');
                 } finally {
                     this.loading = false;
                 }
@@ -229,52 +222,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Validar existencia del contenedor HTML para evitar fallos de Vue
     const modalTarget = document.getElementById('action-type-modal-app');
     if (modalTarget) {
-        // ASIGNACIÓN CRUCIAL: Aquí guardamos la instancia de la aplicación montada
         modalInstance = actionTypeModalApp.mount('#action-type-modal-app');
-    } else {
-        console.error("No se encontró el contenedor id='action-type-modal-app' en el modal HTML.");
     }
 
-    // =========================================================
-    // 3. PUENTES GLOBALES PARA ONCLICK INLINE (HTML)
-    // =========================================================
-    window.openActionTypeModal = () => {
-        if (modalInstance) {
-            modalInstance.openForCreate();
-        } else {
-            console.error("Vue no se ha inicializado correctamente.");
-        }
-    };
-
-    window.editActionType = (id) => {
-        if (modalInstance) {
-            modalInstance.openForEdit(id);
-        }
-    };
+    window.openActionTypeModal = () => modalInstance && modalInstance.openForCreate();
+    window.editActionType = (id) => modalInstance && modalInstance.openForEdit(id);
 
     window.deleteActionType = async (id) => {
-        Swal.fire({
-            title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                const response = await fetch(`/personnel_actions/types/api/delete/${id}/`, {
-                    method: 'POST',
-                    headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const res = await response.json();
-                if (res.success) {
-                    Swal.fire('Eliminado', '', 'success');
-                    loadTableData();
+        Swal.fire({title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí'})
+            .then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch(`/personnel_actions/types/api/delete/${id}/`, {
+                        method: 'POST',
+                        headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        Swal.fire('Eliminado', '', 'success');
+                        loadTableData();
+                    }
                 }
-            }
-        });
+            });
     };
 });
 
-// Helper CSRF Cookie
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

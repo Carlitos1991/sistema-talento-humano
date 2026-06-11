@@ -47,8 +47,8 @@
     </table>
 
     {% if is_paginated %}
-        <div class="pagination-controls"
-             style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div class="pagination-controls" style="margin-top: 1.5rem; padding-bottom: 1rem; padding-top: 1rem;
+        border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span class="pagination-info" style="font-size: .875rem; color: #64748b;">
             Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ paginator.count }} registros
         </span>
