@@ -1115,7 +1115,7 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
             'contract_type__labor_regime',
             'administrative_unit',
             'status'
-        ).order_by('-created_at')
+        ).prefetch_related('history_set').order_by('-created_at')
 
         # 3. Filtros (Igual que antes pero sin evaluar el queryset todavía)
         if q:
@@ -1200,11 +1200,11 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
         try:
             with transaction.atomic():
                 # 1. Obtener catálogos necesarios
-                finalizado_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
+                end_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
                 libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
 
                 # 2. Finalizar el Periodo (Contrato)
-                period.status = finalizado_status
+                period.status = end_status
                 period.end_date = end_date
                 period.updated_by = request.user
                 period.save()
@@ -1267,7 +1267,9 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                     contract=period,
                     user_register=request.user.get_full_name() or request.user.username,
                     type='TERMINACIÓN',
-                    reason=reason
+                    reason=reason,
+                    historical_position=period.display_position,
+                    historical_salary=period.display_remuneration
                 )
 
             return JsonResponse({
@@ -1405,8 +1407,7 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
     def post(self, request, pk):
         period = get_object_or_404(
             ManagementPeriod.objects.select_related('contract_type', 'personnel_action', 'employee__person'),
-            pk=pk
-        )
+            pk=pk)
         try:
             with transaction.atomic():
                 status_signed = CatalogItem.objects.get(
@@ -1430,7 +1431,6 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                         new_status = 'EMPLEADO'
                 period.employee.set_status(new_status)
 
-                # Cuando el contrato está FIRMADO, el empleado debe estar activo
                 try:
                     if not period.employee.is_active:
                         period.employee.is_active = True
@@ -1445,7 +1445,9 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     contract=period,
                     user_register=request.user.get_full_name() or request.user.username,
                     type='FIRMA',
-                    reason='ACCIÓN LEGALIZADA' if is_action_document else 'CONTRATO FIRMADO'
+                    reason='ACCIÓN LEGALIZADA' if is_action_document else 'CONTRATO FIRMADO',
+                    historical_position=period.display_position,
+                    historical_salary=period.display_remuneration
                 )
 
                 # --- REGISTRO EN HISTORIAL DE HORARIOS ---
@@ -1474,9 +1476,10 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
 
 
 class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
-    """Retorna el JSON con todos los datos para el Expediente y el formulario de edición"""
+    """Retorna el JSON con todos los datos para el Expediente"""
 
-    def get(self, request, pk):
+    def get(self, request, pk):  # <--- ASEGÚRATE QUE SEA 'get'
+        # 1. Obtener el periodo/contrato
         p = get_object_or_404(
             ManagementPeriod.objects.select_related(
                 'budget_line__position_item',
@@ -1487,16 +1490,30 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
             ),
             pk=pk
         )
-        hist = History.objects.filter(contract=p).first()
-        position = p.display_position
-        if (not p.budget_line and not p.manual_position) and hist:
-            position = hist.historical_position or 'SIN CARGO REGISTRADO'
 
-        # Determinamos la remuneración (Prioridad: Partida -> Manual -> Historial)
-        salary = p.display_remuneration
-        if (not p.budget_line and not p.manual_remuneration) and hist:
-            salary = hist.historical_salary
+        # 2. Buscar en la tabla de Historial (contract_history)
+        # Esto es lo que recupera los datos de los registros migrados (como el 3106)
+        hist_record = History.objects.filter(contract=p).first()
+
+        # 3. Lógica de asignación de datos
         has_budget_line = p.budget_line is not None
+
+        if has_budget_line:
+            # Si tiene partida, mandamos los datos de la partida
+            cargo_final = p.budget_line.position_item.name if p.budget_line.position_item else 'SIN CARGO'
+            sueldo_final = p.budget_line.remuneration
+            codigo_banner = p.budget_line.number_individual or p.budget_line.code
+        elif hist_record:
+            # SI ES MIGRADO (como tu caso), sacamos de la tabla History
+            cargo_final = hist_record.historical_position
+            sueldo_final = hist_record.historical_salary
+            codigo_banner = "DATOS DE MIGRACIÓN"
+        else:
+            # Si no hay nada, usamos los campos manuales
+            cargo_final = p.manual_position or 'SIN CARGO REGISTRADO'
+            sueldo_final = p.manual_remuneration
+            codigo_banner = "S/P (REGISTRO MANUAL)"
+
         return JsonResponse({
             'success': True,
             'period': {
@@ -1508,29 +1525,20 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
                 'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
                 'status_name': p.status.name,
                 'status_code': p.status.code,
-                'budget_line_number': (
-                            p.budget_line.number_individual or p.budget_line.code) if has_budget_line else 'REGISTRO HISTÓRICO',
-                'position_name': position,
-                'remuneration': f"$ {salary}" if salary else "Consulte Contrato",
-                'unit_name': p.administrative_unit.name if p.administrative_unit else '',
-                'institutional_need_memo': p.institutional_need_memo or '',
-                'budget_certification': p.budget_certification or '',
-                'elaboration_date': p.elaboration_date.isoformat() if p.elaboration_date else '',
-                'elaboration_date_formatted': p.elaboration_date.strftime('%d/%m/%Y') if p.elaboration_date else '',
-                'start_date': p.start_date.isoformat() if p.start_date else '',  # Formato YYYY-MM-DD para el input date
+
+                # Datos procesados
+                'budget_line_number': codigo_banner,
+                'position_name': cargo_final,
+                'remuneration': f"$ {sueldo_final}" if sueldo_final else "No definida",
+
+                # Otros datos
+                'unit_name': p.administrative_unit.name if p.administrative_unit else 'N/A',
                 'start_date_formatted': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
-                'end_date': p.end_date.isoformat() if p.end_date else '',
                 'end_date_formatted': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'INDEFINIDO',
-                'schedule_id': p.schedule.id if p.schedule else '',
-                'schedule_name': p.schedule.name if p.schedule else '',
-                'workplace': p.workplace or '',
+                'schedule_name': p.schedule.name if p.schedule else 'SIN HORARIO',
+                'workplace': p.workplace or 'N/A',
                 'contract_type_name': p.contract_type.name,
                 'contract_type_category': p.contract_type.contract_type_category,
-                'personnel_action_id': p.personnel_action_id,
-                'personnel_action_pdf_url': (
-                    reverse('personnel_actions:action_pdf', args=[p.personnel_action_id])
-                    if p.personnel_action_id else ''
-                ),
                 'job_functions': p.job_functions or '',
                 'action_motivation': p.action_motivation or '',
                 'action_explanation': p.action_explanation or '',

@@ -36,13 +36,15 @@
                         </span>
                     </div>
 
-                    <!-- Caja de Información del Puesto -->
-                    <div class="budget-inherited-box ms-auto text-end" style="min-width: 250px;">
-                        <small class="text-white-opacity d-block mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">
-                            [[ selectedPeriod.has_budget_line ? 'PARTIDA PRESUPUESTARIA' : 'REFERENCIA DE CARGO' ]]
+                    <!-- Caja de Información: Ahora mostrará el cargo del historial -->
+                    <div class="budget-inherited-box ms-auto text-end">
+                        <small class="text-white-opacity d-block mb-1">
+                            [[ selectedPeriod.has_budget_line ? 'PARTIDA PRESUPUESTARIA' : 'CARGO EN HISTORIAL' ]]
                         </small>
-                        <strong class="text-accent d-block" style="font-size: 1.1rem;">[[ selectedPeriod.budget_line_number ]]</strong>
-                        <span class="d-block text-white font-weight-600" style="font-size: 0.85rem;">
+                        <strong class="text-accent d-block" style="font-size: 1.1rem;">
+                            [[ selectedPeriod.budget_line_number ]]
+                        </strong>
+                        <span class="d-block text-white font-weight-600">
                             [[ selectedPeriod.position_name ]]
                         </span>
                     </div>

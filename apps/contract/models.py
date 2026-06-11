@@ -140,7 +140,7 @@ class ManagementPeriod(BaseModel):
     # Identificador único del contrato (Ej: MUN-TTHH-2024-001-CT)
     document_number = models.CharField(
         verbose_name='Número de Documento',
-        max_length=100, unique=True, db_index=True,blank=True
+        max_length=100, unique=True, db_index=True, blank=True
     )
 
     employee = models.ForeignKey(
@@ -248,7 +248,8 @@ class ManagementPeriod(BaseModel):
             if not self.action_explanation:
                 errors['action_explanation'] = 'La explicación es obligatoria para acciones de personal.'
             if not self.administrative_unit_id:
-                errors['administrative_unit'] = 'La unidad administrativa de destino es obligatoria para acciones de personal.'
+                errors[
+                    'administrative_unit'] = 'La unidad administrativa de destino es obligatoria para acciones de personal.'
             if errors:
                 raise ValidationError(errors)
         elif is_professional_service:
@@ -272,7 +273,8 @@ class ManagementPeriod(BaseModel):
             if not self.institutional_need_memo:
                 errors['institutional_need_memo'] = 'El memo de necesidad es obligatorio para este tipo de contrato.'
             if not self.budget_certification:
-                errors['budget_certification'] = 'La certificación presupuestaria es obligatoria para este tipo de contrato.'
+                errors[
+                    'budget_certification'] = 'La certificación presupuestaria es obligatoria para este tipo de contrato.'
             if not self.budget_line_id:
                 errors['budget_line'] = 'La partida presupuestaria es obligatoria para este tipo de contrato.'
             if errors:
@@ -300,6 +302,31 @@ class ManagementPeriod(BaseModel):
             date_active = date_active and today <= self.end_date
         return date_active and self.status.code == 'ACTIVO'
 
+    @property
+    def list_display_position(self):
+        """Retorna el cargo priorizando Partida -> Historial -> Manual"""
+        if self.budget_line and self.budget_line.position_item:
+            return self.budget_line.position_item.name
+
+        # Accedemos al historial vinculado (reverse relation de ForeignKey)
+        hist = self.history_set.first()
+        if hist and hist.historical_position:
+            return hist.historical_position
+
+        return self.manual_position or "SIN CARGO"
+
+    @property
+    def list_display_remuneration(self):
+        """Retorna el sueldo priorizando Partida -> Historial -> Manual"""
+        if self.budget_line:
+            return self.budget_line.remuneration
+
+        hist = self.history_set.first()
+        if hist and hist.historical_salary:
+            return hist.historical_salary
+
+        return self.manual_remuneration
+
     def _normalized_contract_type_code(self):
         raw_code = (getattr(self.contract_type, 'code', '') or '').upper().strip()
         normalized = re.sub(r'[^A-Z0-9]+', '_', raw_code).strip('_')
@@ -317,7 +344,8 @@ class ManagementPeriod(BaseModel):
         )
 
     def _generate_personnel_action_number(self):
-        year = (self.elaboration_date.year if self.elaboration_date else (self.start_date.year if self.start_date else timezone.now().year))
+        year = (self.elaboration_date.year if self.elaboration_date else (
+            self.start_date.year if self.start_date else timezone.now().year))
         max_sequence = 0
         existing_numbers = PersonnelAction.objects.filter(number__endswith=f'-{year}').values_list('number', flat=True)
 
@@ -331,7 +359,8 @@ class ManagementPeriod(BaseModel):
     def _get_personnel_action_authorities(self):
         users = list(User.objects.filter(is_active=True).order_by('username')[:2])
         if not users:
-            raise ValidationError({'personnel_action': 'Debe existir al menos un usuario activo para generar la acción de personal.'})
+            raise ValidationError(
+                {'personnel_action': 'Debe existir al menos un usuario activo para generar la acción de personal.'})
         primary = users[0]
         secondary = users[1] if len(users) > 1 else None
         return primary, secondary
@@ -369,7 +398,8 @@ class ManagementPeriod(BaseModel):
             action_type = template_action_type or action_type
 
         if not action_type:
-            raise ValidationError({'contract_type': 'No existe un tipo de acción activo que coincida con esta modalidad.'})
+            raise ValidationError(
+                {'contract_type': 'No existe un tipo de acción activo que coincida con esta modalidad.'})
 
         authority_1, authority_2 = self._get_personnel_action_authorities()
         authority_1 = self._resolve_authority_from_template(template_sections, 1, authority_1)
@@ -465,7 +495,8 @@ class ManagementPeriod(BaseModel):
                             self.employee.area = self.administrative_unit
                             self.employee.save()
 
-                    if self.personnel_action_id is None and (getattr(self.contract_type, 'contract_type_category', '') or '').upper() == ContractType.TYPE_ACCION_PERSONAL:
+                    if self.personnel_action_id is None and (getattr(self.contract_type, 'contract_type_category',
+                                                                     '') or '').upper() == ContractType.TYPE_ACCION_PERSONAL:
                         self._create_linked_personnel_action()
                         super().save(update_fields=['personnel_action'])
                 return
@@ -478,20 +509,10 @@ class ManagementPeriod(BaseModel):
 
 class History(models.Model):
     """Historial de cambios en contratos"""
-    employee = models.ForeignKey(
-        Employee,
-        verbose_name='Employee',
-        blank=True,
-        null=True,
-        on_delete=models.PROTECT
-    )
-    contract = models.ForeignKey(
-        'ManagementPeriod',
-        verbose_name='Contrato',
-        blank=True,
-        null=True,
-        on_delete=models.PROTECT
-    )
+    employee = models.ForeignKey(Employee, verbose_name='Employee', blank=True, null=True, on_delete=models.PROTECT)
+    type = models.CharField(verbose_name='Tipo de Movimiento', max_length=50, blank=True, null=True)
+    contract = models.ForeignKey('ManagementPeriod', verbose_name='Contrato', blank=True, null=True,
+                                 on_delete=models.PROTECT)
     user_register = models.CharField(
         verbose_name='Registro por:',
         max_length=100,

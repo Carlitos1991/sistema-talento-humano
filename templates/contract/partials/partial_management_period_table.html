@@ -34,15 +34,26 @@
                     </div>
                 </td>
                 <td>
-                    <div class="font-weight-700 text-primary">{{ period.display_position }}</div>
-                    <small class="text-muted">Partida:
-                        {% if period.budget_line %}{% if period.budget_line.number_individual %}
-                            {{ period.budget_line.number_individual }}{% else %}
-                            {{ period.budget_line.code }}{% endif %}{% else %}Sin partida
-                            presupuestaria{% endif %}</small>
-                    <br>
-                    <small class="text-muted">Remuneración: {% if period.display_remuneration is not None %}$
-                        {{ period.display_remuneration }}{% else %}-{% endif %}</small>
+                    <div class="font-weight-700 text-primary">{{ period.list_display_position }}</div>
+                    {% if period.budget_line %}
+                        <small class="text-muted">
+                            Partida:
+                            {% if period.budget_line.number_individual %}
+                                {{ period.budget_line.number_individual }}
+                            {% else %}
+                                {{ period.budget_line.code }}
+                            {% endif %}
+                        </small>
+                        <br>
+                    {% endif %}
+                    <small class="text-muted">
+                        Remuneración:
+                        {% if period.list_display_remuneration is not None %}
+                            $ {{ period.list_display_remuneration }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </small>
                 </td>
                 <td><span class="small font-weight-600">{{ period.administrative_unit.name }}</span></td>
                 <td>
