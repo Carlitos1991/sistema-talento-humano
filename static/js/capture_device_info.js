@@ -110,8 +110,6 @@
             const macAddress = await getMACAddress();
             const deviceInfo = getDeviceInfo();
 
-            console.debug('Enviando info del dispositivo:', { macAddress, deviceInfo });
-
             // Enviar información al servidor
             const response = await fetch('/security/api/update-session-info/', {
                 method: 'POST',
@@ -127,7 +125,6 @@
 
             if (response.ok) {
                 const data = await response.json();
-                console.debug('Información del dispositivo capturada:', data);
             } else {
                 console.error('Error al enviar info del dispositivo:', response.status);
             }

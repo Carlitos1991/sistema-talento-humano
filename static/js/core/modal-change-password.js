@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Auto-open si la URL contiene ?force=1 o si el servidor indicó con data-force-change
 document.addEventListener('DOMContentLoaded', function () {
-    console.debug('[modal-change-password] DOMContentLoaded - checking force flags');
+    // console.debug('[modal-change-password] DOMContentLoaded - checking force flags');
     try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('force') === '1') {

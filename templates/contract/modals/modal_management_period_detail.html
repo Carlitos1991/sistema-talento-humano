@@ -23,51 +23,63 @@
         </div>
 
         <div class="modal-body-scrolled">
-            <!-- Banner Superior: Empleado y Estado -->
-            <div class="inherited-info-card mb-4">
+                <!-- Banner Superior: Dinámico y Limpio -->
+            <div class="inherited-info-card mb-4" :class="{'bg-manual': !selectedPeriod.has_budget_line}">
                 <div class="d-flex align-items-center w-100">
                     <img :src="selectedPeriod.employee_photo || '{% static 'img/avatar-placeholder.png' %}'"
                          class="person-avatar me-3">
                     <div class="employee-main-data">
                         <h4 class="mb-1 text-white font-weight-800">[[ selectedPeriod.employee_name ]]</h4>
                         <span class="status-badge"
-                              :class="selectedPeriod.status_code === 'FIRMADO' ? 'firmado' : 'sin-firmar'">
+                              :class="selectedPeriod.status_code === 'FIRMADO' ? 'firmado' : (selectedPeriod.status_code === 'FINALIZADO' ? 'finalizado' : 'sin-firmar')">
                             [[ selectedPeriod.status_name ]]
                         </span>
                     </div>
-                    <div class="budget-inherited-box ms-auto">
-                        <small class="text-white-opacity">DATOS CONTRACTUALES</small>
-                        <strong class="text-accent">[[ selectedPeriod.budget_line_number ]]</strong>
-                        <span class="d-block small text-white-opacity">[[ selectedPeriod.position_name ]]</span>
+
+                    <!-- Caja de Información del Puesto -->
+                    <div class="budget-inherited-box ms-auto text-end" style="min-width: 250px;">
+                        <small class="text-white-opacity d-block mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+                            [[ selectedPeriod.has_budget_line ? 'PARTIDA PRESUPUESTARIA' : 'REFERENCIA DE CARGO' ]]
+                        </small>
+                        <strong class="text-accent d-block" style="font-size: 1.1rem;">[[ selectedPeriod.budget_line_number ]]</strong>
+                        <span class="d-block text-white font-weight-600" style="font-size: 0.85rem;">
+                            [[ selectedPeriod.position_name ]]
+                        </span>
                     </div>
                 </div>
             </div>
 
             <div class="grid-2-cols">
-                <!-- Columna 1: Datos Administrativos -->
+                <!-- Columna 1: Información Administrativa -->
                 <div class="section-card-standard border-left-primary">
                     <h6 class="section-title"><i class="fas fa-file-invoice text-primary"></i> Información de Respaldo
                     </h6>
                     <div class="audit-data-row"><span>Unidad:</span> <strong>[[ selectedPeriod.unit_name ]]</strong>
                     </div>
                     <div class="audit-data-row"><span>Memo Necesidad:</span> <strong>[[
-                        selectedPeriod.institutional_need_memo ]]</strong></div>
+                        selectedPeriod.institutional_need_memo || 'N/A' ]]</strong></div>
                     <div class="audit-data-row"><span>Cert. Presupuestaria:</span> <strong>[[
-                        selectedPeriod.budget_certification ]]</strong></div>
+                        selectedPeriod.budget_certification || 'N/A' ]]</strong></div>
                     <div class="audit-data-row"><span>Lugar de Trabajo:</span> <strong>[[ selectedPeriod.workplace
                         ]]</strong></div>
                 </div>
 
-                <!-- Columna 2: Vigencia y Horario -->
+                <!-- Columna 2: Vigencia y Remuneración -->
                 <div class="section-card-standard">
                     <h6 class="section-title"><i class="fas fa-calendar-alt text-primary"></i> Vigencia y Jornada</h6>
                     <div class="audit-data-row"><span>Tipo Contrato:</span> <strong>[[ selectedPeriod.contract_type_name
                         ]]</strong></div>
-                    <div class="audit-data-row"><span>Remuneración:</span> <strong>[[ selectedPeriod.remuneration ]]</strong></div>
+
+                    <!-- Aquí la remuneración se muestra sin importar el origen -->
+                    <div class="audit-data-row">
+                        <span>Remuneración:</span>
+                        <strong class="text-success">[[ selectedPeriod.remuneration ]]</strong>
+                    </div>
+
                     <div class="audit-data-row"><span>Fecha Inicio:</span> <strong>[[
                         selectedPeriod.start_date_formatted ]]</strong></div>
-                    <div class="audit-data-row"><span>Fecha Fin:</span> <strong>[[ selectedPeriod.end_date_formatted ||
-                        'INDEFINIDO' ]]</strong></div>
+                    <div class="audit-data-row"><span>Fecha Fin:</span> <strong>[[ selectedPeriod.end_date_formatted
+                        ]]</strong></div>
                     <div class="audit-data-row"><span>Horario:</span> <strong>[[ selectedPeriod.schedule_name
                         ]]</strong></div>
                 </div>

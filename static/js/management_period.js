@@ -57,9 +57,9 @@ const periodApp = createApp({
                 workplace: '', start_date: '', end_date: '', document_number: '',
                 job_functions: '', institutional_need_memo: '', budget_certification: '',
                 manual_position: '', manual_remuneration: '',
-                elaboration_date: '', action_motivation: '', action_explanation: ''
+                elaboration_date: '', action_motivation: '', is_boss: false, action_explanation: ''
             },
-                is_boss: false,
+
 
             // --- ESTADÍSTICAS ---
             stats: {

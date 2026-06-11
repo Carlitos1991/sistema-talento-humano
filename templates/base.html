@@ -129,7 +129,7 @@
     } catch (e) {
         window.__serverForceChange = false;
     }
-    console.debug('[server] force_change_on_login =', window.__serverForceChange);
+    {#console.debug('[server] force_change_on_login =', window.__serverForceChange);#}
 </script>
 <script src="{% static 'js/core/modal-change-password.js' %}"></script>
 {% block extra_js %}{% endblock %}

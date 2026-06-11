@@ -55,11 +55,16 @@ def _render_contract_inline_formatting(content):
     safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
     safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[SIZE_DOWN\](.+?)\[/SIZE_DOWN\]', r'<span style="font-size:0.9em;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[SIZE_UP\](.+?)\[/SIZE_UP\]', r'<span style="font-size:1.1em;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]', r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]', r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]', r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[SIZE_DOWN\](.+?)\[/SIZE_DOWN\]', r'<span style="font-size:0.9em;">\1</span>', safe_text,
+                       flags=re.DOTALL)
+    safe_text = re.sub(r'\[SIZE_UP\](.+?)\[/SIZE_UP\]', r'<span style="font-size:1.1em;">\1</span>', safe_text,
+                       flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]',
+                       r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]',
+                       r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
+    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]',
+                       r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
     return safe_text.replace('\n', '<br>')
 
 
@@ -112,7 +117,8 @@ def _build_contract_user_full_name(user):
 def _get_contract_letterhead_resource(request):
     configuration = SystemConfiguration.get_current()
     if configuration is None:
-        configuration = SystemConfiguration.objects.filter(letterhead__isnull=False).exclude(letterhead='').order_by('-effective_date').first()
+        configuration = SystemConfiguration.objects.filter(letterhead__isnull=False).exclude(letterhead='').order_by(
+            '-effective_date').first()
 
     if not configuration or not configuration.letterhead:
         return ''
@@ -533,7 +539,8 @@ def _build_contract_replacements(period):
     today = _get_contract_today_date()
     person = period.employee.person
     category_label = 'ACCIÓN DE PERSONAL' if period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL else 'CONTRATO'
-    elaboration_date = period.elaboration_date.strftime('%d/%m/%Y') if getattr(period, 'elaboration_date', None) else '-'
+    elaboration_date = period.elaboration_date.strftime('%d/%m/%Y') if getattr(period, 'elaboration_date',
+                                                                               None) else '-'
 
     return {
         '[FULL_NAME]': person.full_name or '-',
@@ -573,9 +580,11 @@ def _render_contract_sections_html(template, replacements):
 
         rendered = _render_contract_inline_formatting(content)
         if section.section_type == 'TITLE':
-            rows.append(f'<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">{rendered}</h4>')
+            rows.append(
+                f'<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">{rendered}</h4>')
         else:
-            rows.append(f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{rendered}</p>')
+            rows.append(
+                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{rendered}</p>')
 
     return ''.join(rows)
 
@@ -891,7 +900,6 @@ class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, Vie
             return HttpResponse('Error al generar el PDF del contrato', status=500)
 
 
-
 class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ManagementPeriod
     template_name = 'contract/management_period_list.html'
@@ -1015,7 +1023,8 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                 })
 
             # 3. Buscar un registro de Employee vinculado que tenga una partida presupuestaria asignada
-            employees = Employee.objects.filter(person=person).select_related('person').prefetch_related('current_budget_line__position_item')
+            employees = Employee.objects.filter(person=person).select_related('person').prefetch_related(
+                'current_budget_line__position_item')
             employee_candidate = employees.first()
             employee_with_line = None
             budget_line = None
@@ -1057,10 +1066,10 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     'full_name': person.full_name,
                     'photo': person.photo.url if person.photo else None,
                     'budget_line': ({
-                        'id': budget_line.id,
-                        'number': budget_line.number_individual or budget_line.code,
-                        'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
-                    } if budget_line else None),
+                                        'id': budget_line.id,
+                                        'number': budget_line.number_individual or budget_line.code,
+                                        'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
+                                    } if budget_line else None),
                     'contract_type_category': contract_category or ContractType.TYPE_CONTRATO,
                     'requires_manual_compensation': is_professional_service
                 },
@@ -1168,9 +1177,6 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
 
 
 class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """
-    Finaliza un contrato y libera automáticamente la partida presupuestaria.
-    """
     permission_required = 'contract.change_managementperiod'
 
     def post(self, request, pk):
@@ -1189,27 +1195,22 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
             return JsonResponse({'success': False, 'message': 'Formato de fecha fin inválido.'}, status=400)
 
         if period.start_date and end_date < period.start_date:
-            return JsonResponse({
-                'success': False,
-                'message': 'La fecha fin de gestión no puede ser menor a la fecha de inicio.'
-            }, status=400)
-
-        # Usar el motivo provisto por el usuario como motivo/observación de liberación
-        release_concept = reason
+            return JsonResponse({'success': False, 'message': 'La fecha fin no puede ser menor al inicio.'}, status=400)
 
         try:
             with transaction.atomic():
-                # 1. Obtener estados
+                # 1. Obtener catálogos necesarios
                 finalizado_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
                 libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
-                current_status = period.employee.employment_status.code
 
-                # 2. Finalizar el Periodo
+                # 2. Finalizar el Periodo (Contrato)
                 period.status = finalizado_status
                 period.end_date = end_date
                 period.updated_by = request.user
                 period.save()
 
+                # 3. Cambiar estado del Empleado a Ex-empleado
+                current_status = period.employee.employment_status.code
                 mapping = {
                     'EMPLEADO': 'EX_EMPLEADO',
                     'TRABAJADOR': 'EX_TRABAJADOR',
@@ -1218,41 +1219,49 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                 }
                 exit_status = mapping.get(current_status, 'PERSONA')
                 period.employee.set_status(exit_status)
-
-                # Cambiar is_active del empleado a False
                 period.employee.is_active = False
                 period.employee.save()
 
-                # 3. Liberar la Partida
+                # 4. LÓGICA DINÁMICA DE PARTIDA PRESUPUESTARIA
+                # Prioridad 1: La que está vinculada al periodo
+                # Prioridad 2: Buscar en la BD cualquier partida que tenga a este empleado como ocupante
                 budget_line = period.budget_line
                 if not budget_line:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'El período de gestión no tiene una partida presupuestaria asignada.'
-                    }, status=400)
+                    from budget.models import BudgetLine  # Import local para evitar circularidad
+                    budget_line = BudgetLine.objects.filter(current_employee=period.employee).first()
 
-                # 3.1 Cerrar historial de asignación con la misma fecha/observación de finalización
-                assignment_history = BudgetAssignmentHistory.objects.filter(
-                    budget_line=budget_line,
-                    employee=period.employee,
-                    is_current=True
-                ).first()
-                if assignment_history:
-                    if assignment_history.start_date and end_date < assignment_history.start_date:
-                        return JsonResponse({
-                            'success': False,
-                            'message': 'La fecha fin no puede ser menor a la fecha de inicio en el historial de partida.'
-                        }, status=400)
-                    assignment_history.end_date = end_date
-                    assignment_history.is_current = False
-                    assignment_history.observation = release_concept
-                    assignment_history.save()
+                if budget_line:
+                    # A. Cerrar historial de asignación (si existe)
+                    assignment_history = BudgetAssignmentHistory.objects.filter(
+                        budget_line=budget_line,
+                        employee=period.employee,
+                        is_current=True
+                    ).first()
 
-                budget_line.status_item = libre_status
-                budget_line.current_employee = None
-                budget_line.save(modified_by=request.user)
+                    if assignment_history:
+                        assignment_history.end_date = end_date
+                        assignment_history.is_current = False
+                        assignment_history.observation = f"Fin de gestión: {reason}"
+                        assignment_history.save()
 
-                # 4. Registro en historial de contrato
+                    # B. Liberar la Partida físicamente
+                    budget_line.status_item = libre_status
+                    budget_line.current_employee = None
+                    # Guardar con modified_by para el historial de auditoría de la partida
+                    budget_line.save(modified_by=request.user)
+
+                    # C. Registrar auditoría de modificación de partida
+                    BudgetModificationHistory.objects.create(
+                        budget_line=budget_line,
+                        modified_by=request.user,
+                        modification_type='RELEASE',
+                        field_name='Estado y Ocupante',
+                        old_value=f"Ocupada por {period.employee.person.full_name}",
+                        new_value="LIBRE / VACANTE",
+                        reason=f"Terminación de contrato {period.document_number}: {reason}"
+                    )
+
+                # 5. Registro en historial de contrato
                 History.objects.create(
                     employee=period.employee,
                     contract=period,
@@ -1261,20 +1270,10 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
                     reason=reason
                 )
 
-                # 5. Auditoría en historial de partida
-                BudgetModificationHistory.objects.create(
-                    budget_line=budget_line,
-                    modified_by=request.user,
-                    modification_type='RELEASE',
-                    field_name='Estado y Ocupante',
-                    old_value=f"Ocupada por {period.employee.person.full_name}",
-                    new_value="LIBRE / VACANTE",
-                    reason=release_concept
-                )
-
             return JsonResponse({
                 'success': True,
-                'message': 'Gestión finalizada, partida liberada y registro guardado en el historial.'
+                'message': 'Gestión finalizada correctamente.' + (
+                    ' Partida liberada.' if budget_line else ' (No se detectó partida vinculada)')
             })
 
         except Exception as e:
@@ -1311,7 +1310,8 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 action_motivation = data.get('action_motivation', '').strip().upper()
                 action_explanation = data.get('action_explanation', '').strip()
 
-                if is_action_document and (not elaboration_date or not data.get('start_date') or not action_motivation or not action_explanation):
+                if is_action_document and (not elaboration_date or not data.get(
+                        'start_date') or not action_motivation or not action_explanation):
                     return JsonResponse({
                         'success': False,
                         'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde, motivación y explicación.'
@@ -1327,8 +1327,10 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 schedule_id = data.get('schedule') if not is_action_document else None
                 workplace = data.get('workplace', '').strip().upper() if not is_action_document else None
                 job_functions = data.get('job_functions', '').strip() if not is_action_document else ''
-                institutional_need_memo = data.get('institutional_need_memo', '').strip().upper() if not is_action_document else None
-                budget_certification = data.get('budget_certification', '').strip().upper() if not is_action_document else None
+                institutional_need_memo = data.get('institutional_need_memo',
+                                                   '').strip().upper() if not is_action_document else None
+                budget_certification = data.get('budget_certification',
+                                                '').strip().upper() if not is_action_document else None
 
                 if is_action_document and not administrative_unit_id:
                     return JsonResponse({
@@ -1434,7 +1436,7 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                         period.employee.is_active = True
                         period.employee.save(update_fields=['is_active'])
                 except Exception as e:
-                    print(f"No se pudo activar employee tras firma (id={getattr(period.employee,'id',None)}): {e}")
+                    print(f"No se pudo activar employee tras firma (id={getattr(period.employee, 'id', None)}): {e}")
 
                 # --- REGISTRO EN HISTORIAL DE CONTRATO ---
                 is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
@@ -1475,20 +1477,41 @@ class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
     """Retorna el JSON con todos los datos para el Expediente y el formulario de edición"""
 
     def get(self, request, pk):
-        p = get_object_or_404(ManagementPeriod, pk=pk)
+        p = get_object_or_404(
+            ManagementPeriod.objects.select_related(
+                'budget_line__position_item',
+                'employee__person',
+                'administrative_unit',
+                'status',
+                'contract_type'
+            ),
+            pk=pk
+        )
+        hist = History.objects.filter(contract=p).first()
+        position = p.display_position
+        if (not p.budget_line and not p.manual_position) and hist:
+            position = hist.historical_position or 'SIN CARGO REGISTRADO'
+
+        # Determinamos la remuneración (Prioridad: Partida -> Manual -> Historial)
+        salary = p.display_remuneration
+        if (not p.budget_line and not p.manual_remuneration) and hist:
+            salary = hist.historical_salary
+        has_budget_line = p.budget_line is not None
         return JsonResponse({
             'success': True,
             'period': {
                 'id': p.id,
+                'has_budget_line': has_budget_line,
                 'signed_document_url': p.signed_document.url if p.signed_document else None,
                 'document_number': p.document_number,
                 'employee_name': p.employee.person.full_name,
                 'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
                 'status_name': p.status.name,
                 'status_code': p.status.code,
-                'budget_line_number': (p.budget_line.number_individual or p.budget_line.code) if p.budget_line else 'SIN PARTIDA',
-                'position_name': p.display_position,
-                'remuneration': str(p.display_remuneration) if p.display_remuneration is not None else '-',
+                'budget_line_number': (
+                            p.budget_line.number_individual or p.budget_line.code) if has_budget_line else 'REGISTRO HISTÓRICO',
+                'position_name': position,
+                'remuneration': f"$ {salary}" if salary else "Consulte Contrato",
                 'unit_name': p.administrative_unit.name if p.administrative_unit else '',
                 'institutional_need_memo': p.institutional_need_memo or '',
                 'budget_certification': p.budget_certification or '',
