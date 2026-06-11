@@ -203,12 +203,15 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
 
 def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
-                                              debug_flag=False):
+                                              debug_flag=False, schedule_lookup_fn=None):
     """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma heurística del reporte mensual."""
     try:
         from schedule.models import get_employee_schedule_for_date
     except Exception:
         get_employee_schedule_for_date = None
+
+    # Usar función de lookup inyectada (caché bulk) o la original por defecto
+    _lookup = schedule_lookup_fn or get_employee_schedule_for_date
 
     for week_local in calendar_data_local:
         for day_obj_local in week_local:
@@ -222,9 +225,9 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             is_workday = cur_date.weekday() < 5
             is_holiday = day_obj_local.get('is_holiday', False)
             schedule = None
-            if get_employee_schedule_for_date:
+            if _lookup:
                 try:
-                    schedule = get_employee_schedule_for_date(employee_obj, cur_date)
+                    schedule = _lookup(employee_obj, cur_date)
                 except Exception:
                     schedule = None
 
@@ -1454,7 +1457,11 @@ def generate_department_report_pdf(request):
             cur += timedelta(days=1)
 
     results_by_unit = {}
-    from schedule.models import get_employee_schedule_for_date
+    # OPTIMIZACIÓN CRÍTICA: pre-cargar TODOS los horarios en 2 queries planas
+    # Antes: get_employee_schedule_for_date() → 2 queries × empleado × día (~8 800 queries)
+    # Ahora: build_schedule_cache()           → 2 queries totales, resolución en memoria
+    from schedule.schedule_prefetch import build_schedule_cache, get_schedule_from_cache
+    _sched_cache = build_schedule_cache(emp_ids, month_start, month_end)
 
     # 3. PROCESAMIENTO EN MEMORIA (MUCHO MÁS RÁPIDO)
     for inst in inst_qs:
@@ -1485,7 +1492,10 @@ def generate_department_report_pdf(request):
                 week_list.append(day_data)
             calendar_data.append(week_list)
 
-        annotate_attendance_calendar_for_employee(calendar_data, year, month, inst.employee, debug_punches)
+        annotate_attendance_calendar_for_employee(
+            calendar_data, year, month, inst.employee, debug_punches,
+            schedule_lookup_fn=lambda emp_obj, d, _eid=emp_id: get_schedule_from_cache(_sched_cache, _eid, d),
+        )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
         # Lógica de tolerancia y filtrado...
