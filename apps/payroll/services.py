@@ -315,13 +315,6 @@ class PayrollCalculatorService:
             for a in all_assignments_qs:
                 assignment_map.setdefault(a.employee_id, []).append(a)
 
-            # mp_map almacena por empleado:
-            #   'latest'     -> el contrato más reciente (para régimen laboral y código)
-            #   'first_date' -> la fecha de inicio del primer contrato (para antigüedad/FR)
-            #
-            # FIX: antes se sobreescribía con mp_map[emp_id] = mp en cada iteración,
-            # dejando solo el último contrato. Fondos de reserva requiere contar desde
-            # el primer contrato de la relación laboral, no desde el último.
             mp_map = {}
             for mp in (
                     ManagementPeriod.objects
@@ -329,15 +322,7 @@ class PayrollCalculatorService:
                             .select_related('contract_type__labor_regime', 'status')
                             .order_by('employee_id', 'start_date')
             ):
-                if mp.employee_id not in mp_map:
-                    # Primer contrato -> guardamos su fecha de inicio
-                    mp_map[mp.employee_id] = {
-                        'latest': mp,
-                        'first_date': mp.start_date,
-                    }
-                else:
-                    # Contratos posteriores -> actualizamos solo el contrato activo
-                    mp_map[mp.employee_id]['latest'] = mp
+                mp_map[mp.employee_id] = mp
 
             # ── 6. Novedades del periodo ──────────────────────────────────
             novelties_map = {}
@@ -467,19 +452,10 @@ class PayrollCalculatorService:
                         pass
 
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
-                    mp_entry = mp_map.get(slip.employee_id)
-                    # mp_entry es un dict {'latest': <ManagementPeriod>, 'first_date': <date>}
-                    # 'latest'     → contrato activo (régimen laboral, código)
-                    # 'first_date' → inicio del primer contrato (antigüedad real)
-                    mp = mp_entry['latest'] if mp_entry else None
-                    first_start_date = mp_entry['first_date'] if mp_entry else None
-
-                    # Antigüedad: desde el PRIMER contrato, no el más reciente
+                    mp = mp_map.get(slip.employee_id)
                     years_of_service = (
-                            (self.period.end_date - first_start_date).days / 365.25
-                    ) if first_start_date else 0
-
-                    # Régimen laboral: del contrato más reciente (activo)
+                            (self.period.end_date - mp.start_date).days / 365.25
+                    ) if mp and mp.start_date else 0
                     regime_code = (
                         mp.contract_type.labor_regime.code.strip().upper()
                         if mp and mp.contract_type and mp.contract_type.labor_regime
@@ -567,32 +543,21 @@ class PayrollCalculatorService:
                             )
                             total_income += val
 
-                    # ── 9.10 IESS PERSONAL Y APORTE PATRONAL ────────────────
-                    #
-                    # NO se busca por código hardcodeado. Se usa directamente la
-                    # lista emp_deductions / emp_contributions que ya viene filtrada
-                    # por spending_context del empleado (5.1 / 7.1 / 6.1 / TODOS).
-                    # Así APORTE_PATRONAL (7.1), APORTE_PATRONAL_SEGURIDAD_SOCIAL (5.1)
-                    # y el de CT (6.1) se resuelven solos sin importar el código.
-                    #
-                    # La tasa se lee de PayrollConstant por el código del rubro encontrado,
-                    # con fallback a los valores legales estándar según régimen.
+                    # ── 9.10 IESS Y APORTE PATRONAL ─────────────────────────
+                    if regime_code == 'LOSEP':
+                        target_iess_code = 'IESS_PER_EMP'
+                        target_patronal_code = 'APORTE_PATRONAL_EMP'
+                    elif regime_code == 'CT':
+                        target_iess_code = 'IESS_PER_TRA'
+                        target_patronal_code = 'APORTE_PATRONAL_TRA'
+                    else:
+                        target_iess_code = 'IESS_PER'
+                        target_patronal_code = 'APORTE_PATRONAL'
 
-                    # Tasas de referencia por régimen (solo se usan si la constante no existe)
-                    default_iess_rate = '9.45'
-                    default_patronal_rate = '11.15' if regime_code != 'CT' else '12.15'
-
-                    # -- IESS Personal: primer descuento de la lista filtrada por contexto --
-                    iess_ded = next(
-                        (d for d in emp_deductions if 'IESS' in (d.code or '').upper()),
-                        emp_deductions[0] if emp_deductions else None
-                    )
+                    iess_ded = emp_ded_map.get(target_iess_code) or emp_ded_map.get('IESS_PER')
                     if iess_ded:
                         iess_rate = Decimal(str(
-                            self.config.get(
-                                (iess_ded.code or '').strip().upper(),
-                                default_iess_rate
-                            )
+                            self.config.get(target_iess_code, self.config.get('IESS_PER', '9.45'))
                         )) / Decimal('100.0')
                         val = taxable_base * iess_rate
                         if val > 0:
@@ -600,23 +565,11 @@ class PayrollCalculatorService:
                                 PayslipItem(payslip=slip, rubric=iess_ded, item_type='DEDUCTION', value=val)
                             )
                             total_deduction += val
-                    else:
-                        logger.warning(
-                            f'[PAYROLL][WARN] Emp {slip.employee_id}: sin rubro IESS '
-                            f'para contexto {emp_spending_type} / régimen {regime_code}'
-                        )
 
-                    # -- Aporte Patronal: primer CONTRIBUTION de la lista filtrada --
-                    contrib_ref = next(
-                        (c for c in emp_contributions if 'PATRONAL' in (c.code or '').upper()),
-                        emp_contributions[0] if emp_contributions else None
-                    )
+                    contrib_ref = emp_contrib_map.get(target_patronal_code) or emp_contrib_map.get('APORTE_PATRONAL')
                     if contrib_ref:
                         patronal_rate = Decimal(str(
-                            self.config.get(
-                                (contrib_ref.code or '').strip().upper(),
-                                default_patronal_rate
-                            )
+                            self.config.get(target_patronal_code, self.config.get('APORTE_PATRONAL', '11.15'))
                         )) / Decimal('100.0')
                         employer_val = taxable_base * patronal_rate
                         if employer_val > 0:
@@ -626,11 +579,6 @@ class PayrollCalculatorService:
                                     item_type='CONTRIBUTION', value=employer_val,
                                 )
                             )
-                    else:
-                        logger.warning(
-                            f'[PAYROLL][WARN] Emp {slip.employee_id}: sin rubro Aporte Patronal '
-                            f'para contexto {emp_spending_type} / régimen {regime_code}'
-                        )
 
                     # ── 9.11 NOVEDADES DE INGRESO (horas extras, etc.) ──────
                     for nov, nov_val in prepared_income_novelties:
@@ -859,148 +807,139 @@ class PayrollCalculatorService:
 
     def _generate_accounting_journal(self, created_payslips) -> list:
         """
-        Genera el asiento contable de la nómina aplicando la matriz de cuentas
-        por tipo de gasto y la lógica de cuenta puente.
+        Genera el asiento contable de la nómina.
 
-        Estructura del asiento:
-          INGRESOS     → Debe: cuenta_gasto(rubro)    / Haber: cuenta_puente(sueldo)
-          DESCUENTOS   → Debe: cuenta_puente(sueldo)  / Haber: cuenta_pasivo(rubro)
-          APORTES      → Debe: cuenta_gasto(rubro)    / Haber: cuenta_pasivo(rubro)
-          LIQUIDACIÓN  → Debe: cuenta_puente(sueldo)  / Haber: cuenta_bancos(income_account del sueldo)
+        Estructura:
+          INGRESOS   -> Debe: cta_gasto(rubro)   / Haber: cta_puente(sueldo)
+          DESCUENTOS -> Debe: cta_puente(sueldo) / Haber: cta_pasivo(rubro)
+          APORTES    -> Debe: cta_gasto(rubro)   / Haber: cta_pasivo(rubro)
+          BANCOS     -> Debe: cta_puente(sueldo) / Haber: income_account(sueldo)
 
-        La liquidación de bancos se procesa una sola vez POR ROL (no dentro del
-        bucle de ítems), eliminando la duplicación original.
+        Orden: respeta rubric.order; descuentos order+800, banco order 900.
+        FIX: eliminado el doble _add del paso 2 que usaba c_puente/sal_rubric
+        del scope del paso 1 (causaba banco duplicado con cuenta incorrecta).
         """
-        aggregation: dict[tuple, Decimal] = {}
+        # aggregation: {(acc_id, mov): [order_min, importe]}
+        aggregation: dict[tuple, list] = {}
         warnings: list[str] = []
 
-        # Rubros de sueldo: proveen cuenta puente y mapeo de banco
         salary_rubrics = list(PayrollRubric.objects.filter(is_salary=True, is_active=True))
         if not salary_rubrics:
             warnings.append(
-                "ERROR: No hay ningún rubro marcado como '¿Es Sueldo / Remuneración Base?'."
+                "ERROR: No hay ningun rubro marcado como 'Es Sueldo / Remuneracion Base'."
             )
-        items_qs = PayslipItem.objects.filter(payslip__in=created_payslips).select_related(
-            'rubric',
-            'budget_line__spending_type_item',
-            'budget_line__activity__project'  # IMPORTANTE: Para saber la cuenta de la obra
-        )
 
         def _find_salary_rubric(spending_type: str):
-            """Rubro de sueldo prioritario para el tipo de gasto dado."""
             return (
                     next((r for r in salary_rubrics if r.spending_context == spending_type), None)
                     or next((r for r in salary_rubrics if r.spending_context == 'TODOS'), None)
             )
 
-        def _add(acc_id, mov, amt):
-            if acc_id and amt > 0:
-                aggregation[(acc_id, mov)] = aggregation.get((acc_id, mov), Decimal('0')) + amt
+        def _add(acc_id, mov, amt, order=100):
+            """Acumula importe conservando el order minimo para ordenar el asiento."""
+            if not acc_id or amt <= 0:
+                return
+            key = (acc_id, mov)
+            if key in aggregation:
+                aggregation[key][0] = min(aggregation[key][0], order)
+                aggregation[key][1] += amt
+            else:
+                aggregation[key] = [order, amt]
 
-        # Cache de cuentas para evitar N+1 al crear JournalItems
         account_cache: dict[int, Account] = {}
 
-        def _get_account(acc_id) -> Account | None:
+        def _get_account(acc_id):
             if not acc_id:
                 return None
             if acc_id not in account_cache:
                 account_cache[acc_id] = Account.objects.filter(id=acc_id).first()
             return account_cache[acc_id]
 
-        # ── PASO 1: Ítems individuales (ingresos, descuentos, aportes) ────
+        # -- PASO 1: Items individuales (ingresos, descuentos, aportes) ------
         items_qs = (
             PayslipItem.objects
             .filter(payslip__in=created_payslips)
             .select_related('rubric', 'budget_line__spending_type_item')
+            .order_by('rubric__order')
         )
 
         for it in items_qs:
             rubric = it.rubric
+            if not rubric:
+                continue
             val = Decimal(str(it.value))
-            spending_type = it.budget_line.spending_type_item.code if it.budget_line and it.budget_line.spending_type_item else '5.1'
+            if val <= 0:
+                continue
+
+            spending_type = (
+                it.budget_line.spending_type_item.code
+                if it.budget_line and it.budget_line.spending_type_item
+                else '5.1'
+            )
+            rub_order = getattr(rubric, 'order', 100) or 100
 
             accounts = _resolve_accounts_for_rubric(rubric, spending_type)
-            sal_rubric = next((r for r in salary_rubrics if r.spending_context == spending_type),
-                              salary_rubrics[0] if salary_rubrics else None)
+            sal_rubric = _find_salary_rubric(spending_type)
             c_puente = _resolve_bridge_account_id(sal_rubric, spending_type) if sal_rubric else None
 
             if rubric.rubric_type == 'INCOME':
-                # 1. Devengado normal (Gasto contra Pasivo)
-                _add(accounts['debit'], 'debit', val)
-                _add(c_puente, 'credit', val)
-
-                # 2. LOGICA ESPECIAL INVERSION: Si es 7.1, registrar el Haber del rubro (repetición que ves en la imagen)
-                if spending_type.startswith('7'):
-                    _add(accounts['credit'], 'credit', val)  # Genera el Haber de la fila 1.52.11
-
-                    # 3. CAPITALIZACION: Sumar al costo de la obra (Fila 4 de tu imagen)
-                    # Aquí asumo que el modelo Project tiene un campo 'capitalization_account_id'
-                    cta_obra_id = getattr(it.budget_line.activity.project, 'capitalization_account_id', None)
-                    if cta_obra_id:
-                        _add(cta_obra_id, 'debit', val)
+                _add(accounts['debit'], 'debit', val, rub_order)
+                _add(c_puente, 'credit', val, rub_order)
 
             elif rubric.rubric_type == 'DEDUCTION':
-                _add(c_puente, 'debit', val)
-                _add(accounts['credit'], 'credit', val)
+                # Descuentos siempre despues de ingresos (order 800+)
+                _add(c_puente, 'debit', val, 800 + rub_order)
+                _add(accounts['credit'], 'credit', val, 800 + rub_order)
 
             elif rubric.rubric_type == 'CONTRIBUTION':
-                # Similar a los ingresos en Inversión
-                _add(accounts['debit'], 'debit', val)
-                _add(accounts['credit'], 'credit', val) if spending_type.startswith('7') else None
-                _add(c_puente, 'credit', val)
+                _add(accounts['debit'], 'debit', val, rub_order)
+                _add(accounts['credit'], 'credit', val, rub_order)
 
-                # Capitalización del aporte patronal en la obra
-                if spending_type.startswith('7'):
-                    cta_obra_id = getattr(it.budget_line.activity.project, 'capitalization_account_id', None)
-                    _add(cta_obra_id, 'debit', val)
-
-        # ── PASO 2: Liquidación de bancos (neto a pagar, POR ROL) ─────────
-        #
-        # FIX: En el código original este bloque estaba FUERA del bucle de
-        # ítems pero dentro de un loop separado por slip, lo cual es correcto.
-        # Lo que se corrige aquí es asegurar que se ejecuta una sola vez por
-        # rol (net_pay > 0) y que usa los mismos helpers de resolución de
-        # cuentas que el paso 1, eliminando la duplicación de lógica.
+        # -- PASO 2: Liquidacion de bancos (UNA vez por rol) -----------------
+        # FIX: usa variables locales propias, no reutiliza c_puente/sal_rubric
+        # del paso 1 (que eran del ultimo item procesado, no del empleado).
         for slip in created_payslips:
-            if slip.net_pay <= 0: continue
+            if slip.net_pay <= 0:
+                continue
 
-            _add(c_puente, 'debit', slip.net_pay)
-            _add(sal_rubric.income_account_id, 'credit', slip.net_pay)
-
-            # Obtener tipo de gasto del primer ítem del rol
             first_item = (
                 slip.items
                 .select_related('budget_line__spending_type_item')
                 .first()
             )
-            spending_type = (
+            spending_type_slip = (
                 first_item.budget_line.spending_type_item.code
                 if first_item and first_item.budget_line and first_item.budget_line.spending_type_item
                 else '5.1'
             )
 
-            salary_rubric = _find_salary_rubric(spending_type)
-            if not salary_rubric:
+            salary_rubric_slip = _find_salary_rubric(spending_type_slip)
+            if not salary_rubric_slip:
                 warnings.append(
-                    f"AVISO: Rol {slip.id} ({slip.employee}) sin rubro de sueldo para tipo {spending_type}."
+                    f"AVISO: Rol {slip.id} ({slip.employee}) sin rubro sueldo para tipo {spending_type_slip}."
                 )
                 continue
 
-            c_puente = _resolve_bridge_account_id(salary_rubric, spending_type)
-            c_banco = salary_rubric.income_account_id  # Cuenta de banco mapeada en el rubro sueldo
+            c_puente_banco = _resolve_bridge_account_id(salary_rubric_slip, spending_type_slip)
+            c_banco = salary_rubric_slip.income_account_id
 
-            # Cuenta puente → Debe / Banco → Haber
-            _add(c_puente, 'debit', slip.net_pay)
-            _add(c_banco, 'credit', slip.net_pay)
+            if not c_banco:
+                warnings.append(
+                    f"AVISO: Rubro sueldo '{salary_rubric_slip.name}' sin cuenta de banco (income_account)."
+                )
 
-        # ── PASO 3: Crear el asiento contable ─────────────────────────────
-        desc_asiento = f"Nómina {self.period.month} {self.period.year}"
+            # Banco siempre al final del asiento (order 900)
+            _add(c_puente_banco, 'debit', slip.net_pay, 900)
+            _add(c_banco, 'credit', slip.net_pay, 900)
+
+        # -- PASO 3: Persistir asiento ordenado por order_min ----------------
+        desc_asiento = f"Nomina {self.period.month} {self.period.year}"
         Journal.objects.filter(description=desc_asiento).delete()
         journal = Journal.objects.create(
             date=self.period.end_date, description=desc_asiento
         )
 
-        for (acc_id, mov_type), val in aggregation.items():
+        for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
             acc = _get_account(acc_id)
             if acc and val > 0:
                 JournalItem.objects.create(

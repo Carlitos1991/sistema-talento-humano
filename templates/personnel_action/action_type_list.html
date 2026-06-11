@@ -1,30 +1,26 @@
 {% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Tipos de Acción | SIGETH{% endblock %}
+{% load static %}\n\n{% block title %}Tipos de Acción | SIGETH{% endblock %}
 
 {% block content %}
     <div id="action-type-list-view">
 
-        <!-- 1. Header -->
         <div class="header-card">
             <div>
-                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>
-                <p>Catálogo de movimientos de personal.</p>
+                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>\n <p>Catálogo de movimientos de
+                personal.</p>
             </div>
-            <!-- Botón llama a una función Global definida en el JS -->
-            <button class="btn-create" onclick="openActionTypeModal()">
+            <button class="btn-create" onclick="window.openActionTypeModal()">
                 <i class="fas fa-plus"></i> NUEVO TIPO
             </button>
         </div>
-        <!-- 3. Tabla -->
+
         <div class="table-app">
             <div class="content-table">
                 <div class="table-controls">
                     <div class="search-box">
-                        <input type="text" id="searchInput" onkeyup="debouncedSearch()"
+                        <input type="text" id="searchInput" onkeyup=\"window.debouncedSearch()\"
                                class="input-field" placeholder="Buscar">
-                        <button type="submit" class="search-btn">
+                        <button type="button" class="search-btn">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
@@ -33,6 +29,7 @@
                 <div id="table-content-wrapper">
                     {% include 'personnel_action/partials/partial_action_type_list.html' %}
                 </div>
+
                 <div class="pagination-container" id="js-pagination">
                     <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
                     <ul class="pagination-list">
@@ -51,10 +48,9 @@
         </div>
 
     </div>
-{% endblock %}
 
-{% block modals %}
     {% include 'personnel_action/modals/modal_action_type_form.html' %}
+
 {% endblock %}
 
 {% block extra_js %}

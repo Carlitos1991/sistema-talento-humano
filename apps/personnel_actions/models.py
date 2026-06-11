@@ -13,6 +13,18 @@ class ActionType(models.Model):
     name = models.CharField(verbose_name='Nombre', max_length=100)
     code = models.CharField(verbose_name='Código', max_length=35, unique=True, help_text="Ej: ASC, NOM, REM")
     is_active = models.BooleanField(verbose_name='Activo', default=True)
+    default_authority_1 = models.ForeignKey(User, verbose_name='Autoridad 1 (Defecto)', on_delete=models.SET_NULL,
+                                            related_name='default_auth1_types', limit_choices_to={'is_active': True},
+                                            null=True, blank=True)
+    default_authority_2 = models.ForeignKey(User, verbose_name='Autoridad 2 (Defecto)', on_delete=models.SET_NULL,
+                                            related_name='default_auth2_types', limit_choices_to={'is_active': True},
+                                            null=True, blank=True)
+    default_reviewer = models.ForeignKey(User, verbose_name='Revisor (Defecto)', on_delete=models.SET_NULL,
+                                         related_name='default_reviewer_types', limit_choices_to={'is_active': True},
+                                         null=True, blank=True)
+    default_register = models.ForeignKey(User, verbose_name='Registrador (Defecto)', on_delete=models.SET_NULL,
+                                         related_name='default_register_types', limit_choices_to={'is_active': True},
+                                         null=True, blank=True)
 
     class Meta:
         ordering = ['name']
@@ -49,17 +61,18 @@ class PersonnelAction(models.Model):
     authority_1 = models.ForeignKey(User, verbose_name='Primera Autoridad', on_delete=models.PROTECT,
                                     related_name='actions_signed_auth1', limit_choices_to={'is_active': True})
     authority_2 = models.ForeignKey(User, verbose_name='Segunda Autoridad', on_delete=models.PROTECT,
-                                    related_name='actions_signed_auth2', limit_choices_to={'is_active': True}, null=True,
+                                    related_name='actions_signed_auth2', limit_choices_to={'is_active': True},
+                                    null=True,
                                     blank=True)
     reviewer = models.ForeignKey(User, verbose_name='Revisado por', on_delete=models.PROTECT,
                                  related_name='actions_reviewed', limit_choices_to={'is_active': True}, null=True,
                                  blank=True)
     elaboration = models.ForeignKey(User, verbose_name='Elaborado por', on_delete=models.PROTECT,
-                                 related_name='actions_elaboration', limit_choices_to={'is_active': True}, null=True,
-                                 blank=True)
-    register = models.ForeignKey(User, verbose_name='Registrado   por', on_delete=models.PROTECT,
-                                    related_name='actions_register', limit_choices_to={'is_active': True}, null=True,
+                                    related_name='actions_elaboration', limit_choices_to={'is_active': True}, null=True,
                                     blank=True)
+    register = models.ForeignKey(User, verbose_name='Registrado   por', on_delete=models.PROTECT,
+                                 related_name='actions_register', limit_choices_to={'is_active': True}, null=True,
+                                 blank=True)
 
     # Auditoría
     created_by = models.ForeignKey(User, verbose_name='Creado por', on_delete=models.PROTECT,
@@ -125,7 +138,8 @@ class ActionMovement(models.Model):
     personnel_action = models.ForeignKey(PersonnelAction, on_delete=models.CASCADE, related_name='movement')
 
     # --- SITUACIÓN ACTUAL (Snapshots o FKs) ---
-    previous_unit = models.CharField(verbose_name='Unidad Administrativa anterior', max_length=200, blank=True, null=True)
+    previous_unit = models.CharField(verbose_name='Unidad Administrativa anterior', max_length=200, blank=True,
+                                     null=True)
     previous_position = models.CharField(verbose_name='Puesto anterior', max_length=200, blank=True, null=True)
     previous_remuneration = models.DecimalField(verbose_name='RMU Anterior', max_digits=10, decimal_places=2, default=0)
     previous_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Anterior', on_delete=models.SET_NULL,
@@ -135,7 +149,8 @@ class ActionMovement(models.Model):
     new_unit = models.CharField(verbose_name='Unidad nueva', max_length=200, blank=True, null=True)
     new_position = models.CharField(verbose_name='Puesto nuevo', max_length=200, blank=True, null=True)
     new_remuneration = models.DecimalField(verbose_name='RMU Nuevo', max_digits=10, decimal_places=2, default=0)
-    new_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Presupuestaria Nueva', on_delete=models.SET_NULL,
+    new_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Presupuestaria Nueva',
+                                        on_delete=models.SET_NULL,
                                         related_name='movements_to_budget', null=True, blank=True)
 
     # Ubicación Física

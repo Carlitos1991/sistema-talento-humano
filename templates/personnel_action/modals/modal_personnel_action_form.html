@@ -1,9 +1,11 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
 
-<form method="post" action="{% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}" id="form-create-action" novalidate>
+<form method="post" action="
+        {% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}"
+      id="form-create-action" novalidate>
     {% csrf_token %}
-    
+
     <!-- HEADER -->
     <div class="modal-header-medium modal-header-gradient">
         <h3 class="modal-title text-white">
@@ -15,41 +17,41 @@
 
     <!-- BODY -->
     <div class="modal-body-custom" style="max-height: 65vh; overflow-y: auto;">
-        
+
         <!-- 1. INFORMACIÓN DEL EMPLEADO -->
         {% if employee_id %}
-        <div class="form-section-card">
-            <h5 class="section-title">
-                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
-            </h5>
-            <div class="alert-info">
-                {% if employee.person.photo %}
-                    <img src="{{ employee.person.photo.url }}"
-                         alt="{{ employee.person.full_name }}"
-                         style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
-                {% else %}
-                    <div style="width: 45px; height: 45px; border-radius: 50%; background: #4a90e2; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-user" style="color: white; font-size: 1.2rem;"></i>
+            <div class="form-section-card">
+                <h5 class="section-title">
+                    <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+                </h5>
+                <div class="alert-info">
+                    {% if employee.person.photo %}
+                        <img src="{{ employee.person.photo.url }}"
+                             alt="{{ employee.person.full_name }}"
+                             style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <div style="width: 45px; height: 45px; border-radius: 50%; background: #4a90e2; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-user" style="color: white; font-size: 1.2rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #1e293b;">{{ employee.person.full_name }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">CI: {{ employee.person.document_number }}</div>
                     </div>
-                {% endif %}
-                <div>
-                    <div style="font-weight: 600; font-size: 0.95rem; color: #1e293b;">{{ employee.person.full_name }}</div>
-                    <div style="font-size: 0.8rem; color: #64748b;">CI: {{ employee.person.document_number }}</div>
+                </div>
+                <input type="hidden" name="employee" value="{{ employee_id }}">
+            </div>
+        {% else %}
+            <div class="form-section-card">
+                <h5 class="section-title">
+                    <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+                </h5>
+                <div class="form-group">
+                    <label class="form-label">Empleado <span class="text-danger">*</span></label>
+                    {{ form.employee }}
+                    <div class="invalid-feedback"></div>
                 </div>
             </div>
-            <input type="hidden" name="employee" value="{{ employee_id }}">
-        </div>
-        {% else %}
-        <div class="form-section-card">
-            <h5 class="section-title">
-                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
-            </h5>
-            <div class="form-group">
-                <label class="form-label">Empleado <span class="text-danger">*</span></label>
-                {{ form.employee }}
-                <div class="invalid-feedback"></div>
-            </div>
-        </div>
         {% endif %}
 
         <!-- 2. DATOS DE LA ACCIÓN -->
@@ -57,7 +59,7 @@
             <h5 class="section-title">
                 <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
             </h5>
-            
+
             <div class="form-group">
                 <label class="form-label">Tipo de Acción <span class="text-danger">*</span></label>
                 {{ form.action_type }}
@@ -86,7 +88,7 @@
             <h5 class="section-title">
                 <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
             </h5>
-            
+
             <div class="form-group">
                 <label class="form-label">Motivación</label>
                 {{ form.motivation }}
@@ -107,7 +109,7 @@
             <h5 class="section-title">
                 <i class="fa-solid fa-arrows-alt"></i> OPCIONES DE MOVIMIENTO
             </h5>
-            
+
             <!-- ACORDEÓN REUBICAR -->
             <div class="accordion-item" data-accordion="reubicar">
                 <button type="button" class="accordion-header" onclick="toggleAccordion('reubicar', this)">
@@ -117,7 +119,8 @@
                 <div class="accordion-content">
                     <div id="reubicar-combos-wrapper">
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                            <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Seleccione la nueva unidad administrativa del empleado en cascada.
+                            <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Seleccione la nueva
+                            unidad administrativa del empleado en cascada.
                         </p>
                     </div>
                 </div>
@@ -131,11 +134,13 @@
                 </button>
                 <div class="accordion-content">
                     <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.25rem;">
-                        <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Busque y seleccione una partida presupuestaria disponible (estado LIBRE).
+                        <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Busque y seleccione una
+                        partida presupuestaria disponible (estado LIBRE).
                     </p>
                     <div class="form-group">
                         <label class="form-label">Partida Presupuestaria</label>
-                        <select id="id_new_budget_line" class="input-field form-control" style="width: 100%;">
+                        <select name="movement_new_budget_line" id="id_new_budget_line" class="input-field form-control"
+                                style="width: 100%;">
                             <option value="">-- Seleccione una partida --</option>
                         </select>
                         <div id="budget-info" class="budget-info-box">
@@ -154,7 +159,7 @@
             <h5 class="section-title">
                 <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
             </h5>
-            
+
             <div class="grid-2-cols">
                 <div class="form-group">
                     <label class="form-label">Autoridad nominadora</label>
@@ -172,7 +177,8 @@
                     <label class="form-label">Elaborado Por</label>
                     <input type="text"
                            class="input-field"
-                           value="{{ request.user.signature_name }}{% if request.user.signature_position %} - {{ request.user.signature_position }}{% endif %}"
+                           value="
+                                   {{ request.user.signature_name }}{% if request.user.signature_position %} - {{ request.user.signature_position }}{% endif %}"
                            readonly>
                     <p class="form-hint">Se registra automáticamente con el usuario que crea la acción.</p>
                 </div>

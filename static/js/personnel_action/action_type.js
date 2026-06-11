@@ -5,28 +5,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     // 1. LÓGICA DE TABLA (FILTROS Y PAGINACIÓN LOCAL)
     // =========================================================
-
-    // Estado de la tabla
     let tableState = {
-        status: '', // ''=All, 'true'=Active, 'false'=Inactive
+        status: '',
         q: '',
         page: 1,
         pageSize: 10
     };
 
-    let allRows = [];      // Todas las filas cargadas
-    let filteredRows = []; // Filas después de buscar
+    let allRows = [];
+    let filteredRows = [];
 
-    // Inicializar
     initTableLogic();
 
-    // Función principal para cargar/recargar datos
     async function loadTableData() {
         const params = new URLSearchParams();
         if (tableState.status) params.append('status', tableState.status);
         if (tableState.q) params.append('q', tableState.q);
-
-        // Llamada AJAX a la vista ListView
+        if (tableState.page) params.append('page', tableState.page);
         const url = `${window.location.pathname}?${params.toString()}`;
 
         try {
@@ -36,223 +31,197 @@ document.addEventListener('DOMContentLoaded', () => {
                 const wrapper = document.getElementById('table-content-wrapper');
                 if (wrapper) {
                     wrapper.innerHTML = html;
-                    // Una vez inyectado el HTML, reiniciamos la lógica de paginación local
-                    initTableLogic();
                 }
             }
-        } catch (e) {
-            console.error('Error cargando tabla:', e);
+        } catch (error) {
+            console.error("Error al cargar la tabla:", error);
         }
     }
 
-    // Inicializa la lógica sobre las filas existentes en el DOM
     function initTableLogic() {
-        // Seleccionamos las filas dentro del tbody
-        const tbody = document.querySelector('#table-content-wrapper table tbody');
-        if (!tbody) return;
-
-        allRows = Array.from(tbody.querySelectorAll('tr'));
-
-        // Si la tabla viene vacía o con mensaje "No hay registros"
-        if (allRows.length === 1 && allRows[0].innerText.includes('No hay registros')) {
-            allRows = [];
-        }
-
-        applyLocalFilters();
-    }
-
-    // Aplica búsqueda local (si ya cargaste datos) y resetea página
-    function applyLocalFilters() {
-        // En este caso, como el filtrado fuerte lo hace el servidor (active/inactive),
-        // aquí filtramos por texto lo que ya llegó, o simplemente pasamos todo.
-        // Si prefieres búsqueda 100% servidor, salta este paso y asigna filteredRows = allRows.
-
-        // Modo Híbrido: El servidor filtra Status, JS pagina.
-        filteredRows = allRows;
-
-        tableState.page = 1;
-        renderPagination();
-        updateStatsUI();
-    }
-
-    // Renderiza la página actual (Oculta/Muestra TRs)
-    function renderPagination() {
-        const totalRows = filteredRows.length;
-        const totalPages = Math.ceil(totalRows / tableState.pageSize) || 1;
-
-        // Ajustar página válida
-        if (tableState.page < 1) tableState.page = 1;
-        if (tableState.page > totalPages) tableState.page = totalPages;
-
-        const start = (tableState.page - 1) * tableState.pageSize;
-        const end = start + tableState.pageSize;
-
-        // 1. Ocultar todas
-        allRows.forEach(row => row.style.display = 'none');
-
-        // 2. Mostrar solo el slice actual
-        if (totalRows > 0) {
-            filteredRows.slice(start, end).forEach(row => row.style.display = '');
-        } else {
-            // Manejo visual de tabla vacía si se desea
-        }
-
-        // 3. Actualizar controles UI
-        const pageInfo = document.getElementById('page-info');
-        const btnPrev = document.getElementById('btn-prev');
-        const btnNext = document.getElementById('btn-next');
-        const pageDisplay = document.getElementById('current-page-display');
-
-        if (pageInfo) {
-            const startLabel = totalRows > 0 ? start + 1 : 0;
-            const endLabel = Math.min(end, totalRows);
-            pageInfo.textContent = `Mostrando ${startLabel}-${endLabel} de ${totalRows}`;
-        }
-        if (pageDisplay) pageDisplay.textContent = tableState.page;
-
-        if (btnPrev) {
-            btnPrev.disabled = (tableState.page === 1);
-            btnPrev.onclick = () => {
-                if (tableState.page > 1) {
-                    tableState.page--;
-                    renderPagination();
-                }
-            };
-        }
-        if (btnNext) {
-            btnNext.disabled = (tableState.page === totalPages);
-            btnNext.onclick = () => {
-                if (tableState.page < totalPages) {
-                    tableState.page++;
-                    renderPagination();
-                }
-            };
-        }
-    }
-
-    // Actualiza visualmente las tarjetas de estadísticas
-    function updateStatsUI() {
-        const cards = {
-            '': document.getElementById('card-filter-all'),
-            'true': document.getElementById('card-filter-true'),
-            'false': document.getElementById('card-filter-false')
-        };
-
-        Object.keys(cards).forEach(key => {
-            const card = cards[key];
-            if (card) {
-                if (String(tableState.status) === String(key)) {
-                    card.classList.remove('opacity-low');
-                    card.classList.add('active-card-shadow'); // Opcional para resaltar más
-                } else {
-                    card.classList.add('opacity-low');
-                    card.classList.remove('active-card-shadow');
-                }
+        window.debouncedSearch = () => {
+            const input = document.getElementById('searchInput');
+            if (input) {
+                tableState.q = input.value;
+                tableState.page = 1; // Al buscar texto, siempre volvemos a la página 1
+                loadTableData();
             }
-        });
+        };
+        window.changePage = (pageNumber) => {
+            tableState.page = pageNumber;
+            loadTableData();
+        };
     }
 
-    // Evento de búsqueda (Debounce)
-    const searchInput = document.getElementById('table-search');
-    let debounceTimer;
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                tableState.q = e.target.value;
-                loadTableData(); // Recargamos del server para buscar en toda la BD
-            }, 300);
-        });
-    }
-
-    // Exponer función de filtrado al window para los onclick del HTML
-    window.filterList = function (status) {
-        tableState.status = status;
-        loadTableData();
-    };
-
-
     // =========================================================
-    // 2. VUE INSTANCE (SOLO PARA MODALES)
+    // 2. LOGICA DEL MODAL (VUE.JS + SELECT2 AJAX)
     // =========================================================
+
+    // Variable global local al DOMContentLoaded para guardar la instancia montada de Vue
+    let modalInstance = null;
+
     const {createApp} = Vue;
 
-    const modalApp = createApp({
+    const actionTypeModalApp = createApp({
         delimiters: ['[[', ']]'],
         data() {
             return {
                 isVisible: false,
                 isEdit: false,
                 loading: false,
-                currentId: null,
-                formData: {name: '', code: '', is_active: true},
-                errors: {}
-            }
+                errors: {},
+                formData: {
+                    code: '',
+                    name: '',
+                    is_active: true,
+                    default_authority_1: null,
+                    default_authority_2: null,
+                    default_reviewer: null,
+                    default_register: null
+                }
+            };
         },
         methods: {
-            openForCreate() {
-                this.resetForm();
-                this.isEdit = false;
-                this.isVisible = true;
-            },
-            async openForEdit(id) {
-                this.resetForm();
-                this.isEdit = true;
-                this.currentId = id;
-                this.isVisible = true;
-                this.loading = true;
-                try {
-                    const response = await fetch(`/personnel_actions/types/api/detail/${id}/`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.formData = {name: data.name, code: data.code, is_active: data.is_active};
-                    }
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
             closeModal() {
                 this.isVisible = false;
-                this.resetForm();
             },
-            resetForm() {
-                this.formData = {name: '', code: '', is_active: true};
+
+            initSelect2AJAX() {
+                this.$nextTick(() => {
+                    const self = this;
+                    const $selects = $('.action-type-user-select');
+                    if ($selects.hasClass('select2-hidden-accessible')) {
+                        $selects.select2('destroy').off('change');
+                    }
+                    // Limpiar inicializaciones anteriores por seguridad
+                    $('.action-type-user-select').select2('destroy').off('change');
+
+                    // Configurar el Select2 con tu API de búsqueda existente
+                    $('.action-type-user-select').select2({
+                        width: '100%',
+                        dropdownParent: $('#action-type-modal-app'), // Clave para renderizar dentro de Vue
+                        placeholder: 'Empiece a escribir para buscar... (Mín. 3 letras)',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                            url: '/personnel_actions/api/users/search/', // Tu URL oficial configurada
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                return {q: params.term};
+                            },
+                            processResults: function (data) {
+                                // Mapea los resultados retornados por user_search_json
+                                return {results: data.results || data};
+                            }
+                        }
+                    }).on('change', function () {
+                        // Capturar el ID del elemento modificado por jQuery y enviarlo a Vue
+                        const elementId = $(this).attr('id');
+                        const modelKey = elementId.replace('id_', ''); // default_authority_1
+                        self.formData[modelKey] = $(this).val();
+                    });
+                });
+            },
+
+            setSelect2Value(elementId, id, text) {
+                let element = $('#' + elementId);
+                if (id && text) {
+                    if (element.find("option[value='" + id + "']").length === 0) {
+                        let newOption = new Option(text, id, true, true);
+                        element.append(newOption);
+                    }
+                    element.val(id).trigger('change.select2');
+                } else {
+                    element.val(null).trigger('change.select2');
+                }
+            },
+
+            openForCreate() {
+                this.isEdit = false;
                 this.errors = {};
-                this.currentId = null;
+                this.formData = {
+                    code: '', name: '', is_active: true,
+                    default_authority_1: null, default_authority_2: null,
+                    default_reviewer: null, default_register: null
+                };
+                this.isVisible = true;
+
+                // Inicializar controles vacíos
+                this.initSelect2AJAX();
+                this.setSelect2Value('id_default_authority_1', null, '');
+                this.setSelect2Value('id_default_authority_2', null, '');
+                this.setSelect2Value('id_default_reviewer', null, '');
+                this.setSelect2Value('id_default_register', null, '');
             },
+
+            async openForEdit(id) {
+                this.isEdit = true;
+                this.errors = {};
+                this.isVisible = true;
+
+                try {
+                    const response = await fetch(`/personnel_actions/types/api/detail/${id}/`);
+                    const data = await response.json();
+
+                    this.formData = {
+                        code: data.code,
+                        name: data.name,
+                        is_active: data.is_active,
+                        default_authority_1: data.auth1_id,
+                        default_authority_2: data.auth2_id,
+                        default_reviewer: data.reviewer_id,
+                        default_register: data.register_id
+                    };
+
+                    // Inicializar e inyectar valores guardados
+                    this.initSelect2AJAX();
+                    this.setSelect2Value('id_default_authority_1', data.auth1_id, data.auth1_text);
+                    this.setSelect2Value('id_default_authority_2', data.auth2_id, data.auth2_text);
+                    this.setSelect2Value('id_default_reviewer', data.reviewer_id, data.reviewer_text);
+                    this.setSelect2Value('id_default_register', data.register_id, data.register_text);
+
+                } catch (error) {
+                    console.error("Error al cargar detalles de tipo:", error);
+                    Swal.fire('Error', 'No se pudieron cargar los datos del registro', 'error');
+                }
+            },
+
             async saveData() {
                 this.loading = true;
                 this.errors = {};
-                let url = '/personnel_actions/types/api/save/';
-                if (this.isEdit) url += `${this.currentId}/`;
 
-                const data = new FormData();
-                data.append('name', this.formData.name);
-                data.append('code', this.formData.code);
-                data.append('is_active', this.formData.is_active ? 'on' : '');
-                data.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+                // Determinar si es alta o modificación
+                const url = this.isEdit
+                    ? `/personnel_actions/types/api/save/${this.formData.id}/`
+                    : '/personnel_actions/types/api/save/';
 
                 try {
                     const response = await fetch(url, {
-                        method: 'POST', body: data, headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(this.formData)
                     });
-                    const result = await response.json();
 
-                    if (result.success) {
-                        this.closeModal();
+                    const res = await response.json();
+                    if (res.success) {
                         Swal.fire({
-                            icon: 'success', title: 'Guardado', toast: true,
-                            position: 'top-end', showConfirmButton: false, timer: 1500
+                            icon: 'success',
+                            title: 'Guardado con éxito',
+                            timer: 1500,
+                            showConfirmButton: false
                         });
-                        // RECARGAR TABLA Y PAGINACIÓN
-                        loadTableData();
+                        this.closeModal();
+                        loadTableData(); // Recargar la lista visual
                     } else {
-                        this.errors = result.errors || {};
+                        this.errors = res.errors || {};
                     }
-                } catch (e) {
-                    Swal.fire('Error', 'Error de conexión', 'error');
+                } catch (error) {
+                    Swal.fire('Error', 'Sucedió un fallo inesperado al guardar', 'error');
                 } finally {
                     this.loading = false;
                 }
@@ -260,11 +229,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const modalInstance = modalApp.mount('#action-type-modal-app');
+    // Validar existencia del contenedor HTML para evitar fallos de Vue
+    const modalTarget = document.getElementById('action-type-modal-app');
+    if (modalTarget) {
+        // ASIGNACIÓN CRUCIAL: Aquí guardamos la instancia de la aplicación montada
+        modalInstance = actionTypeModalApp.mount('#action-type-modal-app');
+    } else {
+        console.error("No se encontró el contenedor id='action-type-modal-app' en el modal HTML.");
+    }
 
-    // Puentes Globales para Vue
-    window.openActionTypeModal = () => modalInstance.openForCreate();
-    window.editActionType = (id) => modalInstance.openForEdit(id);
+    // =========================================================
+    // 3. PUENTES GLOBALES PARA ONCLICK INLINE (HTML)
+    // =========================================================
+    window.openActionTypeModal = () => {
+        if (modalInstance) {
+            modalInstance.openForCreate();
+        } else {
+            console.error("Vue no se ha inicializado correctamente.");
+        }
+    };
+
+    window.editActionType = (id) => {
+        if (modalInstance) {
+            modalInstance.openForEdit(id);
+        }
+    };
 
     window.deleteActionType = async (id) => {
         Swal.fire({
@@ -278,14 +267,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await response.json();
                 if (res.success) {
                     Swal.fire('Eliminado', '', 'success');
-                    loadTableData(); // Recargar tabla
+                    loadTableData();
                 }
             }
         });
     };
 });
 
-// Helper CSRF
+// Helper CSRF Cookie
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

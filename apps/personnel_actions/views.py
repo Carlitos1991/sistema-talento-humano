@@ -395,14 +395,23 @@ class ActionTypeListView(LoginRequiredMixin, ListView):
 
 
 class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
-    """Maneja Crear (POST sin ID) y Actualizar (POST con ID)"""
+    """Maneja Crear (POST sin ID) y Actualizar (POST con ID) de Tipos de Acción"""
 
     def post(self, request, pk=None):
+        # DETECCIÓN DE JSON: Si Vue envía datos como JSON, los cargamos desde el cuerpo
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+        else:
+            data = request.POST
+
         if pk:
             instance = get_object_or_404(ActionType, pk=pk)
-            form = ActionTypeForm(request.POST, instance=instance)
+            form = ActionTypeForm(data, instance=instance)
         else:
-            form = ActionTypeForm(request.POST)
+            form = ActionTypeForm(data)
 
         if form.is_valid():
             form.save()
@@ -415,6 +424,7 @@ class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
             )
             return JsonResponse({'success': True, 'html': html_table})
         else:
+            # Si hay errores de validación, los devolvemos en formato JSON
             return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
@@ -427,7 +437,20 @@ class ActionTypeDetailJsonView(LoginRequiredMixin, View):
             'id': obj.pk,
             'name': obj.name,
             'code': obj.code,
-            'is_active': obj.is_active
+            'is_active': obj.is_active,
+
+            # Devolvemos ID y Texto (Nombre de firma) para inyectar en Select2
+            'auth1_id': obj.default_authority_1.id if obj.default_authority_1 else None,
+            'auth1_text': obj.default_authority_1.signature_name if obj.default_authority_1 else '',
+
+            'auth2_id': obj.default_authority_2.id if obj.default_authority_2 else None,
+            'auth2_text': obj.default_authority_2.signature_name if obj.default_authority_2 else '',
+
+            'reviewer_id': obj.default_reviewer.id if obj.default_reviewer else None,
+            'reviewer_text': obj.default_reviewer.signature_name if obj.default_reviewer else '',
+
+            'register_id': obj.default_register.id if obj.default_register else None,
+            'register_text': obj.default_register.signature_name if obj.default_register else '',
         }
         return JsonResponse(data)
 

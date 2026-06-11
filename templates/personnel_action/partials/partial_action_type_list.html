@@ -1,11 +1,15 @@
 <div class="table-container">
-    <table>
+    <table class="managed-table exportable-table"
+           data-title="Tipos de Acción"
+           data-filename="Reporte_tipos_accion"
+           data-external-pagination="true"
+           data-external-search="true">
         <thead>
         <tr>
             <th>Código</th>
             <th>Nombre de la Acción</th>
             <th>Estado</th>
-            <th class="actions">Acciones</th>
+            <th class="actions text-center">Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -18,14 +22,11 @@
                         {{ type.is_active|yesno:"Activo,Inactivo" }}
                     </span>
                 </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        <!-- Edición controlada por instancia Vue (ActionTypeInstance) -->
+                <td class="actions text-center">
+                    <div class="actions-wrapper justify-content-center">
                         <button class="btn-views-action" onclick="editActionType({{ type.pk }})">
                             <i class="fas fa-edit"></i>
                         </button>
-
-                        <!-- Toggle Estado -->
                         <button class="btn-delete-action text-danger" onclick="deleteActionType({{ type.pk }})">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -37,11 +38,52 @@
                 <td colspan="4">
                     <div class="no-results-content">
                         <i class="fas fa-file-circle-xmark no-results-icon"></i>
-                        <p class="no-results-text">No se encontraron tipos de acción registrados.</p>
+                        <p class="no-results-text">No se encontraron tipos de acción.</p>
                     </div>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+
+    {% if is_paginated %}
+        <div class="pagination-controls"
+             style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <span class="pagination-info" style="font-size: .875rem; color: #64748b;">
+            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ paginator.count }} registros
+        </span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="page-btn" title="Primera"
+                        {% if not page_obj.has_previous %}disabled{% endif %}
+                        onclick="changePage(1)">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button class="page-btn" title="Anterior"
+                        {% if not page_obj.has_previous %}disabled{% endif %}
+                        onclick="changePage(
+                                {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <div class="page-input-wrapper" style="display: flex; align-items: center; gap: 6px;">
+                    <input type="number" class="page-input"
+                           value="{{ page_obj.number }}"
+                           min="1" max="{{ paginator.num_pages }}"
+                           onchange="changePage(parseInt(this.value)||1)"
+                           onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
+                    <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+                </div>
+                <button class="page-btn" title="Siguiente"
+                        {% if not page_obj.has_next %}disabled{% endif %}
+                        onclick="changePage(
+                                {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button class="page-btn" title="Última"
+                        {% if not page_obj.has_next %}disabled{% endif %}
+                        onclick="changePage({{ paginator.num_pages }})">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+        </div>
+    {% endif %}
 </div>

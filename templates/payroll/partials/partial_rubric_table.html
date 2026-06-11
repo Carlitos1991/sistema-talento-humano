@@ -32,10 +32,12 @@
                         {# BLOQUE INVERSIÓN #}
                         {% if r.spending_context == '7.1' %}
                             {% if r.debit_account_inv %}
-                                <div class="text-success"><b>Inv Debe:</b> {{ r.debit_account_inv.code }}</div>
+                                <div class="text-success"><b>Inv
+                                    Debe:</b> {{ r.debit_account_inv.code }}- {{ r.debit_account_inv.name }}</div>
                             {% endif %}
                             {% if r.credit_account_inv %}
-                                <div class="text-danger"><b>Inv Haber:</b> {{ r.credit_account_inv.code }}</div>
+                                <div class="text-danger"><b>Inv
+                                    Haber:</b> {{ r.credit_account_inv.code }}-{{ r.credit_account_inv.name }}</div>
                             {% endif %}
 
                             {# BLOQUE PRODUCCIÓN #}
@@ -50,18 +52,22 @@
                             {# BLOQUE CORRIENTE O TODOS #}
                         {% else %}
                             {% if r.debit_account %}
-                                <div class="text-primary"><b>Debe:</b> {{ r.debit_account.code }}</div>{% endif %}
+                                <div class="text-primary"><b>Debe:</b> {{ r.debit_account.code }}
+                                    - {{ r.debit_account.name }}</div>{% endif %}
                             {% if r.credit_account %}
-                                <div class="text-danger"><b>Haber:</b> {{ r.credit_account.code }}</div>{% endif %}
+                                <div class="text-danger"><b>Haber:</b> {{ r.credit_account.code }}
+                                    - {{ r.credit_account.name }}</div>{% endif %}
                         {% endif %}
 
-                        {# BANCO (Devengado) #}
-                        {% if r.income_account %}
-                            <div style="color: #0891b2; font-weight: bold; border-top: 1px solid #e2e8f0; margin-top: 2px;">
-                                <i class="fa-solid fa-university"></i> Banco: {{ r.income_account.code }}
-                            </div>
-                        {% endif %}
                     </div>
+                    {# BANCO / DEVENGADO: siempre visible sin importar el contexto #}
+                    {% if r.income_account %}
+                        <div style="font-size: 0.8rem; color: #0891b2; font-weight: bold;
+                                    border-top: 1px solid #e2e8f0; margin-top: 3px; padding-top: 3px;">
+                            <i class="fa-solid fa-university"></i>
+                            Devengado / Banco: {{ r.income_account.code }} - {{ r.income_account.name }}
+                        </div>
+                    {% endif %}
                 </td>
                 <td class="text-center fw-bold text-secondary">
                     {% if r.has_mapping %}{{ r.dynamic_suffix }}{% else %}-{% endif %}

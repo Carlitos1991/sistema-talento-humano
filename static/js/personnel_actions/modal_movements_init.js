@@ -13,7 +13,7 @@
     window.toggleAccordion = function (accordionId, buttonElement) {
         const accordionItem = buttonElement.closest('.accordion-item');
         const content = accordionItem.querySelector('.accordion-content');
-        
+
         // Toggle clases
         buttonElement.classList.toggle('active');
         content.classList.toggle('show');
@@ -22,11 +22,11 @@
     // ==========================================
     // OBJETO PERSONALACTL IONMODAL
     // ==========================================
-    
+
     window.PersonnelActionModal = {
         selectedUnitId: null,
         selectedBudgetLineId: null,
-        
+
         init: function () {
             this.initReubicarCascade();
             this.initBudgetLineSearch();
@@ -36,7 +36,7 @@
         // ==========================================
         // CASCADA DE UNIDADES ADMINISTRATIVAS
         // ==========================================
-        
+
         initReubicarCascade: function () {
             const wrapper = document.getElementById('reubicar-combos-wrapper');
             if (!wrapper) return;
@@ -63,85 +63,85 @@
         loadUnitLevel: function (parentId, wrapper, insertAfterGroup = null) {
             const self = this;
             const url = '/personnel_actions/api/unit-children/' + (parentId ? '?parent_id=' + parentId : '');
-            
+
             fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
             })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success || !data.units || data.units.length === 0) {
-                    console.warn('No units found for parent:', parentId);
-                    return;
-                }
-
-                // Crear wrapper del select
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
-
-                const label = document.createElement('label');
-                label.className = 'form-label';
-                label.textContent = 'Seleccione Unidad:';
-
-                const select = document.createElement('select');
-                select.className = 'input-field form-control';
-                select.style.width = '100%';
-                
-                // Opción por defecto
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = '-- Seleccione --';
-                select.appendChild(defaultOption);
-
-                // Agregar opciones de unidades
-                data.units.forEach(unit => {
-                    const option = document.createElement('option');
-                    option.value = unit.id;
-                    option.textContent = unit.name;
-                    option.setAttribute('data-has-children', unit.has_children);
-                    select.appendChild(option);
-                });
-
-                formGroup.appendChild(label);
-                formGroup.appendChild(select);
-
-                if (insertAfterGroup) {
-                    insertAfterGroup.insertAdjacentElement('afterend', formGroup);
-                } else {
-                    wrapper.appendChild(formGroup);
-                }
-
-                const focusAndRevealSelect = function () {
-                    select.focus({ preventScroll: true });
-                    formGroup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                };
-
-                window.setTimeout(focusAndRevealSelect, 0);
-
-                // Event listener para cambio de selección
-                select.addEventListener('change', (e) => {
-                    const val = e.target.value;
-                    const hasChildren = e.target.selectedOptions[0]?.getAttribute('data-has-children') === 'true';
-
-                    self.selectedUnitId = val || null;
-
-                    // Siempre borrar los niveles dependientes del combo actual
-                    self.clearDescendantGroups(formGroup);
-
-                    // Si tiene hijos, cargar el siguiente nivel justo debajo del actual
-                    if (val && hasChildren) {
-                        self.loadUnitLevel(val, wrapper, formGroup);
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success || !data.units || data.units.length === 0) {
+                        console.warn('No units found for parent:', parentId);
+                        return;
                     }
+
+                    // Crear wrapper del select
+                    const formGroup = document.createElement('div');
+                    formGroup.className = 'form-group';
+
+                    const label = document.createElement('label');
+                    label.className = 'form-label';
+                    label.textContent = 'Seleccione Unidad:';
+
+                    const select = document.createElement('select');
+                    select.className = 'input-field form-control';
+                    select.style.width = '100%';
+
+                    // Opción por defecto
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '-- Seleccione --';
+                    select.appendChild(defaultOption);
+
+                    // Agregar opciones de unidades
+                    data.units.forEach(unit => {
+                        const option = document.createElement('option');
+                        option.value = unit.id;
+                        option.textContent = unit.name;
+                        option.setAttribute('data-has-children', unit.has_children);
+                        select.appendChild(option);
+                    });
+
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(select);
+
+                    if (insertAfterGroup) {
+                        insertAfterGroup.insertAdjacentElement('afterend', formGroup);
+                    } else {
+                        wrapper.appendChild(formGroup);
+                    }
+
+                    const focusAndRevealSelect = function () {
+                        select.focus({preventScroll: true});
+                        formGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                    };
+
+                    window.setTimeout(focusAndRevealSelect, 0);
+
+                    // Event listener para cambio de selección
+                    select.addEventListener('change', (e) => {
+                        const val = e.target.value;
+                        const hasChildren = e.target.selectedOptions[0]?.getAttribute('data-has-children') === 'true';
+
+                        self.selectedUnitId = val || null;
+
+                        // Siempre borrar los niveles dependientes del combo actual
+                        self.clearDescendantGroups(formGroup);
+
+                        // Si tiene hijos, cargar el siguiente nivel justo debajo del actual
+                        if (val && hasChildren) {
+                            self.loadUnitLevel(val, wrapper, formGroup);
+                        }
+                    });
+                })
+                .catch(err => {
+                    console.error('Error loading units:', err);
                 });
-            })
-            .catch(err => {
-                console.error('Error loading units:', err);
-            });
         },
 
         // ==========================================
         // BÚSQUEDA DE PARTIDAS PRESUPUESTARIAS
         // ==========================================
-        
+
         initBudgetLineSearch: function () {
             const select = document.getElementById('id_new_budget_line');
             if (!select) return;
@@ -205,23 +205,23 @@
 
                 searchTimeout = setTimeout(() => {
                     fetch('/personnel_actions/api/search-budget-lines/?term=' + encodeURIComponent(term), {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
                     })
-                    .then(res => res.json())
-                    .then(data => {
-                        select.innerHTML = '<option value="">-- Resultados --</option>';
-                        (data.results || []).forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item.id;
-                            option.textContent = item.text;
-                            option.setAttribute('data-code', item.code);
-                            option.setAttribute('data-position', item.position);
-                            option.setAttribute('data-remuneration', item.remuneration);
-                            option.setAttribute('data-program', item.program);
-                            select.appendChild(option);
+                        .then(res => res.json())
+                        .then(data => {
+                            select.innerHTML = '<option value="">-- Resultados --</option>';
+                            (data.results || []).forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.id;
+                                option.textContent = item.text;
+                                option.setAttribute('data-code', item.code);
+                                option.setAttribute('data-position', item.position);
+                                option.setAttribute('data-remuneration', item.remuneration);
+                                option.setAttribute('data-program', item.program);
+                                select.appendChild(option);
+                            });
+                            select.style.display = 'block';
                         });
-                        select.style.display = 'block';
-                    });
                 }, 300);
             });
 
@@ -259,7 +259,7 @@
         // ==========================================
         // CONFIGURACIÓN DEL FORMULARIO
         // ==========================================
-        
+
         setupFormSubmit: function () {
             const form = document.getElementById('form-create-action');
             if (!form) return;
@@ -296,11 +296,42 @@
             }
         }
     };
+    $(document).ready(function () {
+        // Escuchar el cambio en el Tipo de Acción
+        $('#id_action_type').on('change', function () {
+            let typeId = $(this).val();
+
+            if (typeId) {
+                // Llamar a tu API (Asegúrate de que la URL coincida con tu urls.py)
+                $.get('/ruta-a-tu-api/action-types/' + typeId + '/', function (data) {
+
+                    // Función auxiliar para auto-seleccionar en Select2
+                    function setSelect2Value(elementId, id, text) {
+                        let element = $('#' + elementId);
+                        if (id && text) {
+                            // Crear la opción y seleccionarla
+                            let newOption = new Option(text, id, true, true);
+                            element.append(newOption).trigger('change');
+                        } else {
+                            // Limpiar si no hay firma por defecto
+                            element.val(null).trigger('change');
+                        }
+                    }
+
+                    // Inyectar las firmas obtenidas
+                    setSelect2Value('id_authority_1', data.auth1_id, data.auth1_text);
+                    setSelect2Value('id_authority_2', data.auth2_id, data.auth2_text);
+                    setSelect2Value('id_reviewer', data.reviewer_id, data.reviewer_text);
+                    setSelect2Value('id_register', data.register_id, data.register_text);
+                });
+            }
+        });
+    });
 
     // ==========================================
     // INICIALIZACIÓN AL CARGAR EL DOM
     // ==========================================
-    
+
     document.addEventListener('DOMContentLoaded', () => {
         // Inicializar cuando el modal esté visible
         const modal = document.getElementById('form-create-action');

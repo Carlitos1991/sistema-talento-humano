@@ -106,7 +106,7 @@ class ActionMovementForm(forms.ModelForm):
 class ActionTypeForm(forms.ModelForm):
     class Meta:
         model = ActionType
-        fields = ['name', 'code', 'is_active']
+        fields = ['name', 'code', 'is_active', 'default_authority_1', 'default_authority_2', 'default_reviewer', 'default_register']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'}),
             'code': forms.TextInput(attrs={
