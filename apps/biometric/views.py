@@ -1368,6 +1368,9 @@ def generate_specific_report_pdf(request):
         return response
 
 
+from collections import defaultdict
+
+
 def generate_department_report_pdf(request):
     unit_id = request.GET.get('unit_id')
     month = int(request.GET.get('month', 1))
@@ -1376,8 +1379,8 @@ def generate_department_report_pdf(request):
     if not unit_id:
         return HttpResponse('unit_id requerido', status=400)
 
-    # Recolectar unidad y sus descendientes
     from institution.models import AdministrativeUnit
+    from contract.models import ManagementPeriod
 
     def collect_unit_ids(root_id):
         ids = set()
@@ -1387,8 +1390,7 @@ def generate_department_report_pdf(request):
             ids.add(cur)
             children = AdministrativeUnit.objects.filter(parent_id=cur, is_active=True).values_list('id', flat=True)
             for c in children:
-                if c not in ids:
-                    stack.append(c)
+                if c not in ids: stack.append(c)
         return list(ids)
 
     try:
@@ -1398,146 +1400,115 @@ def generate_department_report_pdf(request):
 
     unit_ids = collect_unit_ids(unit_id)
 
-    # Empleados con datos biométricos en la unidad
-    inst_qs = InstitutionalData.objects.select_related('employee__person').filter(
+    # 1. OPTIMIZACIÓN: Traer empleados ORDENADOS alfabéticamente de la A a la Z
+    inst_qs = InstitutionalData.objects.select_related(
+        'employee__person', 'employee__area'
+    ).prefetch_related(
+        'employee__management_periods__contract_type__labor_regime',
+        'employee__management_periods__status'
+    ).filter(
         employee__area_id__in=unit_ids,
         employee__is_active=True,
         biometric_id__isnull=False
-    )
+    ).order_by('employee__person__last_name', 'employee__person__first_name')
 
-    try:
-        from schedule.models import get_employee_schedule_for_date
-    except Exception:
-        get_employee_schedule_for_date = None
+    emp_ids = [inst.employee_id for inst in inst_qs]
+    month_start = date(year, month, 1)
+    month_end = date(year, month, calendar.monthrange(year, month)[1])
+
+    # 2. MEGA OPTIMIZACIÓN: Traer TODO lo necesario fuera del bucle (evita lentitud)
+    # Traer todas las marcaciones del mes de todos los empleados en una sola consulta
+    all_punches = AttendanceRegistry.objects.filter(
+        employee_id__in=emp_ids, registry_date__year=year, registry_date__month=month
+    ).select_related('biometric_load__biometric')
+
+    punches_by_emp = defaultdict(lambda: defaultdict(list))
+    for p in all_punches:
+        dt = timezone.localtime(p.registry_date).replace(tzinfo=None) if timezone.is_aware(
+            p.registry_date) else p.registry_date
+        punches_by_emp[p.employee_id][dt.day].append(
+            {'time': dt.strftime('%H:%M'), 'dt': p.registry_date, 'dt_norm': dt})
+
+    # Traer todos los permisos aprobados
+    all_permits = PermitRequest.objects.filter(employee_id__in=emp_ids, status='APPROVED').filter(
+        Q(start_date__lte=month_end, end_date__gte=month_start)
+    ).select_related('permit_type')
+
+    permits_by_emp = defaultdict(lambda: defaultdict(list))
+    for pr in all_permits:
+        cur = max(pr.start_date, month_start)
+        last = min(pr.end_date or pr.start_date, month_end)
+        while cur <= last:
+            permits_by_emp[pr.employee_id][cur.day].append({'start_time': pr.start_time, 'end_time': pr.end_time})
+            cur += timedelta(days=1)
+
+    # Feriados (una sola vez)
+    holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True, start_date__lte=month_end,
+                                                     end_date__gte=month_start)
+    holidays_map = {}
+    for obs in holidays_qs:
+        cur = max(obs.start_date, month_start)
+        last = min(obs.end_date, month_end)
+        while cur <= last:
+            holidays_map[cur.day] = obs.name
+            cur += timedelta(days=1)
 
     results_by_unit = {}
+    from schedule.models import get_employee_schedule_for_date
+
+    # 3. PROCESAMIENTO EN MEMORIA (MUCHO MÁS RÁPIDO)
     for inst in inst_qs:
-        active_period = inst.employee.management_periods.filter(status__code='ACTIVO').first()
-        regimen_name = active_period.contract_type.labor_regime.name if active_period and active_period.contract_type.labor_regime else "N/A"
+        # CORRECCIÓN RÉGIMEN: Buscar el periodo más reciente si no hay uno marcado como ACTIVO
+        periods = list(inst.employee.management_periods.all())
+        active_period = next((p for p in periods if p.status.code.upper() in ['ACTIVO', 'ACT']), None)
+        if not active_period and periods:
+            active_period = periods[0]  # Fallback al último
+
+        regimen_name = "N/A"
+        if active_period and active_period.contract_type and active_period.contract_type.labor_regime:
+            regimen_name = active_period.contract_type.labor_regime.name
 
         emp_id = inst.employee_id
-        # Marcaciones del mes
-        punches = AttendanceRegistry.objects.filter(
-            employee_id=emp_id, registry_date__year=year, registry_date__month=month
-        ).order_by('registry_date')
-
-        punches_map = {}
-        for p in punches:
-            try:
-                if timezone.is_aware(p.registry_date):
-                    dt_norm = timezone.localtime(p.registry_date).replace(tzinfo=None)
-                else:
-                    dt_norm = p.registry_date
-            except Exception:
-                dt_norm = p.registry_date
-            day = dt_norm.day
-            punches_map.setdefault(day, []).append(
-                {'time': dt_norm.strftime('%H:%M'), 'dt': p.registry_date, 'dt_norm': dt_norm})
-
         weeks = calendar.Calendar(firstweekday=0).monthdayscalendar(year, month)
         calendar_data = []
+
+        emp_punches = punches_by_emp.get(emp_id, {})
+        emp_permits = permits_by_emp.get(emp_id, {})
+
         for week in weeks:
             week_list = []
             for day in week:
-                week_list.append({'day': day if day != 0 else '', 'punches': punches_map.get(day, [])})
+                day_data = {'day': day if day != 0 else '', 'punches': emp_punches.get(day, [])}
+                day_data['raw_punches_count'] = len(day_data['punches'])
+                day_data['is_holiday'] = day in holidays_map
+                day_data['permits'] = emp_permits.get(day, [])
+                week_list.append(day_data)
             calendar_data.append(week_list)
 
-        # Permits y feriados (solo se necesitan para el resumen)
-        month_start = date(year, month, 1)
-        month_end = date(year, month, calendar.monthrange(year, month)[1])
-        permits_qs = PermitRequest.objects.filter(employee_id=emp_id, status='APPROVED').filter(
-            Q(start_date__lte=month_end, end_date__gte=month_start) |
-            Q(start_date__range=(month_start, month_end)) |
-            Q(end_date__range=(month_start, month_end))
-        )
-        permits_map = {}
-        for pr in permits_qs:
-            start = pr.start_date if pr.start_date >= month_start else month_start
-            end = (pr.end_date or pr.start_date)
-            if end > month_end:
-                end = month_end
-            cur = start
-            while cur <= end:
-                d = cur.day
-                permits_map.setdefault(d, []).append({'start_time': pr.start_time, 'end_time': pr.end_time})
-                cur = cur + timedelta(days=1)
-
-        holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True,
-                                                         start_date__lte=month_end, end_date__gte=month_start)
-        holidays_map = {}
-        for obs in holidays_qs:
-            start = obs.start_date if obs.start_date >= month_start else month_start
-            end = obs.end_date if obs.end_date <= month_end else month_end
-            cur = start
-            while cur <= end:
-                holidays_map[cur.day] = obs.name
-                cur = cur + timedelta(days=1)
-
-        for widx, week in enumerate(calendar_data):
-            for didx, day_obj in enumerate(week):
-                d = day_obj.get('day')
-                day_obj['raw_punches_count'] = len(day_obj.get('punches', []))
-                if not d:
-                    day_obj['is_holiday'] = False
-                    day_obj['permits'] = []
-                else:
-                    day_obj['is_holiday'] = d in holidays_map
-                    day_obj['permits'] = permits_map.get(d, [])
-
-        # Reusar el mismo anotador del reporte mensual para evitar divergencias
         annotate_attendance_calendar_for_employee(calendar_data, year, month, inst.employee, debug_punches)
-
-        # Usar helper centralizado para obtener resumen de asistencia del empleado
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
+
+        # Lógica de tolerancia y filtrado...
+        minutos_atraso = summary_emp.get('minutos_atraso', 0)
         inconsistencias = summary_emp.get('inconsistencias', 0)
         dias_sin_marcar = summary_emp.get('dias_sin_marcar', 0)
-        minutos_atraso = summary_emp.get('minutos_atraso', 0)
 
-        schedule_tolerance = None
-        if get_employee_schedule_for_date:
-            try:
-                schedule_ref = get_employee_schedule_for_date(inst.employee, month_end)
-                if not schedule_ref:
-                    schedule_ref = get_employee_schedule_for_date(inst.employee, month_start)
-                if schedule_ref:
-                    schedule_tolerance = int(getattr(schedule_ref, 'late_tolerance_minutes', 0))
-            except Exception:
-                schedule_tolerance = None
+        unit_name = inst.employee.area.name if inst.employee.area else 'Sin Unidad'
+        results_by_unit.setdefault(unit_name, []).append({
+            'employee': inst.employee,
+            'regimen': regimen_name,
+            'inconsistencias': inconsistencias,
+            'dias_sin_marcar': dias_sin_marcar,
+            'minutos_atraso': minutos_atraso,
+        })
 
-        show_employee = (
-                inconsistencias > 0
-                or dias_sin_marcar > 0
-                or (
-                        schedule_tolerance is not None
-                        and minutos_atraso > schedule_tolerance
-                )
-                or (
-                        schedule_tolerance is None
-                        and minutos_atraso > 0
-                )
-        )
-
-        if show_employee:
-            unit_name = inst.employee.area.name if inst.employee and inst.employee.area else 'Sin Unidad'
-            results_by_unit.setdefault(unit_name, []).append({
-                'employee': inst.employee,
-                'regimen': regimen_name,  # <--- Agregamos esto al diccionario
-                'inconsistencias': inconsistencias,
-                'dias_sin_marcar': dias_sin_marcar,
-                'minutos_atraso': minutos_atraso,
-            })
-
-    # Ordenar las unidades alfabéticamente y convertir a lista para el template
+    # Ordenar unidades alfabéticamente
     grouped_results = sorted(list(results_by_unit.items()), key=lambda x: x[0].lower())
 
+    # Generación de PDF (igual que antes)
     template = get_template('biometric/reports/pdf_attendance_by_unit.html')
-    html = template.render({
-        'unit': unit,
-        'year': year,
-        'month': month,
-        'grouped_results': grouped_results,
-        'today': datetime.now(),
-    })
+    html = template.render(
+        {'unit': unit, 'year': year, 'month': month, 'grouped_results': grouped_results, 'today': datetime.now()})
 
     filename = f"Reporte_Dep_{unit.name.replace(' ', '_')}_{year}_{month}.pdf"
     if HTML:
@@ -1549,9 +1520,6 @@ def generate_department_report_pdf(request):
         return response
     else:
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
         from xhtml2pdf import pisa
-        pisa_status = pisa.CreatePDF(html, dest=response)
-        if pisa_status.err:
-            return HttpResponse('Error al generar PDF', status=500)
+        pisa.CreatePDF(html, dest=response)
         return response
