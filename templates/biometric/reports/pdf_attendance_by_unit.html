@@ -3,13 +3,42 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; }
-        .header { display: flex; justify-content: space-between; align-items: center; }
-        .title { font-size: 16px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #444; padding: 6px; text-align: left; }
-        th { background: #eee; }
-        .muted { color: #666; font-size: 11px; }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #444;
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #eee;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -26,6 +55,7 @@
     <table>
         <thead>
         <tr>
+            <th>Nro.</th>
             <th>Empleado</th>
             <th>CÉDULA</th>
             <th>Inconsistencias</th>
@@ -36,7 +66,8 @@
         <tbody>
         {% for r in emps %}
             <tr>
-                <td>{{ r.employee.person.full_name }}</td>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ r.employee.person.name_and_last_name }}</td>
                 <td>{{ r.employee.person.document_number }}</td>
                 <td>{{ r.inconsistencias }}</td>
                 <td>{{ r.dias_sin_marcar }}</td>
