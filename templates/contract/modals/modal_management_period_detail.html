@@ -23,7 +23,7 @@
         </div>
 
         <div class="modal-body-scrolled">
-                <!-- Banner Superior: Dinámico y Limpio -->
+            <!-- Banner Superior: Dinámico y Limpio -->
             <div class="inherited-info-card mb-4" :class="{'bg-manual': !selectedPeriod.has_budget_line}">
                 <div class="d-flex align-items-center w-100">
                     <img :src="selectedPeriod.employee_photo || '{% static 'img/avatar-placeholder.png' %}'"
@@ -72,7 +72,6 @@
                     <div class="audit-data-row"><span>Tipo Contrato:</span> <strong>[[ selectedPeriod.contract_type_name
                         ]]</strong></div>
 
-                    <!-- Aquí la remuneración se muestra sin importar el origen -->
                     <div class="audit-data-row">
                         <span>Remuneración:</span>
                         <strong class="text-success">[[ selectedPeriod.remuneration ]]</strong>
@@ -86,25 +85,9 @@
                         ]]</strong></div>
                 </div>
             </div>
-
-            <div class="section-card-standard mt-3">
-                <h6 class="section-title"><i class="fas fa-print text-primary"></i> Documento para Impresión</h6>
-                <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded">
-                    <div class="small text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        El documento legalizado se gestiona en Archivo Digital.
-                    </div>
-                    <button class="btn-save"
-                            @click="printPeriodDocument(selectedPeriod.id)"
-                            :title="selectedPeriod.contract_type_category === 'CONTRATO' ? 'Imprimir Contrato' : 'Imprimir Acción de Personal'">
-                        <i class="fas fa-print"></i>
-                        [[ selectedPeriod.contract_type_category === 'CONTRATO' ? 'Imprimir Contrato' : 'Imprimir Acción' ]]
-                    </button>
-                </div>
-            </div>
-
             <div class="modal-footer-fixed">
                 <button type="button" @click="closeDetailModal" class="btn-cancel">CERRAR EXPEDIENTE</button>
             </div>
         </div>
     </div>
+</div>

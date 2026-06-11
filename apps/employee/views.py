@@ -301,10 +301,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     context['current_contract'] = {
                         'id': current_contract.id,
                         'document_number': current_contract.document_number,
-                        'position_name': current_contract.budget_line.position_item.name if getattr(current_contract,
-                                                                                                    'budget_line',
-                                                                                                    None) and getattr(
-                            current_contract.budget_line, 'position_item', None) else '',
+                        'position_name': current_contract.get_dynamic_position,
                         'contract_type_name': str(
                             current_contract.contract_type) if current_contract.contract_type else '',
                         'start_date': current_contract.start_date.strftime(
@@ -327,9 +324,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     ch.append({
                         'id': per.id,
                         'document_number': per.document_number,
-                        'position_name': per.budget_line.position_item.name if getattr(per, 'budget_line',
-                                                                                       None) and getattr(
-                            per.budget_line, 'position_item', None) else '',
+                        'position_name': per.get_dynamic_position,
                         'contract_type_name': str(per.contract_type) if per.contract_type else '',
                         'start_date': per.start_date.strftime('%d/%m/%Y') if per.start_date else '',
                         'end_date': per.end_date.strftime('%d/%m/%Y') if per.end_date else '',

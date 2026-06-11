@@ -289,6 +289,20 @@ class ManagementPeriod(BaseModel):
         return self.manual_position or 'SIN CARGO'
 
     @property
+    def get_dynamic_position(self):
+        # 1. Intentar por Partida
+        if self.budget_line and self.budget_line.position_item:
+            return self.budget_line.position_item.name
+
+        # 2. Intentar por Historial (Tabla contract_history)
+        hist = self.history_set.first()
+        if hist and hist.historical_position:
+            return hist.historical_position
+
+        # 3. Fallback: Manual o Número de documento
+        return self.manual_position or self.document_number
+
+    @property
     def display_remuneration(self):
         if self.budget_line and self.budget_line.remuneration is not None:
             return self.budget_line.remuneration
