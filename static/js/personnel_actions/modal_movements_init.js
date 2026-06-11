@@ -111,11 +111,15 @@
                     }
 
                     const focusAndRevealSelect = function () {
-                        select.focus({preventScroll: true});
-                        formGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                        if (!parentId) {
+                            select.focus({preventScroll: true});
+                        } else {
+                            select.focus({preventScroll: true});
+                            formGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                        }
                     };
 
-                    window.setTimeout(focusAndRevealSelect, 0);
+                    window.setTimeout(focusAndRevealSelect, 100);
 
                     // Event listener para cambio de selección
                     select.addEventListener('change', (e) => {

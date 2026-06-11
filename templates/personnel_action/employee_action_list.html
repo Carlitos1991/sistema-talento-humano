@@ -11,15 +11,6 @@
             max-height: 95vh;
             padding: 0;
         }
-
-        #modal-create-action .modal-container-medium {
-            overflow: hidden;
-        }
-
-        #modal-create-action.modal-overlay {
-            align-items: flex-start !important;
-            padding-top: 6vh !important;
-        }
     </style>
 {% endblock %}
 
@@ -101,10 +92,13 @@
     </div>
 
     <!-- Modal de Creación de Acción -->
-    <div id="modal-create-action" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;"
+    <div id="modal-create-action" class="modal-overlay hidden"
+         style="align-items: flex-start !important; padding-top: 6vh !important; overflow-y: auto !important;">
+
+        <div class="modal-container-medium animate-scale-in"
+             style="max-width: 750px; margin-top: 0 !important; margin-bottom: 6vh !important;"
              id="modal-body-content">
-            <!-- Contenido dinámico del formulario -->
+
         </div>
     </div>
 {% endblock %}

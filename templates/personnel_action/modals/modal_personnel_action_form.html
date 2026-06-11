@@ -1,23 +1,7 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
-<style>
-    /* 💡 SOLUCIÓN MAESTRA: Forzar al overlay contenedor a alinearse arriba */
-    .modal-overlay,
-    #modal-create-action.modal-overlay {
-        display: flex !important;
-        align-items: flex-start !important; /* Quita el centrado vertical */
-        justify-content: center !important;
-        padding-top: 4vh !important;       /* Le da una separación fija del techo */
-        overflow-y: auto !important;       /* Permite scroll si la pantalla es pequeña */
-    }
-
-    /* Evitar márgenes internos que empujen el diseño */
-    .modal-container-medium {
-        margin-top: 0 !important;
-        margin-bottom: 4vh !important;
-    }
-</style>
 <form method="post" action="
+        
         {% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}"
       id="form-create-action" novalidate>
     {% csrf_token %}

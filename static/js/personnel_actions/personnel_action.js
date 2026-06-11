@@ -65,7 +65,6 @@ createApp({
             this.modalTitle = 'Nueva Acción de Personal';
             this.modalHtml = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
             this.isModalOpen = true;
-            // ... resto del fetch ...
             try {
                 const response = await fetch('/personnel_actions/create/', {
                     headers: {'X-Requested-With': 'XMLHttpRequest'}

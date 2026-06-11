@@ -37,12 +37,9 @@
     <div class="form-section-card mt-3">
         <h5 class="section-title">
             <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN : <b>{{ action.number }}</b>
+            - {{ action.action_type.name }}
         </h5>
         <div class="grid-2-cols">
-            <div class="form-group">
-                <label class="form-label">Tipo de Acción</label>
-                <p class="form-control-static">{{ action.action_type.name }}</p>
-            </div>
             <div class="form-group">
                 <label class="form-label">Fecha de Emisión</label>
                 <p class="form-control-static">{{ action.date_issue|date:"d/m/Y" }}</p>
@@ -50,16 +47,6 @@
             <div class="form-group">
                 <label class="form-label">Fecha de Vigencia</label>
                 <p class="form-control-static">{{ action.date_effective|date:"d/m/Y" }}</p>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Estado</label>
-                <p class="form-control-static">
-                    {% if action.is_registered %}
-                        <span class="status-badge active">Registrada</span>
-                    {% else %}
-                        <span class="status-badge neutral">Sin registrar</span>
-                    {% endif %}
-                </p>
             </div>
         </div>
     </div>
@@ -87,24 +74,33 @@
         <h5 class="section-title">
             <div class="grid-2-cols">
                 <div class="form-group">
-                    <label class="form-label">Unidad Actual</label>
-                    <p class="form-control-static">
-                        {{ history_action.previous_unit }}</p>
-                    <label class="form-label">Unidad Propuesta</label>
-                    <p class="form-control-static">
-                        {{ history_action.new_unit }}</p>
+                    {% if  history_action.previous_unit %}
+                        <label class="form-label">Unidad Actual</label>
+                        <p class="form-control-static">
+                            {{ history_action.previous_unit }}</p>
+                    {% endif %}
+                    {% if  history_action.new_unit %}
+                        <label class="form-label">Unidad Propuesta</label>
+                        <p class="form-control-static">
+                            {{ history_action.new_unit }}</p>
+                    {% endif %}
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Cargo Actual</label>
-                    <p class="form-control-static">
-                        {{ history_action.previous_position }}</p>
-                    <h5>{{ history_action.previous_remuneration }}</h5>
+                    {% if history_action.previous_position %}
+                        <label class="form-label">Cargo Actual</label>
+                        <p class="form-control-static">
+                            {{ history_action.previous_position }}</p>
+                        <h5>{{ history_action.previous_remuneration }}</h5>
+                    {% endif %}
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Cargo Propuesto</label>
-                    <p class="form-control-static">
-                        {{ history_action.new_position }}</p>
-                    <h5>{{ history_action.new_remuneration }}</h5>
+                    {% if history_action.new_position %}
+                        <label class="form-label">Cargo Propuesto</label>
+                        <p class="form-control-static">
+                            {{ history_action.new_position }}</p>
+                        <h5>{{ history_action.new_remuneration }}</h5>
+                    {% endif %}
+
                 </div>
             </div>
     </div>
