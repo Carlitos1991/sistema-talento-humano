@@ -36,13 +36,9 @@
     <!-- 2. DATOS DE LA ACCIÓN -->
     <div class="form-section-card mt-3">
         <h5 class="section-title">
-            <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
+            <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN : <b>{{ action.number }}</b>
         </h5>
         <div class="grid-2-cols">
-            <div class="form-group">
-                <label class="form-label">Número</label>
-                <p class="form-control-static">{{ action.number }}</p>
-            </div>
             <div class="form-group">
                 <label class="form-label">Tipo de Acción</label>
                 <p class="form-control-static">{{ action.action_type.name }}</p>
@@ -71,52 +67,46 @@
     <!-- 3. MOTIVACIÓN Y EXPLICACIÓN -->
     {% if action.motivation or action.explanation %}
         <div class="form-section-card mt-3">
-            <h5 class="section-title">
-                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
-            </h5>
-            {% if action.motivation %}
-                <div class="form-group">
-                    <label class="form-label">Motivación</label>
-                    <p class="form-control-static">{{ action.motivation }}</p>
-                        {{ action.reviewer.signature_position }}{% endif %}</p>
-            {% endif %}
-            {% if action.explanation %}
-                <div class="form-group">
-                    <label class="form-label">Explicación</label>
-                    <p class="form-control-static" style="white-space: pre-wrap;">{{ action.explanation }}</p>
-                    <p class="form-control-static">{{ action.authority_1.signature_name }}{% if action.authority_1.signature_position %} -
-                        {{ action.authority_1.signature_position }}{% endif %}</p>
+        <h5 class="section-title">
+            <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+        </h5>
+        {% if action.motivation %}
+            <div class="form-group">
+            <label class="form-label">Motivación</label>
+            <p class="form-control-static">{{ action.motivation }}</p>
+        {% endif %}
+    {% endif %}
+    {% if action.explanation %}
+        <div class="form-group">
+            <label class="form-label">Explicación</label>
+            <p class="form-control-static" style="white-space: pre-wrap;">{{ action.explanation }}</p>
         </div>
     {% endif %}
     <!-- 4. movimientos -->
     <div class="form-section-card mt-3">
         <h5 class="section-title">
-                    <p class="form-control-static">{{ action.authority_2.signature_name }}{% if action.authority_2.signature_position %} -
-                        {{ action.authority_2.signature_position }}{% endif %}</p>
-        <div class="grid-2-cols">
-            <div class="form-group">
-                <label class="form-label">Unidad Actual</label>
-                <p class="form-control-static">
-                    {{ history_action.previous_unit }}</p>
-                    <p class="form-control-static">{{ action.register.signature_name }}{% if action.register.signature_position %} -
-                        {{ action.register.signature_position }}{% endif %}</p>
-                <label class="form-label">Unidad Propuesta</label>
-                <p class="form-control-static">
-                    {{ history_action.new_unit }}</p>
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label class="form-label">Unidad Actual</label>
+                    <p class="form-control-static">
+                        {{ history_action.previous_unit }}</p>
+                    <label class="form-label">Unidad Propuesta</label>
+                    <p class="form-control-static">
+                        {{ history_action.new_unit }}</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cargo Actual</label>
+                    <p class="form-control-static">
+                        {{ history_action.previous_position }}</p>
+                    <h5>{{ history_action.previous_remuneration }}</h5>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cargo Propuesto</label>
+                    <p class="form-control-static">
+                        {{ history_action.new_position }}</p>
+                    <h5>{{ history_action.new_remuneration }}</h5>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Cargo Actual</label>
-                <p class="form-control-static">
-                    {{ history_action.previous_position }}</p>
-                <h5>{{ history_action.previous_remuneration }}</h5>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Cargo Propuesto</label>
-                <p class="form-control-static">
-                    {{ history_action.new_position }}</p>
-                <h5>{{ history_action.new_remuneration }}</h5>
-            </div>
-        </div>
     </div>
 
     <!-- 5. FIRMAS AUTORIZADAS -->
@@ -136,38 +126,42 @@
             {% if action.reviewer %}
                 <div class="form-group">
                     <label class="form-label">Revisado Por</label>
-                    <p class="form-control-static">{{ action.reviewer.signature_name }}{% if action.reviewer.signature_position %} -
-                        {{ action.reviewer.signature_position }}{% endif %}</p>
+                    <p class="form-control-static">
+                        {{ action.reviewer.signature_name }}{% if action.reviewer.signature_position %} -
+                            {{ action.reviewer.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.authority_1 %}
                 <div class="form-group">
                     <label class="form-label">Aprobado Por</label>
-                    <p class="form-control-static">{{ action.authority_1.signature_name }}{% if action.authority_1.signature_position %} -
-                        {{ action.authority_1.signature_position }}{% endif %}</p>
+                    <p class="form-control-static">
+                        {{ action.authority_1.signature_name }}{% if action.authority_1.signature_position %} -
+                            {{ action.authority_1.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.authority_2 %}
                 <div class="form-group">
                     <label class="form-label">Autorizado Por</label>
-                    <p class="form-control-static">{{ action.authority_2.signature_name }}{% if action.authority_2.signature_position %} -
-                        {{ action.authority_2.signature_position }}{% endif %}</p>
+                    <p class="form-control-static">
+                        {{ action.authority_2.signature_name }}{% if action.authority_2.signature_position %} -
+                            {{ action.authority_2.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
             {% if action.register %}
                 <div class="form-group">
                     <label class="form-label">Registrado Por</label>
-                    <p class="form-control-static">{{ action.register.signature_name }}{% if action.register.signature_position %} -
-                        {{ action.register.signature_position }}{% endif %}</p>
+                    <p class="form-control-static">
+                        {{ action.register.signature_name }}{% if action.register.signature_position %} -
+                            {{ action.register.signature_position }}{% endif %}</p>
                 </div>
             {% endif %}
         </div>
     </div>
-</div>
+    </div>
 
-<!-- FOOTER -->
-<div class="modal-footer-medium modal-footer-spaced">
-    <button type="button" class="btn-cancel js-close-detail-modal">
-        <i class="fas fa-times-circle"></i> Cerrar
-    </button>
-</div>
+    <!-- FOOTER -->
+    <div class="modal-footer-medium modal-footer-spaced">
+        <button type="button" class="btn-cancel js-close-detail-modal">
+            <i class="fas fa-times-circle"></i> Cerrar
+        </button>
+    </div>

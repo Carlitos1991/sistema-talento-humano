@@ -1,6 +1,22 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+<style>
+    /* 💡 SOLUCIÓN MAESTRA: Forzar al overlay contenedor a alinearse arriba */
+    .modal-overlay,
+    #modal-create-action.modal-overlay {
+        display: flex !important;
+        align-items: flex-start !important; /* Quita el centrado vertical */
+        justify-content: center !important;
+        padding-top: 4vh !important;       /* Le da una separación fija del techo */
+        overflow-y: auto !important;       /* Permite scroll si la pantalla es pequeña */
+    }
 
+    /* Evitar márgenes internos que empujen el diseño */
+    .modal-container-medium {
+        margin-top: 0 !important;
+        margin-bottom: 4vh !important;
+    }
+</style>
 <form method="post" action="
         {% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}"
       id="form-create-action" novalidate>
@@ -150,49 +166,6 @@
                             <div><strong>Programa:</strong> <span id="budget-program">-</span></div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. FIRMAS AUTORIZADAS -->
-        <div class="form-section-card mt-3">
-            <h5 class="section-title">
-                <i class="fa-solid fa-pen-nib"></i> FIRMAS AUTORIZADAS
-            </h5>
-
-            <div class="grid-2-cols">
-                <div class="form-group">
-                    <label class="form-label">Autoridad nominadora</label>
-                    {{ form.authority_1 }}
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Director de Talento Humano</label>
-                    {{ form.authority_2 }}
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Elaborado Por</label>
-                    <input type="text"
-                           class="input-field"
-                           value="
-                                   {{ request.user.signature_name }}{% if request.user.signature_position %} - {{ request.user.signature_position }}{% endif %}"
-                           readonly>
-                    <p class="form-hint">Se registra automáticamente con el usuario que crea la acción.</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Revisado Por</label>
-                    {{ form.reviewer }}
-                    <div class="invalid-feedback"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Registrado Por</label>
-                    {{ form.register }}
-                    <div class="invalid-feedback"></div>
                 </div>
             </div>
         </div>

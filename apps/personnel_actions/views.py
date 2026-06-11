@@ -183,7 +183,7 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                 pass
 
         # Orden por defecto y limitar a últimos 3000 registros
-        ordered = qs.order_by('-date_issue', '-number')
+        ordered = qs.order_by('-pk')
         return ordered[:3000]
 
     def get_context_data(self, **kwargs):
@@ -215,122 +215,144 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
 
 
 class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
+    permission_required = 'personnel_actions.add_personnelaction'
     model = PersonnelAction
     form_class = PersonnelActionForm
     template_name = 'personnel_action/modals/modal_personnel_action_form.html'
 
     def get(self, request, *args, **kwargs):
-        """Devolver el formulario vacío o con empleado preseleccionado"""
-        from employee.models import Employee
+        """Devolver el formulario vacío o con empleado preseleccionado (Blindado)"""
+        try:
+            from employee.models import Employee
 
-        employee_id = request.GET.get('employee_id')
-        employee = None
+            employee_id = request.GET.get('employee_id')
+            employee = None
 
-        if employee_id:
-            employee = get_object_or_404(Employee, pk=employee_id)
+            if employee_id and str(employee_id).strip() not in ['undefined', 'null', '']:
+                employee = get_object_or_404(Employee, pk=employee_id)
+
             form = self.form_class()
-        else:
-            form = self.form_class()
 
-        # Si es AJAX, devolver solo el HTML del formulario
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return render(request, self.template_name, {
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return render(request, self.template_name, {
+                    'form': form,
+                    'employee': employee,
+                    'employee_id': employee_id
+                })
+
+            return render(request, 'personnel_action/action_form_page.html', {
                 'form': form,
                 'employee': employee,
-                'employee_id': employee_id
+                'employee_id': employee_id,
+                'is_edit': False
             })
 
-        # Si no es AJAX, renderizar dentro de una página completa que cargue estilos y scripts
-        return render(request, 'personnel_action/action_form_page.html', {
-            'form': form,
-            'employee': employee,
-            'employee_id': employee_id,
-            'is_edit': False
-        })
+        except Exception as e:
+            import traceback
+            print("🔥 ERROR CRÍTICO AL ABRIR EL MODAL DE ACCIÓN DE PERSONAL:")
+            traceback.print_exc()
+            return HttpResponse(f"Error interno del servidor: {str(e)}", status=500)
 
     def form_valid(self, form):
-        with transaction.atomic():
-            self.object = form.save(commit=False)
-            self.object.created_by = self.request.user
-            self.object.elaboration = self.request.user
+        try:
+            with transaction.atomic():
+                # 1. Preparamos el objeto sin guardarlo todavía
+                self.object = form.save(commit=False)
+                self.object.created_by = self.request.user
+                self.object.elaboration = self.request.user
 
-            # Generar número automáticamente si está vacío
-            if not self.object.number or self.object.number.strip() == '':
-                from datetime import datetime
-                year = datetime.now().year
+                # =========================================================
+                # 2. ASIGNACIÓN AUTOMÁTICA DE FIRMAS
+                # =========================================================
+                if self.object.action_type:
+                    self.object.authority_1 = self.object.action_type.default_authority_1
+                    self.object.authority_2 = self.object.action_type.default_authority_2
+                    self.object.reviewer = self.object.action_type.default_reviewer
+                    self.object.register = self.object.action_type.default_register
+                # =========================================================
 
-                # Buscamos la última acción creada en el año, sea activa o no
-                last_action = PersonnelAction.objects.filter(
-                    number__endswith=f'-{year}'
-                ).order_by('-created_at').first()
+                # 3. Generar número automáticamente si está vacío
+                if not self.object.number or self.object.number.strip() == '':
+                    from datetime import datetime
+                    year = datetime.now().year
 
-                if last_action:
-                    try:
-                        last_num_int = int(last_action.number.split('-')[0])
+                    last_action = PersonnelAction.objects.filter(
+                        number__endswith=f'-{year}'
+                    ).order_by('-created_at').first()
 
-                        if not last_action.is_active:
-                            new_num = last_num_int
-                        else:
+                    if last_action:
+                        try:
+                            last_num_int = int(last_action.number.split('-')[0])
+                            # ¡LA SOLUCIÓN! Siempre sumamos 1 al último número generado
                             new_num = last_num_int + 1
-                    except (ValueError, IndexError):
+                        except (ValueError, IndexError):
+                            new_num = 1
+                    else:
                         new_num = 1
-                else:
-                    new_num = 1
 
-                self.object.number = f'{new_num:04d}-{year}'
-                # ----------------------------------
+                    self.object.number = f'{new_num:04d}-{year}'
 
-            self.object.save()
+                # 4. Guardar la Acción de Personal en la base de datos
+                self.object.save()
 
-            current_budget = self.object.employee.current_budget_line.first()
-            current_unit = self.object.employee.area
+                # 5. Procesar los Movimientos de la Acción
+                current_budget = self.object.employee.current_budget_line.first()
+                current_unit = self.object.employee.area
 
-            # Crear detalle con datos del modal si están disponibles
-            movement_data = {
-                'personnel_action': self.object,
-                'previous_unit': current_unit.name if current_unit else '',
-                'previous_budget_line': current_budget,
-                'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget,
-                                                                                                     'position_item',
-                                                                                                     None) else '',
-                'previous_remuneration': current_budget.remuneration if current_budget else 0,
-            }
+                movement_data = {
+                    'personnel_action': self.object,
+                    'previous_unit': current_unit.name if current_unit else '',
+                    'previous_budget_line': current_budget,
+                    'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget,
+                                                                                                         'position_item',
+                                                                                                         None) else '',
+                    'previous_remuneration': current_budget.remuneration if current_budget else 0,
+                }
 
-            # Procesar datos del modal (Reubicar y Cambiar Partida)
-            new_unit_id = self.request.POST.get('movement_new_unit')
-            new_budget_line_id = self.request.POST.get('movement_new_budget_line')
+                new_unit_id = self.request.POST.get('movement_new_unit')
+                new_budget_line_id = self.request.POST.get('movement_new_budget_line')
 
-            if new_unit_id:
-                from institution.models import AdministrativeUnit
-                try:
-                    movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id).name
-                except AdministrativeUnit.DoesNotExist:
-                    movement_data['new_unit'] = ''
+                if new_unit_id:
+                    from institution.models import AdministrativeUnit
+                    try:
+                        movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id).name
+                    except AdministrativeUnit.DoesNotExist:
+                        movement_data['new_unit'] = ''
 
-            if new_budget_line_id:
-                try:
-                    new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
-                    movement_data['new_budget_line'] = new_budget_line
-                    movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line,
-                                                                                                  'position_item',
-                                                                                                  None) else ''
-                    movement_data['new_remuneration'] = new_budget_line.remuneration
-                except BudgetLine.DoesNotExist:
-                    pass
+                if new_budget_line_id:
+                    try:
+                        from budget.models import BudgetLine
+                        new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
+                        movement_data['new_budget_line'] = new_budget_line
+                        movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line,
+                                                                                                      'position_item',
+                                                                                                      None) else ''
+                        movement_data['new_remuneration'] = new_budget_line.remuneration
+                    except BudgetLine.DoesNotExist:
+                        pass
 
-            ActionMovement.objects.create(**movement_data)
+                ActionMovement.objects.create(**movement_data)
 
-        # Responder con JSON si es AJAX
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': 'Acción de personal creada correctamente'
+            # Si todo salió bien, respondemos con JSON validado
+            if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Acción de personal creada correctamente'
+                })
+
+            return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
+                'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by(
+                    '-date_issue')[:3000]
             })
 
-        return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
-            'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by('-date_issue')[
-                       :3000]
-        })
+        except Exception as e:
+            import traceback
+            print("🔥 ERROR CRÍTICO AL GUARDAR LA ACCIÓN DE PERSONAL:")
+            traceback.print_exc()
+
+            if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Fallo interno: {str(e)}'}, status=500)
+            raise e
 
     def form_invalid(self, form):
         # Si es AJAX, devolver errores en JSON
