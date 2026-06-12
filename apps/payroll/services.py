@@ -816,8 +816,6 @@ class PayrollCalculatorService:
           BANCOS     -> Debe: cta_puente(sueldo) / Haber: income_account(sueldo)
 
         Orden: respeta rubric.order; descuentos order+800, banco order 900.
-        FIX: eliminado el doble _add del paso 2 que usaba c_puente/sal_rubric
-        del scope del paso 1 (causaba banco duplicado con cuenta incorrecta).
         """
         # aggregation: {(acc_id, mov): [order_min, importe]}
         aggregation: dict[tuple, list] = {}
@@ -895,9 +893,7 @@ class PayrollCalculatorService:
                 _add(accounts['debit'], 'debit', val, rub_order)
                 _add(accounts['credit'], 'credit', val, rub_order)
 
-        # -- PASO 2: Liquidacion de bancos (UNA vez por rol) -----------------
-        # FIX: usa variables locales propias, no reutiliza c_puente/sal_rubric
-        # del paso 1 (que eran del ultimo item procesado, no del empleado).
+        # -- PASO 2: Liquidacion de bancos -----------------
         for slip in created_payslips:
             if slip.net_pay <= 0:
                 continue
@@ -932,25 +928,57 @@ class PayrollCalculatorService:
             _add(c_puente_banco, 'debit', slip.net_pay, 900)
             _add(c_banco, 'credit', slip.net_pay, 900)
 
-        # -- PASO 3: Persistir asiento ordenado por order_min ----------------
-        desc_asiento = f"Nomina {self.period.month} {self.period.year}"
-        Journal.objects.filter(description=desc_asiento).delete()
-        journal = Journal.objects.create(
-            date=self.period.end_date, description=desc_asiento
-        )
+            # -- PASO 3: Persistir asiento ordenado por order_min ----------------
+            desc_asiento = f"Nomina {self.period.month} {self.period.year}"
+            Journal.objects.filter(description=desc_asiento).delete()
+            journal = Journal.objects.create(
+                date=self.period.end_date, description=desc_asiento
+            )
 
-        for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
-            acc = _get_account(acc_id)
-            if acc and val > 0:
-                JournalItem.objects.create(
-                    journal=journal,
-                    account=acc,
-                    debit=val if mov_type == 'debit' else Decimal('0'),
-                    credit=val if mov_type == 'credit' else Decimal('0'),
-                    reference=str(self.period),
-                )
+            total_debits = Decimal('0.0')
+            total_credits = Decimal('0.0')
 
-        return warnings
+            # Al ordenar por x[1][0], el asiento se guarda con una estética impecable:
+            for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
+                acc = _get_account(acc_id)
+                if acc and val > 0:
+                    # Blindaje: Forzamos redondeo a dos decimales por registro
+                    val_rounded = val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+                    is_debit = (mov_type == 'debit')
+                    debit_amt = val_rounded if is_debit else Decimal('0.0')
+                    credit_amt = Decimal('0.0') if is_debit else val_rounded
+
+                    JournalItem.objects.create(
+                        journal=journal,
+                        account=acc,
+                        debit=debit_amt,
+                        credit=credit_amt,
+                        reference=str(self.period),
+                    )
+
+                    total_debits += debit_amt
+                    total_credits += credit_amt
+
+            # --- SALVACAÍDAS DE CUADRE (Por diferencias infinitesimales de redondeo) ---
+            if total_debits != total_credits:
+                diff = total_debits - total_credits
+                balancing_account = Account.objects.filter(
+                    Q(code__icontains='PAYROLL') | Q(name__icontains='DIFERENCIAS')
+                ).first()
+
+                if balancing_account:
+                    if diff > 0:
+                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=Decimal('0.0'),
+                                                   credit=diff, reference=str(self.period))
+                    else:
+                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=abs(diff),
+                                                   credit=Decimal('0.0'), reference=str(self.period))
+                else:
+                    warnings.append(
+                        f"AVISO: El asiento tuvo un descuadre por redondeo de ${abs(diff)}. Configure una cuenta de ajuste.")
+
+            return warnings
 
 
 # ---------------------------------------------------------------------------

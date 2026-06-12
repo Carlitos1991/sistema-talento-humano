@@ -1,5 +1,6 @@
 from django import forms
 
+from accounting.models import Account
 from .models import PayrollPeriod, PayrollConstant, PayrollRubric
 
 
@@ -78,12 +79,17 @@ class PayrollRubricForm(forms.ModelForm):
             'placeholder': 'Se autogenera...'
         })
     )
+    income_account = forms.ModelChoiceField(queryset=Account.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     class Meta:
         model = PayrollRubric
         fields = '__all__'
         widgets = {
             'rubric_type': forms.Select(attrs={'class': 'form-select'}),
+            'spending_context': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Sueldo Básico'}),
             'description': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del rubro (Opcional)'}),

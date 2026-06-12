@@ -28,44 +28,31 @@
                     {% if r.abbreviation %}<br><small style="color: #64748b;">({{ r.abbreviation }})</small>{% endif %}
                 </td>
                 <td>
-                    <div style="font-size: 0.8rem; line-height: 1.4;">
-                        {# BLOQUE INVERSIÓN #}
-                        {% if r.spending_context == '7.1' %}
-                            {% if r.debit_account_inv %}
-                                <div class="text-success"><b>Inv
-                                    Debe:</b> {{ r.debit_account_inv.code }}- {{ r.debit_account_inv.name }}</div>
-                            {% endif %}
-                            {% if r.credit_account_inv %}
-                                <div class="text-danger"><b>Inv
-                                    Haber:</b> {{ r.credit_account_inv.code }}-{{ r.credit_account_inv.name }}</div>
-                            {% endif %}
-
-                            {# BLOQUE PRODUCCIÓN #}
-                        {% elif r.spending_context == '6.1' %}
-                            {% if r.debit_account_prod %}
-                                <div class="text-warning"><b>Prod Debe:</b> {{ r.debit_account_prod.code }}</div>
-                            {% endif %}
-                            {% if r.credit_account_prod %}
-                                <div class="text-danger"><b>Prod Haber:</b> {{ r.credit_account_prod.code }}</div>
-                            {% endif %}
-
-                            {# BLOQUE CORRIENTE O TODOS #}
-                        {% else %}
-                            {% if r.debit_account %}
-                                <div class="text-primary"><b>Debe:</b> {{ r.debit_account.code }}
-                                    - {{ r.debit_account.name }}</div>{% endif %}
-                            {% if r.credit_account %}
-                                <div class="text-danger"><b>Haber:</b> {{ r.credit_account.code }}
-                                    - {{ r.credit_account.name }}</div>{% endif %}
+                    <div style="font-size: 0.85rem; line-height: 1.4;">
+                        {% if r.debit_account %}
+                            <div><span style="color: #16a34a; font-weight: bold;">Debe:</span> {{ r.debit_account.code }}
+                                - {{ r.debit_account.name }}</div>
                         {% endif %}
-
+                        {% if r.credit_account %}
+                            <div><span style="color: #dc2626; font-weight: bold;">Haber:</span> {{ r.credit_account.code }}
+                                - {{ r.credit_account.name }}</div>
+                        {% endif %}
                     </div>
+
                     {% if r.income_account %}
-                        <div style="font-size:0.8rem; color:#0891b2; font-weight:bold;
-                                    border-top:1px solid #e2e8f0; margin-top:3px; padding-top:3px;">
-                            <i class="fa-solid fa-university"></i>
-                            Devengado: {{ r.income_account.code }} - {{ r.income_account.name }}
+                        <div style="font-size: 0.8rem; color: #0891b2; font-weight: bold; border-top: 1px solid #e2e8f0; margin-top: 5px; padding-top: 5px;">
+                            {% if r.rubric_type == 'INCOME' %}
+                                <i class="fa-solid fa-university"></i> Banco: {{ r.income_account.code }} -
+                                {{ r.income_account.name }}
+                            {% else %}
+                                <i class="fa-solid fa-exchange-alt"></i> Devengado: {{ r.income_account.code }} -
+                                {{ r.income_account.name }}
+                            {% endif %}
                         </div>
+                    {% endif %}
+
+                    {% if not r.debit_account and not r.credit_account and not r.income_account %}
+                        <span style="color: #94a3b8; font-size: 0.85rem;">Sin mapear</span>
                     {% endif %}
                 </td>
                 <td class="text-center fw-bold text-secondary">

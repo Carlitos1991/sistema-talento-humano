@@ -796,226 +796,340 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         search_query = request.GET.get('q', '').strip()
         group_filter = request.GET.get('group', '').strip()
         regime_filter = request.GET.get('regime', '').strip()
-        tipo_filtro = request.GET.get('filtro', 'NORMAL')
+        filter_type = request.GET.get('filtro', 'NORMAL')
 
         payslips_qs = Payslip.objects.filter(period=period)
 
-        if search_query: payslips_qs = payslips_qs.filter(Q(employee__person__first_name__icontains=search_query) | Q(
-            employee__person__last_name__icontains=search_query) | Q(
-            employee__person__document_number__icontains=search_query) | Q(
-            items__budget_line__budget_group__short_code__icontains=search_query)).distinct()
-        if group_filter: payslips_qs = payslips_qs.filter(
-            items__budget_line__budget_group__short_code=group_filter).distinct()
-        if regime_filter: payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
+        if search_query:
+            payslips_qs = payslips_qs.filter(
+                Q(employee__person__first_name__icontains=search_query) |
+                Q(employee__person__last_name__icontains=search_query) |
+                Q(employee__person__document_number__icontains=search_query) |
+                Q(items__budget_line__budget_group__short_code__icontains=search_query)
+            ).distinct()
+
+        if group_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__budget_group__short_code=group_filter).distinct()
+        if regime_filter:
+            payslips_qs = payslips_qs.filter(items__budget_line__regime_item_id=regime_filter).distinct()
 
         show_withheld = (self.request.GET.get('show_withheld') or '').lower()
         if show_withheld in ['only', '1', 'true', 'yes']:
             payslips_qs = payslips_qs.filter(is_withheld=True)
         else:
-            payslips_qs = payslips_qs.filter(is_withheld=False) if tipo_filtro == 'NORMAL' else payslips_qs.filter(
-                is_withheld=False, is_paid=False)
+            if filter_type == 'NORMAL':
+                payslips_qs = payslips_qs.filter(is_withheld=False)
+            else:
+                payslips_qs = payslips_qs.filter(is_withheld=False, is_paid=False)
 
         valid_payslip_ids = list(payslips_qs.values_list('id', flat=True))
 
-        items = PayslipItem.objects.filter(payslip_id__in=valid_payslip_ids).select_related(
-            'payslip__employee__person', 'budget_line__budget_group', 'rubric__debit_account', 'rubric__credit_account',
-            'rubric__debit_account_prod', 'rubric__credit_account_prod', 'rubric__debit_account_inv',
-            'rubric__credit_account_inv', 'rubric__income_account'
-        ).prefetch_related('payslip__employee__person__economic_data__bank_account__bank',
-                           'payslip__employee__person__economic_data__bank_account__account_type').distinct()
+        items_qs = PayslipItem.objects.filter(payslip_id__in=valid_payslip_ids).select_related(
+            'payslip__employee__person', 'budget_line__budget_group', 'budget_line__spending_type_item',
+            'rubric__debit_account', 'rubric__credit_account',
+            'rubric__debit_account_prod', 'rubric__credit_account_prod',
+            'rubric__debit_account_inv', 'rubric__credit_account_inv',
+            'rubric__income_account'
+        ).prefetch_related(
+            'payslip__employee__person__economic_data__bank_account__bank',
+            'payslip__employee__person__economic_data__bank_account__account_type'
+        ).distinct()
 
         report_data = {}
+        salary_rubrics = list(PayrollRubric.objects.filter(is_salary=True, is_active=True))
 
-        for it in items:
-            val = Decimal(str(it.value))
-            grupo_obj = it.budget_line.budget_group if it.budget_line else None
-            grupo_key = grupo_obj.short_code if grupo_obj else 'SIN_AGRUPAR'
+        # Función auxiliar interna para encontrar el rubro de sueldo según el tipo de gasto
+        def _find_salary_rubric(spending_code: str):
+            return (
+                    next((r for r in salary_rubrics if r.spending_context == spending_code), None)
+                    or next((r for r in salary_rubrics if r.spending_context == 'TODOS'), None)
+            )
 
-            if grupo_key not in report_data:
-                report_data[grupo_key] = {
-                    'group_obj': grupo_obj, 'group_name': grupo_obj.name if grupo_obj else 'Sin agrupación',
-                    'empleados': {}, 'contabilidad': {}, 'presupuesto': {}, 'ingresos_headers': {},
-                    'descuentos_headers': {}, 'aportes_headers': {}
+        # Procesamiento y agrupación de los rubros individuales de cada empleado
+        for item in items_qs:
+            val = Decimal(str(item.value))
+            budget_group_obj = item.budget_line.budget_group if item.budget_line else None
+            group_key = budget_group_obj.short_code if budget_group_obj else 'SIN_AGRUPAR'
+
+            if group_key not in report_data:
+                report_data[group_key] = {
+                    'group_obj': budget_group_obj,
+                    'group_name': budget_group_obj.name if budget_group_obj else 'Sin agrupación',
+                    'empleados': {}, 'contabilidad': {}, 'presupuesto': {},
+                    'ingresos_headers': {}, 'descuentos_headers': {}, 'aportes_headers': {}
                 }
 
-            grupo_data = report_data[grupo_key]
-            emp_id = it.payslip.employee.id
+            group_data = report_data[group_key]
+            employee_id = item.payslip.employee.id
 
-            if emp_id not in grupo_data['empleados']:
-                banco_nombre, cuenta_tipo, cuenta_numero = "NO REGISTRADO", "", ""
+            if employee_id not in group_data['empleados']:
+                bank_name, account_type_name, account_number = "NO REGISTRADO", "", ""
                 try:
-                    bank_acc = it.payslip.employee.person.economic_data.bank_account
-                    banco_nombre, cuenta_tipo, cuenta_numero = bank_acc.bank.name if bank_acc.bank else "Desconocido", bank_acc.account_type.name if bank_acc.account_type else "", bank_acc.account_number
-                except:
+                    bank_acc = item.payslip.employee.person.economic_data.bank_account
+                    bank_name = bank_acc.bank.name if bank_acc.bank else "Desconocido"
+                    account_type_name = bank_acc.account_type.name if bank_acc.account_type else ""
+                    account_number = bank_acc.account_number
+                except Exception:
                     pass
 
-                grupo_data['empleados'][emp_id] = {
-                    'persona': it.payslip.employee.person, 'empleado': it.payslip.employee, 'banco': banco_nombre,
-                    'tipo_cuenta': cuenta_tipo, 'numero_cuenta': cuenta_numero,
-                    'ingresos': Decimal(0), 'descuentos': Decimal(0), 'liquido': Decimal(0), 'ingresos_dict': {},
-                    'descuentos_dict': {}, 'aportes_dict': {},
+                group_data['empleados'][employee_id] = {
+                    'persona': item.payslip.employee.person,
+                    'empleado': item.payslip.employee,
+                    'banco': bank_name, 'tipo_cuenta': account_type_name, 'numero_cuenta': account_number,
+                    'ingresos': Decimal(0), 'descuentos': Decimal(0), 'liquido': Decimal(0),
+                    'ingresos_dict': {}, 'descuentos_dict': {}, 'aportes_dict': {},
+                    'net_pay_by_spending_type': {}  # Guarda el líquido separado por tipo de gasto (5.1, 7.1)
                 }
 
-            emp_dict = grupo_data['empleados'][emp_id]
-            ref = it.rubric
+            employee_dict = group_data['empleados'][employee_id]
+            rubric_ref = item.rubric
 
-            # A. LLENADO DEL ROL
-            if it.item_type == 'INCOME':
-                key, order_val = f"INC_{ref.id}", ref.order if ref.order is not None else 999
-                grupo_data['ingresos_headers'][key] = {'key': key, 'name': ref.name, 'abbreviation': ref.abbreviation,
-                                                       'order': order_val}
-                emp_dict['ingresos_dict'][key] = emp_dict['ingresos_dict'].get(key, Decimal(0)) + val
-                emp_dict['ingresos'] += val
-                emp_dict['liquido'] += val
+            # Identificación del tipo de gasto (Corriente 5.1, Producción 6.1, Inversión 7.1)
+            spending_type = '5.1'
+            if item.budget_line and item.budget_line.spending_type_item:
+                spending_type = item.budget_line.spending_type_item.code
 
-            elif it.item_type == 'DEDUCTION':
-                key, order_val, code_up = f"DED_{ref.id}", ref.order if ref.order is not None else 999, (
-                        ref.code or '').upper()
-                if 'IESS_PER' in code_up or ('APORTE' in code_up and 'PATRONAL' not in code_up):
-                    grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
-                                                          'abbreviation': ref.abbreviation}
-                    emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
+            # A. Distribución estructural en el Rol de Pagos (Sábana)
+            if item.item_type == 'INCOME':
+                header_key = f"INC_{rubric_ref.id}"
+                order_val = rubric_ref.order if rubric_ref.order is not None else 999
+                group_data['ingresos_headers'][header_key] = {
+                    'key': header_key, 'name': rubric_ref.name, 'abbreviation': rubric_ref.abbreviation,
+                    'order': order_val
+                }
+                employee_dict['ingresos_dict'][header_key] = employee_dict['ingresos_dict'].get(header_key,
+                                                                                                Decimal(0)) + val
+                employee_dict['ingresos'] += val
+                employee_dict['liquido'] += val
+                employee_dict['net_pay_by_spending_type'][spending_type] = employee_dict[
+                                                                               'net_pay_by_spending_type'].get(
+                    spending_type, Decimal(0)) + val
+
+            elif item.item_type == 'DEDUCTION':
+                header_key = f"DED_{rubric_ref.id}"
+                order_val = rubric_ref.order if rubric_ref.order is not None else 999
+                code_upper = (rubric_ref.code or '').upper()
+
+                if 'IESS_PER' in code_upper or ('APORTE' in code_upper and 'PATRONAL' not in code_upper):
+                    group_data['aportes_headers'][header_key] = {
+                        'key': header_key, 'name': rubric_ref.name, 'order': order_val,
+                        'abbreviation': rubric_ref.abbreviation
+                    }
+                    employee_dict['aportes_dict'][header_key] = employee_dict['aportes_dict'].get(header_key,
+                                                                                                  Decimal(0)) + val
                 else:
-                    grupo_data['descuentos_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
-                                                             'abbreviation': ref.abbreviation}
-                    emp_dict['descuentos_dict'][key] = emp_dict['descuentos_dict'].get(key, Decimal(0)) + val
-                emp_dict['descuentos'] += val
-                emp_dict['liquido'] -= val
+                    group_data['descuentos_headers'][header_key] = {
+                        'key': header_key, 'name': rubric_ref.name, 'order': order_val,
+                        'abbreviation': rubric_ref.abbreviation
+                    }
+                    employee_dict['descuentos_dict'][header_key] = employee_dict['descuentos_dict'].get(header_key,
+                                                                                                        Decimal(
+                                                                                                            0)) + val
 
-            elif it.item_type == 'CONTRIBUTION':
-                key, order_val = f"CON_{ref.id}", ref.order if ref.order is not None else 999
-                grupo_data['aportes_headers'][key] = {'key': key, 'name': ref.name, 'order': order_val,
-                                                      'abbreviation': ref.abbreviation}
-                emp_dict['aportes_dict'][key] = emp_dict['aportes_dict'].get(key, Decimal(0)) + val
+                employee_dict['descuentos'] += val
+                employee_dict['liquido'] -= val
+                employee_dict['net_pay_by_spending_type'][spending_type] = employee_dict[
+                                                                               'net_pay_by_spending_type'].get(
+                    spending_type, Decimal(0)) - val
 
-            # B. PRESUPUESTO
-            b_code = getattr(it, 'budget_line_code', None)
-            if b_code and str(b_code).strip():
-                if ref.has_mapping or (it.item_type == 'INCOME' and 'REMUNERACION' in (ref.code or '').upper()):
-                    key_presup = f"{b_code}_{ref.name}"
-                    if key_presup not in grupo_data['presupuesto']:
-                        grupo_data['presupuesto'][key_presup] = {'partida': b_code, 'concepto': ref.name,
-                                                                 'monto': Decimal(0), 'order': ref.order or 99999}
-                    grupo_data['presupuesto'][key_presup]['monto'] += val
+            elif item.item_type == 'CONTRIBUTION':
+                header_key = f"CON_{rubric_ref.id}"
+                order_val = rubric_ref.order if rubric_ref.order is not None else 999
+                group_data['aportes_headers'][header_key] = {
+                    'key': header_key, 'name': rubric_ref.name, 'order': order_val,
+                    'abbreviation': rubric_ref.abbreviation
+                }
+                employee_dict['aportes_dict'][header_key] = employee_dict['aportes_dict'].get(header_key,
+                                                                                              Decimal(0)) + val
 
-            # C. CONTABILIDAD MATRICIAL
-            tipo_gasto = it.budget_line.budget_group.spending_type.code if (
-                    it.budget_line and hasattr(it.budget_line, 'budget_group') and hasattr(
-                it.budget_line.budget_group, 'spending_type') and it.budget_line.budget_group.spending_type) else ''
+            # B. Distribución de Partidas Presupuestarias
+            budget_code = getattr(item, 'budget_line_code', None)
+            if budget_code and str(budget_code).strip():
+                if rubric_ref.has_mapping or (
+                        item.item_type == 'INCOME' and 'REMUNERACION' in (rubric_ref.code or '').upper()):
+                    budget_key = f"{budget_code}_{rubric_ref.name}"
+                    if budget_key not in group_data['presupuesto']:
+                        group_data['presupuesto'][budget_key] = {
+                            'partida': budget_code, 'concepto': rubric_ref.name, 'monto': Decimal(0),
+                            'order': rubric_ref.order or 99999
+                        }
+                    group_data['presupuesto'][budget_key]['monto'] += val
 
-            if tipo_gasto.startswith('7'):
-                cuenta_debe, cuenta_haber, grupo_data[
-                    'es_inversion'] = ref.debit_account_inv, ref.credit_account_inv, True
-            elif tipo_gasto.startswith('6'):
-                cuenta_debe, cuenta_haber = ref.debit_account_prod, ref.credit_account_prod
+            # C. Distribución de la Matriz Contable Individual (Regla de Entrada de Cuentas)
+            if spending_type.startswith('7'):
+                debit_account = rubric_ref.debit_account_inv or rubric_ref.debit_account
+                credit_account = rubric_ref.credit_account_inv or rubric_ref.credit_account
+                group_data['es_inversion'] = True
+            elif spending_type.startswith('6'):
+                debit_account = rubric_ref.debit_account_prod or rubric_ref.debit_account
+                credit_account = rubric_ref.credit_account_prod or rubric_ref.credit_account
             else:
-                cuenta_debe, cuenta_haber = ref.debit_account, ref.credit_account
+                debit_account = rubric_ref.debit_account
+                credit_account = rubric_ref.credit_account
 
-            if cuenta_debe:
-                grupo_data['contabilidad'].setdefault(cuenta_debe.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                         'nombre': cuenta_debe.name,
-                                                                         'order': cuenta_debe.order or 99999})
-                grupo_data['contabilidad'][cuenta_debe.code]['debe'] += val
+            # Resolución dinámica de la cuenta puente contable (Pasivo)
+            current_salary_rubric = _find_salary_rubric(spending_type)
+            if current_salary_rubric:
+                if spending_type.startswith('7'):
+                    bridge_account = current_salary_rubric.credit_account_inv or current_salary_rubric.credit_account
+                elif spending_type.startswith('6'):
+                    bridge_account = current_salary_rubric.credit_account_prod or current_salary_rubric.credit_account
+                else:
+                    bridge_account = current_salary_rubric.credit_account
+            else:
+                bridge_account = None
 
-            if cuenta_haber:
-                grupo_data['contabilidad'].setdefault(cuenta_haber.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                          'nombre': cuenta_haber.name,
-                                                                          'order': cuenta_haber.order or 99999})
-                grupo_data['contabilidad'][cuenta_haber.code]['haber'] += val
-                if it.item_type == 'DEDUCTION' and ref.income_account:
-                    grupo_data['contabilidad'][cuenta_haber.code]['debe'] += val
-                    grupo_data['contabilidad'].setdefault(ref.income_account.code,
+            # Ejecución de la partida doble matemática por Tipo de Rubro
+            if rubric_ref.rubric_type == 'INCOME':
+                if debit_account:
+                    group_data['contabilidad'].setdefault(debit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                               'nombre': debit_account.name,
+                                                                               'order': debit_account.order or 99999})
+                    group_data['contabilidad'][debit_account.code]['debe'] += val
+                if bridge_account:
+                    group_data['contabilidad'].setdefault(bridge_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                                'nombre': bridge_account.name,
+                                                                                'order': bridge_account.order or 99999})
+                    group_data['contabilidad'][bridge_account.code]['haber'] += val
+
+            elif rubric_ref.rubric_type == 'DEDUCTION':
+                if bridge_account:
+                    group_data['contabilidad'].setdefault(bridge_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                                'nombre': bridge_account.name,
+                                                                                'order': bridge_account.order or 99999})
+                    group_data['contabilidad'][bridge_account.code]['debe'] += val
+                if credit_account:
+                    group_data['contabilidad'].setdefault(credit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                                'nombre': credit_account.name,
+                                                                                'order': credit_account.order or 99999})
+                    group_data['contabilidad'][credit_account.code]['haber'] += val
+
+                # Gestión del asiento de devengado simultáneo opcional (Asiento Espejo de Ingresos)
+                if rubric_ref.income_account:
+                    if credit_account:
+                        group_data['contabilidad'][credit_account.code]['debe'] += val
+                    group_data['contabilidad'].setdefault(rubric_ref.income_account.code,
                                                           {'debe': Decimal(0), 'haber': Decimal(0),
-                                                           'nombre': ref.income_account.name,
-                                                           'order': ref.income_account.order or 99999})
-                    grupo_data['contabilidad'][ref.income_account.code]['haber'] += val
+                                                           'nombre': rubric_ref.income_account.name,
+                                                           'order': rubric_ref.income_account.order or 99999})
+                    group_data['contabilidad'][rubric_ref.income_account.code]['haber'] += val
 
-            if it.item_type == 'CONTRIBUTION' and 'PATRONAL' in (ref.code or '').upper():
-                cta_p = '2.1.3.71.01' if tipo_gasto.startswith('7') else '2.1.3.51'
-                nom_p = 'GASTOS EN EL PERSONAL DE INVERSION' if tipo_gasto.startswith('7') else 'GASTOS DE PERSONAL'
-                grupo_data['contabilidad'].setdefault(cta_p, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_p,
-                                                              'order': 99999})
-                grupo_data['contabilidad'][cta_p]['debe'] += val
-                grupo_data['contabilidad'][cta_p]['haber'] += val
+            elif rubric_ref.rubric_type == 'CONTRIBUTION':
+                if debit_account:
+                    group_data['contabilidad'].setdefault(debit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                               'nombre': debit_account.name,
+                                                                               'order': debit_account.order or 99999})
+                    group_data['contabilidad'][debit_account.code]['debe'] += val
+                if credit_account:
+                    group_data['contabilidad'].setdefault(credit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                                'nombre': credit_account.name,
+                                                                                'order': credit_account.order or 99999})
+                    group_data['contabilidad'][credit_account.code]['haber'] += val
 
-        # POST-PROCESO
-        for g_key, g_data in report_data.items():
-            total_net_pay = sum((emp['liquido'] for emp in g_data['empleados'].values()), Decimal(0))
-            if total_net_pay > 0:
-                es_inversion = g_data.get('es_inversion', False)
-                cta_gp = '2.1.3.71.01' if es_inversion else '2.1.3.51'
-                nom_gp = 'GASTOS EN EL PERSONAL DE INVERSION' if es_inversion else 'GASTOS DE PERSONAL'
-                cta_bco = '1.1.1.15' if es_inversion else '1.1.1.03.01'
-                nom_bco = 'BANCOS (INVERSION)' if es_inversion else 'BANCO CENTRAL'
+        # ==============================================================
+        # POST-PROCESO: LIQUIDACIÓN DE BANCOS Y CONTRAPARTIDAS PUENTE
+        # ==============================================================
+        for group_key, group_data in report_data.items():
+            for employee_id, employee_stuff in group_data['empleados'].items():
 
-                g_data['contabilidad'].setdefault(cta_gp, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_gp,
-                                                           'order': 99999})
-                g_data['contabilidad'][cta_gp]['debe'] += total_net_pay
-                g_data['contabilidad'].setdefault(cta_bco, {'debe': Decimal(0), 'haber': Decimal(0), 'nombre': nom_bco,
-                                                            'order': 99999})
-                g_data['contabilidad'][cta_bco]['haber'] += total_net_pay
+                # Recorremos el valor neto líquido que cobró el empleado segregado por tipo de gasto
+                for spending_code, net_value in employee_stuff['net_pay_by_spending_type'].items():
+                    if net_value <= 0:
+                        continue
 
-            g_data['ingresos_headers'] = {k: v for k, v in g_data['ingresos_headers'].items() if sum(
-                emp['ingresos_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
-            g_data['descuentos_headers'] = {k: v for k, v in g_data['descuentos_headers'].items() if sum(
-                emp['descuentos_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
-            g_data['aportes_headers'] = {k: v for k, v in g_data['aportes_headers'].items() if sum(
-                emp['aportes_dict'].get(k, Decimal(0)) for emp in g_data['empleados'].values()) > 0}
+                    salary_rubric_ref = _find_salary_rubric(spending_code)
+                    if salary_rubric_ref:
+                        # 1. Determinamos la cuenta puente (Pasivo) que recibe el Debe por el pago ejecutado
+                        if spending_code.startswith('7'):
+                            bridge_account_bank = salary_rubric_ref.credit_account_inv or salary_rubric_ref.credit_account
+                        elif spending_code.startswith('6'):
+                            bridge_account_bank = salary_rubric_ref.credit_account_prod or salary_rubric_ref.credit_account
+                        else:
+                            bridge_account_bank = salary_rubric_ref.credit_account
 
-            g_data['ingresos_headers'] = sorted(g_data['ingresos_headers'].values(),
-                                                key=lambda x: (x['order'], x['name']))
-            g_data['descuentos_headers'] = sorted(g_data['descuentos_headers'].values(),
-                                                  key=lambda x: (x['order'], x['name']))
-            g_data['aportes_headers'] = sorted(g_data['aportes_headers'].values(),
-                                               key=lambda x: (x['order'], x['name']))
+                        # 2. Determinamos la cuenta real de banco (Haber) configurada dinámicamente en el rubro
+                        bank_account_obj = salary_rubric_ref.income_account
 
-            for emp in g_data['empleados'].values():
+                        if bridge_account_bank:
+                            group_data['contabilidad'].setdefault(bridge_account_bank.code,
+                                                                  {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                   'nombre': bridge_account_bank.name,
+                                                                   'order': bridge_account_bank.order or 99999})
+                            group_data['contabilidad'][bridge_account_bank.code]['debe'] += net_value
+                        if bank_account_obj:
+                            group_data['contabilidad'].setdefault(bank_account_obj.code,
+                                                                  {'debe': Decimal(0), 'haber': Decimal(0),
+                                                                   'nombre': bank_account_obj.name,
+                                                                   'order': bank_account_obj.order or 99999})
+                            group_data['contabilidad'][bank_account_obj.code]['haber'] += net_value
+
+            # Limpieza y ordenamiento final de las cabeceras de columnas del reporte
+            group_data['ingresos_headers'] = {k: v for k, v in group_data['ingresos_headers'].items() if sum(
+                emp['ingresos_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
+            group_data['descuentos_headers'] = {k: v for k, v in group_data['descuentos_headers'].items() if sum(
+                emp['descuentos_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
+            group_data['aportes_headers'] = {k: v for k, v in group_data['aportes_headers'].items() if sum(
+                emp['aportes_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
+
+            group_data['ingresos_headers'] = sorted(group_data['ingresos_headers'].values(),
+                                                    key=lambda x: (x['order'], x['name']))
+            group_data['descuentos_headers'] = sorted(group_data['descuentos_headers'].values(),
+                                                      key=lambda x: (x['order'], x['name']))
+            group_data['aportes_headers'] = sorted(group_data['aportes_headers'].values(),
+                                                   key=lambda x: (x['order'], x['name']))
+
+            for emp in group_data['empleados'].values():
                 emp['ingresos_list'] = [emp['ingresos_dict'].get(h['key'], Decimal(0)) for h in
-                                        g_data['ingresos_headers']]
+                                        group_data['ingresos_headers']]
                 emp['descuentos_list'] = [emp['descuentos_dict'].get(h['key'], Decimal(0)) for h in
-                                          g_data['descuentos_headers']]
-                emp['aportes_list'] = [emp['aportes_dict'].get(h['key'], Decimal(0)) for h in g_data['aportes_headers']]
+                                          group_data['descuentos_headers']]
+                emp['aportes_list'] = [emp['aportes_dict'].get(h['key'], Decimal(0)) for h in
+                                       group_data['aportes_headers']]
                 emp['total_aportes'] = sum(emp['aportes_dict'].values())
 
-            ts = {
-                'total_ingresos': sum((e['ingresos'] for e in g_data['empleados'].values()), Decimal(0)),
-                'total_descuentos': sum((e['descuentos'] for e in g_data['empleados'].values()), Decimal(0)),
-                'total_aportes': sum((e['total_aportes'] for e in g_data['empleados'].values()), Decimal(0)),
-                'liquido': sum((e['liquido'] for e in g_data['empleados'].values()), Decimal(0)),
+            totals_sabana = {
+                'total_ingresos': sum((e['ingresos'] for e in group_data['empleados'].values()), Decimal(0)),
+                'total_descuentos': sum((e['descuentos'] for e in group_data['empleados'].values()), Decimal(0)),
+                'total_aportes': sum((e['total_aportes'] for e in group_data['empleados'].values()), Decimal(0)),
+                'liquido': sum((e['liquido'] for e in group_data['empleados'].values()), Decimal(0)),
                 'ingresos_list': [
-                    sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()),
-                        Decimal(0)) for h in g_data['ingresos_headers']],
+                    sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
+                        Decimal(0)) for h in group_data['ingresos_headers']],
                 'descuentos_list': [
-                    sum((e['descuentos_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()),
-                        Decimal(0)) for h in g_data['descuentos_headers']],
+                    sum((e['descuentos_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
+                        Decimal(0)) for h in group_data['descuentos_headers']],
                 'aportes_list': [
-                    sum((e['aportes_dict'].get(h['key'], Decimal(0)) for e in g_data['empleados'].values()), Decimal(0))
-                    for h in g_data['aportes_headers']],
+                    sum((e['aportes_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
+                        Decimal(0)) for h in group_data['aportes_headers']],
             }
-            g_data['totales_sabana'] = ts
+            group_data['totales_sabana'] = totals_sabana
 
-            g_data['colspans'] = {
-                'ingresos': len(g_data['ingresos_headers']) or 1,
-                'aportes': len(g_data['aportes_headers']),
-                'descuentos': len(g_data['descuentos_headers'])
+            group_data['colspans'] = {
+                'ingresos': len(group_data['ingresos_headers']) or 1,
+                'aportes': len(group_data['aportes_headers']),
+                'descuentos': len(group_data['descuentos_headers'])
             }
-            lista_cuentas = []
-            for cta, c_data in g_data['contabilidad'].items():
-                if c_data['debe'] > 0 or c_data['haber'] > 0:
-                    lista_cuentas.append({
-                        'codigo': cta, 'nombre': c_data['nombre'], 'debe': c_data['debe'], 'haber': c_data['haber'],
-                        'order': c_data.get('order', 99999)
+
+            sorted_accounts_list = []
+            for account_code_str, account_data in group_data['contabilidad'].items():
+                if account_data['debe'] > 0 or account_data['haber'] > 0:
+                    sorted_accounts_list.append({
+                        'codigo': account_code_str, 'nombre': account_data['nombre'],
+                        'debe': account_data['debe'], 'haber': account_data['haber'],
+                        'order': account_data.get('order', 99999)
                     })
 
-            g_data['contabilidad_ordenada'] = sorted(lista_cuentas, key=lambda x: (x['order'], x['codigo']))
-            g_data['total_contabilidad_debe'] = sum((c['debe'] for c in g_data['contabilidad_ordenada']), Decimal(0))
-            g_data['total_contabilidad_haber'] = sum((c['haber'] for c in g_data['contabilidad_ordenada']), Decimal(0))
-            g_data['total_presupuesto'] = sum((p['monto'] for p in g_data['presupuesto'].values()), Decimal(0))
-            g_data['presupuesto'] = dict(sorted(g_data['presupuesto'].items(),
-                                                key=lambda item: (int(item[1].get('order', 99999)),
-                                                                  str(item[1].get('concepto', '')))))
-            g_data['empleados'] = dict(
-                sorted(g_data['empleados'].items(), key=lambda item: (item[1]['persona'].last_name or "").lower()))
+            group_data['contabilidad_ordenada'] = sorted(sorted_accounts_list, key=lambda x: (x['order'], x['codigo']))
+            group_data['total_contabilidad_debe'] = sum((c['debe'] for c in group_data['contabilidad_ordenada']),
+                                                        Decimal(0))
+            group_data['total_contabilidad_haber'] = sum((c['haber'] for c in group_data['contabilidad_ordenada']),
+                                                         Decimal(0))
+            group_data['total_presupuesto'] = sum((p['monto'] for p in group_data['presupuesto'].values()), Decimal(0))
+            group_data['presupuesto'] = dict(sorted(group_data['presupuesto'].items(),
+                                                    key=lambda item: (int(item[1].get('order', 99999)),
+                                                                      str(item[1].get('concepto', '')))))
+            group_data['empleados'] = dict(
+                sorted(group_data['empleados'].items(), key=lambda item: (item[1]['persona'].last_name or "").lower()))
 
         sorted_reports = dict(sorted(report_data.items()))
         context = {

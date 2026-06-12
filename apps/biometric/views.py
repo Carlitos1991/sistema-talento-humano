@@ -1429,8 +1429,12 @@ def generate_department_report_pdf(request):
     for p in all_punches:
         dt = timezone.localtime(p.registry_date).replace(tzinfo=None) if timezone.is_aware(
             p.registry_date) else p.registry_date
-        punches_by_emp[p.employee_id][dt.day].append(
-            {'time': dt.strftime('%H:%M'), 'dt': p.registry_date, 'dt_norm': dt})
+        punches_by_emp[p.employee_id][dt.day].append({
+            'time': dt.strftime('%H:%M'),
+            'device': p.biometric_load.biometric.name[:10] if p.biometric_load and p.biometric_load.biometric else '',
+            'dt': p.registry_date,
+            'dt_norm': dt,
+        })
 
     # Traer todos los permisos aprobados
     all_permits = PermitRequest.objects.filter(employee_id__in=emp_ids, status='APPROVED').filter(
@@ -1439,10 +1443,50 @@ def generate_department_report_pdf(request):
 
     permits_by_emp = defaultdict(lambda: defaultdict(list))
     for pr in all_permits:
-        cur = max(pr.start_date, month_start)
-        last = min(pr.end_date or pr.start_date, month_end)
-        while cur <= last:
-            permits_by_emp[pr.employee_id][cur.day].append({'start_time': pr.start_time, 'end_time': pr.end_time})
+        p_start = pr.start_date if pr.start_date >= month_start else month_start
+        p_end = pr.end_date or pr.start_date
+        if p_end > month_end:
+            p_end = month_end
+
+        crosses_midnight = False
+        try:
+            if pr.start_time and pr.end_time and pr.end_time <= pr.start_time:
+                crosses_midnight = True
+        except Exception:
+            crosses_midnight = False
+
+        cur = p_start
+        while cur <= p_end:
+            entry = {'type': pr.permit_type.name if pr.permit_type else '', 'note': pr.response_note or ''}
+            if not pr.start_time and not pr.end_time:
+                entry['start_time'] = None
+                entry['end_time'] = None
+            else:
+                if (pr.start_date == (pr.end_date or pr.start_date)) and not crosses_midnight:
+                    entry['start_time'] = pr.start_time
+                    entry['end_time'] = pr.end_time
+                else:
+                    if crosses_midnight:
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(0, 0)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
+                    else:
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(23, 59)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
+            permits_by_emp[pr.employee_id][cur.day].append(entry)
             cur += timedelta(days=1)
 
     # Feriados (una sola vez)

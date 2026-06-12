@@ -15,6 +15,7 @@
             </div>
 
             <div class="modal-body-content modal-body-custom" style="max-height: 75vh; overflow-y: auto;">
+
                 {% if form.errors %}
                     <div class="alert alert-danger mb-3"
                          style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; padding: 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;">
@@ -35,10 +36,21 @@
                     </h4>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">Descripción</label>
+                            {{ form.description }}
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label">Tipo de Rubro <span class="text-danger">*</span></label>
                             {{ form.rubric_type }}
                         </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Contexto de Gasto <span class="text-danger">*</span></label>
+                            {{ form.spending_context }}
+                        </div>
+
                         <div class="form-group" style="grid-column: span 2;">
                             <label class="form-label">Nombre del Rubro <span class="text-danger">*</span></label>
                             {{ form.name }}
@@ -70,92 +82,62 @@
                         </label>
                     </div>
                 </div>
-                <div class="form-group mt-4 pt-3" id="divIncomeAccount"
-                     style="border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px;">
-                    <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-exchange-alt"></i> Cuenta
-                        Devengado (Haber)</label>
-                    {{ form.income_account }}
-                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Para asiento de ingreso
-                        (Opcional)</small>
-
-                </div>
 
                 <div class="form-section-card mb-3">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px;">
-                        <h4 style="font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--primary-color);">
-                            <i class="fa-solid fa-table me-1"></i> Matriz de Enrutamiento Contable
-                        </h4>
-                        <div style="width: 380px;">
-                            <label class="form-label" style="font-size: 0.7rem; font-weight: bold; margin-bottom: 2px;">ESTE
-                                RUBRO SE APLICARÁ A:</label>
-                            {{ form.spending_context }} <!-- Usamos el campo del modelo -->
-                        </div>
-                    </div>
+                    <h4 style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
+                        <i class="fa-solid fa-table me-1"></i> Matriz de Enrutamiento Contable
+                    </h4>
 
-                    <div id="contenedorCuentasDinamico"
-                         style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-
-                        <!-- 1. BLOQUE PARA TODOS / CORRIENTE -->
-                        <div class="grupo-contable" id="grupo-base">
-                            <div style="margin-bottom: 15px;">
-                                <span id="labelContexto"
-                                      style="background: #475569; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">CUENTAS BASE (GLOBAL / 5.1)</span>
-                                <p id="descContexto" style="color: #64748b; font-size: 0.8rem; margin: 5px 0 0 0;">
-                                    Configure aquí las cuentas principales para este rubro.</p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #0f4c81; font-weight: 700; font-size: 0.9rem; background: #e0f2fe; padding: 6px; border-radius: 4px; margin: 0;">
+                                5.1 - CORRIENTE</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account }}
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta DEBE (Gasto)</label>
-                                    {{ form.debit_account }}
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta HABER (Pasivo/Puente)</label>
-                                    {{ form.credit_account }}
-                                </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account }}
                             </div>
                         </div>
 
-                        <!-- 2. BLOQUE PARA INVERSIÓN -->
-                        <div class="grupo-contable" id="grupo-inversion" style="display: none;">
-                            <div style="margin-bottom: 15px;">
-                                <span style="background: #047857; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">CUENTAS ESPECÍFICAS: INVERSIÓN (7.1)</span>
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #d97706; font-weight: 700; font-size: 0.9rem; background: #fef3c7; padding: 6px; border-radius: 4px; margin: 0;">
+                                6.1 - PRODUCCIÓN</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account_prod }}
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta DEBE (Inversión)</label>
-                                    {{ form.debit_account_inv }}
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta HABER (Inversión)</label>
-                                    {{ form.credit_account_inv }}
-                                </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account_prod }}
                             </div>
                         </div>
 
-                        <!-- 3. BLOQUE PARA PRODUCCIÓN -->
-                        <div class="grupo-contable" id="grupo-produccion" style="display: none;">
-                            <div style="margin-bottom: 15px;">
-                                <span style="background: #b45309; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">CUENTAS ESPECÍFICAS: PRODUCCIÓN (6.1)</span>
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                            <h5 style="text-align: center; color: #047857; font-weight: 700; font-size: 0.9rem; background: #d1fae5; padding: 6px; border-radius: 4px; margin: 0;">
+                                7.1 - INVERSIÓN</h5>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta DEBE</label>
+                                {{ form.debit_account_inv }}
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta DEBE (Producción)</label>
-                                    {{ form.debit_account_prod }}
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Cuenta HABER (Producción)</label>
-                                    {{ form.credit_account_prod }}
-                                </div>
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                                <label class="form-label" style="margin: 0;">Cuenta HABER</label>
+                                {{ form.credit_account_inv }}
                             </div>
                         </div>
                     </div>
 
-                    <!-- BANCO (SIEMPRE VISIBLE) -->
                     <div class="form-group mt-4 pt-3"
                          style="border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px;">
-                        <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-exchange-alt"></i>
-                            Cuenta de BANCO (Haber del Neto)</label>
+                        <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-university"></i>
+                            Cuenta de Contrapartida / Devengado (Banco o Ingreso)</label>
                         {{ form.income_account }}
+                        <small style="color: #64748b; font-size: 0.8rem; margin-top: 2px;">
+                            Asigne la cuenta de Banco Central para la Remuneración Base, o la cuenta de Ingresos espejo
+                            para el Devengado automático de Descuentos.
+                        </small>
                     </div>
                 </div>
 

@@ -952,58 +952,20 @@ function closeRubricModal() {
 }
 
 function initRubricModalLogic() {
-    // Inicializar Select2 con el parent del modal oficial
+    // Inicialización universal de Select2 en el contexto del modal activo
     $('#rubricForm select').select2({
         dropdownParent: $('#rubricModalOverlay'),
         width: '100%'
     });
-    $('#id_spending_context').on('change', function () {
-        const val = $(this).val();
-
-        // Ocultar todos primero
-        $('.grupo-contable').hide();
-
-        // El bloque '#grupo-base' contiene debit_account y credit_account
-        // Se muestra para TODOS (como global) y para 5.1 (como específico)
-        if (val === 'TODOS' || val === '5.1') {
-            $('#grupo-base').fadeIn(200);
-            if (val === 'TODOS') {
-                $('#labelContexto').text('CONFIGURACIÓN GLOBAL (Universal)').css('background', '#475569');
-            } else {
-                $('#labelContexto').text('ESPECÍFICO: CORRIENTE (5.1)').css('background', '#2563eb');
-            }
-        } else if (val === '7.1') {
-            $('#grupo-inversion').fadeIn(200);
-        } else if (val === '6.1') {
-            $('#grupo-produccion').fadeIn(200);
-        }
-    });
-    $('#selectContextoContable').on('change', function () {
-        const contexto = $(this).val();
-
-        // Ocultar todos los grupos
-        $('.grupo-contable').hide();
-
-        // Mostrar el seleccionado
-        if (contexto === 'todos') {
-            $('#grupo-todos').fadeIn(200);
-        } else if (contexto === 'inversion') {
-            $('#grupo-inversion').fadeIn(200);
-        } else if (contexto === 'produccion') {
-            $('#grupo-produccion').fadeIn(200);
-        }
-    });
 
     function toggleFields() {
-        // Captura del valor del Select2 mediante jQuery
-        const type = $('#rubricForm select[name="rubric_type"]').val();
+        const rubricType = $('#id_rubric_type').val();
 
-        if (type === 'DEDUCTION') {
+        // Control de visibilidad exclusivo para la prioridad de cobro en egresos
+        if (rubricType === 'DEDUCTION') {
             $('#divPriority').show();
-            $('#divIncomeAccount').css('display', 'flex'); // Mantiene el orden de columna vertical
         } else {
             $('#divPriority').hide();
-            $('#divIncomeAccount').hide();
         }
     }
 
@@ -1015,11 +977,11 @@ function initRubricModalLogic() {
         }
     }
 
-    // Escucha de eventos unificada para Select2 y Checkboxes nativos
-    $('#rubricForm select[name="rubric_type"]').on('change', toggleFields);
+    // Escuchadores estables para cambios en tiempo de ejecución
+    $('#id_rubric_type').on('change.select2 change', toggleFields);
     $('#id_has_mapping').on('change', toggleBudget);
 
-    // Inicialización del estado en la carga del modal
+    // Verificación inmediata de estados en la carga del modal (Esencial para la edición)
     toggleFields();
     toggleBudget();
 }
