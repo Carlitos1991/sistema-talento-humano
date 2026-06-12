@@ -1438,11 +1438,14 @@ def generate_department_report_pdf(request):
 
     # Traer todos los permisos aprobados
     all_permits = PermitRequest.objects.filter(employee_id__in=emp_ids, status='APPROVED').filter(
-        Q(start_date__lte=month_end, end_date__gte=month_start)
+        models.Q(start_date__lte=month_end, end_date__gte=month_start) |
+        models.Q(start_date__range=(month_start, month_end)) |
+        models.Q(end_date__range=(month_start, month_end))
     ).select_related('permit_type')
 
     permits_by_emp = defaultdict(lambda: defaultdict(list))
     for pr in all_permits:
+        emp_key = str(pr.employee_id)
         p_start = pr.start_date if pr.start_date >= month_start else month_start
         p_end = pr.end_date or pr.start_date
         if p_end > month_end:
@@ -1507,7 +1510,7 @@ def generate_department_report_pdf(request):
     from schedule.schedule_prefetch import build_schedule_cache, get_schedule_from_cache
     _sched_cache = build_schedule_cache(emp_ids, month_start, month_end)
 
-    # 3. PROCESAMIENTO EN MEMORIA (MUCHO MÁS RÁPIDO)
+    # 3. PROCESAMIENTO
     for inst in inst_qs:
         # CORRECCIÓN RÉGIMEN: Buscar el periodo más reciente si no hay uno marcado como ACTIVO
         periods = list(inst.employee.management_periods.all())
@@ -1542,19 +1545,25 @@ def generate_department_report_pdf(request):
         )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
+        sched_ref = get_schedule_from_cache(_sched_cache, emp_id, month_start)
+        tolerance = sched_ref.late_tolerance_minutes if sched_ref else 0
+
         # Lógica de tolerancia y filtrado...
         minutos_atraso = summary_emp.get('minutos_atraso', 0)
         inconsistencias = summary_emp.get('inconsistencias', 0)
         dias_sin_marcar = summary_emp.get('dias_sin_marcar', 0)
-
-        unit_name = inst.employee.area.name if inst.employee.area else 'Sin Unidad'
-        results_by_unit.setdefault(unit_name, []).append({
-            'employee': inst.employee,
-            'regimen': regimen_name,
-            'inconsistencias': inconsistencias,
-            'dias_sin_marcar': dias_sin_marcar,
-            'minutos_atraso': minutos_atraso,
-        })
+        if (inconsistencias > 0 or
+                dias_sin_marcar > 0 or
+                minutos_atraso > tolerance):
+            unit_name = inst.employee.area.name if inst.employee.area else 'Sin Unidad'
+            results_by_unit.setdefault(unit_name, []).append({
+                'employee': inst.employee,
+                'regimen': regimen_name,
+                'inconsistencias': inconsistencias,
+                'dias_sin_marcar': dias_sin_marcar,
+                'minutos_atraso': minutos_atraso,
+                'tolerancia': tolerance,
+            })
 
     # Ordenar unidades alfabéticamente
     grouped_results = sorted(list(results_by_unit.items()), key=lambda x: x[0].lower())
