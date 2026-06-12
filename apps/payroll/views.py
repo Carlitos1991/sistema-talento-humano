@@ -888,7 +888,8 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             spending_type = '5.1'
             if item.budget_line and item.budget_line.spending_type_item:
                 spending_type = item.budget_line.spending_type_item.code
-
+            if rubric_ref.is_salary or 'main_spending_type' not in employee_dict:
+                employee_dict['main_spending_type'] = spending_type
             # A. Distribución estructural en el Rol de Pagos (Sábana)
             if item.item_type == 'INCOME':
                 header_key = f"INC_{rubric_ref.id}"
@@ -1031,7 +1032,37 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
         # ==============================================================
         for group_key, group_data in report_data.items():
             for employee_id, employee_stuff in group_data['empleados'].items():
+                total_liquid = employee_stuff['liquido']
+                if total_liquid <= 0:
+                    continue
 
+                main_spending = employee_stuff.get('main_spending_type', '5.1')
+                salary_rubric_ref = _find_salary_rubric(main_spending)
+
+                if salary_rubric_ref:
+                    # Resolvemos la cuenta puente (Pasivo) que se debita al pagar
+                    if main_spending.startswith('7'):
+                        bridge_account_bank = salary_rubric_ref.credit_account_inv or salary_rubric_ref.credit_account
+                    elif main_spending.startswith('6'):
+                        bridge_account_bank = salary_rubric_ref.credit_account_prod or salary_rubric_ref.credit_account
+                    else:
+                        bridge_account_bank = salary_rubric_ref.credit_account
+
+                    # Resolvemos la cuenta real de banco central o tesorería
+                    bank_account_obj = salary_rubric_ref.income_account
+
+                    if bridge_account_bank:
+                        group_data['contabilidad'].setdefault(bridge_account_bank.code,
+                                                              {'debe': Decimal(0), 'haber': Decimal(0),
+                                                               'nombre': bridge_account_bank.name,
+                                                               'order': bridge_account_bank.order or 99999})
+                        group_data['contabilidad'][bridge_account_bank.code]['debe'] += total_liquid
+                    if bank_account_obj:
+                        group_data['contabilidad'].setdefault(bank_account_obj.code,
+                                                              {'debe': Decimal(0), 'haber': Decimal(0),
+                                                               'nombre': bank_account_obj.name,
+                                                               'order': bank_account_obj.order or 99999})
+                        group_data['contabilidad'][bank_account_obj.code]['haber'] += total_liquid
                 # Recorremos el valor neto líquido que cobró el empleado segregado por tipo de gasto
                 for spending_code, net_value in employee_stuff['net_pay_by_spending_type'].items():
                     if net_value <= 0:

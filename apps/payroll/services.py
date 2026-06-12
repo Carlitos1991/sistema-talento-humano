@@ -316,13 +316,34 @@ class PayrollCalculatorService:
                 assignment_map.setdefault(a.employee_id, []).append(a)
 
             mp_map = {}
-            for mp in (
-                    ManagementPeriod.objects
-                            .filter(employee_id__in=emp_ids)
-                            .select_related('contract_type__labor_regime', 'status')
-                            .order_by('employee_id', 'start_date')
-            ):
-                mp_map[mp.employee_id] = mp
+            service_days_map = {}
+
+            management_periods = ManagementPeriod.objects.filter(employee_id__in=emp_ids).select_related(
+                'contract_type__labor_regime', 'status'
+            ).order_by('employee_id', 'start_date')
+
+            for mp in management_periods:
+                # Conservamos el último contrato para el régimen y estado activo
+                curr = mp_map.get(mp.employee_id)
+                if not curr:
+                    mp_map[mp.employee_id] = mp
+                else:
+                    if mp.start_date > curr.start_date:
+                        mp_map[mp.employee_id] = mp
+                    elif mp.start_date == curr.start_date:
+                        code_curr = str(curr.status.code if curr.status else '').upper()
+                        if 'FINA' in code_curr:
+                            mp_map[mp.employee_id] = mp
+                        elif curr.end_date is not None and mp.end_date is None:
+                            mp_map[mp.employee_id] = mp
+
+                # Acumulamos los días de servicio de todos los contratos históricos
+                if mp.start_date <= self.period.end_date:
+                    contract_start = mp.start_date
+                    contract_end = min(mp.end_date, self.period.end_date) if mp.end_date else self.period.end_date
+                    if contract_start <= contract_end:
+                        days_count = (contract_end - contract_start).days + 1
+                        service_days_map[mp.employee_id] = service_days_map.get(mp.employee_id, 0) + days_count
 
             # ── 6. Novedades del periodo ──────────────────────────────────
             novelties_map = {}
@@ -453,9 +474,8 @@ class PayrollCalculatorService:
 
                     effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
-                    years_of_service = (
-                            (self.period.end_date - mp.start_date).days / 365.25
-                    ) if mp and mp.start_date else 0
+                    total_days_service = service_days_map.get(slip.employee_id, 0)
+                    years_of_service = total_days_service / 365.25
                     regime_code = (
                         mp.contract_type.labor_regime.code.strip().upper()
                         if mp and mp.contract_type and mp.contract_type.labor_regime
@@ -884,10 +904,14 @@ class PayrollCalculatorService:
                 _add(accounts['debit'], 'debit', val, rub_order)
                 _add(c_puente, 'credit', val, rub_order)
 
+
             elif rubric.rubric_type == 'DEDUCTION':
-                # Descuentos siempre despues de ingresos (order 800+)
                 _add(c_puente, 'debit', val, 800 + rub_order)
                 _add(accounts['credit'], 'credit', val, 800 + rub_order)
+                if rubric.income_account_id:
+                    _add(accounts['credit'], 'debit', val, 800 + rub_order)
+
+                    _add(rubric.income_account_id, 'credit', val, 800 + rub_order)
 
             elif rubric.rubric_type == 'CONTRIBUTION':
                 _add(accounts['debit'], 'debit', val, rub_order)
