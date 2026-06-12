@@ -1383,7 +1383,6 @@ def generate_department_report_pdf(request):
         return HttpResponse('unit_id requerido', status=400)
 
     from institution.models import AdministrativeUnit
-    from contract.models import ManagementPeriod
 
     def collect_unit_ids(root_id):
         ids = set()
@@ -1403,7 +1402,7 @@ def generate_department_report_pdf(request):
 
     unit_ids = collect_unit_ids(unit_id)
 
-    # 1. OPTIMIZACIÓN: Traer empleados ORDENADOS alfabéticamente de la A a la Z
+    # 1. Traer empleados
     inst_qs = InstitutionalData.objects.select_related(
         'employee__person', 'employee__area'
     ).prefetch_related(
@@ -1419,24 +1418,23 @@ def generate_department_report_pdf(request):
     month_start = date(year, month, 1)
     month_end = date(year, month, calendar.monthrange(year, month)[1])
 
-    # 2. MEGA OPTIMIZACIÓN: Traer TODO lo necesario fuera del bucle (evita lentitud)
-    # Traer todas las marcaciones del mes de todos los empleados en una sola consulta
+    # 2. MEGA OPTIMIZACIÓN: Diccionarios con llaves NORMALIZADAS (string)
     all_punches = AttendanceRegistry.objects.filter(
         employee_id__in=emp_ids, registry_date__year=year, registry_date__month=month
     ).select_related('biometric_load__biometric')
 
     punches_by_emp = defaultdict(lambda: defaultdict(list))
     for p in all_punches:
+        emp_key = str(p.employee_id)
         dt = timezone.localtime(p.registry_date).replace(tzinfo=None) if timezone.is_aware(
             p.registry_date) else p.registry_date
-        punches_by_emp[p.employee_id][dt.day].append({
+        punches_by_emp[emp_key][dt.day].append({
             'time': dt.strftime('%H:%M'),
             'device': p.biometric_load.biometric.name[:10] if p.biometric_load and p.biometric_load.biometric else '',
             'dt': p.registry_date,
             'dt_norm': dt,
         })
 
-    # Traer todos los permisos aprobados
     all_permits = PermitRequest.objects.filter(employee_id__in=emp_ids, status='APPROVED').filter(
         models.Q(start_date__lte=month_end, end_date__gte=month_start) |
         models.Q(start_date__range=(month_start, month_end)) |
@@ -1446,88 +1444,50 @@ def generate_department_report_pdf(request):
     permits_by_emp = defaultdict(lambda: defaultdict(list))
     for pr in all_permits:
         emp_key = str(pr.employee_id)
-        p_start = pr.start_date if pr.start_date >= month_start else month_start
-        p_end = pr.end_date or pr.start_date
-        if p_end > month_end:
-            p_end = month_end
-
-        crosses_midnight = False
-        try:
-            if pr.start_time and pr.end_time and pr.end_time <= pr.start_time:
-                crosses_midnight = True
-        except Exception:
-            crosses_midnight = False
+        p_start = max(pr.start_date, month_start)
+        p_end = min(pr.end_date or pr.start_date, month_end)
 
         cur = p_start
         while cur <= p_end:
-            entry = {'type': pr.permit_type.name if pr.permit_type else '', 'note': pr.response_note or ''}
+            entry = {'type': pr.permit_type.name if pr.permit_type else 'PERMISO', 'note': pr.response_note or ''}
+            # Lógica compacta de horas de permiso
             if not pr.start_time and not pr.end_time:
-                entry['start_time'] = None
-                entry['end_time'] = None
+                entry['start_time'], entry['end_time'] = None, None
             else:
-                if (pr.start_date == (pr.end_date or pr.start_date)) and not crosses_midnight:
-                    entry['start_time'] = pr.start_time
-                    entry['end_time'] = pr.end_time
-                else:
-                    if crosses_midnight:
-                        if cur == pr.start_date:
-                            entry['start_time'] = pr.start_time
-                            entry['end_time'] = dtime(0, 0)
-                        elif cur == (pr.end_date or pr.start_date):
-                            entry['start_time'] = dtime(0, 0)
-                            entry['end_time'] = pr.end_time
-                        else:
-                            entry['start_time'] = dtime(0, 0)
-                            entry['end_time'] = dtime(23, 59)
-                    else:
-                        if cur == pr.start_date:
-                            entry['start_time'] = pr.start_time
-                            entry['end_time'] = dtime(23, 59)
-                        elif cur == (pr.end_date or pr.start_date):
-                            entry['start_time'] = dtime(0, 0)
-                            entry['end_time'] = pr.end_time
-                        else:
-                            entry['start_time'] = dtime(0, 0)
-                            entry['end_time'] = dtime(23, 59)
-            permits_by_emp[pr.employee_id][cur.day].append(entry)
+                # Simplificación para el reporte grupal: marcar las horas si es el día de inicio/fin
+                entry['start_time'] = pr.start_time if cur == pr.start_date else dtime(0, 0)
+                entry['end_time'] = pr.end_time if cur == (pr.end_date or pr.start_date) else dtime(23, 59)
+
+            permits_by_emp[emp_key][cur.day].append(entry)
             cur += timedelta(days=1)
 
-    # Feriados (una sola vez)
     holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True, start_date__lte=month_end,
                                                      end_date__gte=month_start)
     holidays_map = {}
     for obs in holidays_qs:
-        cur = max(obs.start_date, month_start)
-        last = min(obs.end_date, month_end)
-        while cur <= last:
-            holidays_map[cur.day] = obs.name
-            cur += timedelta(days=1)
+        h_cur, h_last = max(obs.start_date, month_start), min(obs.end_date, month_end)
+        while h_cur <= h_last:
+            holidays_map[h_cur.day] = obs.name
+            h_cur += timedelta(days=1)
 
-    results_by_unit = {}
-    # OPTIMIZACIÓN CRÍTICA: pre-cargar TODOS los horarios en 2 queries planas
-    # Antes: get_employee_schedule_for_date() → 2 queries × empleado × día (~8 800 queries)
-    # Ahora: build_schedule_cache()           → 2 queries totales, resolución en memoria
     from schedule.schedule_prefetch import build_schedule_cache, get_schedule_from_cache
     _sched_cache = build_schedule_cache(emp_ids, month_start, month_end)
 
-    # 3. PROCESAMIENTO
+    results_by_unit = {}
     for inst in inst_qs:
-        # CORRECCIÓN RÉGIMEN: Buscar el periodo más reciente si no hay uno marcado como ACTIVO
+        emp_id_str = str(inst.employee_id)
+
+        # Régimen laboral
         periods = list(inst.employee.management_periods.all())
-        active_period = next((p for p in periods if p.status.code.upper() in ['ACTIVO', 'ACT']), None)
-        if not active_period and periods:
-            active_period = periods[0]  # Fallback al último
+        active_period = next((p for p in periods if p.status.code.upper() in ['ACTIVO', 'ACT']),
+                             periods[0] if periods else None)
+        regimen_name = active_period.contract_type.labor_regime.name if active_period and active_period.contract_type and active_period.contract_type.labor_regime else "N/A"
 
-        regimen_name = "N/A"
-        if active_period and active_period.contract_type and active_period.contract_type.labor_regime:
-            regimen_name = active_period.contract_type.labor_regime.name
-
-        emp_id = inst.employee_id
+        # Construir calendario del mes para este empleado
         weeks = calendar.Calendar(firstweekday=0).monthdayscalendar(year, month)
         calendar_data = []
-
-        emp_punches = punches_by_emp.get(emp_id, {})
-        emp_permits = permits_by_emp.get(emp_id, {})
+        emp_punches = punches_by_emp.get(emp_id_str, {})
+        emp_permits = permits_by_emp.get(emp_id_str, {})
 
         for week in weeks:
             week_list = []
@@ -1539,22 +1499,23 @@ def generate_department_report_pdf(request):
                 week_list.append(day_data)
             calendar_data.append(week_list)
 
+        # Anotar y calcular
         annotate_attendance_calendar_for_employee(
             calendar_data, year, month, inst.employee, debug_punches,
-            schedule_lookup_fn=lambda emp_obj, d, _eid=emp_id: get_schedule_from_cache(_sched_cache, _eid, d),
+            schedule_lookup_fn=lambda emp_obj, d, _eid=inst.employee_id: get_schedule_from_cache(_sched_cache, _eid, d),
         )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
-        sched_ref = get_schedule_from_cache(_sched_cache, emp_id, month_start)
+        # Tolerancia del horario (tomamos el del día 1 como referencia)
+        sched_ref = get_schedule_from_cache(_sched_cache, inst.employee_id, month_start)
         tolerance = sched_ref.late_tolerance_minutes if sched_ref else 0
 
-        # Lógica de tolerancia y filtrado...
         minutos_atraso = summary_emp.get('minutos_atraso', 0)
         inconsistencias = summary_emp.get('inconsistencias', 0)
         dias_sin_marcar = summary_emp.get('dias_sin_marcar', 0)
-        if (inconsistencias > 0 or
-                dias_sin_marcar > 0 or
-                minutos_atraso > tolerance):
+
+        # --- FILTRO DE EXCEPCIONES ---
+        if inconsistencias > 0 or dias_sin_marcar > 0 or minutos_atraso > tolerance:
             unit_name = inst.employee.area.name if inst.employee.area else 'Sin Unidad'
             results_by_unit.setdefault(unit_name, []).append({
                 'employee': inst.employee,
@@ -1565,18 +1526,15 @@ def generate_department_report_pdf(request):
                 'tolerancia': tolerance,
             })
 
-    # Ordenar unidades alfabéticamente
+    # Ordenar y Generar PDF
     grouped_results = sorted(list(results_by_unit.items()), key=lambda x: x[0].lower())
-
-    # Generación de PDF (igual que antes)
     template = get_template('biometric/reports/pdf_attendance_by_unit.html')
     html = template.render(
         {'unit': unit, 'year': year, 'month': month, 'grouped_results': grouped_results, 'today': datetime.now()})
 
     filename = f"Reporte_Dep_{unit.name.replace(' ', '_')}_{year}_{month}.pdf"
     if HTML:
-        base_url = request.build_absolute_uri('/')
-        pdf = HTML(string=html, base_url=base_url).write_pdf(
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf(
             stylesheets=[CSS(string='@page { size: A4; margin: 0.8cm }')])
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{filename}"'
