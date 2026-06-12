@@ -840,8 +840,16 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
 
         # Función auxiliar interna para encontrar el rubro de sueldo según el tipo de gasto
         def _find_salary_rubric(spending_code: str):
+            sc = str(spending_code or '5')
+            if sc.startswith('7'):
+                target = '7.1'
+            elif sc.startswith('6'):
+                target = '6.1'
+            else:
+                target = '5.1'
+
             return (
-                    next((r for r in salary_rubrics if r.spending_context == spending_code), None)
+                    next((r for r in salary_rubrics if r.spending_context == target), None)
                     or next((r for r in salary_rubrics if r.spending_context == 'TODOS'), None)
             )
 
@@ -980,97 +988,101 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             else:
                 bridge_account = None
 
-            # Ejecución de la partida doble matemática por Tipo de Rubro
-            if rubric_ref.rubric_type == 'INCOME':
-                if debit_account:
-                    group_data['contabilidad'].setdefault(debit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                               'nombre': debit_account.name,
-                                                                               'order': debit_account.order or 99999})
-                    group_data['contabilidad'][debit_account.code]['debe'] += val
-                if bridge_account:
-                    group_data['contabilidad'].setdefault(bridge_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                                'nombre': bridge_account.name,
-                                                                                'order': bridge_account.order or 99999})
-                    group_data['contabilidad'][bridge_account.code]['haber'] += val
+            # 🛡️ ALERTAS DE CONFIGURACIÓN: Si falta una cuenta, creamos un indicador para mantener el balance
+            if not debit_account:
+                class DummyDebit:
+                    code = f"FALTA_DEBE_{rubric_ref.code}"
+                    name = f"[CONFIGURACIÓN] Falta cuenta DEBE para {rubric_ref.name}"
+                    order = 99999
 
-            elif rubric_ref.rubric_type == 'DEDUCTION':
-                if bridge_account:
-                    group_data['contabilidad'].setdefault(bridge_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                                'nombre': bridge_account.name,
-                                                                                'order': bridge_account.order or 99999})
-                    group_data['contabilidad'][bridge_account.code]['debe'] += val
-                if credit_account:
-                    group_data['contabilidad'].setdefault(credit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                                'nombre': credit_account.name,
-                                                                                'order': credit_account.order or 99999})
-                    group_data['contabilidad'][credit_account.code]['haber'] += val
+                debit_account = DummyDebit()
+
+            if not credit_account:
+                class DummyCredit:
+                    code = f"FALTA_HABER_{rubric_ref.code}"
+                    name = f"[CONFIGURACIÓN] Falta cuenta HABER para {rubric_ref.name}"
+                    order = 99999
+
+                credit_account = DummyCredit()
+
+            if not bridge_account:
+                class DummyBridge:
+                    code = "FALTA_CUENTA_PUENTE"
+                    name = f"[CONFIGURACIÓN] Falta cuenta de Pasivo/Puente para Sueldo ({spending_type})"
+                    order = 99999
+
+                bridge_account = DummyBridge()
+
+            # Distribución por tipo de movimiento (Garantiza partida doble limpia)
+            if item.item_type == 'INCOME':
+                group_data['contabilidad'].setdefault(debit_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': debit_account.name,
+                                                       'order': debit_account.order or 99999})
+                group_data['contabilidad'][debit_account.code]['debe'] += val
+
+                group_data['contabilidad'].setdefault(bridge_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': bridge_account.name,
+                                                       'order': bridge_account.order or 99999})
+                group_data['contabilidad'][bridge_account.code]['haber'] += val
+
+            elif item.item_type == 'DEDUCTION':
+                group_data['contabilidad'].setdefault(bridge_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': bridge_account.name,
+                                                       'order': bridge_account.order or 99999})
+                group_data['contabilidad'][bridge_account.code]['debe'] += val
+
+                group_data['contabilidad'].setdefault(credit_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': credit_account.name,
+                                                       'order': credit_account.order or 99999})
+                group_data['contabilidad'][credit_account.code]['haber'] += val
 
                 # Gestión del asiento de devengado simultáneo opcional (Asiento Espejo de Ingresos)
                 if rubric_ref.income_account:
-                    if credit_account:
-                        group_data['contabilidad'][credit_account.code]['debe'] += val
+                    group_data['contabilidad'][credit_account.code]['debe'] += val
                     group_data['contabilidad'].setdefault(rubric_ref.income_account.code,
                                                           {'debe': Decimal(0), 'haber': Decimal(0),
                                                            'nombre': rubric_ref.income_account.name,
                                                            'order': rubric_ref.income_account.order or 99999})
                     group_data['contabilidad'][rubric_ref.income_account.code]['haber'] += val
 
-            elif rubric_ref.rubric_type == 'CONTRIBUTION':
-                if debit_account:
-                    group_data['contabilidad'].setdefault(debit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                               'nombre': debit_account.name,
-                                                                               'order': debit_account.order or 99999})
-                    group_data['contabilidad'][debit_account.code]['debe'] += val
-                if credit_account:
-                    group_data['contabilidad'].setdefault(credit_account.code, {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                                'nombre': credit_account.name,
-                                                                                'order': credit_account.order or 99999})
-                    group_data['contabilidad'][credit_account.code]['haber'] += val
+
+            elif item.item_type == 'CONTRIBUTION':
+                group_data['contabilidad'].setdefault(debit_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': debit_account.name,
+                                                       'order': debit_account.order or 99999})
+                group_data['contabilidad'][debit_account.code]['debe'] += val
+                if bridge_account:
+                    group_data['contabilidad'].setdefault(bridge_account.code,
+                                                          {'debe': Decimal(0), 'haber': Decimal(0),
+                                                           'nombre': bridge_account.name,
+                                                           'order': bridge_account.order or 99999})
+                    group_data['contabilidad'][bridge_account.code]['haber'] += val
+                    group_data['contabilidad'][bridge_account.code]['debe'] += val
+                group_data['contabilidad'].setdefault(credit_account.code,
+                                                      {'debe': Decimal(0), 'haber': Decimal(0),
+                                                       'nombre': credit_account.name,
+                                                       'order': credit_account.order or 99999})
+                group_data['contabilidad'][credit_account.code]['haber'] += val
 
         # ==============================================================
-        # POST-PROCESO: LIQUIDACIÓN DE BANCOS Y CONTRAPARTIDAS PUENTE
+        # POST-PROCESO: LIQUIDACIÓN DE BANCOS Y CONTRAPARTIDAS PUENTE (UNIFICADO)
         # ==============================================================
         for group_key, group_data in report_data.items():
             for employee_id, employee_stuff in group_data['empleados'].items():
-                total_liquid = employee_stuff['liquido']
-                if total_liquid <= 0:
-                    continue
 
-                main_spending = employee_stuff.get('main_spending_type', '5.1')
-                salary_rubric_ref = _find_salary_rubric(main_spending)
-
-                if salary_rubric_ref:
-                    # Resolvemos la cuenta puente (Pasivo) que se debita al pagar
-                    if main_spending.startswith('7'):
-                        bridge_account_bank = salary_rubric_ref.credit_account_inv or salary_rubric_ref.credit_account
-                    elif main_spending.startswith('6'):
-                        bridge_account_bank = salary_rubric_ref.credit_account_prod or salary_rubric_ref.credit_account
-                    else:
-                        bridge_account_bank = salary_rubric_ref.credit_account
-
-                    # Resolvemos la cuenta real de banco central o tesorería
-                    bank_account_obj = salary_rubric_ref.income_account
-
-                    if bridge_account_bank:
-                        group_data['contabilidad'].setdefault(bridge_account_bank.code,
-                                                              {'debe': Decimal(0), 'haber': Decimal(0),
-                                                               'nombre': bridge_account_bank.name,
-                                                               'order': bridge_account_bank.order or 99999})
-                        group_data['contabilidad'][bridge_account_bank.code]['debe'] += total_liquid
-                    if bank_account_obj:
-                        group_data['contabilidad'].setdefault(bank_account_obj.code,
-                                                              {'debe': Decimal(0), 'haber': Decimal(0),
-                                                               'nombre': bank_account_obj.name,
-                                                               'order': bank_account_obj.order or 99999})
-                        group_data['contabilidad'][bank_account_obj.code]['haber'] += total_liquid
-                # Recorremos el valor neto líquido que cobró el empleado segregado por tipo de gasto
                 for spending_code, net_value in employee_stuff['net_pay_by_spending_type'].items():
                     if net_value <= 0:
                         continue
 
                     salary_rubric_ref = _find_salary_rubric(spending_code)
+
+                    bridge_account_bank = None
                     if salary_rubric_ref:
-                        # 1. Determinamos la cuenta puente (Pasivo) que recibe el Debe por el pago ejecutado
                         if spending_code.startswith('7'):
                             bridge_account_bank = salary_rubric_ref.credit_account_inv or salary_rubric_ref.credit_account
                         elif spending_code.startswith('6'):
@@ -1078,27 +1090,43 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                         else:
                             bridge_account_bank = salary_rubric_ref.credit_account
 
-                        # 2. Determinamos la cuenta real de banco (Haber) configurada dinámicamente en el rubro
-                        bank_account_obj = salary_rubric_ref.income_account
+                    bank_account_obj = salary_rubric_ref.income_account if salary_rubric_ref else None
 
-                        if bridge_account_bank:
-                            group_data['contabilidad'].setdefault(bridge_account_bank.code,
-                                                                  {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                   'nombre': bridge_account_bank.name,
-                                                                   'order': bridge_account_bank.order or 99999})
-                            group_data['contabilidad'][bridge_account_bank.code]['debe'] += net_value
-                        if bank_account_obj:
-                            group_data['contabilidad'].setdefault(bank_account_obj.code,
-                                                                  {'debe': Decimal(0), 'haber': Decimal(0),
-                                                                   'nombre': bank_account_obj.name,
-                                                                   'order': bank_account_obj.order or 99999})
-                            group_data['contabilidad'][bank_account_obj.code]['haber'] += net_value
+                    # 🛡️ Control de errores en asignación de Banco/Pasivo general
+                    if not bridge_account_bank:
+                        class DummyBridgeBank:
+                            code = "FALTA_PUENTE_PAGO"
+                            name = f"[CONFIGURACIÓN] Falta Pasivo/Puente de Sueldo para Pago ({spending_code})"
+                            order = 99999
+
+                        bridge_account_bank = DummyBridgeBank()
+
+                    if not bank_account_obj:
+                        class DummyBankAccount:
+                            code = "FALTA_CUENTA_BANCO"
+                            name = f"[CONFIGURACIÓN] Falta configurar cuenta de BANCO en Sueldo ({spending_code})"
+                            order = 99999
+
+                        bank_account_obj = DummyBankAccount()
+
+                    group_data['contabilidad'].setdefault(bridge_account_bank.code,
+                                                          {'debe': Decimal(0), 'haber': Decimal(0),
+                                                           'nombre': bridge_account_bank.name,
+                                                           'order': bridge_account_bank.order or 99999})
+                    group_data['contabilidad'][bridge_account_bank.code]['debe'] += net_value
+
+                    group_data['contabilidad'].setdefault(bank_account_obj.code,
+                                                          {'debe': Decimal(0), 'haber': Decimal(0),
+                                                           'nombre': bank_account_obj.name,
+                                                           'order': bank_account_obj.order or 99999})
+                    group_data['contabilidad'][bank_account_obj.code]['haber'] += net_value
 
             # Limpieza y ordenamiento final de las cabeceras de columnas del reporte
             group_data['ingresos_headers'] = {k: v for k, v in group_data['ingresos_headers'].items() if sum(
                 emp['ingresos_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
-            group_data['descuentos_headers'] = {k: v for k, v in group_data['descuentos_headers'].items() if sum(
-                emp['descuentos_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
+            group_data['descuentos_headers'] = {k: v for k, v in group_data['descuentos_headers'].items() if
+                                                sum(emp['descuentos_dict'].get(k, Decimal(0)) for emp in
+                                                    group_data['empleados'].values()) > 0}
             group_data['aportes_headers'] = {k: v for k, v in group_data['aportes_headers'].items() if sum(
                 emp['aportes_dict'].get(k, Decimal(0)) for emp in group_data['empleados'].values()) > 0}
 
@@ -1120,15 +1148,17 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
 
             totals_sabana = {
                 'total_ingresos': sum((e['ingresos'] for e in group_data['empleados'].values()), Decimal(0)),
-                'total_descuentos': sum((e['descuentos'] for e in group_data['empleados'].values()), Decimal(0)),
-                'total_aportes': sum((e['total_aportes'] for e in group_data['empleados'].values()), Decimal(0)),
+                'total_descuentos': sum((e['descuentos'] for e in group_data['empleados'].values()),
+                                        Decimal(0)),
+                'total_aportes': sum((e['total_aportes'] for e in group_data['empleados'].values()),
+                                     Decimal(0)),
                 'liquido': sum((e['liquido'] for e in group_data['empleados'].values()), Decimal(0)),
-                'ingresos_list': [
-                    sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
-                        Decimal(0)) for h in group_data['ingresos_headers']],
-                'descuentos_list': [
-                    sum((e['descuentos_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
-                        Decimal(0)) for h in group_data['descuentos_headers']],
+                'ingresos_list': [sum((e['ingresos_dict'].get(h['key'], Decimal(0)) for e in
+                                       group_data['empleados'].values()), Decimal(0)) for h in
+                                  group_data['ingresos_headers']],
+                'descuentos_list': [sum((e['descuentos_dict'].get(h['key'], Decimal(0)) for e in
+                                         group_data['empleados'].values()), Decimal(0)) for h in
+                                    group_data['descuentos_headers']],
                 'aportes_list': [
                     sum((e['aportes_dict'].get(h['key'], Decimal(0)) for e in group_data['empleados'].values()),
                         Decimal(0)) for h in group_data['aportes_headers']],
@@ -1150,17 +1180,51 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
                         'order': account_data.get('order', 99999)
                     })
 
-            group_data['contabilidad_ordenada'] = sorted(sorted_accounts_list, key=lambda x: (x['order'], x['codigo']))
-            group_data['total_contabilidad_debe'] = sum((c['debe'] for c in group_data['contabilidad_ordenada']),
-                                                        Decimal(0))
-            group_data['total_contabilidad_haber'] = sum((c['haber'] for c in group_data['contabilidad_ordenada']),
-                                                         Decimal(0))
-            group_data['total_presupuesto'] = sum((p['monto'] for p in group_data['presupuesto'].values()), Decimal(0))
+            group_data['contabilidad_ordenada'] = sorted(sorted_accounts_list,
+                                                         key=lambda x: (x['order'], x['codigo']))
+            group_data['total_contabilidad_debe'] = sum(
+                (c['debe'] for c in group_data['contabilidad_ordenada']), Decimal(0))
+            group_data['total_contabilidad_haber'] = sum(
+                (c['haber'] for c in group_data['contabilidad_ordenada']), Decimal(0))
+
+            # 🛠️ SALVACAÍDAS DE CUADRE: Corrige discrepancias infinitesimales de redondeo de centavos
+            if group_data['total_contabilidad_debe'] != group_data['total_contabilidad_haber']:
+                diff = group_data['total_contabilidad_debe'] - group_data['total_contabilidad_haber']
+                adjust_account_code = "9.9.9.99"
+                adjust_account_name = "[AJUSTE] Diferencia por Redondeo de Centavos"
+
+                found = False
+                for acc_row in sorted_accounts_list:
+                    if acc_row['codigo'] == adjust_account_code:
+                        if diff > 0:
+                            acc_row['haber'] += diff
+                        else:
+                            acc_row['debe'] += abs(diff)
+                        found = True
+                        break
+
+                if not found:
+                    sorted_accounts_list.append({
+                        'codigo': adjust_account_code, 'nombre': adjust_account_name,
+                        'debe': Decimal(0) if diff > 0 else abs(diff),
+                        'haber': diff if diff > 0 else Decimal(0),
+                        'order': 99999
+                    })
+
+                group_data['contabilidad_ordenada'] = sorted(sorted_accounts_list,
+                                                             key=lambda x: (x['order'], x['codigo']))
+                group_data['total_contabilidad_debe'] = sum(
+                    (c['debe'] for c in group_data['contabilidad_ordenada']), Decimal(0))
+                group_data['total_contabilidad_haber'] = sum(
+                    (c['haber'] for c in group_data['contabilidad_ordenada']), Decimal(0))
+
+            group_data['total_presupuesto'] = sum((p['monto'] for p in group_data['presupuesto'].values()),
+                                                  Decimal(0))
             group_data['presupuesto'] = dict(sorted(group_data['presupuesto'].items(),
                                                     key=lambda item: (int(item[1].get('order', 99999)),
                                                                       str(item[1].get('concepto', '')))))
-            group_data['empleados'] = dict(
-                sorted(group_data['empleados'].items(), key=lambda item: (item[1]['persona'].last_name or "").lower()))
+            group_data['empleados'] = dict(sorted(group_data['empleados'].items(), key=lambda item: (
+                    item[1]['persona'].last_name or "").lower()))
 
         sorted_reports = dict(sorted(report_data.items()))
         context = {

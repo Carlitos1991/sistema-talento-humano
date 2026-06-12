@@ -848,8 +848,15 @@ class PayrollCalculatorService:
             )
 
         def _find_salary_rubric(spending_type: str):
+            sc = str(spending_type or '5')
+            if sc.startswith('7'):
+                target = '7.1'
+            elif sc.startswith('6'):
+                target = '6.1'
+            else:
+                target = '5.1'
             return (
-                    next((r for r in salary_rubrics if r.spending_context == spending_type), None)
+                    next((r for r in salary_rubrics if r.spending_context == target), None)
                     or next((r for r in salary_rubrics if r.spending_context == 'TODOS'), None)
             )
 
@@ -913,9 +920,13 @@ class PayrollCalculatorService:
 
                     _add(rubric.income_account_id, 'credit', val, 800 + rub_order)
 
+
             elif rubric.rubric_type == 'CONTRIBUTION':
                 _add(accounts['debit'], 'debit', val, rub_order)
-                _add(accounts['credit'], 'credit', val, rub_order)
+                if c_puente:
+                    _add(c_puente, 'credit', val, rub_order)
+                    _add(c_puente, 'debit', val, 800 + rub_order)
+                _add(accounts['credit'], 'credit', val, 800 + rub_order)
 
         # -- PASO 2: Liquidacion de bancos -----------------
         for slip in created_payslips:
