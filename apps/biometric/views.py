@@ -1444,19 +1444,49 @@ def generate_department_report_pdf(request):
     permits_by_emp = defaultdict(lambda: defaultdict(list))
     for pr in all_permits:
         emp_key = str(pr.employee_id)
-        p_start = max(pr.start_date, month_start)
-        p_end = min(pr.end_date or pr.start_date, month_end)
+        p_start = pr.start_date if pr.start_date >= month_start else month_start
+        p_end = pr.end_date or pr.start_date
+        if p_end > month_end:
+            p_end = month_end
+
+        crosses_midnight = False
+        try:
+            if pr.start_time and pr.end_time and pr.end_time <= pr.start_time:
+                crosses_midnight = True
+        except Exception:
+            crosses_midnight = False
 
         cur = p_start
         while cur <= p_end:
-            entry = {'type': pr.permit_type.name if pr.permit_type else 'PERMISO', 'note': pr.response_note or ''}
-            # Lógica compacta de horas de permiso
+            entry = {'type': pr.permit_type.name if pr.permit_type else '', 'note': pr.response_note or ''}
             if not pr.start_time and not pr.end_time:
-                entry['start_time'], entry['end_time'] = None, None
+                entry['start_time'] = None
+                entry['end_time'] = None
             else:
-                # Simplificación para el reporte grupal: marcar las horas si es el día de inicio/fin
-                entry['start_time'] = pr.start_time if cur == pr.start_date else dtime(0, 0)
-                entry['end_time'] = pr.end_time if cur == (pr.end_date or pr.start_date) else dtime(23, 59)
+                if (pr.start_date == (pr.end_date or pr.start_date)) and not crosses_midnight:
+                    entry['start_time'] = pr.start_time
+                    entry['end_time'] = pr.end_time
+                else:
+                    if crosses_midnight:
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(0, 0)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
+                    else:
+                        if cur == pr.start_date:
+                            entry['start_time'] = pr.start_time
+                            entry['end_time'] = dtime(23, 59)
+                        elif cur == (pr.end_date or pr.start_date):
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = pr.end_time
+                        else:
+                            entry['start_time'] = dtime(0, 0)
+                            entry['end_time'] = dtime(23, 59)
 
             permits_by_emp[emp_key][cur.day].append(entry)
             cur += timedelta(days=1)
@@ -1470,8 +1500,10 @@ def generate_department_report_pdf(request):
             holidays_map[h_cur.day] = obs.name
             h_cur += timedelta(days=1)
 
-    from schedule.schedule_prefetch import build_schedule_cache, get_schedule_from_cache
-    _sched_cache = build_schedule_cache(emp_ids, month_start, month_end)
+    try:
+        from schedule.models import get_employee_schedule_for_date
+    except Exception:
+        get_employee_schedule_for_date = None
 
     results_by_unit = {}
     for inst in inst_qs:
@@ -1502,12 +1534,13 @@ def generate_department_report_pdf(request):
         # Anotar y calcular
         annotate_attendance_calendar_for_employee(
             calendar_data, year, month, inst.employee, debug_punches,
-            schedule_lookup_fn=lambda emp_obj, d, _eid=inst.employee_id: get_schedule_from_cache(_sched_cache, _eid, d),
+            schedule_lookup_fn=get_employee_schedule_for_date,
         )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
         # Tolerancia del horario (tomamos el del día 1 como referencia)
-        sched_ref = get_schedule_from_cache(_sched_cache, inst.employee_id, month_start)
+        sched_ref = get_employee_schedule_for_date(inst.employee,
+                                                   month_start) if get_employee_schedule_for_date else None
         tolerance = sched_ref.late_tolerance_minutes if sched_ref else 0
 
         minutos_atraso = summary_emp.get('minutos_atraso', 0)
