@@ -103,12 +103,13 @@
 
 {% block extra_js %}
     <script>
-        // CRÍTICO: Aseguramos que el ID se renderice como número
         window.CURRENT_PERIOD_ID = "{{ current_period.id|default:'' }}";
         window.URLS = {
-            baseList: "{% url 'payroll:payslip_list' %}"
+            baseList: "{% url 'payroll:payslip_list' %}",
+            reporteNomina: "{% url 'payroll:grouped_report' pk=999999 %}",
+            reporteBanco: "{% url 'payroll:report_bank_transfer' pk=999999 %}",
+            reporteNegativos: "{% url 'payroll:report_negative_balances' period_id=999999 %}"
         };
-        // TableManager compatibility: permitir que su fallback encuentre la URL
         window._personExport = window._personExport || {};
         window._personExport.listUrl = window.URLS.baseList;
     </script>

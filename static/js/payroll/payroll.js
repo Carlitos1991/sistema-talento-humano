@@ -732,10 +732,22 @@ function getCSRF() {
 }
 
 function _resolveCurrentPeriodId() {
-    // La variable puede estar en window (fallback) o en el scope de modal_generate_payroll.js
-    if (typeof window !== 'undefined' && typeof window.currentGenPeriodId !== 'undefined' && window.currentGenPeriodId) return window.currentGenPeriodId;
-    if (typeof currentGenPeriodId !== 'undefined' && currentGenPeriodId) return currentGenPeriodId;
-    return null;
+    // 1. Si estamos en la vista de Detalle de Roles (payslip_list.html)
+    if (typeof window !== 'undefined' && window.CURRENT_PERIOD_ID && window.CURRENT_PERIOD_ID !== 'None') {
+        return window.CURRENT_PERIOD_ID;
+    }
+
+    // 2. Si estamos usando los modales en la vista de Periodos (payroll_period_list.html)
+    if (typeof window !== 'undefined' && typeof window.currentGenPeriodId !== 'undefined' && window.currentGenPeriodId) {
+        return window.currentGenPeriodId;
+    }
+    if (typeof currentGenPeriodId !== 'undefined' && currentGenPeriodId) {
+        return currentGenPeriodId;
+    }
+
+    // 3. Fallback infalible: extraerlo directamente de la URL actual
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('period_id');
 }
 
 function submitGenerate(mode) {

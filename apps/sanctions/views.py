@@ -509,6 +509,8 @@ def _build_notification_form_like_object(notification):
             'registration_date': notification.registration_date,
             'authority_1': notification.authority_1,
             'authority_2': notification.authority_2,
+            'reviewer': notification.reviewer,
+            'elaborated_by': notification.elaborated_by,
             'minutes_late': notification.minutes_late or 0,
             'regs_without_mark': notification.regs_without_mark or 0,
             'days_without_mark': notification.days_without_mark or 0,
@@ -890,6 +892,8 @@ class GenerateSanctionNotificationView(LoginRequiredMixin, View):
         notification.registration_date = form.cleaned_data['registration_date']
         notification.authority_1 = form.cleaned_data['authority_1']
         notification.authority_2 = form.cleaned_data.get('authority_2') or None
+        notification.reviewer = form.cleaned_data.get('reviewer')
+        notification.elaborated_by = form.cleaned_data.get('elaborated_by')
         notification.minutes_late = form.cleaned_data.get('minutes_late') or 0
         notification.regs_without_mark = form.cleaned_data.get('regs_without_mark') or 0
         notification.days_without_mark = form.cleaned_data.get('days_without_mark') or 0
