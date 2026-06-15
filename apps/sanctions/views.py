@@ -300,10 +300,19 @@ def _build_notification_data_context(employee, regime_context, notification_type
             'authority_2') else '',
         'authority_1': form.cleaned_data['authority_1'],
         'authority_2': form.cleaned_data.get('authority_2'),
+        'reviewer_name': form.cleaned_data['reviewer'].signature_name if form.cleaned_data.get('reviewer') else '',
+        'reviewer_position': form.cleaned_data['reviewer'].signature_position if form.cleaned_data.get(
+            'reviewer') else '',
+        'elaborated_name': form.cleaned_data['elaborated_by'].signature_name if form.cleaned_data.get(
+            'elaborated_by') else '',
+        'elaborated_position': form.cleaned_data['elaborated_by'].signature_position if form.cleaned_data.get(
+            'elaborated_by') else '',
         'minutes_late': form.cleaned_data.get('minutes_late') or 0,
         'regs_without_mark': form.cleaned_data.get('regs_without_mark') or 0,
         'days_without_mark': form.cleaned_data.get('days_without_mark') or 0,
         'observations': form.cleaned_data.get('observations') or '',
+        'reviewer': form.cleaned_data.get('reviewer'),
+        'elaborated_by': form.cleaned_data.get('elaborated_by'),
     }
 
 
@@ -1115,11 +1124,31 @@ class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         template = self.object
-        context['available_mappings'] = list(
+        system_vars = [
+            {'placeholder': '[FULL_NAME]', 'label': 'Nombre completo empleado'},
+            {'placeholder': '[DOCUMENT_NUMBER]', 'label': 'Cédula empleado'},
+            {'placeholder': '[POSITION]', 'label': 'Cargo empleado'},
+            {'placeholder': '[UNIT]', 'label': 'Unidad/Área empleado'},
+            {'placeholder': '[AUTHORITY_1_NAME]', 'label': 'Nombre Autoridad 1'},
+            {'placeholder': '[AUTHORITY_1_POSITION]', 'label': 'Cargo Autoridad 1'},
+            {'placeholder': '[AUTHORITY_2_NAME]', 'label': 'Nombre Autoridad 2'},
+            {'placeholder': '[AUTHORITY_2_POSITION]', 'label': 'Cargo Autoridad 2'},
+            {'placeholder': '[NOMBRE_REVISOR]', 'label': 'Nombre del Revisor'},
+            {'placeholder': '[CARGO_REVISOR]', 'label': 'Cargo del Revisor'},
+            {'placeholder': '[NOMBRE_ELABORADOR]', 'label': 'Nombre del Elaborador'},
+            {'placeholder': '[CARGO_ELABORADOR]', 'label': 'Cargo del Elaborador'},
+
+            {'placeholder': '[MINUTES_LATE]', 'label': 'Minutos de atraso'},
+            {'placeholder': '[OBSERVATIONS]', 'label': 'Observaciones'},
+            {'placeholder': '[AÑO]', 'label': 'Año actual'},
+            {'placeholder': '[today]', 'label': 'Fecha hoy (texto)'},
+        ]
+        dynamic_mappings = list(
             SanctionNotificationMapping.objects.filter(is_active=True)
             .order_by('order', 'label')
             .values('placeholder', 'label')
         )
+        context['available_mappings'] = system_vars + dynamic_mappings
         context['header_format'] = f'NOTIFICACIÓN Nº [SECUENCIA]-{template.labor_regime.code}-[AÑO]-[CODIGO_USUARIO]'
         context['location'] = 'Loja'
         context['date_format'] = '[today]'

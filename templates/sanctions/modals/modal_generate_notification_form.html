@@ -98,6 +98,19 @@
             <div class="section-card-standard border-left-success">
                 <h4 class="section-title"><i class="fas fa-file-signature text-primary"></i> FIRMAS DE RESPONSABILIDAD
                 </h4>
+                <div class="grid-2-cols mb-3">
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Elaborado por <span
+                                class="text-danger">*</span></label>
+                        {{ form.elaborated_by }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-weight-700">Revisado por</label>
+                        {{ form.reviewer }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
                 <div class="grid-2-cols">
                     <div class="form-group">
                         <label class="form-label font-weight-700">Firma 1 <span class="text-danger">*</span></label>

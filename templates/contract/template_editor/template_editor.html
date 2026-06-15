@@ -22,7 +22,8 @@
                         </p>
                         {% if template.contract_type.contract_type_category == 'ACCION_PERSONAL' %}
                             <p class="text-muted small mb-0 mt-2">
-                                Esta plantilla usa campos predefinidos de Acción de Personal y no permite crear párrafos libres.
+                                Esta plantilla usa campos predefinidos de Acción de Personal y no permite crear párrafos
+                                libres.
                             </p>
                         {% endif %}
                     </div>
@@ -45,7 +46,8 @@
                 <div class="card shadow-sm template-editor-panel">
                     <div class="card-body">
                         <hr>
-                        <h6 class="mb-3">{% if template.contract_type.contract_type_category == 'ACCION_PERSONAL' %}Campos de la Acción de Personal{% else %}Secciones de la Plantilla{% endif %}</h6>
+                        <h6 class="mb-3">{% if template.contract_type.contract_type_category == 'ACCION_PERSONAL' %}
+                            Campos de la Acción de Personal{% else %}Secciones de la Plantilla{% endif %}</h6>
                         <div id="sectionsList" class="sortable-list template-section-list">
                             {% for section in template.sections.all %}
                                 <div class="section-item card mb-2" data-section-id="{{ section.id }}"
@@ -98,35 +100,62 @@
     </div>
 
     <div id="sectionEditorModal" class="modal-overlay hidden">
-        <div class="modal-box templates-modal-box" style="width: min(96vw, 825px); max-width: 825px; height: 77vh; max-height: 77vh; min-height: 77vh;">
+        <div class="modal-box templates-modal-box"
+             style="width: min(96vw, 825px); max-width: 825px; height: 77vh; max-height: 77vh; min-height: 77vh;">
             <div class="modal-header">
                 <h5 class="modal-title" id="sectionEditorTitle">Agregar Nuevo Párrafo</h5>
-                <button type="button" class="btn-close js-close-section-editor-modal" aria-label="Cerrar">&times;</button>
+                <button type="button" class="btn-close js-close-section-editor-modal" aria-label="Cerrar">&times;
+                </button>
             </div>
-            <div class="modal-body templates-modal-body" style="flex: 1; height: calc(98vh - 138px); max-height: none; min-height: 0; overflow-y: auto;">
+            <div class="modal-body templates-modal-body"
+                 style="flex: 1; height: calc(98vh - 138px); max-height: none; min-height: 0; overflow-y: auto;">
                 <div class="mb-3">
                     <div class="template-editor-modal-top-actions">
                         <label for="sectionEditorContent" class="form-label mb-0">Contenido</label>
                     </div>
                     <div class="btn-toolbar mb-2" role="toolbar" aria-label="Herramientas de formato">
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="**" data-suffix="**" title="Negrita"><i class="fas fa-bold"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="*" data-suffix="*" title="Cursiva"><i class="fas fa-italic"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="__" data-suffix="__" title="Subrayado"><i class="fas fa-underline"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="[SIZE_DOWN]" data-suffix="[/SIZE_DOWN]" title="Disminuir tamaño">A-</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="[SIZE_UP]" data-suffix="[/SIZE_UP]" title="Aumentar tamaño">A+</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="[ALIGN_LEFT]" data-suffix="[/ALIGN_LEFT]" title="Alinear izquierda"><i class="fas fa-align-left"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="[ALIGN_CENTER]" data-suffix="[/ALIGN_CENTER]" title="Alinear centrado"><i class="fas fa-align-center"></i></button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action" data-target="sectionEditorContent" data-prefix="[ALIGN_RIGHT]" data-suffix="[/ALIGN_RIGHT]" title="Alinear derecha"><i class="fas fa-align-right"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="**" data-suffix="**" title="Negrita"><i
+                                class="fas fa-bold"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="*" data-suffix="*" title="Cursiva"><i
+                                class="fas fa-italic"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="__" data-suffix="__" title="Subrayado">
+                            <i class="fas fa-underline"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="[SIZE_DOWN]" data-suffix="[/SIZE_DOWN]"
+                                title="Disminuir tamaño">A-
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="[SIZE_UP]" data-suffix="[/SIZE_UP]"
+                                title="Aumentar tamaño">A+
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="[ALIGN_LEFT]"
+                                data-suffix="[/ALIGN_LEFT]" title="Alinear izquierda"><i class="fas fa-align-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="[ALIGN_CENTER]"
+                                data-suffix="[/ALIGN_CENTER]" title="Alinear centrado"><i
+                                class="fas fa-align-center"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-format-action"
+                                data-target="sectionEditorContent" data-prefix="[ALIGN_RIGHT]"
+                                data-suffix="[/ALIGN_RIGHT]" title="Alinear derecha"><i class="fas fa-align-right"></i>
+                        </button>
                     </div>
-                    <textarea id="sectionEditorContent" class="form-control" rows="22" placeholder="Ingresa el contenido del párrafo"></textarea>
-                    <small class="text-muted d-block mt-2">Usa **texto** (negrita), *texto* (cursiva), __texto__ (subrayado) y [ALIGN_CENTER]texto[/ALIGN_CENTER].</small>
+                    <textarea id="sectionEditorContent" class="form-control" rows="22"
+                              placeholder="Ingresa el contenido del párrafo"></textarea>
+                    <small class="text-muted d-block mt-2">Usa **texto** (negrita), *texto* (cursiva), __texto__
+                        (subrayado) y [ALIGN_CENTER]texto[/ALIGN_CENTER].</small>
                 </div>
             </div>
             <div class="modal-footer-medium modal-footer-spaced template-editor-modal-footer">
                 <button type="button" class="btn-cancel template-editor-modal-btn js-close-section-editor-modal">
                     <i class="fa-solid fa-times"></i> Cancelar
                 </button>
-                <button type="button" class="btn-cancel template-editor-modal-btn template-editor-modal-vars-btn" id="btn-open-variables-swal">
+                <button type="button" class="btn-cancel template-editor-modal-btn template-editor-modal-vars-btn"
+                        id="btn-open-variables-swal">
                     <i class="fas fa-code"></i> Ver Variables
                 </button>
                 <button type="button" class="btn-save template-editor-modal-btn" id="saveSectionBtn">
@@ -141,6 +170,9 @@
 
 {% block extra_js %}
     <script src="{% static 'js/contract/template_editor.js' %}?v=20260410d"></script>
+    <script id="templateEditorMappingsData" type="application/json">
+    {{ available_mappings|safe|json_script:"templateEditorMappingsData" }}
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const templateId = Number('{{ template.id }}');

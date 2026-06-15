@@ -1,18 +1,13 @@
 from django.contrib import admin
 from .models import (
-    SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, 
-    SanctionNotificationTypeMapping, SanctionNotificationTypeRegime, SanctionType, 
+    SanctionNotification, SanctionNotificationMapping, SanctionNotificationType, SanctionNotificationTypeRegime,
+    SanctionType,
     Sanction, NotificationTemplate, TemplateSection
 )
 
 
 class SanctionNotificationTypeRegimeInline(admin.TabularInline):
     model = SanctionNotificationTypeRegime
-    extra = 0
-
-
-class SanctionNotificationTypeMappingInline(admin.TabularInline):
-    model = SanctionNotificationTypeMapping
     extra = 0
 
 
@@ -28,12 +23,14 @@ class SanctionTypeAdmin(admin.ModelAdmin):
 class SanctionNotificationTypeAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active', 'regime_count', 'created_at']
     list_filter = ['is_active']
-    search_fields = ['name', 'description', 'regime_templates__labor_regime__name', 'regime_templates__labor_regime__code']
-    inlines = [SanctionNotificationTypeRegimeInline, SanctionNotificationTypeMappingInline]
+    search_fields = ['name', 'description', 'regime_templates__labor_regime__name',
+                     'regime_templates__labor_regime__code']
+    inlines = [SanctionNotificationTypeRegimeInline]
     ordering = ['name']
 
     def regime_count(self, obj):
         return obj.regime_templates.count()
+
     regime_count.short_description = 'Regímenes'
 
     def save_model(self, request, obj, form, change):
@@ -59,9 +56,11 @@ class SanctionNotificationMappingAdmin(admin.ModelAdmin):
 
 @admin.register(SanctionNotification)
 class SanctionNotificationAdmin(admin.ModelAdmin):
-    list_display = ['sequence_number', 'user_code', 'employee', 'notification_type', 'labor_regime', 'month', 'year', 'registration_date', 'created_by']
+    list_display = ['sequence_number', 'user_code', 'employee', 'notification_type', 'labor_regime', 'month', 'year',
+                    'registration_date', 'created_by']
     list_filter = ['notification_type', 'labor_regime', 'month', 'year', 'registration_date']
-    search_fields = ['employee__person__first_name', 'employee__person__last_name', 'employee__person__document_number', 'notification_type__name', 'user_code']
+    search_fields = ['employee__person__first_name', 'employee__person__last_name', 'employee__person__document_number',
+                     'notification_type__name', 'user_code']
     readonly_fields = ['sequence_number', 'user_code', 'created_at', 'updated_at', 'created_by', 'updated_by']
     exclude = ['generated_pdf']
     ordering = ['-registration_date', '-created_at']
@@ -70,7 +69,7 @@ class SanctionNotificationAdmin(admin.ModelAdmin):
 @admin.register(Sanction)
 class SanctionAdmin(admin.ModelAdmin):
     list_display = [
-        'get_sanction_number', 'employee', 'sanction_type', 
+        'get_sanction_number', 'employee', 'sanction_type',
         'severity', 'sanction_date', 'status', 'created_by'
     ]
     list_filter = ['status', 'severity', 'sanction_type', 'sanction_date']
@@ -83,7 +82,7 @@ class SanctionAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     date_hierarchy = 'sanction_date'
     ordering = ['-sanction_date', '-created_at']
-    
+
     fieldsets = (
         ('Información General', {
             'fields': ('employee', 'sanction_type', 'severity')
@@ -105,10 +104,12 @@ class SanctionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     def get_sanction_number(self, obj):
         return obj.personnel_action.number if obj.personnel_action else 'N/A'
+
     get_sanction_number.short_description = 'Número de Acción'
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.created_by = request.user
@@ -144,6 +145,7 @@ class NotificationTemplateAdmin(admin.ModelAdmin):
 
     def section_count(self, obj):
         return obj.sections.filter(is_active=True).count()
+
     section_count.short_description = 'Secciones activas'
 
     def save_model(self, request, obj, form, change):
@@ -178,6 +180,7 @@ class TemplateSectionAdmin(admin.ModelAdmin):
     def preview_content(self, obj):
         preview = obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
         return preview
+
     preview_content.short_description = 'Contenido (preview)'
 
     def save_model(self, request, obj, form, change):

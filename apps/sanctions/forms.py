@@ -1,6 +1,6 @@
 from django import forms
 from .models import SanctionNotificationType, SanctionNotification, SanctionNotificationMapping, \
-    SanctionNotificationTypeMapping, SanctionType, Sanction
+    SanctionType, Sanction
 from employee.models import Employee
 from personnel_actions.models import PersonnelAction, ActionType
 from core.models import User
@@ -66,31 +66,6 @@ class SanctionNotificationTypeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(),
         }
 
-
-class SanctionNotificationTypeMappingForm(forms.ModelForm):
-    class Meta:
-        model = SanctionNotificationTypeMapping
-        fields = ['placeholder', 'label', 'source_key', 'description', 'is_active', 'order']
-        widgets = {
-            'placeholder': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ej. [AUTHORITY_1_NAME]'
-            }),
-            'label': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ej. Autoridad 1'
-            }),
-            'source_key': forms.Select(attrs={'class': 'form-select select2'}),
-            'description': forms.Textarea(attrs={
-                'class': 'input-field',
-                'rows': 3,
-                'placeholder': 'Explicación corta de cuándo usar este marcador'
-            }),
-            'is_active': forms.CheckboxInput(),
-            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
-        }
-
-
 class SanctionNotificationMappingForm(forms.ModelForm):
     class Meta:
         model = SanctionNotificationMapping
@@ -137,6 +112,7 @@ class SanctionNotificationForm(forms.ModelForm):
             'registration_date',
             'authority_1',
             'authority_2',
+            'reviewer', 'elaborated_by',
             'minutes_late',
             'regs_without_mark',
             'days_without_mark',
@@ -153,6 +129,8 @@ class SanctionNotificationForm(forms.ModelForm):
             'regs_without_mark': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'days_without_mark': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'reviewer': forms.Select(attrs={'class': 'form-select select2'}),
+            'elaborated_by': forms.Select(attrs={'class': 'form-select select2'}),
         }
 
     def __init__(self, *args, notification_types=None, authorities=None, **kwargs):
@@ -162,15 +140,23 @@ class SanctionNotificationForm(forms.ModelForm):
         if authorities is not None:
             self.fields['authority_1'].queryset = authorities
             self.fields['authority_2'].queryset = authorities
+            self.fields['reviewer'].queryset = authorities
+            self.fields['elaborated_by'].queryset = authorities
             self.fields['authority_1'].label_from_instance = lambda \
                     obj: f"{obj.signature_name} - {obj.signature_position}"
             self.fields['authority_2'].label_from_instance = lambda \
+                    obj: f"{obj.signature_name} - {obj.signature_position}"
+            self.fields['reviewer'].label_from_instance = lambda \
+                    obj: f"{obj.signature_name} - {obj.signature_position}"
+            self.fields['elaborated_by'].label_from_instance = lambda \
                     obj: f"{obj.signature_name} - {obj.signature_position}"
 
         self.fields['notification_type'].empty_label = 'Seleccione...'
         self.fields['authority_1'].empty_label = 'Seleccione...'
         self.fields['authority_2'].empty_label = 'Seleccione...'
         self.fields['authority_1'].required = True
+        self.fields['reviewer'].required = False
+        self.fields['elaborated_by'].required = True
         self.fields['minutes_late'].required = False
         self.fields['regs_without_mark'].required = False
         self.fields['days_without_mark'].required = False

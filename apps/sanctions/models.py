@@ -65,57 +65,6 @@ class SanctionNotificationType(BaseModel):
         return self.name
 
 
-class SanctionNotificationTypeMapping(models.Model):
-    """
-    Define un mapeo reutilizable entre un marcador y una fuente de datos.
-    """
-    SOURCE_CHOICES = [
-        ('employee_full_name', 'Nombre completo del empleado'),
-        ('employee_first_name', 'Nombres del empleado'),
-        ('employee_last_name', 'Apellidos del empleado'),
-        ('employee_document_number', 'Documento del empleado'),
-        ('employee_position', 'Cargo del empleado'),
-        ('employee_unit', 'Unidad / área del empleado'),
-        ('regime_code', 'Código del régimen'),
-        ('regime_name', 'Nombre del régimen'),
-        ('notification_name', 'Nombre del tipo de notificación'),
-        ('month_name', 'Nombre del mes'),
-        ('month_number', 'Número del mes'),
-        ('year', 'Año'),
-        ('registration_date', 'Fecha de registro'),
-        ('authority_1_name', 'Nombre de la autoridad 1'),
-        ('authority_1_position', 'Cargo de la autoridad 1'),
-        ('authority_2_name', 'Nombre de la autoridad 2'),
-        ('authority_2_position', 'Cargo de la autoridad 2'),
-        ('minutes_late', 'Minutos de atraso'),
-        ('regs_without_mark', 'Registros sin marcar'),
-        ('days_without_mark', 'Dias sin marcar'),
-        ('observations', 'Observaciones'),
-    ]
-
-    notification_type = models.ForeignKey(
-        SanctionNotificationType,
-        on_delete=models.CASCADE,
-        related_name='template_mappings',
-        verbose_name='Tipo de notificación',
-    )
-    placeholder = models.CharField(verbose_name='Marcador', max_length=80)
-    label = models.CharField(verbose_name='Nombre visible', max_length=120)
-    source_key = models.CharField(verbose_name='Fuente de datos', max_length=60, choices=SOURCE_CHOICES)
-    description = models.TextField(verbose_name='Descripción', blank=True, null=True)
-    is_active = models.BooleanField(verbose_name='Activo', default=True)
-    order = models.PositiveSmallIntegerField(verbose_name='Orden', default=0)
-
-    class Meta:
-        ordering = ['order', 'label']
-        verbose_name = 'Mapeo de marcador'
-        verbose_name_plural = 'Mapeos de marcadores'
-        unique_together = [['notification_type', 'placeholder']]
-
-    def __str__(self):
-        return f'{self.notification_type.name} - {self.placeholder}'
-
-
 class SanctionNotificationMapping(BaseModel):
     """
     Mapeo global reutilizable para todas las plantillas de notificación.
@@ -304,6 +253,18 @@ class SanctionNotification(BaseModel):
         verbose_name='Firma 2',
         blank=True,
         null=True,
+    )
+    reviewer = models.ForeignKey(
+        User, on_delete=models.PROTECT,
+        related_name='notif_reviewer',
+        verbose_name='Revisado por',
+        null=True, blank=True
+    )
+    elaborated_by = models.ForeignKey(
+        User, on_delete=models.PROTECT,
+        related_name='notif_elaborator',
+        verbose_name='Elaborado por',
+        null=True, blank=True
     )
     minutes_late = models.PositiveIntegerField(
         verbose_name='Minutos de atraso',
