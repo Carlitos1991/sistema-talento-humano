@@ -1,177 +1,342 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Reporte de Saldos Rezagados</title>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="header-card no-print"
+         style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 4px solid #f59e0b;">
+        <div>
+            <h1 style="color: white; margin-bottom: 5px;"><i class="fa-solid fa-arrow-trend-down me-2"
+                                                             style="color: #f59e0b;"></i> Reporte de Saldos Negativos
+            </h1>
+            <p style="color: #94a3b8; margin: 0;">Periodo: <strong
+                    style="color: #f8fafc;">{{ period.month }} {{ period.year }}</strong> | Pendientes de Cobro</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'payroll:period_list' %}" class="btn-header-premium"
+               style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <button onclick="window.print()" class="btn-header-premium"
+                    style="background: #ef4444; color: white; border: none; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); cursor: pointer; padding: 10px 18px; border-radius: 8px; font-weight: 600;">
+                <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Exportar a PDF
+            </button>
+        </div>
+    </div>
+
+    <div id="printable-area" class="mt-4">
+        <div class="report-group-container">
+
+            <table class="header-table">
+                <tr>
+                    <td style="width: 20%; text-align: left;">
+                        {% if company.logo %}
+                            <img src="{{ company.logo.url }}" alt="Logo Municipio" class="logo-municipio">
+                        {% else %}
+                            <img src="{% static 'img/logo.png' %}" alt="Logo" class="logo-municipio">
+                        {% endif %}
+                    </td>
+                    <td style="width: 60%;">
+                        <div class="header-title-container">
+                            <h1 class="municipio-name">{{ company.name|default:"GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA" }}</h1>
+                            <p class="departamento-name">{{ company.department|default:"DIRECCIÓN DE TALENTO HUMANO - NOMINA" }}</p>
+                            <h2 class="report-name">REPORTE DE SALDOS NEGATIVOS (PENDIENTES DE COBRO)</h2>
+                            <p class="period-range">
+                                <span class="font-bold">PERIODO:</span> {{ period.month }} {{ period.year }}<br>
+                                ({{ period.start_date|date:"d/m/Y" }} - {{ period.end_date|date:"d/m/Y" }})
+                            </p>
+                        </div>
+                    </td>
+                    <td style="width: 20%; text-align: right; font-size: 8pt; vertical-align: top;">
+                        Usuario: {{ request.user.username }}<br>
+                        Fecha: {% now "d/m/Y" %}<br>
+                        Hora: {% now "H:i" %}
+                    </td>
+                </tr>
+            </table>
+
+            {% if has_debts %}
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th class="col-cedula">Cédula</th>
+                        <th class="col-nombre">Apellidos y Nombres</th>
+                        <th class="col-original">V. Original ($)</th>
+                        <th class="col-cobrado">V. Cobrado ($)</th>
+                        <th class="col-pendiente">Saldo Pendiente ($)</th>
+                    </tr>
+                    </thead>
+
+                    <tfoot>
+                    <tr class="total-general-row">
+                        <td colspan="2" class="text-right">TOTAL GENERAL:</td>
+                        <td class="text-right">${{ total_original|floatformat:2 }}</td>
+                        <td class="text-right">${{ total_cobrado|floatformat:2 }}</td>
+                        <td class="text-right">${{ total_pendiente|floatformat:2 }}</td>
+                    </tr>
+                    </tfoot>
+
+                    <tbody>
+                    {% for concept, data in grouped_data.items %}
+                        <tr class="group-header-row">
+                            <td colspan="5" class="text-left">
+                                CONCEPTO: {{ concept|upper }}
+                            </td>
+                        </tr>
+
+                        {% for debt in data.items %}
+                            <tr>
+                                <td class="text-center">{{ debt.employee.person.document_number }}</td>
+                                <td class="text-left">
+                                    {{ debt.employee.person.last_name }} {{ debt.employee.person.first_name }}
+                                </td>
+                                <td class="text-right">{{ debt.original_value|floatformat:2 }}</td>
+                                <td class="text-right">{{ debt.collected_value|floatformat:2 }}</td>
+                                <td class="text-right font-bold"
+                                    style="color: #ef4444;">{{ debt.pending_balance|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+
+                        <tr class="subtotal-row">
+                            <td colspan="2" class="text-right">SUBTOTAL {{ concept|upper }}:</td>
+                            <td class="text-right">${{ data.sub_original|floatformat:2 }}</td>
+                            <td class="text-right">${{ data.sub_cobrado|floatformat:2 }}</td>
+                            <td class="text-right">${{ data.sub_pendiente|floatformat:2 }}</td>
+                        </tr>
+
+                        <tr class="no-print">
+                            <td colspan="5" style="border:none; height: 15px;"></td>
+                        </tr>
+
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+            {% else %}
+                <div style="text-align: center; padding: 40px; border: 1px dashed #cbd5e1; margin-top: 30px; border-radius: 8px; background: #f8fafc;">
+                    <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981; margin-bottom: 15px;"></i>
+                    <h3 style="color: #334155; margin: 0;">Todo en orden</h3>
+                    <p style="color: #64748b; margin-top: 5px;">No existen registros de saldos negativos en este
+                        periodo.</p>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
     <style>
-        @page {
-            size: A4 portrait;
-            margin: 2cm;
-            @frame footer {
-            -pdf-frame-content: footerContent;
-            bottom: 1cm;
-            margin-left: 2cm;
-            margin-right: 2cm;
-            height: 1cm;
-        }
-        }
-
-        body {
-            font-family: Helvetica, sans-serif;
-            font-size: 11px;
-            color: #333;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #0f172a;
-        }
-
-        .subtitle {
-            font-size: 12px;
-            color: #64748b;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th {
-            background-color: #f1f5f9;
-            color: #0f172a;
-            font-weight: bold;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            text-align: left;
-        }
-
-        td {
-            padding: 7px;
+        /* ESTILOS DE LA PANTALLA (WEB) */
+        .report-group-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
             border: 1px solid #e2e8f0;
         }
 
-        .text-right {
-            text-align: right;
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            border: none !important;
+        }
+
+        .header-table td {
+            border: none !important;
+            padding: 2px;
+            vertical-align: middle;
+        }
+
+        .logo-municipio {
+            height: 65px;
+            width: auto;
+        }
+
+        .header-title-container {
+            text-align: center;
+        }
+
+        .municipio-name {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0f172a;
+        }
+
+        .departamento-name {
+            font-size: 9pt;
+            margin: 3px 0;
+            color: #475569;
+        }
+
+        .report-name {
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 8px 0;
+            text-decoration: underline;
+        }
+
+        .period-range {
+            font-size: 9pt;
+            font-weight: normal;
+            margin-top: 5px;
+        }
+
+        /* TABLA DE DATOS */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .data-table thead th {
+            border: 1px solid #cbd5e1;
+            background-color: #f1f5f9 !important;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px 6px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+
+        .data-table tbody td, .data-table tfoot td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 6px;
+            vertical-align: middle;
+        }
+
+        .group-header-row td {
+            background-color: #e2e8f0 !important;
+            font-weight: bold;
+            border-top: 2px solid #94a3b8;
+            border-bottom: 2px solid #94a3b8;
+            color: #0f172a;
+        }
+
+        .subtotal-row td {
+            background-color: #f8fafc !important;
+            font-weight: bold;
+            border-top: 1px solid #cbd5e1;
+        }
+
+        .total-general-row td {
+            background-color: #f1f5f9 !important;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #0f172a;
+            border-top: 2px solid #64748b;
+            padding: 10px 6px;
         }
 
         .text-center {
             text-align: center;
         }
 
-        /* Estilos para la agrupación */
-        .group-header td {
-            background-color: #e2e8f0;
-            font-weight: bold;
-            color: #0f172a;
-            font-size: 12px;
+        .text-left {
+            text-align: left;
         }
 
-        .subtotal-row td {
-            background-color: #f8fafc;
-            font-weight: bold;
-            font-style: italic;
-            color: #334155;
+        .text-right {
+            text-align: right;
         }
 
-        .totals-row td {
-            background-color: #cbd5e1;
-            font-weight: bold;
-            color: #0f172a;
-            font-size: 12px;
-        }
-
-        .debt-text {
-            color: #b91c1c;
+        .font-bold {
             font-weight: bold;
         }
 
-        /* Blindaje para que el $ no salte a otra línea */
-        .money {
-            white-space: nowrap;
+        .col-cedula {
+            width: 12%;
+        }
+
+        .col-nombre {
+            width: 40%;
+        }
+
+        .col-original {
+            width: 16%;
+        }
+
+        .col-cobrado {
+            width: 16%;
+        }
+
+        .col-pendiente {
+            width: 16%;
+        }
+
+
+        /* OPCIÓN NUCLEAR DE IMPRESIÓN (Heredada del Banco) */
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+
+            #printable-area, #printable-area * {
+                visibility: visible !important;
+            }
+
+            #printable-area {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            aside, .sidebar, #sidebar, header, nav, .navbar, footer, .no-print {
+                display: none !important;
+            }
+
+            @page {
+                size: portrait;
+                margin: 1cm;
+            }
+
+            body, html {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+            }
+
+            body {
+                font-family: 'Arial', sans-serif;
+                font-size: 8pt;
+                line-height: 1.2;
+                color: #000;
+            }
+
+            .report-group-container {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Forzar repetición de cabeceras en salto de página */
+            thead {
+                display: table-header-group;
+            }
+
+            tfoot {
+                display: table-footer-group;
+            }
+
+            tr {
+                page-break-inside: avoid;
+            }
+
+            /* Forzar colores de fondo al imprimir */
+            .data-table th, .group-header-row td, .subtotal-row td, .total-general-row td {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
     </style>
-</head>
-<body>
-
-<div class="header">
-    <div class="title">REPORTE DE ALCANCE Y SALDOS REZAGADOS</div>
-    <div class="subtitle">PERIODO: {{ period.month }} {{ period.year }}</div>
-</div>
-
-<table>
-    <thead>
-    <tr>
-        <th style="width: 15%;">Cédula</th>
-        <th style="width: 40%;">Nombres y Apellidos</th>
-        <th class="text-right" style="width: 15%;">Original</th>
-        <th class="text-right" style="width: 15%;">Cobrado</th>
-        <th class="text-right" style="width: 15%;">Rezagado</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% if has_debts %}
-        {% for concept, data in grouped_data.items %}
-
-            <tr class="group-header">
-                <td colspan="5">RUBRO: {{ concept|upper }}</td>
-            </tr>
-
-            {% for debt in data.items %}
-                <tr>
-                    <td>
-                        {% if debt.employee.person.identification %}
-                            {{ debt.employee.person.identification }}
-                        {% elif debt.employee.person.cedula %}
-                            {{ debt.employee.person.cedula }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    <td>{{ debt.employee.person.last_name }} {{ debt.employee.person.first_name }}</td>
-                    <td class="text-right money">$&nbsp;{{ debt.original_value|floatformat:2 }}</td>
-                    <td class="text-right money">$&nbsp;{{ debt.collected_value|floatformat:2 }}</td>
-                    <td class="text-right debt-text money">$&nbsp;{{ debt.pending_balance|floatformat:2 }}</td>
-                </tr>
-            {% endfor %}
-
-            <tr class="subtotal-row">
-                <td colspan="2" class="text-right">SUBTOTAL {{ concept|upper }}:</td>
-                <td class="text-right money">$&nbsp;{{ data.sub_original|floatformat:2 }}</td>
-                <td class="text-right money">$&nbsp;{{ data.sub_cobrado|floatformat:2 }}</td>
-                <td class="text-right debt-text money">$&nbsp;{{ data.sub_pendiente|floatformat:2 }}</td>
-            </tr>
-        {% endfor %}
-
-        <tr class="totals-row">
-            <td colspan="2" class="text-right">TOTAL GENERAL DEL PERIODO:</td>
-            <td class="text-right money">$&nbsp;{{ total_original|floatformat:2 }}</td>
-            <td class="text-right money">$&nbsp;{{ total_cobrado|floatformat:2 }}</td>
-            <td class="text-right debt-text money">$&nbsp;{{ total_pendiente|floatformat:2 }}</td>
-        </tr>
-    {% else %}
-        <tr>
-            <td colspan="5" class="text-center" style="padding: 20px; color: #64748b;">
-                No existen saldos rezagados en este periodo.
-            </td>
-        </tr>
-    {% endif %}
-    </tbody>
-</table>
-
-<div id="footerContent" style="text-align: right; font-size: 9px; color: #94a3b8;">
-    Página
-    <pdf:pagenumber> de
-        <pdf:pagecount>
-</div>
-
-</body>
-</html>
+{% endblock %}

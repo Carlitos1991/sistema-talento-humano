@@ -731,7 +731,7 @@ class ParseNoveltyExcelView(View):
                 else:
                     valor = col_2
 
-                emp = Employee.objects.filter(person__document_number=cedula, is_active=True).first()
+                emp = Employee.objects.filter(person__document_number=cedula).order_by('-is_active').first()
                 if emp:
                     if emp.id not in data_map:
                         data_map[emp.id] = {'emp_id': emp.id, 'cedula': cedula,
@@ -1594,8 +1594,8 @@ def api_calculate_working_days(request):
 
 def export_negative_balances_report(request, period_id):
     """
-    Genera un PDF Institucional con los empleados cuyo sueldo no alcanzó
-    para cubrir sus descuentos, agrupado por tipo de descuento con subtotales.
+    Genera la vista de los empleados cuyo sueldo no alcanzó
+    para cubrir sus descuentos, agrupado por tipo de descuento.
     """
     period = get_object_or_404(PayrollPeriod, id=period_id)
 
@@ -1606,7 +1606,6 @@ def export_negative_balances_report(request, period_id):
         'employee__person', 'rubric'
     ).order_by('rubric__name', 'employee__person__last_name')
 
-    # Diccionario para agrupar los datos y calcular subtotales
     grouped_data = {}
     total_original = Decimal('0.0')
     total_cobrado = Decimal('0.0')
@@ -1622,15 +1621,11 @@ def export_negative_balances_report(request, period_id):
                 'sub_pendiente': Decimal('0.0'),
             }
 
-        # Agregamos el empleado al grupo
         grouped_data[concept_name]['items'].append(debt)
-
-        # Sumamos a los subtotales del grupo
         grouped_data[concept_name]['sub_original'] += debt.original_value
         grouped_data[concept_name]['sub_cobrado'] += debt.collected_value
         grouped_data[concept_name]['sub_pendiente'] += debt.pending_balance
 
-        # Sumamos a los totales generales
         total_original += debt.original_value
         total_cobrado += debt.collected_value
         total_pendiente += debt.pending_balance
@@ -1641,20 +1636,13 @@ def export_negative_balances_report(request, period_id):
         'total_original': total_original,
         'total_cobrado': total_cobrado,
         'total_pendiente': total_pendiente,
-        'has_debts': debts.exists()
+        'has_debts': debts.exists(),
+        # Variable opcional por si decides implementar un botón de imprimir en el HTML
+        'auto_print': False
     }
 
-    template = get_template('payroll/reports/report_negative_balances.html')
-    html = template.render(context)
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Saldos_Rezagados_{period.month}_{period.year}.pdf"'
-
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
-        return HttpResponse('Ocurrió un error al generar el PDF', status=500)
-
-    return response
+    # Renderizamos directamente el HTML, igual que en el Reporte Bancario
+    return render(request, 'payroll/reports/report_negative_balances.html', context)
 
 
 class MassUpdateReserveFundsView(View):

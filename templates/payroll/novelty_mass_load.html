@@ -68,24 +68,40 @@
                             Para rubros de horas: puede usar formato de 2 columnas
                             (<strong>Cédula, Horas</strong>) cargando cada rubro por separado,
                             o 3 columnas (<strong>Cédula, Horas Extra, Horas Suplementarias</strong>).
-                            En formato de 2 filas por cédula, la primera fila se toma como horas extra y la segunda como suplementarias.
+                            En formato de 2 filas por cédula, la primera fila se toma como horas extra y la segunda como
+                            suplementarias.
                         </small>
                     </div>
 
                     <button type="button" class="btn-create w-100 mt-3" onclick="uploadExcel()">
-                        <i class="fas fa-file-excel"></i> Fusionar Excel con Tabla
+                        <i class="fas fa-file-excel"></i> Cargar Excel con Tabla
                     </button>
+
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn flex-grow-1" onclick="deleteAllNovelties()"
+                                style="background-color: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 600; padding: 8px 12px; font-size: 0.9rem;">
+                            <i class="fas fa-trash-alt"></i> Eliminar todo
+                        </button>
+                        <button type="button" class="btn flex-grow-1" onclick="exportNoveltiesToExcel()"
+                                style="background-color: #10b981; color: white; border: none; border-radius: 6px; font-weight: 600; padding: 8px 12px; font-size: 0.9rem;">
+                            <i class="fas fa-file-download"></i> Descargar
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <div class="col-md-8">
-                <div class="table-container">
-                    <table class="table table-hover">
-                        <thead>
+                <div class="card mb-3"
+                     style="max-height: calc(100vh - 340px); overflow-x: hidden; overflow-y: auto; padding: 0; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <table class="table table-hover mb-0"
+                           style="width: 100%; min-width: 100% !important; table-layout: fixed;">
+                        <thead style="position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                         <tr>
-                            <th style="width: 20%">Cédula</th>
-                            <th style="width: 50%">Empleado</th>
-                            <th style="width: 30%" class="text-end">Monto a Aplicar ($)</th>
+                            <th style="width: 18%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Cédula</th>
+                            <th style="width: 62%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Empleado</th>
+                            <th style="width: 20%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;"
+                                class="text-end">Monto ($)
+                            </th>
                         </tr>
                         </thead>
                         <tbody id="novelty_tbody">
@@ -97,18 +113,19 @@
                             </td>
                         </tr>
                         </tbody>
-                        <tfoot class="border-top" style="background: #f8fafc;">
-                        <tr>
-                            <th colspan="2" class="text-end py-3 fs-6">TOTAL EN TABLA:</th>
-                            <th class="text-end py-3 fs-5 text-primary-bold" id="total_sum">$ 0.00</th>
-                        </tr>
-                        </tfoot>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-end mt-3">
-                    <button type="button" class="btn-save hidden" id="btn_save_novelties" onclick="saveNovelties()">
-                        <i class="fas fa-save"></i> Guardar Todo
+                <div class="d-flex align-items-center w-100"
+                     style="background: #ffffff; border: 1px solid #cbd5e1; padding: 15px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #475569;">
+                        TOTAL EN TABLA: <span class="ms-3 fs-4" id="total_sum" style="color: #0f4c81;">$ 0.00</span>
+                    </div>
+
+                    <button type="button" class="btn-save hidden ms-auto" id="btn_save_novelties"
+                            onclick="saveNovelties()"
+                            style="margin: 0; padding: 10px 24px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                        <i class="fas fa-save me-1"></i> Guardar Todo
                     </button>
                 </div>
             </div>
@@ -215,7 +232,17 @@
                             renderTable();
 
                             if (res.not_found.length > 0) {
-                                Swal.fire('Advertencia', `No se encontraron ${res.not_found.length} cédulas del Excel en la base de datos.`, 'info');
+                                const cedulasFaltantes = res.not_found.join(', ');
+                                Swal.fire({
+                                    title: 'Advertencia',
+                                    html: `No se encontraron <b>${res.not_found.length}</b> cédulas del Excel en la base de datos:<br><br>
+                                           <div style="max-height: 120px; overflow-y: auto; background-color: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.95rem; color: #334155; border: 1px dashed #cbd5e1; text-align: justify; word-wrap: break-word;">
+                                              ${cedulasFaltantes}
+                                           </div>
+                                           <br><small style="color: #64748b;">Los demás registros sí se cargaron correctamente en la tabla.</small>`,
+                                    icon: 'warning',
+                                    confirmButtonColor: '#3b82f6'
+                                });
                             } else {
                                 Swal.fire({
                                     toast: true,
@@ -273,15 +300,14 @@
 
             parsedData.forEach((row, index) => {
                 const tr = document.createElement('tr');
-                // Resaltar en rojo si se puso a cero (para eliminar)
                 if (row.valor === 0) tr.style.backgroundColor = '#fef2f2';
 
                 tr.innerHTML = `
-                <td><span class="badge-code">${row.cedula}</span></td>
-                <td class="fw-bold text-secondary">${row.nombres}</td>
-                <td class="text-end">
-                    <input type="number" step="0.01" class="input-field text-end fw-bold" 
-                           style="width: 120px; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #046f9f;'}"
+                <td class="text-truncate" style="padding: 6px 15px; vertical-align: middle;"><span class="badge-code">${row.cedula}</span></td>
+                <td class="fw-bold text-secondary text-truncate" title="${row.nombres}" style="font-size: 0.85rem; padding: 6px 15px; vertical-align: middle;">${row.nombres}</td>
+                <td class="text-end" style="padding: 4px 15px; vertical-align: middle;">
+                    <input type="number" step="0.01" class="input-field text-end fw-bold"
+                           style="width: 85px; padding: 4px 8px; margin: 0; height: auto; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #0f4c81;'}"
                            value="${row.valor}" 
                            onchange="updateValue(${index}, this.value)"
                            onkeyup="updateValue(${index}, this.value)">
@@ -331,6 +357,150 @@
                         Swal.fire('Error', res.message, 'error');
                     }
                 });
+        }
+
+        function deleteAllNovelties() {
+            const period_id = document.getElementById('period_id').value;
+            const rubro_type = document.getElementById('rubro_type').value;
+            let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+
+            if (!period_id || !rubro_type || !rubro_id) {
+                Swal.fire('Atención', 'Primero selecciona el Periodo, el Tipo y el Rubro.', 'warning');
+                return;
+            }
+
+            if (parsedData.length === 0) {
+                Swal.fire('Atención', 'No hay datos cargados para eliminar.', 'info');
+                return;
+            }
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Se eliminarán TODAS las novedades de este rubro para este periodo en la base de datos. ¡Esta acción no se puede deshacer!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar todo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // Al enviar el array 'items' vacío, el servidor borra los actuales y no guarda nada nuevo.
+                    const payload = {
+                        period_id: period_id,
+                        rubro_type: rubro_type,
+                        rubro_id: rubro_id,
+                        items: []
+                    };
+
+                    // Mostramos spinner de carga
+                    Swal.fire({
+                        title: 'Eliminando registros...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch('{% url "payroll:save_novelties" %}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(response => response.json())
+                        .then(res => {
+                            if (res.status === 'success') {
+                                Swal.fire('¡Eliminado!', 'Se han limpiado todos los registros de este rubro.', 'success')
+                                    .then(() => checkAndLoad()); // Recargamos la tabla (ahora estará vacía)
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(err => {
+                            Swal.fire('Error', 'Ocurrió un problema de conexión.', 'error');
+                        });
+                }
+            });
+        }
+
+        function exportNoveltiesToExcel() {
+            const periodSelect = document.getElementById('period_id');
+            const period_name = periodSelect.options[periodSelect.selectedIndex]?.text || '';
+            const rubro_type = document.getElementById('rubro_type').value;
+
+            if (!rubro_type) {
+                Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro para poder descargar.', 'warning');
+                return;
+            }
+
+            const selectEl = rubro_type === 'INCOME' ? document.getElementById('income_id') : document.getElementById('deduction_id');
+            const rubro_name = selectEl.options[selectEl.selectedIndex]?.text || 'Reporte';
+
+            if (parsedData.length === 0) {
+                Swal.fire('Atención', 'No hay datos en la tabla para exportar.', 'info');
+                return;
+            }
+
+            // Construimos la estructura HTML/XML que Excel interpreta perfectamente manteniendo estilos
+            let excelHtml = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="utf-8">
+                    </head>
+                <body>
+                    <table>
+                        <tr>
+                            <td colspan="3" style="font-size: 14pt; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">
+                                ${rubro_name.toUpperCase()}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="font-size: 10pt; color: #475569; text-align: center; font-family: Arial, sans-serif; font-weight: bold;">
+                                PERIODO: ${period_name}
+                            </td>
+                        </tr>
+                        <tr><td colspan="3"></td></tr> <thead>
+                            <tr style="background-color: #f1f5f9; font-weight: bold; font-family: Arial, sans-serif; font-size: 10pt;">
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Cédula</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Nombres y Apellidos</th>
+                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: right;">Descuento ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody style="font-family: Arial, sans-serif; font-size: 9.5pt;">
+            `;
+
+            parsedData.forEach(row => {
+                excelHtml += `
+                    <tr>
+                        <td style="border: 1px solid #e2e8f0; padding: 4px; mso-number-format:'\\@';">${row.cedula}</td>
+                        <td style="border: 1px solid #e2e8f0; padding: 4px;">${row.nombres}</td>
+                        <td style="border: 1px solid #e2e8f0; padding: 4px; text-align: right;">${parseFloat(row.valor).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            excelHtml += `
+                        </tbody>
+                       </table>
+                </body>
+                </html>
+            `;
+
+            // Creamos el archivo temporal de descarga
+            const blob = new Blob([excelHtml], {type: 'application/vnd.ms-excel;charset=utf-8;'});
+            const link = document.createElement("a");
+
+            // Generamos un nombre limpio sustituyendo espacios por guiones bajos
+            const cleanRubroName = rubro_name.replace(/[^a-zA-Z0-9]/g, "_");
+            const cleanPeriodName = period_name.replace(/[^a-zA-Z0-9]/g, "_");
+            const fileName = `Reporte_${cleanRubroName}_${cleanPeriodName}.xls`;
+
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 {% endblock %}
