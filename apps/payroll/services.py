@@ -190,10 +190,10 @@ class PayrollCalculatorService:
 
         return holiday_dates, prev_effective_days_map, absent_dates_map
 
-    def _filter_eligible_employees(self, employees):
+    def _filter_employees(self, employees):
         candidate_ids = [
             emp.id for emp in employees
-            if emp.is_active and getattr(emp, 'person', None) and emp.person.is_active
+            if getattr(emp, 'person', None)
         ]
 
         all_assignments_qs = BudgetAssignmentHistory.objects.filter(
@@ -216,7 +216,7 @@ class PayrollCalculatorService:
     # ------------------------------------------------------------------
 
     def generate_bulk(self):
-        eligible_employees = self._filter_eligible_employees(self.employees)
+        eligible_employees = self._filter_employees(self.employees)
         payslip_buffer = [
             Payslip(employee=emp, period=self.period, worked_days=self.period.working_days)
             for emp in eligible_employees
@@ -225,7 +225,7 @@ class PayrollCalculatorService:
 
     def generate_for_selected(self, employees_with_days):
         employees = [emp for emp, _ in employees_with_days]
-        eligible_employees = self._filter_eligible_employees(employees)
+        eligible_employees = self._filter_employees(employees)
         eligible_ids = {emp.id for emp in eligible_employees}
 
         eligible_pairs = [(emp, days) for emp, days in employees_with_days if emp.id in eligible_ids]

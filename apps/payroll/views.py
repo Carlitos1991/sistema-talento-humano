@@ -203,15 +203,18 @@ class GeneratePayrollView(View):
             period = PayrollPeriod.objects.get(pk=period_id)
             if period.is_closed:
                 return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=400)
-
-            # Cargar solo empleados activos y relaciones usadas por el cálculo para evitar N+1.
+            valid_history_emp_ids = BudgetAssignmentHistory.objects.filter(
+                start_date__lte=period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=period.start_date)
+            ).values_list('employee_id', flat=True)
+            # Cargar empleados (activos o inactivos) que tuvieron partida en el mes
             employees = Employee.objects.filter(
-                is_active=True,
-                person__is_active=True
+                id__in=valid_history_emp_ids
             ).select_related('person', 'person__economic_data', 'person__economic_data__payroll_info')
 
             service = PayrollCalculatorService(period, employees, is_scope_run=is_scope_run)
-            # Recibimos el resultado del servicio
+            # Vuelve el resultado del servicio
             result = service.generate_bulk()
 
             warnings = result.get('warnings', [])
@@ -1431,8 +1434,6 @@ class GenerateMissingPayrollView(LoginRequiredMixin, View):
             # 4. Traemos a los empleados y los mandamos al motor
             missing_employees = Employee.objects.filter(
                 id__in=missing_ids,
-                is_active=True,
-                person__is_active=True
             ).select_related('person', 'person__economic_data', 'person__economic_data__payroll_info')
             employees_with_days = [(emp, period.working_days) for emp in missing_employees]
 
