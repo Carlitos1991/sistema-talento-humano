@@ -21,9 +21,16 @@
         <tbody>
         {% for p in payslips %}
             <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 12px;">
-                    <div style="font-weight: 600; color: #1e293b;">{{ p.employee.person.name_and_last_name }}</div>
-                    <div style="font-size: 0.85rem; color: #64748b;">{{ p.employee.get_contract_type_display }}</div>
+                <td style="padding: 12px; {% if not p.employee.is_active %}background-color: #fee2e2; border-left: 4px solid #ef4444;{% endif %}">
+                    <div style="font-weight: 600; color: {% if not p.employee.is_active %}#991b1b{% else %}#1e293b{% endif %};">
+                        {{ p.employee.person.name_and_last_name }}
+                        {% if not p.employee.is_active %}
+                            <span style="font-size: 0.7rem; color: #dc2626; background: #fecaca; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Inactivo</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.85rem; color: {% if not p.employee.is_active %}#b91c1c{% else %}#64748b{% endif %};">
+                        {{ p.employee.get_contract_type_display }}
+                    </div>
                 </td>
                 <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
                 <td style="padding: 12px;">
