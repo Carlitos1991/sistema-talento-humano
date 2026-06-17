@@ -750,6 +750,9 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
+        if not self.object.number:
+            original_action = PersonnelAction.objects.get(pk=self.object.pk)
+            self.object.number = original_action.number
         self.object.elaboration = self.request.user
         self.object.save()
 

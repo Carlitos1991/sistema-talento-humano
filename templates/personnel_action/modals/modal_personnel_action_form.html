@@ -67,8 +67,7 @@
             </div>
 
             <!-- Campo número oculto, se genera automáticamente -->
-            <input type="hidden" name="number" value="">
-
+            <input type="hidden" name="number" value="{{ action.number|default:'' }}">
             <div class="grid-2-cols">
                 <div class="form-group">
                     <label class="form-label">Fecha de Emisión <span class="text-danger">*</span></label>
