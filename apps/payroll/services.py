@@ -382,6 +382,7 @@ class PayrollCalculatorService:
             payslips_to_update = []
             pending_debts_buffer = []
             debts_to_update = []
+            payslips_to_delete = []
             warnings = []
 
             # ── 9. BUCLE PRINCIPAL POR EMPLEADO ───────────────────────────
@@ -405,6 +406,7 @@ class PayrollCalculatorService:
                     # -- 9.2 Segmentos de tiempo (por partida) --------------
                     segments = self._build_segments(emp_assignments)
                     if not segments:
+                        payslips_to_delete.append(slip.id)
                         continue
 
                     # -- 9.3 Tipo de gasto del empleado (UNA sola lectura) --
@@ -667,6 +669,18 @@ class PayrollCalculatorService:
                     slip.total_deduction = total_deduction
                     slip.net_pay = total_income - total_deduction
                     payslips_to_update.append(slip)
+
+                    # ── 10. Persistencia masiva ────────────────────────────────────
+                    if payslips_to_delete:
+                        Payslip.objects.filter(id__in=payslips_to_delete).delete()
+
+                    # Continuación normal del código...
+                    from payroll.models import PayslipItem  # (Por si acaso)
+                    PayslipItem.objects.bulk_create(items_buffer, batch_size=1000)
+                    Payslip.objects.bulk_update(
+                        payslips_to_update,
+                        ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'],
+                    )
 
                 except Exception as e:
                     print(

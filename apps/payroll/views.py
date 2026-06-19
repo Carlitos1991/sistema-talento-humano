@@ -282,10 +282,14 @@ class GeneratePayrollUIView(View):
         context = {'periods': periods}
         if period_id:
             period = PayrollPeriod.objects.get(pk=period_id)
-            # empleados activos con partida asignada (current_employee) y persona activa
-            emp_ids = BudgetLine.objects.filter(current_employee_id__isnull=False).values_list('current_employee_id',
-                                                                                               flat=True)
-            employees = Employee.objects.filter(id__in=emp_ids, is_active=True, person__is_active=True)
+
+            valid_emp_ids = BudgetAssignmentHistory.objects.filter(
+                start_date__lte=period.end_date
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=period.start_date)
+            ).values_list('employee_id', flat=True).distinct()
+
+            employees = Employee.objects.filter(id__in=valid_emp_ids, is_active=True, person__is_active=True)
 
             rows = []
             for emp in employees:
@@ -310,12 +314,10 @@ class GeneratePayrollUIView(View):
                 else:
                     # Aplicamos la misma lógica comercial
                     if period.end_date.month == 2 and join.month == 2 and join.day >= 28:
-                        # Febrero: Si entra el 28, paga 3 días (28, 29, 30)
                         worked = (30 - join.day) + 1
                     elif join.day == 31:
                         worked = 1
                     else:
-                        # Mes estándar: del día de ingreso al 30
                         worked = (30 - join.day) + 1
 
                 rows.append({'employee': emp, 'worked_days': max(0, worked)})

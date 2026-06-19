@@ -36,6 +36,7 @@ class AdministrativeUnit(BaseModel):
         verbose_name="Pertenece a (Padre)"
     )
 
+
     # --- NUEVO CAMPO SOLICITADO: JEFE INMEDIATO ---
     boss = models.ForeignKey(
         'employee.Employee',
