@@ -6,14 +6,14 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta, date
 from django.db import transaction
 from django.db.models import Q
-
+from payroll.models import PayslipItem
 from accounting.models import Journal, JournalItem, Account
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation
 from .models import (
-    Payslip, PayslipItem, PayrollConstant, PendingDebt,
+    Payslip, PayrollConstant, PendingDebt,
     PayrollPeriod, PayrollNovelty, PayrollRubric,
 )
 
@@ -670,18 +670,6 @@ class PayrollCalculatorService:
                     slip.net_pay = total_income - total_deduction
                     payslips_to_update.append(slip)
 
-                    # ── 10. Persistencia masiva ────────────────────────────────────
-                    if payslips_to_delete:
-                        Payslip.objects.filter(id__in=payslips_to_delete).delete()
-
-                    # Continuación normal del código...
-                    from payroll.models import PayslipItem  # (Por si acaso)
-                    PayslipItem.objects.bulk_create(items_buffer, batch_size=1000)
-                    Payslip.objects.bulk_update(
-                        payslips_to_update,
-                        ['total_income', 'total_deduction', 'net_pay', 'effective_worked_days'],
-                    )
-
                 except Exception as e:
                     print(
                         f"\n{'=' * 60}\n"
@@ -695,6 +683,8 @@ class PayrollCalculatorService:
             _lap("calculate items loop")
 
             # ── 10. Persistencia masiva ────────────────────────────────────
+            if payslips_to_delete:
+                Payslip.objects.filter(id__in=payslips_to_delete).delete()
             PayslipItem.objects.bulk_create(items_buffer, batch_size=1000)
             Payslip.objects.bulk_update(
                 payslips_to_update,
