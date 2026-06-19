@@ -231,8 +231,9 @@
     <table class="loja-info-grid">
         <tr>
             <td style="width: 50%;"><b>Servidor:</b> {{ payslip.employee.person.full_name }}</td>
-            <td style="width: 50%;">
-                <b>Cargo:</b> {{ payslip.employee.current_budget_line.first.position_item.name|default:"—" }}</td>
+            <td style="font-size: 0.9rem;">
+                <b>Cargo:</b> {{ payslip.historical_position }}
+            </td>
         </tr>
         <tr>
             <td><b>Cédula:</b> {{ payslip.employee.person.document_number }}</td>

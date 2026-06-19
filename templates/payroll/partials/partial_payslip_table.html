@@ -11,7 +11,7 @@
             <th style="padding: 12px; text-align: right;" data-field="net_pay">A Pagar</th>
 
             {% if current_period and not current_period.is_closed %}
-                <th style="padding: 12px; text-align: center;">Retener</th>
+                <th style="padding: 12px; text-align: center;"> Retener</th>
                 <th style="padding: 12px; text-align: center;">Acciones</th>
             {% else %}
                 <th style="padding: 12px; text-align: center;">Ver</th>
@@ -28,17 +28,18 @@
                             <span style="font-size: 0.7rem; color: #dc2626; background: #fecaca; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">Inactivo</span>
                         {% endif %}
                     </div>
-                    <div style="font-size: 0.85rem; color: {% if not p.employee.is_active %}#b91c1c{% else %}#64748b{% endif %};">
+
+                    <div style="font-size: 0.85rem; font-weight: 500; color: {% if not p.employee.is_active %}#b91c1c{% else %}#334155{% endif %}; margin-top: 2px;">
+                        {{ p.historical_position }}
+                    </div>
+
+                    <div style="font-size: 0.75rem; color: {% if not p.employee.is_active %}#ca8a04{% else %}#64748b{% endif %};">
                         {{ p.employee.get_contract_type_display }}
                     </div>
                 </td>
                 <td style="padding: 12px;">{{ p.employee.person.document_number }}</td>
-                <td style="padding: 12px;">
-                    {% for item in p.items.all %}
-                        {% if item.income_ref.code == 'REMUNERACION' or item.income_ref.code == 'SALARIOS_BASICOS' %}
-                            {{ item.budget_line_code|default:"Sin Partida" }}
-                        {% endif %}
-                    {% endfor %}
+                <td style="padding: 12px; font-size: 0.85rem; color: #475569; font-weight: 500;">
+                    {{ p.historical_budget_lines|default:"Sin Partida Registrada" }}
                 </td>
                 <td style="padding: 12px; text-align: right; color: #10b981;">$ {{ p.total_income }}</td>
                 <td style="padding: 12px; text-align: right; color: #ef4444;">$ {{ p.total_deduction }}</td>
