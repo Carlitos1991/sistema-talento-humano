@@ -207,17 +207,16 @@ class Payslip(models.Model):
         """
         from budget.models import BudgetAssignmentHistory
         from django.db.models import Q
-
-        # Buscamos la asignación presupuestaria que estuvo vigente en este periodo
+        
         assignment = BudgetAssignmentHistory.objects.filter(
             employee=self.employee,
             start_date__lte=self.period.end_date
         ).filter(
             Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
-        ).select_related('budget_line', 'budget_line__position').first()
+        ).select_related('budget_line', 'budget_line__position_item').first()
 
         if assignment and assignment.budget_line:
-            pos = getattr(assignment.budget_line, 'position', None)
+            pos = getattr(assignment.budget_line, 'position_item', None)
             if pos:
                 return getattr(pos, 'name', str(pos))
             # Fallbacks por si acaso la estructura difiere
