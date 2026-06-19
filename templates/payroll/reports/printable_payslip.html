@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Impresión Rol - {{ payslip.employee.person.full_name }}</title>
     <style>
-        /* 🟢 TRUCO MAESTRO: Obliga a Chrome/Edge a imprimir los colores de fondo */
+        /* 🟢 OBLIGA A LOS NAVEGADORES A MOSTRAR LOS COLORES EN LA IMPRESIÓN */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -14,18 +14,18 @@
         body {
             font-family: Arial, Helvetica, sans-serif;
             color: #000;
-            background: #f3f4f6; /* Fondo grisáceo para la pantalla */
+            background: #f3f4f6; /* Fondo de pantalla */
             margin: 0;
             padding: 20px 0;
         }
 
-        /* 🟢 EFECTO HOJA A4 PARA LA PANTALLA */
+        /* 🟢 EFECTO HOJA PAPEL A4 */
         .a4-container {
-            max-width: 21cm; /* Ancho exacto de una hoja A4 */
+            max-width: 21cm;
             margin: 0 auto;
             background: #fff;
             padding: 1.5cm;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* Sombra elegante */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
 
         .loja-header {
@@ -34,164 +34,151 @@
             border-collapse: collapse;
         }
 
-        .loja-logo {
-            width: 80px;
-            height: auto;
-        }
-
-        .loja-titles {
-            text-align: center;
+        .loja-header td {
             vertical-align: middle;
         }
 
-        .loja-titles h2 {
-            font-size: 1.15rem;
-            font-weight: bold;
+        .loja-header .title-area {
+            text-align: center;
+            padding-right: 80px;
+        }
+
+        .loja-header h2 {
             margin: 0 0 5px 0;
+            font-size: 1.3rem;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .loja-titles h3 {
-            font-size: 1.05rem;
-            font-weight: bold;
+        .loja-header h3 {
             margin: 0;
+            font-size: 1rem;
+            color: #4b5563;
+            font-weight: normal;
         }
 
-        .loja-info-grid {
+        /* Ficha Informativa del Servidor */
+        .loja-info-table {
             width: 100%;
-            background-color: #e6f0fa; /* Celeste pastel */
-            border: 1px solid #000;
             border-collapse: collapse;
             margin-bottom: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
         }
 
-        .loja-info-grid td {
-            padding: 6px 10px;
+        .loja-info-table td {
+            padding: 8px 12px;
             font-size: 0.85rem;
-            border: 1px solid #000;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
         }
 
-        .loja-detail-table {
+        /* 🟢 TABLA DE CONCEPTOS CON ESPACIADO INFERIOR CORREGIDO */
+        .loja-content-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.8rem;
-            border: 1px solid #000;
+            margin-bottom: 25px; /* Crea la separación perfecta antes del Neto */
         }
 
-        .loja-detail-table th, .loja-detail-table td {
-            padding: 5px 8px;
-            border: 1px solid #000;
-        }
-
-        .loja-detail-table thead th {
-            border: 1px solid #000;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        /* Colores de las tablas */
-        .th-ingresos {
-            background-color: #d9ead3 !important;
-        }
-
-        .th-descuentos {
-            background-color: #f4cccc !important;
-        }
-
-        .loja-detail-table tbody td {
-            border-top: none;
-            border-bottom: none;
-        }
-
-        .filled-row td {
-            border: 1px solid #000;
-        }
-
-        .empty-filler-row td {
-            height: 20px;
-            border-top: none !important;
-            border-bottom: none !important;
-            border-left: 1px solid #000;
-            border-right: 1px solid #000;
-        }
-
-        .loja-detail-table tfoot td {
-            border: 1px solid #000 !important;
-            font-weight: bold;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .total-label {
-            text-align: left;
-        }
-
-        .loja-summary-bar {
-            width: 100%;
-            background-color: #e6f0fa;
-            border: 2px solid #000;
-            border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 15px;
-        }
-
-        .loja-summary-bar td {
+        .loja-content-table th {
+            background: #1e3a8a;
+            color: #ffffff;
+            font-size: 0.85rem;
             padding: 8px 10px;
-            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #1e3a8a;
+        }
+
+        .loja-content-table td {
+            padding: 8px 10px;
             font-size: 0.85rem;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .loja-content-table .items-subtable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .loja-content-table .items-subtable td {
+            border: none;
+            padding: 4px 0;
+        }
+
+        /* Caja del Neto a Pagar */
+        .loja-totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background: #1e3a8a;
+            border: 1px solid #1e3a8a;
+        }
+
+        .loja-totals-table td {
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #fff;
             text-align: center;
-            border: 1px solid #000;
+        }
+
+        .loja-deposit-info {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-bottom: 30px;
+            line-height: 1.5;
+            background: #f8fafc;
+            padding: 12px;
+            border-left: 4px solid #3b82f6;
         }
 
         .loja-deposit-info p {
-            margin: 3px 0;
-            font-size: 0.85rem;
+            margin: 0 0 5px 0;
         }
 
-        .loja-legal-footer {
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.8rem;
-            margin-top: 40px;
+        .loja-deposit-info p:last-child {
+            margin: 0;
         }
 
         .loja-qr-footer {
-            margin-top: 24px;
-            border-top: 1px solid #d1d5db;
-            padding-top: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
+            width: 100%;
+            margin-top: 20px;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 15px;
         }
 
         .loja-qr-footer .qr-box {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 6px;
+            width: 110px;
+            height: 110px;
+            float: left;
             background: #fff;
-            line-height: 0;
+            border: 1px solid #e2e8f0;
+            padding: 4px;
         }
 
         .loja-qr-footer .qr-box img {
-            width: 72px;
-            height: 72px;
-            display: block;
+            width: 100%;
+            height: 100%;
         }
 
-        .loja-qr-meta {
-            font-size: 0.75rem;
+        .loja-qr-footer .loja-qr-meta {
+            margin-left: 130px;
+            padding-top: 10px;
+            font-size: 0.8rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .loja-qr-footer .loja-qr-meta .code {
+            font-family: monospace;
+            font-size: 0.85rem;
             color: #334155;
-            line-height: 1.35;
-            text-align: left;
+            margin-top: 5px;
+            font-weight: bold;
         }
 
-        .loja-qr-meta .code {
-            font-weight: 700;
-        }
-
-        /* 🟢 REGLAS ESPECÍFICAS PARA CUANDO SALE POR LA IMPRESORA */
         @media print {
             body {
                 background: #fff;
@@ -199,15 +186,9 @@
             }
 
             .a4-container {
-                box-shadow: none;
-                margin: 0;
                 padding: 0;
+                box-shadow: none;
                 max-width: 100%;
-            }
-
-            @page {
-                size: A4;
-                margin: 1.5cm;
             }
         }
     </style>
@@ -217,170 +198,167 @@
 <div class="a4-container">
     <table class="loja-header">
         <tr>
-            <td style="width: 15%; text-align: left; vertical-align: middle;">
-                <img src="{% static 'img/logo.png' %}" alt="Escudo de Loja" class="loja-logo">
+            <td style="width: 100px;">
+                <img src="{% static 'img/logo_loja.png' %}" alt="Logo Institucional" style="width: 90px; height: auto;">
             </td>
-            <td class="loja-titles">
-                <h2>GOBIERNO AUTÓNOMO DESCENTRALIZADO MUNICIPAL DE LOJA</h2>
-                <h3>ROL DE PAGOS – {{ payslip.period.month|upper }} {{ payslip.period.year }}</h3>
+            <td class="title-area">
+                <h2>Municipio de Loja</h2>
+                <h3>Comprobante de Pago Individual de Remuneraciones</h3>
             </td>
-            <td style="width: 15%;"></td>
         </tr>
     </table>
 
-    <table class="loja-info-grid">
+    <table class="loja-info-table">
         <tr>
-            <td style="width: 50%;"><b>Servidor:</b> {{ payslip.employee.person.full_name }}</td>
-            <td style="font-size: 0.9rem;">
-                <b>Cargo:</b> {{ payslip.historical_position }}
-            </td>
+            <td style="width: 15%; font-weight: bold;">Cédula:</td>
+            <td style="width: 35%;">{{ payslip.employee.person.document_number }}</td>
+            <td style="width: 15%; font-weight: bold;">Periodo:</td>
+            <td style="width: 35%;">{{ payslip.period.get_month_display|upper }} — {{ payslip.period.year }}</td>
         </tr>
         <tr>
-            <td><b>Cédula:</b> {{ payslip.employee.person.document_number }}</td>
-            <td><b>Unidad:</b> {{ payslip.employee.area.name|default:"—" }}</td>
+            <td style="font-weight: bold;">Servidor:</td>
+            <td>{{ payslip.employee.person.name_and_last_name|default:payslip.employee.person.full_name }}</td>
+            <td style="font-weight: bold;">Días Lab:</td>
+            <td>{{ payslip.effective_worked_days|default:0 }} días</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Cargo P.:</td>
+            <td>{{ cargo|default:payslip.historical_position }}</td>
+            <td style="font-weight: bold;">Partida P.:</td>
+            <td>{{ partida|default:payslip.historical_budget_lines }}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Régimen:</td>
+            <td colspan="3">{{ payslip.employee.institutional_data.regime_item.name|default:"No registrado" }}</td>
         </tr>
     </table>
 
-    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+    <table class="loja-content-table">
+        <thead>
         <tr>
-            <td style="width: 49%; vertical-align: top; padding-right: 1%;">
-                <table class="loja-detail-table table-ingresos">
-                    <thead>
-                    <tr>
-                        <th colspan="2" class="th-ingresos">INGRESO</th>
-                    </tr>
-                    <tr>
-                        <th style="width: 70%;">Concepto</th>
-                        <th style="width: 30%;">Valor</th>
-                    </tr>
-                    </thead>
-                    <tbody>
+            <th style="width: 50%;">Ingresos / Percepciones</th>
+            <th style="width: 50%;">Egresos / Deducciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="border-bottom: none;">
+                <table class="items-subtable">
                     {% for item in incomes %}
-                        <tr class="filled-row">
-                            <td>{{ item.income_ref.name }}</td>
-                            <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
+                        <tr>
+                            <td>
+                                {% if item.rubric and item.rubric.name %}
+                                    {{ item.rubric.name }}
+                                {% elif item.deduction_ref and item.deduction_ref.name %}
+                                    {{ item.deduction_ref.name }}
+                                {% elif item.name and item.name != 'None' and item.name|length > 0 %}
+                                    {{ item.name }}
+                                {% else %}
+                                    Rubro de Nómina
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; font-weight: 500;">$ {{ item.value|floatformat:"2g" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" style="color: #94a3b8; text-align: center; padding-top: 15px;">No existen
+                                ingresos.
+                            </td>
                         </tr>
                     {% endfor %}
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    </tbody>
-                    <tfoot>
-                    <tr>
-                        <td class="total-label th-ingresos"><u>TOTAL INGRESOS</u></td>
-                        <td class="text-center th-ingresos">$ {{ payslip.total_income|floatformat:"2g" }}</td>
-                    </tr>
-                    </tfoot>
                 </table>
             </td>
 
-            <td style="width: 49%; vertical-align: top; padding-left: 1%;">
-                <table class="loja-detail-table table-descuentos">
-                    <thead>
-                    <tr>
-                        <th colspan="2" class="th-descuentos">DESCUENTOS</th>
-                    </tr>
-                    <tr>
-                        <th style="width: 70%;">Concepto</th>
-                        <th style="width: 30%;">Valor</th>
-                    </tr>
-                    </thead>
-                    <tbody>
+            <td style="border-bottom: none;">
+                <table class="items-subtable">
                     {% for item in deductions %}
-                        <tr class="filled-row">
-                            <td>{{ item.deduction_ref.name }}</td>
-                            <td class="text-center">{{ item.value|floatformat:"2g" }}</td>
+                        <tr>
+                            <td>
+                                {% if item.rubric and item.rubric.name %}
+                                    {{ item.rubric.name }}
+                                {% elif item.deduction_ref and item.deduction_ref.name %}
+                                    {{ item.deduction_ref.name }}
+                                {% elif item.name and item.name != 'None' and item.name|length > 0 %}
+                                    {{ item.name }}
+                                {% else %}
+                                    Descuento de Nómina
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; font-weight: 500; color: #b91c1c;">
+                                $ {{ item.value|floatformat:"2g" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" style="color: #94a3b8; text-align: center; padding-top: 15px;">No existen
+                                descuentos.
+                            </td>
                         </tr>
                     {% endfor %}
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    <tr class="empty-filler-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                    </tr>
-                    </tbody>
-                    <tfoot>
-                    <tr>
-                        <td class="total-label th-descuentos"><u>TOTAL DESCUENTOS</u></td>
-                        <td class="text-center th-descuentos">$ {{ payslip.total_deduction|floatformat:"2g" }}</td>
-                    </tr>
-                    </tfoot>
                 </table>
             </td>
         </tr>
+
+        <tr>
+            <td style="padding: 10px 14px; background-color: #f1f5f9; border-top: 2px solid #cbd5e1;">
+                <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
+                    <tr>
+                        <td style="font-size: 0.85rem; color: #1e293b; font-weight: bold; padding: 0; border: none;">
+                            TOTAL INGRESOS
+                        </td>
+                        <td style="text-align: right; font-size: 0.85rem; color: #16a34a; font-weight: bold; padding: 0; border: none;">
+                            $ {{ payslip.total_income|floatformat:"2g" }}</td>
+                    </tr>
+                </table>
+            </td>
+            <td style="padding: 10px 14px; background-color: #f1f5f9; border-top: 2px solid #cbd5e1;">
+                <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
+                    <tr>
+                        <td style="font-size: 0.85rem; color: #1e293b; font-weight: bold; padding: 0; border: none;">
+                            TOTAL EGRESOS
+                        </td>
+                        <td style="text-align: right; font-size: 0.85rem; color: #dc2626; font-weight: bold; padding: 0; border: none;">
+                            $ {{ payslip.total_deduction|floatformat:"2g" }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        </tbody>
     </table>
 
-    <table class="loja-summary-bar">
+    <table class="loja-totals-table">
         <tr>
-            <td style="width: 33.33%;"><u>TOTAL INGRESO:</u> $ {{ payslip.total_income|floatformat:"2g" }}</td>
-            <td style="width: 33.33%;"><u>TOTAL DESCUENTOS:</u> $ {{ payslip.total_deduction|floatformat:"2g" }}</td>
-            <td style="width: 33.33%;">VALOR A RECIBIR: {{ payslip.net_pay|floatformat:"2g" }}</td>
+            <td>NETO A RECIBIR: $ {{ payslip.net_pay|floatformat:"2g" }}</td>
         </tr>
     </table>
 
     <div class="loja-deposit-info">
         {% with ba=payslip.employee.person.economic_data.bank_account %}
-            <p><b>Depositado en:</b> {% if ba %}{{ ba.bank.name|default:"—" }} – Cuenta Nro. xxxxxx
-                {{ ba.account_number|slice:"-4:"|default:"----" }}{% else %}No registrado{% endif %}</p>
+            <p><b>Acreditado en:</b> {% if ba %}{{ ba.bank.name|default:"—" }} – Cuenta Nro. xxxxxx
+                {{ ba.account_number|slice:"-4:"|default:"----" }}{% else %}No registrado / Pago Directo{% endif %}</p>
         {% endwith %}
-        <p><b>LÍQUIDO A RECIBIR:</b> {{ net_pay_words|default:"(Error al cargar letras)" }}</p>
+        <p style="text-transform: uppercase; font-weight: 600; font-size: 0.8rem; margin-top: 4px; color: #1e293b;"><b>Son:</b> {{ net_pay_words|default:"(Error al convertir valores a letras)" }}
+        </p>
     </div>
 
     <div class="loja-qr-footer">
         <div class="qr-box">
             {% if qr_code %}
-                <img src="data:image/png;base64,{{ qr_code }}" alt="Codigo QR de validacion">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="Código QR institucional">
             {% endif %}
         </div>
         <div class="loja-qr-meta">
-            <div><strong>Validacion publica del rol</strong></div>
-            <div>Escanee el codigo QR para verificar este documento.</div>
+            <div><strong>Validación Electrónica del Rol</strong></div>
+            <div>Este documento cuenta con una firma digitalizada respaldada por el Sistema de Gestión de Talento Humano
+                del Municipio de Loja (SIGETH). Escanee el código QR para verificar la autenticidad de la información
+                directo en el servidor del GAD.
+            </div>
             {% if validation_code %}
-                <div class="code">Codigo: {{ validation_code }}</div>
+                <div class="code">Token de Seguridad: {{ validation_code }}</div>
             {% endif %}
         </div>
+        <div style="clear: both;"></div>
     </div>
 </div>
 
-<script>
-    window.onload = function () {
-        if ({{ auto_print|yesno:'true,false' }}) {
-            setTimeout(function () {
-                window.print();
-            }, 500);
-        }
-    }
-</script>
 </body>
 </html>

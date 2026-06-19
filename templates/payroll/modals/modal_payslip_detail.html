@@ -1,5 +1,3 @@
-{# Styles moved to static/css/payroll.css - keep template markup minimal #}
-
 <div id="payslipBackdrop" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-medium custom-payslip-modal" role="document">
 
@@ -19,8 +17,10 @@
                 <div class="payslip-banner-item">
                     <span class="payslip-banner-label">Cuenta</span>
                     {% with ba=payslip.employee.person.economic_data.bank_account %}
-                        <span class="payslip-banner-value">{% if ba and ba.account_number %}{{ ba.account_number }}{% else %}—{% endif %}</span>
-                        <small class="text-muted d-block" style="font-size:0.75rem;">{% if ba and ba.bank %}{{ ba.bank.name }}{% endif %}</small>
+                        <span class="payslip-banner-value">{% if ba and ba.account_number %}
+                            {{ ba.account_number }}{% else %}—{% endif %}</span>
+                        <small class="text-muted d-block" style="font-size:0.75rem;">
+                            {% if ba and ba.bank %}{{ ba.bank.name }}{% endif %}</small>
                     {% endwith %}
                 </div>
                 <div class="payslip-banner-divider"></div>
@@ -32,13 +32,7 @@
                 <div class="payslip-banner-item">
                     <span class="payslip-banner-label">Cargo</span>
                     <span class="payslip-banner-value">
-                        {% with cb=payslip.employee.current_budget_line.first %}
-                            {% if cb and cb.position_item %}
-                                {{ cb.position_item.name }}
-                            {% else %}
-                                Sin cargo asignado
-                            {% endif %}
-                        {% endwith %}
+                        {{ payslip.historical_position }}
                     </span>
                 </div>
 
@@ -59,8 +53,11 @@
                                 <li>
                                     <span class="desc">{{ item.income_ref.name }}</span>
                                     <div class="val-container">
-                                        <span class="val sealed" data-item-id="{{ item.id }}" id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        <input class="val-input" data-item-id="{{ item.id }}" type="text" value="{{ item.value|floatformat:2 }}" style="display:none; width:90px; text-align:right;" />
+                                        <span class="val sealed" data-item-id="{{ item.id }}"
+                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                        <input class="val-input" data-item-id="{{ item.id }}" type="text"
+                                               value="{{ item.value|floatformat:2 }}"
+                                               style="display:none; width:90px; text-align:right;"/>
                                     </div>
                                 </li>
                             {% empty %}
@@ -84,8 +81,11 @@
                                 <li>
                                     <span class="desc">{{ item.deduction_ref.name }}</span>
                                     <div class="val-container">
-                                        <span class="val sealed" data-item-id="{{ item.id }}" id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
-                                        <input class="val-input" data-item-id="{{ item.id }}" type="text" value="{{ item.value|floatformat:2 }}" style="display:none; width:90px; text-align:right;" />
+                                        <span class="val sealed" data-item-id="{{ item.id }}"
+                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                        <input class="val-input" data-item-id="{{ item.id }}" type="text"
+                                               value="{{ item.value|floatformat:2 }}"
+                                               style="display:none; width:90px; text-align:right;"/>
                                     </div>
                                 </li>
                             {% empty %}
@@ -105,9 +105,9 @@
             <button type="button" class="btn-cancel" data-action="close">
                 <i class="fas fa-times me-1"></i> Cerrar
             </button>
-            <button type="button" class="btn-save" data-action="print">
-                <i class="fas fa-print me-1"></i> Imprimir Comprobante
-            </button>
+{#            <button type="button" class="btn-save" data-action="print">#}
+{#                <i class="fas fa-print me-1"></i> Imprimir Comprobante#}
+{#            </button>#}
         </div>
     </div>
 </div>

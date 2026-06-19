@@ -201,34 +201,49 @@ class Payslip(models.Model):
 
     @property
     def historical_position(self):
-        """
-        Busca en el historial de asignaciones qué cargo (puesto) tenía el empleado
-        durante el periodo específico de este rol de pagos.
-        """
         from budget.models import BudgetAssignmentHistory
         from django.db.models import Q
-        
+
         assignment = BudgetAssignmentHistory.objects.filter(
             employee=self.employee,
             start_date__lte=self.period.end_date
         ).filter(
             Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
-        ).select_related('budget_line', 'budget_line__position_item').first()
+        ).select_related('budget_line', 'budget_line__position_item').order_by('start_date').first()
 
         if assignment and assignment.budget_line:
             pos = getattr(assignment.budget_line, 'position_item', None)
             if pos:
                 return getattr(pos, 'name', str(pos))
-            # Fallbacks por si acaso la estructura difiere
             return getattr(assignment.budget_line, 'name', getattr(assignment.budget_line, 'description', ''))
 
-        # Fallback si no hay historial: usamos el cargo actual que tiene registrado
         inst_data = getattr(self.employee, 'institutional_data', None)
         if inst_data and getattr(inst_data, 'position', None):
             pos = inst_data.position
             return getattr(pos, 'name', str(pos))
 
         return "No asignado"
+
+    @property
+    def historical_budget_lines(self):
+        """
+        Busca el código de la partida cruzando fechas directamente con el
+        historial presupuestario (Garantizado para coincidir con el cargo).
+        """
+        from budget.models import BudgetAssignmentHistory
+        from django.db.models import Q
+
+        assignment = BudgetAssignmentHistory.objects.filter(
+            employee=self.employee,
+            start_date__lte=self.period.end_date
+        ).filter(
+            Q(end_date__isnull=True) | Q(end_date__gte=self.period.start_date)
+        ).select_related('budget_line').order_by('start_date').first()
+
+        if assignment and assignment.budget_line:
+            return assignment.budget_line.code
+
+        return "Sin Partida Registrada"
 
     def __str__(self):
         return f"Rol: {self.employee} - {self.period}"
