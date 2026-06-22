@@ -1211,13 +1211,16 @@ class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin,
 
                 # 3. Cambiar estado del Empleado a Ex-empleado
                 current_status = period.employee.employment_status.code
-                mapping = {
-                    'EMPLEADO': 'EX_EMPLEADO',
-                    'TRABAJADOR': 'EX_TRABAJADOR',
-                    'CONTRATADO': 'EX_EMPLEADO',
-                    'PROFESIONAL': 'EX_PROFESIONAL'
-                }
-                exit_status = mapping.get(current_status, 'PERSONA')
+                if current_status.startswith('EX'):
+                    exit_status = current_status
+                else:
+                    mapping = {
+                        'EMPLEADO': 'EX_EMPLEADO',
+                        'TRABAJADOR': 'EX_TRABAJADOR',
+                        'CONTRATADO': 'EX_EMPLEADO',
+                        'PROFESIONAL': 'EX_PROFESIONAL'
+                    }
+                    exit_status = mapping.get(current_status, 'PERSONA')
                 period.employee.set_status(exit_status)
                 period.employee.is_active = False
                 period.employee.save()
