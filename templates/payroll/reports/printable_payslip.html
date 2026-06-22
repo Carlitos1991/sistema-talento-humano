@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <title>Impresión Rol - {{ payslip.employee.person.full_name }}</title>
     <style>
-        /* 🟢 OBLIGA A LOS NAVEGADORES A MOSTRAR LOS COLORES EN LA IMPRESIÓN */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -199,11 +198,11 @@
     <table class="loja-header">
         <tr>
             <td style="width: 100px;">
-                <img src="{% static 'img/logo_loja.png' %}" alt="Logo Institucional" style="width: 90px; height: auto;">
+                <img src="{% static 'img/logo.png' %}" alt="Logo Institucional" style="width: 90px; height: auto;">
             </td>
             <td class="title-area">
                 <h2>Municipio de Loja</h2>
-                <h3>Comprobante de Pago Individual de Remuneraciones</h3>
+                <h3>Rol de pagos</h3>
             </td>
         </tr>
     </table>
@@ -218,18 +217,8 @@
         <tr>
             <td style="font-weight: bold;">Servidor:</td>
             <td>{{ payslip.employee.person.name_and_last_name|default:payslip.employee.person.full_name }}</td>
-            <td style="font-weight: bold;">Días Lab:</td>
-            <td>{{ payslip.effective_worked_days|default:0 }} días</td>
-        </tr>
-        <tr>
             <td style="font-weight: bold;">Cargo P.:</td>
             <td>{{ cargo|default:payslip.historical_position }}</td>
-            <td style="font-weight: bold;">Partida P.:</td>
-            <td>{{ partida|default:payslip.historical_budget_lines }}</td>
-        </tr>
-        <tr>
-            <td style="font-weight: bold;">Régimen:</td>
-            <td colspan="3">{{ payslip.employee.institutional_data.regime_item.name|default:"No registrado" }}</td>
         </tr>
     </table>
 

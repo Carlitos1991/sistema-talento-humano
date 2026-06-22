@@ -51,7 +51,7 @@
                         <ul class="payslip-items-list">
                             {% for item in incomes %}
                                 <li>
-                                    <span class="desc">{{ item.income_ref.name }}</span>
+                                    <span class="desc">{{ item.rubric.name }}</span>
                                     <div class="val-container">
                                         <span class="val sealed" data-item-id="{{ item.id }}"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
@@ -79,7 +79,7 @@
                         <ul class="payslip-items-list">
                             {% for item in deductions %}
                                 <li>
-                                    <span class="desc">{{ item.deduction_ref.name }}</span>
+                                    <span class="desc">{{ item.rubric.name }}</span>
                                     <div class="val-container">
                                         <span class="val sealed" data-item-id="{{ item.id }}"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
@@ -105,9 +105,9 @@
             <button type="button" class="btn-cancel" data-action="close">
                 <i class="fas fa-times me-1"></i> Cerrar
             </button>
-{#            <button type="button" class="btn-save" data-action="print">#}
-{#                <i class="fas fa-print me-1"></i> Imprimir Comprobante#}
-{#            </button>#}
+            {#            <button type="button" class="btn-save" data-action="print">#}
+            {#                <i class="fas fa-print me-1"></i> Imprimir Comprobante#}
+            {#            </button>#}
         </div>
     </div>
 </div>
