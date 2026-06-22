@@ -467,7 +467,7 @@ class PayrollCalculatorService:
                         )
                         if payroll_info:
                             monthly_bonuses = bool(payroll_info.monthly_payment)
-                            monthly_reserve_funds = bool(payroll_info.reserve_funds)
+                            monthly_reserve_funds = not bool(payroll_info.reserve_funds)
                             valid_dependents_count = (
                                     payroll_info.family_dependents + payroll_info.education_dependents
                             )
