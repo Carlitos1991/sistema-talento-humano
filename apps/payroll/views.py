@@ -1392,10 +1392,12 @@ class RecalculatePayslipsView(LoginRequiredMixin, View):
 
         employees = list(Employee.objects.filter(id__in=emp_ids))
 
+        seen_emp_ids = set()
         pairs = []
-        for p in Payslip.objects.filter(period=period, employee_id__in=emp_ids):
-            pairs.append((p.employee, p.worked_days or period.working_days))
-
+        for p in Payslip.objects.filter(period=period, employee_id__in=emp_ids).order_by('employee_id', 'id'):
+            if p.employee_id not in seen_emp_ids:
+                seen_emp_ids.add(p.employee_id)
+                pairs.append((p.employee, p.worked_days or period.working_days))
         try:
             svc = PayrollCalculatorService(period, employees)
             result = svc.generate_for_selected(pairs)

@@ -467,7 +467,7 @@ class PayrollCalculatorService:
                         )
                         if payroll_info:
                             monthly_bonuses = bool(payroll_info.monthly_payment)
-                            monthly_reserve_funds = not bool(payroll_info.reserve_funds)
+                            monthly_reserve_funds = bool(payroll_info.reserve_funds)
                             valid_dependents_count = (
                                     payroll_info.family_dependents + payroll_info.education_dependents
                             )
@@ -484,7 +484,7 @@ class PayrollCalculatorService:
                         else ''
                     )
 
-                    # -- 9.8 Preparar novedades de ingreso ------------------
+                    # ── 9.8 Preparar novedades de ingreso ------------------
                     emp_novelties = novelties_map.get(
                         slip.employee_id, {'incomes': [], 'deductions': []}
                     )
@@ -496,6 +496,20 @@ class PayrollCalculatorService:
                             continue
                         nov_val = Decimal(str(nov.value))
                         code_up = (nov.rubric.code or '').strip().upper()
+
+                        # ── GUARDIÁN FONDO DE RESERVA ────────────────────────────────
+                        # Una novedad manual de FONDOS_RESERVA debe obedecer las mismas
+                        # 3 reglas que el cálculo automático. Sin este bloque, un valor
+                        # registrado en PayrollNovelty entra directo a 9.11 sin control.
+                        if 'FONDOS_RESERVA' in code_up:
+                            # Regla 1 (absoluta): acumula en IESS → $0, sin excepción
+                            if not monthly_reserve_funds:
+                                continue
+                            # Regla 3: antigüedad insuficiente → $0
+                            if years_of_service <= 1:
+                                continue
+                            # Regla 2: llega aquí → tiene derecho, dejar pasar el valor
+                        # ─────────────────────────────────────────────────────────────
 
                         if 'HORAS_EXTRAS' in code_up or 'HORA_EXTRA' in code_up:
                             daily_salary = (salary / Decimal('30.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -550,14 +564,15 @@ class PayrollCalculatorService:
                                           Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days))
                                   )
                         elif code_clean == 'FONDOS_RESERVA':
-                            if not monthly_reserve_funds and years_of_service > 1:
+                            # Regla 1: acumula en IESS → nunca pagar (monthly_reserve_funds=False)
+                            # Regla 3: menos de 12 meses de antigüedad → no pagar
+                            # Regla 2: no acumula Y >= 12 meses → mensualizar el 8.33%
+                            if monthly_reserve_funds and years_of_service > 1:
+                                tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
                                 val = (
-                                              salary
-                                              * (Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal(
-                                          '100.0'))
-                                      ) * (
-                                              Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days))
-                                      )
+                                        salary * tasa
+                                        * (Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days)))
+                                ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                         if val > 0:
                             items_buffer.append(
