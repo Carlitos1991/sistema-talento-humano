@@ -973,11 +973,20 @@ function initRubricModalLogic() {
     function toggleFields() {
         const rubricType = $('#id_rubric_type').val();
 
-        // Control de visibilidad exclusivo para la prioridad de cobro en egresos
         if (rubricType === 'DEDUCTION') {
             $('#divPriority').show();
         } else {
             $('#divPriority').hide();
+        }
+        if (rubricType === 'INCOME') {
+            $('#divPlusIESS').show();
+        } else {
+            $('#divPlusIESS').hide();
+        }
+        if (rubricType === 'INCOME') {
+            $('#divMultiplier').show();
+        } else {
+            $('#divMultiplier').hide();
         }
     }
 

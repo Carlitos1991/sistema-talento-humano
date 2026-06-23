@@ -699,16 +699,14 @@ class ParseNoveltyExcelView(View):
         try:
             wb = openpyxl.load_workbook(excel_file, data_only=True)
             sheet = wb.active
-            data_map, not_found, income_code = {}, set(), ''
+            data_map, not_found = {}, set()
 
+            # 1. Identificar modo de horas
+            is_overtime_mode = False
             if rubro_type == 'INCOME' and rubro_id:
-                rubric = PayrollRubric.objects.filter(pk=rubro_id).only('code').first()
-                income_code = (rubric.code or '').strip().upper() if rubric else ''
-
-            is_hours_extra = ('HORAS_EXTRAS' in income_code or 'HORA_EXTRA' in income_code)
-            is_hours_supp = ('SUPLEMENTARIAS' in income_code or 'SUPLEMENTARIA' in income_code)
-            is_hours_mode = is_hours_extra or is_hours_supp
-            occurrence_by_cedula = {}
+                rubric = PayrollRubric.objects.filter(pk=rubro_id).first()
+                if rubric and getattr(rubric, 'is_overtime', False):
+                    is_overtime_mode = True
 
             def to_decimal(value):
                 try:
@@ -716,39 +714,121 @@ class ParseNoveltyExcelView(View):
                 except:
                     return Decimal('0.00')
 
+            # ==========================================
+            # 🚀 FASE 1: LECTURA Y EXTRACCIÓN MASIVA (BULK)
+            # ==========================================
+            excel_rows = []
+            cedulas_set = set()
+
             for row in sheet.iter_rows(min_row=1, values_only=True):
                 if not row[0]: continue
                 raw_cedula = str(row[0]).strip()
                 if not raw_cedula.replace('.', '').isdigit(): continue
                 if raw_cedula.endswith('.0'): raw_cedula = raw_cedula[:-2]
+
                 cedula = raw_cedula.zfill(10)
+                cedulas_set.add(cedula)
 
-                col_2, col_3 = to_decimal(row[1] if len(row) > 1 else 0), to_decimal(row[2] if len(row) > 2 else 0)
+                excel_rows.append({
+                    'cedula': cedula,
+                    'val_b': to_decimal(row[1] if len(row) > 1 else 0),
+                    'val_c': to_decimal(row[2] if len(row) > 2 else 0)
+                })
 
-                if is_hours_mode:
-                    if len(row) > 2:
-                        valor = col_2 if is_hours_extra else col_3
-                    else:
-                        occ = occurrence_by_cedula.get(cedula, 0) + 1
-                        occurrence_by_cedula[cedula] = occ
-                        valor = col_2 if (is_hours_extra and occ == 1) or (
-                                not is_hours_extra and occ == 2) else Decimal('0.00')
-                else:
-                    valor = col_2
+            # ==========================================
+            # 🚀 FASE 2: PRECARGA EN MEMORIA (DICCIONARIOS)
+            # ==========================================
 
-                emp = Employee.objects.filter(person__document_number=cedula).order_by('-is_active').first()
+            # A. Buscamos TODOS los empleados de una sola vez
+            employees_qs = Employee.objects.select_related('person', 'job_title').filter(
+                person__document_number__in=cedulas_set
+            ).order_by('-is_active')
+
+            emp_dict = {}
+            for e in employees_qs:
+                doc = e.person.document_number
+                if doc not in emp_dict:
+                    emp_dict[doc] = e
+
+            # B. Buscamos TODAS las partidas de una sola vez (si es modo horas)
+            bah_dict = {}
+            if is_overtime_mode and emp_dict:
+                from budget.models import BudgetAssignmentHistory
+                emp_ids = [e.id for e in emp_dict.values()]
+
+                # select_related para traer la info de la partida sin hacer más consultas
+                bahs_qs = BudgetAssignmentHistory.objects.select_related('budget_line').filter(
+                    employee_id__in=emp_ids
+                ).order_by('employee_id', '-start_date')
+
+                for bah in bahs_qs:
+                    if bah.employee_id not in bah_dict:
+                        bah_dict[bah.employee_id] = bah  # Guardamos solo la más reciente por empleado
+
+            # ==========================================
+            # 🚀 FASE 3: PROCESAMIENTO EN RAM (CERO CONSULTAS DB)
+            # ==========================================
+            for row_data in excel_rows:
+                cedula = row_data['cedula']
+                val_b = row_data['val_b']
+                val_c = row_data['val_c']
+
+                # Buscamos en nuestro diccionario de memoria (¡Instántaneo!)
+                emp = emp_dict.get(cedula)
+
                 if emp:
+                    valor_final = Decimal('0.00')
+
+                    if is_overtime_mode:
+                        # Obtenemos la partida desde nuestro diccionario en memoria
+                        bah = bah_dict.get(emp.id)
+
+                        base_salary = Decimal('460.00')
+                        partida_code = ""
+
+                        if bah and bah.budget_line:
+                            partida_code = bah.budget_line.code or ""
+                            if bah.budget_line.remuneration:
+                                base_salary = Decimal(str(bah.budget_line.remuneration))
+
+                        # Matemática en memoria
+                        hourly_value = (base_salary / Decimal('30.0') / Decimal('8.0')).quantize(Decimal('0.01'),
+                                                                                                 rounding=ROUND_HALF_UP)
+                        factor_extra = Decimal('1.60')
+                        factor_supl = Decimal('2.00')
+
+                        if "01.06" in partida_code:
+                            factor_extra = Decimal('1.50')
+
+                        total_dollars = Decimal('0.00')
+                        if val_b > Decimal('0'):
+                            total_dollars += val_b * hourly_value * factor_extra
+                        if val_c > Decimal('0'):
+                            total_dollars += val_c * hourly_value * factor_supl
+
+                        valor_final = total_dollars.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+                    else:
+                        valor_final = val_b
+
+                    # Sumamos al mapa de respuesta
                     if emp.id not in data_map:
-                        data_map[emp.id] = {'emp_id': emp.id, 'cedula': cedula,
-                                            'nombres': f"{emp.person.last_name} {emp.person.first_name}",
-                                            'valor': Decimal('0.00')}
-                    data_map[emp.id]['valor'] += valor
+                        data_map[emp.id] = {
+                            'emp_id': emp.id,
+                            'cedula': cedula,
+                            'nombres': f"{emp.person.last_name} {emp.person.first_name}",
+                            'valor': Decimal('0.00')
+                        }
+
+                    data_map[emp.id]['valor'] += valor_final
                 else:
                     not_found.add(cedula)
 
             data = sorted([dict(item, valor=float(item['valor'])) for item in data_map.values()],
                           key=lambda x: x['nombres'])
+
             return JsonResponse({'status': 'success', 'data': data, 'not_found': sorted(list(not_found))})
+
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 

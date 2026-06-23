@@ -36,11 +36,6 @@
                     </h4>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label class="form-label">Descripción</label>
-                            {{ form.description }}
-                        </div>
-
                         <div class="form-group">
                             <label class="form-label">Tipo de Rubro <span class="text-danger">*</span></label>
                             {{ form.rubric_type }}
@@ -49,6 +44,10 @@
                         <div class="form-group">
                             <label class="form-label">Contexto de Gasto <span class="text-danger">*</span></label>
                             {{ form.spending_context }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Código de Sistema</label>
+                            {{ form.code }}
                         </div>
 
                         <div class="form-group" style="grid-column: span 2;">
@@ -60,16 +59,27 @@
                             {{ form.abbreviation }}
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Código de Sistema</label>
-                            {{ form.code }}
-                        </div>
-                        <div class="form-group">
                             <label class="form-label">Orden (Rol)</label>
                             {{ form.order }}
                         </div>
                         <div class="form-group" id="divPriority">
                             <label class="form-label">Prioridad Cobro</label>
                             {{ form.priority }}
+                        </div>
+                        <div id="divPlusIESS" class="form-group" style="margin-top: 32px;">
+                            {{ form.is_taxable }}
+                            <label class="toggle-status-red-wrapper" for="id_is_taxable">
+                                <div class="toggle-status-red-circle"></div>
+                                <span class="toggle-status-red-text">¿Suma para IESS / Fondos?</span>
+                            </label>Factor Multiplicador de Horas
+                        </div>
+                        <div class="form-group" id="divMultiplier" style="margin-top: 32px;">
+                            {{ form.is_overtime }}
+                            <label class="toggle-status-red-wrapper" for="id_is_overtime">
+                                <div class="toggle-status-red-circle"></div>
+                                <span class="toggle-status-red-text">Factor de Horas Extra</span>
+                            </label>
+
                         </div>
                     </div>
 

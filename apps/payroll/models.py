@@ -73,6 +73,17 @@ class PayrollRubric(models.Model):
     dynamic_suffix = models.CharField(max_length=50, null=True, blank=True, verbose_name="Sufijo Presupuestario")
     is_fixed = models.BooleanField(default=False, verbose_name="¿Es Partida Fija?")
 
+    is_taxable = models.BooleanField(
+        default=False,
+        verbose_name="¿Suma para IESS y Fondos de Reserva?",
+        help_text="Marque si este rubro (ej. Subrogación, Horas Extra) es base imponible."
+    )
+    is_overtime = models.BooleanField(
+        default=False,
+        verbose_name="¿Es Rubro de Horas Extras/Suplementarias?",
+        help_text="Marque si el Excel de este rubro debe leer la Columna B (1.50) y Col C (2.00) como horas."
+    )
+
     def __str__(self):
         return f"[{self.get_rubric_type_display()}] {self.name}"
 

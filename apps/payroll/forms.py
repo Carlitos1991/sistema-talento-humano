@@ -80,13 +80,20 @@ class PayrollRubricForm(forms.ModelForm):
         })
     )
     income_account = forms.ModelChoiceField(queryset=Account.objects.all(),
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
+                                            required=False,
+                                            widget=forms.Select(attrs={'class': 'form-select'})
+                                            )
 
     class Meta:
         model = PayrollRubric
-        fields = '__all__'
+        fields = [
+            'rubric_type', 'name', 'code', 'is_salary', 'description',
+            'spending_context', 'abbreviation', 'is_active', 'order', 'priority',
+            'debit_account', 'credit_account', 'debit_account_prod', 'credit_account_prod',
+            'debit_account_inv', 'credit_account_inv', 'income_account',
+            'has_mapping', 'dynamic_suffix', 'is_fixed',
+            'is_taxable', 'is_overtime'
+        ]
         widgets = {
             'rubric_type': forms.Select(attrs={'class': 'form-select'}),
             'spending_context': forms.Select(attrs={'class': 'form-select'}),
@@ -108,6 +115,8 @@ class PayrollRubricForm(forms.ModelForm):
             'has_mapping': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
             'is_fixed': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
+            'is_taxable': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
+            'is_overtime': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
         }
 
     def clean(self):
