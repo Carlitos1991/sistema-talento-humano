@@ -64,7 +64,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
 
         # 2. LOGICA: Clases CSS y Atributos (Manejo especial para Email)
         placeholders_map = {
-            'document_number': '1234567890',
+            'document_number': '1100025869',
             'first_name': 'JUAN CARLOS',
             'last_name': 'PÉREZ GARCÍA',
             'email': 'ejemplo@correo.com',
