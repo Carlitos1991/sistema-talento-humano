@@ -205,7 +205,7 @@ const app = createApp({
 
         const isActivityModalVisible = ref(false);
         const isReportModalVisible = ref(false);
-        const reportDates = ref({ start: '', end: '' });
+        const reportDates = ref({start: '', end: ''});
 
         const teleworkData = ref({
             punches: [],
@@ -400,6 +400,7 @@ const app = createApp({
                     payrollForm.value = {
                         monthly_payment: false,
                         reserve_funds: false,
+                        immediate_reserve_funds: false,
                         family_dependents: 0,
                         education_dependents: 0,
                         roles_entry_date: null,
@@ -443,6 +444,7 @@ const app = createApp({
         const payrollForm = ref({
             monthly_payment: false,
             reserve_funds: false,
+            immediate_reserve_funds: false,
             family_dependents: 0,
             education_dependents: 0,
             roles_entry_date: null,
@@ -520,8 +522,8 @@ const app = createApp({
         let visibilities = {};
         try {
             const dataScript = document.getElementById('tab-visibilities-data');
-            if(dataScript) {
-                 visibilities = JSON.parse(dataScript.textContent);
+            if (dataScript) {
+                visibilities = JSON.parse(dataScript.textContent);
             }
         } catch (e) {
             console.error("Error parsing tab visibilities", e);
@@ -1382,6 +1384,7 @@ const app = createApp({
             payrollForm.value = {
                 monthly_payment: false,
                 reserve_funds: false,
+                immediate_reserve_funds: false,
                 family_dependents: 0,
                 education_dependents: 0,
                 roles_entry_date: null,

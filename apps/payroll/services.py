@@ -463,6 +463,7 @@ class PayrollCalculatorService:
                     monthly_bonuses = False
                     monthly_reserve_funds = True
                     valid_dependents_count = 0
+                    has_prior_funds_right = False
 
                     try:
                         payroll_info = getattr(
@@ -475,6 +476,7 @@ class PayrollCalculatorService:
                             valid_dependents_count = (
                                     payroll_info.family_dependents + payroll_info.education_dependents
                             )
+                            has_prior_funds_right = getattr(payroll_info, 'immediate_reserve_funds', False)
                     except Exception:
                         pass
 
@@ -505,7 +507,7 @@ class PayrollCalculatorService:
                         # GUARDIÁN DE FONDO DE RESERVA MANUAL
                         if 'FONDOS_RESERVA' in code_up:
                             if not monthly_reserve_funds: continue
-                            if years_of_service <= 1: continue
+                            if years_of_service <= 1 and not has_prior_funds_right: continue
 
                         # Sumamos al IESS si tiene el switch activado (Subrogaciones, Horas Extras, etc.)
                         if getattr(nov.rubric, 'is_taxable', False):
@@ -547,7 +549,7 @@ class PayrollCalculatorService:
                             val = val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                         elif code_clean == 'FONDOS_RESERVA':
-                            if monthly_reserve_funds and years_of_service > 1:
+                            if monthly_reserve_funds and (years_of_service > 1 or has_prior_funds_right):
                                 tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
                                 # Se calcula sobre el gran total del mes imponible
                                 val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)

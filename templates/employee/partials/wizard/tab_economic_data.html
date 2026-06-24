@@ -17,7 +17,8 @@
             </div>
             <div class="info-data-row">
                 <label>Número:</label>
-                <span id="econ_bank_number" class="text-primary fw-bold" style="letter-spacing: 0.5px;">{{ bank_account.account_number }}</span>
+                <span id="econ_bank_number" class="text-primary fw-bold"
+                      style="letter-spacing: 0.5px;">{{ bank_account.account_number }}</span>
             </div>
             <div class="info-data-row">
                 <label>Titular:</label>
@@ -30,11 +31,11 @@
 
             <!-- Footer con botón centrado -->
             {% if can_edit_person %}
-            <div class="info-box-footer">
-                <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
-                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                </button>
-            </div>
+                <div class="info-box-footer">
+                    <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
+                        <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                    </button>
+                </div>
             {% endif %}
         {% else %}
             <div class="text-center py-4">
@@ -43,9 +44,9 @@
                 </div>
                 <p class="text-muted small mb-3">No hay cuenta bancaria registrada</p>
                 {% if can_edit_person %}
-                <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
-                    <i class="fa-solid fa-plus tiny-icon"></i> Agregar
-                </button>
+                    <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
+                        <i class="fa-solid fa-plus tiny-icon"></i> Agregar
+                    </button>
                 {% endif %}
             </div>
         {% endif %}
@@ -60,16 +61,26 @@
         {% if payroll_info %}
             <div class="info-data-row">
                 <label>Mensualiza Décimos:</label>
-                <span id="econ_payroll_monthly" class="status-badge {% if payroll_info.monthly_payment %}active{% else %}neutral{% endif %}"
+                <span id="econ_payroll_monthly"
+                      class="status-badge {% if payroll_info.monthly_payment %}active{% else %}neutral{% endif %}"
                       style="font-size: 0.7rem;">
                     {% if payroll_info.monthly_payment %}SÍ{% else %}NO{% endif %}
                 </span>
             </div>
             <div class="info-data-row">
                 <label>Fondos de Reserva:</label>
-                <span id="econ_payroll_reserve" class="status-badge {% if payroll_info.reserve_funds %}active{% else %}neutral{% endif %}"
+                <span id="econ_payroll_reserve"
+                      class="status-badge {% if payroll_info.reserve_funds %}active{% else %}neutral{% endif %}"
                       style="font-size: 0.7rem;">
                     {% if payroll_info.reserve_funds %}ACUMULA{% else %}NO ACUMULA{% endif %}
+                </span>
+            </div>
+            <div class="info-data-row">
+                <label>F. Reserva Inmediato:</label>
+                <span id="econ_payroll_immediate_reserve"
+                      class="status-badge {% if payroll_info.immediate_reserve_funds %}active{% else %}neutral{% endif %}"
+                      style="font-size: 0.7rem;">
+                    {% if payroll_info.immediate_reserve_funds %}SÍ (Continuidad){% else %}NO{% endif %}
                 </span>
             </div>
             <div class="info-data-row mt-3 pt-2 border-top">
@@ -82,16 +93,17 @@
             </div>
             <div class="info-data-row mt-2">
                 <label>Ingreso a Roles:</label>
-                <span id="econ_payroll_roles_entry" class="small">{{ payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
+                <span id="econ_payroll_roles_entry"
+                      class="small">{{ payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
             </div>
 
             <!-- Footer con botón centrado -->
             {% if can_edit_person %}
-            <div class="info-box-footer">
-                <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
-                    <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                </button>
-            </div>
+                <div class="info-box-footer">
+                    <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
+                        <i class="fa-solid fa-pen-to-square"></i> Actualizar
+                    </button>
+                </div>
             {% endif %}
         {% else %}
             <div class="text-center py-4">
@@ -100,9 +112,9 @@
                 </div>
                 <p class="text-muted small mb-3">Sin configuración de nómina</p>
                 {% if can_edit_person %}
-                <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
-                    <i class="fa-solid fa-plus tiny-icon"></i> Configurar
-                </button>
+                    <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
+                        <i class="fa-solid fa-plus tiny-icon"></i> Configurar
+                    </button>
                 {% endif %}
             </div>
         {% endif %}
@@ -120,7 +132,7 @@
         </div>
         <div class="modal-body-custom">
 
-                <div class="form-group mb-3">
+            <div class="form-group mb-3">
                 <label class="form-label required">Institución Bancaria</label>
                 <select v-model="bankForm.bank" name="bank" class="input-field select2-wizard select2-wizard-bank">
                     <option value="">---------</option>
@@ -132,9 +144,10 @@
                 <span v-if="bankErrors.bank" class="text-error">[[ bankErrors.bank[0] ]]</span>
             </div>
 
-                <div class="form-group mb-3">
+            <div class="form-group mb-3">
                 <label class="form-label required">Tipo de Cuenta</label>
-                <select v-model="bankForm.account_type" name="account_type" class="input-field select2-wizard select2-wizard-bank">
+                <select v-model="bankForm.account_type" name="account_type"
+                        class="input-field select2-wizard select2-wizard-bank">
                     <option value="">---------</option>
                     {% for t in account_types_list %}
                         <option value="{{ t.id }}">{{ t.name }}</option>
@@ -142,17 +155,17 @@
                 </select>
             </div>
 
-                <div class="form-group mb-3">
-                    <label class="form-label required">Número de Cuenta</label>
-                    <input type="text" name="account_number" v-model="bankForm.account_number" class="input-field"
-                           placeholder="Ingrese el número de cuenta">
-                </div>
+            <div class="form-group mb-3">
+                <label class="form-label required">Número de Cuenta</label>
+                <input type="text" name="account_number" v-model="bankForm.account_number" class="input-field"
+                       placeholder="Ingrese el número de cuenta">
+            </div>
 
-                <div class="form-group mb-3">
-                    <label class="form-label required">Titular de la Cuenta</label>
-                    <input type="text" name="holder_name" v-model="bankForm.holder_name" class="input-field uppercase-input"
-                           placeholder="NOMBRE DEL TITULAR">
-                </div>
+            <div class="form-group mb-3">
+                <label class="form-label required">Titular de la Cuenta</label>
+                <input type="text" name="holder_name" v-model="bankForm.holder_name" class="input-field uppercase-input"
+                       placeholder="NOMBRE DEL TITULAR">
+            </div>
         </div>
         <div class="modal-footer-fixed">
             <button class="btn-save" @click="saveBankAccount({{ person.id }})"><i
@@ -183,7 +196,8 @@
                         <small class="text-muted">Marque si el empleado mensualiza décimos</small>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly" name="monthly_payment">
+                        <input type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly"
+                               name="monthly_payment">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -193,7 +207,20 @@
                         <small class="text-muted">Marque si acumula fondos de reserva</small>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve" name="reserve_funds">
+                        <input type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve"
+                               name="reserve_funds">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                        <div class="fw-bold">Derecho Inmediato a Fondos (Continuidad)</div>
+                        <small class="text-muted">Marque si certifica continuidad en el sector público (no espera 1
+                            año)</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" v-model="payrollForm.immediate_reserve_funds" id="checkImmediateReserve"
+                               name="immediate_reserve_funds">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -205,12 +232,12 @@
             <div class="grid-2-cols gap-3 mb-4">
                 <div class="form-group">
                     <label class="form-label required">Hijos dependientes</label>
-                        <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
+                    <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
                 </div>
                 <div class="form-group">
-                        <label class="form-label required">Hijos con discapacidad</label>
-                        <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
-                               max="20">
+                    <label class="form-label required">Hijos con discapacidad</label>
+                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
+                           max="20">
                 </div>
             </div>
 

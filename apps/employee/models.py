@@ -241,6 +241,11 @@ class PayrollInfo(BaseModel):
     education_dependents = models.IntegerField(default=0, verbose_name='Hijos con discapacidad')
     roles_entry_date = models.DateField(null=True, blank=True, verbose_name='Ingreso a Roles')
     roles_count = models.IntegerField(default=0, verbose_name='Número de Roles')
+    immediate_reserve_funds = models.BooleanField(
+        default=False,
+        verbose_name="Derecho a Fondos de Reserva Inmediato",
+        help_text="Marcar si el empleado certifica continuidad en el sector público (no requiere esperar 1 año)"
+    )
 
     def clean(self):
         if self.family_dependents < 0 or self.family_dependents > 20:
