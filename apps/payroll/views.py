@@ -740,7 +740,7 @@ class ParseNoveltyExcelView(View):
             # ==========================================
 
             # A. Buscamos TODOS los empleados de una sola vez
-            employees_qs = Employee.objects.select_related('person', 'job_title').filter(
+            employees_qs = Employee.objects.select_related('person').filter(
                 person__document_number__in=cedulas_set
             ).order_by('-is_active')
 
