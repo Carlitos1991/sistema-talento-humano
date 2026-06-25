@@ -1486,6 +1486,7 @@ const app = createApp({
                 // Booleans: CheckboxInput in Django checks for presence or 'on'
                 if (form.monthly_payment) formData.append('monthly_payment', 'on');
                 if (form.reserve_funds) formData.append('reserve_funds', 'on');
+                if (form.immediate_reserve_funds) formData.append('immediate_reserve_funds', 'on');
 
                 // Numbers: Ensure they are not empty strings to avoid validation errors
                 formData.append('family_dependents', (form.family_dependents === '' || form.family_dependents == null) ? 0 : form.family_dependents);
