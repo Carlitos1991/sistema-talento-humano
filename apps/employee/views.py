@@ -320,7 +320,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 
                 periods = ManagementPeriod.objects.filter(employee=employee).select_related('contract_type', 'status',
                                                                                             'administrative_unit').order_by(
-                    '-start_date')[:50]
+                    '-start_date')[:500]
                 ch = []
                 for per in periods:
                     ch.append({
@@ -447,7 +447,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         try:
             if employee:
                 actions_qs = PersonnelAction.objects.filter(employee=employee).select_related('action_type').order_by(
-                    '-date_issue')[:50]
+                    '-date_issue')[:500]
                 actions_list = []
                 for a in actions_qs:
                     mv = a.movement.first() if hasattr(a, 'movement') else None
@@ -496,7 +496,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         try:
             if employee:
                 sanctions_qs = Sanction.objects.filter(employee=employee).select_related('sanction_type').order_by(
-                    '-sanction_date')[:50]
+                    '-sanction_date')[:500]
                 sh = []
                 for s in sanctions_qs:
                     sh.append({
@@ -519,7 +519,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             if employee:
                 # Traer balances (lista) para mostrar en la UI
                 balances_qs = EmployeeVacationBalance.objects.filter(employee=employee).select_related(
-                    'period').order_by('-created_at')[:50]
+                    'period').order_by('-created_at')[:500]
                 vb = []
                 for b in balances_qs:
                     total_with_previous = (Decimal(str(b.total_days or 0)) + Decimal(str(b.additional_days or 0)))
