@@ -1073,6 +1073,19 @@
     line-height: 1.2;
 }
 
+.nomina-card .badge-info {
+    background-color: #664d03;
+    color: #fff8d6;
+    font-size: 0.67rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-align: center;
+    line-height: 1.2;
+    display: inline-block;
+    text-transform: uppercase;
+}
+
 .subdependencias-section {
     margin-bottom: 24px;
 }
@@ -1284,21 +1297,53 @@
     transform: translateY(-1px) scale(0.98);
 }
 
+/* ============================================= */
+/* EMPLEADOS REUBICADOS / DEPENDIENTES EXTERNOS  */
+/* ============================================= */
+
+.nomina-card.nomina-card-relocated {
+    background: #fefce8 !important; /* Amarillo claro estilo Tailwind */
+    border: 1px solid #fef08a !important;
+    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.12);
+}
+
+.nomina-card-relocated:hover {
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.2);
+}
+
+.relocated-badge {
+    background-color: #fef08a;
+    color: #b45309;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-align: center;
+    line-height: 1.1;
+    margin-top: 4px;
+    cursor: help;
+    border: 1px solid #fde047;
+}
+
+.relocated-badge i {
+    margin-right: 2px;
+}
+
 @media (max-width: 768px) {
     .stats-buttons-container {
         gap: 8px;
     }
-    
+
     .stat-btn {
         min-width: 120px;
         padding: 10px 14px;
         gap: 8px;
     }
-    
+
     .stat-btn i {
         font-size: 1.5rem;
     }
-    
+
     .stat-btn-count {
         font-size: 1.25rem;
     }
@@ -1317,13 +1362,14 @@
 
 @media (max-width: 1200px) {
     .nomina-card {
-    .subdependencia-card-blue {
+        .subdependencia-card-blue {
+        }
     }
-}
 
-@media (max-width: 900px) {
-    .nomina-card,
-    .subdependencia-card-blue {
-        flex-basis: 100%;
+    @media (max-width: 900px) {
+        .nomina-card,
+        .subdependencia-card-blue {
+            flex-basis: 100%;
+        }
     }
 }

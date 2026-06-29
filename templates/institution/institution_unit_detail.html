@@ -176,7 +176,8 @@
                                     <td>[[ d.description ]]</td>
                                     <td class="actions">
                                         <div class="actions-wrapper">
-                                            <button class="btn-views-action" type="button" @click="openModal(d)" title="Editar Entregable">
+                                            <button class="btn-views-action" type="button" @click="openModal(d)"
+                                                    title="Editar Entregable">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
                                         </div>
@@ -202,7 +203,9 @@
                                 <span v-if="editingId">Editar Entregable</span>
                                 <span v-else>Nuevo Entregable</span>
                             </h3>
-                            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
+                            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+                                &times;
+                            </button>
                         </div>
 
                         <div class="modal-body-content modal-body-custom deliverable-modal-body">
@@ -237,7 +240,7 @@
                             {% if unit.boss and emp.id == unit.boss.id %}
                                 {# Omitir jefe inmediato #}
                             {% else %}
-                                <div class="nomina-card">
+                                <div class="nomina-card {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}nomina-card-relocated{% endif %}">
                                     {% if emp.person.photo %}
                                         <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
                                     {% else %}
@@ -255,15 +258,21 @@
                                             -
                                         {% endif %}
                                     </span>
+
+                                    {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}
+                                        <div class="badge-info"
+                                             title="Motivo: {{ emp.institutional_data.original_dependency_reason|default:'Sin motivo detallado' }}">
+                                            <b>Origen:</b> {{ emp.institutional_data.original_dependency.name|truncatechars:20 }}
+                                        </div>
+                                    {% endif %}
+
                                     <div class="nomina-actions">
-                                        <!-- Botón Perfil: Azul -->
                                         <a href="{% url 'employee:employee_detail' emp.person.id %}"
                                            class="action-btn btn-profile-blue"
                                            title="Ver Perfil Completo">
                                             <i class="fa-solid fa-user"></i>
                                         </a>
 
-                                        <!-- Botón Reubicar: Verde -->
                                         <button type="button"
                                                 class="action-btn btn-relocate-green"
                                                 title="Reubicar Empleado"
@@ -289,7 +298,8 @@
                     <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                     {% if perms.institution.add_administrativeunit %}
-                        <button class="btn btn-nuevo-entregable btn-cta-action" onclick="window.openCreateUnit('{{ unit.id }}')">
+                        <button class="btn btn-nuevo-entregable btn-cta-action"
+                                onclick="window.openCreateUnit('{{ unit.id }}')">
                             <i class="fa-solid fa-plus"></i> Crear Dependencia
                         </button>
                     {% endif %}
