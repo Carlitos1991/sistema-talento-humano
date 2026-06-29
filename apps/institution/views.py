@@ -2,7 +2,7 @@
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Q, F
 from django.db.models.functions import Length
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -11,9 +11,7 @@ from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
-from django.db.models import Max
-from django.db.models.functions import Cast
-from django.db.models import IntegerField
+
 from employee.models import Employee
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
 from .forms import AssignBossForm
@@ -190,14 +188,14 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         for child in children:
             descendants.extend(self.get_all_descendant_units(child))
         return descendants
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_unit = self.object
         children = AdministrativeUnit.objects.filter(
             parent=current_unit, is_active=True
         ).order_by('code', 'name')
-        
+
         # Empleados solo de la unidad actual (para mostrar en la lista)
         employees = Employee.objects.filter(
             area_id=current_unit.pk, is_active=True
@@ -207,10 +205,10 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         ).select_related('person').prefetch_related(
             'current_budget_line', 'current_budget_line__position_item'
         )
-        
+
         # Obtener IDs de todas las subdependencias (recursivo)
         all_unit_ids = self.get_all_descendant_units(current_unit)
-        
+
         # Empleados de la unidad actual + todas sus subdependencias
         all_employees = Employee.objects.filter(
             area_id__in=all_unit_ids, is_active=True
@@ -218,23 +216,36 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             Q(employment_status__name__icontains='EX EMPLEADO') |
             Q(employment_status__name__icontains='EX TRABAJADOR')
         )
-        
+        # Propios: No tienen dependencia original registrada o es igual a su área actual
+        propios_count = all_employees.filter(
+            Q(institutional_data__original_dependency__isnull=True) |
+            Q(institutional_data__original_dependency=F('area'))
+        ).count()
+
+        reubicados_count = all_employees.filter(
+            institutional_data__original_dependency__isnull=False
+        ).exclude(
+            institutional_data__original_dependency=F('area')
+        ).count()
+
         # Estadísticas por estado laboral (incluyendo todas las subdependencias)
         from django.db.models import Count
         stats_qs = all_employees.values(
             'employment_status__code'
         ).annotate(total=Count('id'))
-        
-        stats_dict = {stat['employment_status__code']: stat['total'] 
+
+        stats_dict = {stat['employment_status__code']: stat['total']
                       for stat in stats_qs if stat['employment_status__code']}
-        
+
         unit_stats = {
             'total': all_employees.count(),
             'empleado': stats_dict.get('EMPLEADO', 0),
             'trabajador': stats_dict.get('TRABAJADOR', 0),
             'contratado': stats_dict.get('CONTRATADO', 0),
+            'propios': propios_count,
+            'reubicados': reubicados_count,
         }
-        
+
         context['children'] = children
         context['employees'] = employees  # Solo de la unidad actual para mostrar
         context['unit_stats'] = unit_stats  # Incluye todas las subdependencias
@@ -304,7 +315,7 @@ class UnitUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         original_parent = self.object.parent
         original_level = self.object.level
         original_boss = self.object.boss
-        
+
         form = self.get_form()
         if form.is_valid():
             selected_boss = form.cleaned_data.get('boss') or original_boss
@@ -359,12 +370,12 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def post(self, request, pk):
         unit = get_object_or_404(AdministrativeUnit, pk=pk)
         new_parent_id = request.POST.get('parent')
-        
+
         try:
             # Validar que el nuevo padre sea válido (si no es vacío)
             if new_parent_id and str(new_parent_id).isdigit():
                 new_parent = AdministrativeUnit.objects.get(pk=int(new_parent_id), is_active=True)
-                
+
                 # Validación: El nuevo padre no puede ser la misma unidad
                 if int(new_parent_id) == unit.id:
                     return JsonResponse({
@@ -372,7 +383,7 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         'message': 'No puedes asignar la unidad como su propio padre.',
                         'errors': {'parent': ['La unidad no puede ser su propio padre.']}
                     }, status=400)
-                
+
                 # Validación: El nuevo padre debe tener un nivel menor (order menor)
                 if new_parent.level.level_order >= unit.level.level_order:
                     return JsonResponse({
@@ -380,19 +391,19 @@ class UnitChangeParentView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         'message': 'El padre debe tener un nivel jerárquico superior.',
                         'errors': {'parent': ['El padre debe tener un nivel jerárquico superior.']}
                     }, status=400)
-                
+
                 unit.parent = new_parent
             else:
                 # Si no hay parent_id o es vacío, establecer como raíz
                 unit.parent = None
-            
+
             unit.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'message': f'Unidad "{unit.name}" reubicada correctamente.'
             })
-        
+
         except AdministrativeUnit.DoesNotExist:
             return JsonResponse({
                 'success': False,
@@ -432,8 +443,8 @@ def unit_partial_table(request):
     q = request.GET.get('q')
 
     # Base queryset with selects/annotations
-    qs = AdministrativeUnit.objects.all().select_related('level', 'parent', 'boss__person')\
-        .annotate(code_len=Length('code'))\
+    qs = AdministrativeUnit.objects.all().select_related('level', 'parent', 'boss__person') \
+        .annotate(code_len=Length('code')) \
         .order_by('level__level_order', 'code_len', 'code', 'name')
 
     # Active/inactive filter
@@ -894,101 +905,107 @@ def get_all_descendant_unit_ids(unit):
 
 @login_required
 @permission_required('institution.view_administrativeunit', raise_exception=True)
+@login_required
+@permission_required('institution.view_administrativeunit', raise_exception=True)
 def export_unit_employees_excel(request, pk):
-    """
-    Exporta empleados de una unidad administrativa a Excel
-    Incluye empleados de la unidad y todas sus subdependencias recursivamente
-    Filtrado por estado laboral si se proporciona
-    """
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, PatternFill
     from openpyxl.utils import get_column_letter
-    
+
     unit = get_object_or_404(AdministrativeUnit, pk=pk)
     status_code = request.GET.get('status', 'total')
-    
-    # Obtener IDs de todas las subdependencias (recursivo)
+    status_code_upper = status_code.upper() if status_code else 'TOTAL'
+
     all_unit_ids = get_all_descendant_unit_ids(unit)
-    
-    # Obtener empleados de la unidad + todas sus subdependencias
+
+    # Consulta base con select_related optimizado
     employees = Employee.objects.filter(
-        area_id__in=all_unit_ids, 
+        area_id__in=all_unit_ids,
         is_active=True
     ).exclude(
         Q(employment_status__name__icontains='EX EMPLEADO') |
         Q(employment_status__name__icontains='EX TRABAJADOR')
     ).select_related(
-        'person', 
+        'person',
         'employment_status',
-        'area'
+        'area',
+        'institutional_data',  # <-- NUEVO
+        'institutional_data__original_dependency'  # <-- NUEVO
     ).prefetch_related(
         'current_budget_line',
         'current_budget_line__position_item'
     ).order_by('area__name', 'person__last_name')
-    
-    # Filtrar por estado si no es "total"
-    if status_code and status_code.upper() != 'TOTAL':
-        employees = employees.filter(employment_status__code=status_code.upper())
-    
-    # Crear workbook
+
+    # Aplicar filtros según el botón presionado
+    if status_code_upper == 'PROPIOS':
+        employees = employees.filter(
+            Q(institutional_data__original_dependency__isnull=True) |
+            Q(institutional_data__original_dependency=F('area'))
+        )
+    elif status_code_upper == 'REUBICADOS':
+        employees = employees.filter(
+            institutional_data__original_dependency__isnull=False
+        ).exclude(
+            institutional_data__original_dependency=F('area')
+        )
+    elif status_code_upper != 'TOTAL':
+        # Filtro normal por tipo de contrato (EMPLEADO, TRABAJADOR, etc.)
+        employees = employees.filter(employment_status__code=status_code_upper)
+
     wb = Workbook()
     ws = wb.active
-    
-    # Título del estado
-    if status_code and status_code.upper() != 'TOTAL':
-        ws.title = f"{status_code.capitalize()}"
-    else:
-        ws.title = "Todos"
-    
-    # Encabezados (agregamos columna de Dependencia)
-    headers = ['N°', 'Apellidos y Nombres', 'Cédula/Documento', 'Dependencia', 'Cargo', 'Remuneración']
+    ws.title = status_code_upper if status_code_upper != 'TOTAL' else "Todos"
+
+    # Encabezados actualizados
+    headers = ['N°', 'Apellidos y Nombres', 'Cédula/Documento', 'Dependencia Actual', 'Dependencia Original', 'Cargo',
+               'Remuneración']
     ws.append(headers)
-    
-    # Estilo del encabezado
+
     header_fill = PatternFill(start_color="198754", end_color="198754", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=12)
     header_alignment = Alignment(horizontal="center", vertical="center")
-    
+
     for col_num in range(1, len(headers) + 1):
         cell = ws.cell(row=1, column=col_num)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = header_alignment
-    
-    # Datos
+
     for idx, emp in enumerate(employees, start=1):
         full_name = f"{emp.person.last_name} {emp.person.first_name}"
         document = emp.person.document_number or '-'
-        dependencia = emp.area.name if emp.area else '-'
-        
-        # Obtener cargo
+        dependencia_actual = emp.area.name if emp.area else '-'
+
+        # Determinar dependencia original
+        if hasattr(emp, 'institutional_data') and emp.institutional_data.original_dependency:
+            dependencia_orig = emp.institutional_data.original_dependency.name
+        else:
+            dependencia_orig = dependencia_actual
+
         cargo = '-'
         budget_line = emp.current_budget_line.first()
         if budget_line and budget_line.position_item:
             cargo = budget_line.position_item.name
-        
-        # Obtener remuneración
+
         remuneracion = '-'
         if budget_line and hasattr(budget_line, 'remuneration') and budget_line.remuneration:
             remuneracion = f"${budget_line.remuneration:,.2f}"
-        
-        ws.append([idx, full_name, document, dependencia, cargo, remuneracion])
-    
-    # Ajustar ancho de columnas (agregamos ancho para la columna Dependencia)
-    column_widths = [8, 40, 18, 35, 35, 15]
+
+        ws.append([idx, full_name, document, dependencia_actual, dependencia_orig, cargo, remuneracion])
+
+    # Ajustar ancho de columnas (ahora son 7)
+    column_widths = [8, 40, 18, 35, 35, 35, 15]
     for i, width in enumerate(column_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
-    
-    # Respuesta HTTP
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    
-    filename = f"Empleados_{unit.name.replace(' ', '_')}_{status_code}.xlsx"
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = f"Empleados_{unit.name.replace(' ', '_')}_{status_code_upper}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
     wb.save(response)
     return response
+
+
 def get_units_context(units_queryset=None):
     """Auxiliar para mantener consistencia de contexto en vistas y AJAX"""
     if units_queryset is None:

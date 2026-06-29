@@ -147,6 +147,29 @@
                         </div>
                     </button>
                 {% endif %}
+                {% if unit_stats.propios > 0 %}
+                    <button class="stat-btn stat-btn-total" style="background-color: #0d6efd; color: white;"
+                            onclick="exportUnitEmployees('{{ unit.id }}', 'PROPIOS')"
+                            title="Empleados originarios de esta unidad - Clic para exportar a Excel">
+                        <i class="fas fa-building-user"></i>
+                        <div class="stat-btn-content">
+                            <span class="stat-btn-label">Propios</span>
+                            <span class="stat-btn-count">{{ unit_stats.propios }}</span>
+                        </div>
+                    </button>
+                {% endif %}
+
+                {% if unit_stats.reubicados > 0 %}
+                    <button class="stat-btn stat-btn-contractor" style="background-color: #dc3545; color: white;"
+                            onclick="exportUnitEmployees('{{ unit.id }}', 'REUBICADOS')"
+                            title="Empleados reubicados desde otra unidad - Clic para exportar a Excel">
+                        <i class="fas fa-person-walking-luggage"></i>
+                        <div class="stat-btn-content">
+                            <span class="stat-btn-label">Reubicados</span>
+                            <span class="stat-btn-count">{{ unit_stats.reubicados }}</span>
+                        </div>
+                    </button>
+                {% endif %}
             </div>
 
             <!-- Entregables tipo acordeón -->
