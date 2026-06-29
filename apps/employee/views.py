@@ -42,6 +42,7 @@ from .forms import AcademicTitleForm, WorkExperienceForm, TrainingForm
 from .models import Employee, Curriculum, AcademicTitle, WorkExperience, Training, InstitutionalData, \
     EmployeeProfileVisibility
 from .models import TeleworkActivity
+from institution.models import AdministrativeUnit
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         context['employee_area_name'] = 'SIN AREA ASIGNADA'
         context['employee_profile'] = employee
         context['curriculum_obj'] = curriculum
+        context['areas_list'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
         context['economic_data'] = economic_data
         context['bank_account'] = _safe_related(economic_data, 'bank_account', None)
         context['payroll_info'] = _safe_related(economic_data, 'payroll_info', None)
@@ -1029,7 +1031,6 @@ def get_cv_item_detail_api(request, item_type, item_id):
 
 
 @login_required
-@login_required
 def get_institutional_data_api(request, person_id):
     try:
         person = get_object_or_404(Person, pk=person_id)
@@ -1063,7 +1064,10 @@ def get_institutional_data_api(request, person_id):
             'institutional_email': inst_data.institutional_email or '',
             'observations': inst_data.observations or '',
             'collective_contract': inst_data.collective_contract,
-            'entry_date': inst_data.entry_date.isoformat() if inst_data.entry_date else ''
+            'entry_date': inst_data.entry_date.isoformat() if inst_data.entry_date else '',
+            'original_dependency': inst_data.original_dependency.id if inst_data.original_dependency else None,
+            'original_dependency_name': inst_data.original_dependency.name if inst_data.original_dependency else 'Sin Especificar',
+            'original_dependency_reason': inst_data.original_dependency_reason or ''
         }
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
@@ -1112,7 +1116,13 @@ def save_institutional_data_api(request, person_id):
                     collective_contract == 'true' or collective_contract == 'on' or collective_contract == '1')
             entry_date = request.POST.get('entry_date')
             inst_data.entry_date = entry_date if entry_date else None
+            orig_dep_id = request.POST.get('original_dependency')
+            if orig_dep_id == 'null' or orig_dep_id == '' or orig_dep_id is None:
+                inst_data.original_dependency = None
+            else:
+                inst_data.original_dependency_id = orig_dep_id
 
+            inst_data.original_dependency_reason = request.POST.get('original_dependency_reason')
             inst_data.save()
             log_person_audit(
                 request,

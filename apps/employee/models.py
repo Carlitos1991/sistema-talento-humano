@@ -73,27 +73,19 @@ class InstitutionalData(BaseModel):
     """
     Datos de control interno y biométrico.
     """
-    employee = models.OneToOneField(
-        Employee,
-        on_delete=models.CASCADE,
-        related_name='institutional_data',
-        verbose_name='Empleado'
-    )
-    file_number = models.CharField(
-        max_length=50, blank=True, null=True,
-        verbose_name='Número de Expediente'
-    )
-    biometric_id = models.CharField(
-        max_length=50, blank=True, null=True, unique=True,
-        verbose_name='ID Biométrico'
-    )
-    institutional_email = models.EmailField(
-        max_length=100, blank=True, null=True, unique=True,
-        verbose_name='Correo Institucional'
-    )
+    employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='institutional_data',
+                                    verbose_name='Empleado')
+    file_number = models.CharField(max_length=50, blank=True, null=True, verbose_name='Número de Expediente')
+    biometric_id = models.CharField(max_length=50, blank=True, null=True, unique=True, verbose_name='ID Biométrico')
+    institutional_email = models.EmailField(max_length=100, blank=True, null=True, unique=True,
+                                            verbose_name='Correo Institucional')
     observations = models.TextField(blank=True, null=True, verbose_name='Observaciones')
     collective_contract = models.BooleanField(default=False, verbose_name='Es contrato colectivo')
     entry_date = models.DateField(verbose_name='Fecha de ingreso', null=True, blank=True)
+    original_dependency = models.ForeignKey(AdministrativeUnit, on_delete=models.SET_NULL,
+                                            related_name='institutional_data_original',
+                                            verbose_name="Dependencia Original", null=True, blank=True)
+    original_dependency_reason = models.TextField(blank=True, null=True, verbose_name="Motivo de Dependencia Original")
 
     class Meta:
         verbose_name = 'Datos Institucionales'

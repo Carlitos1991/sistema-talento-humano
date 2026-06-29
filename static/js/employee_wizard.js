@@ -463,8 +463,99 @@ const app = createApp({
             file_number: '',
             biometric_id: '',
             institutional_email: '',
-            observations: ''
+            observations: '',
+            original_dependency: null,
+            original_dependency_reason: ''
         });
+        const dependencyHistory = ref([]);
+        const loadOriginalDependencyLevel = (parentId) => {
+            const apiUrl = '/institution/api/unit-children/';
+            const params = parentId ? {parent_id: parentId} : {};
+
+            $.ajax({
+                url: apiUrl,
+                data: params,
+                success: function (data) {
+                    const $select = $('#original_dependency_single_select');
+
+                    // Destruimos select2 temporalmente para poder manipular los options de forma segura
+                    if ($select.data('select2')) {
+                        $select.select2('destroy');
+                    }
+
+                    $select.empty();
+                    $select.append('<option value="">-- Seleccione Unidad --</option>');
+
+                    // Si el historial tiene elementos, estamos en un subnivel: agregamos la opción para regresar
+                    if (dependencyHistory.value.length > 0) {
+                        const currentParent = dependencyHistory.value[dependencyHistory.value.length - 1];
+                        $select.append(`<option value="ACTION_GO_BACK" style="font-weight: bold; color: #f97316;">⬅️ Volver a: ${currentParent.parentName}</option>`);
+                    }
+
+                    // Inyectamos las unidades del nivel actual
+                    if (data.units && data.units.length > 0) {
+                        data.units.forEach(function (u) {
+                            // Si tiene hijos, le agregamos un indicador visual "❯" al texto
+                            const labelSuffix = u.has_children ? ' ❯' : '';
+                            $select.append(`<option value="${u.id}" data-has-children="${u.has_children}">${u.name}${labelSuffix}</option>`);
+                        });
+                    }
+
+                    // Volvemos a levantar Select2 acoplado al modal
+                    $select.select2({
+                        dropdownParent: $('#modalInstitutionalOverlay'),
+                        width: '100%'
+                    });
+
+                    // Escuchamos el cambio de selección
+                    $select.off('change').on('change', function () {
+                        const val = $(this).val();
+                        if (!val) return;
+
+                        // CASO A: El usuario presiona la opción de regresar de nivel
+                        if (val === 'ACTION_GO_BACK') {
+                            dependencyHistory.value.pop(); // Sacamos el nivel actual del historial
+
+                            // Determinamos cuál es el nuevo padre según el tope del historial
+                            const newParentId = dependencyHistory.value.length > 0
+                                ? dependencyHistory.value[dependencyHistory.value.length - 1].parentId
+                                : null;
+
+                            // Sincronizamos la selección de Vue con el nivel superior al que estamos regresando
+                            if (dependencyHistory.value.length > 0) {
+                                const prev = dependencyHistory.value[dependencyHistory.value.length - 1];
+                                institutionalForm.value.original_dependency = prev.parentId;
+                                institutionalForm.value.original_dependency_name = prev.parentName;
+                            } else {
+                                institutionalForm.value.original_dependency = null;
+                                institutionalForm.value.original_dependency_name = '';
+                            }
+
+                            loadOriginalDependencyLevel(newParentId);
+                            return;
+                        }
+
+                        // CASO B: El usuario selecciona una unidad real
+                        const $selectedOpt = $(this).find(':selected');
+                        const name = $selectedOpt.text().replace(' ❯', '');
+                        const hasChildren = $selectedOpt.data('has-children');
+
+                        // Impactamos el estado de Vue inmediatamente
+                        institutionalForm.value.original_dependency = val;
+                        institutionalForm.value.original_dependency_name = name;
+
+                        // Si la opción seleccionada tiene dependencias hijas, entramos a su nivel
+                        if (hasChildren === true || hasChildren === "true" || hasChildren === "True") {
+                            dependencyHistory.value.push({
+                                parentId: val,
+                                parentName: name
+                            });
+                            loadOriginalDependencyLevel(val);
+                        }
+                    });
+                }
+            });
+        };
         const institutionalErrors = ref({});
 
         // --- 3. UI Y PREVIEW ---
@@ -1039,6 +1130,8 @@ const app = createApp({
                     setText('inst_institutional_email', res.data.institutional_email || 'Sin especificar');
                     setText('inst_area', res.data.area_name || (appElement.dataset.areaName || 'Sin asignar'));
                     setText('inst_employment_status', res.data.employment_status_name || '—');
+                    setText('inst_original_dependency_name', res.data.original_dependency_name || 'Sin especificar');
+                    setText('inst_original_dependency_reason', res.data.original_dependency_reason || '—');
                     // Es jefe
                     const isBossEl = document.getElementById('inst_is_boss');
                     if (isBossEl) {
@@ -1534,15 +1627,18 @@ const app = createApp({
 
         const openInstitutionalModal = async (personId) => {
             institutionalErrors.value = {};
-            // Reset form could be here, but we usually fetch first
             try {
                 const pid = personId || appElement.dataset.personId;
                 const response = await fetch(`/employee/person/${pid}/get-institutional-data/`);
                 const res = await response.json();
+
                 if (res.success) {
                     institutionalForm.value = res.data;
 
-                    // Abrir modal (solo mostrar campos editables en este modal)
+                    // Inicializar desde la raíz el combo nuevo
+                    dependencyHistory.value = [];
+                    loadOriginalDependencyLevel(null);
+
                     $('#modalInstitutionalOverlay').removeClass('hidden');
                     document.body.classList.add('no-scroll');
                 } else {
@@ -1735,7 +1831,6 @@ const app = createApp({
             openInstitutionalModal,
             saveInstitutionalData,
             refreshInstitutionalTab,
-
             toggleTabVisibility,
             teleworkData,
             teleworkForm,
