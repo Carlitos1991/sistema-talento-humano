@@ -1773,7 +1773,7 @@ class SanctionHistoryListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
 
         if not self.request.user.is_staff:
             queryset = queryset.filter(assignment_history__assigned_to=self.request.user)
-        return queryset
+        return queryset.distinct()
 
     def get_queryset(self):
         queryset = self._get_base_queryset()

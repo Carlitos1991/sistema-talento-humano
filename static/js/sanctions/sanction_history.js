@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 closeModal(modalId);
             }
         }
-        
+
         // Manejador específico para cerrar el modal de detalle de acción
         const closeDetailBtn = e.target.closest('.js-close-detail-modal');
         if (closeDetailBtn) {
@@ -227,7 +227,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (res.ok && data.success) {
                     closeModal('customModal');
-                    Toast.fire({icon: 'success', title: data.message || 'Acción de personal actualizada correctamente'});
+                    Toast.fire({
+                        icon: 'success',
+                        title: data.message || 'Acción de personal actualizada correctamente'
+                    });
                     fetchHistoryPage(1);
                     return;
                 }
@@ -287,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (container && data.success) {
                     container.innerHTML = data.html;
                     openModal('actionsHistoryModal');
-                    
+
                     // Agregar manejador para botones de detalle dentro del modal
                     container.querySelectorAll('.js-view-detail-action').forEach(btn => {
                         btn.onclick = (e) => {
@@ -445,12 +448,28 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- EVENTOS (bindEvents) ---
     function bindEvents() {
         // 1. Checkboxes
         const checkAll = document.getElementById('check-all-notifications');
         const checkboxes = document.querySelectorAll('.js-notification-checkbox');
+        const searchInput = document.getElementById('notifications-search');
+        const searchBtn = document.querySelector('.search-btn');
 
+        if (searchInput) {
+            // Ejecutar búsqueda al presionar "Enter"
+            searchInput.addEventListener('keyup', function (e) {
+                if (e.key === 'Enter') {
+                    fetchHistoryPage(1);
+                }
+            });
+        }
+
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                fetchHistoryPage(1);
+            });
+        }
         if (checkAll) {
             checkAll.onclick = function () {
                 checkboxes.forEach(cb => {
