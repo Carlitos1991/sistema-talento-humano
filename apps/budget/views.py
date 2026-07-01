@@ -1,18 +1,18 @@
+from datetime import date, datetime, timedelta
+
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q, Count
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
-from django.http import JsonResponse
-from django.db.models import Q, Count
-from datetime import date, datetime, timedelta
+
 from core.models import CatalogItem
 from employee.models import Employee
-from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetModificationHistory, \
-    BudgetAssignmentHistory, BudgetGroup
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
     AssignIndividualNumberForm, BudgetChangeStatusForm, BudgetGroupForm
-from django.utils import timezone
+from .models import BudgetLine, Program, Subprogram, Project, Activity, BudgetAssignmentHistory, BudgetGroup
 
 
 # --- 1. ENDPOINT PARA CASCADA (JSON) ---
@@ -47,7 +47,7 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
 
 # --- 2. ESTADÍSTICAS (Python Calculation) ---
 def get_budget_stats():
-    from django.db.models import Count, Q, Case, When, IntegerField
+    from django.db.models import Count, Case, When, IntegerField
 
     # Una sola consulta con agregaciones condicionales (más eficiente)
     result = BudgetLine.objects.aggregate(

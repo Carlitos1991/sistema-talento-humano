@@ -109,16 +109,18 @@ class Command(BaseCommand):
                                 continue
 
                             # Control de duplicados usando registry_date
-                            obj, created = AttendanceRegistry.objects.get_or_create(
+                            registro_existe = AttendanceRegistry.objects.filter(
                                 employee=empleado,
-                                registry_date=fecha_reg,
-                                defaults={
-                                    'biometric_load': nueva_carga,
-                                    'employee_id_bio': id_bio_emp
-                                }
-                            )
+                                registry_date=fecha_reg
+                            ).exists()
 
-                            if created:
+                            if not registro_existe:
+                                AttendanceRegistry.objects.create(
+                                    employee=empleado,
+                                    registry_date=fecha_reg,
+                                    biometric_load=nueva_carga,
+                                    employee_id_bio=id_bio_emp
+                                )
                                 migrados_este_bio += 1
                             else:
                                 duplicados_este_bio += 1

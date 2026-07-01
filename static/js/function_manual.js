@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         if (this.currentStep === 3) {
-                            if (this.activities.length < 6) return true;
+                            if (this.activities.length < 10) return true;
                             return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
                         }
                         return false;
@@ -826,10 +826,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             const validNodes = this.selectedNodes.filter(n => n !== '');
 
                             // Si hay menos de 6, falta completar
-                            if (validNodes.length < 6) {
+                            if (validNodes.length < 10) {
                                 window.Toast.fire({
                                     icon: 'warning',
-                                    title: 'Debe completar la valoración hasta el nivel de Complejidad.'
+                                    title: 'Debe registrar al menos 10 actividades esenciales.'
                                 });
                                 return false;
                             }

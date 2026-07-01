@@ -143,7 +143,7 @@ class JobProfile(BaseModel):
     # Total de puntos de las primeras 6 actividades
     total_activity_points = models.PositiveIntegerField(
         default=0, verbose_name="Total Puntos Actividades",
-        help_text="Suma de puntos de las primeras 6 actividades"
+        help_text="Suma de puntos de las actividades"
     )
 
     # Nivel del cargo (obtenido del nodo RESULT seleccionado)
@@ -172,8 +172,8 @@ class JobProfile(BaseModel):
     )
 
     def calculate_activity_points(self):
-        """Calcula la suma de puntos de las primeras 6 actividades"""
-        activities = self.activities.all()[:6]
+        """Calcula la suma de puntos de las primeras 10 actividades"""
+        activities = self.activities.all()[:10]
         return sum(activity.points for activity in activities)
 
     def update_total_activity_points(self):
