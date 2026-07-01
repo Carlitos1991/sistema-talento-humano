@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             action_verb: '',
                             description: '',
                             additional_knowledge: '',
-                            deliverable: '',
+                            deliverables: [],
                             complexity: '',
                             contribution: '',
                             frequency: ''
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             action_verb: '',
                             description: '',
                             additional_knowledge: '',
-                            deliverable: '',
+                            deliverables: [],
                             complexity: '',
                             contribution: '',
                             frequency: '',
@@ -753,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     action_verb: a.action_verb || '',
                                     description: a.description || '',
                                     additional_knowledge: a.additional_knowledge || '',
-                                    deliverable: a.deliverable || '',
+                                    deliverables: a.deliverables || [],
                                     complexity: a.complexity || '',
                                     contribution: a.contribution || '',
                                     frequency: a.frequency || '',
@@ -791,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // Forzamos a Select2 del PASO 3 a mostrar los valores
                                 this.activities.forEach((act, idx) => {
                                     $(`select[data-index="${idx}"][data-field="action_verb"]`).val(act.action_verb).trigger('change.select2');
-                                    $(`select[data-index="${idx}"][data-field="deliverable"]`).val(act.deliverable).trigger('change.select2');
+                                    $(`select[data-index="${idx}"][data-field="deliverables"]`).val(act.deliverables).trigger('change.select2');
                                     $(`select[data-index="${idx}"][data-field="complexity"]`).val(act.complexity).trigger('change.select2');
                                     $(`select[data-index="${idx}"][data-field="contribution"]`).val(act.contribution).trigger('change.select2');
                                     $(`select[data-index="${idx}"][data-field="frequency"]`).val(act.frequency).trigger('change.select2');
@@ -1211,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             action_verb: '',
                             description: '',
                             additional_knowledge: '',
-                            deliverable: '',
+                            deliverables: [],
                             complexity: '',
                             contribution: '',
                             frequency: '',
@@ -1272,12 +1272,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 action_verb: original.action_verb || '',
                                 description: original.description || '',
                                 additional_knowledge: original.additional_knowledge || '',
-                                deliverable: original.deliverable || '',
+                                deliverables: [...(original.deliverables || [])],
                                 complexity: original.complexity || '',
                                 contribution: original.contribution || '',
                                 frequency: original.frequency || '',
                                 points: this.calculateActivityPoints(original)
                             };
+                            $(`select[data-index="${newIndex}"][data-field="deliverables"]`).val(copy.deliverables).trigger('change.select2');
 
                             // Insertar copia después del índice actual
                             const newIndex = idx + 1;

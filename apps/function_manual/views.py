@@ -119,13 +119,13 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if query:
             queryset = queryset.filter(
                 models.Q(position_code__icontains=query) |
-                models.Q(specific_job_title__icontains=query) | 
+                models.Q(specific_job_title__icontains=query) |
                 models.Q(administrative_unit__name__icontains=query))
-        
+
         # Manejo de ordenamiento dinámico desde request
         sort_field = self.request.GET.get('sort_field', '')
         sort_dir = self.request.GET.get('sort_dir', 'asc')
-        
+
         # Campos permitidos para ordenamiento (whitelist para prevenir inyecciones)
         allowed_fields = {
             'position_code': 'position_code',
@@ -136,7 +136,7 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'level': 'level',
             '-created_at': '-created_at'
         }
-        
+
         # Si el campo de ordenamiento es válido, aplicarlo
         if sort_field in allowed_fields:
             order_by_field = allowed_fields[sort_field]
@@ -149,7 +149,7 @@ class JobProfileListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         else:
             # Ordenamiento por defecto
             queryset = queryset.order_by('-created_at')
-        
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -350,12 +350,12 @@ class JobProfileUpdateView(LoginRequiredMixin, PermissionRequiredMixin, JobProfi
 
         # 3. Actividades
         activities_data = []
-        for act in profile.activities.all():
+        for act in profile.activities.all().prefetch_related('deliverables'):
             activities_data.append({
                 'action_verb': act.action_verb_id,
                 'description': act.description,
                 'additional_knowledge': act.additional_knowledge,
-                'deliverable': act.deliverable_id,
+                'deliverables': list(act.deliverables.values_list('id', flat=True)),  # <-- Lista de IDs
                 'complexity': act.complexity_id,
                 'contribution': act.contribution_id,
                 'frequency': act.frequency_id,
@@ -1106,15 +1106,16 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
 
             # 7. Asignar specific_job_title
             if selected_generic:
-                profile.specific_job_title = selected_generic.name_extra or (
-                    selected_generic.catalog_item.name if selected_generic.catalog_item else 'Sin nombre'
-                )
-                print(f">>> specific_job_title asignado: {profile.specific_job_title}")
+                if not profile.denomination_completed:
+                    profile.specific_job_title = selected_generic.name_extra or (
+                        selected_generic.catalog_item.name if selected_generic.catalog_item else 'Sin nombre'
+                    )
+                    print(f">>> specific_job_title asignado automáticamente: {profile.specific_job_title}")
+                else:
+                    print(
+                        f">>> specific_job_title preservado (Ya fue completado previamente): {profile.specific_job_title}")
 
-                # Guardar todos los campos (occupational_classification, specific_job_title, level)
                 profile.save(update_fields=['occupational_classification', 'specific_job_title', 'level'])
-                print(f">>> Profile guardado correctamente")
-
                 return selected_generic.id
             else:
                 # Solo guardar occupational_classification y level
@@ -1215,18 +1216,17 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
 
             # Si encontramos un nodo válido, actualizar specific_job_title
             if selected_node:
-                print(
-                    f">>> SELECTED generic node id={selected_node.id}, parent_id={selected_node.parent_id}, name_extra={selected_node.name_extra}")
-                profile.specific_job_title = selected_node.name_extra or (
-                    selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
-                )
-                print(f">>> specific_job_title = {profile.specific_job_title}")
+                print(f">>> SELECTED generic node id={selected_node.id}, parent_id={selected_node.parent_id}")
+
+                if not profile.denomination_completed:
+                    profile.specific_job_title = selected_node.name_extra or (
+                        selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
+                    )
+                else:
+                    print(f">>> specific_job_title preservado: {profile.specific_job_title}")
             else:
                 print(f">>> No se encontró generic_node apropiado")
 
-            # Guardar el profile con los cambios
-            print(
-                f">>> GUARDANDO: occupational_classification_id={profile.occupational_classification_id}, specific_job_title={profile.specific_job_title}")
             profile.save(update_fields=['specific_job_title', 'occupational_classification'])
 
             # Verificar post-save
@@ -1245,10 +1245,10 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
         """
         Selecciona la Denominación Genérica correcta basada en total_activity_points
         usando la OccupationalMatrix (occupational_classification) como punto de partida.
-        
+
         Nota: El RESULT en este sistema es la OccupationalMatrix, no un ValuationNode.
         Buscamos nodos GENERIC_DENOMINATION que sean hijos del occupational_classification.
-        
+
         Lógica de selección:
         - Buscamos GENERIC_DENOMINATION que estén vinculados a la matrix seleccionada
         - Seleccionamos el de mayor minimum_value <= total_activity_points
@@ -1306,17 +1306,14 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
 
             # Si encontramos un nodo válido, actualizar specific_job_title
             if selected_node:
-                profile.specific_job_title = selected_node.name_extra or (
-                    selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
-                )
-                print(f">>> specific_job_title asignado: {profile.specific_job_title}")
-                # Guardar solo specific_job_title (occupational_classification ya fue guardado)
-                profile.save(update_fields=['specific_job_title'])
-                print(f">>> Profile guardado")
-            else:
-                print(f">>> No se encontró generic_node que cumpla los criterios. specific_job_title no se modifica.")
-
-            print(f">>> _set_generic_denomination_and_title_from_matrix COMPLETADO\n")
+                # CAMBIO AQUÍ: Respetar si ya está completado
+                if not profile.denomination_completed:
+                    profile.specific_job_title = selected_node.name_extra or (
+                        selected_node.catalog_item.name if selected_node.catalog_item else 'Sin nombre'
+                    )
+                    profile.save(update_fields=['specific_job_title'])
+                else:
+                    print(f">>> specific_job_title preservado: {profile.specific_job_title}")
             return selected_node.id if selected_node else None
 
         except Exception as e:
@@ -1435,51 +1432,45 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                 profile.save()
 
                 # 2. Gestionar Actividades
-                # Ahora que el profile tiene pk, podemos acceder a sus relaciones
                 profile.activities.all().delete()
                 activities_data = data.get('activities', [])
 
-                activities_to_create = []
-                for act in activities_data:
-                    if act.get('description') and act.get('action_verb'):
-                        activities_to_create.append(JobActivity(
-                            profile=profile,
-                            action_verb_id=act.get('action_verb'),
-                            description=act.get('description'),
-                            additional_knowledge=act.get('additional_knowledge', ''),
-                            deliverable_id=act.get('deliverable') or None,
-                            complexity_id=act.get('complexity') or None,
-                            contribution_id=act.get('contribution') or None,
-                            frequency_id=act.get('frequency') or None,
-                            points=act.get('points', 0)
-                        ))
-
                 selected_generic_node_id = None
+                valid_activities = [act for act in activities_data if act.get('description') and act.get('action_verb')]
 
-                if activities_to_create:
-                    # PRIMERO guardar el profile para que exista en BD
+                if valid_activities:
                     profile.save()
                     print(f"\n=== PASO 1: Profile guardado ===")
                     print(f"profile.id={profile.id}")
                     print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
                     print(f"profile.specific_job_title={profile.specific_job_title}")
 
-                    JobActivity.objects.bulk_create(activities_to_create)
-                    # Recalcular el total de puntos de actividades después de crear
+                    for act in valid_activities:
+                        new_act = JobActivity.objects.create(
+                            profile=profile,
+                            action_verb_id=act.get('action_verb'),
+                            description=act.get('description'),
+                            additional_knowledge=act.get('additional_knowledge', ''),
+                            complexity_id=act.get('complexity') or None,
+                            contribution_id=act.get('contribution') or None,
+                            frequency_id=act.get('frequency') or None,
+                            points=act.get('points', 0)
+                        )
+                        deliverables = act.get('deliverables', [])
+                        if deliverables:
+                            new_act.deliverables.set(deliverables)
+
                     profile.update_total_activity_points()
                     print(f"\n=== PASO 2: Después de update_total_activity_points ===")
                     print(f"profile.total_activity_points={profile.total_activity_points}")
                     print(f"profile.occupational_classification_id={profile.occupational_classification_id}")
                     print(f"profile.specific_job_title={profile.specific_job_title}")
 
-                    # Lógica automática: Seleccionar el RESULT correcto según total_activity_points
-                    # y luego su Denominación Genérica
                     complexity_node_id = data.get('complexity_node_id')
                     if complexity_node_id:
                         print(f"\n=== Seleccionando RESULT correcto desde COMPLEXITY {complexity_node_id} ===")
                         selected_generic_node_id = self._select_result_and_denomination(profile, complexity_node_id)
                     elif result_node_id:
-                        # Fallback: si viene result_node_id explícito
                         print(f"\n=== Selección por result_node_id={result_node_id} ===")
                         selected_generic_node_id = self._set_generic_denomination_and_title(profile, result_node_id)
                     elif profile.occupational_classification:
@@ -1487,7 +1478,6 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                             f"\n=== Selección por occupational_classification_id={profile.occupational_classification_id} ===")
                         selected_generic_node_id = self._set_generic_denomination_and_title_from_matrix(profile)
 
-                    # Si el frontend envió explícitamente un generic node (nieto) preferirlo
                     incoming_generic = data.get('selected_generic_node_id') or data.get('generic_node_id')
                     if not incoming_generic:
                         sel_nodes = data.get('selectedNodes') or data.get('selected_nodes') or data.get('selected')
@@ -1500,19 +1490,18 @@ class JobProfileSaveApi(LoginRequiredMixin, View):
                     if incoming_generic:
                         try:
                             incoming_generic_id = int(incoming_generic)
-                            # Override computed selection
                             selected_generic_node_id = incoming_generic_id
                             gn = ValuationNode.objects.filter(pk=incoming_generic_id).first()
-                            if gn:
+
+                            # CAMBIO AQUÍ: No dejar que el nodo entrante del front fuerce el nombre si ya está completado
+                            if gn and not profile.denomination_completed:
                                 profile.specific_job_title = gn.name_extra or (
                                     gn.catalog_item.name if gn.catalog_item else profile.specific_job_title)
                                 profile.save(update_fields=['specific_job_title'])
-                                print(
-                                    f">>> specific_job_title guardado desde incoming generic node: {incoming_generic_id} -> {profile.specific_job_title}")
                         except Exception as e:
                             print(f">>> ERROR procesando incoming_generic {incoming_generic}: {e}")
                 else:
-                    raise ValueError("El perfil debe tener al menos una actividad esencial.")
+                    raise ValueError("El perfil debe tener al menos una actividad esencial con descripción y verbo.")
 
                 # 3. Gestionar Competencias
                 profile.competencies.clear()
@@ -1809,7 +1798,8 @@ class GetReportPdfModalView(LoginRequiredMixin, View):
     def get(self, request, pk):
         # Permisos: permitir a quien tenga view OR change OR add OR can_admin
         if not (request.user.has_perm('function_manual.view_jobprofile') or request.user.has_perm(
-            'function_manual.change_jobprofile') or request.user.has_perm('function_manual.add_jobprofile') or request.user.has_perm('function_manual.can_admin')):
+                'function_manual.change_jobprofile') or request.user.has_perm(
+            'function_manual.add_jobprofile') or request.user.has_perm('function_manual.can_admin')):
             return JsonResponse({'success': False, 'message': 'No autorizado'}, status=403)
 
         profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
@@ -1912,8 +1902,9 @@ class JobActivityReportPdfView(LoginRequiredMixin, View):
             return JsonResponse(
                 {'success': False, 'message': 'El perfil debe estar legalizado para generar este reporte'}, status=403)
 
-        activities = profile.activities.all().select_related('action_verb', 'deliverable', 'complexity', 'contribution',
-                                                             'frequency')
+        activities = profile.activities.all().select_related(
+            'action_verb', 'complexity', 'contribution', 'frequency'
+        ).prefetch_related('deliverables')
 
         # Crear PDF en memoria - ORIENTACIÓN HORIZONTAL (LANDSCAPE)
         buffer = BytesIO()
@@ -2227,8 +2218,8 @@ class JobActivityReportExcelView(LoginRequiredMixin, PermissionRequiredMixin, Vi
     def get(self, request, pk):
         profile = get_object_or_404(JobProfile.objects.select_related('administrative_unit'), pk=pk)
         activities = profile.activities.all().select_related(
-            'action_verb', 'deliverable', 'complexity', 'contribution', 'frequency'
-        )
+            'action_verb', 'complexity', 'contribution', 'frequency'
+        ).prefetch_related('deliverables')
 
         # 1. Configuración del Libro y Hoja
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -2316,7 +2307,8 @@ class JobActivityReportExcelView(LoginRequiredMixin, PermissionRequiredMixin, Vi
         row_num = 6
         for idx, act in enumerate(activities, start=1):
             # Obtención de nombres
-            deliverable_name = act.deliverable.name if act.deliverable else "N/A"
+            deliverable_names = [d.name for d in act.deliverables.all()]
+            deliverable_name = "\n".join(deliverable_names) if deliverable_names else "N/A"
             activity_text = f"{act.action_verb.name} {act.description}".strip()
             ag_name = act.contribution.name if act.contribution else "Bajo"
             f_name = act.frequency.name if act.frequency else "Anual"

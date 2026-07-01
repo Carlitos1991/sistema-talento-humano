@@ -136,11 +136,11 @@
                                         </option>
                                     </select>
 
-                                    <select :data-index="idx" data-field="deliverable"
-                                            data-placeholder="Producto/Servicio..." class="select2-act">
-                                        <option></option>
-                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id"
-                                                :selected="act.deliverable == d.id">[[ d.name ]]
+                                    <select :data-index="idx" data-field="deliverables"
+                                            data-placeholder="Productos/Servicios..." class="select2-act"
+                                            multiple="multiple">
+                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id">
+                                            [[ d.name ]]
                                         </option>
                                     </select>
                                 </td>
