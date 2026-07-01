@@ -217,10 +217,10 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             Q(employment_status__name__icontains='EX TRABAJADOR')
         )
         # Propios: No tienen dependencia original registrada o es igual a su área actual
-        propios_count = all_employees.filter(
-            Q(institutional_data__original_dependency__isnull=True) |
-            Q(institutional_data__original_dependency=F('area'))
-        ).count()
+        propios_filter = Q(institutional_data__original_dependency=current_unit.pk) | \
+                         Q(institutional_data__original_dependency__isnull=True, area_id=current_unit.pk)
+
+        propios_count = all_employees.filter(propios_filter).count()
 
         reubicados_count = all_employees.filter(
             institutional_data__original_dependency__isnull=False
@@ -929,27 +929,18 @@ def export_unit_employees_excel(request, pk):
         'person',
         'employment_status',
         'area',
-        'institutional_data',  # <-- NUEVO
-        'institutional_data__original_dependency'  # <-- NUEVO
-    ).prefetch_related(
-        'current_budget_line',
-        'current_budget_line__position_item'
+        'institutional_data',
+        'institutional_data__original_dependency'
     ).order_by('area__name', 'person__last_name')
 
-    # Aplicar filtros según el botón presionado
+    propios_filter = Q(institutional_data__original_dependency=unit.pk) | \
+                     Q(institutional_data__original_dependency__isnull=True, area_id=unit.pk)
+
     if status_code_upper == 'PROPIOS':
-        employees = employees.filter(
-            Q(institutional_data__original_dependency__isnull=True) |
-            Q(institutional_data__original_dependency=F('area'))
-        )
+        employees = employees.filter(propios_filter)
     elif status_code_upper == 'REUBICADOS':
-        employees = employees.filter(
-            institutional_data__original_dependency__isnull=False
-        ).exclude(
-            institutional_data__original_dependency=F('area')
-        )
+        employees = employees.exclude(propios_filter)
     elif status_code_upper != 'TOTAL':
-        # Filtro normal por tipo de contrato (EMPLEADO, TRABAJADOR, etc.)
         employees = employees.filter(employment_status__code=status_code_upper)
 
     wb = Workbook()

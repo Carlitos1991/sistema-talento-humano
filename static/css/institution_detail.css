@@ -1283,14 +1283,26 @@
 
 /* Botón Contratados - Púrpura */
 .stat-btn-contractor {
-    background: linear-gradient(135deg, #6b21a8 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #5721a8 0%, #763aed 100%);
     color: #ffffff;
 }
 
 .stat-btn-contractor:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #6d3aed 0%, #715cf6 100%);
     transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(107, 33, 168, 0.35);
+    box-shadow: 0 6px 16px rgba(71, 33, 168, 0.35);
+}
+
+/* Botón Contratados - Púrpura */
+.stat-btn-changes {
+    background: linear-gradient(135deg, #a82121 0%, #ed3a3a 100%);
+    color: #ffffff;
+}
+
+.stat-btn-changes:hover {
+    background: linear-gradient(135deg, #ed3a3a 0%, #f65c5c 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(168, 33, 33, 0.35);
 }
 
 .stat-btn:active {

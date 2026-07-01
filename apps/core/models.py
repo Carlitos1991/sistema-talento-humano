@@ -331,30 +331,3 @@ class SystemConfiguration(BaseModel):
             is_active=True,
             effective_date__lte=timezone.now().date()
         ).first()
-
-
-class Authority(BaseModel):
-    """
-    Representa una autoridad de la institución.
-    """
-    name = models.CharField(
-        max_length=255,
-        verbose_name="Nombre Completo"
-    )
-    position = models.CharField(
-        max_length=255,
-        verbose_name="Cargo"
-    )
-    status = models.BooleanField(default=True, verbose_name="Estado legado")
-
-    class Meta:
-        verbose_name = "Autoridad"
-        verbose_name_plural = "Autoridades"
-        ordering = ['name']
-
-    def save(self, *args, **kwargs):
-        self.status = self.is_active
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.name} - {self.position}"

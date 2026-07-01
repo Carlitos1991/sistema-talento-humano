@@ -41,14 +41,6 @@ urlpatterns = [
     path('settings/locations/update/<int:pk>/', views.LocationUpdateView.as_view(), name='location_update'),
     path('settings/locations/toggle/<int:pk>/', views.location_toggle_status, name='location_toggle'),
     path('api/locations/', views.LocationJsonView.as_view(), name='location_list_json'),
-
-    # --- Authorities ---
-    path('settings/authorities/', views.AuthorityListView.as_view(), name='authority_list'),
-    path('settings/authorities/create/', views.AuthorityCreateView.as_view(), name='authority_create'),
-    path('settings/authorities/detail/<int:pk>/', views.authority_detail, name='authority_detail'),
-    path('settings/authorities/update/<int:pk>/', views.AuthorityUpdateView.as_view(), name='authority_update'),
-    path('settings/authorities/toggle/<int:pk>/', views.authority_toggle_status, name='authority_toggle'),
-
     # --- System Configuration ---
     path('settings/letterhead/', views.SystemLetterheadView.as_view(), name='system_letterhead'),
 ]

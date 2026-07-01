@@ -1,23 +1,24 @@
+import base64
 import calendar
 import json
 import logging
-from datetime import datetime, date, timedelta
-from datetime import time as dtime
-from django.utils import timezone
-import base64
 import mimetypes
 import os
+from datetime import datetime, date, timedelta
+from datetime import time as dtime
 from decimal import Decimal
 from uuid import UUID
-from django.shortcuts import get_object_or_404
+
 from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from django.views.decorators.http import require_GET, require_http_methods
-from django.views.generic import TemplateView, View, ListView
-from django.http import JsonResponse, HttpResponse
-from django.template.loader import render_to_string, get_template
 from django.db import transaction, models
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string, get_template
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_http_methods
+from django.views.generic import View, ListView
 
 logger = logging.getLogger(__name__)
 ENABLE_SHIFT_COLLAPSE = False  # desactivar colapso automático hasta afinar reglas
@@ -445,7 +446,7 @@ try:
 except Exception:
     HTML = None
     CSS = None
-from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, BiometricCommand, OfflineAttendanceRegistry
+from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry
 from .utils import test_connection, BiometricConnection
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation

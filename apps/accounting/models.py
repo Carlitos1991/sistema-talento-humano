@@ -67,7 +67,7 @@ class JournalItem(models.Model):
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='journal_items')
     debit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # Asociar a una partida presupuestaria opcionalmente
+    # Asociar a una partida presupuestaria
     budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
     reference = models.CharField(max_length=255, blank=True, null=True)
 
