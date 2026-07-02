@@ -106,7 +106,10 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = super().get_queryset().filter(is_active=True).select_related('employee__person', 'action_type')
+        qs = super().get_queryset().filter(is_active=True).select_related(
+            'employee__person',
+            'action_type'
+        ).prefetch_related('movement')
         # Filtros básicos y avanzados
         q = self.request.GET.get('q', '').strip()
         action_type = self.request.GET.get('action_type', '').strip()
@@ -656,7 +659,18 @@ class ActionDetailView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         action = get_object_or_404(
-            PersonnelAction.objects.select_related('employee__person', 'action_type'),
+            PersonnelAction.objects.select_related(
+                'employee__person',
+                'action_type',
+                'action_type__default_authority_1',
+                'action_type__default_authority_2',
+                'action_type__default_reviewer',
+                'action_type__default_register',
+                'authority_1',
+                'authority_2',
+                'reviewer',
+                'register'
+            ),
             pk=pk
         )
         movement = action.movement.first()
@@ -905,7 +919,19 @@ class ActionPDFView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         action = get_object_or_404(
-            PersonnelAction.objects.select_related('employee__person', 'action_type', 'employee__area'),
+            PersonnelAction.objects.select_related(
+                'employee__person',
+                'action_type',
+                'employee__area',
+                'action_type__default_authority_1',
+                'action_type__default_authority_2',
+                'action_type__default_reviewer',
+                'action_type__default_register',
+                'authority_1',
+                'authority_2',
+                'reviewer',
+                'register'
+            ),
             pk=pk
         )
 
@@ -921,11 +947,11 @@ class ActionPDFView(LoginRequiredMixin, View):
         # Para datos migrados, 'previous_unit' y 'new_unit' son CharFields.
         # Debemos obtener los objetos AdministrativeUnit correspondientes.
         current_unit = None
-        if movement and movement.previous_unit:
+        if movement and movement.new_unit:
             try:
-                current_unit = AdministrativeUnit.objects.get(name=movement.previous_unit)
+                proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
             except AdministrativeUnit.DoesNotExist:
-                current_unit = None  # Puede ser un nombre antiguo que ya no existe
+                proposed_unit = None
         if not current_unit:
             current_unit = action.employee.area  # Fallback al área actual del empleado
 
@@ -935,8 +961,6 @@ class ActionPDFView(LoginRequiredMixin, View):
                 proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
             except AdministrativeUnit.DoesNotExist:
                 proposed_unit = None
-        if not proposed_unit:
-            proposed_unit = current_unit  # Fallback a la unidad actual
 
         current_budget = None
         proposed_budget = None
@@ -959,8 +983,6 @@ class ActionPDFView(LoginRequiredMixin, View):
 
         if movement and movement.new_budget_line:
             proposed_budget = movement.new_budget_line
-        else:
-            proposed_budget = current_budget
 
         if show_without_current_situation:
             current_unit = None
@@ -972,7 +994,7 @@ class ActionPDFView(LoginRequiredMixin, View):
             from weasyprint import HTML
 
             current_unit_snapshot = _unit_snapshot(current_unit)
-            proposed_unit_snapshot = _unit_snapshot(proposed_unit)
+            proposed_unit_snapshot = _unit_snapshot(proposed_unit) if proposed_unit else None
 
             html = render_to_string(
                 'personnel_action/pdf/action_pdf.html',
@@ -984,29 +1006,14 @@ class ActionPDFView(LoginRequiredMixin, View):
                     'current_unit_snapshot': current_unit_snapshot,
                     'proposed_unit_snapshot': proposed_unit_snapshot,
                     'current_budget': _budget_snapshot(current_budget),
-                    'proposed_budget': _budget_snapshot(proposed_budget),
+                    'proposed_budget': _budget_snapshot(proposed_budget) if proposed_budget else None,
+                    # Pasará Limpio como None si no cambió
                     'show_without_current_situation': show_without_current_situation,
-                    'standard_action_types': [
-                        'INGRESO',
-                        'TRASPASO',
-                        'INCREMENTO DE RMU',
-                        'REVISIÓN CLAS. PUEST.',
-                        'REINGRESO',
-                        'CAMBIO ADMINISTRATIVO',
-                        'SUBROGACION',
-                        'RESTITUCION',
-                        'INTERC. VOLUNTARIO',
-                        'ENCARGO',
-                        'REINTEGRO',
-                        'LICENCIA',
-                        'CESACIÓN DE FUNCIONES',
-                        'ASCENSO',
-                        'COMISIÓN DE SERVICIOS',
-                        'DESTITUCIÓN',
-                        'TRASLADO',
-                        'SANCIONES',
-                        'VACACIONES',
-                    ],
+                    'standard_action_types': ['INGRESO', 'TRASPASO', 'INCREMENTO DE RMU', 'REVISIÓN CLAS. PUEST.',
+                                              'REINGRESO', 'CAMBIO ADMINISTRATIVO', 'SUBROGACION', 'RESTITUCION',
+                                              'INTERC. VOLUNTARIO', 'ENCARGO', 'REINTEGRO', 'LICENCIA',
+                                              'CESACIÓN DE FUNCIONES', 'ASCENSO', 'COMISIÓN DE SERVICIOS',
+                                              'DESTITUCIÓN', 'TRASLADO', 'SANCIONES', 'VACACIONES'],
                 },
                 request=request
             )

@@ -260,7 +260,7 @@
                         <b>PUESTO:</b> {{ current_budget.position|default:"N/A" }}<br>
                         <b>GRUPO:</b> {{ current_budget.group|default:"N/A" }}<br>
                         <b>GRADO:</b> {{ current_budget.grade|default:"N/A" }}<br>
-                        <b>RMU:</b> {{ current_budget.rmu|default:"N/A" }}<br>
+                        <b>RMU:</b> {% if current_budget.rmu %}${{ current_budget.rmu }}{% else %}N/A{% endif %}<br>
                         <b>PARTIDA:</b> {{ current_budget.code|default:"N/A" }}
                     {% else %}
                         <b>PUESTO:</b> N/A<br>
@@ -271,22 +271,30 @@
                     {% endif %}
                 {% endif %}
             </td>
+
             <td colspan="6">
-                <b>PROCESO INSTITUCIONAL:</b> {{ proposed_unit_snapshot.path|default:"N/A" }}<br>
-                <b>NIVEL DE GESTIÓN:</b> {{ proposed_unit.parent.name|default:"N/A" }}<br>
-                <b>UNIDAD ADMINISTRATIVA:</b> {{ proposed_unit.name|default:"N/A" }}<br>
-                {% if proposed_budget %}
-                    <b>PUESTO:</b> {{ proposed_budget.position|default:"N/A" }}<br>
-                    <b>GRUPO:</b> {{ proposed_budget.group|default:"N/A" }}<br>
-                    <b>GRADO:</b> {{ proposed_budget.grade|default:"N/A" }}<br>
-                    <b>RMU:</b> {{ proposed_budget.rmu|default:"N/A" }}<br>
-                    <b>PARTIDA:</b> {{ proposed_budget.code|default:"N/A" }}
+                {% if proposed_unit or proposed_budget %}
+                    <b>PROCESO INSTITUCIONAL:</b> {{ proposed_unit_snapshot.path|default:"SIN CAMBIOS" }}<br>
+                    <b>NIVEL DE GESTIÓN:</b> {{ proposed_unit.parent.name|default:"SIN CAMBIOS" }}<br>
+                    <b>UNIDAD ADMINISTRATIVA:</b> {{ proposed_unit.name|default:"SIN CAMBIOS" }}<br>
+                    {% if proposed_budget %}
+                        <b>PUESTO:</b> {{ proposed_budget.position|default:"SIN CAMBIOS" }}<br>
+                        <b>GRUPO:</b> {{ proposed_budget.group|default:"SIN CAMBIOS" }}<br>
+                        <b>GRADO:</b> {{ proposed_budget.grade|default:"SIN CAMBIOS" }}<br>
+                        <b>RMU:</b> {% if proposed_budget.rmu %}${{ proposed_budget.rmu }}{% else %}SIN CAMBIOS
+                    {% endif %}<br>
+                        <b>PARTIDA:</b> {{ proposed_budget.code|default:"SIN CAMBIOS" }}
+                    {% else %}
+                        <b>PUESTO:</b> SIN CAMBIOS<br>
+                        <b>GRUPO:</b> SIN CAMBIOS<br>
+                        <b>GRADO:</b> SIN CAMBIOS<br>
+                        <b>RMU:</b> SIN CAMBIOS<br>
+                        <b>PARTIDA:</b> SIN CAMBIOS
+                    {% endif %}
                 {% else %}
-                    <b>PUESTO:</b> N/A<br>
-                    <b>GRUPO:</b> N/A<br>
-                    <b>GRADO:</b> N/A<br>
-                    <b>RMU:</b> N/A<br>
-                    <b>PARTIDA:</b> N/A
+                    <div style="text-align: center; color: #555; font-style: italic; padding: 15px 0;">
+                        SIN CAMBIOS EN LA UNIDAD ADMINISTRATIVA NI EN LA PARTIDA PRESUPUESTARIA
+                    </div>
                 {% endif %}
             </td>
         </tr>
@@ -322,11 +330,13 @@
         <tr>
             <td style="height: 80px; vertical-align: bottom;">
                 Firma:______________________________________________________<br>
-                <b>{{ action.authority_1_signature_name }}</b><br>{{ action.authority_1_signature_position }}
+                <b>{{ action.authority_1.signature_name|default:action.action_type.default_authority_1.signature_name|default:"" }}</b><br>
+                {{ action.authority_1.signature_position|default:action.action_type.default_authority_1.signature_position|default:"AUTORIDAD NOMINADORA O DELEGADO" }}
             </td>
             <td style="height: 80px; vertical-align: bottom;">
                 Firma:______________________________________________________<br>
-                <b>{{ action.authority_2_signature_name }}</b><br>{{ action.authority_2_signature_position }}
+                <b>{{ action.authority_2.signature_name|default:action.action_type.default_authority_2.signature_name|default:"" }}</b><br>
+                {{ action.authority_2.signature_position|default:action.action_type.default_authority_2.signature_position|default:"RESPONSABLE DE TALENTO HUMANO" }}
             </td>
         </tr>
     </table>
@@ -365,13 +375,19 @@
         </tr>
         <tr>
             <td style="height: 70px; vertical-align: bottom;">
-                Firma:______________________________<br><b>{{ action.elaboration_signature_name }}</b><br>{{ action.elaboration_signature_position }}
+                Firma:______________________________<br>
+                <b>{{ action.elaboration_signature_name|default:"" }}</b><br>
+                {{ action.elaboration_signature_position|default:"ELABORACIÓN" }}
             </td>
             <td style="height: 70px; vertical-align: bottom;">
-                Firma:______________________________<br><b>{{ action.reviewer_signature_name }}</b><br>{{ action.reviewer_signature_position }}
+                Firma:______________________________<br>
+                <b>{{ action.reviewer.signature_name|default:action.action_type.default_reviewer.signature_name|default:"" }}</b><br>
+                {{ action.reviewer.signature_position|default:action.action_type.default_reviewer.signature_position|default:"REVISIÓN" }}
             </td>
             <td style="height: 70px; vertical-align: bottom;">
-                Firma:______________________________<br><b>{{ action.register_signature_name }}</b><br>{{ action.register_signature_position }}
+                Firma:______________________________<br>
+                <b>{{ action.register.signature_name|default:action.action_type.default_register.signature_name|default:"" }}</b><br>
+                {{ action.register.signature_position|default:action.action_type.default_register.signature_position|default:"REGISTRO" }}
             </td>
         </tr>
     </table>
