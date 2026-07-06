@@ -3,113 +3,103 @@
            data-external-pagination="true" data-external-search="true">
         <thead>
         <tr>
-            <th style="width:10%;" class="sortable-header">
-                <a href="#" class="sortable" data-order="number">
-                    Número <span class="sort-arrow">⇅</span>
-                </a>
-            </th>
-            <th style="width:22%;" class="sortable-header">
-                <a href="#" class="sortable" data-order="employee__person__last_name">
-                    Empleado <span class="sort-arrow">⇅</span>
-                </a>
-            </th>
-            <th style="width:15%;" class="sortable-header">
-                <a href="#" class="sortable" data-order="action_type__name">
-                    Tipo <span class="sort-arrow">⇅</span>
-                </a>
-            </th>
-            <th style="width:25%;" class="sortable-header">
-                <a href="#" class="sortable" data-order="movement__new_position">
-                    Cargo <span class="sort-arrow"></span>
-                </a>
-            </th>
-            <th style="width:18%;" class="sortable-header">
-                <a href="#" class="sortable" data-order="movement__new_unit">
-                    Dependencia <span class="sort-arrow"></span>
-                </a>
-            </th>
-            <th class="text-center actions no-sort" style="width:16%;">Acciones</th>
+            <th style="width:8%;">Número</th>
+            <th style="width:18%;">Empleado</th>
+            <th style="width:12%;">Tipo</th>
+            <th style="width:14%;">Cargo Actual</th>
+            <th style="width:14%;">Desde (Unidad)</th>
+            <th style="width:14%;">Hacia (Unidad)</th>
+            <th style="width:14%;">Nuevo Cargo</th>
+            <th style="width:10%;">Estado</th>
+            <th class="actions text-center" style="width:12%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for action in actions %}
-            <tr data-search-text="{{ action.employee.person.first_name|default:''|lower }} {{ action.employee.person.last_name|default:''|lower }} {{ action.employee.person.document_number|default:''|lower }} {{ action.action_type.name|default:''|lower }}">
-                <td style="font-weight:500;">{{ action.number }}</td>
-                <td>
-                    <div class="person-details">
-                        <div class="person-full-name">{{ action.employee.person.full_name }}</div>
+            {% with mov=action.movement.first %}
+                <tr>
+                    <td><strong>{{ action.number }}</strong></td>
+                    <td>{{ action.employee.person.name_and_last_name }}
                         <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge-code" style="background:#dbeafe;color:#1e40af;">
+                    </td>
+                    <td><span class="badge-code" style="background:#dbeafe;color:#1e40af;">
                         {{ action.action_type.name }}
+                    </span></td>
+
+                    <td>{{ mov.previous_position|default:"N/A" }}</td>
+
+                    <td>{{ mov.previous_unit|default:"N/A" }}</td>
+
+                    <td>
+                        {% if mov.new_unit %}
+                            <span class="fw-bold text-dark">{{ mov.new_unit }}</span>
+                        {% else %}
+                            <span class="text-muted" style="font-style: italic; font-size: 0.85rem;">Sin cambios</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if mov.new_position %}
+                            <span class="fw-bold text-dark">{{ mov.new_position }}</span>
+                        {% else %}
+                            <span class="text-muted" style="font-style: italic; font-size: 0.85rem;">Sin cambios</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                    <span class="status-badge {% if action.is_registered %}active{% else %}pending{% endif %}">
+                        {{ action.is_registered|yesno:"Registrado,Borrador" }}
                     </span>
-                </td>
-                {% with mv=action.movement.first %}
-                    <td>
-                        <small class="d-block">cargo anterior:
-                            {% if mv and mv.previous_position %}{{ mv.previous_position }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-primary">nuevo:
-                            {% if mv and mv.new_position %}{{ mv.new_position }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-muted">Rige: {{ action.date_effective|date:"d/m/Y" }}</small>
                     </td>
-                    <td>
-                        <small class="d-block">desde:
-                            {% if mv and mv.previous_unit %}{{ mv.previous_unit }}{% else %}-{% endif %}</small>
-                        <small class="d-block text-primary">hacia:
-                            {% if mv and mv.new_unit %}{{ mv.new_unit }}{% else %}-{% endif %}</small>
+                    <td class="actions">
+                        <div class="actions-wrapper">
+                            {% if perms.personnel_actions.view_personnelaction %}
+                                <button class="btn-icon btn-info-action js-view-detail"
+                                        data-action-id="{{ action.pk }}" title="Ver Detalle">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
+                                <button class="btn-icon btn-views-action js-edit-action"
+                                        data-action-id="{{ action.pk }}" title="Editar Acción">
+                                    <i class="fa-solid fa-edit"></i>
+                                </button>
+                            {% endif %}
+                            {% if not action.is_registered %}
+                                <button class="btn-icon btn-delete-action js-inactivate-action"
+                                        data-action-id="{{ action.pk }}"
+                                        data-number="{{ action.number }}"
+                                        title="Anular Acción">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
+                                <button class="btn-icon btn-success-action js-register-action"
+                                        data-action-id="{{ action.pk }}" title="Registrar Acción">
+                                    <i class="fa-solid fa-check-circle"></i>
+                                </button>
+                            {% endif %}
+                            {% if perms.personnel_actions.view_personnelaction %}
+                                <button class="btn-icon btn-list-action js-print-action"
+                                        data-action-id="{{ action.pk }}" title="Imprimir PDF">
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+                            {% endif %}
+                        </div>
                     </td>
-                {% endwith %}
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-info-action js-view-detail"
-                                    data-action-id="{{ action.pk }}" title="Ver Detalle">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        {% endif %}
-                        {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                            <button class="btn-icon btn-views-action js-edit-action"
-                                    data-action-id="{{ action.pk }}" title="Editar Acción">
-                                <i class="fa-solid fa-edit"></i>
-                            </button>
-                        {% endif %}
-                        {% if not action.is_registered %}
-                            <button class="btn-icon btn-delete-action js-inactivate-action"
-                                    data-action-id="{{ action.pk }}"
-                                    data-number="{{ action.number }}"
-                                    title="Anular Acción">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        {% endif %}
-                        {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                            <button class="btn-icon btn-success-action js-register-action"
-                                    data-action-id="{{ action.pk }}" title="Registrar Acción">
-                                <i class="fa-solid fa-check-circle"></i>
-                            </button>
-                        {% endif %}
-                        {% if perms.personnel_actions.view_personnelaction %}
-                            <button class="btn-icon btn-list-action js-print-action"
-                                    data-action-id="{{ action.pk }}" title="Imprimir PDF">
-                                <i class="fa-solid fa-print"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
+                </tr>
+            {% endwith %}
         {% empty %}
             <tr>
-                <td colspan="6" class="text-center" style="padding:2rem;">
-                    <i class="fa-solid fa-inbox" style="font-size:3rem;color:#ccc;"></i>
-                    <p style="margin-top:1rem;color:#666;">No hay acciones de personal registradas</p>
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="fas fa-folder-open d-block mb-2" style="font-size: 2rem;"></i>
+                    No se encontraron acciones de personal registradas.
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
-
 <!-- PAGINACIÓN — único contador, renderizado por el servidor -->
 <div class="pagination-container">
     <span class="pagination-info">
