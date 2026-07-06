@@ -3,7 +3,7 @@
 <form method="post" action="
         
         {% if is_edit %}{% url 'personnel_actions:action_update' action.pk %}{% else %}{% url 'personnel_actions:action_create' %}{% endif %}"
-      id="form-create-action" novalidate>
+    id="form-create-action" data-form-mode="{% if is_edit %}edit{% else %}create{% endif %}" novalidate>
     {% csrf_token %}
 
     <!-- HEADER -->
@@ -103,7 +103,45 @@
             </div>
         </div>
 
-        <!-- 4. ACORDEÓN: OPCIONES DE MOVIMIENTO -->
+        <!-- 4. FIRMAS -->
+        <div class="form-section-card mt-3" {% if not is_edit %}style="display: none;"{% endif %}>
+            <h5 class="section-title">
+                <i class="fa-solid fa-pen-to-square"></i> FIRMAS
+            </h5>
+
+            <p class="form-hint">
+                {% if is_edit %}
+                    Puedes cambiar los firmantes guardados en esta acción.
+                {% else %}
+                    Las firmas se completan automáticamente según el tipo de acción.
+                {% endif %}
+            </p>
+
+            <div class="grid-2-cols mt-3">
+                <div class="form-group">
+                    <label class="form-label">Primera Autoridad <span class="text-danger">*</span></label>
+                    {{ form.authority_1 }}
+                    <div class="invalid-feedback"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Segunda Autoridad</label>
+                    {{ form.authority_2 }}
+                    <div class="invalid-feedback"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Revisor</label>
+                    {{ form.reviewer }}
+                    <div class="invalid-feedback"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Registrador</label>
+                    {{ form.register }}
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. ACORDEÓN: OPCIONES DE MOVIMIENTO -->
         <div class="form-section-card mt-3">
             <h5 class="section-title">
                 <i class="fa-solid fa-arrows-alt"></i> OPCIONES DE MOVIMIENTO

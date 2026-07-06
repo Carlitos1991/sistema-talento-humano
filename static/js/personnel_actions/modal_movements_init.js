@@ -30,6 +30,7 @@
         init: function () {
             this.initReubicarCascade();
             this.initBudgetLineSearch();
+            this.initSignatureSelects();
             this.setupFormSubmit();
         },
 
@@ -186,6 +187,24 @@
             }
         },
 
+        initSignatureSelects: function () {
+            if (typeof jQuery === 'undefined' || !jQuery.fn.select2) return;
+
+            jQuery('.action-signature-select').each(function () {
+                const $select = jQuery(this);
+
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    return;
+                }
+
+                $select.select2({
+                    width: '100%',
+                    placeholder: 'Seleccione una firma',
+                    allowClear: true
+                });
+            });
+        },
+
         initBasicBudgetSearch: function (select) {
             // Búsqueda simple sin Select2
             const input = document.createElement('input');
@@ -301,13 +320,20 @@
         }
     };
     $(document).ready(function () {
+        const form = document.getElementById('form-create-action');
+        const isCreateMode = !form || form.dataset.formMode !== 'edit';
+
         // Escuchar el cambio en el Tipo de Acción
         $('#id_action_type').on('change', function () {
+            if (!isCreateMode) {
+                return;
+            }
+
             let typeId = $(this).val();
 
             if (typeId) {
-                // Llamar a tu API (Asegúrate de que la URL coincida con tu urls.py)
-                $.get('/ruta-a-tu-api/action-types/' + typeId + '/', function (data) {
+                // Cargar firmas por defecto del tipo de acción
+                $.get('/personnel_actions/types/api/detail/' + typeId + '/', function (data) {
 
                     // Función auxiliar para auto-seleccionar en Select2
                     function setSelect2Value(elementId, id, text) {
@@ -327,6 +353,8 @@
                     setSelect2Value('id_authority_2', data.auth2_id, data.auth2_text);
                     setSelect2Value('id_reviewer', data.reviewer_id, data.reviewer_text);
                     setSelect2Value('id_register', data.register_id, data.register_text);
+                }).fail(function () {
+                    console.warn('No se pudieron cargar las firmas por defecto del tipo de acción.');
                 });
             }
         });
