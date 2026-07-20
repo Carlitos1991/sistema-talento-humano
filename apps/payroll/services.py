@@ -554,6 +554,26 @@ class PayrollCalculatorService:
                                 # Se calcula sobre el gran total del mes imponible
                                 val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+                        elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and years_of_service >= 1:
+                            val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
+                                str(effective_days_prev)
+                            )
+                        elif code_clean == 'TRANSPORTE' and regime_code == 'CT' and years_of_service >= 1:
+                            val = Decimal(str(self.config.get('TRANSPORTE_DIARIO', '0.50'))) * Decimal(
+                                str(effective_days_prev)
+                            )
+                        elif (
+                                code_clean == 'SUBSIDIO_FAMILIAR'
+                                and regime_code == 'CT'
+                                and years_of_service >= 1
+                                and valid_dependents_count > 0
+                        ):
+                            val = Decimal(str(self.config.get('SBU', '460.00'))) * (
+                                    Decimal('1.00') / Decimal('100.0')
+                            ) * Decimal(str(valid_dependents_count))
+                        elif code_clean == 'ANTIGUEDAD' and regime_code == 'CT' and years_of_service >= 1:
+                            val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(years_of_service)))
+
                         if val > 0:
                             items_buffer.append(
                                 PayslipItem(payslip=slip, rubric=inc, item_type='INCOME', value=val)
