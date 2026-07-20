@@ -6396,6 +6396,18 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     margin: 2px 6px !important;
 }
 
+.table-container .personnel-action-table td.actions .actions-wrapper {
+    gap: 2px;
+}
+
+.table-container .personnel-action-table td.actions .btn-views-action,
+.table-container .personnel-action-table td.actions .btn-list-action,
+.table-container .personnel-action-table td.actions .btn-success-action,
+.table-container .personnel-action-table td.actions .btn-info-action,
+.table-container .personnel-action-table td.actions .btn-delete-action {
+    margin: 0 !important;
+}
+
 .table-container td .btn-views-action i,
 .table-container td .btn-list-action i,
 .table-container td .btn-success-action i,
