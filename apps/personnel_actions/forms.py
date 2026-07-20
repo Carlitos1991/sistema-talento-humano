@@ -62,6 +62,13 @@ class PersonnelActionForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        action_type = cleaned_data.get('action_type')
+        is_create = not self.instance.pk
+        if action_type:
+            if is_create and not action_type.default_authority_1:
+                self.add_error('action_type',
+                               'Control de Configuración: Este Tipo de Acción no tiene configuradas las "Firmas por Defecto". '
+                               'Por favor, configure las firmas predefinidas en el catálogo de Tipos de Acción antes de usarlo.')
         if self.instance and self.instance.pk and not cleaned_data.get('authority_1'):
             self.add_error('authority_1', 'La primera autoridad no puede quedar vacía al editar.')
         return cleaned_data

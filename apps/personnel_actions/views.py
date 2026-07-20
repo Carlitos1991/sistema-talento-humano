@@ -18,6 +18,56 @@ from .forms import PersonnelActionForm, ActionTypeForm
 from .models import PersonnelAction, ActionMovement, ActionType
 
 
+def _save_action_movement(action, request, is_create=False):
+    """
+    Función auxiliar para procesar y guardar el movimiento (Situación Actual vs Propuesta)
+    """
+    from budget.models import BudgetLine
+    from institution.models import AdministrativeUnit
+
+    # 1. Obtener o crear el objeto de movimiento
+    if is_create:
+        movement = ActionMovement(personnel_action=action)
+        # Solo en la creación capturamos la "Situación Actual" (Snapshot)
+        employee = action.employee
+        current_budget = employee.current_budget_line.first()
+        current_unit = employee.area
+
+        movement.previous_unit = current_unit.name if current_unit else ''
+        movement.previous_budget_line = current_budget
+        movement.previous_position = current_budget.position_item.name if current_budget and current_budget.position_item else ''
+        movement.previous_remuneration = current_budget.remuneration if current_budget else 0
+    else:
+        # En edición, buscamos el movimiento existente
+        movement, _ = ActionMovement.objects.get_or_create(personnel_action=action)
+
+    # 2. Capturar "Situación Propuesta" desde los inputs ocultos que genera el JS
+    new_unit_id = request.POST.get('movement_new_unit')
+    new_budget_line_id = request.POST.get('movement_new_budget_line')
+    location_text = request.POST.get('location_text')  # Si tienes este campo en el form
+
+    if new_unit_id:
+        try:
+            unit_obj = AdministrativeUnit.objects.get(pk=new_unit_id)
+            movement.new_unit = unit_obj.name
+        except AdministrativeUnit.DoesNotExist:
+            pass
+
+    if new_budget_line_id:
+        try:
+            new_bl = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
+            movement.new_budget_line = new_bl
+            movement.new_position = new_bl.position_item.name if new_bl.position_item else ''
+            movement.new_remuneration = new_bl.remuneration
+        except BudgetLine.DoesNotExist:
+            pass
+
+    if location_text:
+        movement.location_text = location_text
+
+    movement.save()
+
+
 def _flatten_unit_descendants(unit, depth=0):
     descendants = []
     if not unit:
@@ -259,110 +309,54 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         try:
             with transaction.atomic():
-                # 1. Preparamos el objeto sin guardarlo todavía
                 self.object = form.save(commit=False)
                 self.object.created_by = self.request.user
                 self.object.elaboration = self.request.user
 
-                # =========================================================
-                # 2. ASIGNACIÓN AUTOMÁTICA DE FIRMAS
-                # =========================================================
+                # Asignación automática de firmas
                 if self.object.action_type:
                     self.object.authority_1 = self.object.action_type.default_authority_1
                     self.object.authority_2 = self.object.action_type.default_authority_2
                     self.object.reviewer = self.object.action_type.default_reviewer
                     self.object.register = self.object.action_type.default_register
-                # =========================================================
 
-                # 3. Generar número automáticamente si está vacío
+                # Lógica de número automático
                 if not self.object.number or self.object.number.strip() == '':
                     from datetime import datetime
                     year = datetime.now().year
-
-                    last_action = PersonnelAction.objects.filter(
-                        number__endswith=f'-{year}'
-                    ).order_by('-created_at').first()
-
+                    last_action = PersonnelAction.objects.filter(number__endswith=f'-{year}').order_by(
+                        '-created_at').first()
+                    new_num = 1
                     if last_action:
                         try:
-                            last_num_int = int(last_action.number.split('-')[0])
-                            # ¡LA SOLUCIÓN! Siempre sumamos 1 al último número generado
-                            new_num = last_num_int + 1
-                        except (ValueError, IndexError):
-                            new_num = 1
-                    else:
-                        new_num = 1
-
+                            new_num = int(last_action.number.split('-')[0]) + 1
+                        except:
+                            pass
                     self.object.number = f'{new_num:04d}-{year}'
 
-                # 4. Guardar la Acción de Personal en la base de datos
                 self.object.save()
 
-                # 5. Procesar los Movimientos de la Acción
-                current_budget = self.object.employee.current_budget_line.first()
-                current_unit = self.object.employee.area
+                _save_action_movement(self.object, self.request, is_create=True)
 
-                movement_data = {
-                    'personnel_action': self.object,
-                    'previous_unit': current_unit.name if current_unit else '',
-                    'previous_budget_line': current_budget,
-                    'previous_position': current_budget.position_item.name if current_budget and getattr(current_budget,
-                                                                                                         'position_item',
-                                                                                                         None) else '',
-                    'previous_remuneration': current_budget.remuneration if current_budget else 0,
-                }
-
-                new_unit_id = self.request.POST.get('movement_new_unit')
-                new_budget_line_id = self.request.POST.get('movement_new_budget_line')
-
-                if new_unit_id:
-                    from institution.models import AdministrativeUnit
-                    try:
-                        movement_data['new_unit'] = AdministrativeUnit.objects.get(pk=new_unit_id).name
-                    except AdministrativeUnit.DoesNotExist:
-                        movement_data['new_unit'] = ''
-
-                if new_budget_line_id:
-                    try:
-                        from budget.models import BudgetLine
-                        new_budget_line = BudgetLine.objects.select_related('position_item').get(pk=new_budget_line_id)
-                        movement_data['new_budget_line'] = new_budget_line
-                        movement_data['new_position'] = new_budget_line.position_item.name if getattr(new_budget_line,
-                                                                                                      'position_item',
-                                                                                                      None) else ''
-                        movement_data['new_remuneration'] = new_budget_line.remuneration
-                    except BudgetLine.DoesNotExist:
-                        pass
-
-                ActionMovement.objects.create(**movement_data)
-
-            # Si todo salió bien, respondemos con JSON validado
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Acción de personal creada correctamente'
-                })
+                return JsonResponse({'success': True, 'message': 'Acción de personal creada correctamente'})
 
-            return render(self.request, 'personnel_action/partials/partial_personnel_action_list.html', {
-                'actions': PersonnelAction.objects.select_related('employee', 'action_type').all().order_by(
-                    '-date_issue')[:3000]
-            })
+            return super().form_valid(form)
 
         except Exception as e:
             import traceback
-            print("🔥 ERROR CRÍTICO AL GUARDAR LA ACCIÓN DE PERSONAL:")
             traceback.print_exc()
-
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'message': f'Fallo interno: {str(e)}'}, status=500)
             raise e
 
     def form_invalid(self, form):
-        # Si es AJAX, devolver errores en JSON
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
             return JsonResponse({
                 'success': False,
-                'errors': form.errors
+                'message': 'Error de validación',
+                'errors': errors_data
             }, status=400)
 
         return super().form_invalid(form)
@@ -673,7 +667,7 @@ class ActionDetailView(LoginRequiredMixin, View):
             ),
             pk=pk
         )
-        movement = action.movement.first()
+        movement = getattr(action, 'movement', None)
 
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
@@ -763,19 +757,26 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
         })
 
     def form_valid(self, form):
-        self.object = form.save(commit=False)
-        if not self.object.number:
-            original_action = PersonnelAction.objects.get(pk=self.object.pk)
-            self.object.number = original_action.number
-        self.object.elaboration = self.request.user
-        self.object.save()
+        try:
+            with transaction.atomic():
+                self.object = form.save(commit=False)
+                if not self.object.number:
+                    original = PersonnelAction.objects.get(pk=self.object.pk)
+                    self.object.number = original.number
 
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': 'Acción actualizada correctamente'
-            })
-        return super().form_valid(form)
+                self.object.save()
+
+                _save_action_movement(self.object, self.request, is_create=False)
+
+            if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Acción actualizada correctamente'})
+
+            return super().form_valid(form)
+
+        except Exception as e:
+            if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+            raise e
 
     def form_invalid(self, form):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -803,10 +804,9 @@ class ActionRegisterView(LoginRequiredMixin, View):
 
         try:
             with transaction.atomic():
-                movement = ActionMovement.objects.select_related(
-                    'previous_budget_line', 'new_budget_line'
-                ).filter(personnel_action=action).first()
-
+                movement = getattr(action, 'movement', None)
+                if not movement:
+                    raise ValueError("Esta acción no tiene un movimiento asociado.")
                 effective_date = action.date_effective
                 reason = _movement_reason(action)
                 previous_budget_line = movement.previous_budget_line if movement and movement.previous_budget_line else action.employee.current_budget_line.first()
@@ -935,14 +935,7 @@ class ActionPDFView(LoginRequiredMixin, View):
             pk=pk
         )
 
-        movement = action.movement.select_related(
-            'previous_budget_line', 'previous_budget_line__position_item',
-            'previous_budget_line__group_item', 'previous_budget_line__grade_item', 'previous_budget_line__activity',
-            'previous_budget_line__activity__project__subprogram__program',
-            'new_budget_line', 'new_budget_line__position_item',
-            'new_budget_line__group_item', 'new_budget_line__grade_item', 'new_budget_line__activity',
-            'new_budget_line__activity__project__subprogram__program'
-        ).first()
+        movement = getattr(action, 'movement', None)
 
         # Para datos migrados, 'previous_unit' y 'new_unit' son CharFields.
         # Debemos obtener los objetos AdministrativeUnit correspondientes.

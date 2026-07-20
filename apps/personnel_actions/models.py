@@ -135,7 +135,11 @@ class ActionMovement(models.Model):
     Detalle del movimiento: Situación Actual vs Situación Propuesta.
     Se usa OneToOne porque una acción generalmente implica un solo movimiento lógico principal.
     """
-    personnel_action = models.ForeignKey(PersonnelAction, on_delete=models.CASCADE, related_name='movement')
+    personnel_action = models.OneToOneField(
+        PersonnelAction,
+        on_delete=models.CASCADE,
+        related_name='movement'
+    )
 
     # --- SITUACIÓN ACTUAL (Snapshots o FKs) ---
     previous_unit = models.CharField(verbose_name='Unidad Administrativa anterior', max_length=200, blank=True,

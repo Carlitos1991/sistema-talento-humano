@@ -27,7 +27,6 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
         parent_id = int(parent_id)
         results = []
 
-        # Agregamos 'code' al values para enviarlo al frontend
         if target_type == 'subprogram':
             qs = Subprogram.objects.filter(program_id=parent_id, is_active=True).values('id', 'code', 'name')
         elif target_type == 'project':
@@ -37,7 +36,6 @@ class HierarchyOptionsJsonView(LoginRequiredMixin, View):
         else:
             return JsonResponse({'results': []})
 
-        # Se envia el 'code' por separado para facilitar la concatenación en JS
         results = [
             {'id': x['id'], 'text': f"{x['code']} - {x['name']}", 'code': x['code']}
             for x in qs
@@ -70,8 +68,6 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'budget.view_budgetline'
 
     def get_queryset(self):
-        # Optimización: select_related SOLO para lo que se muestra en tabla
-        # only() para cargar solo campos necesarios
         qs = BudgetLine.objects.select_related(
             'activity__project__subprogram__program',  # Para mostrar programa
             'position_item',  # Para cargo
@@ -86,7 +82,6 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'status_item__name', 'status_item__code'
         )
 
-        # Búsqueda rápida
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(
@@ -98,7 +93,6 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(current_employee__person__document_number__icontains=q)
             )
 
-        # Filtro rápido por estado
         status = self.request.GET.get('status')
         if status and status != 'all':
             qs = qs.filter(status_item__code=status)

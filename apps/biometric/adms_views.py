@@ -1,15 +1,15 @@
-# apps/biometric/adms_views.py
 import json
 import logging
 import time
 from datetime import datetime
+
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
-from .models import BiometricDevice, AttendanceRegistry, BiometricLoad
+
 from employee.models import InstitutionalData
 from .models import BiometricCommand
+from .models import BiometricDevice, AttendanceRegistry, BiometricLoad
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def iclock_getrequest(request):
         logger.warning("[ADMS] Rechazado SN='%s' (no existe o inactivo)", sn)
         return HttpResponse("OK", content_type="text/plain")
 
-    # Buscar el comando más antiguo pendiente (FIFO)
+    # Buscar el comando más antiguo pendiente
     cmd = BiometricCommand.objects.filter(device=device, status='PENDING').order_by('created_at').first()
 
     if cmd:
@@ -65,15 +65,12 @@ def iclock_getrequest(request):
 def iclock_devicecmd(request):
     """
     Endpoint donde el dispositivo reporta el resultado de un comando.
-    El reloj envía POST con: ID=123&Return=0&CMD=DATA...
     """
     if request.method == 'POST':
         try:
-            # Los datos suelen venir en el body como texto plano: ID=1&Return=0
             raw_body = request.body.decode('utf-8', errors='ignore')
             logger.info("[ADMS] Respuesta de comando: %s", raw_body)
 
-            # Parsear respuesta
             data = {}
             parts = raw_body.split('&')
             for p in parts:
@@ -82,7 +79,7 @@ def iclock_devicecmd(request):
                     data[k] = v
 
             cmd_id = data.get('ID')
-            ret_val = data.get('Return')  # 0 = Éxito, otros valores = Error
+            ret_val = data.get('Return')
 
             if cmd_id:
                 cmd = BiometricCommand.objects.filter(id=cmd_id).first()
@@ -125,8 +122,7 @@ def adms_receive_attendance(request):
 
                 lines = raw_body.splitlines()
 
-                # 1. Pre-cargar empleados en un diccionario para evitar queries en el loop
-                # Solo traemos los que tienen biometric_id
+                # 1. Pre-cargar empleados en un diccionario
                 emps_map = {
                     e.biometric_id: e
                     for e in InstitutionalData.objects.filter(biometric_id__isnull=False).select_related('employee')
@@ -169,7 +165,7 @@ def adms_receive_attendance(request):
                             except ValueError:
                                 continue
 
-                # 2. Inserción masiva ignorando duplicados (Eficiencia máxima)
+                # 2. Inserción masiva ignorando duplicados
                 if new_registries:
                     # ignore_conflicts=True evita que el proceso falle si una marcación ya existe
                     created_objs = AttendanceRegistry.objects.bulk_create(
@@ -201,8 +197,7 @@ def adms_download_command(request, pk):
             start_time = data.get('start_time')
             end_time = data.get('end_time')
 
-            # Creamos el comando ADMS para que el reloj lo lea en su próximo Heartbeat
-            # Formato: DATA QUERY ATTLOG StartTime=... EndTime=...
+            # comando ADMS para que el reloj lo lea en su próxima carga
             command_text = f"DATA QUERY ATTLOG StartTime={start_time} EndTime={end_time}"
 
             BiometricCommand.objects.create(

@@ -42,14 +42,11 @@
             </div>
             <!-- CAMPO CONTRASEÑA -->
             <div class="form-group">
-                <!-- IMPORTANTE: El wrapper envuelve icono izq, input e icono der -->
                 <div class="input-icon-wrapper">
                     <!-- Icono Izquierda (Candado) -->
                     <i class="fa-solid fa-lock input-icon-left"></i>
-                    <!-- Input Password -->
                     <input :type="passwordVisible ? 'text' : 'password'" name="password" class="form-control with-icon"
                            placeholder="Contraseña" required>
-                    <!-- Icono Derecha (Ojo - Vue Click) -->
                     <i class="fa toggle-password" :class="passwordVisible ? 'fa-eye-slash' : 'fa-eye'"
                        @click="togglePassword"></i>
                 </div>

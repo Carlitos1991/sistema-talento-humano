@@ -19,10 +19,26 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import View, ListView
+from django.urls import reverse
+from django.views.generic import TemplateView
+
+from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry
+from .utils import test_connection, BiometricConnection
+from permitrequest.models import PermitRequest
+from schedule.models import ScheduleObservation
+from core.models import SystemConfiguration
+from django.db.models import Q
+from employee.models import InstitutionalData
+
+try:
+    from weasyprint import HTML, CSS
+except Exception:
+    HTML = None
+    CSS = None
 
 logger = logging.getLogger(__name__)
-ENABLE_SHIFT_COLLAPSE = False  # desactivar colapso automático hasta afinar reglas
-# Configurables para el emparejador (ajustables según pruebas)
+ENABLE_SHIFT_COLLAPSE = False
+# Configuración minutos maximo entre picadas
 DEDUPE_WINDOW_MINUTES = 3  # 3 minutos no acepta duplicados dentro de los primeros 3 minutos
 IN_TOLERANCE_SECONDS = 60  # 1 minuto de tolerancia para in
 OUT_MAX_SECONDS = 90 * 60  # 30 minutos para aceptar out antes del evento si no hay after
@@ -35,11 +51,6 @@ def _p_dt(p):
 
 
 def select_in_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
-    """Selecciona candidato para evento 'in'.
-    Preferir el candidato más cercano ANTES de ev_dt. Si no existe, elegir el más cercano DESPUÉS
-    sólo si está dentro de IN_MAX_SECONDS. Además, si el candidato posterior está claramente
-    más cercano al siguiente evento (next_ev_dt) y dentro de CROSS_SHIFT_THRESHOLD, se evita.
-    """
     if not candidates:
         return None
     before = [p for p in candidates if _p_dt(p) <= ev_dt]
@@ -49,17 +60,13 @@ def select_in_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     after = [p for p in candidates if _p_dt(p) > ev_dt]
     if not after:
         return None
-    # elegir el posterior más cercano si está dentro del máximo
     best_after = min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
     diff = (_p_dt(best_after) - ev_dt).total_seconds()
     if diff <= IN_MAX_SECONDS:
-        # comprobar regla literal cross-shift: si el punch está claramente
-        # más cercano al evento previo (prev_ev_dt) según umbral, no tomarlo.
         if prev_ev_dt:
             res = resolve_cross_shift(best_after, prev_ev_dt=prev_ev_dt, next_ev_dt=next_ev_dt)
             if res == 'prev':
                 return None
-        # si está claramente más cercano al siguiente evento, permitirlo
         return best_after
     return None
 
@@ -75,7 +82,7 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     if after:
         # elegir el posterior más cercano (mínima dt)
         best_after = min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
-        # evitar robar un punch que sea claramente más cercano al siguiente evento
+        # evitar un punch que sea más cercano al siguiente evento
         try:
             res = resolve_cross_shift(best_after, prev_ev_dt=ev_dt, next_ev_dt=next_ev_dt)
             if res == 'next':
@@ -89,7 +96,7 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     best_before = max(before, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
     diff = abs((_p_dt(best_before) - ev_dt).total_seconds())
     if diff <= OUT_MAX_SECONDS:
-        # si este punch es muy cercano al evento anterior, y prev_ev_dt existe, evitar robarlo
+        # si este punch es muy cercano al evento anterior, y prev_ev_dt existe, evitar duplicarlo
         if prev_ev_dt:
             diff_prev = abs((_p_dt(best_before) - prev_ev_dt).total_seconds())
             if diff_prev <= CROSS_SHIFT_THRESHOLD and diff_prev < diff:
@@ -113,14 +120,12 @@ def resolve_cross_shift(punch, prev_ev_dt=None, next_ev_dt=None):
             return 'prev'
         if diff_next <= CROSS_SHIFT_THRESHOLD and diff_next < diff_prev:
             return 'next'
-        # si ninguno está dentro del umbral, devolver None para que la selección use otras reglas
+        # si ninguno está dentro del umbral, devolver None para que la selección use demas reglas
     return None
 
 
 def build_attendance_summary_for_employee(calendar_data_local, year_local, month_local, employee_obj, debug_flag=False):
-    """Helper reutilizable para calcular inconsistencias, dias sin marcar y minutos de atraso
-    a partir de una estructura `calendar_data` preparada previamente por los reportes.
-    """
+    """Helper reutilizable para calcular inconsistencias, dias sin marcar y minutos de atraso"""
     inconsistencias = 0
     dias_sin_marcar = 0
     minutos_atraso = 0
@@ -177,17 +182,13 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                     except Exception:
                         continue
 
-                    # El desplazamiento por permiso ya está aplicado en ev_dt gracias al anotador
                     if ev.get('type') == 'in':
-                        # Entrada tardía: punch llegó después de la hora esperada
                         diff = (p_dt - ev_dt).total_seconds()
                         if diff >= 60:
                             minutos_atraso += int(diff // 60)
                     elif ev.get('type') == 'out':
-                        # Early departure: only penalize if the mark is BEFORE the (adjusted) expected time
                         diff_seconds = (ev_dt - p_dt).total_seconds()
                         if diff_seconds >= 60:
-                            # Check if the punch itself fell inside any permit window to avoid unfair penalties
                             is_inside_permit = False
                             for perm in day_obj_local.get('permits', []):
                                 ps = perm.get('start_time')
@@ -205,7 +206,7 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
 def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
                                               debug_flag=False, schedule_lookup_fn=None):
-    """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma heurística del reporte mensual."""
+    """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma logica del reporte mensual."""
     try:
         from schedule.models import get_employee_schedule_for_date
     except Exception:
@@ -305,7 +306,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                             if pe and not ps and ev['dt'].time() <= pe:
                                 is_covered = True
 
-                # Solución Punto 1: El evento SIEMPRE queda activo para permitir emparejar marcas reales
                 events_active.append(ev)
                 if is_covered:
                     events_skipped.append(ev['label'])
@@ -328,7 +328,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
-            # Deduplicar marcaciones cercanas
             last_p_dt = datetime.min
             for p in punches_sorted:
                 try:
@@ -438,26 +437,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
     return calendar_data_local
 
 
-from django.urls import reverse
-from django.views.generic import TemplateView
-
-try:
-    from weasyprint import HTML, CSS
-except Exception:
-    HTML = None
-    CSS = None
-from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry
-from .utils import test_connection, BiometricConnection
-from permitrequest.models import PermitRequest
-from schedule.models import ScheduleObservation
-from core.models import SystemConfiguration
-from django.db.models import Q
-from employee.models import InstitutionalData
-
-
 class OfflineAttendanceAccessView(View):
     """Simple redirector to the offline attendance page."""
-
     def get(self, request, *args, **kwargs):
         try:
             url = reverse('biometric:offline_attendance')
@@ -1075,7 +1056,6 @@ def generate_monthly_report_pdf(request):
         disp = f"{disp_date.day} de {months_es[disp_date.month].capitalize()} de {disp_date.year} - {obs.name.upper()}"
         observations_list.append(disp)
 
-    # Inyectar metadatos base iniciales por día
     for week in calendar_data:
         for day_obj in week:
             d = day_obj.get('day')
@@ -1089,10 +1069,7 @@ def generate_monthly_report_pdf(request):
                 day_obj['holi_name'] = holidays_map.get(d, '')
                 day_obj['permits'] = permits_map.get(d, [])
 
-    # Solución Punto 2: Ejecutamos el anotador centralizado común para blindar consistencia total de datos
     annotate_attendance_calendar_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
-
-    # Segundo recorrido para procesar la visualización y Máquina de Estados G1..G4 en el reporte individual
     for week in calendar_data:
         for day_obj in week:
             d = day_obj.get('day')
@@ -1189,7 +1166,6 @@ def generate_monthly_report_pdf(request):
             day_obj['atr_dia'] = ATR
             day_obj['temp'] = TEMP
 
-            # Mapear visibilidad en base al emparejamiento unificado
             try:
                 event_to_punch = {}
                 for p in day_obj.get('punches', []):
@@ -1516,7 +1492,6 @@ def generate_department_report_pdf(request):
                              periods[0] if periods else None)
         regimen_name = active_period.contract_type.labor_regime.name if active_period and active_period.contract_type and active_period.contract_type.labor_regime else "N/A"
 
-        # Construir calendario del mes para este empleado
         weeks = calendar.Calendar(firstweekday=0).monthdayscalendar(year, month)
         calendar_data = []
         emp_punches = punches_by_emp.get(emp_id_str, {})
@@ -1539,7 +1514,6 @@ def generate_department_report_pdf(request):
         )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
-        # Tolerancia del horario (tomamos el del día 1 como referencia)
         sched_ref = get_employee_schedule_for_date(inst.employee,
                                                    month_start) if get_employee_schedule_for_date else None
         tolerance = sched_ref.late_tolerance_minutes if sched_ref else 0

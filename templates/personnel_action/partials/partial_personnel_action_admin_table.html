@@ -16,7 +16,7 @@
         </thead>
         <tbody>
         {% for action in actions %}
-            {% with mov=action.movement.first %}
+            {% with mov=action.movement %}
                 <tr>
                     <td><strong>{{ action.number }}</strong></td>
                     <td>{{ action.employee.person.name_and_last_name }}
