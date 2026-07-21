@@ -450,9 +450,12 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     '-date_issue')[:500]
                 actions_list = []
                 for a in actions_qs:
-                    mv = a.movement.first() if hasattr(a, 'movement') else None
-                    from_area = mv.previous_unit if mv and mv.previous_unit else ''
-                    to_area = mv.new_unit if mv and mv.new_unit else ''
+                    try:
+                        mv = a.movement
+                    except ObjectDoesNotExist:
+                        mv = None
+                    from_area = mv.previous_unit if mv and getattr(mv, 'previous_unit', None) else ''
+                    to_area = mv.new_unit if mv and getattr(mv, 'new_unit', None) else ''
                     actions_list.append({
                         'id': a.pk,
                         'number': a.number,
