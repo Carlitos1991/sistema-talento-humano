@@ -20,6 +20,7 @@ urlpatterns = [
     path('observations/', views.ObservationListView.as_view(), name='observation_list'),
     path('observations/partial-table/', views.ObservationTablePartialView.as_view(), name='observation_partial_table'),
     path('observations/create/', views.ObservationCreateView.as_view(), name='observation_create'),
+    path('observations/update/<int:pk>/', views.ObservationUpdateView.as_view(), name='observation_update'),
     path('observations/detail/<int:pk>/', views.ObservationDetailAPIView.as_view(), name='observation_detail_api'),
     path('observations/toggle-status/<int:pk>/', views.ObservationToggleStatusView.as_view(),
          name='observation_toggle_status'),

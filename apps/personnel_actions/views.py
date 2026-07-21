@@ -249,7 +249,7 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
         """Si es AJAX, devolver JSON con HTML de la tabla"""
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html_table = render_to_string(
-                'personnel_action/partials/partial_personnel_action_admin_table.html',
+                'personnel_action/partials/partial_personnel_action_table.html',
                 context,
                 request=self.request
             )

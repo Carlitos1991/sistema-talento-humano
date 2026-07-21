@@ -3,7 +3,6 @@
            data-external-pagination="true" data-external-search="true">
         <thead>
         <tr>
-            <th style="width:8%;">Número</th>
             <th style="width:18%;">Empleado</th>
             <th style="width:12%;">Tipo</th>
             <th style="width:14%;">Cargo Actual</th>
@@ -18,13 +17,14 @@
         {% for action in actions %}
             {% with mov=action.movement %}
                 <tr>
-                    <td><strong>{{ action.number }}</strong></td>
                     <td>{{ action.employee.person.name_and_last_name }}
                         <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
                     </td>
                     <td><span class="badge-code" style="background:#dbeafe;color:#1e40af;">
                         {{ action.action_type.name }}
-                    </span></td>
+                    </span>
+                        <div class="person-doc"><b>Acción:</b> {{ action.number }}</div>
+                    </td>
 
                     <td>{{ mov.previous_position|default:"N/A" }}</td>
 

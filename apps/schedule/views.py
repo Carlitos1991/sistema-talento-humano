@@ -284,6 +284,22 @@ class ObservationCreateView(LoginRequiredMixin, View):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+class ObservationUpdateView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        observation = get_object_or_404(ScheduleObservation, pk=pk)
+        form = ScheduleObservationForm(request.POST, instance=observation)
+        if form.is_valid():
+            with transaction.atomic():
+                updated_observation = form.save(commit=False)
+                # Si el formulario de edición no envía is_active, conservar el estado actual.
+                if 'is_active' not in request.POST:
+                    updated_observation.is_active = observation.is_active
+                updated_observation.updated_by = request.user
+                updated_observation.save()
+            return JsonResponse({'success': True, 'message': 'Actualizado correctamente'})
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
 class ObservationDetailAPIView(LoginRequiredMixin, View):
     def get(self, request, pk):
         obs = get_object_or_404(ScheduleObservation, pk=pk)
@@ -296,6 +312,7 @@ class ObservationDetailAPIView(LoginRequiredMixin, View):
                 'start_date': obs.start_date.strftime('%Y-%m-%d'),
                 'end_date': obs.end_date.strftime('%Y-%m-%d'),
                 'is_holiday': obs.is_holiday,
+                'is_active': obs.is_active,
             }
         })
 
