@@ -36,7 +36,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: msg.tag === 'error' ? 'Error' : 'Éxito',
                 text: msg.text,
                 confirmButtonColor: '#2c3e50',
-                confirmButtonText: 'Entendido'
+                confirmButtonText: 'Entendido',
+                cancelButtonText: 'Cancelar',
+                showCancelButton: false,
+                showDenyButton: false,
+                showCloseButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                buttonsStyling: true
             });
         });
     }
