@@ -405,7 +405,11 @@ class PayrollCalculatorService:
 
                     # -- 9.2 Segmentos de tiempo (por partida) --------------
                     segments = self._build_segments(emp_assignments)
+                    print(
+                        f"-> [SEGMENTS] Emp: {slip.employee_id} | Asignaciones: {emp_assignments} | Segmentos: {segments}")
                     if not segments:
+                        print(
+                            f"-> [SEGMENTS] OMITIENDO EMPLEADO {slip.employee_id}: No tiene segmentos de tiempo válidos para este periodo.")
                         payslips_to_delete.append(slip.id)
                         continue
 
@@ -426,6 +430,25 @@ class PayrollCalculatorService:
                     emp_incomes = _filter_rubrics_by_context(all_incomes, emp_spending_type)
                     emp_deductions = _filter_rubrics_by_context(all_deductions, emp_spending_type)
                     emp_contributions = _filter_rubrics_by_context(all_contributions, emp_spending_type)
+
+                    # -- DEBUG TEMPORAL: diagnóstico de ANTIGUEDAD ----------
+                    # TODO: quitar este bloque una vez resuelto el problema.
+                    _antig_all = next((r for r in all_incomes if (r.code or '').strip().upper() == 'ANTIGUEDAD'), None)
+                    if _antig_all is not None:
+                        _survived = any((r.code or '').strip().upper() == 'ANTIGUEDAD' for r in emp_incomes)
+                        logger.info(
+                            f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
+                            f"emp_spending_type={emp_spending_type!r} "
+                            f"rubric_spending_context={_antig_all.spending_context!r} "
+                            f"rubric_is_active={_antig_all.is_active} "
+                            f"survived_context_filter={_survived}"
+                        )
+                    else:
+                        logger.info(
+                            f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
+                            f"NO existe ningún rubro con code='ANTIGUEDAD' en all_incomes "
+                            f"(revisar: code mal escrito, rubric_type != 'INCOME', o is_active=False)"
+                        )
 
                     # Reconstruir índices locales ya filtrados
                     emp_ded_map = {d.code.strip().upper(): d for d in emp_deductions if d.code}
@@ -489,6 +512,13 @@ class PayrollCalculatorService:
                         if mp and mp.contract_type and mp.contract_type.labor_regime
                         else ''
                     )
+                    years_of_last_contract = 0.0
+                    if mp and mp.start_date <= self.period.end_date:
+                        c_start = mp.start_date
+                        c_end = min(mp.end_date, self.period.end_date) if mp.end_date else self.period.end_date
+                        if c_start <= c_end:
+                            last_contract_days = (c_end - c_start).days + 1
+                            years_of_last_contract = last_contract_days / 365.25
 
                     # ── 9.8 Preparar novedades de ingreso ------------------
                     emp_novelties = novelties_map.get(
@@ -518,6 +548,19 @@ class PayrollCalculatorService:
                             thirteenth_base += nov_val
 
                         prepared_income_novelties.append((nov, nov_val))
+
+                    # === PRINTS CORREGIDOS (FUERA DEL BUCLE) ===
+                    codigos_rubros = [f"'{inc.code}'" for inc in emp_incomes]
+                    print(f"\n-> [RUBRICAS A EVALUAR] Emp {slip.employee_id}: {codigos_rubros}")
+
+                    _antig_all = next((r for r in all_incomes if (r.code or '').strip().upper() == 'ANTIGUEDAD'),
+                                      None)
+                    if _antig_all is not None:
+                        _survived = any((r.code or '').strip().upper() == 'ANTIGUEDAD' for r in emp_incomes)
+                        print(
+                            f"-> [FILTRO CONTEXTO] Contexto del Rubro ANTIGUEDAD: {_antig_all.spending_context} | Contexto del Empleado: {emp_spending_type} | ¿Pasó el filtro?: {_survived}\n")
+                    else:
+                        print("-> [ERROR BIZARRO] No se encontró el rubro en la lista maestra.\n")
 
                     # ── 9.9 INGRESOS ────────────────────────────────────────
                     for inc in emp_incomes:
@@ -553,7 +596,21 @@ class PayrollCalculatorService:
                                 tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
                                 # Se calcula sobre el gran total del mes imponible
                                 val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                            print(f"\n[DEBUG FONDOS] Evaluando Emp: {slip.employee_id}")
+                            print(f" - monthly_reserve_funds (¿Recibe mensualizado?): {monthly_reserve_funds}")
+                            print(f" - years_of_service (¿Mayor a 1 año?): {years_of_service:.2f}")
+                            print(f" - has_prior_funds_right (¿Derecho previo?): {has_prior_funds_right}")
+                            print(f" - taxable_base (Sueldo base): {taxable_base}")
 
+                            if monthly_reserve_funds and (years_of_service > 1 or has_prior_funds_right):
+                                tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
+                                val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                                print(f"-> [DEBUG FONDOS] EXITO. Valor calculado: {val}")
+                            else:
+                                print(
+                                    "-> [DEBUG FONDOS] FALLO LA CONDICIÓN: El empleado no cumple los requisitos para el cálculo automático este mes.")
+
+                        # -- Beneficios recuperados del commit 09-jun (CT, con antigüedad >= 1 año) --
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and years_of_service >= 1:
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
                                 str(effective_days_prev)
@@ -571,8 +628,31 @@ class PayrollCalculatorService:
                             val = Decimal(str(self.config.get('SBU', '460.00'))) * (
                                     Decimal('1.00') / Decimal('100.0')
                             ) * Decimal(str(valid_dependents_count))
-                        elif code_clean == 'ANTIGUEDAD' and regime_code == 'CT' and years_of_service >= 1:
-                            val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(years_of_service)))
+                        elif code_clean == 'ANTIGUEDAD':
+                            # -- DEBUG TEMPORAL MEJORADO --
+                            debug_msg = (
+                                f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
+                                f"llegó al elif | regime_code={regime_code!r} "
+                                f"years_of_service={years_of_service:.4f} "
+                                f"salary={salary} config_SBU={self.config.get('SBU')}"
+                            )
+                            logger.info(debug_msg)
+                            print(debug_msg)  # Fuerza la salida en consola
+
+                            # Evaluamos las condiciones explícitamente para ver dónde falla
+                            if regime_code == 'CT' and years_of_last_contract >= 1:
+                                if years_of_service >= 1:
+                                    val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(years_of_last_contract)))
+                                    print(
+                                        f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> Cálculo exitoso: val={val}")
+                                else:
+                                    skip_msg = f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> OMITIDO: years_of_service ({years_of_service:.2f}) es menor a 1 año."
+                                    logger.info(skip_msg)
+                                    print(skip_msg)
+                            else:
+                                skip_msg = f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> OMITIDO: regime_code es {regime_code!r}, se requiere 'CT'."
+                                logger.info(skip_msg)
+                                print(skip_msg)
 
                         if val > 0:
                             items_buffer.append(
