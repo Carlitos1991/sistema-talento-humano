@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.views import LoginView
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
@@ -22,6 +23,7 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from urllib.parse import urlencode
 
 
 def _safe_related(instance, attr_name, default=None):
@@ -70,11 +72,22 @@ class CustomLoginView(LoginView):
         return response
 
     def get_success_url(self):
+        redirect_url = self.get_redirect_url()
+        if redirect_url:
+            return redirect_url
         return reverse_lazy('core:dashboard')
 
     def form_invalid(self, form):
         messages.error(self.request, "Credenciales incorrectas. Intente nuevamente.")
         return super().form_invalid(form)
+
+
+class CustomLogoutView(auth_views.LogoutView):
+    def get_next_page(self):
+        next_url = self.request.POST.get(self.redirect_field_name) or self.request.GET.get(self.redirect_field_name)
+        if next_url:
+            return f"{reverse('core:login')}?{urlencode({self.redirect_field_name: next_url})}"
+        return reverse_lazy('core:login')
 
 
 class ForgotPasswordView(TemplateView):

@@ -11,7 +11,7 @@ urlpatterns = [
     path('login/create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
 
     # Logout
-    path('logout/', auth_views.LogoutView.as_view(next_page='core:login'), name='logout'),
+    path('logout/', views.CustomLogoutView.as_view(), name='logout'),
 
     # Dashboard (Home)
     path('', views.DashboardView.as_view(), name='dashboard'),

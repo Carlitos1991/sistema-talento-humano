@@ -75,6 +75,7 @@
                 <!-- Logout seguro con POST -->
                 <form action="{% url 'core:logout' %}" method="post" id="logout-form">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <a href="#" class="dropdown-item"
                        onclick="document.getElementById('logout-form').submit(); return false;"
                        style="color: var(--error, #ef4444);">

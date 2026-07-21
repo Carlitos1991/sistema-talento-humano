@@ -1,6 +1,7 @@
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
+from urllib.parse import urlencode
 
 
 class SIGETHSecurityMiddleware:
@@ -89,7 +90,7 @@ class SIGETHSecurityMiddleware:
 
         # 3. Si no es pública y no está autenticado, enviarlo al login
         if not is_public and not request.user.is_authenticated:
-            return redirect(login_url_resolved)
+            return redirect(f"{login_url_resolved}?{urlencode({'next': request.get_full_path()})}")
 
         # 4. (Reservado) - El flujo de cambio obligatorio se gestiona mediante
         # la sesión `force_change_on_login` establecida en el LoginView, y la

@@ -722,7 +722,8 @@
                 <span class="sidebar-badge hidden" id="helpMessagesBadge">0</span>
             {% endif %}
         </a>
-        <a href="{% url 'core:logout' %}" class="sidebar-footer-action sidebar-footer-logout" title="Salir del sistema">
+        <a href="{% url 'core:logout' %}?next={{ request.get_full_path|urlencode }}"
+           class="sidebar-footer-action sidebar-footer-logout" title="Salir del sistema">
             <i class="fa-solid fa-power-off"></i>
             <span class="menu-text">Salir</span>
         </a>
