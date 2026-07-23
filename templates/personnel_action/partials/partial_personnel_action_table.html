@@ -1,22 +1,45 @@
 <div class="table-container">
     <table class="exportable-table managed-table personnel-action-table" data-filename="acciones_personal"
-           data-external-pagination="true" data-external-search="true">
+           data-external-pagination="true" data-external-search="true" id="main-data-table">
         <thead>
         <tr>
-            <th style="width:18%;">Empleado</th>
-            <th style="width:12%;">Tipo</th>
-            <th style="width:14%;">Cargo Actual</th>
-            <th style="width:14%;">Desde (Unidad)</th>
-            <th style="width:14%;">Hacia (Unidad)</th>
-            <th style="width:14%;">Nuevo Cargo</th>
-            <th style="width:10%;">Estado</th>
+            <th style="width:18%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="employee__person__last_name">
+                    Empleado <span class="sort-arrow">⇅</span>
+                </a>
+            </th>
+            <th style="width:12%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="action_type__name">
+                    Tipo <span class="sort-arrow">⇅</span>
+                </a>
+            </th>
+            <th style="width:14%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__previous_position">
+                    Cargo<span class="sort-arrow">⇅</span>
+                </a>
+            </th>
+            <th style="width:15%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__previous_unit">
+                    Unidad Adm. <span class="sort-arrow">⇅</span>
+                </a>
+            </th>
+            <th style="width:15%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__new_unit">
+                    Fecha <span class="sort-arrow">⇅</span>
+                </a>
+            </th>
+            <th style="width:8%;">
+                <a href="#" class="sortable text-decoration-none text-dark" data-order="is_registered">
+                    Estado <span class="sort-arrow">⇅</span>
+                </a>
+            </th>
             <th class="actions text-center" style="width:12%;">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for action in actions %}
             {% with mov=action.movement %}
-                <tr>
+                <tr data-search-text="{{ action.employee.person.full_name }} {{ action.employee.person.document_number }} {{ action.number }} {{ action.action_type.name }}">
                     <td>{{ action.employee.person.name_and_last_name }}
                         <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
                     </td>
@@ -25,25 +48,30 @@
                     </span>
                         <div class="person-doc"><b>Acción:</b> {{ action.number }}</div>
                     </td>
-
-                    <td>{{ mov.previous_position|default:"N/A" }}</td>
-
-                    <td>{{ mov.previous_unit|default:"N/A" }}</td>
-
                     <td>
-                        {% if mov.new_unit %}
-                            <span class="fw-bold text-dark">{{ mov.new_unit }}</span>
-                        {% else %}
-                            <span class="text-muted" style="font-style: italic; font-size: 0.85rem;">Sin cambios</span>
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if mov.new_position %}
+                        <div class="person-doc"><b
+                                style="color: #c62828">Actual: </b>{{ mov.previous_position|default:"N/A" }}</div>
+                        <div class="person-doc"><b
+                                style="color: #0ba542">Propuesto: </b>{% if mov.new_position %}
                             <span class="fw-bold text-dark">{{ mov.new_position }}</span>
                         {% else %}
                             <span class="text-muted" style="font-style: italic; font-size: 0.85rem;">Sin cambios</span>
-                        {% endif %}
+                        {% endif %}</div>
+                    </td>
+                    <td>
+                        <div class="person-doc"><b
+                                style="color: #c62828">Desde: </b>{{ mov.previous_unit|default:"N/A" }}</div>
+                        <div class="person-doc"><b
+                                style="color: #0ba542">Hacia: </b>{% if mov.new_unit %}
+                            <span class="fw-bold text-dark">{{ mov.new_unit }}</span>
+                        {% else %}
+                            <span class="text-muted" style="font-style: italic; font-size: 0.85rem;">Sin cambios</span>
+                        {% endif %}</div>
+                    <td>
+                        <div class="person-doc"><b
+                                style="color: #05246c">Elaborado: </b>{{ action.date_issue|default:"N/A" }}</div>
+                        <div class="person-doc"><b
+                                style="color: #05246c">Vigente: </b>{{ action.date_effective|default:"N/A" }}</div>
                     </td>
 
                     <td>
@@ -91,16 +119,23 @@
             {% endwith %}
         {% empty %}
             <tr>
-                <td colspan="9" class="text-center text-muted py-4">
+                <td colspan="8" class="text-center text-muted py-4">
                     <i class="fas fa-folder-open d-block mb-2" style="font-size: 2rem;"></i>
                     No se encontraron acciones de personal registradas.
                 </td>
             </tr>
         {% endfor %}
+        <tr id="client-no-results" style="display: none;">
+            <td colspan="8" class="text-center text-muted py-4">
+                <i class="fas fa-search d-block mb-2" style="font-size: 2rem;"></i>
+                No se encontraron coincidencias para la búsqueda local.
+            </td>
+        </tr>
         </tbody>
     </table>
 </div>
-<!-- PAGINACIÓN — único contador, renderizado por el servidor -->
+
+<!-- PAGINACIÓN -->
 <div class="pagination-container">
     <span class="pagination-info">
         {% if page_obj %}
