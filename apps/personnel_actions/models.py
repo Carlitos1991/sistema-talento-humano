@@ -90,44 +90,44 @@ class PersonnelAction(models.Model):
     @property
     def elaboration_signature_name(self):
         user = self.elaboration or self.created_by
-        return user.signature_name if user else ''
+        return getattr(user, 'signature_name', '') if user else ''
 
     @property
     def elaboration_signature_position(self):
         user = self.elaboration or self.created_by
-        return user.signature_position if user else ''
+        return getattr(user, 'signature_position', '') if user else ''
 
     @property
     def authority_1_signature_name(self):
-        return self.authority_1.signature_name if self.authority_1 else ''
+        return getattr(self.authority_1, 'signature_name', '') if self.authority_1 else ''
 
     @property
     def authority_1_signature_position(self):
-        return self.authority_1.signature_position if self.authority_1 else ''
+        return getattr(self.authority_1, 'signature_position', '') if self.authority_1 else ''
 
     @property
     def authority_2_signature_name(self):
-        return self.authority_2.signature_name if self.authority_2 else ''
+        return getattr(self.authority_2, 'signature_name', '') if self.authority_2 else ''
 
     @property
     def authority_2_signature_position(self):
-        return self.authority_2.signature_position if self.authority_2 else ''
+        return getattr(self.authority_2, 'signature_position', '') if self.authority_2 else ''
 
     @property
     def reviewer_signature_name(self):
-        return self.reviewer.signature_name if self.reviewer else ''
+        return getattr(self.reviewer, 'signature_name', '') if self.reviewer else ''
 
     @property
     def reviewer_signature_position(self):
-        return self.reviewer.signature_position if self.reviewer else ''
+        return getattr(self.reviewer, 'signature_position', '') if self.reviewer else ''
 
     @property
     def register_signature_name(self):
-        return self.register.signature_name if self.register else ''
+        return getattr(self.register, 'signature_name', '') if self.register else ''
 
     @property
     def register_signature_position(self):
-        return self.register.signature_position if self.register else ''
+        return getattr(self.register, 'signature_position', '') if self.register else ''
 
 
 class ActionMovement(models.Model):

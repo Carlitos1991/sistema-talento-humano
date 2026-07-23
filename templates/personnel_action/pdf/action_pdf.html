@@ -330,17 +330,18 @@
         <tr>
             <td style="height: 80px; vertical-align: bottom;">
                 Firma:______________________________________________________<br>
-                <b>{{ action.authority_1.signature_name|default:action.action_type.default_authority_1.signature_name|default:"" }}</b><br>
-                {{ action.authority_1.signature_position|default:action.action_type.default_authority_1.signature_position|default:"AUTORIDAD NOMINADORA O DELEGADO" }}
+                <b>{{ signatures.auth1_name }}</b><br>
+                {{ signatures.auth1_pos }}
             </td>
             <td style="height: 80px; vertical-align: bottom;">
                 Firma:______________________________________________________<br>
-                <b>{{ action.authority_2.signature_name|default:action.action_type.default_authority_2.signature_name|default:"" }}</b><br>
-                {{ action.authority_2.signature_position|default:action.action_type.default_authority_2.signature_position|default:"RESPONSABLE DE TALENTO HUMANO" }}
+                <b>{{ signatures.auth2_name }}</b><br>
+                {{ signatures.auth2_pos }}
             </td>
         </tr>
     </table>
 
+    <!-- ACEPTACIÓN Y TESTIGO -->
     <table class="signature-table">
         <tr class="bg-gray bold text-center">
             <td>ACEPTACIÓN DEL SERVIDOR</td>
@@ -359,11 +360,11 @@
                 <b>RAZÓN:</b> En presencia del testigo se deja constancia de que la o el
                 servidor público tiene la negativa de recibir la comunicación de registro
                 de esta acción de personal.
-
             </td>
         </tr>
     </table>
 
+    <!-- RESPONSABLES DE FIRMAS -->
     <table class="signature-table">
         <tr class="bg-gray bold text-center">
             <td colspan="3">RESPONSABLES DE FIRMAS</td>
@@ -376,18 +377,18 @@
         <tr>
             <td style="height: 70px; vertical-align: bottom;">
                 Firma:______________________________<br>
-                <b>{{ action.elaboration_signature_name|default:"" }}</b><br>
-                {{ action.elaboration_signature_position|default:"ELABORACIÓN" }}
+                <b>{{ signatures.elaboration_name }}</b><br>
+                {{ signatures.elaboration_pos }}
             </td>
             <td style="height: 70px; vertical-align: bottom;">
                 Firma:______________________________<br>
-                <b>{{ action.reviewer.signature_name|default:action.action_type.default_reviewer.signature_name|default:"" }}</b><br>
-                {{ action.reviewer.signature_position|default:action.action_type.default_reviewer.signature_position|default:"REVISIÓN" }}
+                <b>{{ signatures.reviewer_name }}</b><br>
+                {{ signatures.reviewer_pos }}
             </td>
             <td style="height: 70px; vertical-align: bottom;">
                 Firma:______________________________<br>
-                <b>{{ action.register.signature_name|default:action.action_type.default_register.signature_name|default:"" }}</b><br>
-                {{ action.register.signature_position|default:action.action_type.default_register.signature_position|default:"REGISTRO" }}
+                <b>{{ signatures.register_name }}</b><br>
+                {{ signatures.register_pos }}
             </td>
         </tr>
     </table>

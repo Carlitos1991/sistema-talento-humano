@@ -921,6 +921,7 @@ class ActionPDFView(LoginRequiredMixin, View):
         action = get_object_or_404(
             PersonnelAction.objects.select_related(
                 'employee__person',
+                'employee__person__document_type',
                 'action_type',
                 'employee__area',
                 'action_type__default_authority_1',
@@ -930,25 +931,18 @@ class ActionPDFView(LoginRequiredMixin, View):
                 'authority_1',
                 'authority_2',
                 'reviewer',
-                'register'
+                'register',
+                'elaboration',
+                'created_by'
             ),
             pk=pk
         )
 
         movement = getattr(action, 'movement', None)
 
-        # Para datos migrados, 'previous_unit' y 'new_unit' son CharFields.
-        # Debemos obtener los objetos AdministrativeUnit correspondientes.
-        current_unit = None
-        if movement and movement.new_unit:
-            try:
-                proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
-            except AdministrativeUnit.DoesNotExist:
-                proposed_unit = None
-        if not current_unit:
-            current_unit = action.employee.area  # Fallback al área actual del empleado
-
+        current_unit = action.employee.area if action.employee else None
         proposed_unit = None
+
         if movement and movement.new_unit:
             try:
                 proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
@@ -959,15 +953,14 @@ class ActionPDFView(LoginRequiredMixin, View):
         proposed_budget = None
 
         management_period = getattr(action, 'management_period', None)
-        show_without_current_situation = bool(
-            management_period
-            and getattr(getattr(management_period, 'contract_type', None), 'contract_type_category',
-                        '') == 'ACCION_PERSONAL'
-        )
+        contract_type = getattr(management_period, 'contract_type', None) if management_period else None
+        contract_category = getattr(contract_type, 'contract_type_category', '') if contract_type else ''
+
+        show_without_current_situation = bool(contract_category == 'ACCION_PERSONAL')
 
         if movement and movement.previous_budget_line:
             current_budget = movement.previous_budget_line
-        elif management_period and management_period.budget_line:
+        elif management_period and getattr(management_period, 'budget_line', None):
             current_budget = management_period.budget_line
         else:
             current_budget = BudgetLine.objects.select_related(
@@ -980,8 +973,39 @@ class ActionPDFView(LoginRequiredMixin, View):
         if show_without_current_situation:
             current_unit = None
             current_budget = None
-            proposed_unit = movement.new_unit if movement and movement.new_unit else management_period.administrative_unit
-            proposed_budget = movement.new_budget_line if movement and movement.new_budget_line else management_period.budget_line
+            if movement and movement.new_unit:
+                proposed_unit = proposed_unit
+            elif management_period:
+                proposed_unit = getattr(management_period, 'administrative_unit', None)
+
+            if movement and movement.new_budget_line:
+                proposed_budget = movement.new_budget_line
+            elif management_period:
+                proposed_budget = getattr(management_period, 'budget_line', None)
+
+        # Resolución segura de nombres y cargos de firmas (Fallback a Defaults si es None)
+        auth1_user = action.authority_1 or action.action_type.default_authority_1
+        auth2_user = action.authority_2 or action.action_type.default_authority_2
+        reviewer_user = action.reviewer or action.action_type.default_reviewer
+        register_user = action.register or action.action_type.default_register
+        elaboration_user = action.elaboration or action.created_by
+
+        signatures = {
+            'auth1_name': auth1_user.signature_name if auth1_user else '',
+            'auth1_pos': auth1_user.signature_position if auth1_user else 'AUTORIDAD NOMINADORA O DELEGADO',
+
+            'auth2_name': auth2_user.signature_name if auth2_user else '',
+            'auth2_pos': auth2_user.signature_position if auth2_user else 'RESPONSABLE DE TALENTO HUMANO',
+
+            'reviewer_name': reviewer_user.signature_name if reviewer_user else '',
+            'reviewer_pos': reviewer_user.signature_position if reviewer_user else 'REVISIÓN',
+
+            'register_name': register_user.signature_name if register_user else '',
+            'register_pos': register_user.signature_position if register_user else 'REGISTRO',
+
+            'elaboration_name': elaboration_user.signature_name if elaboration_user else '',
+            'elaboration_pos': elaboration_user.signature_position if elaboration_user else 'ELABORACIÓN',
+        }
 
         try:
             from weasyprint import HTML
@@ -989,34 +1013,39 @@ class ActionPDFView(LoginRequiredMixin, View):
             current_unit_snapshot = _unit_snapshot(current_unit)
             proposed_unit_snapshot = _unit_snapshot(proposed_unit) if proposed_unit else None
 
-            html = render_to_string(
-                'personnel_action/pdf/action_pdf.html',
-                {
-                    'action': action,
-                    'movement': movement,
-                    'current_unit': current_unit,
-                    'proposed_unit': proposed_unit,
-                    'current_unit_snapshot': current_unit_snapshot,
-                    'proposed_unit_snapshot': proposed_unit_snapshot,
-                    'current_budget': _budget_snapshot(current_budget),
-                    'proposed_budget': _budget_snapshot(proposed_budget) if proposed_budget else None,
-                    # Pasará Limpio como None si no cambió
-                    'show_without_current_situation': show_without_current_situation,
-                    'standard_action_types': ['INGRESO', 'TRASPASO', 'INCREMENTO DE RMU', 'REVISIÓN CLAS. PUEST.',
-                                              'REINGRESO', 'CAMBIO ADMINISTRATIVO', 'SUBROGACION', 'RESTITUCION',
-                                              'INTERC. VOLUNTARIO', 'ENCARGO', 'REINTEGRO', 'LICENCIA',
-                                              'CESACIÓN DE FUNCIONES', 'ASCENSO', 'COMISIÓN DE SERVICIOS',
-                                              'DESTITUCIÓN', 'TRASLADO', 'SANCIONES', 'VACACIONES'],
-                },
-                request=request
-            )
+            context = {
+                'action': action,
+                'movement': movement,
+                'current_unit': current_unit,
+                'proposed_unit': proposed_unit,
+                'current_unit_snapshot': current_unit_snapshot,
+                'proposed_unit_snapshot': proposed_unit_snapshot,
+                'current_budget': _budget_snapshot(current_budget),
+                'proposed_budget': _budget_snapshot(proposed_budget) if proposed_budget else None,
+                'show_without_current_situation': show_without_current_situation,
+                'signatures': signatures,
+                'standard_action_types': [
+                    'INGRESO', 'TRASPASO', 'INCREMENTO DE RMU', 'REVISIÓN CLAS. PUEST.',
+                    'REINGRESO', 'CAMBIO ADMINISTRATIVO', 'SUBROGACION', 'RESTITUCION',
+                    'INTERC. VOLUNTARIO', 'ENCARGO', 'REINTEGRO', 'LICENCIA',
+                    'CESACIÓN DE FUNCIONES', 'ASCENSO', 'COMISIÓN DE SERVICIOS',
+                    'DESTITUCIÓN', 'TRASLADO', 'SANCIONES', 'VACACIONES'
+                ],
+            }
+
+            html = render_to_string('personnel_action/pdf/action_pdf.html', context, request=request)
             pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
-            filename = f'Accion_{action.number.replace("/", "-")}.pdf'
+            filename = f'Accion_{str(action.number).replace("/", "-")}.pdf'
             response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
-        except Exception:
-            return HttpResponse('Error al generar el PDF de la acción', status=500)
+
+        except Exception as e:
+            import traceback
+            print("🔥 ERROR GENERANDO PDF DE ACCIÓN DE PERSONAL:")
+            traceback.print_exc()
+            return HttpResponse(f"<h3>Error al generar PDF:</h3><pre>{traceback.format_exc()}</pre>", status=500)
 
 
 # ==========================================
