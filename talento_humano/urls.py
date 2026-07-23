@@ -15,7 +15,8 @@ urlpatterns = [
     path('person/', include('person.urls')),
     path('security/', include('security.urls')),
     # Alias sin namespace para compatibilidad con referencias legacy.
-    path('security/help/messages/<int:pk>/sumilla/', security_views.HelpMessageSumillaView.as_view(), name='help_message_sumilla'),
+    path('security/help/messages/<int:pk>/sumilla/', security_views.HelpMessageSumillaView.as_view(),
+         name='help_message_sumilla'),
     path('institution/', include('institution.urls')),
     path('budget/', include('budget.urls')),
     path('payroll/', include('payroll.urls')),
@@ -36,11 +37,12 @@ urlpatterns = [
     path('iclock/cdata', adms_views.adms_receive_attendance),
     path('iclock/getrequest', adms_views.iclock_getrequest),
     path('iclock/ping', adms_views.iclock_ping),
+    # Rutas automáticas de Keycloak / OIDC
+    path('oidc/', include('mozilla_django_oidc.urls')),
 
 ]
 
-# Configuración para servir archivos MEDIA (fotos, documentos, etc.)
-# Funciona tanto con DEBUG=True como DEBUG=False en desarrollo
+# Configuración para servir archivos MEDIA
 urlpatterns += [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]

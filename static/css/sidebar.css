@@ -136,7 +136,7 @@
 
 .sidebar.collapsed .sidebar-menu li a .chevron-icon,
 .layout-wrapper.is-collapsed .sidebar-menu li a .chevron-icon {
-    display: block !important;
+    display: none !important;
     position: absolute;
     right: 8px;
     top: 50%;
@@ -162,7 +162,7 @@
 .sidebar-footer {
     position: relative;
     padding: 0.55rem 0.7rem 0.7rem;
-    background: linear-gradient(180deg, rgba(7, 20, 44, 0.35), rgba(7, 20, 44, 0.95));
+    background: linear-gradient(180deg, rgba(20, 44, 94, 0.35), rgba(17, 39, 85, 0.95));
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     display: grid;
     gap: 0.45rem;
@@ -174,7 +174,9 @@
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    color: #e2e8f0;
+    color: #ffffff;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 600;
     text-decoration: none;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 10px;
@@ -218,6 +220,31 @@
     align-items: center;
     justify-content: center;
     padding: 0 6px;
+}
+
+/* En colapsado, el badge no debe desplazar el icono: va en la esquina superior derecha */
+.sidebar.collapsed .sidebar-menu li a .sidebar-badge,
+.layout-wrapper.is-collapsed .sidebar-menu li a .sidebar-badge {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    margin: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 0.64rem;
+    line-height: 1;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Asegura alineación uniforme de iconos en colapsado, incluso en items con submenú */
+.sidebar.collapsed .sidebar-menu .has-submenu > a,
+.sidebar.collapsed .sidebar-menu .has-inner-submenu > a,
+.layout-wrapper.is-collapsed .sidebar-menu .has-submenu > a,
+.layout-wrapper.is-collapsed .sidebar-menu .has-inner-submenu > a {
+    justify-content: center !important;
+    padding-right: 0.5rem !important;
 }
 
 .layout-wrapper.is-collapsed .sidebar-section-title,

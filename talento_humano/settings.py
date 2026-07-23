@@ -8,21 +8,16 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
-# Configuración de Media (Archivos subidos por usuario)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'True'
 
-# Evita advertencias COOP en desarrollo HTTP local.
 if DEBUG:
     SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '*').split(',') if host.strip()]
 
-# Cuando estamos detrás de Nginx/Traefik/Caddy, Django debe confiar en X-Forwarded-Proto.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
@@ -60,6 +55,7 @@ INSTALLED_APPS = [
     'sanctions',
     'documents',
     'employee_archive',
+    'mozilla_django_oidc',
 ]
 AUTH_USER_MODEL = 'core.User'
 MIDDLEWARE = [
@@ -80,11 +76,9 @@ EMAIL_HOST = os.environ.get('EMAIL_HOST', 'mail.loja.gob.ec')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-# Configuramos la seguridad leyendo strings y convirtiéndolos a booleanos
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
 
-# El remitente oficial que verán los empleados
 DEFAULT_FROM_EMAIL = f"Municipio de Loja - Nómina <{EMAIL_HOST_USER}>"
 
 ROOT_URLCONF = 'talento_humano.urls'
@@ -127,10 +121,10 @@ DATABASES = {
     },
     'old_db': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_talento_2020',  # El nombre de la base vieja
+        'NAME': 'db_talento_2020',
         'USER': 'postgres',
         'PASSWORD': r'Talento2023**',
-        'HOST': '192.168.1.253',  # La IP del servidor donde está la BD vieja
+        'HOST': '192.168.1.253',
         'PORT': '5432',
     }
 }
@@ -167,19 +161,14 @@ USE_I18N = True
 
 USE_TZ = False
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 # Configuración de Archivos Estáticos
-# Usar ruta absoluta para evitar URLs relativas que causen 404 en subpaths
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para producción
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Configuración de WhiteNoise para archivos estáticos en producción
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
