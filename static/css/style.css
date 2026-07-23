@@ -1000,12 +1000,6 @@ h1, h2, h3, h4, h5, h6 {
     align-items: start;
 }
 
-.grid-3-cols {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-}
-
 .grid-4-cols {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -5208,12 +5202,6 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 @media (min-width: 768px) {
     body:not(.employee-dashboard-page) .grid-info-personal {
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-}
-
-@media (min-width: 992px) {
-    body:not(.employee-dashboard-page) .grid-info-personal {
-        grid-template-columns: repeat(3, 1fr);
     }
 }
 
