@@ -1,24 +1,28 @@
-from django.urls import path
-from . import views
 from django.contrib.auth import views as auth_views
+from django.urls import path, include
+
+from . import views
 
 app_name = 'core'
 
 urlpatterns = [
-    # Login Personalizado
+    # Login propio (formulario local que valida contra Keycloak vía ROPC)
     path('login/', views.CustomLoginView.as_view(), name='login'),
-    path('login/forgot-password/', views.ForgotPasswordView.as_view(), name='forgot_password'),
-    path('login/create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
+    path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot_password'),
+    path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
+
+    # Login SSO por redirect a Keycloak (flujo aparte, sigue disponible en /oidc/)
+    path('oidc/', include('mozilla_django_oidc.urls')),
 
     # Logout
-    path('logout/', auth_views.LogoutView.as_view(next_page='core:login'), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
     # Dashboard (Home)
     path('', views.DashboardView.as_view(), name='dashboard'),
 
-    # Perfil de Usuario (NUEVO)
+    # Perfil de Usuario
     path('profile/', views.ProfileView.as_view(), name='profile'),
-    path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
 
     # --- Catalogs ---
     path('settings/catalogs/', views.CatalogListView.as_view(), name='catalog_list'),

@@ -9,13 +9,9 @@
 {% endblock %}
 
 {% block content %}
-    <!-- CSRF Token para JavaScript -->
     {% csrf_token %}
-
-    <!-- Employee ID para JavaScript -->
     <div data-employee-id="{{ employee.id }}" style="display: none;"></div>
-
-    <!-- Banner Superior -->
+    
     <div class="vacation-detail-banner">
         <div class="vacation-banner-left">
             <i class="fas fa-plane vacation-banner-icon"></i>

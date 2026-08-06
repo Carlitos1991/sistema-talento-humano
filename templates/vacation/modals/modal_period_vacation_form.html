@@ -2,7 +2,7 @@
 <div class="modal-container-medium shadow-card">
     <div class="modal-content">
 
-        <!-- HEADER: Título centrado, X absoluta a la derecha -->
+        <!-- HEADER -->
         <div class="modal-header-refined">
             <div class="header-title-group">
                 <div class="header-icon-circle">
@@ -23,12 +23,12 @@
             <div class="modal-body">
                 {% for field in form %}
                     <div class="form-group">
-                        <!-- Lógica especial para el Checkbox (Toggle Switch) -->
+                        <!-- Lógica especial para el Checkbox -->
                         {% if field.name == 'is_active' %}
                             <label class="control-label">{{ field.label }}</label>
                             <div class="toggle-switch-wrapper">
                                 <label class="switch">
-                                    {{ field }} <!-- El input checkbox original -->
+                                    {{ field }}
                                     <span class="slider round"></span>
                                 </label>
                                 <span class="toggle-label-text">Activar / Desactivar</span>

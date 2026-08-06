@@ -6,17 +6,15 @@
 {% block content %}
     <div class="page-header">
         <h2>Mi Perfil</h2>
-        <p class="text-muted">Actualiza tu información personal y credenciales</p>
+        <p class="text-muted">Actualiza tu información personal.</p>
     </div>
-
-    <!-- FORMULARIO -->
+    
     <form method="post" enctype="multipart/form-data" class="profile-grid">
         {% csrf_token %}
-
-        <!-- COLUMNA IZQUIERDA: Avatar -->
+    
         <div class="card profile-card-main">
             <div class="profile-avatar-wrapper">
-                <!-- Lógica visual del avatar - Mostrar foto de Person -->
+            
                 {% if user.person.photo %}
                     <img src="{{ user.person.photo.url }}" alt="Foto de Perfil" id="avatarPreview">
                     <div id="avatarPlaceholder" class="avatar-placeholder hidden">
@@ -114,7 +112,6 @@
 
 {% block extra_js %}
     <script>
-        // FIX DE SEGURIDAD: Esperar a que el DOM cargue y verificar existencia
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('id_photo');
 

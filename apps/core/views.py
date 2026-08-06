@@ -24,6 +24,9 @@ from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from urllib.parse import urlencode
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_related(instance, attr_name, default=None):
@@ -53,6 +56,34 @@ class CustomLoginView(LoginView):
             pass
 
         response = super().form_valid(form)
+
+        # --- Aprovisionamiento hacia Keycloak (perezoso, no bloqueante) ---
+        # El usuario local YA existe (así fue que se autenticó, vía
+        # ModelBackend como respaldo -> ver AUTHENTICATION_BACKENDS). Este
+        # bloque migra la cuenta a Keycloak usando el MISMO username y la
+        # MISMA contraseña que el usuario acaba de escribir en el form, para
+        # que su PRÓXIMO login ya sea validado directamente por
+        # KeycloakPasswordBackend (ROPC) sin que el usuario note nada.
+        #
+        # Es clave usar la contraseña en texto plano de ESTE request: Django
+        # solo guarda el hash local, así que esta es la única oportunidad de
+        # conocerla y reutilizarla en Keycloak.
+        try:
+            person = _safe_related(self.request.user, 'person', None)
+            if person is not None:
+                plain_password = form.cleaned_data.get('password')
+                from .keycloak_service import ensure_keycloak_account
+                result = ensure_keycloak_account(person, self.request.user, plain_password)
+                if result.get('status') == 'created':
+                    logger.info(
+                        "[KEYCLOAK][PROVISION] Usuario %s migrado a Keycloak con su mismo username/contraseña.",
+                        self.request.user.username,
+                    )
+        except Exception:
+            logger.exception(
+                "[KEYCLOAK][PROVISION] Fallo inesperado aprovisionando a %s en Keycloak.",
+                getattr(self.request.user, 'username', '?'),
+            )
 
         current_session_key = self.request.session.session_key
         user_id = str(self.request.user.id)
@@ -94,74 +125,149 @@ class ForgotPasswordView(TemplateView):
     template_name = 'core/forgot_password.html'
 
     def post(self, request, *args, **kwargs):
-        from person.models import Person
+        from django.contrib.auth import get_user_model
+        from django.db.models import Q
+        from django.urls import reverse  # Importación necesaria para construir la URL
 
-        cedula = (request.POST.get('cedula') or '').strip()
+        identificador = (request.POST.get('identificador') or '').strip()
         birth_date_raw = (request.POST.get('birth_date') or '').strip()
 
-        if not cedula or not birth_date_raw:
-            return JsonResponse({'status': 'error', 'message': 'Debe ingresar la cédula y la fecha de nacimiento.'})
+        if not identificador or not birth_date_raw:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Debe ingresar su usuario o correo y la fecha de nacimiento.'})
 
-        person = Person.objects.filter(
-            document_number=cedula
-        ).select_related('user', 'employee_profile__institutional_data').first()
+        User = get_user_model()
 
-        if not person:
-            return JsonResponse({'status': 'error', 'message': 'No se encontró un registro con la cédula ingresada.'})
+        # 1. Buscar en la BD local si existe el usuario o correo
+        user = User.objects.filter(Q(username=identificador) | Q(email=identificador)).first()
 
+        if not user or not hasattr(user, 'person'):
+            return JsonResponse(
+                {'status': 'error', 'message': 'No se encontró un registro asociado a este usuario o correo.'})
+
+        person = user.person
+
+        # 2. Validar la fecha de nacimiento como factor de seguridad
         if not person.birth_date or str(person.birth_date) != birth_date_raw:
-            return JsonResponse({'status': 'error', 'message': 'La fecha de nacimiento no coincide con el registro.'})
-
-        if not person.user:
-            return JsonResponse({'status': 'error', 'message': 'La persona aún no tiene usuario creado.'})
-
-        employee_profile = getattr(person, 'employee_profile', None)
-        institutional_data = getattr(employee_profile, 'institutional_data', None) if employee_profile else None
-        institutional_email = getattr(institutional_data, 'institutional_email', None)
-
-        if not institutional_email:
             return JsonResponse(
-                {'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+                {'status': 'error', 'message': 'La fecha de nacimiento no coincide con nuestros registros.'})
 
-        username = person.user.username or cedula
-        plain_password = cedula
+        from .keycloak_service import find_keycloak_user_by_username, send_keycloak_reset_password_email
 
-        person.user.username = username
-        person.user.email = institutional_email
-        person.user.first_name = person.first_name
-        person.user.last_name = person.last_name
-        person.user.set_password(plain_password)
-        person.user.save()
-
-        subject = 'Recuperación de credenciales - SIGETH'
-
-        context_email = {
-            'nombre': person.full_name,
-            'usuario': username,
-            'contraseña': plain_password,
-        }
-        html_content = render_to_string('core/emails/forgot_password_notification.html', context_email)
-        text_content = strip_tags(html_content)
-
-        remitente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'nomina@loja.gob.ec')
-        email = EmailMultiAlternatives(subject=subject, body=text_content, from_email=remitente,
-                                       to=[institutional_email])
-        email.attach_alternative(html_content, "text/html")
-
+        # 3. Verificar existencia en Keycloak usando el USERNAME exacto
         try:
-            email.send(fail_silently=False)
+            kc_user = find_keycloak_user_by_username(user.username)
         except Exception as e:
+            logger.exception("[KEYCLOAK][RESET] Error conectando a Keycloak al buscar %s", user.username)
             return JsonResponse(
-                {'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+                {'status': 'error', 'message': 'Error de conexión con el servidor de identidades. Intente más tarde.'})
+
+        if not kc_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Su cuenta no ha sido migrada a Keycloak. Contacte a Talento Humano.'
+            })
+
+        # Construir la URL absoluta a la que volverá el usuario tras cambiar la clave
+        redirect_to = request.build_absolute_uri(reverse('core:login'))
+
+        # 4. Ordenar a Keycloak que envíe el correo con el enlace de recuperación y contexto de redirección
+        try:
+            send_keycloak_reset_password_email(kc_user['id'], redirect_to)
+        except Exception as e:
+            logger.exception("[KEYCLOAK][RESET] Error solicitando correo a Keycloak para %s", user.username)
+            return JsonResponse(
+                {'status': 'error', 'message': 'Keycloak no pudo procesar el envío del correo. Intente más tarde.'})
+
+        # 5. Enmascarar correo para el mensaje de éxito
+        institutional_email = kc_user.get('email')
+        if not institutional_email:
+            return JsonResponse({'status': 'error',
+                                 'message': 'El usuario en Keycloak no tiene un correo configurado para recibir el enlace.'})
 
         masked_email = institutional_email
-        if institutional_email and len(institutional_email) > 8:
-            masked_email = f"{institutional_email[:4]}{'*' * (len(institutional_email) - 8)}{institutional_email[-4:]}"
+        if '@' in institutional_email:
+            parts = institutional_email.split('@')
+            name_part = parts[0]
+            masked_name = f"{name_part[:2]}{'*' * (len(name_part) - 4)}{name_part[-2:]}" if len(
+                name_part) > 4 else name_part
+            masked_email = f"{masked_name}@{parts[1]}"
 
         return JsonResponse({
             'status': 'success',
-            'message': f'Se enviaron el usuario y la contraseña al correo {masked_email}'
+            'message': f'Se ha enviado un enlace seguro de recuperación al correo {masked_email}'
         })
+
+
+class ChangePasswordView(LoginRequiredMixin, View):
+    """
+    "Cambiar Contraseña" para un usuario YA autenticado en el sistema
+    (ver navbar.html -> openChangePasswordModal()).
+
+    A diferencia de ForgotPasswordView (que es para alguien SIN sesión que
+    olvidó su clave), aquí el usuario confirma su contraseña ACTUAL y
+    Keycloak la valida antes de permitir el cambio. La contraseña nueva
+    también se guarda únicamente en Keycloak; localmente el password sigue
+    quedando "unusable".
+    """
+
+    def post(self, request, *args, **kwargs):
+        current_password = request.POST.get('current_password') or ''
+        new_password = request.POST.get('new_password') or ''
+        confirm_password = request.POST.get('confirm_password') or ''
+
+        if not current_password or not new_password or not confirm_password:
+            return JsonResponse({'status': 'error', 'message': 'Debe completar todos los campos.'})
+
+        if new_password != confirm_password:
+            return JsonResponse({'status': 'error', 'message': 'La nueva contraseña y su confirmación no coinciden.'})
+
+        if new_password == current_password:
+            return JsonResponse(
+                {'status': 'error', 'message': 'La nueva contraseña debe ser distinta a la actual.'})
+
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(new_password, user=request.user)
+        except DjangoValidationError as e:
+            return JsonResponse({'status': 'error', 'message': ' '.join(e.messages)})
+
+        person = _safe_related(request.user, 'person', None)
+        document_number = getattr(person, 'document_number', None)
+        if not document_number:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Su usuario no está vinculado a una persona con cédula registrada.'
+            })
+
+        from .keycloak_service import change_password_by_document
+        result = change_password_by_document(
+            document_number=document_number,
+            current_password=current_password,
+            username=request.user.username,
+            new_password=new_password,
+        )
+
+        if result.get('status') == 'invalid_current_password':
+            return JsonResponse({'status': 'error', 'message': 'La contraseña actual no es correcta.'})
+        if result.get('status') == 'not_found':
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No existe una cuenta en Keycloak asociada a su usuario. Contacte a Talento Humano.'
+            })
+        if result.get('status') == 'error':
+            return JsonResponse({
+                'status': 'error', 'message': 'No se pudo actualizar la contraseña en este momento. Intente más tarde.'
+            })
+
+        # Sincronizamos el local: sigue sin password utilizable, Keycloak
+        # es la fuente de verdad (se deja explícito por si algún flujo
+        # legado hubiera dejado un hash usable).
+        request.user.set_unusable_password()
+        request.user.save(update_fields=['password'])
+
+        return JsonResponse({'status': 'success', 'message': 'Contraseña actualizada correctamente.'})
 
 
 class CreateUserFromLoginView(TemplateView):
@@ -171,7 +277,8 @@ class CreateUserFromLoginView(TemplateView):
         from django.contrib.auth.models import Group, Permission
         from django.contrib.contenttypes.models import ContentType
         from person.models import Person
-        from employee.models import Employee
+        from core.auth import generate_keycloak_username
+        from django.urls import reverse
 
         cedula = (request.POST.get('cedula') or '').strip()
         if not cedula:
@@ -200,68 +307,103 @@ class CreateUserFromLoginView(TemplateView):
             return JsonResponse(
                 {'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
 
-        username = cedula
-        plain_password = cedula
+        # 1. Generamos el username según la regla
+        username = generate_keycloak_username(person.first_name, person.last_name)
+
         user_model = get_user_model()
-
         user = getattr(person, 'user', None)
-        if user is not None:
-            return JsonResponse({'status': 'error', 'message': 'Usted ya tiene un usuario registrado en el sistema.'})
 
+        from .keycloak_service import find_keycloak_user_by_username, create_keycloak_user, \
+            send_keycloak_reset_password_email
+
+        redirect_to = request.build_absolute_uri(reverse('core:login'))
+        kc_user_id = None
+
+        # 2. Validar si existe en Keycloak por USERNAME
+        try:
+            existing_kc_user = find_keycloak_user_by_username(username)
+        except Exception as e:
+            logger.exception("[KEYCLOAK][REGISTRO] Error consultando Keycloak para username=%s", username)
+            return JsonResponse(
+                {'status': 'error', 'message': 'No se pudo verificar la cuenta en Keycloak. Intente más tarde.'})
+
+        if existing_kc_user:
+            # 3. SI EXISTE: Tomamos su ID
+            kc_user_id = existing_kc_user.get('id')
+            logger.info(
+                "[KEYCLOAK][REGISTRO] El usuario %s ya existe en Keycloak (id=%s). Se solicitará correo de actualización.",
+                username, kc_user_id)
+        else:
+            # 4. SI NO EXISTE: Lo creamos en Keycloak (Keycloak le asignará clave interna, la reemplazaremos con el link)
+            logger.info("[KEYCLOAK][REGISTRO] Creando nuevo usuario %s en Keycloak.", username)
+            try:
+                # Al no pasar 'password', create_keycloak_user genera una aleatoria interna
+                new_kc_user_id, _ = create_keycloak_user(
+                    username=username,
+                    email=institutional_email,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    document_number=cedula,
+                    temporary=True,
+                )
+                kc_user_id = new_kc_user_id
+            except Exception as e:
+                logger.exception("[KEYCLOAK][REGISTRO] Error creando usuario en Keycloak para username=%s", username)
+                return JsonResponse(
+                    {'status': 'error', 'message': 'No se pudo crear la cuenta en el servidor. Intente más tarde.'})
+
+        # 5. Ordenar a Keycloak que envíe el correo de configuración inicial / reseteo
+        if kc_user_id:
+            try:
+                send_keycloak_reset_password_email(kc_user_id, redirect_to)
+            except Exception as e:
+                logger.exception("[KEYCLOAK][REGISTRO] Error solicitando correo a Keycloak para %s", username)
+                return JsonResponse(
+                    {'status': 'error',
+                     'message': 'La cuenta está lista pero Keycloak no pudo procesar el envío del correo. Intente más tarde.'})
+
+        # 6. Lógica del Usuario Local (Django)
         if user is None:
             if user_model.objects.filter(username=username).exists():
-                return JsonResponse(
-                    {'status': 'error', 'message': 'Ya existe un usuario con esa cédula. Contacte a Talento Humano.'})
+                user = user_model.objects.get(username=username)
+            else:
+                user = user_model.objects.create_user(
+                    username=username,
+                    email=institutional_email,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    is_active=True
+                )
 
-            user = user_model.objects.create_user(
-                username=username,
-                password=plain_password,
-                email=institutional_email,
-                first_name=person.first_name,
-                last_name=person.last_name,
-                is_active=True
-            )
-            # No forzamos aquí; el modal se mostrará en el primer login según last_login
+            # La contraseña local es inutilizable porque Keycloak manda
+            user.set_unusable_password()
             user.save()
             person.user = user
             person.save(update_fields=['user', 'updated_at'])
 
-        normal_group, _ = Group.objects.get_or_create(name='USUARIO_NORMAL')
-        user.groups.add(normal_group)
+            # Asignación de grupos y permisos locales
+            normal_group, _ = Group.objects.get_or_create(name='USUARIO_NORMAL')
+            user.groups.add(normal_group)
+            ct = ContentType.objects.get_for_model(Group)
+            dashboard_perm, _ = Permission.objects.get_or_create(
+                codename='dashboard_empleado',
+                content_type=ct,
+                defaults={'name': 'Acceso dashboard empleado'}
+            )
+            user.user_permissions.add(dashboard_perm)
 
-        # Garantiza acceso al dashboard de empleado para el usuario normal.
-        ct = ContentType.objects.get_for_model(Group)
-        dashboard_perm, _ = Permission.objects.get_or_create(
-            codename='dashboard_empleado',
-            content_type=ct,
-            defaults={'name': 'Acceso dashboard empleado'}
-        )
-        user.user_permissions.add(dashboard_perm)
-
-        subject = 'Creación de usuario - SIGETH'
-
-        context_email = {
-            'nombre': person.full_name,
-            'usuario': username,
-            'contraseña': plain_password,
-        }
-        html_content = render_to_string('core/emails/create_user_notification.html', context_email)
-        text_content = strip_tags(html_content)
-
-        remitente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'nomina@loja.gob.ec')
-        email = EmailMultiAlternatives(subject=subject, body=text_content, from_email=remitente,
-                                       to=[institutional_email])
-        email.attach_alternative(html_content, "text/html")
-
-        try:
-            email.send(fail_silently=False)
-        except Exception as e:
-            return JsonResponse(
-                {'status': 'error', 'message': 'No se pudo enviar el correo institucional con las credenciales.'})
+        # 7. Enmascarar correo para el mensaje de éxito
+        masked_email = institutional_email
+        if '@' in institutional_email:
+            parts = institutional_email.split('@')
+            name_part = parts[0]
+            masked_name = f"{name_part[:2]}{'*' * (len(name_part) - 4)}{name_part[-2:]}" if len(
+                name_part) > 4 else name_part
+            masked_email = f"{masked_name}@{parts[1]}"
 
         return JsonResponse({
             'status': 'success',
-            'message': f'El usuario y la contraseña han sido enviados al correo {institutional_email}'
+            'message': f'Se ha configurado su cuenta y enviado un enlace seguro de acceso al correo {masked_email}'
         })
 
 

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -20,29 +21,29 @@ class SIGETHSecurityMiddleware:
         if request.user.is_authenticated:
             try:
                 from security.models import UserSession
-                
+
                 # Obtener IP del cliente (mejorado)
                 ip_address = None
-                
+
                 # Intenta obtner de X-Forwarded-For (proxy/load balancer)
                 x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
                 if x_forwarded_for:
                     ip_address = x_forwarded_for.split(',')[0].strip()
-                
+
                 # Si no, intenta X-Real-IP
                 if not ip_address:
                     ip_address = request.META.get('HTTP_X_REAL_IP', '').strip()
-                
+
                 # Si no, usa REMOTE_ADDR
                 if not ip_address:
                     ip_address = request.META.get('REMOTE_ADDR', '').strip()
-                
+
                 # Obtener session_key
                 try:
                     session_key = request.session.session_key
                 except Exception:
                     session_key = None
-                
+
                 # Actualizar o crear sesión usando SOLO el usuario como clave
                 if ip_address:  # Solo actualizar si tenemos IP válida
                     UserSession.objects.update_or_create(
@@ -64,22 +65,32 @@ class SIGETHSecurityMiddleware:
 
         path = request.path_info
 
-        # Intentar resolver la URL de login, fallback a la configuración directa
+        # Intentar resolver la URL de NUESTRO login (settings.LOGIN_URL),
+        # con fallback directo a la ruta fija si algo falla al resolver.
+        #
+        # OJO: antes esto apuntaba SIEMPRE a 'oidc_authentication_init'
+        # (el login hospedado de Keycloak), sin importar lo que dijera
+        # settings.LOGIN_URL. Por eso, aunque LOGIN_URL ya apuntara a
+        # 'core:login', este middleware terminaba mandando a cualquier
+        # usuario no autenticado directo a Keycloak, incluso cuando la
+        # petición era hacia la propia página de login.
         try:
-            login_url_resolved = reverse('core:login')
-        except:
-            login_url_resolved = '/login/'  # Fallback genérico si falla el reverse
+            login_url_resolved = reverse(settings.LOGIN_URL)
+        except Exception:
+            login_url_resolved = '/login/'
 
-        # 1. Rutas PÚBLICAS (Lista Blanca)
-        # Aquí definimos qué partes del sistema no requieren usuario/contraseña
+        # 1. Rutas PÚBLICAS
         public_paths = [
-            login_url_resolved,  # La página de login
+            login_url_resolved,  # Nuestra página de login (formulario propio)
+            '/forgot-password/',  # Recuperación de contraseña (vía Keycloak)
+            '/create-user/',  # Auto-registro (crea la cuenta en Keycloak)
+            '/oidc/',  # Flujo SSO por redirect (opcional, sigue disponible)
             '/admin/',  # El admin de Django (tiene su propio login)
             '/favicon.ico',  # Permitir favicon sin autenticación
             '/static/',  # Archivos CSS/JS
             '/media/',  # Archivos subidos
-            '/biometric/adms/',  # Tu ruta antigua (opcional)
-            '/iclock/',  # <--- ¡IMPORTANTE! Esta es la ruta que usa el ZKTeco
+            '/biometric/adms/',
+            '/iclock/',
             '/payroll/payslips/validate/',  # Validación pública de roles de pago mediante QR
             '/permissions/validate/',  # Validación pública de permisos mediante QR
         ]

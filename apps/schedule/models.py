@@ -4,6 +4,7 @@ from core.models import BaseModel, User
 from employee.models import Employee
 from django.db.models import Q
 
+
 class Schedule(BaseModel):
     """
     Define horarios institucionales (diurnos, nocturnos o partidos).
@@ -31,7 +32,8 @@ class Schedule(BaseModel):
     saturday = models.BooleanField(default=False, verbose_name='Sáb')
     sunday = models.BooleanField(default=False, verbose_name='Dom')
 
-    late_tolerance_minutes = models.IntegerField(default=15, validators=[MinValueValidator(0)], verbose_name='Tolerancia (min)')
+    late_tolerance_minutes = models.IntegerField(default=15, validators=[MinValueValidator(0)],
+                                                 verbose_name='Tolerancia (min)')
     daily_hours = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name='Horas Diarias')
 
     class Meta:
@@ -46,6 +48,7 @@ class Schedule(BaseModel):
     @property
     def is_continuous(self):
         return self.afternoon_start is None
+
 
 class EmployeeScheduleHistory(BaseModel):
     """Rastrea la asignación de horarios a empleados."""
@@ -63,7 +66,8 @@ class EmployeeScheduleHistory(BaseModel):
 
     def save(self, *args, **kwargs):
         if self.is_current:
-            EmployeeScheduleHistory.objects.filter(employee=self.employee, is_current=True).exclude(pk=self.pk).update(is_current=False)
+            EmployeeScheduleHistory.objects.filter(employee=self.employee, is_current=True).exclude(pk=self.pk).update(
+                is_current=False)
         super().save(*args, **kwargs)
 
 
@@ -97,7 +101,11 @@ def get_employee_schedule_for_date(employee, target_date):
     try:
         qs = EmployeeScheduleHistory.objects.filter(employee=employee).filter(
             start_date__lte=target_date
-        ).filter(Q(end_date__isnull=True) | Q(end_date__gte=target_date)).select_related('schedule').order_by('-start_date')
+        ).filter(
+            Q(end_date__isnull=True) | Q(end_date__gte=target_date)
+        ).filter(
+            schedule__is_active=True
+        ).select_related('schedule').order_by('-start_date')
         row = qs.first()
         sched = row.schedule if row else None
         # Si no hay asignación, retornar None
@@ -117,7 +125,8 @@ def get_employee_schedule_for_date(employee, target_date):
 
         if SCH:
             try:
-                hist = SCH.objects.filter(schedule=sched, effective_from__lte=target_date).order_by('-effective_from').first()
+                hist = SCH.objects.filter(schedule=sched, effective_from__lte=target_date).order_by(
+                    '-effective_from').first()
                 if hist:
                     # Construir objeto ligero con atributos esperados por el código (compatibilidad)
                     from types import SimpleNamespace
@@ -172,7 +181,8 @@ class ScheduleChangeHistory(BaseModel):
     friday = models.BooleanField(default=True, verbose_name='Vie')
     saturday = models.BooleanField(default=False, verbose_name='Sáb')
     sunday = models.BooleanField(default=False, verbose_name='Dom')
-    late_tolerance_minutes = models.IntegerField(default=15, validators=[MinValueValidator(0)], verbose_name='Tolerancia (min)')
+    late_tolerance_minutes = models.IntegerField(default=15, validators=[MinValueValidator(0)],
+                                                 verbose_name='Tolerancia (min)')
     daily_hours = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name='Horas Diarias')
     reason = models.TextField(blank=True, null=True, verbose_name='Motivo del Cambio')
 
