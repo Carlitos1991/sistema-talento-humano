@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!container) return;
 
                 container.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.btn-quick-view, .btn-views-action');
+                    const btn = e.target.closest('[data-action="quick-view"], .btn-quick-view, .btn-views-action');
                     if (btn) {
                         e.preventDefault();
                         const personId = btn.dataset.id;
@@ -587,7 +587,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const cs = window.getComputedStyle(o);
                         return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
                     });
-                    if (!anyVisible) document.body.classList.remove('no-scroll');
+                    if (!anyVisible) {
+                        document.body.classList.remove('no-scroll');
+                        document.body.style.paddingRight = '';
+                    }
                 }, 80);
             };
 
@@ -596,6 +599,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // ----------------------------------------------------
             const showModal = (el) => {
                 if (el) {
+                    const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+                    if (scrollBarWidth > 0) {
+                        document.body.style.paddingRight = `${scrollBarWidth}px`;
+                    }
                     el.classList.remove('hidden');
                     document.body.classList.add('no-scroll');
                 }
@@ -614,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         if (!anyVisible) {
                             document.body.classList.remove('no-scroll');
+                            document.body.style.paddingRight = '';
                         }
                     }, 50);
                 }

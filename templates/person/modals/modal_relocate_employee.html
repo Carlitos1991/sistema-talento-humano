@@ -1,24 +1,24 @@
-<div id="modal-relocate-employee" class="modal-overlay" style="display:none !important;">
+<div id="modal-relocate-employee" class="modal-overlay hidden">
     <div class="modal-container-medium">
         <div class="modal-header-gradient">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fa-solid fa-sitemap"></i></div>
                 <h3 class="header-title-main">Reubicar Empleado</h3>
             </div>
-            <button type="button" onclick="window.closeRelocateModal()" class="btn-close-modal-refined">&times;</button>
+            <button type="button" class="btn-close-circle" @click="closeModal"><i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         <form id="form-relocate-employee">
             <div class="modal-body-custom">
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-building"></i> Nueva Unidad Administrativa</div>
                     <div id="relocate-combos-wrapper">
-                        <!-- Aquí se insertarán los combos dependientes con select2 -->
                     </div>
                 </div>
             </div>
             <div class="modal-footer-fixed">
-                <button type="button" onclick="window.closeRelocateModal()" class="btn-cancel">Cancelar</button>
-                <button type="submit" class="btn-save">
+                <button type="button" onclick="window.closeRelocateModal()" class="btn-default-outline">Cancelar</button>
+                <button type="submit" class="btn-default">
                     <i class="fa-solid fa-check"></i> Guardar Reubicación
                 </button>
             </div>

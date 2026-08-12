@@ -30,7 +30,7 @@
                 </td>
                 <td>
                     {% if not schedule.is_continuous %}
-                        <span class="badge-time success">
+                        <span class="badge-time btn-success">
                         <i class="fa-regular fa-clock"></i> {{ schedule.afternoon_start|time:"H:i" }} - {{ schedule.afternoon_end|time:"H:i" }}
                             {% if schedule.afternoon_crosses_midnight %}
                                 <i class="fa-solid fa-moon text-warning" title="Cruza medianoche"></i>{% endif %}

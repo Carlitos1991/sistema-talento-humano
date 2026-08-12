@@ -8,7 +8,7 @@
                     <i class="fa-solid fa-user-pen me-2"></i>
                     <span v-text="isEditing ? ' Editar Datos' : ' Nueva Persona'"></span>
                 </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
+                <button type="button" class="btn-close-circle" @click="closeModal"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <!-- BODY -->
@@ -261,8 +261,8 @@
 
             <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md">
+                <button type="button" class="btn-default-outline" @click="closeModal">Cancelar</button>
+                <button type="submit" class="btn-default">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar
                 </button>
             </div>

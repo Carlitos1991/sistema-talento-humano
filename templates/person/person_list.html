@@ -4,46 +4,6 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
-    <style>
-        #app-content {
-            overflow-x: hidden;
-        }
-
-        .person-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .person-avatar-link {
-            display: block;
-            flex-shrink: 0;
-            line-height: 0;
-            text-decoration: none !important;
-            color: inherit;
-            cursor: pointer;
-        }
-
-        .person-avatar-link:hover,
-        .person-avatar-link:focus,
-        .person-avatar-link:active {
-            text-decoration: none !important;
-            color: inherit;
-        }
-
-        .person-details {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.3;
-        }
-
-        .person-details h4 {
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #1e293b;
-            margin: 0;
-        }
-    </style>
 {% endblock %}
 
 {% block content %}
@@ -63,7 +23,7 @@
                 <p>Gestión de fichas personales y empleados </p>
             </div>
             {% if perms.person.add_person %}
-                <button type="button" class="btn btn-create" @click="openCreateModal">
+                <button type="button" class="btn-primary" @click="openCreateModal">
                     <i class="fas fa-plus"></i> Nueva Persona
                 </button>
             {% endif %}
@@ -76,15 +36,6 @@
         <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
             <div class="content-table">
-                <script>
-                    if (typeof sortPersonTable === 'undefined') {
-                        window.sortPersonTable = (thElement) => {
-                            if (window.vueApp && typeof window.vueApp.fetchPeople === 'function') {
-                                window.vueApp.fetchPeople(1);
-                            }
-                        };
-                    }
-                </script>
                 <form id="personFiltersForm" class="person-filter-form" onsubmit="return false;">
                     <div class="person-filter-panel">
                         <div class="person-filter-grid">
@@ -115,8 +66,12 @@
                             <div class="person-filter-field">
                                 <select id="filter_is_active" name="is_active" class="input-field">
                                     <option value="">Todos los estados</option>
-                                    <option value="true" {% if current_filters.is_active == 'true' %}selected{% endif %}>Activo</option>
-                                    <option value="false" {% if current_filters.is_active == 'false' %}selected{% endif %}>Inactivo</option>
+                                    <option value="true"
+                                            {% if current_filters.is_active == 'true' %}selected{% endif %}>Activo
+                                    </option>
+                                    <option value="false"
+                                            {% if current_filters.is_active == 'false' %}selected{% endif %}>Inactivo
+                                    </option>
                                 </select>
                             </div>
                         </div>
@@ -125,10 +80,10 @@
                 <div class="person-toolbar">
                     <div class="table-controls person-filter-controls"></div>
                     <div class="person-filter-actions">
-                        <button type="submit" form="personFiltersForm" class="btn btn-search">
+                        <button type="submit" form="personFiltersForm" class="btn-primary">
                             <i class="fas fa-search"></i> Buscar
                         </button>
-                        <button type="button" id="personFiltersClear" class="btn btn-secondary">
+                        <button type="button" id="personFiltersClear" class="btn-primary-outline">
                             <i class="fas fa-eraser"></i> Limpiar
                         </button>
                     </div>

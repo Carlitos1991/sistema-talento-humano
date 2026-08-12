@@ -19,13 +19,7 @@
                 Cédula
                 <span class="sort-arrow">⇅</span>
             </th>
-            <th data-field="email" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;"> Correo
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th data-field="phone_number" onclick="sortPersonTable(this)" class="sortable-header"
-                style="cursor: pointer;">Teléfono
-                <span class="sort-arrow">⇅</span>
-            </th>
+            <th>Contacto</th>
             <th class="text-center sortable-header" data-field="employee_profile__area__name"
                 onclick="sortPersonTable(this)" style="cursor: pointer;">Dependencia
                 <span class="sort-arrow">⇅</span>
@@ -51,7 +45,8 @@
                                class="person-avatar-link"
                                title="Ver perfil completo de {{ person.full_name }}">
                                 {% if person.photo %}
-                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
+                                         class="person-avatar">
                                 {% else %}
                                     <div class="person-avatar-placeholder">
                                         {{ person.first_name|first }}{{ person.last_name|first }}
@@ -61,7 +56,8 @@
                         {% else %}
                             <div class="person-avatar-link" style="cursor: default;">
                                 {% if person.photo %}
-                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
+                                         class="person-avatar">
                                 {% else %}
                                     <div class="person-avatar-placeholder">
                                         {{ person.first_name|first }}{{ person.last_name|first }}
@@ -75,8 +71,10 @@
                     </div>
                 </td>
                 <td>{{ person.document_number|default:"--" }}</td>
-                <td>{{ person.email|default:"--" }}</td>
-                <td>{{ person.phone_number|default:"--" }}</td>
+                <td>
+                    <div class="person-doc"><b>{{ person.email|default:"sin correo" }}</b></div>
+                    <div class="person-doc"><b>{{ person.phone_number|default:"sin teléfono" }}</b></div>
+                </td>
                 <td class="text-center">
                     {% if person.employee_profile.area %}
                         <div class="font-weight-700 small text-primary">
@@ -110,7 +108,7 @@
                         <div class="actions-wrapper">
                             {% if perms.person.change_person %}
                                 <button type="button"
-                                        class="btn-info-action"
+                                        class="btn-second"
                                         title="Reubicar Empleado"
                                         onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ unit.name }}')">
                                     <i class="fa-solid fa-sitemap"></i>
@@ -118,17 +116,18 @@
                             {% endif %}
 
                             {% if perms.person.view_person %}
-                            <button type="button"
-                                    class="btn-views-action btn-quick-view"
-                                    data-id="{{ person.id }}"
-                                    title="Vista Rápida">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
+                                <button type="button"
+                                        class="btn-tenth"
+                                        data-action="quick-view"
+                                        data-id="{{ person.id }}"
+                                        title="Vista Rápida">
+                                    <i class="fa-duotone fa-solid fa-eye"></i>
+                                </button>
                             {% endif %}
 
                             {% if perms.person.change_person or perms.person.delete_person %}
                                 <a href="{% url 'employee:employee_detail' person.id %}"
-                                   class="btn-list-action"
+                                   class="btn-first"
                                    title="Ver Detalle Completo">
                                     <i class="fa-solid fa-user-gear"></i>
                                 </a>
@@ -141,7 +140,7 @@
             <tr>
                 {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                     <td colspan="8">
-                {% else %}
+                        {% else %}
                     <td colspan="7">
                 {% endif %}
                 <div class="empty-state-container">
@@ -154,7 +153,7 @@
         <tr id="client-no-results" style="display: none;">
             {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
                 <td colspan="8">
-            {% else %}
+                    {% else %}
                 <td colspan="7">
             {% endif %}
             <div class="empty-state-container">

@@ -383,7 +383,7 @@ body {
     animation: localToastIn 180ms ease-out;
 }
 
-.local-toast.success {
+.local-toast.btn-success {
     border-color: rgba(34, 197, 94, 0.35);
 }
 
@@ -391,7 +391,7 @@ body {
     border-color: rgba(239, 68, 68, 0.35);
 }
 
-.local-toast.warning {
+.local-toast.btn-warning {
     border-color: rgba(245, 158, 11, 0.35);
 }
 

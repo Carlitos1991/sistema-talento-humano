@@ -2159,700 +2159,356 @@ input:checked + .toggle-slider:before {
     width: 100% !important;
 }
 
-
 /* =====================================================================
    09. BOTONES
    ===================================================================== */
 
-/* Base */
-.btn {
-    padding: 0.5rem 1rem;
-    font-weight: bold;
-    border-radius: 0.375rem;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-/* Botón primario de login */
-.btn-primary {
-    width: 100%;
-    padding: 0.9rem;
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    margin-top: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
-    transition: all 0.2s;
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-hover);
-    transform: translateY(-1px);
-}
-
-/* Crear */
-.btn-create {
+/* --- Base compartida para TODOS los botones (Sólidos y Outline) --- */
+.btn-primary, .btn-default, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger,
+.btn-primary-outline, .btn-default-outline, .btn-secondary-outline, .btn-success-outline,
+.btn-info-outline, .btn-warning-outline, .btn-danger-outline {
     font-family: 'Inter', 'Roboto', sans-serif;
+    padding: 0.6rem 1.6rem;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: white;
-    padding: 0.6rem 1.2rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    border-radius: 10px;
-    cursor: pointer;
     text-decoration: none;
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-    transition: var(--table-btn-transition);
-    border: none;
-    white-space: nowrap;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    border: 1px solid transparent; /* Se mantiene en 1px siempre */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
-.btn-create:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.2);
+/* Forzar que los iconos NUNCA tengan subrayado y preparar su transición */
+.btn-primary i, .btn-default i, .btn-secondary i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
+.btn-primary-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
+.btn-info-outline i, .btn-warning-outline i, .btn-danger-outline i, .btn-close-circle i {
+    text-decoration: none !important;
+    font-size: 1.15em;
+    transition: transform 0.3s ease; /* Transición suave para cuando los iconos giran */
 }
 
-.btn-create:active {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.2);
-}
-
-/* Buscar */
-.btn-search {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0.75rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    background-color: #088dbf;
-    color: white;
-    border: none;
-    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.04);
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.btn-search:hover {
+/* Hover general (todos suben -2px excepto los de cerrar) */
+.btn-primary:hover, .btn-default:hover, .btn-secondary:hover, .btn-success:hover,
+.btn-info:hover, .btn-warning:hover, .btn-danger:hover,
+.btn-primary-outline:hover, .btn-default-outline:hover, .btn-secondary-outline:hover,
+.btn-success-outline:hover, .btn-info-outline:hover, .btn-warning-outline:hover, .btn-danger-outline:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.07);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
-.btn-search:active {
-    transform: translateY(0);
+/* Efecto al hacer clic (hundimiento) para todos */
+.btn-primary:active, .btn-default:active, .btn-secondary:active, .btn-success:active,
+.btn-info:active, .btn-warning:active, .btn-danger:active,
+.btn-primary-outline:active, .btn-default-outline:active, .btn-secondary-outline:active,
+.btn-success-outline:active, .btn-info-outline:active, .btn-warning-outline:active, .btn-danger-outline:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Cancelar & Guardar */
-.btn-cancel,
-.btn-save {
+/* ==========================================
+   ESTILOS SÓLIDOS (Fondo color, Borde color, Texto blanco)
+   ========================================== */
+.btn-primary, .btn-default, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger {
+    border: none !important; /* Se quita el borde para que el degradado luzca bien */
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4a89f3 0%, #4d5c88 100%);
+    color: #ffffff;
+}
+
+.btn-default {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    color: #ffffff;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #a872d8 0%, #6d28d9 100%);
+    color: #ffffff;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #00d26a 0%, #047857 100%);
+    color: #ffffff;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #2cb3f0 0%, #0369a1 100%);
+    color: #ffffff;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f79a0e 0%, #b45309 100%);
+    color: #ffffff;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff3e6c 0%, #be123c 100%);
+    color: #ffffff;
+}
+
+/* Botón Píldora Close */
+.success-login {
+    /* 1. Centrado y tamaño */
+    display: flex;
+    justify-content: center;
+    width: 100%; /* Hace que ocupe todo el ancho igual que los inputs */
+    margin: 1.5rem auto 0; /* Lo centra y le da un espacio arriba para separarlo del texto de "Olvidaste tu contraseña" */
+
+    /* 2. Bordes menos redondeados */
+    border-radius: 8px; /* Un radio de 8px es el estándar para campos de formularios de login */
+
+    /* 3. Verde menos brillante (más profesional y corporativo) */
+    background: linear-gradient(135deg, #059669 0%, #059669 100%);
+    color: #ffffff;
+
+    /* Estilos base para mantener la forma del botón */
     font-family: 'Inter', 'Roboto', sans-serif;
-    font-weight: 600;
-    font-size: 0.95rem;
-    letter-spacing: 0.01em;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+    padding: 0.8rem 1.6rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+/* Efecto hover para que mantenga la interactividad de tu sistema */
+.success-login:hover {
+    background: linear-gradient(135deg, #059669 0%, #059669 100%); /* Se oscurece ligeramente */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.success-login:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* ==========================================
+   ESTILOS OUTLINE (Fondo blanco, Borde color, Texto color)
+   ========================================== */
+.btn-primary-outline {
+    background-color: #ffffff;
+    border-color: #4a89f3;
+    color: #4a89f3;
+}
+
+.btn-default-outline {
+    background-color: #ffffff;
+    border-color: #05246c;
+    color: #05246c;
+}
+
+.btn-secondary-outline {
+    background-color: #ffffff;
+    border-color: #a872d8;
+    color: #a872d8;
+}
+
+.btn-success-outline {
+    background-color: #ffffff;
+    border-color: #00d26a;
+    color: #00d26a;
+}
+
+.btn-info-outline {
+    background-color: #ffffff;
+    border-color: #2cb3f0;
+    color: #2cb3f0;
+}
+
+.btn-warning-outline {
+    background-color: #ffffff;
+    border-color: #f79a0e;
+    color: #f79a0e;
+}
+
+.btn-danger-outline {
+    background-color: #ffffff;
+    border-color: #ff3e6c;
+    color: #ff3e6c;
+}
+
+/* Hover para rellenar los outline */
+.btn-primary-outline:hover {
+    background-color: #f8fafc;
+    color: #4a89f3;
+    border-color: #4a89f3;
+}
+
+.btn-default-outline:hover {
+    background-color: #f8fafc;
+    color: #05246c;
+    border-color: #05246c;
+}
+
+.btn-secondary-outline:hover {
+    background-color: #a872d8;
+    color: #ffffff;
+}
+
+.btn-success-outline:hover {
+    background-color: #00d26a;
+    color: #ffffff;
+}
+
+.btn-info-outline:hover {
+    background-color: #2cb3f0;
+    color: #ffffff;
+}
+
+.btn-warning-outline:hover {
+    background-color: #f79a0e;
+    color: #ffffff;
+}
+
+.btn-danger-outline:hover {
+    background-color: #ff3e6c;
+    color: #ffffff;
+}
+
+
+/* --- Base compartida para botones circulares (Primera Fila) --- */
+.btn-first, .btn-second, .btn-third, .btn-fourth, .btn-fifth,
+.btn-sixth, .btn-seventh, .btn-eighth, .btn-ninth, .btn-tenth,
+.btn-eleventh, .btn-twelfth, .btn-thirteenth, .btn-close-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
+    color: #ffffff;
     border: none;
-    min-width: 160px;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-size: 1.4rem;
+    text-decoration: none;
 }
 
-.btn-cancel {
-    background-color: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
+.btn-first:hover, .btn-second:hover, .btn-third:hover, .btn-fourth:hover,
+.btn-fifth:hover, .btn-sixth:hover, .btn-seventh:hover, .btn-eighth:hover,
+.btn-ninth:hover, .btn-tenth:hover, .btn-eleventh:hover, .btn-twelfth:hover,
+.btn-thirteenth:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
 }
 
-.btn-cancel:hover {
-    background-color: #e2e8f0;
-    color: #1e293b;
-    border-color: #94a3b8;
+.btn-first:active, .btn-second:active, .btn-third:active, .btn-fourth:active,
+.btn-fifth:active, .btn-sixth:active, .btn-seventh:active, .btn-eighth:active,
+.btn-ninth:active, .btn-tenth:active, .btn-eleventh:active, .btn-twelfth:active,
+.btn-thirteenth:active, .btn-close-circle:active {
     transform: translateY(-1px);
 }
 
-.btn-save {
-    background: linear-gradient(135deg, #0f4c81 0%, #0a355c 100%);
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(15, 76, 129, 0.3);
+/* Botón Circular Close */
+.btn-close-circle {
+    background: linear-gradient(135deg, #ff3e6c 0%, #be123c 100%);
 }
 
-.btn-save:hover {
-    background: linear-gradient(135deg, #0a355c 0%, #082847 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(15, 76, 129, 0.4);
+.btn-close-circle:hover {
+    transform: translateY(0) !important; /* Evita que el botón suba */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
 }
 
-.btn-save:active, .btn-cancel:active {
-    transform: translateY(0);
+.btn-close-circle:hover i {
+    transform: rotate(90deg);
 }
 
-.btn-cancel i, .btn-save i {
-    font-size: 1rem;
+/* --- Colores Específicos Circulares (Primera Fila 1 al 13) --- */
+.btn-first {
+    background-color: #3b5998;
 }
 
-/* Botón compacto */
-.btn-compact {
-    min-width: auto;
-    padding: 0.65rem 1.25rem;
+.btn-second {
+    background-color: #55acee;
 }
 
-.btn-secondary-search {
-    background-color: #64748b;
+.btn-third {
+    background-color: #dd4b39;
 }
 
-.btn-secondary-search:hover {
+.btn-fourth {
+    background-color: #007bb5;
+}
+
+.btn-fifth {
+    background-color: #3f729b;
+}
+
+.btn-sixth {
+    background-color: #cb2027;
+}
+
+.btn-seventh {
+    background-color: #bb0000;
+}
+
+.btn-eighth {
+    background-color: #ea4c89;
+}
+
+.btn-ninth {
+    background-color: #45668e;
+}
+
+.btn-tenth {
+    background-color: #f48024;
+}
+
+.btn-eleventh {
+    background-color: #54b689;
+}
+
+.btn-twelfth {
+    background-color: #333333;
+}
+
+.btn-thirteenth {
     background-color: #475569;
 }
 
-/* Olvidé contraseña */
-.forgot-password-link {
-    font-size: 0.85rem;
-    color: #64748b;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.forgot-password-link:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
-}
-
-/* Regresar */
-.btn-back {
+/* ==========================================
+   BOTONES ENLACE
+   ========================================== */
+.btn-link {
+    font-family: 'Inter', 'Roboto', sans-serif;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.65rem 1.25rem;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--white);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-    font-size: 0.9rem;
+    color: #64748b;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    text-decoration: none;
     font-weight: 600;
-    text-decoration: none;
-    transition: all 0.25s ease;
-}
-
-.btn-back:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: var(--white);
-    transform: translateX(-4px);
-    color: var(--white);
-}
-
-.btn-back i {
-    font-size: 0.8rem;
-}
-
-/* Header actions */
-.header-actions, .header-actions-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.btn-header-premium {
-    text-decoration: none !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-    white-space: nowrap;
-    line-height: 1.1;
-}
-
-/* Ensure header action buttons (anchor + button) look identical */
-.header-actions-wrapper .btn-header-premium {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    font-size: 0.9rem;
-}
-
-.header-actions-wrapper .btn-header-premium i {
-    font-size: 1rem;
-}
-
-.btn-header-back {
-    background: rgba(255, 255, 255, 0.1);
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-header-back:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateX(-5px);
-}
-
-.btn-header-edit {
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(15, 76, 129, 0.3);
-    background: linear-gradient(to right, #fbbf24, #f59e0b);
-}
-
-.btn-header-edit:hover {
-    background: #f59e0b;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
-}
-
-.btn-header-edit i {
-    font-size: 1rem;
-}
-
-/* Botón cerrar modal */
-.btn-close-modal {
-    position: absolute;
-    top: 1.25rem;
-    right: 1.5rem;
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.btn-close-modal:hover {
-    background: var(--error);
-    transform: rotate(90deg);
-    color: white;
-}
-
-.btn-close-modal:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-.btn-close-modal i {
-    font-size: 1.1rem;
-}
-
-.btn-close-modal-refined {
-    position: absolute !important;
-    top: 1.2rem !important;
-    right: 1.5rem !important;
-    width: 30px;
-    height: 30px;
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    border-radius: 50%;
-    color: white !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 10002;
     transition: all 0.2s ease;
-}
-
-.btn-close-modal-refined:hover {
-    background: #ef4444 !important;
-    transform: scale(1.1) rotate(90deg);
-}
-
-/* Botón cerrar icon pequeño */
-.btn-close-icon {
-    background: none;
-    border: none;
-    font-size: 1.75rem;
-    color: #94a3b8;
     cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
+    width: fit-content;
+    margin: 0 auto;
 }
 
-.btn-close-icon:hover {
-    color: #64748b;
-}
-
-/* Detalle de acciones de personal */
-.action-detail-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10001;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(4px);
-}
-
-.action-detail-card {
-    width: min(1040px, calc(100vw - 2rem));
-    max-height: calc(100vh - 2rem);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.action-detail-shell {
-    width: 100%;
-    background: #ffffff;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: var(--shadow-card);
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    display: flex;
-    flex-direction: column;
-}
-
-.action-detail-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, #0f172a 0%, #0b4d78 100%);
-    color: #ffffff;
-}
-
-.action-detail-header-title {
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.action-detail-close {
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    font-size: 1.6rem;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex: 0 0 auto;
-}
-
-.action-detail-close:hover {
-    background: rgba(255, 255, 255, 0.22);
-}
-
-.action-detail-body {
-    padding: 1.25rem 1.5rem;
-    overflow: auto;
-    max-height: calc(100vh - 11rem);
-    background: #f8fafc;
-}
-
-.action-detail-footer {
-    padding: 1rem 1.5rem 1.25rem;
-    display: flex;
-    justify-content: flex-end;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-}
-
-.action-detail-employee-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.action-detail-photo,
-.action-detail-avatar {
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex: 0 0 auto;
-}
-
-.action-detail-photo {
-    background: #e2e8f0;
-}
-
-.action-detail-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #0f4c81;
-    font-size: 1.6rem;
-}
-
-.action-detail-name {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.action-detail-ci {
-    margin: 0.2rem 0 0;
-    color: #64748b;
-    font-size: 0.9rem;
-}
-
-.action-detail-val,
-.action-detail-val--bold,
-.action-detail-val--pre {
-    margin: 0;
+/* Efecto al pasar el ratón */
+.btn-link:hover {
     color: #334155;
-    font-size: 0.95rem;
-    line-height: 1.6;
-}
-
-.action-detail-val--bold {
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.action-detail-val--pre {
-    white-space: pre-wrap;
-}
-
-.status-badge--registered {
-    background: #dcfce7;
-    color: #166534;
-}
-
-@media (max-width: 768px) {
-    .action-detail-card {
-        width: calc(100vw - 1rem);
-    }
-
-    .action-detail-shell {
-        border-radius: 14px;
-    }
-
-    .action-detail-header,
-    .action-detail-body,
-    .action-detail-footer {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-
-    .action-detail-employee-row {
-        align-items: flex-start;
-    }
-
-    .grid-2-cols {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Pill action */
-.btn-pill-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 25px;
-    background-color: #0f4c81;
-    color: white !important;
-    border-radius: 50px;
-    font-weight: 700;
-    text-decoration: none !important;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(15, 76, 129, 0.25);
-    border: 2px solid transparent;
-}
-
-.btn-pill-action:hover {
-    background-color: #0a355c;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(15, 76, 129, 0.35);
-}
-
-/* Botones de acción en tabla (redondos grandes) */
-.btn-create-action,
-.btn-success-action,
-.btn-views-action,
-.btn-detail-action,
-.btn-delete-action,
-.btn-reject-action,
-.btn-restore-action,
-.btn-list-action,
-.btn-info-action {
-    display: inline-flex;
-    width: var(--table-btn-size);
-    height: var(--table-btn-size);
-    border-radius: var(--table-btn-radius);
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    border: none;
-    box-shadow: var(--table-btn-shadow);
-    cursor: pointer;
-    font-size: 1.05rem;
-    transition: var(--table-btn-transition);
-    padding: 0;
-}
-
-.btn-create-action i, .btn-success-action i, .btn-views-action i,
-.btn-delete-action i, .btn-reject-action i, .btn-restore-action i, .btn-list-action i, .btn-info-action i,
-.btn-create-action svg, .btn-success-action svg, .btn-views-action svg,
-.btn-restore-action svg, .btn-delete-action svg, .btn-reject-action svg, .btn-list-action svg, .btn-info-action svg {
-    color: #ffffff;
-    font-size: var(--table-btn-icon-size);
-    line-height: 1;
-}
-
-.btn-create-action {
-    background: linear-gradient(to right, #0ba542, #009e36);
-}
-
-.btn-success-action {
-    background: linear-gradient(to right, #10b981, #059669);
-}
-
-.btn-views-action {
-    background: linear-gradient(to right, #fbbf24, #f59e0b);
-}
-
-.btn-reject-action {
-    background: linear-gradient(to right, #fb923c, #f97316);
-}
-
-.btn-detail-action {
-    background: linear-gradient(to right, #7dc1df, #1378dd);
-}
-
-.btn-delete-action {
-    background: linear-gradient(to right, #c64939, #6c051d);
-}
-
-.btn-restore-action {
-    background: linear-gradient(to right, #3ac5d1, #0ecad6);
-}
-
-.btn-list-action {
-    background: linear-gradient(to right, rgba(46, 149, 230, 0.78), #082d7c);
-}
-
-.btn-info-action {
-    background: linear-gradient(to right, #3ac5d1, #20acb8);
-}
-
-.btn-create-action:hover, .btn-success-action:hover, .btn-views-action:hover,
-.btn-restore-action:hover, .btn-delete-action:hover, .btn-list-action:hover, .btn-info-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.1);
-}
-
-.btn-create-action:active, .btn-success-action:active, .btn-views-action:active,
-.btn-detail-action:active, .btn-delete-action:active, .btn-restore-action:active,
-.btn-list-action:active, .btn-info-action:active {
     transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.08);
 }
 
-/* Botones de editar/eliminar pequeños (modales CV) */
-.btn-action-edit,
-.btn-action-delete {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.875rem;
+/* Efecto al hacer clic */
+.btn-link:active {
+    transform: translateY(0);
 }
-
-.btn-action-edit {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.btn-action-edit:hover {
-    background: #fde68a;
-    transform: scale(1.05);
-}
-
-.btn-action-delete {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.btn-action-delete:hover {
-    background: #fecaca;
-    transform: scale(1.05);
-}
-
-.btn-action-label {
-    min-width: 84px;
-    padding: 0.25rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    gap: 0.5rem;
-    display: inline-flex !important;
-    align-items: center;
-}
-
-.btn-action-label .btn-label-text {
-    margin-left: 0.5rem;
-    font-size: 0.85rem;
-    color: inherit;
-}
-
-/* Toggle all */
-.btn-toggle-all {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-toggle-all:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
 
 /* =====================================================================
    10. TABLAS PRINCIPALES

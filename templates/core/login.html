@@ -54,17 +54,17 @@
 
                 <!-- Link Olvidé Contraseña (Debajo y a la derecha) -->
                 <div class="text-right mt-2">
-                    <a href="{% url 'core:forgot_password' %}" class="forgot-password-link">¿Olvidaste tu
+                    <a href="{% url 'core:forgot_password' %}" class="btn-link">¿Olvidaste tu
                         contraseña?</a>
                 </div>
             </div>
 
             <!-- BOTÓN DE ACCIÓN -->
-            <button type="submit" class="btn-primary">
+            <button type="submit" class="success-login">
                 Ingresar al Sistema
             </button>
             <div class="text-center">
-                <a href="{% url 'core:create_user_from_login' %}" class="forgot-password-link">Crear usuario</a>
+                <a href="{% url 'core:create_user_from_login' %}" class="btn-link">Crear usuario</a>
             </div>
         </form>
     </div>
