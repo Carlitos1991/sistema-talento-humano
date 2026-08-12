@@ -2255,7 +2255,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* Botón Píldora Close */
-.success-login {
+.btn-success-login {
     /* 1. Centrado y tamaño */
     display: flex;
     justify-content: center;
@@ -2282,13 +2282,13 @@ input:checked + .toggle-slider:before {
 }
 
 /* Efecto hover para que mantenga la interactividad de tu sistema */
-.success-login:hover {
+.btn-success-login:hover {
     background: linear-gradient(135deg, #059669 0%, #059669 100%); /* Se oscurece ligeramente */
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
-.success-login:active {
+.btn-success-login:active {
     transform: translateY(1px);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
