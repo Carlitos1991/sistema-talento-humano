@@ -1363,6 +1363,18 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
 }
 
+.td-clickable {
+    font-weight: 600;
+    color: #3b82f6;
+    transition: all 0.2s ease;
+}
+
+.td-clickable:hover {
+    color: #1d4ed8;
+    background-color: #f0f9ff;
+    text-decoration-color: #1d4ed8;
+}
+
 
 /* =====================================================================
    08. FORMULARIOS
@@ -2230,7 +2242,7 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #a872d8 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, #333333 0%, #555555 100%);
     color: #ffffff;
 }
 
@@ -2433,7 +2445,8 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-second {
-    background-color: #55acee;
+    background: linear-gradient(135deg, #55acee 0%, #1e73be 100%);
+    color: #ffffff;
 }
 
 .btn-third {
@@ -2441,7 +2454,8 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-fourth {
-    background-color: #007bb5;
+    background: linear-gradient(135deg, #007bb5 0%, #004372 100%);
+    color: #ffffff;
 }
 
 .btn-fifth {
@@ -2449,11 +2463,13 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-sixth {
-    background-color: #cb2027;
+    background: linear-gradient(135deg, #cb2027 0%, #ef4444 100%);
+    color: #ffffff;
 }
 
 .btn-seventh {
-    background-color: #bb0000;
+    background: linear-gradient(135deg, #f6d218 0%, #f59e0b 100%);
+    color: #ffffff;
 }
 
 .btn-eighth {
@@ -2469,15 +2485,18 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-eleventh {
-    background-color: #54b689;
+    background: linear-gradient(135deg, #54b689 0%, #0d8a7a 100%);
+    color: #ffffff;
 }
 
 .btn-twelfth {
-    background-color: #333333;
+    background: linear-gradient(135deg, #333333 0%, #555555 100%);
+    color: #ffffff;
 }
 
 .btn-thirteenth {
-    background-color: #475569;
+    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+    color: #ffffff;
 }
 
 /* ==========================================

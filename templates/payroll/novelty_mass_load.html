@@ -10,7 +10,7 @@
                 <h1>Gestión de Novedades</h1>
                 <p>Selecciona un rubro para ver los datos cargados. Sube un Excel para agregar o modificar valores.</p>
             </div>
-            <a href="{% url 'payroll:period_list' %}" class="btn btn-back">
+            <a href="{% url 'payroll:period_list' %}" class="btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver a Periodos
             </a>
         </div>
@@ -73,17 +73,15 @@
                         </small>
                     </div>
 
-                    <button type="button" class="btn-create w-100 mt-3" onclick="uploadExcel()">
+                    <button type="button" class="btn-success w-100 mt-3" onclick="uploadExcel()">
                         <i class="fas fa-file-excel"></i> Cargar Excel con Tabla
                     </button>
 
                     <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn flex-grow-1" onclick="deleteAllNovelties()"
-                                style="background-color: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 600; padding: 8px 12px; font-size: 0.9rem;">
+                        <button type="button" class="btn-danger flex-grow-1" onclick="deleteAllNovelties()">
                             <i class="fas fa-trash-alt"></i> Eliminar todo
                         </button>
-                        <button type="button" class="btn flex-grow-1" onclick="exportNoveltiesToExcel()"
-                                style="background-color: #10b981; color: white; border: none; border-radius: 6px; font-weight: 600; padding: 8px 12px; font-size: 0.9rem;">
+                        <button type="button" class="btn-info flex-grow-1" onclick="exportNoveltiesToExcel()">
                             <i class="fas fa-file-download"></i> Descargar
                         </button>
                     </div>
@@ -122,9 +120,8 @@
                         TOTAL EN TABLA: <span class="ms-3 fs-4" id="total_sum" style="color: #0f4c81;">$ 0.00</span>
                     </div>
 
-                    <button type="button" class="btn-save hidden ms-auto" id="btn_save_novelties"
-                            onclick="saveNovelties()"
-                            style="margin: 0; padding: 10px 24px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                    <button type="button" class="btn-default" id="btn_save_novelties"
+                            onclick="saveNovelties()">
                         <i class="fas fa-save me-1"></i> Guardar Todo
                     </button>
                 </div>

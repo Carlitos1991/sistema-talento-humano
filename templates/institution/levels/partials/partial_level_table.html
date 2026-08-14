@@ -28,19 +28,19 @@
                     {% if perms.institution.change_organizationallevel %}
                         <td class="actions text-center">
                             <div class="actions-wrapper">
-                                <button class="btn-icon btn-views-action" onclick="openEditLevel({{ lvl.id }})"
+                                <button class="btn-seventh" onclick="openEditLevel({{ lvl.id }})"
                                         title="Editar">
                                     <i class="fas fa-pencil"></i>
                                 </button>
 
                                 {% if lvl.is_active %}
-                                    <button class="btn-icon btn-delete-action"
+                                    <button class="btn-sixth"
                                             onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
                                             title="Desactivar">
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 {% else %}
-                                    <button class="btn-icon btn-success-action"
+                                    <button class="btn-eleventh"
                                             onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
                                             title="Activar">
                                         <i class="fas fa-toggle-on"></i>

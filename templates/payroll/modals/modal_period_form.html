@@ -6,12 +6,14 @@
                 <div class="header-icon-circle"><i class="fas fa-calendar-alt"></i></div>
                 <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Periodo</h3>
             </div>
-            <button type="button" class="btn-close-modal-refined" onclick="closePayrollModal()">
+            <button type="button" class="btn-close-circle" onclick="closePayrollModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <form method="post" id="periodForm" action="{% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}" onsubmit="submitPayrollForm(event)">
+        <form method="post" id="periodForm" action="
+                {% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}"
+              onsubmit="submitPayrollForm(event)">
             {% csrf_token %}
             <div class="modal-body-custom">
                 <div class="form-section-card">
@@ -56,8 +58,8 @@
             </div>
 
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-cancel" onclick="closePayrollModal()">Cancelar</button>
-                <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-default-outline" onclick="closePayrollModal()">Cancelar</button>
+                <button type="submit" class="btn-default"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </form>
     </div>

@@ -507,6 +507,10 @@
     border-color: #ef4444;
     color: #b91c1c;
 }
+#modalGeneratePayroll .action-card.action-card-gray {
+    border-color: rgb(8, 1, 12);
+    color: #100101;
+}
 
 /* Alineación de footer similar al modal de periodo */
 /* Centrar el botón Cancelar y asegurar que sea interactuable */

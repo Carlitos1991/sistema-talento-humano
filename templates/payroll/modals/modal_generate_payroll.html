@@ -6,9 +6,6 @@
                 <div class="header-icon-circle"><i class="fas fa-cogs"></i></div>
                 <h3 class="header-title-main">Procesar Nómina</h3>
             </div>
-            <button type="button" class="btn-close-modal-refined" onclick="closeGenerateModal()">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
 
         <div class="modal-body-custom">
@@ -33,7 +30,7 @@
                             <span class="muted">Borra y genera el rol principal (corte al día 25).</span>
                         </div>
                     </button>
-                    <button id="btn-generate-scope" onclick="submitGenerate('scope')" class="action-card action-card-blue" style="display: none;">
+                    <button id="btn-generate-scope" onclick="submitGenerate('scope')" class="action-card action-card-gray">
                         <i class="fas fa-code-branch fa-2x"></i>
                         <div>
                             <strong>Generar Rol de Alcance</strong>
@@ -45,7 +42,7 @@
         </div>
 
         <div class="modal-footer-fixed">
-            <button type="button" class="btn-cancel" onclick="closeGenerateModal()">Cancelar</button>
+            <button type="button" class="btn-default-outline" onclick="closeGenerateModal()">Cancelar</button>
         </div>
     </div>
 </div>

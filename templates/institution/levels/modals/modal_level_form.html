@@ -8,8 +8,7 @@
                         <i class="fa-solid fa-layer-group me-2"></i>
                         <span v-text="isEditing ? 'Editar Nivel' : 'Nuevo Nivel'"></span>
                     </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;
-                    </button>
+                    <button type="button" class="btn-close-circle" @click="closeModal">&times;</button>
                 </div>
 
                 <div class="modal-body-content modal-body-custom">
@@ -21,7 +20,8 @@
                         <!-- Solo mostramos el nombre -->
                         <div class="form-group mb-3">
                             <label class="form-label">Nombre del Nivel <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" v-model="formName" required maxlength="100" placeholder="Nombre del Nivel">
+                            <input type="text" name="name" class="form-control" v-model="formName" required
+                                   maxlength="100" placeholder="Nombre del Nivel">
                             <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
                         </div>
 
@@ -34,9 +34,9 @@
                 </div>
 
                 <div class="modal-footer-medium modal-footer-spaced">
-                    <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                    <button type="button" class="btn-default-outline" @click="closeModal">Cancelar</button>
                     <button type="submit" class="btn-save shadow-md">
-                        <i class="fa-solid fa-save me-2"></i> Guardar
+                        <i class="btn-default"></i> Guardar
                     </button>
                 </div>
             </form>
