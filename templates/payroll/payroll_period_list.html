@@ -1,10 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Periodos de Nómina | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}?v=1.4">
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -15,25 +14,15 @@
                 <p>Gestión de aperturas y cálculo de roles.</p>
             </div>
             {% if perms.payroll.add_payrollperiod %}
-                <button type="button" class="btn btn-create"
-                        onclick="openPayrollModal('{% url 'payroll:period_create' %}')">
+                <button type="button" class="btn-secondary"
+                        onclick="openAjaxModal('{% url 'payroll:period_create' %}', '.modal-overlay', 'initializePeriodModal')">
                     <i class="fas fa-plus"></i> Nuevo Periodo
                 </button>
             {% endif %}
         </div>
 
         <div class="content-table mt-4">
-            <div class="table-controls"
-                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center;">
-                    <input class="modern-toggle-input" type="checkbox" id="toggleClosedPeriods"
-                           onchange="toggleClosedPeriods(this.checked)">
-                    <label class="modern-toggle-wrapper mb-0" for="toggleClosedPeriods">
-                        <div class="modern-toggle-circle"></div>
-                        <span class="modern-toggle-text">Mostrar Periodos Cerrados</span>
-                    </label>
-                </div>
-
+            <div class="table-controls">
                 <div class="search-box" style="max-width: 350px; width: 100%;">
                     <input id="searchPeriodInput" class="table-search-input" placeholder="Buscar periodo...">
                 </div>
@@ -66,6 +55,4 @@
         };
     </script>
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
-    <script src="{% static 'js/payroll/payroll_period_list.js' %}"></script>
-    <script src="{% static 'js/payroll/modal_generate_payroll.js' %}"></script>
 {% endblock %}

@@ -1,62 +1,51 @@
-/* Hereda estilos globales, aquí solo detalles específicos de nómina */
+/* =====================================================================
+   MÓDULO DE NÓMINA (ESTILOS ESPECÍFICOS)
+   ===================================================================== */
 
-.payroll-value-badge {
+/* --- Badges de Valores --- */
+.payroll-value-badge, .payroll-value-badge-blue,
+.payroll-value-badge-red, .payroll-value-badge-yellow, .payroll-value-badge-gray {
     font-size: 0.9rem;
     font-weight: 600;
     padding: 0.35em 0.8em;
     border-radius: 6px;
+    display: inline-block;
+    border: 1px solid transparent;
+}
+
+.payroll-value-badge {
     background-color: #e8f5e9;
     color: #2e7d32;
-    border: 1px solid #c8e6c9;
-    display: inline-block;
+    border-color: #c8e6c9;
 }
 
 .payroll-value-badge-blue {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.35em 0.8em;
-    border-radius: 6px;
     background-color: #a9dfdf;
     color: #0f34d8;
-    border: 1px solid #a8e3e8;
-    display: inline-block;
+    border-color: #a8e3e8;
 }
 
 .payroll-value-badge-red {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.35em 0.8em;
-    border-radius: 6px;
     background-color: #dfa9ae;
     color: #d80f0f;
-    border: 1px solid #e8a8b7;
-    display: inline-block;
+    border-color: #e8a8b7;
 }
 
 .payroll-value-badge-yellow {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.35em 0.8em;
-    border-radius: 6px;
     background-color: #f37f0a;
     color: #fffffc;
-    border: 1px solid #fad9b9;
-    display: inline-block;
+    border-color: #fad9b9;
 }
 
 .payroll-value-badge-gray {
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-align: center;
-    padding: 0.35em 0.8em;
-    border-radius: 6px;
     background-color: #989696;
     color: #f6f6f6;
-    border: 1px solid #656868;
+    border-color: #656868;
     display: block;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+    text-align: center;
 }
 
 .payroll-code {
@@ -69,324 +58,45 @@
     border: 1px dashed #ef9a9a;
 }
 
-/* Ajustes para la tabla heredada */
+/* --- Ajustes Tabla y Modal de Recálculo --- */
 .content-table {
     background: #fff;
-
-    /* SweetAlert2 - styles específicos para el modal de recalculo */
-
-    .swal2-recalc-popup.swal2-popup {
-        overflow: visible !important;
-    }
-
-    .swal2-recalc-popup .swal2-content {
-        overflow: visible !important;
-        max-height: none !important;
-        padding: 0 0 6px 0 !important;
-    }
-
-    .swal2-recalc-popup .swal2-html-container {
-        overflow: visible !important;
-        max-height: none !important;
-    }
-
-    .swal2-recalc-popup .swal2-html-container, .swal2-recalc-popup .swal2-content {
-        overflow-y: visible !important;
-    }
-
-    /* Hide any confirm/accept button inside the recalculation popup */
-
-    .swal2-recalc-popup .swal2-confirm, .swal2-recalc-popup .swal2-styled.swal2-confirm {
-        display: none !important;
-    }
-
-    /* Ensure cancel is the only visible action and centered */
-
-    .swal2-recalc-popup .swal2-actions {
-        justify-content: center !important;
-    }
-
-    /* Remove scrollbar visual artifacts inside SweetAlert */
-
-    .swal2-recalc-popup .swal2-html-container::-webkit-scrollbar {
-        display: none;
-    }
-
-    .swal2-recalc-popup .swal2-html-container {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-
-    .swal2-recalc-popup .swal2-actions {
-        justify-content: center !important;
-        padding-top: 14px !important;
-    }
-
-    /* Ocultar el botón Aceptar (confirm) en este popup y dejar solo Cancelar */
-
-    .swal2-recalc-popup .swal2-confirm {
-        display: none !important;
-    }
-
-    .swal2-recalc-popup .swal2-cancel {
-        min-width: 120px !important;
-        padding: 10px 18px !important;
-    }
-
-    /* Evitar que aparezca una scrollbar vertical dentro del popup */
-
-    .swal2-recalc-popup .swal2-content::-webkit-scrollbar {
-        display: none;
-    }
-
-    .swal2-recalc-popup .swal2-content {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-
-    /* Spinner tamaño y alineación */
-
-    .swal2-recalc-popup .recalc-spinner {
-        width: 36px;
-        height: 36px;
-        border-width: 4px;
-    }
-
-    @keyframes sw-spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     padding: 20px;
 }
 
-/* --- MODALES PERSONALIZADOS (SIN BOOTSTRAP) --- */
-
-/* Fondo oscuro (Overlay) */
-.custom-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    animation: fadeIn 0.2s ease-out;
+.swal2-recalc-popup.swal2-popup {
+    overflow: visible !important;
 }
 
-/* Caja del Modal */
-.custom-modal {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    width: 100%;
-    max-width: 500px; /* Ancho máximo */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    animation: slideDown 0.3s ease-out;
+.swal2-recalc-popup .swal2-content, .swal2-recalc-popup .swal2-html-container {
+    overflow: visible !important;
+    max-height: none !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-/* Cabecera */
-.custom-modal-header {
-    padding: 15px 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.swal2-recalc-popup .swal2-html-container::-webkit-scrollbar,
+.swal2-recalc-popup .swal2-content::-webkit-scrollbar {
+    display: none;
 }
 
-.custom-modal-header h5 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #333;
-}
-
-.btn-close-modal {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #999;
-    cursor: pointer;
-    line-height: 1;
-}
-
-.btn-close-modal:hover {
-    color: #333;
-}
-
-/* Cuerpo */
-.custom-modal-body {
-    padding: 20px;
-    overflow-y: auto;
-    max-height: 70vh;
-}
-
-/* Pie */
-.custom-modal-footer {
-    padding: 15px 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-/* Botones estándar para el modal */
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.btn-primary {
-    background-color: #0d6efd;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideDown {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* =====================================================================
-   FORMULARIOS DE NÓMINA Y MAPEO PRESUPUESTARIO
-   ===================================================================== */
-
-/* Caja dinámica de mapeo presupuestario */
-.budget-mapping-box {
-    background-color: var(--bg-light, #f1f5f9);
-    border: 1px solid #e2e8f0;
-    border-radius: var(--border-radius, 8px);
-    padding: 1.25rem;
-    transition: all 0.3s ease-in-out;
-}
-
-/* Ocultamiento de la caja usando la utilidad global que ya tienes en style.css */
-.budget-mapping-box.hidden-mapping {
+.swal2-recalc-popup .swal2-confirm {
     display: none !important;
 }
 
-/* Borde azul característico para la tarjeta de mapeo */
-.card-budget-integration {
-    border-left: 4px solid #3b82f6 !important;
-}
-
-/* =====================================================================
-   SWITCH PERSONALIZADO TIPO BOTÓN 
-   ===================================================================== */
-
-/* Ocultamos el checkbox real */
-.toggle-status-red-input {
-    display: none !important;
-}
-
-/* El label actúa como el botón contenedor (Inactivo por defecto) */
-.toggle-status-red-wrapper {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 18px;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    user-select: none;
-}
-
-/* El círculo indicador (Inactivo: Borde gris, fondo vacío) */
-.toggle-status-red-wrapper .toggle-status-red-circle {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    background-color: transparent;
-    transition: all 0.3s ease;
-}
-
-/* Texto del botón (Inactivo: Color oscuro) */
-.toggle-status-red-wrapper .toggle-status-red-text {
-    font-weight: 600;
-    color: #1e293b;
-    font-size: 0.9rem;
-    transition: color 0.3s ease;
-}
-
-/* Scoped toggle styles inside managed tables to avoid collisions with other libraries */
-.managed-table .toggle-status-red-wrapper,
-.managed-table .toggle-status-red-wrapper.toggle-status-red-green,
-.managed-table .toggle-status-red-wrapper.toggle-status-red-yellow {
-    box-sizing: border-box;
-    padding: 6px 10px !important;
-    height: 34px !important;
-    align-items: center;
-    display: inline-flex !important;
-    gap: 8px !important;
-}
-
-.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
-    display: inline-block;
-    line-height: 1 !important;
-    font-size: 0.85rem !important;
-}
-
-.managed-table .toggle-status-red-wrapper .toggle-status-red-circle {
-    width: 14px !important;
-    height: 14px !important;
-}
-
-/* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
-.managed-table .toggle-status-red-wrapper {
-    background-clip: padding-box !important;
-    min-width: 100px !important;
-}
-
-/* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
-.managed-table .toggle-status-red-wrapper {
+.swal2-recalc-popup .swal2-actions {
     justify-content: center !important;
+    padding-top: 14px !important;
 }
 
-.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
-    width: 88px !important; /* fixed width to accommodate longest label */
-    text-align: center !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+.swal2-recalc-popup .swal2-cancel {
+    min-width: 120px !important;
+    padding: 10px 18px !important;
 }
 
-/* Recalculation progress modal styles */
+/* --- Barra de Progreso y Spinner --- */
 .recalc-progress-wrapper {
     width: 100%;
     max-width: 520px;
@@ -420,20 +130,19 @@
     gap: 12px;
     align-items: center;
     font-size: 0.9rem;
-    color: #374151
+    color: #374151;
 }
 
 .recalc-progress-percent {
     font-weight: 700;
-    color: #0f172a
+    color: #0f172a;
 }
 
 .recalc-progress-msg {
     color: #6b7280;
-    font-size: 0.85rem
+    font-size: 0.85rem;
 }
 
-/* Simple modern spinner */
 .recalc-spinner {
     display: inline-block;
     width: 48px;
@@ -445,22 +154,13 @@
     margin: 6px 0;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 .recalc-spinner-wrapper {
     display: flex;
     align-items: center;
-    gap: 14px
+    gap: 14px;
 }
 
-/* Estilos para los cards de acción dentro del modal de procesar nómina */
+/* --- Modal Procesar Nómina --- */
 #modalGeneratePayroll {
     z-index: 2050 !important;
 }
@@ -507,13 +207,12 @@
     border-color: #ef4444;
     color: #b91c1c;
 }
+
 #modalGeneratePayroll .action-card.action-card-gray {
-    border-color: rgb(8, 1, 12);
+    border-color: #08010c;
     color: #100101;
 }
 
-/* Alineación de footer similar al modal de periodo */
-/* Centrar el botón Cancelar y asegurar que sea interactuable */
 #modalGeneratePayroll .modal-footer-fixed {
     padding: 18px 22px;
     display: flex;
@@ -523,478 +222,7 @@
     border-top: 1px solid #eee;
 }
 
-#modalGeneratePayroll .btn-cancel {
-    background: #f8f9fa;
-    border: 1px solid #e6e6e6;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    pointer-events: auto !important;
-}
-
-/* Forzar que el botón de cierre tenga mayor prioridad */
-#modalGeneratePayroll .btn-close-modal-refined {
-    z-index: 3000 !important;
-    pointer-events: auto !important;
-}
-
-
-/* ==========================================================
-   ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
-   ========================================================== */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper {
-    background-color: #f87171; /* Rojo claro moderno */
-    border-color: #f87171;
-    box-shadow: 0 4px 10px rgba(248, 113, 113, 0.3);
-}
-
-/* Círculo (Activo: Se rellena de blanco brillante) */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-circle {
-    border-color: #ffffff;
-    background-color: #ffffff;
-}
-
-/* Texto (Activo: Pasa a color blanco) */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-text {
-    color: #ffffff;
-}
-
-/* Estilo amarillo para toggles de retención en filas */
-.toggle-status-red-wrapper.toggle-status-red-yellow {
-    background-color: #f59e0b !important; /* amarillo anaranjado */
-    border-color: #f59e0b !important;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
-}
-
-.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-circle {
-    border-color: #ffffff !important;
-    background-color: #ffffff !important;
-}
-
-.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-text {
-    color: #ffffff !important;
-}
-
-/* Variante verde para estados activos tipo 'ON' (usada en Fondos de Reserva / Mensualiza) */
-.toggle-status-red-wrapper.toggle-status-red-green {
-    background: linear-gradient(180deg, #10b981, #059669) !important;
-    border-color: #059669 !important;
-    /* Keep box-shadow subtle to avoid perceived size change */
-    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.12) !important;
-}
-
-.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-circle {
-    border-color: #ffffff !important;
-    background-color: #ffffff !important;
-}
-
-.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-text {
-    color: #ffffff !important;
-}
-
-/* Force consistent min-width so label doesn't grow when active */
-.toggle-status-red-wrapper {
-    min-width: 110px;
-}
-
-.toggle-status-red-wrapper .toggle-status-red-circle {
-    flex: 0 0 auto;
-    margin-right: 10px;
-}
-
-/* =====================================================================
-   CONTROLES DE TABLA (GRID LAYOUT)
-   ===================================================================== */
-.table-controls-grid {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    width: 100%;
-    gap: 1rem;
-}
-
-.table-controls-center {
-    display: flex;
-    justify-content: center;
-}
-
-.table-controls-right {
-    margin-left: auto;
-    justify-self: flex-end;
-    width: 100%;
-    max-width: 350px;
-}
-
-/* ===== Estilos de botones y buscador para la lista de períodos ===== */
-.btn-export {
-    border: 1px solid #e6edf3;
-    background: #ffffff;
-    color: #0f172a;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
-}
-
-.btn-export.btn-excel {
-    border-color: #e6f4ea;
-    color: #116530
-}
-
-.btn-export.btn-pdf {
-    border-color: #fdecea;
-    color: #b91c1c
-}
-
-.table-search-input {
-    height: 38px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    padding: 0 10px;
-    vertical-align: middle;
-    width: 260px;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(2, 6, 23, 0.03);
-}
-
-/* Center the toggle visually when placed in the top controls */
-.toggle-status-red-wrapper {
-    margin: 0 auto;
-}
-
-/* Icon circular buttons used in actions column */
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.08);
-    margin-left: 6px;
-}
-
-.btn-icon i {
-    font-size: 14px;
-}
-
-.btn-views-action {
-    background: linear-gradient(180deg, #f59e0b, #f97316);
-
-    /* Forzar visibilidad del botón X en el modal de Procesar Nómina */
-
-    #modalGeneratePayroll .btn-close-modal {
-        display: inline-block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        z-index: 9999 !important;
-    }
-
-    /* Asegurar que el modal esté por debajo del botón y no oculte el control */
-
-    #modalGeneratePayroll {
-        z-index: 9998 !important;
-    }
-}
-
-.btn-success-action {
-    background: linear-gradient(180deg, #10b981, #059669);
-}
-
-.btn-search {
-    background: linear-gradient(180deg, #06b6d4, #0ea5a4);
-}
-
-.btn-primary-action {
-    background: linear-gradient(180deg, #0369a1, #075985);
-}
-
-.actions-wrapper {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-}
-
-/* Small responsive tweaks */
-@media (max-width: 900px) {
-    .table-search-input {
-        width: 160px;
-    }
-
-    .btn-icon {
-        width: 34px;
-        height: 34px
-    }
-}
-
-/* =====================================================================
-   PERÍODO MODAL - CAMPOS OCULTOS
-   ===================================================================== */
-.period-hidden-field {
-    display: none !important;
-}
-
-/* Buscador Moderno SIGETH */
-.search-container-modern {
-    flex: 1; /* Esto hace que el buscador crezca */
-    display: flex;
-    align-items: center;
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 0 15px;
-    height: 50px;
-}
-
-.search-container-modern:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-    transform: translateY(-1px);
-}
-
-.search-container-modern i {
-    color: #94a3b8;
-    margin-right: 12px;
-    font-size: 1.1rem;
-}
-
-/* Agregamos esto para que el input ocupe el espacio */
-.search-input-modern {
-    flex: 1;
-    border: none !important;
-    background: transparent !important;
-    outline: none !important;
-    font-size: 1rem;
-    box-shadow: none !important; /* Quita sombra de style.css */
-}
-
-/* Estilo para el Select de Agrupaciones */
-#groupFilter {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    padding: 0 15px;
-    font-weight: 500;
-    color: #475569;
-    background-color: #fff;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-#groupFilter:hover {
-    border-color: #cbd5e1;
-    background-color: #f8fafc;
-}
-
-/* payroll.css */
-.filters-container-modern {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    border: 1px solid #e8edf4;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
-    margin-bottom: 20px;
-}
-
-.select-container-modern {
-    min-width: 220px;
-}
-
-.input-field-modern {
-    width: 100%;
-    height: 45px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    padding: 0 10px;
-    font-size: 0.9rem;
-}
-
-.buttons-container-modern {
-    display: flex;
-    gap: 10px;
-    flex-shrink: 0;
-}
-
-#btnSearch {
-    height: 48px;
-    padding: 0 25px;
-    border-radius: 10px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* ================== PAGINADOR (copiado de table-manager.css para parity) ================== */
-.pagination-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 5px;
-    margin-top: 15px;
-    border-top: 1px solid #f1f5f9;
-    font-family: sans-serif;
-    color: #64748b;
-    font-size: 0.9em;
-}
-
-.pagination-controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.page-btn {
-    width: 32px;
-    height: 32px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    border-radius: 6px;
-    color: #3b82f6;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.page-btn:hover:not(:disabled) {
-    background: #eff6ff;
-    border-color: #3b82f6;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
-}
-
-.page-btn:disabled {
-    color: #cbd5e1;
-    background: #f8fafc;
-    border-color: #f1f5f9;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.page-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 0 10px 0 6px;
-    height: 32px;
-}
-
-.page-input-wrapper .page-input,
-.page-input-wrapper input[type="number"].page-input {
-    width: 32px;
-    height: 100%;
-    text-align: center;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    font-weight: 600;
-    font-size: 0.9em;
-    color: #334155;
-    padding: 0;
-    border-radius: 0;
-}
-
-.page-input-wrapper .page-input::-webkit-outer-spin-button,
-.page-input-wrapper .page-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.page-input-wrapper .page-input:focus,
-.page-input-wrapper input[type="number"].page-input:focus {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background-color: transparent !important;
-    color: #3b82f6;
-}
-
-.total-pages-badge {
-    font-size: 0.8em;
-    font-weight: 500;
-    color: #94a3b8;
-    white-space: nowrap;
-    padding-left: 6px;
-    border-left: 1px solid #e2e8f0;
-}
-
-/* ========================================================================================= */
-
-/* ======== Estilos para el modal detalle de rol (centralizados desde la plantilla) ======== */
-/* Reglas trasladadas desde templates/payroll/modals/modal_payslip_detail.html */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(2, 6, 23, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1200;
-}
-
-.modal-overlay.hidden {
-    display: none;
-}
-
-.modal-container-medium {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 8px 30px rgba(2, 6, 23, 0.25);
-    width: 100%;
-    max-width: 980px;
-    overflow: hidden;
-}
-
-/* variante usada por el modal de rol para ajustar ancho/padding específicos */
-.modal-container-medium.custom-payslip-modal {
-    max-width: 850px;
-    padding: 0 !important;
-}
-
-.modal-header-refined {
-    background: linear-gradient(90deg, #0f172a 0%, #0b3a57 100%);
-    color: #fff;
-    padding: 18px 22px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.modal-header-refined .header-title-main {
-    font-size: 1.05rem;
-    font-weight: 700;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.btn-close-modal-refined {
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 1.1rem;
-    cursor: pointer;
-}
-
-.modal-body-custom {
-    padding: 2rem;
-    background: #fff;
-}
-
+/* --- Detalle de Rol (Payslip) --- */
 .payslip-summary-banner {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border-radius: 12px;
@@ -1048,7 +276,7 @@
 }
 
 .payslip-net-box .payslip-banner-value {
-    color: #34d399; /* Verde esmeralda brillante */
+    color: #34d399;
     font-size: 1rem;
     font-weight: 800;
 }
@@ -1115,51 +343,20 @@
     color: #1e293b;
 }
 
-/* Estado "sellado" (no editable) */
 .val.sealed {
     display: inline-block;
     padding: 4px 8px;
     border-radius: 6px;
     background: #f8fafc;
     border: 1px solid #e6eef6;
-    transition: box-shadow 0.18s ease, transform 0.12s ease;
     cursor: text;
 }
 
-/* Efecto visual al entrar en modo edición */
-.val-input.editing {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-    border: 1px solid #3b82f6;
-}
-
-/* Pequeña animación de sellado al confirmar */
 .val.seal-animate {
     animation: sealPulse 420ms ease-out;
 }
 
-@keyframes sealPulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 rgba(59, 130, 246, 0);
-    }
-    40% {
-        transform: scale(1.02);
-        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: none;
-    }
-}
-
-/* Input inline para edición */
-.val-input {
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid #e6eef6;
-}
-
-/* Nota que se agrega al imprimir */
+/* --- Impresión --- */
 .print-note {
     margin-top: 18px;
     border: 2px solid #0b3a57;
@@ -1183,135 +380,24 @@
     text-align: center;
 }
 
-.payslip-items-list li.empty-message {
-    justify-content: center;
-    color: #94a3b8;
-    padding: 2rem 0;
-}
-
-.payslip-list-footer {
-    display: flex;
-    justify-content: space-between;
-    padding: 14px 16px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    font-weight: 800;
-    font-size: 1.05rem;
-}
-
-.payslip-list-footer.incomes-total {
-    color: #059669;
-}
-
-.payslip-list-footer.deductions-total {
-    color: #dc2626;
-}
-
-.btn-save {
-    background: linear-gradient(180deg, #075985, #0b5b83);
-    color: #fff;
-    padding: 10px 18px;
+/* --- Caja de Mapeo Presupuestario --- */
+.budget-mapping-box {
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    border: none;
-    cursor: pointer;
+    padding: 1.25rem;
+    transition: all 0.3s ease-in-out;
 }
 
-.btn-cancel {
-    background: #fff;
-    border: 1px solid #e6eef6;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-/* Small tweaks for the print/close button row */
-.modal-footer {
-    display: flex;
-    gap: 12px;
-    padding: 1.25rem 2rem;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-}
-
-/* Fin: estilos modal detalle de rol */
-/* =====================================================================
-   SWITCH "Mostrar Periodos Cerrados" - modern-toggle
-   ===================================================================== */
-
-/* Ocultamos el checkbox real */
-.modern-toggle-input {
+.budget-mapping-box.hidden-mapping {
     display: none !important;
 }
 
-/* Label contenedor del switch (estado OFF por defecto) */
-.modern-toggle-wrapper {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 16px;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    user-select: none;
+.card-budget-integration {
+    border-left: 4px solid #3b82f6 !important;
 }
 
-.modern-toggle-wrapper:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-/* Círculo indicador (OFF: borde gris, vacío) */
-.modern-toggle-wrapper .modern-toggle-circle {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    background-color: transparent;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-}
-
-/* Texto del switch */
-.modern-toggle-wrapper .modern-toggle-text {
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.875rem;
-    transition: color 0.3s ease;
-    white-space: nowrap;
-}
-
-/* Estado ON (checkbox marcado) */
-.modern-toggle-input:checked + .modern-toggle-wrapper {
-    background-color: #f0fdf4;
-    border-color: #86efac;
-    box-shadow: 0 1px 4px rgba(5, 150, 105, 0.12);
-}
-
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
-    background-color: #059669;
-    border-color: #059669;
-}
-
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
-    color: #065f46;
-}
-
-/* =====================================================================
-   MÓDULO DE RUBROS (MAPEO CONTABLE)
-   ===================================================================== */
-/* Controles de la tabla */
-.rubric-table-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: center;
-    width: 100%;
-    gap: 1rem;
-}
-
-/* Modal de Rubros */
+/* --- Módulo de Rubros --- */
 .rubric-modal-container {
     background: white;
     width: 85%;
@@ -1340,7 +426,6 @@
     padding-bottom: 5px;
 }
 
-/* Columnas de la Matriz Contable */
 .rubric-matrix-col {
     padding: 0 15px;
 }
@@ -1377,4 +462,114 @@
     border-top: 1px dashed #cbd5e1;
     margin-top: 1rem;
     padding-top: 1rem;
+}
+
+
+/* =====================================================================
+   FIXES VISUALES: SWITCH, MODALES Y CAMPOS OCULTOS
+   ===================================================================== */
+
+/* --- 1. Switch Moderno (Forzamos a ocultar el checkbox nativo) --- */
+input[type="checkbox"].modern-toggle-input {
+    display: none !important;
+}
+
+.modern-toggle-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    user-select: none;
+    margin: 0;
+}
+
+.modern-toggle-wrapper .modern-toggle-circle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background-color: transparent;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.modern-toggle-wrapper .modern-toggle-text {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.modern-toggle-input:checked + .modern-toggle-wrapper {
+    background-color: #f0fdf4;
+    border-color: #86efac;
+}
+
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
+    color: #065f46;
+}
+
+/* --- 2. Ocultar campos automáticos en el modal de periodo --- */
+.period-hidden-field,
+#div_id_start_date,
+#div_id_end_date,
+#div_id_working_days {
+    display: none !important;
+}
+
+/* --- 3. Cabecera Elegante para Modales --- */
+.modal-header-refined {
+    background: linear-gradient(90deg, #0f172a 0%, #0b3a57 100%);
+    color: #fff;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.modal-header-refined h2,
+.modal-header-refined h5,
+.modal-header-refined .header-title-main {
+    margin: 0;
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* --- 4. Botón Cerrar Modal (Rojo, Pequeño y con Giro 90°) --- */
+.btn-close-modal-refined {
+    background: linear-gradient(135deg, #ff3e6c 0%, #be123c 100%);
+    color: white !important;
+    border: none;
+    border-radius: 50%;
+    width: 28px !important;
+    height: 28px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem !important; /* Icono pequeño */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 0;
+}
+
+.btn-close-modal-refined:hover {
+    transform: rotate(90deg); /* El botón entero da un cuarto de vuelta */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }

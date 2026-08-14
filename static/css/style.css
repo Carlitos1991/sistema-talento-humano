@@ -1089,37 +1089,12 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 400;
 }
 
-.header-card button {
-    font-family: 'Inter', 'Roboto', sans-serif;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: white;
-    padding: 0.65rem 1.3rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    border-radius: 10px;
-    cursor: pointer;
-    text-decoration: none;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-    transition: var(--table-btn-transition, transform 0.2s ease, box-shadow 0.2s ease);
-    border: none;
-    white-space: nowrap;
-}
-
-/* Estado Hover (Al pasar el mouse) */
-.header-card button:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
-}
-
-.header-card button:active {
-    transform: translateY(0);
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+.header-card > div,
+.header-card > a,
+.header-card > button,
+.header-card .btn-secondary {
+    position: relative;
+    z-index: 2;
 }
 
 /* Sección de títulos */
@@ -1653,208 +1628,119 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     accent-color: #ef4444;
 }
 
-/* Toggle iOS */
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-}
+/* =====================================================================
+   SWITCHES UNIVERSALES (Interruptores)
+   ===================================================================== */
 
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #cbd5e1;
-    transition: .3s;
-    border-radius: 34px;
-}
-
-.toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .3s;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-input:checked + .toggle-slider {
-    background-color: #10b981;
-}
-
-input:checked + .toggle-slider:before {
-    transform: translateX(20px);
-}
-
-/* Ajustes para switches dentro de modales y contenedores responsivos */
-.toggle-switch {
-    min-width: 44px;
-    flex-shrink: 0;
-}
-
-.toggle-slider {
-    overflow: visible;
-}
-
-.toggle-slider:before {
-    /* Usar un desplazamiento relativo para evitar desbordes si se cambia el tamaño */
-    transform: translateX(calc(100% - 21px));
-}
-
-/* Ocultamos el checkbox real */
-.toggle-status-red-input {
+/* 1. Ocultar el checkbox nativo */
+input[type="checkbox"].switch-input {
     display: none !important;
 }
 
-/* El label actúa como el botón contenedor (Inactivo por defecto) */
-.toggle-status-red-wrapper {
+/* 2. Diseño base del contenedor (Estado Inactivo/Apagado) */
+.switch-wrapper {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 18px;
+    gap: 10px;
+    padding: 6px 16px;
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 50px; /* Diseño tipo píldora */
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     user-select: none;
+    margin: 0;
 }
 
-/* El círculo indicador (Inactivo: Borde gris, fondo vacío) */
-.toggle-status-red-wrapper .toggle-status-red-circle {
-    width: 20px;
-    height: 20px;
+.switch-wrapper:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 3. El circulito indicador (Apagado = gris y vacío) */
+.switch-wrapper .switch-circle {
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 2px solid #cbd5e1;
     background-color: transparent;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
-/* Texto del botón (Inactivo: Color oscuro) */
-.toggle-status-red-wrapper .toggle-status-red-text {
+/* 4. Texto del switch */
+.switch-wrapper .switch-text {
     font-weight: 600;
-    color: #1e293b;
-    font-size: 0.9rem;
+    color: #475569;
+    font-size: 0.85rem;
     transition: color 0.3s ease;
+    white-space: nowrap;
 }
 
-.managed-table .toggle-status-red-wrapper,
-.managed-table .toggle-status-red-wrapper.toggle-status-red-green,
-.managed-table .toggle-status-red-wrapper.toggle-status-red-yellow {
-    box-sizing: border-box;
-    padding: 6px 10px !important;
-    height: 34px !important;
-    align-items: center;
-    display: inline-flex !important;
-    gap: 8px !important;
+
+/* ==========================================
+   VARIANTES DE COLOR (Estado Activo/Encendido)
+   ========================================== */
+
+/* --- SUCCESS (Verde) --- */
+.switch-input.switch-success:checked + .switch-wrapper {
+    background-color: #f0fdf4;
+    border-color: #86efac;
 }
 
-.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
-    display: inline-block;
-    line-height: 1 !important;
-    font-size: 0.85rem !important;
+.switch-input.switch-success:checked + .switch-wrapper .switch-circle {
+    background-color: #10b981;
+    border-color: #10b981;
 }
 
-.managed-table .toggle-status-red-wrapper .toggle-status-red-circle {
-    width: 14px !important;
-    height: 14px !important;
+.switch-input.switch-success:checked + .switch-wrapper .switch-text {
+    color: #065f46;
 }
 
-/* Ensure the label behaves like a fixed-size button and doesn't inherit other .btn styles */
-.managed-table .toggle-status-red-wrapper {
-    background-clip: padding-box !important;
-    min-width: 100px !important;
+/* --- DANGER (Rojo) --- */
+.switch-input.switch-danger:checked + .switch-wrapper {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
 }
 
-/* Fix toggle width so 'Mensualiza' and 'Acumula' occupy same space */
-.managed-table .toggle-status-red-wrapper {
-    justify-content: center !important;
+.switch-input.switch-danger:checked + .switch-wrapper .switch-circle {
+    background-color: #ef4444;
+    border-color: #ef4444;
 }
 
-.managed-table .toggle-status-red-wrapper .toggle-status-red-text {
-    width: 88px !important; /* fixed width to accommodate longest label */
-    text-align: center !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+.switch-input.switch-danger:checked + .switch-wrapper .switch-text {
+    color: #991b1b;
 }
 
-/* ==========================================================
-   ESTADO: SELECCIONADO (Activo) - COLOR ROJO CLARO
-   ========================================================== */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper {
-    background-color: #f87171; /* Rojo claro moderno */
-    border-color: #f87171;
-    box-shadow: 0 4px 10px rgba(248, 113, 113, 0.3);
+/* --- PRIMARY (Azul) --- */
+.switch-input.switch-primary:checked + .switch-wrapper {
+    background-color: #eff6ff;
+    border-color: #93c5fd;
 }
 
-/* Círculo (Activo: Se rellena de blanco brillante) */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-circle {
-    border-color: #ffffff;
-    background-color: #ffffff;
+.switch-input.switch-primary:checked + .switch-wrapper .switch-circle {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
 }
 
-/* Texto (Activo: Pasa a color blanco) */
-.toggle-status-red-input:checked + .toggle-status-red-wrapper .toggle-status-red-text {
-    color: #ffffff;
+.switch-input.switch-primary:checked + .switch-wrapper .switch-text {
+    color: #1e40af;
 }
 
-/* Estilo amarillo para toggles de retención en filas */
-.toggle-status-red-wrapper.toggle-status-red-yellow {
-    background-color: #f59e0b !important; /* amarillo anaranjado */
-    border-color: #f59e0b !important;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
+/* --- WARNING (Amarillo/Naranja) --- */
+.switch-input.switch-warning:checked + .switch-wrapper {
+    background-color: #fffbeb;
+    border-color: #fde047;
 }
 
-.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-circle {
-    border-color: #ffffff !important;
-    background-color: #ffffff !important;
+.switch-input.switch-warning:checked + .switch-wrapper .switch-circle {
+    background-color: #f59e0b;
+    border-color: #f59e0b;
 }
 
-.toggle-status-red-wrapper.toggle-status-red-yellow .toggle-status-red-text {
-    color: #ffffff !important;
-}
-
-/* Variante verde para estados activos tipo 'ON' (usada en Fondos de Reserva / Mensualiza) */
-.toggle-status-red-wrapper.toggle-status-red-green {
-    background: linear-gradient(180deg, #10b981, #059669) !important;
-    border-color: #059669 !important;
-    /* Keep box-shadow subtle to avoid perceived size change */
-    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.12) !important;
-}
-
-.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-circle {
-    border-color: #ffffff !important;
-    background-color: #ffffff !important;
-}
-
-.toggle-status-red-wrapper.toggle-status-red-green .toggle-status-red-text {
-    color: #ffffff !important;
-}
-
-/* Force consistent min-width so label doesn't grow when active */
-.toggle-status-red-wrapper {
-    min-width: 110px;
-}
-
-.toggle-status-red-wrapper .toggle-status-red-circle {
-    flex: 0 0 auto;
-    margin-right: 10px;
+.switch-input.switch-warning:checked + .switch-wrapper .switch-text {
+    color: #92400e;
 }
 
 /* Photo uploader */
@@ -2171,6 +2057,10 @@ input:checked + .toggle-slider:before {
     width: 100% !important;
 }
 
+.hidden-field {
+    display: none;
+}
+
 /* =====================================================================
    09. BOTONES
    ===================================================================== */
@@ -2201,9 +2091,9 @@ input:checked + .toggle-slider:before {
 .btn-primary i, .btn-default i, .btn-secondary i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
 .btn-primary-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
 .btn-info-outline i, .btn-warning-outline i, .btn-danger-outline i, .btn-close-circle i {
-    text-decoration: none !important;
+    text-decoration: none;
     font-size: 1.15em;
-    transition: transform 0.3s ease; /* Transición suave para cuando los iconos giran */
+    transition: transform 0.3s ease;
 }
 
 /* Hover general (todos suben -2px excepto los de cerrar) */
@@ -2427,6 +2317,9 @@ input:checked + .toggle-slider:before {
 /* Botón Circular Close */
 .btn-close-circle {
     background: linear-gradient(135deg, #ff3e6c 0%, #be123c 100%);
+    width: 32px;
+    height: 32px;
+    font-size: 1rem; /* Tamaño Icono */
 }
 
 .btn-close-circle:hover {

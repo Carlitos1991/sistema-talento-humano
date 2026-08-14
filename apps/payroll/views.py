@@ -5,8 +5,6 @@ import json
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
-from accounting.models import Account
-
 try:
     from num2words import num2words
 except ImportError:
@@ -26,14 +24,14 @@ from django.http import Http404
 from django.core import signing
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
-from django.template.loader import render_to_string, get_template
-from django.urls import reverse_lazy, reverse
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.html import strip_tags
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
 from xhtml2pdf import pisa
 
 from accounting.models import JournalItem
-from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetGroup
+from budget.models import BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
 from core.models import CatalogItem
 from employee.models import Employee
@@ -65,7 +63,7 @@ class PayrollListView(ListView):
     model = Payslip
     template_name = 'payroll/payroll_list.html'
     context_object_name = 'payslips'
-    paginate_by = 50  # Paginación esencial para velocidad de carga (rendering)
+    paginate_by = 50
 
     def get_queryset(self):
         period_id = self.request.GET.get('period_id')
@@ -96,9 +94,7 @@ class PeriodListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = PayrollPeriodForm()  # Formulario vacío para el modal
-
-        # Check for budget changes after the 25th for each period
+        context['form'] = PayrollPeriodForm()
         for period in context['periods']:
             try:
                 cutoff_date = date(int(period.year), period.month_number, 25)
@@ -127,16 +123,13 @@ class PeriodListView(ListView):
         )
         qs = qs.annotate(month_num=month_case, year_int=Cast('year', IntegerField()))
 
-        show_closed = self.request.GET.get('show_closed')
-        ordered = qs.order_by('-year_int', '-month_num')
-        if show_closed and str(show_closed).lower() in ['true', '1', 'on']:
-            return ordered
-        return ordered.filter(is_closed=False)
+        # Siempre retornamos todos los periodos ordenados
+        return qs.order_by('-year_int', '-month_num')
 
     def get(self, request, *args, **kwargs):
         # Si es petición AJAX devolvemos el partial completo (HTML) empaquetado en JSON
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # configurar object_list y contexto para que la paginación de ListView funcione
+            # configurar object_list y contexto para la paginación de ListView
             self.object_list = self.get_queryset()
             context = self.get_context_data()
 
@@ -161,7 +154,7 @@ class PeriodListView(ListView):
                     })
                 return JsonResponse({'periods': data})
 
-            # Renderizamos el partial completo con contexto (incluye paginador)
+            # Renderizamos el partial completo con contexto
             html = render_to_string('payroll/partials/partial_period_table.html', context, request=request)
             return JsonResponse({'html': html})
         return super().get(request, *args, **kwargs)

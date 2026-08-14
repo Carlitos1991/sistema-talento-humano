@@ -6,14 +6,14 @@
                 <div class="header-icon-circle"><i class="fas fa-calendar-alt"></i></div>
                 <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Periodo</h3>
             </div>
-            <button type="button" class="btn-close-circle" onclick="closePayrollModal()">
+            <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
         <form method="post" id="periodForm" action="
                 {% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}"
-              onsubmit="submitPayrollForm(event)">
+              onsubmit="submitAjaxForm(event, () => reloadTableData(window.location.href, '#period-table-container'))">
             {% csrf_token %}
             <div class="modal-body-custom">
                 <div class="form-section-card">
@@ -32,17 +32,16 @@
                             {% endif %}
                         </div>
 
-                        <!-- Campos ocultos que se llenan automáticamente -->
-                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                        <div class="col-md-6 form-group mt-3 hidden-field">
                             <label class="form-label">Fecha Inicio <small class="text-muted">(Auto)</small></label>
                             {{ form.start_date }}
                         </div>
-                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                        <div class="col-md-6 form-group mt-3 hidden-field">
                             <label class="form-label">Fecha Fin <small class="text-muted">(Auto)</small></label>
                             {{ form.end_date }}
                         </div>
 
-                        <div class="col-md-6 form-group mt-3 period-hidden-field">
+                        <div class="col-md-6 form-group mt-3 hidden-field">
                             <label class="form-label">Días Laborables <small class="text-muted">(Auto)</small></label>
                             {{ form.working_days }}
                         </div>
@@ -58,7 +57,7 @@
             </div>
 
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-default-outline" onclick="closePayrollModal()">Cancelar</button>
+                <button type="button" class="btn-default-outline" onclick="closeAjaxModal()">Cancelar</button>
                 <button type="submit" class="btn-default"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </form>

@@ -16,7 +16,7 @@
             <tr>
                 <td class="cursor-pointer td-clickable"
                     data-sort="{{ p.year }}{{ p.month_number|stringformat:"02d" }}"
-                    onclick="openPayrollModal('{% url 'payroll:period_edit' pk=p.id %}')">
+                    onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', '.modal-overlay', 'initializePeriodModal')">
                     {{ p.month }} {{ p.year }}
                 </td>
                 <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
