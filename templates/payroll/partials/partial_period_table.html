@@ -1,5 +1,5 @@
 <div class="table-container">
-    <table class="table managed-table exportable-table table-hover" data-page-size="12"
+    <table class="table managed-table exportable-table table-hover" data-page-size="10"
            data-title="Reporte de Periodos">
         <thead>
         <tr>
@@ -14,10 +14,15 @@
         <tbody>
         {% for p in periods %}
             <tr>
-                <td class="cursor-pointer td-clickable"
+                <td class="{% if not p.is_closed %}cursor-pointer td-clickable{% else %}fw-bold text-muted{% endif %}"
                     data-sort="{{ p.year }}{{ p.month_number|stringformat:"02d" }}"
-                    onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', '.modal-overlay', 'initializePeriodModal')">
+                    {% if not p.is_closed %}onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', '.modal-overlay', 'initializePeriodModal')"{% endif %}>
+
                     {{ p.month }} {{ p.year }}
+                    {% if p.is_closed %}
+                        <i class="fas fa-lock ms-2" title="Periodo cerrado"
+                           style="font-size: 0.8em; color: #94a3b8;"></i>
+                    {% endif %}
                 </td>
                 <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
                 <td class="text-center">{{ p.working_days }}</td>

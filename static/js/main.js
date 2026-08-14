@@ -107,23 +107,22 @@ window.initSharedFormInteractions = function (container) {
 window.reloadTableData = function (url, containerSelector) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(async response => {
-            const contentType = response.headers.get('content-type');
-            // Si Django responde con JSON (como en el listado de periodos)
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                return data.html;
+            const text = await response.text();
+            try {
+                // Forzamos a leer como JSON primero
+                const data = JSON.parse(text);
+                return data.html ? data.html : text;
+            } catch (e) {
+                // Si falla, es porque es HTML puro
+                return text;
             }
-            // Si Django responde con HTML directo
-            return await response.text();
         })
         .then(html => {
             const container = document.querySelector(containerSelector);
-            if (!container) return location.reload(); // Fallback de seguridad
+            if (!container) return location.reload();
 
-            // Reemplaza el contenedor correcto completo
             container.innerHTML = html;
 
-            // Reinicia la interactividad de la tabla
             const table = container.querySelector('.managed-table');
             if (table) {
                 if (table._tableManager) {
@@ -135,5 +134,8 @@ window.reloadTableData = function (url, containerSelector) {
                 }
             }
         })
-        .catch(() => location.reload());
+        .catch(error => {
+            console.error("Error recargando tabla:", error);
+            location.reload();
+        });
 };

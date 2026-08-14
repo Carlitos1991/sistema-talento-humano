@@ -1,20 +1,27 @@
 <div id="modalGeneratePayroll" class="modal-overlay" style="display: none !important;">
-    <div class="modal-container-medium">
+    <div class="modal-container-medium" style="max-width: 550px;">
 
+        <!-- Cabecera Estandarizada con botón cerrar -->
         <div class="modal-header-refined">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-cogs"></i></div>
                 <h3 class="header-title-main">Procesar Nómina</h3>
             </div>
+            <button type="button" class="btn-close-circle" onclick="window.closeGenerateModal()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
+        <!-- Cuerpo del Modal -->
         <div class="modal-body-custom">
             <div id="generate-loading" style="display: none; text-align: center; padding: 40px;">
-                <i class="fas fa-spinner fa-spin fa-3x" style="color: #ffffff;"></i>
-                <p style="margin-top: 15px; font-weight: bold; color: #e2e8f0;">Procesando, espere...</p>
+                <i class="fas fa-spinner fa-spin fa-3x" style="color: #3b82f6;"></i>
+                <p style="margin-top: 15px; font-weight: bold; color: #475569;">Procesando, espere...</p>
             </div>
+
             <div id="generate-options">
-                <p style="margin-bottom: 20px; color: #64748b;">Periodo: <strong id="gen-period-name"></strong></p>
+                <p style="margin-bottom: 20px; color: #64748b;">Periodo: <strong id="gen-period-name"
+                                                                                 style="color: #0f172a;"></strong></p>
                 <div style="display: grid; gap: 15px;">
                     <button onclick="submitGenerate('missing')" class="action-card action-card-green">
                         <i class="fas fa-user-plus fa-2x"></i>
@@ -30,7 +37,8 @@
                             <span class="muted">Borra y genera el rol principal (corte al día 25).</span>
                         </div>
                     </button>
-                    <button id="btn-generate-scope" onclick="submitGenerate('scope')" class="action-card action-card-gray">
+                    <button id="btn-generate-scope" onclick="submitGenerate('scope')"
+                            class="action-card action-card-gray">
                         <i class="fas fa-code-branch fa-2x"></i>
                         <div>
                             <strong>Generar Rol de Alcance</strong>
@@ -41,8 +49,9 @@
             </div>
         </div>
 
+        <!-- Pie del Modal -->
         <div class="modal-footer-fixed">
-            <button type="button" class="btn-default-outline" onclick="closeGenerateModal()">Cancelar</button>
+            <button type="button" class="btn-default-outline" onclick="window.closeGenerateModal()">Cancelar</button>
         </div>
     </div>
 </div>

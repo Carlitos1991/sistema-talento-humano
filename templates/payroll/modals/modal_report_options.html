@@ -1,40 +1,36 @@
-<div id="modalReportOptions" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal" style="max-width: 500px;">
-        <div class="custom-modal-header">
-            <h5><i class="fas fa-print me-2"></i> Reportes: <span id="rep-period-name"></span></h5>
-            <button type="button" class="btn-close-modal" onclick="closeReportModal()">&times;</button>
-        </div>
-        <div class="custom-modal-body">
-            <div class="list-group mb-4">
-                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2" style="cursor: pointer;">
-                    <input type="radio" name="reportFiltro" value="NORMAL" checked>
-                    <span><strong>Nómina Mensual</strong><br><small class="text-muted">Excluye retenidos.</small></span>
-                </label>
-                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2" style="cursor: pointer;">
-                    <input type="radio" name="reportFiltro" value="REZAGADOS">
-                    <span><strong>Alcance / Rezagados</strong><br><small
-                            class="text-warning">Solo pendientes de cobro.</small></span>
-                </label>
-            </div>
-            <div id="sellar-container" style="display: none;">
-                <button onclick="sellarComoPagados()" class="btn btn-outline-success w-100 py-2 fw-bold"
-                        style="border: 2px solid #198754; color: #198754; background: transparent;">
-                    <i class="fas fa-check-double"></i> Sellar como PAGADOS
-                </button>
-            </div>
-        </div>
-        <div class="custom-modal-footer" style="justify-content: space-between;">
-            <button type="button" class="btn-secondary" onclick="closeReportModal()">Cancelar</button>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="downloadReport('banco')" class="btn btn-success"
-                        style="background-color:#10b981; color:white; border:none;">Banco
-                </button>
-                <button onclick="downloadReport('nomina')" class="btn btn-primary"
-                        style="background-color:#0f172a; color:white; border:none;">Nómina
-                </button>
+<div id="modalReportOptions" class="modal-overlay" style="display: none !important;">
+    <div class="modal-container" style="max-width: 550px;">
 
-                <button onclick="downloadReport('negativos')" class="btn btn-warning"
-                        style="background-color:#f59e0b; color:white; border:none;">Saldos Neg.
+        <!-- Nueva Cabecera Estandarizada -->
+        <div class="modal-header-refined">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fas fa-print"></i></div>
+                <h3 class="header-title-main">Reportes: <span id="rep-period-name"></span></h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="window.closeReportModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div class="modal-body-custom">
+            <div class="list-group mb-4">
+                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2 cursor-pointer"
+                       style="background: white;">
+                    <input type="radio" name="reportFiltro" value="NORMAL" checked class="custom-radio">
+                    <span><strong style="color: #1e293b;">Nómina Mensual</strong><br><small class="text-muted">Excluye retenidos.</small></span>
+                </label>
+                <label class="list-group-item d-flex gap-3 p-3 border rounded mb-2 cursor-pointer"
+                       style="background: white;">
+                    <input type="radio" name="reportFiltro" value="REZAGADOS" class="custom-radio">
+                    <span><strong style="color: #1e293b;">Alcance / Rezagados</strong><br><small class="text-warning">Solo pendientes de cobro.</small></span>
+                </label>
+            </div>
+
+            <div id="sellar-container" style="display: none;">
+                <button onclick="sellarComoPagados()" class="btn-success-outline w-100 mt-2"
+                        style="justify-content: center;">
+                    <i class="fas fa-check-double"></i> Sellar como PAGADOS
                 </button>
             </div>
         </div>
