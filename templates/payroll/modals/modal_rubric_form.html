@@ -1,21 +1,26 @@
-<div class="modal-overlay" id="rubricModalOverlay" role="dialog"
-     style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050;">
-    <div class="modal-container-medium animate-scale-in" style="max-width: 950px; width: 95%;">
+<div class="modal-overlay" id="rubricModalOverlay">
+    <div class="modal-container-medium" style="max-width: 950px; width: 95%;">
 
-        <form method="post" id="rubricForm" action="{{ request.path }}" onsubmit="submitRubricForm(event)">
+        <!-- Actualizamos el action para recargar la tabla al guardar -->
+        <form method="post" id="rubricForm" action="{{ request.path }}"
+              onsubmit="submitAjaxForm(event, () => reloadTableData(window.location.href, '#table-content-wrapper'))">
             {% csrf_token %}
 
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-sliders-h me-2"></i>
-                    {% if form.instance.pk %}Editar Rubro Contable{% else %}Nuevo Rubro Contable{% endif %}
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeRubricModal()">&times;
+            <div class="modal-header-refined">
+                <div class="header-content-group">
+                    <div class="header-icon-circle"><i class="fa-solid fa-sliders-h"></i></div>
+                    <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Rubro
+                        Contable</h3>
+                </div>
+                <!-- Función de cierre estandarizada -->
+                <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <div class="modal-body-content modal-body-custom" style="max-height: 75vh; overflow-y: auto;">
+            <div class="modal-body-custom" style="max-height: 75vh;">
 
+                <!-- Manejo de errores nativo de Django por si falla el front -->
                 {% if form.errors %}
                     <div class="alert alert-danger mb-3"
                          style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; padding: 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;">
@@ -30,6 +35,7 @@
                     </div>
                 {% endif %}
 
+                <!-- SECCIÓN 1: Información General -->
                 <div class="form-section-card mb-3">
                     <h4 style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
                         <i class="fa-solid fa-info-circle me-1"></i> Información General
@@ -66,33 +72,35 @@
                             <label class="form-label">Prioridad Cobro</label>
                             {{ form.priority }}
                         </div>
+
+                        <!-- Uso de Switch Universal en lugar de label personalizada -->
                         <div id="divPlusIESS" class="form-group" style="margin-top: 32px;">
-                            {{ form.is_taxable }}
-                            <label class="toggle-status-red-wrapper" for="id_is_taxable">
-                                <div class="toggle-status-red-circle"></div>
-                                <span class="toggle-status-red-text">¿Suma para IESS / Fondos?</span>
-                            </label>Factor Multiplicador de Horas
+                            {{ form.is_taxable }} <!-- El forms.py debe agregarle class="switch-input switch-danger" -->
+                            <label class="switch-wrapper" for="{{ form.is_taxable.id_for_label }}">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">¿Suma para IESS / Fondos?</span>
+                            </label>
                         </div>
                         <div class="form-group" id="divMultiplier" style="margin-top: 32px;">
                             {{ form.is_overtime }}
-                            <label class="toggle-status-red-wrapper" for="id_is_overtime">
-                                <div class="toggle-status-red-circle"></div>
-                                <span class="toggle-status-red-text">Factor de Horas Extra</span>
+                            <!-- El forms.py debe agregarle class="switch-input switch-danger" -->
+                            <label class="switch-wrapper" for="{{ form.is_overtime.id_for_label }}">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">Factor de Horas Extra</span>
                             </label>
-
                         </div>
                     </div>
 
                     <div class="form-group mt-3" style="display: flex; align-items: center; gap: 10px;">
                         {{ form.is_salary }}
-                        <label class="toggle-status-red-wrapper" for="id_is_salary" style="margin:0;">
-                            <div class="toggle-status-red-circle"></div>
-                            <span class="toggle-status-red-text"
-                                  style="font-size: 0.9rem; font-weight: 500; color: #475569;">¿Este rubro representa el Sueldo / Remuneración Base Mensual?</span>
+                        <label class="switch-wrapper" for="{{ form.is_salary.id_for_label }}" style="margin:0;">
+                            <div class="switch-circle"></div>
+                            <span class="switch-text">¿Este rubro representa el Sueldo Base Mensual?</span>
                         </label>
                     </div>
                 </div>
 
+                <!-- SECCIÓN 2: Matriz Contable -->
                 <div class="form-section-card mb-3">
                     <h4 style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
                         <i class="fa-solid fa-table me-1"></i> Matriz de Enrutamiento Contable
@@ -142,44 +150,43 @@
                     <div class="form-group mt-4 pt-3"
                          style="border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 5px;">
                         <label class="form-label" style="font-weight: bold;"><i class="fa-solid fa-university"></i>
-                            Cuenta de Contrapartida / Devengado (Banco o Ingreso)</label>
+                            Cuenta de Contrapartida / Devengado</label>
                         {{ form.income_account }}
-                        <small style="color: #64748b; font-size: 0.8rem; margin-top: 2px;">
-                            Asigne la cuenta de Banco Central para la Remuneración Base, o la cuenta de Ingresos espejo
-                            para el Devengado automático de Descuentos.
-                        </small>
                     </div>
                 </div>
 
+                <!-- SECCIÓN 3: Presupuesto y Estado -->
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
 
                     <div class="form-section-card mb-0">
                         <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 {{ form.has_mapping }}
-                                <label class="toggle-status-red-wrapper" for="id_has_mapping" style="margin:0;">
-                                    <div class="toggle-status-red-circle"></div>
-                                    <span class="toggle-status-red-text"
+                                <!-- El forms.py debe agregarle class="switch-input switch-primary" -->
+                                <label class="switch-wrapper" for="{{ form.has_mapping.id_for_label }}"
+                                       style="margin:0;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text"
                                           style="font-weight: 700; color: var(--primary-color); font-size: 1rem;"><i
-                                            class="fa-solid fa-coins"></i> ¿Afecta al Presupuesto Institucional?</span>
+                                            class="fa-solid fa-coins"></i> ¿Afecta al Presupuesto?</span>
                                 </label>
                             </div>
-                            <small style="color: #64748b; font-size: 0.8rem; margin-top: 8px; margin-left: 5px;">Marque
-                                esta casilla si este rubro debe generar una afectación presupuestaria.</small>
                         </div>
 
                         <div id="budgetMappingFields"
-                             style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                             style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: none;">
                             <div class="form-group">
-                                <label class="form-label">Sufijo Presupuestario (Ej: 5.1.06.01)</label>
+                                <label class="form-label">Sufijo Presupuestario</label>
                                 {{ form.dynamic_suffix }}
                             </div>
                             <div class="form-group">
                                 <label class="form-label">¿Partida Fija?</label>
                                 <div style="display: flex; align-items: center; margin-top: 8px; gap: 10px;">
                                     {{ form.is_fixed }}
-                                    <label class="toggle-status-red-wrapper" for="id_is_fixed" style="margin:0;">
-                                        <div class="toggle-status-red-circle"></div>
+                                    <!-- El forms.py debe agregarle class="switch-input switch-danger" -->
+                                    <label class="switch-wrapper" for="{{ form.is_fixed.id_for_label }}"
+                                           style="margin:0;">
+                                        <div class="switch-circle"></div>
                                     </label>
                                 </div>
                             </div>
@@ -190,11 +197,11 @@
                          style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px;">
                         <h4 style="font-size: 1rem; font-weight: 700; margin: 0;">Estado del Rubro</h4>
                         <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                            {{ form.is_active }}
-                            <label class="toggle-status-red-wrapper" for="id_is_active"
+                            {{ form.is_active }} <!-- El forms.py debe agregarle class="switch-input switch-success" -->
+                            <label class="switch-wrapper" for="{{ form.is_active.id_for_label }}"
                                    style="margin:0; transform: scale(1.1);">
-                                <div class="toggle-status-red-circle"></div>
-                                <span class="toggle-status-red-text">Activo</span>
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">Activo</span>
                             </label>
                         </div>
                     </div>
@@ -203,11 +210,10 @@
 
             </div>
 
-            <div class="modal-header-medium modal-footer-fixed"
-                 style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 15px 24px; display: flex; justify-content: flex-end; gap: 12px;">
-                <button type="button" class="btn-cancel" onclick="closeRubricModal()">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md"><i class="fa-solid fa-save me-2"></i> Guardar Rubro
-                </button>
+            <!-- Botones de guardar y cancelar -->
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-default-outline" onclick="closeAjaxModal()">Cancelar</button>
+                <button type="submit" class="btn-default"><i class="fa-solid fa-save"></i> Guardar Rubro</button>
             </div>
 
         </form>

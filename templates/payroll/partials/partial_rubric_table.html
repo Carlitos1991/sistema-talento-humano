@@ -1,5 +1,6 @@
 <div class="table-container">
-    <table class="managed-table exportable-table" id="rubricsTable">
+    <table class="table managed-table exportable-table table-hover" data-page-size="10"
+           data-title="Reporte de Rubros">
         <thead>
         <tr>
             <th>Tipo</th>
@@ -30,11 +31,13 @@
                 <td>
                     <div style="font-size: 0.85rem; line-height: 1.4;">
                         {% if r.debit_account %}
-                            <div><span style="color: #16a34a; font-weight: bold;">Debe:</span> {{ r.debit_account.code }}
+                            <div><span
+                                    style="color: #16a34a; font-weight: bold;">Debe:</span> {{ r.debit_account.code }}
                                 - {{ r.debit_account.name }}</div>
                         {% endif %}
                         {% if r.credit_account %}
-                            <div><span style="color: #dc2626; font-weight: bold;">Haber:</span> {{ r.credit_account.code }}
+                            <div><span
+                                    style="color: #dc2626; font-weight: bold;">Haber:</span> {{ r.credit_account.code }}
                                 - {{ r.credit_account.name }}</div>
                         {% endif %}
                     </div>
@@ -64,8 +67,8 @@
             </span>
                 </td>
                 <td class="text-center">
-                    <button type="button" class="btn-views-action" title="Editar"
-                            onclick="openRubricModal('{% url 'payroll:rubric_edit' r.pk %}')">
+                    <button type="button" class="btn-seventh" title="Editar"
+                            onclick="openAjaxModal('{% url 'payroll:rubric_edit' r.pk %}', '.modal-overlay')">
                         <i class="fas fa-pen"></i>
                     </button>
                 </td>

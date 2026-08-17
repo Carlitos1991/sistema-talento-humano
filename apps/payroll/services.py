@@ -1,4 +1,5 @@
 import copy
+import calendar
 import traceback
 import logging
 import time
@@ -6,10 +7,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta, date
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import TruncDate
 from payroll.models import PayslipItem
 from accounting.models import Journal, JournalItem, Account
 from budget.models import BudgetAssignmentHistory
 from contract.models import ManagementPeriod
+from biometric.models import AttendanceRegistry
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation
 from .models import (
@@ -134,19 +137,88 @@ class PayrollCalculatorService:
                 holiday_dates.add(curr)
                 curr += timedelta(days=1)
 
-        prev_period = (
-            PayrollPeriod.objects
-            .filter(end_date__lt=self.period.start_date)
-            .order_by('-end_date')
-            .first()
-        )
         prev_effective_days_map = {}
-        if prev_period:
-            prev_effective_days_map = dict(
-                Payslip.objects
-                .filter(period=prev_period, employee_id__in=emp_ids)
-                .values_list('employee_id', 'effective_worked_days')
+        prev_year = self.period.start_date.year
+        prev_month = self.period.start_date.month - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        prev_start = date(prev_year, prev_month, 1)
+        prev_end = date(prev_year, prev_month, calendar.monthrange(prev_year, prev_month)[1])
+
+        prev_period = PayrollPeriod.objects.filter(start_date=prev_start, end_date=prev_end).first()
+        if not prev_period:
+            print(
+                f"[PAYROLL][BENEFITS] prev payroll period missing for calendar range {prev_start}-{prev_end}; "
+                f"using calendar month dates directly"
             )
+
+        if emp_ids:
+            prev_holiday_dates = set()
+            prev_holidays_qs = ScheduleObservation.objects.filter(
+                is_holiday=True, is_active=True,
+                start_date__lte=prev_end,
+                end_date__gte=prev_start,
+            ).values_list('start_date', 'end_date')
+            for start_date, end_date in prev_holidays_qs:
+                curr = max(start_date, prev_start)
+                end_limit = min(end_date, prev_end)
+                while curr <= end_limit:
+                    prev_holiday_dates.add(curr)
+                    curr += timedelta(days=1)
+
+            prev_discountable_types = (
+                Q(permit_type__name__icontains='Personal')
+                | Q(permit_type__name__icontains='Médico')
+                | Q(permit_type__name__icontains='Medico')
+                | Q(permit_type__parent__name__icontains='Personal')
+                | Q(permit_type__parent__name__icontains='Médico')
+                | Q(permit_type__parent__name__icontains='Medico')
+            )
+            prev_approved_permits = (
+                PermitRequest.objects
+                .filter(
+                    employee_id__in=emp_ids,
+                    status='APPROVED',
+                    start_date__lte=prev_end,
+                )
+                .filter(Q(end_date__isnull=True) | Q(end_date__gte=prev_start))
+                .filter(prev_discountable_types)
+                .values('employee_id', 'start_date', 'end_date', 'days', 'hours')
+            )
+            prev_absent_dates_map = {}
+            full_day_hours = Decimal(str(self.config.get('JORNADA_DIARIA_HORAS', '8')))
+            for permit in prev_approved_permits:
+                eid = permit['employee_id']
+                prev_absent_dates_map.setdefault(eid, set())
+                p_start = max(permit['start_date'], prev_start)
+                p_end = min(permit['end_date'] or permit['start_date'], prev_end)
+                is_multi_day = p_start != p_end
+                hours = Decimal(str(permit.get('hours') or 0))
+                days = Decimal(str(permit.get('days') or 0))
+                is_full_day_absence = (
+                    is_multi_day
+                    or hours >= full_day_hours
+                    or (hours == 0 and days >= 1)
+                )
+                if is_full_day_absence:
+                    curr = p_start
+                    while curr <= p_end:
+                        prev_absent_dates_map[eid].add(curr)
+                        curr += timedelta(days=1)
+
+            prev_worked_holidays_map = self._get_worked_holidays_map(emp_ids, prev_holiday_dates)
+            prev_effective_days_map = {
+                eid: self._count_valid_benefit_days(
+                    eid,
+                    prev_holiday_dates,
+                    prev_absent_dates_map,
+                    prev_worked_holidays_map,
+                    start_date=prev_start,
+                    end_date=prev_end,
+                )
+                for eid in emp_ids
+            }
 
         discountable_types = (
                 Q(permit_type__name__icontains='Personal')
@@ -169,6 +241,12 @@ class PayrollCalculatorService:
             .values('employee_id', 'start_date', 'end_date', 'days', 'hours')
         )
 
+        # Jornada completa en horas (configurable). Un permiso con menos horas
+        # que esto es PARCIAL: el empleado sí asistió parte del día, por lo
+        # tanto ese día NO debe descontarse de effective_worked_days (y por
+        # ende no afecta el pago de alimentación/transporte).
+        full_day_hours = Decimal(str(self.config.get('JORNADA_DIARIA_HORAS', '8')))
+
         absent_dates_map = {}
         for permit in approved_permits:
             eid = permit['employee_id']
@@ -178,17 +256,132 @@ class PayrollCalculatorService:
                 permit['end_date'] or permit['start_date'],
                 self.period.end_date,
             )
-            if (
-                    (permit.get('days') or 0) >= 1
-                    or (permit.get('hours') or 0) >= 8
-                    or p_start != p_end
-            ):
+
+            is_multi_day = p_start != p_end
+            hours = Decimal(str(permit.get('hours') or 0))
+            days = Decimal(str(permit.get('days') or 0))
+
+            # AUSENCIA DE DÍA COMPLETO (sí descuenta el día) cuando:
+            #   - el permiso abarca más de un día calendario, o
+            #   - las horas solicitadas cubren la jornada completa (>= full_day_hours), o
+            #   - el permiso está expresado solo en "días" (sin horas registradas)
+            #     y pide 1 día completo o más.
+            # Si el permiso es de pocas horas dentro de un solo día
+            # (ej. 4 horas de 8), el empleado asistió parte del día y NO se
+            # descuenta: el día sigue contando para alimentación/transporte.
+            is_full_day_absence = (
+                    is_multi_day
+                    or hours >= full_day_hours
+                    or (hours == 0 and days >= 1)
+            )
+
+            if is_full_day_absence:
                 curr = p_start
                 while curr <= p_end:
                     absent_dates_map[eid].add(curr)
                     curr += timedelta(days=1)
 
-        return holiday_dates, prev_effective_days_map, absent_dates_map
+        worked_holidays_map = self._get_worked_holidays_map(emp_ids, holiday_dates)
+
+        return holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map
+
+    def _get_worked_holidays_map(self, emp_ids, holiday_dates):
+        """
+        Retorna {employee_id: set(fecha)} solo para feriados con una marcación
+        registrada en biometric.attendance_registry.
+        """
+        if not emp_ids or not holiday_dates:
+            return {}
+
+        worked_holidays = (
+            AttendanceRegistry.objects
+            .filter(
+                employee_id__in=emp_ids,
+                registry_date__date__in=holiday_dates,
+            )
+            .annotate(date=TruncDate('registry_date'))
+            .values('employee_id', 'date')
+            .distinct()
+        )
+
+        worked_map = {}
+        for item in worked_holidays:
+            employee_id = item['employee_id']
+            worked_map.setdefault(employee_id, set()).add(item['date'])
+        return worked_map
+
+    def _count_valid_benefit_days(
+        self,
+        employee_id,
+        holiday_dates,
+        absent_dates_map,
+        worked_holidays_map,
+        start_date=None,
+        end_date=None,
+    ):
+        """
+        Regla de beneficios:
+        - Días normales (Lun-Vie): cuentan por defecto, salvo ausencia total.
+        - Días feriados: no cuentan por defecto; solo cuentan si hubo marcación biométrica.
+        """
+        start_date = start_date or self.period.start_date
+        end_date = end_date or self.period.end_date
+
+        employee_absences = absent_dates_map.get(employee_id, set())
+        employee_worked_holidays = worked_holidays_map.get(employee_id, set())
+
+        valid_days = 0
+        debug_days = []
+        counted_dates = []
+        excluded_dates = []
+        current = start_date
+        while current <= end_date:
+            is_weekday = current.weekday() < 5
+            is_holiday = current in holiday_dates
+            is_absent = current in employee_absences
+            is_worked_holiday = current in employee_worked_holidays
+
+            if is_weekday and not is_holiday:
+                if not is_absent:
+                    valid_days += 1
+                    debug_days.append((current, 'NORMAL_OK'))
+                    counted_dates.append(current.isoformat())
+                else:
+                    debug_days.append((current, 'NORMAL_ABSENT'))
+                    excluded_dates.append(f"{current.isoformat()}:NORMAL_ABSENT")
+            elif is_holiday:
+                if is_worked_holiday and not is_absent:
+                    valid_days += 1
+                    debug_days.append((current, 'HOLIDAY_WORKED'))
+                    counted_dates.append(current.isoformat())
+                else:
+                    debug_days.append((current, 'HOLIDAY_SKIPPED'))
+                    excluded_dates.append(f"{current.isoformat()}:HOLIDAY_SKIPPED")
+            else:
+                debug_days.append((current, 'WEEKEND'))
+                excluded_dates.append(f"{current.isoformat()}:WEEKEND")
+            current += timedelta(days=1)
+
+        logger.info(
+            "[PAYROLL][BENEFITS] emp=%s period=%s-%s valid_days=%s counted_dates=%s excluded_dates=%s holiday_dates=%s absences=%s worked_holidays=%s debug=%s",
+            employee_id,
+            start_date,
+            end_date,
+            valid_days,
+            counted_dates,
+            excluded_dates,
+            sorted(holiday_dates),
+            sorted(employee_absences),
+            sorted(employee_worked_holidays),
+            debug_days,
+        )
+        print(
+            f"[PAYROLL][BENEFITS] emp={employee_id} period={start_date}-{end_date} "
+            f"valid_days={valid_days} counted_dates={counted_dates} excluded_dates={excluded_dates} "
+            f"holiday_dates={sorted(holiday_dates)} absences={sorted(employee_absences)} "
+            f"worked_holidays={sorted(employee_worked_holidays)} debug={debug_days}"
+        )
+        return valid_days
 
     def _filter_employees(self, employees):
         candidate_ids = [
@@ -244,21 +437,14 @@ class PayrollCalculatorService:
     # Motor de cálculo principal
     # ------------------------------------------------------------------
 
-    def _execute_payroll_calculation(
-            self,
-            payslip_buffer,
-            delete_entire_period=False,
-            employee_ids_to_delete=None,
-    ):
+    def _execute_payroll_calculation(self, payslip_buffer, delete_entire_period=False, employee_ids_to_delete=None):
         t0 = time.perf_counter()
         t_mark = t0
 
         def _lap(label):
             nonlocal t_mark
             now = time.perf_counter()
-            msg = f"[PAYROLL][PERF] {label} -> +{(now - t_mark):.3f}s (acum: {(now - t0):.3f}s)"
-            logger.info(msg)
-            print(msg)
+            print(f"[PAYROLL][PERF] {label} -> +{(now - t_mark):.3f}s (acum: {(now - t0):.3f}s)")
             t_mark = now
 
         with transaction.atomic():
@@ -281,7 +467,7 @@ class PayrollCalculatorService:
             _lap("bulk_create payslips")
 
             # ── 3. Datos masivos (feriados, permisos, etc.) ───────────────
-            holiday_dates, prev_effective_days_map, absent_dates_map = self._prepare_mass_data(emp_ids)
+            holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map = self._prepare_mass_data(emp_ids)
             _lap("prepare mass data")
 
             # ── 4. Cargar catálogo de rubros ACTIVOS (una sola vez) ───────
@@ -377,6 +563,19 @@ class PayrollCalculatorService:
 
             _lap("load mappings and novelties")
 
+            # ── 7.1 Calendario global de días laborables (Optimización) ───
+            # Precalculamos UNA sola vez el conjunto de días lunes-viernes
+            # que no son feriados. Antes, cada empleado repetía por cada día
+            # de sus segmentos: curr_date.weekday() < 5 y curr_date not in
+            # holiday_dates. Ahora es una sola búsqueda en un set ya armado.
+            global_working_days = set()
+            curr_gwd = self.period.start_date
+            while curr_gwd <= self.period.end_date:
+                if curr_gwd.weekday() < 5 and curr_gwd not in holiday_dates:
+                    global_working_days.add(curr_gwd)
+                curr_gwd += timedelta(days=1)
+            _lap("global working days calendar")
+
             # ── 8. Buffers de escritura diferida ──────────────────────────
             items_buffer = []
             payslips_to_update = []
@@ -455,18 +654,12 @@ class PayrollCalculatorService:
                     emp_contrib_map = {c.code.strip().upper(): c for c in emp_contributions if c.code}
 
                     # -- 9.5 Días efectivos laborados -----------------------
-                    effective_days = 0
-                    emp_absences = absent_dates_map.get(slip.employee_id, set())
-                    for segment in segments:
-                        curr_date = segment['real_start']
-                        while curr_date <= segment['real_end']:
-                            if (
-                                    curr_date.weekday() < 5
-                                    and curr_date not in holiday_dates
-                                    and curr_date not in emp_absences
-                            ):
-                                effective_days += 1
-                            curr_date += timedelta(days=1)
+                    effective_days = self._count_valid_benefit_days(
+                        slip.employee_id,
+                        holiday_dates,
+                        absent_dates_map,
+                        worked_holidays_map,
+                    )
                     slip.effective_worked_days = effective_days
 
                     # -- 9.6 Sueldo proporcional total (base para cálculos) -
@@ -503,7 +696,6 @@ class PayrollCalculatorService:
                     except Exception:
                         pass
 
-                    effective_days_prev = prev_effective_days_map.get(slip.employee_id, 0)
                     mp = mp_map.get(slip.employee_id)
                     total_days_service = service_days_map.get(slip.employee_id, 0)
                     years_of_service = total_days_service / 365.25
@@ -610,14 +802,31 @@ class PayrollCalculatorService:
                                 print(
                                     "-> [DEBUG FONDOS] FALLO LA CONDICIÓN: El empleado no cumple los requisitos para el cálculo automático este mes.")
 
-                        # -- Beneficios recuperados del commit 09-jun (CT, con antigüedad >= 1 año) --
+                        # -- Beneficios CT (alimentación/transporte) -------------------
+                        # Regla de negocio:
+                        #   * normales (Lun-Vie): cuentan por defecto, salvo ausencia completa
+                        #   * feriados: no cuentan por defecto; solo si hubo marcación biométrica
+                        # del empleado en la fecha.
+                        # El beneficio se paga con los días válidos del mes anterior.
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and years_of_service >= 1:
+                            benefit_days = prev_effective_days_map.get(slip.employee_id, 0)
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
-                                str(effective_days_prev)
+                                str(benefit_days)
+                            )
+                            print(
+                                f"[PAYROLL][BENEFIT-BASE] emp={slip.employee_id} rubro=ALIMENTACION "
+                                f"prev_effective_days={benefit_days} daily={self.config.get('ALIMENTACION_DIARIA', '4.00')} "
+                                f"total={val}"
                             )
                         elif code_clean == 'TRANSPORTE' and regime_code == 'CT' and years_of_service >= 1:
+                            benefit_days = prev_effective_days_map.get(slip.employee_id, 0)
                             val = Decimal(str(self.config.get('TRANSPORTE_DIARIO', '0.50'))) * Decimal(
-                                str(effective_days_prev)
+                                str(benefit_days)
+                            )
+                            print(
+                                f"[PAYROLL][BENEFIT-BASE] emp={slip.employee_id} rubro=TRANSPORTE "
+                                f"prev_effective_days={benefit_days} daily={self.config.get('TRANSPORTE_DIARIO', '0.50')} "
+                                f"total={val}"
                             )
                         elif (
                                 code_clean == 'SUBSIDIO_FAMILIAR'
@@ -642,7 +851,8 @@ class PayrollCalculatorService:
                             # Evaluamos las condiciones explícitamente para ver dónde falla
                             if regime_code == 'CT' and years_of_last_contract >= 1:
                                 if years_of_service >= 1:
-                                    val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(str(int(years_of_last_contract)))
+                                    val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(
+                                        str(int(years_of_last_contract)))
                                     print(
                                         f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> Cálculo exitoso: val={val}")
                                 else:

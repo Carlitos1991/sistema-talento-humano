@@ -1,8 +1,21 @@
 /**
  * MAIN.JS - GESTOR CENTRALIZADO DE AJAX Y MODALES PARA TODO SIGETH
  */
-const getCSRF = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
+// 1. OBTENCIÓN ROBUSTA DEL TOKEN CSRF
+const getCSRF = () => {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (el) return el.value;
+    const name = 'csrftoken=';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.indexOf(name) === 0) return decodeURIComponent(c.substring(name.length));
+    }
+    return '';
+};
+
+// 2. APERTURA DE MODALES DINÁMICOS
 window.openAjaxModal = function (url, modalOverlaySelector = '.modal-overlay', callback = null) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => response.text())
@@ -25,14 +38,11 @@ window.openAjaxModal = function (url, modalOverlaySelector = '.modal-overlay', c
             $(root).find('input[type="text"]').addClass('input-field');
             window.initSharedFormInteractions(root);
 
-            // EJECUCIÓN SEGURA DEL CALLBACK
             if (callback) {
                 if (typeof callback === 'function') {
                     callback(root);
                 } else if (typeof window[callback] === 'function') {
-                    window[callback](root); // Lo ejecuta aunque se pase como 'texto'
-                } else {
-                    console.warn('No se encontró la función callback:', callback);
+                    window[callback](root);
                 }
             }
         })
@@ -41,12 +51,15 @@ window.openAjaxModal = function (url, modalOverlaySelector = '.modal-overlay', c
             Swal.fire('Error', 'No se pudo cargar la vista.', 'error');
         });
 };
+
+// 3. CIERRE DE MODALES DINÁMICOS
 window.closeAjaxModal = function () {
     const root = document.getElementById('modal-root');
     if (root) root.innerHTML = '';
     document.body.classList.remove('modal-open');
 };
 
+// 4. ENVÍO ESTANDARIZADO DE FORMULARIOS
 window.submitAjaxForm = function (event, successCallback = null) {
     event.preventDefault();
     const form = event.target;
@@ -83,9 +96,10 @@ window.submitAjaxForm = function (event, successCallback = null) {
                 Swal.fire('Error', data.message || 'Error al procesar la solicitud.', 'error');
             }
         })
-        .catch(error => Swal.fire('Error', 'Problema con el servidor.', 'error'));
+        .catch(() => Swal.fire('Error', 'Problema con el servidor.', 'error'));
 };
 
+// 5. INTERACCIONES COMPARTIDAS (Mapeos y Select2)
 window.initSharedFormInteractions = function (container) {
     const mappingCheckbox = container.querySelector('input[name="has_mapping"]');
     const budgetFieldsBox = container.querySelector('#budgetMappingFields');
@@ -104,16 +118,15 @@ window.initSharedFormInteractions = function (container) {
     });
 };
 
+// 6. RECARGA INTELIGENTE DE TABLAS
 window.reloadTableData = function (url, containerSelector) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(async response => {
             const text = await response.text();
             try {
-                // Forzamos a leer como JSON primero
                 const data = JSON.parse(text);
                 return data.html ? data.html : text;
             } catch (e) {
-                // Si falla, es porque es HTML puro
                 return text;
             }
         })
@@ -122,7 +135,6 @@ window.reloadTableData = function (url, containerSelector) {
             if (!container) return location.reload();
 
             container.innerHTML = html;
-
             const table = container.querySelector('.managed-table');
             if (table) {
                 if (table._tableManager) {
@@ -134,8 +146,37 @@ window.reloadTableData = function (url, containerSelector) {
                 }
             }
         })
-        .catch(error => {
-            console.error("Error recargando tabla:", error);
-            location.reload();
-        });
+        .catch(() => location.reload());
+};
+
+// 7. ELIMINACIÓN GENÉRICA DE REGISTROS (Reemplaza a deleteConstant)
+window.deleteRecordAjax = function (url, itemName) {
+    Swal.fire({
+        title: `¿Eliminar ${itemName}?`,
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        scrollbarPadding: false,
+        heightAuto: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(url, {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()}
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' || data.success) {
+                        Swal.fire('Eliminado', data.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(() => Swal.fire('Error', 'Error de comunicación', 'error'));
+        }
+    });
 };
