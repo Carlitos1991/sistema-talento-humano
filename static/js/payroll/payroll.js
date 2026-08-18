@@ -684,3 +684,548 @@ window.filterTableLocal = function () {
         else row.style.display = 'none';
     });
 };
+
+/* =================================================================================
+   7. LISTADO Y BÚSQUEDA DE ROLES (payslip_list) — MIGRADO desde payslip_list.js
+   ================================================================================
+   FIX del bug "busca bien, pero luego se reinicia con toda la lista":
+   El campo #searchInput tenía DOS sistemas de búsqueda compitiendo:
+     1) TableManager.initSearch() -> filtro local INSTANTÁNEO (sin debounce)
+        sobre solo las filas de la página actual.
+     2) Este módulo -> búsqueda con debounce (300ms) que trae el dataset
+        completo ya filtrado por el servidor.
+   Cada búsqueda AJAX creaba además una TableManager NUEVA sin quitar el
+   listener de la ANTERIOR, acumulando listeners 'input' duplicados sobre el
+   mismo campo persistente -> renders en conflicto y resultados que parecían
+   "resetearse" solos.
+   Corrección: después de crear cada TableManager, se elimina explícitamente
+   su listener de búsqueda local (independiente de si el <table> tiene o no
+   data-external-search="true" en el HTML), de modo que ESTE módulo sea el
+   único dueño de #searchInput.
+   ================================================================================= */
+(function () {
+    const searchInput = document.getElementById('searchInput');
+    const groupFilter = document.getElementById('groupFilter');
+    const regimeFilter = document.getElementById('regimeFilter');
+    const container = document.getElementById('payslip-table-container');
+
+    // Esta sección solo aplica en la vista de Detalle de Roles.
+    if (!container || !searchInput) return;
+
+    let currentPeriodId = window.CURRENT_PERIOD_ID;
+    if (!currentPeriodId || currentPeriodId === "" || currentPeriodId === "None") {
+        currentPeriodId = new URLSearchParams(window.location.search).get('period_id') || 'default';
+    }
+
+    const STORAGE_Q = 'payslip_q';
+    const STORAGE_PAGE = 'payslip_page';
+    const STORAGE_REGIME = 'payslip_regime';
+    const STORAGE_PERIOD = 'payslip_period';
+
+    const navEntries = performance.getEntriesByType("navigation");
+    if (navEntries.length > 0 && navEntries[0].type === "navigate") {
+        sessionStorage.removeItem(STORAGE_Q);
+        sessionStorage.removeItem(STORAGE_PAGE);
+        sessionStorage.removeItem(STORAGE_REGIME);
+    }
+
+    // FIX: quita el listener local de búsqueda que TableManager pudo haber
+    // añadido a #searchInput, dejando este módulo como único dueño del input.
+    function neutralizeTableManagerSearch(table) {
+        try {
+            const tm = table && table._tableManager;
+            const input = (tm && tm.searchInput) || searchInput;
+            if (input && input._tmSearchHandler) {
+                input.removeEventListener('input', input._tmSearchHandler);
+                delete input._tmSearchHandler;
+            }
+        } catch (e) { /* ignore */
+        }
+    }
+
+    function initPaginationControls(root) {
+        const pagination = (root || document).querySelector('#js-pagination');
+        if (!pagination) return;
+
+        const firstBtn = pagination.querySelector('#btn-first');
+        const prevBtn = pagination.querySelector('#btn-prev');
+        const nextBtn = pagination.querySelector('#btn-next');
+        const lastBtn = pagination.querySelector('#btn-last');
+        const pageInput = pagination.querySelector('#page-input');
+
+        const attach = (btn) => {
+            if (!btn) return;
+            const page = btn.getAttribute('data-page');
+            btn.disabled = !page;
+            btn.removeEventListener('click', btn._payrollHandler);
+            btn._payrollHandler = function (e) {
+                e.preventDefault();
+                if (!page) return;
+                window.loadTablePage(Number(page));
+            };
+            btn.addEventListener('click', btn._payrollHandler);
+        };
+
+        attach(firstBtn);
+        attach(prevBtn);
+        attach(nextBtn);
+        attach(lastBtn);
+
+        if (pageInput) {
+            const total = parseInt(pageInput.getAttribute('data-total') || '1', 10) || 1;
+            const submit = (v) => {
+                let p = parseInt(String(v).trim(), 10) || 1;
+                if (p < 1) p = 1;
+                if (p > total) p = total;
+                window.loadTablePage(p);
+            };
+            pageInput.removeEventListener('keypress', pageInput._keyHandler);
+            pageInput._keyHandler = function (e) {
+                if (e.key === 'Enter') submit(e.target.value);
+            };
+            pageInput.addEventListener('keypress', pageInput._keyHandler);
+            pageInput.removeEventListener('blur', pageInput._blurHandler);
+            pageInput._blurHandler = function (e) {
+                submit(e.target.value);
+            };
+            pageInput.addEventListener('blur', pageInput._blurHandler);
+            pageInput.removeEventListener('input', pageInput._inputHandler);
+            pageInput._inputHandler = function (e) {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            };
+            pageInput.addEventListener('input', pageInput._inputHandler);
+        }
+    }
+
+    function formatNumberES(value) {
+        const parts = parseFloat(value || 0).toFixed(2).split('.');
+        return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + parts[1];
+    }
+
+    function formatIntegerES(value) {
+        const n = parseInt(value || 0, 10) || 0;
+        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function performSearch(options) {
+        options = options || {};
+        let periodId = window.CURRENT_PERIOD_ID;
+        if (!periodId || periodId === "" || periodId === "None") {
+            periodId = new URLSearchParams(window.location.search).get('period_id');
+        }
+        if (!periodId) {
+            console.error("Error: ID de periodo no válido:", periodId);
+            return Promise.resolve();
+        }
+
+        const paramsObj = {
+            period_id: periodId,
+            q: searchInput ? searchInput.value : '',
+            group: groupFilter ? groupFilter.value : '',
+            regime: regimeFilter ? regimeFilter.value : ''
+        };
+
+        const checkbox = document.getElementById('toggleWithheld');
+        paramsObj['show_withheld'] = (options && typeof options.show_withheld !== 'undefined')
+            ? (options.show_withheld ? 'only' : 'exclude')
+            : (checkbox && checkbox.checked ? 'only' : 'exclude');
+
+        if (options.page) paramsObj['page'] = options.page;
+        if (options.full) paramsObj['full'] = '1';
+        const params = new URLSearchParams(paramsObj);
+
+        try {
+            container.style.minHeight = container.offsetHeight + 'px';
+        } catch (e) { /* ignore */
+        }
+        container.style.opacity = '0.5';
+
+        return fetch(`${window.URLS.baseList}?${params.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                const scrollTop = container.scrollTop;
+                const scrollLeft = container.scrollLeft;
+                container.innerHTML = data.html;
+
+                const table = container.querySelector('.managed-table');
+                if (table && typeof TableManager !== 'undefined') {
+                    new TableManager(table);
+                    // FIX: este módulo es el único dueño de #searchInput.
+                    neutralizeTableManagerSearch(table);
+                    try {
+                        const tm = table._tableManager;
+                        if (options && options.full && tm) {
+                            const tbody = table.tBodies && table.tBodies[0];
+                            const allRows = tbody ? Array.from(tbody.rows) : Array.from(table.querySelectorAll('tbody tr'));
+                            tm.originalRows = allRows.slice();
+                            tm.currentRows = allRows.slice();
+                            if (typeof tm.render === 'function') tm.render();
+                        }
+                    } catch (e) {
+                        console.warn('TableManager re-sync falló:', e);
+                    }
+                }
+                initPaginationControls(container);
+
+                if (data.total_roles !== undefined) {
+                    const el = document.getElementById('total-roles');
+                    if (el) el.innerText = formatIntegerES(data.total_roles);
+                }
+                if (data.total_liquidado !== undefined) {
+                    const el2 = document.getElementById('total-liquidado');
+                    if (el2) el2.innerText = `$ ${formatNumberES(data.total_liquidado)}`;
+                }
+
+                try {
+                    sessionStorage.setItem(STORAGE_Q, paramsObj.q || '');
+                    sessionStorage.setItem(STORAGE_PAGE, String(paramsObj.page || 1));
+                    sessionStorage.setItem(STORAGE_REGIME, paramsObj.regime || '');
+                    if (periodId) sessionStorage.setItem(STORAGE_PERIOD, String(periodId));
+                } catch (e) { /* ignore */
+                }
+
+                try {
+                    container.scrollTop = scrollTop;
+                    container.scrollLeft = scrollLeft;
+                } catch (e) { /* ignore */
+                }
+                container.style.opacity = '1';
+                try {
+                    container.style.minHeight = '';
+                } catch (e) { /* ignore */
+                }
+            })
+            .catch(err => {
+                console.error("Error en la petición:", err);
+                container.style.opacity = '1';
+                return Promise.reject(err);
+            });
+    }
+
+    if (regimeFilter) regimeFilter.addEventListener('change', () => performSearch({page: 1}));
+    if (groupFilter) groupFilter.addEventListener('change', performSearch);
+
+    function debounce(fn, wait) {
+        let t;
+        return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    let fullLoaded = false;
+
+    // Enter: siempre fuerza una búsqueda paginada en servidor con el término actual.
+    searchInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            fullLoaded = false;
+            performSearch({page: 1});
+        }
+    });
+
+    // Escribir: carga el dataset completo (con debounce) UNA sola vez por
+    // término; luego el propio TableManager narra localmente sobre ese set
+    // ya filtrado por el servidor (sin volver a golpear al backend).
+    const loadFullOnce = debounce(function () {
+        if (fullLoaded) return;
+        const q = (searchInput.value || '').trim();
+        if (!q) return;
+        performSearch({page: 1, full: true}).then(() => {
+            fullLoaded = true;
+        }).catch(() => {
+        });
+    }, 300);
+
+    searchInput.addEventListener('input', function () {
+        if (fullLoaded) return;
+        loadFullOnce();
+    });
+
+    // Si el usuario borra la búsqueda, volver a la vista paginada normal.
+    searchInput.addEventListener('input', function () {
+        if ((searchInput.value || '').trim() === '' && fullLoaded) {
+            fullLoaded = false;
+            performSearch({page: 1});
+        }
+    });
+
+    try {
+        let currentPeriod = window.CURRENT_PERIOD_ID;
+        if (!currentPeriod || currentPeriod === "" || currentPeriod === "None") {
+            currentPeriod = new URLSearchParams(window.location.search).get('period_id');
+        }
+        const storedPeriod = sessionStorage.getItem(STORAGE_PERIOD);
+
+        if (storedPeriod && currentPeriod && String(storedPeriod) !== String(currentPeriod)) {
+            sessionStorage.removeItem(STORAGE_Q);
+            sessionStorage.removeItem(STORAGE_PAGE);
+            sessionStorage.removeItem(STORAGE_PERIOD);
+        } else {
+            const storedQ = sessionStorage.getItem(STORAGE_Q);
+            const storedPage = parseInt(sessionStorage.getItem(STORAGE_PAGE) || '1', 10) || 1;
+            if (storedQ && storedQ.trim() !== '') {
+                searchInput.value = storedQ;
+                performSearch({page: storedPage});
+            }
+        }
+    } catch (e) { /* ignore */
+    }
+
+    window.performSearch = performSearch;
+    window.loadTablePage = function (page) {
+        performSearch({page: page});
+    };
+    window.performSearchWithOptions = function () {
+        const checkbox = document.getElementById('toggleWithheld');
+        performSearch({show_withheld: checkbox && checkbox.checked});
+    };
+
+    const initialTable = document.querySelector('.managed-table');
+    if (initialTable && typeof TableManager !== 'undefined') {
+        // La tabla ya viene inicializada por el auto-init de table-manager.js
+        // en DOMContentLoaded; solo neutralizamos su búsqueda local.
+        neutralizeTableManagerSearch(initialTable);
+    }
+
+    initPaginationControls(container);
+
+    const btnRecalc = document.getElementById('btn-recalculate');
+    if (btnRecalc) {
+        btnRecalc.addEventListener('click', function () {
+            const checkbox = document.getElementById('toggleWithheld');
+            const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+            const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
+            if (!periodId) return alert('Periodo no seleccionado.');
+
+            const form = new FormData();
+            form.append('period_id', periodId);
+            form.append('q', searchInput.value);
+            form.append('group', groupFilter ? groupFilter.value : '');
+            form.append('regime', regimeFilter ? regimeFilter.value : '');
+            form.append('show_withheld', show_withheld);
+
+            let stopped = false;
+
+            function openProgressModal() {
+                const html = `
+                    <div class="recalc-progress-wrapper">
+                        <div class="recalc-spinner-wrapper">
+                            <div class="recalc-spinner" aria-hidden="true"></div>
+                            <div>
+                                <div class="recalc-progress-msg" id="recalc-progress-msg">Calculando, Por favor espere</div>
+                            </div>
+                        </div>
+                    </div>`;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: '', html: html, showConfirmButton: false, showCancelButton: true,
+                        cancelButtonText: 'Cancelar', allowOutsideClick: false,
+                        customClass: {popup: 'swal2-recalc-popup'},
+                        didOpen: () => {
+                            try {
+                                const btn = document.querySelector('.swal2-cancel');
+                                if (btn) {
+                                    btn.addEventListener('click', function () {
+                                        stopped = true;
+                                        try {
+                                            Swal.close();
+                                        } catch (e) {
+                                        }
+                                    });
+                                    btn.style.minWidth = '120px';
+                                }
+                            } catch (e) { /* ignore */
+                            }
+                        }
+                    });
+                } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.id = 'recalc-progress-fallback';
+                    wrapper.innerHTML = html;
+                    document.body.appendChild(wrapper);
+                }
+            }
+
+            function closeProgressModal() {
+                if (typeof Swal !== 'undefined') {
+                    try {
+                        Swal.close();
+                    } catch (e) {
+                    }
+                } else {
+                    const el = document.getElementById('recalc-progress-fallback');
+                    if (el) el.remove();
+                }
+            }
+
+            function setProgress(pct, msg) {
+                try {
+                    const msgEl = document.getElementById('recalc-progress-msg');
+                    if (msgEl) msgEl.innerText = msg || (pct ? `${Math.round(pct)}%` : 'Procesando...');
+                } catch (e) { /* ignore */
+                }
+            }
+
+            openProgressModal();
+
+            fetch(PAYROLL_URLS.recalculate, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCSRF(), 'X-Requested-With': 'XMLHttpRequest'},
+                body: form
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data) throw new Error('No response');
+
+                    if (data.task_id) {
+                        const taskId = data.task_id;
+                        const statusUrl = `${PAYROLL_URLS.status}?task_id=${encodeURIComponent(taskId)}`;
+                        let lastPct = 0;
+                        let totalCount = (typeof data.total === 'number' && data.total > 0) ? data.total
+                            : (typeof data.total_count === 'number' && data.total_count > 0 ? data.total_count : null);
+                        let lastProcessed = 0;
+
+                        const poll = () => {
+                            if (stopped) return;
+                            fetch(statusUrl, {
+                                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                                credentials: 'same-origin'
+                            })
+                                .then(r => r.json())
+                                .then(s => {
+                                    if (!s) return;
+                                    if (typeof s.processed_count === 'number' && totalCount) {
+                                        lastProcessed = s.processed_count;
+                                        lastPct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                        setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                    } else if (typeof s.processed === 'number' && totalCount) {
+                                        lastProcessed = s.processed;
+                                        lastPct = Math.min(100, (lastProcessed / totalCount) * 100);
+                                        setProgress(lastPct, s.message || `${lastProcessed} / ${totalCount}`);
+                                    } else {
+                                        const pct = typeof s.progress !== 'undefined' ? Number(s.progress) : (s.done ? 100 : lastPct);
+                                        lastPct = isNaN(pct) ? lastPct : pct;
+                                        setProgress(lastPct, s.message || (s.done ? 'Completado' : 'Procesando...'));
+                                    }
+
+                                    if (s.done || (totalCount && lastProcessed >= totalCount) || (typeof s.progress !== 'undefined' && s.progress >= 100) || s.success) {
+                                        stopped = true;
+                                        closeProgressModal();
+                                        setTimeout(() => {
+                                            document.querySelectorAll('.swal2-cancel').forEach(el => el.remove());
+                                            if (s.success || (!s.success && s.done && lastProcessed >= totalCount)) {
+                                                if (typeof Swal !== 'undefined') Swal.fire({
+                                                    title: 'Recalculo completado',
+                                                    text: `Se recalcularon ${s.count || data.count || totalCount || 0} roles.`,
+                                                    icon: 'success', confirmButtonText: 'OK', showCancelButton: false
+                                                });
+                                                performSearch({page: 1});
+                                            } else {
+                                                if (typeof Swal !== 'undefined') Swal.fire({
+                                                    title: 'Error', text: s.message || 'Error en recalculo',
+                                                    icon: 'error', confirmButtonText: 'OK', showCancelButton: false
+                                                });
+                                            }
+                                        }, 300);
+                                    } else {
+                                        setTimeout(poll, 900);
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('poll error', err);
+                                    setTimeout(poll, 1500);
+                                });
+                        };
+
+                        if (totalCount) setProgress(0, `0 / ${totalCount}`);
+                        else setProgress(5, 'Calculando, Por favor espere');
+                        setTimeout(poll, 600);
+                    } else if (data && data.success) {
+                        closeProgressModal();
+                        if (typeof Swal !== 'undefined') Swal.fire({
+                            title: 'Recalculo completado', text: `Se recalcularon ${data.count || 0} roles.`,
+                            icon: 'success', confirmButtonText: 'OK', showCancelButton: false
+                        });
+                        performSearch({page: 1});
+                    } else {
+                        closeProgressModal();
+                        if (typeof Swal !== 'undefined') Swal.fire({
+                            title: 'Error', text: data && data.message || 'Error',
+                            icon: 'error', confirmButtonText: 'OK', showCancelButton: false
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error recalculando roles:', err);
+                    closeProgressModal();
+                    if (typeof Swal !== 'undefined') Swal.fire({
+                        title: 'Error', text: 'Fallo al recalcular roles',
+                        icon: 'error', confirmButtonText: 'OK', showCancelButton: false
+                    });
+                });
+        });
+    }
+})();
+
+window.downloadFilteredReport = function (type) {
+    const searchInput = document.getElementById('searchInput');
+    const groupFilter = document.getElementById('groupFilter');
+    const regimeFilter = document.getElementById('regimeFilter');
+
+    const q = searchInput ? searchInput.value : '';
+    const group = groupFilter ? groupFilter.value : '';
+    const regime = regimeFilter ? regimeFilter.value : '';
+
+    let periodId = window.CURRENT_PERIOD_ID;
+    if (!periodId || periodId === "" || periodId === "None") {
+        periodId = new URLSearchParams(window.location.search).get('period_id');
+    }
+    if (!periodId) {
+        alert("Error: No se pudo identificar el periodo. Regrese a la lista e intente de nuevo.");
+        return;
+    }
+
+    const reportPath = type === 'banco' ? 'bank' : 'grouped';
+    const checkbox = document.getElementById('toggleWithheld');
+    const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+    const url = `/payroll/reports/${reportPath}/${periodId}/?q=${encodeURIComponent(q)}&group=${encodeURIComponent(group)}&regime=${encodeURIComponent(regime)}&filtro=NORMAL&show_withheld=${show_withheld}`;
+    window.open(url, '_blank');
+};
+
+window.sendPayslipEmail = function (payslipId) {
+    if (typeof Swal === 'undefined') {
+        alert("El sistema de alertas no está cargado.");
+        return;
+    }
+    Swal.fire({
+        title: '¿Enviar Rol por Correo?',
+        text: "Se enviará una notificación con los valores al correo registrado del servidor.",
+        icon: 'question', showCancelButton: true, confirmButtonColor: '#10b981',
+        cancelButtonColor: '#ef4444', confirmButtonText: 'Sí, enviar ahora', cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Enviando correo...', text: 'Por favor, espere.', allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            fetch(`/payroll/payslips/${payslipId}/send-email/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') Swal.fire('¡Enviado!', data.message, 'success');
+                    else Swal.fire('Atención', data.message, 'warning');
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', 'Hubo un problema de conexión al intentar enviar el correo.', 'error');
+                });
+        }
+    });
+};

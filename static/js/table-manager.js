@@ -108,10 +108,25 @@ class TableManager {
             console.warn('TableManager: No se encontró el input de búsqueda.');
             return;
         }
-        this.searchInput.addEventListener('input', (e) => {
+        // FIX: solo debe existir UN listener de 'input' activo por campo de
+        // búsqueda, sin importar cuántas veces se recree TableManager (p.ej.
+        // tras cada búsqueda AJAX que reemplaza la tabla e instancia una
+        // TableManager nueva). Antes, cada instancia agregaba su propio
+        // listener sin quitar el anterior; las instancias viejas (con
+        // originalRows/tbody obsoletos) seguían disparándose en cada tecleo
+        // junto con la nueva, produciendo renders en conflicto y resultados
+        // que parecían "resetearse" solos. Guardamos la referencia del
+        // handler en el propio DOM del input (no en la instancia) para
+        // poder quitar el de la instancia ANTERIOR antes de añadir el de esta.
+        if (this.searchInput._tmSearchHandler) {
+            this.searchInput.removeEventListener('input', this.searchInput._tmSearchHandler);
+        }
+        const handler = (e) => {
             this.filterState.search = e.target.value.toLowerCase().trim();
             this.applyGlobalFilters();
-        });
+        };
+        this.searchInput._tmSearchHandler = handler;
+        this.searchInput.addEventListener('input', handler);
     }
 
     // ─── FILTROS ──────────────────────────────────────────────────────────────
@@ -387,7 +402,7 @@ class TableManager {
         const contentTable = this.table.closest('.content-table');
 
         // Ensure table has an id for pagination association
-        if (!this.table.dataset.tmId) this.table.dataset.tmId = 'tm-' + Math.random().toString(36).slice(2,8);
+        if (!this.table.dataset.tmId) this.table.dataset.tmId = 'tm-' + Math.random().toString(36).slice(2, 8);
 
         // Try to reuse an existing pagination container already associated to this table
         let pagContainer = document.querySelector('.pagination-container[data-tm-for="' + this.table.dataset.tmId + '"]');
@@ -420,7 +435,10 @@ class TableManager {
         }
 
         // Associate this pagContainer explicitly to this table to avoid other managers reusing it
-        try { pagContainer.dataset.tmFor = this.table.dataset.tmId; } catch(e) {}
+        try {
+            pagContainer.dataset.tmFor = this.table.dataset.tmId;
+        } catch (e) {
+        }
         this.pagContainer = pagContainer;
     }
 
@@ -528,7 +546,8 @@ class TableManager {
                     try {
                         const w = th.offsetWidth;
                         if (w && w > 0) td.style.minWidth = w + 'px';
-                    } catch (e) {}
+                    } catch (e) {
+                    }
                     // Hacerla de altura mínima para no afectar layout vertical
                     td.style.padding = '0';
                     td.style.border = 'none';
@@ -609,10 +628,18 @@ document.addEventListener('click', (e) => {
     } catch (err) {
         console.warn('TableManager: error en handleSort delegado', err);
     } finally {
-        setTimeout(() => { try { delete th._tm_handling; } catch(_){} }, 60);
+        setTimeout(() => {
+            try {
+                delete th._tm_handling;
+            } catch (_) {
+            }
+        }, 60);
     }
 
 }, true);
 
 // Expose constructor on window explicitly in case environments differ
-try { window.TableManager = TableManager; } catch (e) { /* ignore */ }
+try {
+    window.TableManager = TableManager;
+} catch (e) { /* ignore */
+}

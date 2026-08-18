@@ -168,12 +168,12 @@ class PayrollCalculatorService:
                     curr += timedelta(days=1)
 
             prev_discountable_types = (
-                Q(permit_type__name__icontains='Personal')
-                | Q(permit_type__name__icontains='Médico')
-                | Q(permit_type__name__icontains='Medico')
-                | Q(permit_type__parent__name__icontains='Personal')
-                | Q(permit_type__parent__name__icontains='Médico')
-                | Q(permit_type__parent__name__icontains='Medico')
+                    Q(permit_type__name__icontains='Personal')
+                    | Q(permit_type__name__icontains='Médico')
+                    | Q(permit_type__name__icontains='Medico')
+                    | Q(permit_type__parent__name__icontains='Personal')
+                    | Q(permit_type__parent__name__icontains='Médico')
+                    | Q(permit_type__parent__name__icontains='Medico')
             )
             prev_approved_permits = (
                 PermitRequest.objects
@@ -197,9 +197,9 @@ class PayrollCalculatorService:
                 hours = Decimal(str(permit.get('hours') or 0))
                 days = Decimal(str(permit.get('days') or 0))
                 is_full_day_absence = (
-                    is_multi_day
-                    or hours >= full_day_hours
-                    or (hours == 0 and days >= 1)
+                        is_multi_day
+                        or hours >= full_day_hours
+                        or (hours == 0 and days >= 1)
                 )
                 if is_full_day_absence:
                     curr = p_start
@@ -208,6 +208,8 @@ class PayrollCalculatorService:
                         curr += timedelta(days=1)
 
             prev_worked_holidays_map = self._get_worked_holidays_map(emp_ids, prev_holiday_dates)
+            # Precalculado UNA sola vez para todos los empleados (no por empleado).
+            prev_business_days_set = self._build_business_days_set(prev_start, prev_end, prev_holiday_dates)
             prev_effective_days_map = {
                 eid: self._count_valid_benefit_days(
                     eid,
@@ -216,6 +218,7 @@ class PayrollCalculatorService:
                     prev_worked_holidays_map,
                     start_date=prev_start,
                     end_date=prev_end,
+                    business_days_set=prev_business_days_set,
                 )
                 for eid in emp_ids
             }
@@ -310,78 +313,58 @@ class PayrollCalculatorService:
             worked_map.setdefault(employee_id, set()).add(item['date'])
         return worked_map
 
+    def _build_business_days_set(self, start_date, end_date, holiday_dates):
+        """
+        Calendario de días Lun-Vie que NO son feriados para un rango dado.
+        Se calcula UNA sola vez por periodo (no por empleado) y se reutiliza
+        para todos los empleados vía operaciones de sets.
+        """
+        business_days = set()
+        curr = start_date
+        while curr <= end_date:
+            if curr.weekday() < 5 and curr not in holiday_dates:
+                business_days.add(curr)
+            curr += timedelta(days=1)
+        return business_days
+
     def _count_valid_benefit_days(
-        self,
-        employee_id,
-        holiday_dates,
-        absent_dates_map,
-        worked_holidays_map,
-        start_date=None,
-        end_date=None,
+            self,
+            employee_id,
+            holiday_dates,
+            absent_dates_map,
+            worked_holidays_map,
+            start_date=None,
+            end_date=None,
+            business_days_set=None,
     ):
         """
         Regla de beneficios:
         - Días normales (Lun-Vie): cuentan por defecto, salvo ausencia total.
         - Días feriados: no cuentan por defecto; solo cuentan si hubo marcación biométrica.
+
+        OPTIMIZADO: antes hacía un bucle día-por-día por empleado (con
+        logger.info + print y sorted() en cada llamada), lo que dominaba el
+        tiempo total del cálculo. Ahora usa operaciones de sets sobre un
+        calendario base precalculado UNA sola vez por periodo
+        (business_days_set), sin logging por empleado.
         """
         start_date = start_date or self.period.start_date
         end_date = end_date or self.period.end_date
 
+        if business_days_set is None:
+            # Fallback por si se llama sin precalcular (evita romper otros usos),
+            # pero lo ideal es siempre pasar business_days_set ya armado.
+            business_days_set = self._build_business_days_set(start_date, end_date, holiday_dates)
+
         employee_absences = absent_dates_map.get(employee_id, set())
         employee_worked_holidays = worked_holidays_map.get(employee_id, set())
 
-        valid_days = 0
-        debug_days = []
-        counted_dates = []
-        excluded_dates = []
-        current = start_date
-        while current <= end_date:
-            is_weekday = current.weekday() < 5
-            is_holiday = current in holiday_dates
-            is_absent = current in employee_absences
-            is_worked_holiday = current in employee_worked_holidays
+        # Días normales válidos = laborables (Lun-Vie, sin feriado) menos ausencias.
+        normal_valid = len(business_days_set - employee_absences)
+        # Feriados válidos = solo si hubo marcación biométrica ese día y no hay ausencia.
+        holiday_valid = len(employee_worked_holidays - employee_absences)
 
-            if is_weekday and not is_holiday:
-                if not is_absent:
-                    valid_days += 1
-                    debug_days.append((current, 'NORMAL_OK'))
-                    counted_dates.append(current.isoformat())
-                else:
-                    debug_days.append((current, 'NORMAL_ABSENT'))
-                    excluded_dates.append(f"{current.isoformat()}:NORMAL_ABSENT")
-            elif is_holiday:
-                if is_worked_holiday and not is_absent:
-                    valid_days += 1
-                    debug_days.append((current, 'HOLIDAY_WORKED'))
-                    counted_dates.append(current.isoformat())
-                else:
-                    debug_days.append((current, 'HOLIDAY_SKIPPED'))
-                    excluded_dates.append(f"{current.isoformat()}:HOLIDAY_SKIPPED")
-            else:
-                debug_days.append((current, 'WEEKEND'))
-                excluded_dates.append(f"{current.isoformat()}:WEEKEND")
-            current += timedelta(days=1)
-
-        logger.info(
-            "[PAYROLL][BENEFITS] emp=%s period=%s-%s valid_days=%s counted_dates=%s excluded_dates=%s holiday_dates=%s absences=%s worked_holidays=%s debug=%s",
-            employee_id,
-            start_date,
-            end_date,
-            valid_days,
-            counted_dates,
-            excluded_dates,
-            sorted(holiday_dates),
-            sorted(employee_absences),
-            sorted(employee_worked_holidays),
-            debug_days,
-        )
-        print(
-            f"[PAYROLL][BENEFITS] emp={employee_id} period={start_date}-{end_date} "
-            f"valid_days={valid_days} counted_dates={counted_dates} excluded_dates={excluded_dates} "
-            f"holiday_dates={sorted(holiday_dates)} absences={sorted(employee_absences)} "
-            f"worked_holidays={sorted(employee_worked_holidays)} debug={debug_days}"
-        )
-        return valid_days
+        return normal_valid + holiday_valid
 
     def _filter_employees(self, employees):
         candidate_ids = [
@@ -467,7 +450,12 @@ class PayrollCalculatorService:
             _lap("bulk_create payslips")
 
             # ── 3. Datos masivos (feriados, permisos, etc.) ───────────────
-            holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map = self._prepare_mass_data(emp_ids)
+            holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map = self._prepare_mass_data(
+                emp_ids)
+            # Precalculado UNA sola vez para todos los empleados del período actual.
+            current_business_days_set = self._build_business_days_set(
+                self.period.start_date, self.period.end_date, holiday_dates
+            )
             _lap("prepare mass data")
 
             # ── 4. Cargar catálogo de rubros ACTIVOS (una sola vez) ───────
@@ -659,6 +647,7 @@ class PayrollCalculatorService:
                         holiday_dates,
                         absent_dates_map,
                         worked_holidays_map,
+                        business_days_set=current_business_days_set,
                     )
                     slip.effective_worked_days = effective_days
 
@@ -1084,9 +1073,13 @@ class PayrollCalculatorService:
     # ------------------------------------------------------------------
 
     def _assign_budget_lines_to_items(self, created_payslips, assignment_map):
+        # OPTIMIZACIÓN: antes solo se hacía select_related('rubric'), pero el
+        # bucle accede a item.payslip.employee_id -> sin select_related('payslip')
+        # eso dispara UNA consulta a la base de datos POR CADA ITEM (N+1 query),
+        # que es lo que dominaba el tiempo de "assign budget lines" (63-110s).
         created_items = PayslipItem.objects.filter(
             payslip__in=created_payslips
-        ).select_related('rubric')
+        ).select_related('rubric', 'payslip')
 
         latest_budget_line_by_employee = {}
         for employee_id, assignments in assignment_map.items():

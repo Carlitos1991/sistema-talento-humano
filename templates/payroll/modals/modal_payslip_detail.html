@@ -3,10 +3,12 @@
 
         <div class="modal-header-refined">
             <h5 class="header-title-main mb-0 d-flex align-items-center">
-                <i class="fas fa-file-invoice-dollar"></i>
+                <!-- Se añadió margen derecho al ícono (me-2) -->
+                <i class="fas fa-file-invoice-dollar me-2" style="margin-right: 10px;"></i>
                 Detalle de Rol: {{ payslip.employee.person.last_name }} {{ payslip.employee.person.first_name }}
             </h5>
-            <button type="button" class="btn-close-modal-refined" aria-label="Cerrar" data-action="close">
+            <button type="button" class="btn-close-circle" aria-label="Cerrar" data-action="close"
+                    onclick="closeAjaxModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -64,8 +66,10 @@
                                 <li class="empty-message">No hay ingresos</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer incomes-total">
-                            <span>Total Ingresos</span>
+                        <!-- Pie de tabla de Ingresos centrado con fondo verde -->
+                        <div class="payslip-list-footer incomes-total"
+                             style="display: flex; justify-content: center; align-items: center; gap: 8px; background-color: #ecfdf5; color: #059669; padding: 12px 16px; font-weight: 800; font-size: 0.95rem; border-top: 2px solid #a7f3d0;">
+                            <span>Total Ingresos:</span>
                             <span id="total-ingresos">$ {{ payslip.total_income }}</span>
                         </div>
                     </div>
@@ -92,9 +96,11 @@
                                 <li class="empty-message">No hay egresos</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer deductions-total">
-                            <span>Total Egresos</span>
-                            <span id="total-egresos" class="text-danger">$ {{ payslip.total_deduction }}</span>
+                        <!-- Pie de tabla de Egresos centrado con fondo rojo -->
+                        <div class="payslip-list-footer deductions-total"
+                             style="display: flex; justify-content: center; align-items: center; gap: 8px; background-color: #fef2f2; color: #dc2626; padding: 12px 16px; font-weight: 800; font-size: 0.95rem; border-top: 2px solid #fecaca;">
+                            <span>Total Egresos:</span>
+                            <span id="total-egresos">$ {{ payslip.total_deduction }}</span>
                         </div>
                     </div>
                 </div>
@@ -102,12 +108,9 @@
         </div>
 
         <div class="modal-footer">
-            <button type="button" class="btn-cancel" data-action="close">
+            <button type="button" class="btn-default-outline" data-action="close" onclick="closeAjaxModal()">
                 <i class="fas fa-times me-1"></i> Cerrar
             </button>
-            {#            <button type="button" class="btn-save" data-action="print">#}
-            {#                <i class="fas fa-print me-1"></i> Imprimir Comprobante#}
-            {#            </button>#}
         </div>
     </div>
 </div>

@@ -13,7 +13,7 @@
                 <p>Periodo: {% if current_period %}{{ current_period.month }} {{ current_period.year }}{% else %}
                     -{% endif %}</p>
             </div>
-            <a href="{% url 'payroll:period_list' %}" class="btn-header-premium btn-header-back">
+            <a href="{% url 'payroll:period_list' %}" class="btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver a Periodos
             </a>
         </div>
@@ -31,7 +31,6 @@
                     <h3>Liquidado Total</h3>
                     <div class="number" id="total-liquidado">$ {{ total_liquidado|floatformat:"2g" }}</div>
                 </div>
-                <i class="fas fa-money-bill-wave stat-icon"></i>
             </div>
         </div>
 
@@ -53,19 +52,18 @@
                                     style="background-color:white; color:#f59e0b;"><i
                                     class="fa-solid fa-arrow-trend-down"></i> Saldos Neg.
                             </button>
-                            <button type="button" id="btn-recalculate" class="btn btn-secondary"
-                                    style="margin-left:8px;">
-                                <i class="fas fa-sync-alt"></i> Recalcular Roles
+                            <button type="button" id="btn-recalculate" class="btn-success">
+                                <i class="fas fa-sync-alt"></i> Recalcular
                             </button>
                         </div>
                     </div>
 
-                    <div style="display:flex; justify-content:center; justify-self: center;">
-                        <input class="modern-toggle-input" type="checkbox" id="toggleWithheld"
+                    <div>
+                        <input type="checkbox" id="toggleWithheld" class="switch-input switch-danger"
                                onchange="performSearchWithOptions()">
-                        <label class="modern-toggle-wrapper mb-0" for="toggleWithheld" style="margin-left:10px;">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">Mostrar Roles Retenidos</span>
+                        <label class="switch-wrapper" for="toggleWithheld">
+                            <div class="switch-circle"></div>
+                            <span class="switch-text">Mostrar Roles Retenidos</span>
                         </label>
                     </div>
 
@@ -114,7 +112,6 @@
         window._personExport = window._personExport || {};
         window._personExport.listUrl = window.URLS.baseList;
     </script>
-    <script src="{% static 'js/payroll/payslip_list.js' %}"></script>
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script src="{% static 'js/payslip_modal.js' %}"></script>
 {% endblock %}
