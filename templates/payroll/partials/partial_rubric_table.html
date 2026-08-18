@@ -13,7 +13,10 @@
         </thead>
         <tbody>
         {% for r in rubrics %}
-            <tr class="rubric-row" data-type="{{ r.rubric_type }}" data-active="{{ r.is_active|yesno:'true,false' }}">
+            <tr class="rubric-row" data-filter-row
+                data-type="{{ r.rubric_type }}"
+                data-active="{{ r.is_active|yesno:'true,false' }}"
+                data-search-text="{{ r.name|default:''|lower }} {{ r.code|default:''|lower }} {{ r.abbreviation|default:''|lower }} {{ r.dynamic_suffix|default:''|lower }}">
                 <td class="fw-bold">
                     {% if r.rubric_type == 'INCOME' %}
                         <span style="color: #059669;"><i class="fa-solid fa-arrow-up"></i> Ingreso</span>
@@ -68,9 +71,18 @@
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn-seventh" title="Editar"
-                            onclick="openAjaxModal('{% url 'payroll:rubric_edit' r.pk %}', '.modal-overlay')">
+                            onclick="openAjaxModal('{% url 'payroll:rubric_edit' r.pk %}', '.modal-overlay', 'initializeRubricModal')">
                         <i class="fas fa-pen"></i>
                     </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state-container">
+                        <i class="fas fa-file-circle-xmark empty-state-icon"></i>
+                        <p class="empty-state-text">No se encontraron rubros registrados.</p>
+                    </div>
                 </td>
             </tr>
         {% endfor %}

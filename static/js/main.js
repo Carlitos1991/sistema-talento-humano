@@ -149,7 +149,119 @@ window.reloadTableData = function (url, containerSelector) {
         .catch(() => location.reload());
 };
 
-// 7. ELIMINACIÓN GENÉRICA DE REGISTROS (Reemplaza a deleteConstant)
+// 7. FILTROS GENERICOS PARA TABLAS EN CLIENTE
+window.initGlobalTableFilters = function (root) {
+    const container = typeof root === 'string' ? document.querySelector(root) : root;
+    if (!container || container.dataset.filterBound === '1') return;
+
+    const searchInput = container.querySelector('[data-filter-search]');
+    const selectFields = Array.from(container.querySelectorAll('[data-filter-select]'));
+    const applyButton = container.querySelector('[data-filter-apply]');
+    const clearButton = container.querySelector('[data-filter-clear]');
+    const rowSelector = container.dataset.rowSelector || '[data-filter-row]';
+    const noResultsRow = container.querySelector('[data-filter-no-results]');
+    const tableScope = container.closest('.content-table') || document;
+
+    if (window.$ && $.fn.select2) {
+        selectFields.forEach((select) => {
+            const $select = $(select);
+            try {
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    $select.select2('destroy');
+                }
+            } catch (error) {
+                console.warn('No se pudo reinicializar Select2', error);
+            }
+
+            $select.select2({
+                width: '100%',
+                allowClear: true,
+                minimumResultsForSearch: Infinity,
+                dropdownAutoWidth: true
+            });
+        });
+    }
+
+    const normalize = (value) => (value || '').toString().trim().toLowerCase();
+
+    const getRowAttribute = (row, attrName) => {
+        const value = row.getAttribute(`data-${attrName}`) ?? row.dataset?.[attrName] ?? '';
+        return normalize(value);
+    };
+
+    const applyFilters = () => {
+        const searchTerm = normalize(searchInput ? searchInput.value : '');
+        const hasActiveFilters = !!searchTerm || selectFields.some((select) => normalize(select.value));
+        let visibleCount = 0;
+
+        tableScope.querySelectorAll(rowSelector).forEach((row) => {
+            const rowSearchText = normalize(row.dataset.searchText || row.innerText);
+            const matchesSearch = !searchTerm || rowSearchText.includes(searchTerm);
+
+            const matchesSelects = selectFields.every((select) => {
+                const selectedValue = normalize(select.value);
+                if (!selectedValue) return true;
+
+                const attrName = select.dataset.filterAttr;
+                if (!attrName) return true;
+
+                return getRowAttribute(row, attrName) === selectedValue;
+            });
+
+            const visible = matchesSearch && matchesSelects;
+            row.style.display = visible ? '' : 'none';
+            if (visible) visibleCount += 1;
+        });
+
+        if (noResultsRow) {
+            noResultsRow.style.display = hasActiveFilters && visibleCount === 0 ? '' : 'none';
+        }
+    };
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+
+    selectFields.forEach((select) => {
+        select.addEventListener('change', applyFilters);
+        if (window.$ && $.fn.select2) {
+            $(select).on('select2:select', applyFilters);
+            $(select).on('select2:clear', applyFilters);
+        }
+    });
+
+    if (applyButton) {
+        applyButton.addEventListener('click', applyFilters);
+    }
+
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            selectFields.forEach((select) => {
+                select.value = '';
+            });
+            applyFilters();
+            if (searchInput) searchInput.focus();
+        });
+    }
+
+    container.dataset.filterBound = '1';
+    applyFilters();
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-global-table-filter]').forEach((container) => {
+        window.initGlobalTableFilters(container);
+    });
+});
+
+// 8. ELIMINACIÓN GENÉRICA DE REGISTROS (Reemplaza a deleteConstant)
 window.deleteRecordAjax = function (url, itemName) {
     Swal.fire({
         title: `¿Eliminar ${itemName}?`,

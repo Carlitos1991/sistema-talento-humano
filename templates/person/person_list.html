@@ -7,15 +7,7 @@
 {% endblock %}
 
 {% block content %}
-    <div id="personApp" data-urls='{
-    "list": "{% url "person:person_list" %}",
-    "create": "{% url "person:person_create" %}",
-    "update": "{% url "person:person_update" 0 %}",
-    "detail": "{% url "person:person_detail" 0 %}",
-    "locations": "{% url "core:location_list_json" %}",
-    "createCredentials": "{% url "security:user_create_credentials" 0 %}",
-    "administrative_units": "{% url "institution:api_unit_children" %}"  
-    }'>
+    <div id="personApp">
         <!-- 1. Header -->
         <div class="header-card">
             <div>

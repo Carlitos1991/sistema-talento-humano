@@ -14,40 +14,73 @@
                 <p>Configuración unificada de la matriz contable y presupuestaria.</p>
             </div>
             {% if perms.payroll.add_payrollrubric %}
-                <button id="btn-add-rubric" type="button" class="btn-secondary"
-                        onclick="openAjaxModal('{% url 'payroll:rubric_create' %}', '.modal-overlay')">
+                <button id="btn-add-rubric" type="button" class="btn-primary"
+                        onclick="openAjaxModal('{% url 'payroll:rubric_create' %}', '.modal-overlay', 'initializeRubricModal')">
                     <i class="fas fa-plus"></i> Nuevo Rubro
                 </button>
             {% endif %}
         </div>
 
         <div class="content-table mt-4">
+            <form id="rubricFiltersForm" class="global-table-filter-form" data-global-table-filter
+                  data-row-selector="[data-filter-row]" onsubmit="return false;">
+                <div class="global-table-filter-panel">
+                    <div class="global-table-filter-grid">
+                        <div class="global-table-filter-field">
+                            <label for="searchRubric">Buscar</label>
+                            <div class="search-box">
+                                <input type="text" id="searchRubric" class="table-search-input"
+                                       placeholder="Buscar por rubro o código"
+                                       autocomplete="off" data-filter-search>
+                            </div>
+                        </div>
 
-            <div class="table-controls"
-                 style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <div style="min-width: 250px;">
-                        <select id="filterRubricType" class="form-control select2" onchange="filterRubrics()">
-                            <option value="">-- Filtrar por Tipo --</option>
-                            <option value="INCOME">Ingresos</option>
-                            <option value="DEDUCTION">Descuentos</option>
-                            <option value="CONTRIBUTION">Aportes Institucionales</option>
-                        </select>
+                        <div class="global-table-filter-field">
+                            <label for="filterRubricType">Tipo</label>
+                            <select id="filterRubricType" class="form-control select2" data-filter-select
+                                    data-filter-attr="type">
+                                <option value="">Todos los tipos</option>
+                                <option value="INCOME">Ingresos</option>
+                                <option value="DEDUCTION">Descuentos</option>
+                                <option value="CONTRIBUTION">Aportes Institucionales</option>
+                            </select>
+                        </div>
+
+                        <div class="global-table-filter-field">
+                            <label for="filterRubricStatus">Estado</label>
+                            <select id="filterRubricStatus" class="form-control select2" data-filter-select
+                                    data-filter-attr="active">
+                                <option value="">Todos los estados</option>
+                                <option value="true">Activo</option>
+                                <option value="false">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rubric-toolbar-row">
+                    <div class="rubric-toolbar-left">
+                        <div class="table-controls rubric-export-controls"></div>
                     </div>
 
-                    <input class="switch-input switch-success" type="checkbox" id="toggleInactiveRubrics"
-                           onchange="filterRubrics()">
-                    <label class="switch-wrapper" for="toggleInactiveRubrics" style="margin: 0;">
-                        <div class="switch-circle"></div>
-                        <span class="switch-text">Mostrar Inactivos</span>
-                    </label>
+                    <div class="rubric-toolbar-center">
+                        <button type="button" class="btn-primary" data-filter-apply>
+                            <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                        </button>
+                        <button type="button" class="btn-primary-outline" data-filter-clear>
+                            <i class="fa-solid fa-eraser"></i> Limpiar
+                        </button>
+                    </div>
+
+                    <div class="rubric-toolbar-right"></div>
                 </div>
 
-                <div class="search-box" style="max-width: 350px; width: 100%;">
-                    <input type="text" id="searchRubric" class="table-search-input"
-                           placeholder="Buscar rubro o código..." onkeyup="searchRubricTable()">
+                <div id="rubric-no-results" class="rubric-no-results empty-state-container" data-filter-no-results
+                     style="display: none;">
+                    <i class="fas fa-search empty-state-icon"></i>
+                    <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
                 </div>
-            </div>
+            </form>
 
             <div id="rubrics-table-container">
                 {% include 'payroll/partials/partial_rubric_table.html' %}
@@ -61,37 +94,20 @@
 {% block extra_js %}
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script>
-        $(document).ready(function () {
-            $('#filterRubricType').select2({
-                minimumResultsForSearch: Infinity,
-                width: '100%'
-            });
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.$ && $.fn.select2) {
+                $('#filterRubricType, #filterRubricStatus').each(function () {
+                    $(this).select2({
+                        width: '100%',
+                        minimumResultsForSearch: Infinity,
+                        allowClear: true,
+                        dropdownAutoWidth: true
+                    });
+                });
+            }
+            if (window.initGlobalTableFilters) {
+                window.initGlobalTableFilters(document.getElementById('rubricFiltersForm'));
+            }
         });
-
-        // Si usas filterRubrics y searchRubricTable en esta vista de forma local:
-        function searchRubricTable() {
-            const input = document.getElementById("searchRubric").value.toLowerCase();
-            const rows = document.querySelectorAll(".rubric-row");
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(input) ? "" : "none";
-            });
-        }
-
-        function filterRubrics() {
-            const type = document.getElementById("filterRubricType").value;
-            const showInactive = document.getElementById("toggleInactiveRubrics").checked;
-            const rows = document.querySelectorAll(".rubric-row");
-
-            rows.forEach(row => {
-                const rType = row.getAttribute("data-type");
-                const rActive = row.getAttribute("data-active") === 'true';
-
-                let matchType = (type === "" || rType === type);
-                let matchStatus = showInactive ? true : rActive === true;
-
-                row.style.display = (matchType && matchStatus) ? "" : "none";
-            });
-        }
     </script>
 {% endblock %}

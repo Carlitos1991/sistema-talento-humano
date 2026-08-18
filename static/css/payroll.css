@@ -464,112 +464,12 @@
     padding-top: 1rem;
 }
 
-
-/* =====================================================================
-   FIXES VISUALES: SWITCH, MODALES Y CAMPOS OCULTOS
-   ===================================================================== */
-
-/* --- 1. Switch Moderno (Forzamos a ocultar el checkbox nativo) --- */
-input[type="checkbox"].modern-toggle-input {
+/* Blindaje para forzar el ocultamiento del checkbox nativo de Django */
+input[type="checkbox"].switch-input,
+input[type="checkbox"].toggle-status-red-input,
+input[type="checkbox"]:has(+ .switch-wrapper) {
     display: none !important;
-}
-
-.modern-toggle-wrapper {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 16px;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 50px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    user-select: none;
-    margin: 0;
-}
-
-.modern-toggle-wrapper .modern-toggle-circle {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    background-color: transparent;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-}
-
-.modern-toggle-wrapper .modern-toggle-text {
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.85rem;
-}
-
-.modern-toggle-input:checked + .modern-toggle-wrapper {
-    background-color: #f0fdf4;
-    border-color: #86efac;
-}
-
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-circle {
-    background-color: #10b981;
-    border-color: #10b981;
-}
-
-.modern-toggle-input:checked + .modern-toggle-wrapper .modern-toggle-text {
-    color: #065f46;
-}
-
-/* --- 2. Ocultar campos automáticos en el modal de periodo --- */
-.period-hidden-field,
-#div_id_start_date,
-#div_id_end_date,
-#div_id_working_days {
-    display: none !important;
-}
-
-/* --- 3. Cabecera Elegante para Modales --- */
-.modal-header-refined {
-    background: linear-gradient(90deg, #0f172a 0%, #0b3a57 100%);
-    color: #fff;
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-}
-
-.modal-header-refined h2,
-.modal-header-refined h5,
-.modal-header-refined .header-title-main {
-    margin: 0;
-    color: #fff;
-    font-size: 1.15rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* --- 4. Botón Cerrar Modal (Rojo, Pequeño y con Giro 90°) --- */
-.btn-close-modal-refined {
-    background: linear-gradient(135deg, #ff3e6c 0%, #be123c 100%);
-    color: white !important;
-    border: none;
-    border-radius: 50%;
-    width: 28px !important;
-    height: 28px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.85rem !important; /* Icono pequeño */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 0;
-}
-
-.btn-close-modal-refined:hover {
-    transform: rotate(90deg); /* El botón entero da un cuarto de vuelta */
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    width: 0;
+    height: 0;
+    opacity: 0;
 }

@@ -92,7 +92,7 @@ class PayrollRubricForm(forms.ModelForm):
             'debit_account', 'credit_account', 'debit_account_prod', 'credit_account_prod',
             'debit_account_inv', 'credit_account_inv', 'income_account',
             'has_mapping', 'dynamic_suffix', 'is_fixed',
-            'is_taxable', 'is_overtime'
+            'is_taxable', 'is_overtime', 'is_upload'
         ]
         widgets = {
             'rubric_type': forms.Select(attrs={'class': 'form-select'}),
@@ -111,12 +111,13 @@ class PayrollRubricForm(forms.ModelForm):
             'debit_account_inv': forms.Select(attrs={'class': 'form-select'}),
             'credit_account_inv': forms.Select(attrs={'class': 'form-select'}),
             'income_account': forms.Select(attrs={'class': 'form-select'}),
-            'is_salary': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
-            'has_mapping': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
-            'is_fixed': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
-            'is_taxable': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
-            'is_overtime': forms.CheckboxInput(attrs={'class': 'toggle-status-red-input'}),
+            'is_salary': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
+            'has_mapping': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
+            'is_fixed': forms.CheckboxInput(attrs={'class': 'switch-input switch-danger'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-success'}),
+            'is_taxable': forms.CheckboxInput(attrs={'class': 'switch-input switch-danger'}),
+            'is_overtime': forms.CheckboxInput(attrs={'class': 'switch-input switch-warning'}),
+            'is_upload': forms.CheckboxInput(attrs={'class': 'switch-input switch-warning'}),
         }
 
     def clean(self):

@@ -83,6 +83,9 @@ class PayrollRubric(models.Model):
         verbose_name="¿Es Rubro de Horas Extras/Suplementarias?",
         help_text="Marque si el Excel de este rubro debe leer la Columna B (1.50) y Col C (2.00) como horas."
     )
+    is_upload = models.BooleanField(
+        default=False,
+        verbose_name="¿Tiene Carga masiva?", )
 
     def __str__(self):
         return f"[{self.get_rubric_type_display()}] {self.name}"
