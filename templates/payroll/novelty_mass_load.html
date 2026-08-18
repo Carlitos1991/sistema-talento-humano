@@ -14,490 +14,175 @@
                 <i class="fas fa-arrow-left"></i> Volver a Periodos
             </a>
         </div>
-
         <div class="row g-4">
+
+            <!-- PANEL IZQUIERDO: FORMULARIO Y BOTONES ESTÁTICOS -->
             <div class="col-md-4">
-                <div class="card form-section-card h-100">
-                    <h5 class="section-title mt-2"><i class="fas fa-cog"></i> Configuración de Novedad</h5>
+                <!-- Se ajustó la altura a -260px para que NUNCA quede debajo de la pantalla -->
+                <div class="card form-section-card"
+                     style="display: flex; flex-direction: column; height: calc(100vh - 260px); margin-bottom: 0; padding-bottom: 1.25rem;">
 
-                    <div class="form-group">
-                        <label class="form-label">Periodo de Nómina</label>
-                        <select id="period_id" class="input-field {% if selected_period_id %}bg-readonly{% endif %}"
-                                onchange="checkAndLoad()" {% if selected_period_id %}disabled{% endif %}>
-                            <option value="">Seleccione el periodo...</option>
-                            {% for p in periods %}
-                                <option value="{{ p.id }}"
-                                        {% if selected_period_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.month }} {{ p.year }}</option>
-                            {% endfor %}
-                        </select>
+                    <!-- Título -->
+                    <h5 class="section-title mt-2" style="flex-shrink: 0;"><i class="fas fa-cog"></i> Configuración de
+                        Novedad</h5>
+
+                    <!-- Zona central con Scroll (Compactada para evitar scroll interno) -->
+                    <div style="flex-grow: 1; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">
+
+                        <!-- Usamos form-group-compact y height: auto para evitar que se estiren -->
+                        <div class="form-group form-group-compact" style="height: auto;">
+                            <label class="form-label mb-1">Periodo de Nómina</label>
+                            <select id="period_id" class="input-field {% if selected_period_id %}bg-readonly{% endif %}"
+                                    onchange="checkAndLoad()" {% if selected_period_id %}disabled{% endif %}>
+                                <option value="">Seleccione el periodo...</option>
+                                {% for p in periods %}
+                                    <option value="{{ p.id }}"
+                                            {% if selected_period_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.month }} {{ p.year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group form-group-compact" style="height: auto;">
+                            <label class="form-label mb-1">Tipo de Novedad</label>
+                            <select id="rubro_type" class="input-field" onchange="toggleRubroSelects()">
+                                <option value="">Seleccione...</option>
+                                <option value="INCOME">Ingreso (Horas extras, etc)</option>
+                                <option value="DEDUCTION">Descuento (Préstamos, Multas)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group form-group-compact hidden" id="group_income" style="height: auto;">
+                            <label class="form-label mb-1">Seleccione el Ingreso</label>
+                            <select id="income_id" class="input-field" onchange="checkAndLoad()">
+                                <option value="">Seleccione...</option>
+                                {% for inc in incomes %}
+                                    <option value="{{ inc.id }}">{{ inc.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group form-group-compact hidden" id="group_deduction" style="height: auto;">
+                            <label class="form-label mb-1">Seleccione el Descuento</label>
+                            <select id="deduction_id" class="input-field" onchange="checkAndLoad()">
+                                <option value="">Seleccione...</option>
+                                {% for ded in deductions %}
+                                    <option value="{{ ded.id }}">{{ ded.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group form-group-compact"
+                             style="margin-bottom: 0; margin-top: 0.5rem; height: auto;">
+                            <label class="form-label mb-1">Subir o Actualizar con Excel (.xlsx)</label>
+                            <input type="file" id="excel_file" class="form-control" accept=".xlsx, .xls">
+                            <small class="text-muted d-block mt-2" style="line-height: 1.2; font-size: 0.75rem;">
+                                Para rubros de horas: use formato de 2 columnas (<strong>Cédula, Horas</strong>), o 3
+                                columnas (<strong>Cédula, Extra, Supl</strong>).
+                                En 2 filas, la 1ra es extra, la 2da suplementaria.
+                            </small>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Tipo de Novedad</label>
-                        <select id="rubro_type" class="input-field" onchange="toggleRubroSelects()">
-                            <option value="">Seleccione...</option>
-                            <option value="INCOME">Ingreso (Horas extras, etc)</option>
-                            <option value="DEDUCTION">Descuento (Préstamos, Multas)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group hidden" id="group_income">
-                        <label class="form-label">Seleccione el Ingreso</label>
-                        <select id="income_id" class="input-field" onchange="checkAndLoad()">
-                            <option value="">Seleccione...</option>
-                            {% for inc in incomes %}
-                                <option value="{{ inc.id }}">{{ inc.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="form-group hidden" id="group_deduction">
-                        <label class="form-label">Seleccione el Descuento</label>
-                        <select id="deduction_id" class="input-field" onchange="checkAndLoad()">
-                            <option value="">Seleccione...</option>
-                            {% for ded in deductions %}
-                                <option value="{{ ded.id }}">{{ ded.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="form-group mt-4">
-                        <label class="form-label">Subir o Actualizar con Excel (.xlsx)</label>
-                        <input type="file" id="excel_file" class="form-control" accept=".xlsx, .xls">
-                        <small class="text-muted d-block mt-2">
-                            Para rubros de horas: puede usar formato de 2 columnas
-                            (<strong>Cédula, Horas</strong>) cargando cada rubro por separado,
-                            o 3 columnas (<strong>Cédula, Horas Extra, Horas Suplementarias</strong>).
-                            En formato de 2 filas por cédula, la primera fila se toma como horas extra y la segunda como
-                            suplementarias.
-                        </small>
-                    </div>
-
-                    <button type="button" class="btn-success w-100 mt-3" onclick="uploadExcel()">
-                        <i class="fas fa-file-excel"></i> Cargar Excel con Tabla
-                    </button>
-
-                    <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn-danger flex-grow-1" onclick="deleteAllNovelties()">
-                            <i class="fas fa-trash-alt"></i> Eliminar todo
+                    <!-- Zona estática de botones al final -->
+                    <div style="flex-shrink: 0; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                        <button type="button" class="btn-success" style="width: 100%; margin-bottom: 0.8rem;"
+                                onclick="uploadExcel()">
+                            <i class="fas fa-file-excel"></i> Cargar Excel con Tabla
                         </button>
-                        <button type="button" class="btn-info flex-grow-1" onclick="exportNoveltiesToExcel()">
-                            <i class="fas fa-file-download"></i> Descargar
-                        </button>
+
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="button" class="btn-danger" style="width: 100%; margin: 0;"
+                                    onclick="deleteAllNovelties()">
+                                <i class="fas fa-trash-alt"></i> Eliminar todo
+                            </button>
+                            <button type="button" class="btn-info" style="width: 100%; margin: 0;"
+                                    onclick="exportNoveltiesToExcel()">
+                                <i class="fas fa-file-download"></i> Descargar
+                            </button>
+                        </div>
                     </div>
+
                 </div>
             </div>
 
+            <!-- PANEL DERECHO: BUSCADOR Y TABLA FLEXIBLE -->
             <div class="col-md-8">
-                <div class="card mb-3"
-                     style="max-height: calc(100vh - 340px); overflow-x: hidden; overflow-y: auto; padding: 0; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <table class="table table-hover mb-0"
-                           style="width: 100%; min-width: 100% !important; table-layout: fixed;">
-                        <thead style="position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <tr>
-                            <th style="width: 18%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Cédula</th>
-                            <th style="width: 62%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Empleado</th>
-                            <th style="width: 20%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;"
-                                class="text-end">Monto ($)
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody id="novelty_tbody">
-                        <tr>
-                            <td colspan="3" class="text-center py-5 text-muted">
-                                <i class="fas fa-table fa-3x mb-3 opacity-50"></i><br>
-                                Selecciona el Periodo y el Rubro para ver los datos.<br>
-                                <small>Pon "0" en una celda para eliminar ese descuento.</small>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <div style="display: flex; flex-direction: column; height: calc(100vh - 260px);">
 
-                <div class="d-flex align-items-center w-100"
-                     style="background: #ffffff; border: 1px solid #cbd5e1; padding: 15px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #475569;">
-                        TOTAL EN TABLA: <span class="ms-3 fs-4" id="total_sum" style="color: #0f4c81;">$ 0.00</span>
+                    <!-- BUSCADOR CENTRADO Y MÁS ANCHO -->
+                    <div style="display: flex; justify-content: center; width: 100%; margin-bottom: 1rem; flex-shrink: 0;">
+                        <div class="search-input-wrapper" style="width: 85%; max-width: 700px; position: relative;">
+                            <i class="fas fa-search search-icon-left"
+                               style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #3b82f6;"></i>
+                            <input type="text" id="searchTable" class="search-input-clean"
+                                   style="width: 100%; border: 1px solid #cbd5e1; border-radius: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.95rem; padding: 10px 15px 10px 42px;"
+                                   placeholder="Buscar por cédula, nombres, apellidos o valor cargado..."
+                                   onkeyup="filterTableLocal()">
+                        </div>
                     </div>
 
-                    <button type="button" class="btn-default" id="btn_save_novelties"
-                            onclick="saveNovelties()">
-                        <i class="fas fa-save me-1"></i> Guardar Todo
-                    </button>
+                    <!-- TABLA -->
+                    <div class="card"
+                         style="flex-grow: 1; overflow-x: hidden; overflow-y: auto; padding: 0; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1rem;">
+                        <table class="table table-hover mb-0"
+                               style="width: 100%; min-width: 100% !important; table-layout: fixed;">
+                            <thead style="position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <tr>
+                                <th style="width: 18%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Cédula
+                                </th>
+                                <th style="width: 62%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;">Empleado
+                                </th>
+                                <th style="width: 20%; border-bottom: 2px solid #cbd5e1; padding: 10px 15px;"
+                                    class="text-end">Monto ($)
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody id="novelty_tbody">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted"
+                                    style="height: 250px; vertical-align: middle;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                        <i class="fas fa-table fa-3x mb-3" style="opacity: 0.5;"></i>
+                                        <span style="font-size: 1rem;">Selecciona el Periodo y el Rubro para ver los datos.</span>
+                                        <small style="margin-top: 0.5rem;">Pon "0" en una celda para eliminar ese
+                                            descuento.</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TOTALES Y GUARDAR (Se mostrarán sin necesidad de bajar la página) -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #ffffff; border: 1px solid #cbd5e1; padding: 12px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #475569;">
+                            TOTAL EN TABLA: <span style="margin-left: 1rem; font-size: 1.4rem; color: #0f4c81;"
+                                                  id="total_sum">$ 0.00</span>
+                        </div>
+
+                        <button type="button" class="btn-default" id="btn_save_novelties" onclick="saveNovelties()"
+                                style="margin: 0;">
+                            <i class="fas fa-save me-1"></i> Guardar Todo
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script>
-        let parsedData = [];
-
-        // Llamamos a la función por si el periodo ya venía pre-seleccionado desde la otra pantalla
-        window.onload = function () {
-            if (document.getElementById('period_id').value) {
-                checkAndLoad();
-            }
+        window.NOVELTY_URLS = {
+            get: '{% url "payroll:get_novelties" %}',
+            parse: '{% url "payroll:parse_novelty_excel" %}',
+            save: '{% url "payroll:save_novelties" %}'
         };
 
-        function toggleRubroSelects() {
-            const type = document.getElementById('rubro_type').value;
-            document.getElementById('group_income').classList.add('hidden');
-            document.getElementById('group_deduction').classList.add('hidden');
-
-            // Reset valores
-            document.getElementById('income_id').value = '';
-            document.getElementById('deduction_id').value = '';
-
-            if (type === 'INCOME') document.getElementById('group_income').classList.remove('hidden');
-            if (type === 'DEDUCTION') document.getElementById('group_deduction').classList.remove('hidden');
-
-            checkAndLoad();
-        }
-
-        function checkAndLoad() {
-            const period_id = document.getElementById('period_id').value;
-            const rubro_type = document.getElementById('rubro_type').value;
-            let rubro_id = null;
-            if (rubro_type === 'INCOME') rubro_id = document.getElementById('income_id').value;
-            if (rubro_type === 'DEDUCTION') rubro_id = document.getElementById('deduction_id').value;
-
-            if (period_id && rubro_type && rubro_id) {
-                // Mostrar spinner
-                document.getElementById('novelty_tbody').innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Cargando datos guardados...</td></tr>';
-
-                fetch(`{% url "payroll:get_novelties" %}?period_id=${period_id}&rubro_type=${rubro_type}&rubro_id=${rubro_id}`)
-                    .then(res => res.json())
-                    .then(res => {
-                        if (res.status === 'success') {
-                            parsedData = res.data;
-                            renderTable();
-                        }
-                    });
-            } else {
-                parsedData = [];
-                renderTable(true);
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.getElementById('period_id') && document.getElementById('period_id').value) {
+                if (typeof window.checkAndLoad === 'function') window.checkAndLoad();
             }
-        }
-
-        function uploadExcel() {
-            const period_id = document.getElementById('period_id').value;
-            const rubro_type = document.getElementById('rubro_type').value;
-            const fileInput = document.getElementById('excel_file');
-
-            if (!period_id || !rubro_type || (!document.getElementById('income_id').value && !document.getElementById('deduction_id').value)) {
-                Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro en la configuración.', 'warning');
-                return;
-            }
-
-            if (fileInput.files.length === 0) {
-                Swal.fire('Error', 'Selecciona un archivo Excel', 'warning');
-                return;
-            }
-
-            const doUpload = (mergeMode) => {
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
-                const rubroId = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
-                formData.append('rubro_type', rubro_type);
-                formData.append('rubro_id', rubroId);
-                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                fetch('{% url "payroll:parse_novelty_excel" %}', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(res => {
-                        if (res.status === 'success') {
-                            // Fusión según modo elegido: REPLACE o ADD
-                            res.data.forEach(newRow => {
-                                const existingIndex = parsedData.findIndex(r => r.emp_id === newRow.emp_id);
-                                if (existingIndex >= 0) {
-                                    if (mergeMode === 'add') {
-                                        const current = parseFloat(parsedData[existingIndex].valor) || 0;
-                                        const incoming = parseFloat(newRow.valor) || 0;
-                                        parsedData[existingIndex].valor = parseFloat((current + incoming).toFixed(2));
-                                    } else {
-                                        parsedData[existingIndex].valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
-                                    }
-                                } else {
-                                    newRow.valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
-                                    parsedData.push(newRow);
-                                }
-                            });
-
-                            renderTable();
-
-                            if (res.not_found.length > 0) {
-                                const cedulasFaltantes = res.not_found.join(', ');
-                                Swal.fire({
-                                    title: 'Advertencia',
-                                    html: `No se encontraron <b>${res.not_found.length}</b> cédulas del Excel en la base de datos:<br><br>
-                                           <div style="max-height: 120px; overflow-y: auto; background-color: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.95rem; color: #334155; border: 1px dashed #cbd5e1; text-align: justify; word-wrap: break-word;">
-                                              ${cedulasFaltantes}
-                                           </div>
-                                           <br><small style="color: #64748b;">Los demás registros sí se cargaron correctamente en la tabla.</small>`,
-                                    icon: 'warning',
-                                    confirmButtonColor: '#3b82f6'
-                                });
-                            } else {
-                                Swal.fire({
-                                    toast: true,
-                                    position: 'top-end',
-                                    icon: 'success',
-                                    title: mergeMode === 'add' ? 'Excel adicionado con éxito' : 'Excel reemplazado con éxito',
-                                    showConfirmButton: false,
-                                    timer: 2000
-                                });
-                            }
-                        } else {
-                            Swal.fire('Error', res.message, 'error');
-                        }
-                        // Limpiar input de archivo
-                        fileInput.value = '';
-                    });
-            };
-
-            // Si ya hay datos cargados, preguntar cómo fusionar este nuevo Excel.
-            if (parsedData.length > 0) {
-                Swal.fire({
-                    title: '¿Cómo deseas cargar el nuevo Excel?',
-                    text: 'Reemplazar: sustituye valores existentes. Adicionar: suma por cédula.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    showDenyButton: true,
-                    confirmButtonText: 'Reemplazar todo',
-                    denyButtonText: 'Adicionar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        doUpload('replace');
-                    } else if (result.isDenied) {
-                        doUpload('add');
-                    } else {
-                        fileInput.value = '';
-                    }
-                });
-            } else {
-                // Primera carga: comportamiento normal (equivalente a reemplazar)
-                doUpload('replace');
-            }
-        }
-
-        function renderTable(isEmpty = false) {
-            const tbody = document.getElementById('novelty_tbody');
-            tbody.innerHTML = '';
-
-            if (isEmpty || parsedData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">No hay datos para este rubro. Puedes subir un Excel para agregar.</td></tr>';
-                document.getElementById('btn_save_novelties').classList.add('hidden');
-                updateTotal();
-                return;
-            }
-
-            parsedData.forEach((row, index) => {
-                const tr = document.createElement('tr');
-                if (row.valor === 0) tr.style.backgroundColor = '#fef2f2';
-
-                tr.innerHTML = `
-                <td class="text-truncate" style="padding: 6px 15px; vertical-align: middle;"><span class="badge-code">${row.cedula}</span></td>
-                <td class="fw-bold text-secondary text-truncate" title="${row.nombres}" style="font-size: 0.85rem; padding: 6px 15px; vertical-align: middle;">${row.nombres}</td>
-                <td class="text-end" style="padding: 4px 15px; vertical-align: middle;">
-                    <input type="number" step="0.01" class="input-field text-end fw-bold"
-                           style="width: 85px; padding: 4px 8px; margin: 0; height: auto; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #0f4c81;'}"
-                           value="${row.valor}" 
-                           onchange="updateValue(${index}, this.value)"
-                           onkeyup="updateValue(${index}, this.value)">
-                </td>
-            `;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('btn_save_novelties').classList.remove('hidden');
-            updateTotal();
-        }
-
-        function updateValue(index, newValue) {
-            let val = parseFloat(newValue);
-            parsedData[index].valor = isNaN(val) || val < 0 ? 0 : val;
-            renderTable(); // Re-render para mostrar el color rojo si se puso en 0
-        }
-
-        function updateTotal() {
-            const total = parsedData.reduce((sum, row) => sum + row.valor, 0);
-            document.getElementById('total_sum').innerText = `$ ${total.toFixed(2)}`;
-        }
-
-        function saveNovelties() {
-            const period_id = document.getElementById('period_id').value;
-            const rubro_type = document.getElementById('rubro_type').value;
-            let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
-
-            const payload = {
-                period_id: period_id,
-                rubro_type: rubro_type,
-                rubro_id: rubro_id,
-                items: parsedData
-            };
-
-            fetch('{% url "payroll:save_novelties" %}', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-                body: JSON.stringify(payload)
-            })
-                .then(response => response.json())
-                .then(res => {
-                    if (res.status === 'success') {
-                        Swal.fire('¡Guardado!', 'Los datos se aplicarán la próxima vez que generes el Rol de este periodo.', 'success')
-                            .then(() => checkAndLoad()); // Recargamos de la base de datos para limpiar los ceros
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                    }
-                });
-        }
-
-        function deleteAllNovelties() {
-            const period_id = document.getElementById('period_id').value;
-            const rubro_type = document.getElementById('rubro_type').value;
-            let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
-
-            if (!period_id || !rubro_type || !rubro_id) {
-                Swal.fire('Atención', 'Primero selecciona el Periodo, el Tipo y el Rubro.', 'warning');
-                return;
-            }
-
-            if (parsedData.length === 0) {
-                Swal.fire('Atención', 'No hay datos cargados para eliminar.', 'info');
-                return;
-            }
-
-            Swal.fire({
-                title: '¿Estás seguro?',
-                text: "Se eliminarán TODAS las novedades de este rubro para este periodo en la base de datos. ¡Esta acción no se puede deshacer!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar todo',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-
-                    // Al enviar el array 'items' vacío, el servidor borra los actuales y no guarda nada nuevo.
-                    const payload = {
-                        period_id: period_id,
-                        rubro_type: rubro_type,
-                        rubro_id: rubro_id,
-                        items: []
-                    };
-
-                    // Mostramos spinner de carga
-                    Swal.fire({
-                        title: 'Eliminando registros...',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    fetch('{% url "payroll:save_novelties" %}', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-                        body: JSON.stringify(payload)
-                    })
-                        .then(response => response.json())
-                        .then(res => {
-                            if (res.status === 'success') {
-                                Swal.fire('¡Eliminado!', 'Se han limpiado todos los registros de este rubro.', 'success')
-                                    .then(() => checkAndLoad()); // Recargamos la tabla (ahora estará vacía)
-                            } else {
-                                Swal.fire('Error', res.message, 'error');
-                            }
-                        })
-                        .catch(err => {
-                            Swal.fire('Error', 'Ocurrió un problema de conexión.', 'error');
-                        });
-                }
-            });
-        }
-
-        function exportNoveltiesToExcel() {
-            const periodSelect = document.getElementById('period_id');
-            const period_name = periodSelect.options[periodSelect.selectedIndex]?.text || '';
-            const rubro_type = document.getElementById('rubro_type').value;
-
-            if (!rubro_type) {
-                Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro para poder descargar.', 'warning');
-                return;
-            }
-
-            const selectEl = rubro_type === 'INCOME' ? document.getElementById('income_id') : document.getElementById('deduction_id');
-            const rubro_name = selectEl.options[selectEl.selectedIndex]?.text || 'Reporte';
-
-            if (parsedData.length === 0) {
-                Swal.fire('Atención', 'No hay datos en la tabla para exportar.', 'info');
-                return;
-            }
-
-            // Construimos la estructura HTML/XML que Excel interpreta perfectamente manteniendo estilos
-            let excelHtml = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-                <head>
-                    <meta charset="utf-8">
-                    </head>
-                <body>
-                    <table>
-                        <tr>
-                            <td colspan="3" style="font-size: 14pt; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">
-                                ${rubro_name.toUpperCase()}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" style="font-size: 10pt; color: #475569; text-align: center; font-family: Arial, sans-serif; font-weight: bold;">
-                                PERIODO: ${period_name}
-                            </td>
-                        </tr>
-                        <tr><td colspan="3"></td></tr> <thead>
-                            <tr style="background-color: #f1f5f9; font-weight: bold; font-family: Arial, sans-serif; font-size: 10pt;">
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Cédula</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Nombres y Apellidos</th>
-                                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: right;">Descuento ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody style="font-family: Arial, sans-serif; font-size: 9.5pt;">
-            `;
-
-            parsedData.forEach(row => {
-                excelHtml += `
-                    <tr>
-                        <td style="border: 1px solid #e2e8f0; padding: 4px; mso-number-format:'\\@';">${row.cedula}</td>
-                        <td style="border: 1px solid #e2e8f0; padding: 4px;">${row.nombres}</td>
-                        <td style="border: 1px solid #e2e8f0; padding: 4px; text-align: right;">${parseFloat(row.valor).toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            excelHtml += `
-                        </tbody>
-                       </table>
-                </body>
-                </html>
-            `;
-
-            // Creamos el archivo temporal de descarga
-            const blob = new Blob([excelHtml], {type: 'application/vnd.ms-excel;charset=utf-8;'});
-            const link = document.createElement("a");
-
-            // Generamos un nombre limpio sustituyendo espacios por guiones bajos
-            const cleanRubroName = rubro_name.replace(/[^a-zA-Z0-9]/g, "_");
-            const cleanPeriodName = period_name.replace(/[^a-zA-Z0-9]/g, "_");
-            const fileName = `Reporte_${cleanRubroName}_${cleanPeriodName}.xls`;
-
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", fileName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        });
     </script>
 {% endblock %}

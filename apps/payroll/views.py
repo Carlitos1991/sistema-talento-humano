@@ -676,8 +676,19 @@ class NoveltyMassLoadView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['periods'] = PayrollPeriod.objects.filter(is_closed=False)
-        context['incomes'] = PayrollRubric.objects.filter(rubric_type='INCOME', is_active=True)
-        context['deductions'] = PayrollRubric.objects.filter(rubric_type='DEDUCTION', is_active=True)
+        
+        context['incomes'] = PayrollRubric.objects.filter(
+            rubric_type='INCOME',
+            is_active=True,
+            is_upload=True
+        ).order_by('name')
+
+        context['deductions'] = PayrollRubric.objects.filter(
+            rubric_type='DEDUCTION',
+            is_active=True,
+            is_upload=True
+        ).order_by('name')
+
         context['selected_period_id'] = self.request.GET.get('period_id', '')
         return context
 

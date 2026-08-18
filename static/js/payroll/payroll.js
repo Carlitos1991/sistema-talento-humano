@@ -347,3 +347,340 @@ document.addEventListener('click', function (e) {
         );
     }
 });
+/* =================================================================================
+   6. CARGA MASIVA DE NOVEDADES (EXCEL)
+   ================================================================================= */
+window.noveltyParsedData = [];
+
+window.toggleRubroSelects = function () {
+    const type = document.getElementById('rubro_type').value;
+    const groupInc = document.getElementById('group_income');
+    const groupDed = document.getElementById('group_deduction');
+
+    if (groupInc) groupInc.classList.add('hidden');
+    if (groupDed) groupDed.classList.add('hidden');
+
+    document.getElementById('income_id').value = '';
+    document.getElementById('deduction_id').value = '';
+
+    if (type === 'INCOME' && groupInc) groupInc.classList.remove('hidden');
+    if (type === 'DEDUCTION' && groupDed) groupDed.classList.remove('hidden');
+
+    window.checkAndLoad();
+};
+
+window.checkAndLoad = function () {
+    const period_id = document.getElementById('period_id').value;
+    const rubro_type = document.getElementById('rubro_type').value;
+    let rubro_id = null;
+
+    if (rubro_type === 'INCOME') rubro_id = document.getElementById('income_id').value;
+    if (rubro_type === 'DEDUCTION') rubro_id = document.getElementById('deduction_id').value;
+
+    if (period_id && rubro_type && rubro_id) {
+        document.getElementById('novelty_tbody').innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Cargando datos guardados...</td></tr>';
+
+        fetch(`${window.NOVELTY_URLS.get}?period_id=${period_id}&rubro_type=${rubro_type}&rubro_id=${rubro_id}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    window.noveltyParsedData = res.data;
+                    window.renderTable();
+                }
+            });
+    } else {
+        window.noveltyParsedData = [];
+        window.renderTable(true);
+    }
+};
+
+window.uploadExcel = function () {
+    const period_id = document.getElementById('period_id').value;
+    const rubro_type = document.getElementById('rubro_type').value;
+    const fileInput = document.getElementById('excel_file');
+
+    if (!period_id || !rubro_type || (!document.getElementById('income_id').value && !document.getElementById('deduction_id').value)) {
+        Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro en la configuración.', 'warning');
+        return;
+    }
+
+    if (fileInput.files.length === 0) {
+        Swal.fire('Error', 'Selecciona un archivo Excel', 'warning');
+        return;
+    }
+
+    const doUpload = (mergeMode) => {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const rubroId = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+        formData.append('rubro_type', rubro_type);
+        formData.append('rubro_id', rubroId);
+
+        fetch(window.NOVELTY_URLS.parse, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()}
+        })
+            .then(response => response.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    res.data.forEach(newRow => {
+                        const existingIndex = window.noveltyParsedData.findIndex(r => r.emp_id === newRow.emp_id);
+                        if (existingIndex >= 0) {
+                            if (mergeMode === 'add') {
+                                const current = parseFloat(window.noveltyParsedData[existingIndex].valor) || 0;
+                                const incoming = parseFloat(newRow.valor) || 0;
+                                window.noveltyParsedData[existingIndex].valor = parseFloat((current + incoming).toFixed(2));
+                            } else {
+                                window.noveltyParsedData[existingIndex].valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                            }
+                        } else {
+                            newRow.valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                            window.noveltyParsedData.push(newRow);
+                        }
+                    });
+
+                    window.renderTable();
+
+                    if (res.not_found.length > 0) {
+                        const cedulasFaltantes = res.not_found.join(', ');
+                        Swal.fire({
+                            title: 'Advertencia',
+                            html: `No se encontraron <b>${res.not_found.length}</b> cédulas del Excel en la base de datos:<br><br>
+                               <div style="max-height: 120px; overflow-y: auto; background-color: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.95rem; color: #334155; border: 1px dashed #cbd5e1; text-align: justify; word-wrap: break-word;">
+                                  ${cedulasFaltantes}
+                               </div>
+                               <br><small style="color: #64748b;">Los demás registros sí se cargaron correctamente en la tabla.</small>`,
+                            icon: 'warning',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    } else {
+                        Swal.fire({
+                            toast: true, position: 'top-end', icon: 'success',
+                            title: mergeMode === 'add' ? 'Excel adicionado con éxito' : 'Excel reemplazado con éxito',
+                            showConfirmButton: false, timer: 2000
+                        });
+                    }
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+                fileInput.value = '';
+            });
+    };
+
+    if (window.noveltyParsedData.length > 0) {
+        Swal.fire({
+            title: '¿Cómo deseas cargar el nuevo Excel?',
+            text: 'Reemplazar: sustituye valores existentes. Adicionar: suma por cédula.',
+            icon: 'question',
+            showCancelButton: true, showDenyButton: true,
+            confirmButtonText: 'Reemplazar todo', denyButtonText: 'Adicionar', cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) doUpload('replace');
+            else if (result.isDenied) doUpload('add');
+            else fileInput.value = '';
+        });
+    } else {
+        doUpload('replace');
+    }
+};
+
+window.renderTable = function (isEmpty = false) {
+    const tbody = document.getElementById('novelty_tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (isEmpty || window.noveltyParsedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">No hay datos para este rubro. Puedes subir un Excel para agregar.</td></tr>';
+        document.getElementById('btn_save_novelties').classList.add('hidden');
+        window.updateTotal();
+        return;
+    }
+
+    window.noveltyParsedData.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        if (row.valor === 0) tr.style.backgroundColor = '#fef2f2';
+
+        tr.innerHTML = `
+        <td class="text-truncate" style="padding: 6px 15px; vertical-align: middle;"><span class="badge-code">${row.cedula}</span></td>
+        <td class="fw-bold text-secondary text-truncate" title="${row.nombres}" style="font-size: 0.85rem; padding: 6px 15px; vertical-align: middle;">${row.nombres}</td>
+        <td class="text-end" style="padding: 4px 15px; vertical-align: middle;">
+            <input type="number" step="0.01" class="input-field text-end fw-bold"
+                   style="width: 85px; padding: 4px 8px; margin: 0; height: auto; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #0f4c81;'}"
+                   value="${row.valor}" 
+                   onchange="window.updateValue(${index}, this.value)"
+                   onkeyup="window.updateValue(${index}, this.value)">
+        </td>`;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('btn_save_novelties').classList.remove('hidden');
+    window.updateTotal();
+    window.filterTableLocal();
+};
+
+window.updateValue = function (index, newValue) {
+    let val = parseFloat(newValue);
+    window.noveltyParsedData[index].valor = isNaN(val) || val < 0 ? 0 : val;
+    window.renderTable();
+};
+
+window.updateTotal = function () {
+    const total = window.noveltyParsedData.reduce((sum, row) => sum + (parseFloat(row.valor) || 0), 0);
+    const totalEl = document.getElementById('total_sum');
+    if (totalEl) {
+        const parts = total.toFixed(2).split('.');
+        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const decimalPart = parts[1];
+
+        totalEl.innerText = `$ ${integerPart},${decimalPart}`;
+    }
+};
+
+window.saveNovelties = function () {
+    const period_id = document.getElementById('period_id').value;
+    const rubro_type = document.getElementById('rubro_type').value;
+    let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+
+    const payload = {
+        period_id: period_id, rubro_type: rubro_type, rubro_id: rubro_id,
+        items: window.noveltyParsedData
+    };
+
+    fetch(window.NOVELTY_URLS.save, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF(), 'X-Requested-With': 'XMLHttpRequest'},
+        body: JSON.stringify(payload)
+    })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'success') {
+                Swal.fire('¡Guardado!', 'Los datos se aplicarán la próxima vez que generes el Rol de este periodo.', 'success')
+                    .then(() => window.checkAndLoad());
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
+        });
+};
+
+window.deleteAllNovelties = function () {
+    const period_id = document.getElementById('period_id').value;
+    const rubro_type = document.getElementById('rubro_type').value;
+    let rubro_id = rubro_type === 'INCOME' ? document.getElementById('income_id').value : document.getElementById('deduction_id').value;
+
+    if (!period_id || !rubro_type || !rubro_id) {
+        Swal.fire('Atención', 'Primero selecciona el Periodo, el Tipo y el Rubro.', 'warning');
+        return;
+    }
+
+    if (window.noveltyParsedData.length === 0) {
+        Swal.fire('Atención', 'No hay datos cargados para eliminar.', 'info');
+        return;
+    }
+
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Se eliminarán TODAS las novedades de este rubro para este periodo en la base de datos. ¡Esta acción no se puede deshacer!",
+        icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b', confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar todo',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const payload = {period_id: period_id, rubro_type: rubro_type, rubro_id: rubro_id, items: []};
+
+            Swal.fire({title: 'Eliminando registros...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            fetch(window.NOVELTY_URLS.save, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRF(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        Swal.fire('¡Eliminado!', 'Se han limpiado todos los registros de este rubro.', 'success')
+                            .then(() => window.checkAndLoad());
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }).catch(err => Swal.fire('Error', 'Ocurrió un problema de conexión.', 'error'));
+        }
+    });
+};
+
+window.exportNoveltiesToExcel = function () {
+    const periodSelect = document.getElementById('period_id');
+    const period_name = periodSelect.options[periodSelect.selectedIndex]?.text || '';
+    const rubro_type = document.getElementById('rubro_type').value;
+
+    if (!rubro_type) {
+        Swal.fire('Atención', 'Primero selecciona el Tipo y el Rubro para poder descargar.', 'warning');
+        return;
+    }
+
+    const selectEl = rubro_type === 'INCOME' ? document.getElementById('income_id') : document.getElementById('deduction_id');
+    const rubro_name = selectEl.options[selectEl.selectedIndex]?.text || 'Reporte';
+
+    if (window.noveltyParsedData.length === 0) {
+        Swal.fire('Atención', 'No hay datos en la tabla para exportar.', 'info');
+        return;
+    }
+
+    let excelHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="utf-8"></head>
+        <body>
+            <table>
+                <tr><td colspan="3" style="font-size: 14pt; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">${rubro_name.toUpperCase()}</td></tr>
+                <tr><td colspan="3" style="font-size: 10pt; color: #475569; text-align: center; font-family: Arial, sans-serif; font-weight: bold;">PERIODO: ${period_name}</td></tr>
+                <tr><td colspan="3"></td></tr>
+                <thead>
+                    <tr style="background-color: #f1f5f9; font-weight: bold; font-family: Arial, sans-serif; font-size: 10pt;">
+                        <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Cédula</th>
+                        <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left;">Nombres y Apellidos</th>
+                        <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: right;">Descuento ($)</th>
+                    </tr>
+                </thead>
+                <tbody style="font-family: Arial, sans-serif; font-size: 9.5pt;">`;
+
+    window.noveltyParsedData.forEach(row => {
+        excelHtml += `
+            <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 4px; mso-number-format:'\\@';">${row.cedula}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 4px;">${row.nombres}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 4px; text-align: right;">${parseFloat(row.valor).toFixed(2)}</td>
+            </tr>`;
+    });
+
+    excelHtml += `</tbody></table></body></html>`;
+
+    const blob = new Blob([excelHtml], {type: 'application/vnd.ms-excel;charset=utf-8;'});
+    const link = document.createElement("a");
+    const cleanRubroName = rubro_name.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanPeriodName = period_name.replace(/[^a-zA-Z0-9]/g, "_");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `Reporte_${cleanRubroName}_${cleanPeriodName}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+window.filterTableLocal = function () {
+    const term = document.getElementById('searchTable').value.toLowerCase();
+    const rows = document.querySelectorAll('#novelty_tbody tr');
+
+    if (window.noveltyParsedData.length === 0) return;
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const inputs = row.querySelectorAll('input');
+        let valStr = inputs.length > 0 ? inputs[0].value.toLowerCase() : '';
+
+        if (text.includes(term) || valStr.includes(term)) row.style.display = '';
+        else row.style.display = 'none';
+    });
+};
