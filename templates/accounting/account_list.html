@@ -1,63 +1,114 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block extra_css %}
+    <!-- 1. CSS Global y Específico -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="header-card">
-        <div>
-            <h1>Cuentas Contables</h1>
-            <p>Gestión del plan de cuentas y configuración contable</p>
-        </div>
-        <div class="header-actions">
-            <button type="button" class="btn btn-create"
-                    onclick="openAccountModal('{% url 'accounting:account_add' %}')">
+    <div class="container-fluid">
+        <div class="header-card">
+            <div>
+                <h1>Cuentas Contables</h1>
+                <p>Gestión del plan de cuentas y configuración contable</p>
+            </div>
+            <button type="button" class="btn-secondary"
+                    onclick="openAjaxModal('{% url 'accounting:account_add' %}')">
                 <i class="fas fa-plus"></i> Nueva Cuenta
             </button>
         </div>
-    </div>
 
-    <div class="content-table mt-4">
+        <div class="content-table mt-4">
 
-        <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
+            <div class="table-controls"
+                 style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
 
-            <div style="display: flex; justify-content: center;">
-                <input class="modern-toggle-input" type="checkbox" id="toggleInactiveAccounts"
-                       onchange="toggleInactiveAccounts(this.checked)">
+                <div style="display: flex; justify-content: center;">
+                    <!-- 2. Switch Global Limpio (Azul) -->
+                    <input type="checkbox" class="switch-input switch-red" id="toggleInactiveAccounts"
+                           onchange="toggleInactiveAccounts(this.checked)">
+                    <label class="switch-wrapper mb-0" for="toggleInactiveAccounts">
+                        <div class="switch-circle"></div>
+                        <span class="switch-text">Mostrar Cuentas Inactivas</span>
+                    </label>
+                </div>
 
-                <label class="modern-toggle-wrapper mb-0" for="toggleInactiveAccounts">
-                    <div class="modern-toggle-circle"></div>
-                    <span class="modern-toggle-text">Mostrar Cuentas Inactivas</span>
-                </label>
+                <div class="search-box"
+                     style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
+                    <input type="text" class="table-search-input" placeholder="Buscar cuenta por código o nombre...">
+                </div>
             </div>
 
-            <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
+            <div class="table-container">
+                <table class="table managed-table exportable-table" data-page-size="10"
+                       data-title="Reporte de Cuentas Contables">
+                    <thead>
+                    <tr>
+                        <th data-field="code">Código</th>
+                        <th data-field="name">Nombre</th>
+                        <th data-field="order">Orden</th>
+                        <th data-field="type">Tipo</th>
+                        <th class="center no-sort">Estado</th>
+                        <th class="center actions no-sort">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
 
-                <input type="text" class="table-search-input" placeholder="Buscar cuenta por código o nombre...">
+                    <!-- 3. Unificación directa de _account_rows.html con clases limpias -->
+                    {% for a in accounts %}
+                        <tr>
+                            <td>{{ a.code }}</td>
+                            <td class="bold">{{ a.name }}</td>
+                            <td class="bold">{{ a.order }}</td>
+                            <td>{{ a.get_type_display }}</td>
+
+                            <td class="center">
+                                {% if a.is_active %}
+                                    <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+                                {% else %}
+                                    <span class="status-badge inactive"><i
+                                            class="fas fa-times-circle"></i> Inactivo</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="center actions">
+                                <div class="actions-wrapper">
+                                    <button class="btn-seventh" title="Editar" type="button"
+                                            onclick="openAjaxModal('{% url 'accounting:account_edit' a.pk %}')">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">
+                                <!-- Diseño estándar global para estado vacío -->
+                                <div class="empty-state-container">
+                                    <i class="fas fa-folder-open empty-state-icon"></i>
+                                    <div class="empty-state-text">No hay cuentas definidas.</div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+
+                    </tbody>
+                </table>
             </div>
-        </div>
-
-        <div class="table-container">
-            <table class="table managed-table exportable-table" data-page-size="10" data-title="Reporte de Cuentas Contables">
-                <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Orden</th>
-                    <th>Tipo</th>
-                    <th class="text-center">Estado</th>
-                    <th class="actions no-sort">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% include 'accounting/_account_rows.html' %}
-                </tbody>
-            </table>
         </div>
     </div>
 
     <div id="modal-root"></div>
 {% endblock content %}
+
 {% block extra_js %}
+    <!-- 4. Inclusión de JS Global (main.js) y gestores de tabla -->
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/table-manager.js' %}"></script>
+    <script src="{% static 'js/table-sort.js' %}"></script>
+    <script src="{% static 'js/table-export.js' %}"></script>
+
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}

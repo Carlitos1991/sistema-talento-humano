@@ -14,14 +14,13 @@
         <tbody>
         {% for p in periods %}
             <tr>
-                <td class="{% if not p.is_closed %}cursor-pointer td-clickable{% else %}fw-bold text-muted{% endif %}"
+                <td class="{% if not p.is_closed %}td-clickable{% else %}bold text-muted{% endif %}"
                     data-sort="{{ p.year }}{{ p.month_number|stringformat:"02d" }}"
                     {% if not p.is_closed %}onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', '.modal-overlay', 'initializePeriodModal')"{% endif %}>
-
                     {{ p.month }} {{ p.year }}
+
                     {% if p.is_closed %}
-                        <i class="fas fa-lock ms-2" title="Periodo cerrado"
-                           style="font-size: 0.8em; color: #94a3b8;"></i>
+                        <i class="fas fa-lock ms-2 text-muted small" title="Periodo cerrado"></i>
                     {% endif %}
                 </td>
                 <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>

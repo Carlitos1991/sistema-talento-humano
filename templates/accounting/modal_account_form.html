@@ -8,7 +8,7 @@
                     {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Cuenta Contable
                 </h3>
             </div>
-            <button type="button" class="btn-close-modal-refined" onclick="closeContributionModal()">
+            <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -56,8 +56,8 @@
             </div>
 
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-cancel" onclick="closeContributionModal()">Cancelar</button>
-                <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-default-outline" onclick="closeAjaxModal()">Cancelar</button>
+                <button type="submit" class="btn-default"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </form>
     </div>

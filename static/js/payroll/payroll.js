@@ -1229,3 +1229,121 @@ window.sendPayslipEmail = function (payslipId) {
         }
     });
 };
+
+/* =================================================================================
+   8. GESTIÓN DE CUENTAS CONTABLES Y ESTADOS VISUALES (VERSIÓN AJAX)
+   ================================================================================= */
+window.toggleInactiveAccounts = function (show) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('show_inactive', show ? 'true' : 'false');
+
+    // Actualizamos la URL sin recargar la página
+    window.history.pushState(null, '', url.toString());
+
+    // Buscamos el contenedor de la tabla para aplicarle el efecto de "Cargando"
+    const tableContainer = document.querySelector('.table-container');
+    if (tableContainer) {
+        tableContainer.style.opacity = '0.4';
+        tableContainer.style.pointerEvents = 'none';
+    }
+
+    // Petición AJAX (Idéntica a la que usamos para la paginación y el ordenamiento)
+    fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(res => res.text())
+        .then(html => {
+            // Extraemos solo la tabla del HTML devuelto por Django
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const newTableContainer = temp.querySelector('.table-container');
+
+            // Reemplazo Quirúrgico
+            if (newTableContainer && tableContainer) {
+                tableContainer.replaceWith(newTableContainer);
+            }
+
+            // Re-inicializamos el JavaScript de la tabla para que siga funcionando el buscador/orden
+            setTimeout(() => {
+                const newTable = document.querySelector('.managed-table');
+                if (newTable && typeof TableManager !== 'undefined') {
+                    new TableManager(newTable);
+                }
+            }, 50);
+        })
+        .catch(err => {
+            console.error('Error al traer las cuentas inactivas:', err);
+            if (tableContainer) {
+                tableContainer.style.opacity = '1';
+                tableContainer.style.pointerEvents = 'auto';
+            }
+        });
+};
+
+// Mantiene el Switch encendido si el usuario recarga la página manualmente
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleAccountsBtn = document.getElementById('toggleInactiveAccounts');
+    if (toggleAccountsBtn) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('show_inactive') === 'true') {
+            toggleAccountsBtn.checked = true;
+        }
+    }
+});
+
+/* =================================================================================
+   9. GESTIÓN DE CUENTAS CONTABLES (ESTADOS VISUALES VÍA AJAX)
+   ================================================================================= */
+window.toggleInactiveAccounts = function (show) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('show_inactive', show ? 'true' : 'false');
+
+    // Actualizamos la URL silenciosamente
+    window.history.pushState(null, '', url.toString());
+
+    // Buscamos el contenedor de la tabla para darle el efecto de carga
+    const tableContainer = document.querySelector('.table-container');
+    if (tableContainer) {
+        tableContainer.style.opacity = '0.4';
+        tableContainer.style.pointerEvents = 'none';
+    }
+
+    // Petición AJAX al servidor
+    fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(res => res.text())
+        .then(html => {
+            const temp = document.createElement('div');
+               temp.innerHTML = html;
+
+            const newTableContainer = temp.querySelector('.table-container');
+
+            if (newTableContainer && tableContainer) {
+                tableContainer.replaceWith(newTableContainer);
+            }
+
+            // Re-inicializamos el TableManager para mantener ordenamiento y buscador vivos
+            setTimeout(() => {
+                const newTable = document.querySelector('.managed-table');
+                if (newTable && typeof TableManager !== 'undefined') {
+                    new TableManager(newTable);
+                }
+            }, 50);
+        })
+        .catch(err => {
+            console.error('Error al cargar cuentas inactivas:', err);
+            if (tableContainer) {
+                tableContainer.style.opacity = '1';
+                tableContainer.style.pointerEvents = 'auto';
+            }
+        });
+};
+
+// Autoejecutable para que el switch recuerde su posición si recargas la página
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleAccountsBtn = document.getElementById('toggleInactiveAccounts');
+    if (toggleAccountsBtn) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('show_inactive') === 'true') {
+            toggleAccountsBtn.checked = true;
+        }
+    }
+});

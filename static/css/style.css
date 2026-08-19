@@ -1337,15 +1337,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .td-clickable {
-    font-weight: 600;
-    color: #3b82f6;
+    font-weight: 700;
+    color: #07194a;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .td-clickable:hover {
-    color: #1d4ed8;
-    background-color: #f0f9ff;
-    text-decoration-color: #1d4ed8;
+    color: #0b2c8c;
+    background-color: #eff6ff;
 }
 
 
@@ -2158,8 +2158,8 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #333333 0%, #555555 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #334155;
 }
 
 .btn-success {
@@ -2642,7 +2642,7 @@ table {
 }
 
 .table-container tbody tr:hover {
-    background-color: #f9fafb;
+    background-color: #cde3f8;
 }
 
 /* Columna acciones */
@@ -4129,13 +4129,15 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
    15. PAGINACIÓN & BUSCADOR
    ===================================================================== */
 .pagination-container {
-    display: grid;
-    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
-    border-top: 1px solid #e2e8f0;
-    margin-top: 1rem;
-    gap: 1rem;
+    padding: 12px 5px;
+    margin-top: 15px;
+    border-top: 1px solid #f1f5f9;
+    font-family: sans-serif;
+    color: #64748b;
+    font-size: 0.9em;
 }
 
 .pagination-list {

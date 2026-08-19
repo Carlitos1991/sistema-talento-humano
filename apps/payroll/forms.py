@@ -113,11 +113,11 @@ class PayrollRubricForm(forms.ModelForm):
             'income_account': forms.Select(attrs={'class': 'form-select'}),
             'is_salary': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
             'has_mapping': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
-            'is_fixed': forms.CheckboxInput(attrs={'class': 'switch-input switch-danger'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-success'}),
-            'is_taxable': forms.CheckboxInput(attrs={'class': 'switch-input switch-danger'}),
-            'is_overtime': forms.CheckboxInput(attrs={'class': 'switch-input switch-warning'}),
-            'is_upload': forms.CheckboxInput(attrs={'class': 'switch-input switch-warning'}),
+            'is_fixed': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
+            'is_taxable': forms.CheckboxInput(attrs={'class': 'switch-input switch-red'}),
+            'is_overtime': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
+            'is_upload': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
         }
 
     def clean(self):

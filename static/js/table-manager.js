@@ -214,35 +214,27 @@ class TableManager {
         const arrow = clickedTh.querySelector('.sort-arrow');
         if (arrow) arrow.innerText = this.sortAsc ? '↑' : '↓';
 
-        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
-        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
-        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
         if (this.externalPagination || this.externalSearch) {
             const headerEl = allHeaders[colIndex];
             const field = headerEl?.dataset?.field || null;
 
-            // Si la columna no tiene data-field (ej. Retener o Acciones), no hace nada
             if (!field) return;
 
-            // 1. Guardar memoria visual del ordenamiento
             window._currentTableSort = {col: colIndex, asc: this.sortAsc};
 
-            // 2. EFECTO VISUAL DE "CARGANDO" (Para que no sientas que "tarda" o se cuelga)
             const oldTableContainer = this.table.closest('.table-container');
             if (oldTableContainer) {
-                oldTableContainer.style.opacity = '0.4'; // Transparencia sutil
-                oldTableContainer.style.pointerEvents = 'none'; // Evita doble clic rápido
+                oldTableContainer.style.opacity = '0.4';
+                oldTableContainer.style.pointerEvents = 'none';
             }
 
-            // 3. Construir la URL manteniendo los filtros/búsquedas actuales
             const listUrl = this.table.getAttribute('data-list-url') || window.location.pathname;
             const params = new URLSearchParams(window.location.search);
 
-            params.set('page', 1); // Al ordenar, regresamos a la página 1
+            params.set('page', 1);
             params.set('sort_field', field);
             params.set('sort_dir', this.sortAsc ? 'asc' : 'desc');
 
-            // 4. Petición AJAX
             fetch(`${listUrl}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                 .then(async (response) => {
                     const contentType = response.headers.get("content-type");
@@ -255,7 +247,6 @@ class TableManager {
                 .then(html => {
                     if (!html) return;
 
-                    // 5. REEMPLAZO QUIRÚRGICO (Solo cambiamos la tabla, respetamos tus botones superiores)
                     const temp = document.createElement('div');
                     temp.innerHTML = html;
 
@@ -272,7 +263,6 @@ class TableManager {
                         newTableContainer.after(newPagination);
                     }
 
-                    // 6. Re-inicializar JS y restaurar flechitas
                     setTimeout(() => {
                         if (newTableContainer) {
                             const newTable = newTableContainer.querySelector('.managed-table');
@@ -292,7 +282,6 @@ class TableManager {
                 })
                 .catch(e => {
                     console.error('Error al ordenar la tabla:', e);
-                    // Si falla, regresamos la tabla a la normalidad
                     if (oldTableContainer) {
                         oldTableContainer.style.opacity = '1';
                         oldTableContainer.style.pointerEvents = 'auto';
@@ -377,49 +366,17 @@ class TableManager {
     // ─── PAGINACIÓN ───────────────────────────────────────────────────────────
 
     initPagination() {
-        /*
-         * FIX #1 — Posición del paginador:
-         * El paginador debe vivir FUERA de .content-table (igual que en levels),
-         * pero DENTRO de #table-app, para que herede el fondo correcto y quede
-         * siempre pegado al borde inferior del card.
-         *
-         * Jerarquía esperada:
-         *   #table-app
-         *     .content-table        ← wrapper (tabla + controles)
-         *     .pagination-container ← paginador (hermano de .content-table)
-         *
-         * Si ya existe un .pagination-container hermano, lo reutilizamos.
-         * Si no, lo creamos justo después de .content-table.
-         */
-        const tableApp = this.table.closest('#table-app');
         const contentTable = this.table.closest('.content-table');
 
-        // Ensure table has an id for pagination association
-        if (!this.table.dataset.tmId) this.table.dataset.tmId = 'tm-' + Math.random().toString(36).slice(2, 8);
-
-        // Try to reuse an existing pagination container already associated to this table
-        let pagContainer = document.querySelector('.pagination-container[data-tm-for="' + this.table.dataset.tmId + '"]');
-
-        if (!pagContainer) {
-            // Search within #table-app for a pagination container that is not inside a content-table
-            if (tableApp) {
-                const candidates = Array.from(tableApp.querySelectorAll('.pagination-container'));
-                pagContainer = candidates.find(el => !el.closest('.content-table')) || null;
-            }
-        }
+        // Reutiliza el paginador que ya existe junto a este .content-table
+        // en vez de crear uno nuevo cada vez (evita duplicados que "mueven" los botones)
+        let pagContainer = contentTable?.nextElementSibling?.classList.contains('pagination-container')
+            ? contentTable.nextElementSibling
+            : null;
 
         if (!pagContainer) {
-            // Fallback: search near the contentTable parent for any pagination-container not inside the contentTable
-            const parent = (contentTable && contentTable.parentNode) ? contentTable.parentNode : this.table.parentNode;
-            const candidates = Array.from(parent.querySelectorAll('.pagination-container'));
-            pagContainer = candidates.find(el => !el.closest('.content-table')) || null;
-        }
-
-        if (!pagContainer) {
-            // Create and place as sibling of .content-table (outside it)
             pagContainer = document.createElement('div');
             pagContainer.className = 'pagination-container';
-
             if (contentTable && contentTable.parentNode) {
                 contentTable.parentNode.insertBefore(pagContainer, contentTable.nextSibling);
             } else {
@@ -427,11 +384,6 @@ class TableManager {
             }
         }
 
-        // Associate this pagContainer explicitly to this table to avoid other managers reusing it
-        try {
-            pagContainer.dataset.tmFor = this.table.dataset.tmId;
-        } catch (e) {
-        }
         this.pagContainer = pagContainer;
     }
 
@@ -461,20 +413,20 @@ class TableManager {
                 Mostrando ${start}-${end} de ${totalRows}
             </div>
             <div class="pagination-controls" style="${!showControls ? 'visibility:hidden;' : ''}">
-                <button class="page-btn btn-first" title="Primera" ${prevDisabled ? 'disabled' : ''}>
+                <button class="page-btn page-first" title="Primera" ${prevDisabled ? 'disabled' : ''}>
                     <i class="fas fa-angle-double-left"></i>
                 </button>
-                <button class="page-btn btn-prev" title="Anterior" ${prevDisabled ? 'disabled' : ''}>
+                <button class="page-btn page-prev" title="Anterior" ${prevDisabled ? 'disabled' : ''}>
                     <i class="fas fa-angle-left"></i>
                 </button>
                 <div class="page-input-wrapper">
                     <input type="number" class="page-input" value="${this.currentPage}" min="1" max="${totalPages}">
                     <span class="total-pages-badge">de ${totalPages}</span>
                 </div>
-                <button class="page-btn btn-next" title="Siguiente" ${nextDisabled ? 'disabled' : ''}>
+                <button class="page-btn page-next" title="Siguiente" ${nextDisabled ? 'disabled' : ''}>
                     <i class="fas fa-angle-right"></i>
                 </button>
-                <button class="page-btn btn-last" title="Última" ${nextDisabled ? 'disabled' : ''}>
+                <button class="page-btn page-last" title="Última" ${nextDisabled ? 'disabled' : ''}>
                     <i class="fas fa-angle-double-right"></i>
                 </button>
             </div>
@@ -490,10 +442,10 @@ class TableManager {
             this.render();
         };
 
-        this.pagContainer.querySelector('.btn-first').onclick = () => go(1);
-        this.pagContainer.querySelector('.btn-prev').onclick = () => go(this.currentPage - 1);
-        this.pagContainer.querySelector('.btn-next').onclick = () => go(this.currentPage + 1);
-        this.pagContainer.querySelector('.btn-last').onclick = () => go(totalPages);
+        this.pagContainer.querySelector('.page-first').onclick = () => go(1);
+        this.pagContainer.querySelector('.page-prev').onclick = () => go(this.currentPage - 1);
+        this.pagContainer.querySelector('.page-next').onclick = () => go(this.currentPage + 1);
+        this.pagContainer.querySelector('.page-last').onclick = () => go(totalPages);
 
         input.addEventListener('change', () => go(parseInt(input.value) || 1));
         input.addEventListener('keypress', (e) => {
@@ -636,3 +588,102 @@ try {
     window.TableManager = TableManager;
 } catch (e) { /* ignore */
 }
+// =====================================================================
+// DELEGADO GLOBAL PARA PAGINACIÓN EXTERNA AJAX
+// Resuelve la "muerte" de los botones al reemplazar el HTML
+// =====================================================================
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.page-btn');
+    if (!btn) return;
+
+    // Buscar la tabla administrada principal
+    const table = document.querySelector('.managed-table');
+    if (!table || table.dataset.externalPagination !== 'true') return;
+
+    // Ignorar si el botón está deshabilitado
+    if (btn.hasAttribute('disabled') || btn.classList.contains('disabled')) return;
+
+    // Bloquear scripts viejos/rotos del usuario
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const page = btn.dataset.page;
+    if (!page) return;
+
+    const oldTableContainer = table.closest('.table-container');
+    const oldPagination = btn.closest('.pagination-container');
+
+    // Efecto de carga
+    if (oldTableContainer) {
+        oldTableContainer.style.opacity = '0.4';
+        oldTableContainer.style.pointerEvents = 'none';
+    }
+
+    // Preparar URL preservando búsqueda y ordenamiento actual
+    const listUrl = table.getAttribute('data-list-url') || window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', page);
+
+    if (window._currentTableSort) {
+        const ths = table.querySelectorAll('thead th');
+        const th = ths[window._currentTableSort.col];
+        if (th && th.dataset.field) {
+            params.set('sort_field', th.dataset.field);
+            params.set('sort_dir', window._currentTableSort.asc ? 'asc' : 'desc');
+        }
+    }
+
+    // Petición AJAX idéntica a la del ordenamiento
+    fetch(`${listUrl}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(async (response) => {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                return data.html || '';
+            }
+            return await response.text();
+        })
+        .then(html => {
+            if (!html) return;
+
+            // Actualizar URL en el navegador
+            window.history.pushState(null, '', `?${params.toString()}`);
+
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const newTableContainer = temp.querySelector('.table-container');
+            const newPagination = temp.querySelector('.pagination-container');
+
+            if (newTableContainer && oldTableContainer) {
+                oldTableContainer.replaceWith(newTableContainer);
+            }
+            if (newPagination && oldPagination) {
+                oldPagination.replaceWith(newPagination);
+            }
+
+            // Re-inicializar JS para mantener la tabla viva
+            setTimeout(() => {
+                const newTable = document.querySelector('.managed-table');
+                if (newTable) {
+                    new TableManager(newTable);
+                    if (window._currentTableSort) {
+                        const s = window._currentTableSort;
+                        const newThs = newTable.querySelectorAll('thead th');
+                        if (newThs[s.col]) {
+                            newThs[s.col].classList.add(s.asc ? 'sorted-asc' : 'sorted-desc');
+                            const arrow = newThs[s.col].querySelector('.sort-arrow');
+                            if (arrow) arrow.innerText = s.asc ? '↑' : '↓';
+                        }
+                    }
+                }
+            }, 50);
+        })
+        .catch(err => {
+            console.error('Error al cambiar de página AJAX:', err);
+            if (oldTableContainer) {
+                oldTableContainer.style.opacity = '1';
+                oldTableContainer.style.pointerEvents = 'auto';
+            }
+        });
+}, true);

@@ -8,6 +8,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
 from .forms import AccountForm
 from .models import Account, Journal
+from django.db.models import F
 
 
 class JournalListView(ListView):
@@ -48,24 +49,16 @@ class AccountListView(ListView):
     template_name = 'accounting/account_list.html'
     context_object_name = 'accounts'
 
-    def get(self, request, *args, **kwargs):
-        show_inactive = request.GET.get('show_inactive')
-
-        from django.db.models import F
+    def get_queryset(self):
         qs = Account.objects.all().order_by(F('order').asc(nulls_last=True), 'code')
 
-        if show_inactive is None or show_inactive.lower() in ['false', '0', '']:
+        show_inactive = self.request.GET.get('show_inactive')
+
+        if show_inactive is not None and show_inactive.lower() in ['true', '1']:
+            qs = qs.filter(is_active=False)
+        else:
             qs = qs.filter(is_active=True)
-
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.template.loader import render_to_string
-            html = render_to_string('accounting/_account_rows.html', {'accounts': qs})
-            from django.http import HttpResponse
-            return HttpResponse(html)
-
-        self.object_list = qs
-        context = self.get_context_data()
-        return self.render_to_response(context)
+        return qs
 
 
 class AccountCreateView(CreateView):

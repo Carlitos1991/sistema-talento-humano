@@ -749,6 +749,10 @@ class PayrollCalculatorService:
                         code_clean = inc.code.strip().upper() if inc.code else ''
 
                         if getattr(inc, 'is_salary', False):
+                            if regime_code == 'CT' and code_clean != 'SUELDO_TRA':
+                                continue
+                            if regime_code == 'LOSEP' and code_clean != 'SUELDO_EMP':
+                                continue
                             # Sueldo base proporcional por segmentos
                             for segment in segments:
                                 segment_val = (segment['base_salary'] / Decimal('30.0')) * Decimal(
@@ -1206,7 +1210,7 @@ class PayrollCalculatorService:
             rub_order = getattr(rubric, 'order', 100) or 100
 
             accounts = _resolve_accounts_for_rubric(rubric, spending_type)
-            sal_rubric = _find_salary_rubric(spending_type)
+            sal_rubric = rubric if getattr(rubric, 'is_salary', False) else _find_salary_rubric(spending_type)
             c_puente = _resolve_bridge_account_id(sal_rubric, spending_type) if sal_rubric else None
 
             if rubric.rubric_type == 'INCOME':

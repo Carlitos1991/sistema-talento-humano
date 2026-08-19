@@ -168,21 +168,26 @@
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Mapeo de presupuesto. main.js ya se encarga de mostrarlo y ocultarlo -->
+                        
                         <div id="budgetMappingFields" class="col-md-12 hidden-field mt-3">
                             <div class="budget-mapping-box">
                                 <div class="row g-3">
-                                    <div class="col-md-8 form-group mb-0">
+                                    <div class="col-md-8 form-group">
                                         <label class="form-label">Sufijo Presupuestario</label>
                                         {{ form.dynamic_suffix }}
                                     </div>
                                     <div class="col-md-4 form-group mb-0">
-                                        <label class="form-label">¿Partida Fija?</label>
-                                        <div class="mt-2">
+                                        <label class="form-label d-block">¿Partida Fija?</label>
+                                        <div class="mt-2" style="display: flex; align-items: center;">
+
+                                            <!-- El checkbox renderizado por Django -->
                                             {{ form.is_fixed }}
+
+                                            <!-- El nuevo wrapper del switch -->
                                             <label class="switch-wrapper m-0" for="{{ form.is_fixed.id_for_label }}">
                                                 <div class="switch-circle"></div>
+                                                <!-- Opcional: Puedes ponerle un texto al lado, o borrar el span si lo quieres solo -->
+                                                <span class="switch-text">Fija</span>
                                             </label>
                                         </div>
                                     </div>
