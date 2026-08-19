@@ -12,8 +12,11 @@ class TableManager {
         this.sortCol = null;
         this.sortAsc = true;
 
-        // data-external-pagination="true" → paginación manejada por backend/Vue
-        // data-external-search="true"     → búsqueda manejada por backend/Vue
+        if (window._currentTableSort) {
+            this.sortCol = window._currentTableSort.col;
+            this.sortAsc = window._currentTableSort.asc;
+        }
+
         this.externalPagination = this.table.dataset.externalPagination === 'true';
         this.externalSearch = this.table.dataset.externalSearch === 'true';
 
@@ -212,100 +215,90 @@ class TableManager {
         if (arrow) arrow.innerText = this.sortAsc ? '↑' : '↓';
 
         // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
+        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
+        // Si la tabla usa paginación/filtrado externo, delegar el ordenamiento al servidor
         if (this.externalPagination || this.externalSearch) {
-            // Determinar campo de orden desde el encabezado (data-field)
             const headerEl = allHeaders[colIndex];
             const field = headerEl?.dataset?.field || null;
-            // Guardar estado globalmente para que el cliente que reciba el HTML lo reaplique
-            window._personExport = window._personExport || {};
-            window._personExport.sort = {col: colIndex, asc: this.sortAsc, field: field};
-            // Intentar invocar fetchPeople; si no existe todavía (Vue no montado), hacer fallback directo
-            if (typeof window.fetchPeople === 'function') {
-                window.fetchPeople(1);
-                return;
+
+            // Si la columna no tiene data-field (ej. Retener o Acciones), no hace nada
+            if (!field) return;
+
+            // 1. Guardar memoria visual del ordenamiento
+            window._currentTableSort = {col: colIndex, asc: this.sortAsc};
+
+            // 2. EFECTO VISUAL DE "CARGANDO" (Para que no sientas que "tarda" o se cuelga)
+            const oldTableContainer = this.table.closest('.table-container');
+            if (oldTableContainer) {
+                oldTableContainer.style.opacity = '0.4'; // Transparencia sutil
+                oldTableContainer.style.pointerEvents = 'none'; // Evita doble clic rápido
             }
 
-            // Fallback: si conocemos la URL del listado, realizar fetch directo al endpoint
-            if (!window._personExport) window._personExport = {};
-            // Intentar recuperar la URL desde el DOM si aún no la expuso person.js
-            if (!window._personExport.listUrl) {
-                const appEl = document.getElementById('personApp');
-                if (appEl && appEl.dataset && appEl.dataset.urls) {
-                    try {
-                        // dataset.urls contiene JSON con saltos de línea en template; limpiarlos
-                        const raw = appEl.dataset.urls.replace(/\n/g, '');
-                        const parsed = JSON.parse(raw);
-                        if (parsed && parsed.list) window._personExport.listUrl = parsed.list;
-                    } catch (e) {
-                        console.warn('TableManager: no se pudo parsear data-urls de #personApp', e);
+            // 3. Construir la URL manteniendo los filtros/búsquedas actuales
+            const listUrl = this.table.getAttribute('data-list-url') || window.location.pathname;
+            const params = new URLSearchParams(window.location.search);
+
+            params.set('page', 1); // Al ordenar, regresamos a la página 1
+            params.set('sort_field', field);
+            params.set('sort_dir', this.sortAsc ? 'asc' : 'desc');
+
+            // 4. Petición AJAX
+            fetch(`${listUrl}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(async (response) => {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        return data.html || '';
                     }
-                }
-            }
-            if (window._personExport && window._personExport.listUrl) {
-                try {
-                    const params = new URLSearchParams();
-                    params.append('page', 1);
-                    if (window._personExport.sort && window._personExport.sort.field) {
-                        params.append('sort_field', window._personExport.sort.field);
-                        params.append('sort_dir', window._personExport.sort.asc ? 'asc' : 'desc');
+                    return await response.text();
+                })
+                .then(html => {
+                    if (!html) return;
+
+                    // 5. REEMPLAZO QUIRÚRGICO (Solo cambiamos la tabla, respetamos tus botones superiores)
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+
+                    const newTableContainer = temp.querySelector('.table-container');
+                    const newPagination = temp.querySelector('.pagination-container');
+                    const oldPagination = document.getElementById('js-pagination');
+
+                    if (newTableContainer && oldTableContainer) {
+                        oldTableContainer.replaceWith(newTableContainer);
                     }
-                    const url = `${window._personExport.listUrl}?${params.toString()}`;
-                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success && data.html) {
-                                const container = document.getElementById('tableContainer') || document.getElementById('table-app') || document.querySelector('.table-container');
-                                if (container) {
-                                    container.innerHTML = data.html;
-                                    // Inicializar nueva tabla y reaplicar sort
-                                    const newTable = container.querySelector('.managed-table');
-                                    if (newTable) {
-                                        try {
-                                            new TableManager(newTable);
-                                        } catch (e) {
-                                            console.error('Error inicializando TableManager en fallback:', e);
-                                        }
-                                        // Reaplicar clase de sort
-                                        if (window._personExport && window._personExport.sort) {
-                                            const s = window._personExport.sort;
-                                            const ths = newTable.querySelectorAll('thead th');
-                                            const th = ths[s.col];
-                                            if (th) {
-                                                th.classList.remove('sorted-asc', 'sorted-desc');
-                                                th.classList.add(s.asc ? 'sorted-asc' : 'sorted-desc');
-                                                const arrow = th.querySelector('.sort-arrow');
-                                                if (arrow) arrow.innerText = s.asc ? '↑' : '↓';
-                                            }
-                                        }
-                                    }
+                    if (newPagination && oldPagination) {
+                        oldPagination.replaceWith(newPagination);
+                    } else if (newPagination && !oldPagination && newTableContainer) {
+                        newTableContainer.after(newPagination);
+                    }
+
+                    // 6. Re-inicializar JS y restaurar flechitas
+                    setTimeout(() => {
+                        if (newTableContainer) {
+                            const newTable = newTableContainer.querySelector('.managed-table');
+                            if (newTable) {
+                                new TableManager(newTable);
+
+                                const s = window._currentTableSort;
+                                const ths = newTable.querySelectorAll('thead th');
+                                if (ths[s.col]) {
+                                    ths[s.col].classList.add(s.asc ? 'sorted-asc' : 'sorted-desc');
+                                    const arrow = ths[s.col].querySelector('.sort-arrow');
+                                    if (arrow) arrow.innerText = s.asc ? '↑' : '↓';
                                 }
                             }
-                        })
-                        .catch(e => console.warn('TableManager fallback fetch error:', e));
-                    return;
-                } catch (e) {
-                    console.warn('TableManager: error during fallback fetch', e);
-                }
-            }
-
-            // Si no hay URL conocida, reintentar corto (compatibilidad)
-            let attempts = 0;
-            const maxAttempts = 20; // hasta ~2s
-            const retryInterval = 100;
-            const interval = setInterval(() => {
-                attempts += 1;
-                if (typeof window.fetchPeople === 'function') {
-                    clearInterval(interval);
-                    try {
-                        window.fetchPeople(1);
-                    } catch (e) {
-                        console.warn('TableManager: error calling fetchPeople after it became available', e);
+                        }
+                    }, 50);
+                })
+                .catch(e => {
+                    console.error('Error al ordenar la tabla:', e);
+                    // Si falla, regresamos la tabla a la normalidad
+                    if (oldTableContainer) {
+                        oldTableContainer.style.opacity = '1';
+                        oldTableContainer.style.pointerEvents = 'auto';
                     }
-                } else if (attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    console.warn('TableManager: fetchPeople not available after retries.');
-                }
-            }, retryInterval);
+                });
+
             return;
         }
 

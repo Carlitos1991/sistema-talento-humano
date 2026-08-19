@@ -833,57 +833,50 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1.5rem !important;
 }
 
-/* Texto */
-.text-white {
-    color: #ffffff !important;
-}
-
-.text-white-opacity {
-    color: rgba(255, 255, 255, 0.8) !important;
-}
-
-.text-white-opacity:hover {
-    color: #ffffff !important;
-    opacity: 1;
-}
-
-.text-danger {
+/* --- UTILIDADES DE TEXTO LIMPIAS --- */
+.text-red {
     color: #ef4444;
-    margin-left: 2px;
 }
 
-.text-error {
-    color: var(--error);
-    font-size: 0.8rem;
-    margin-top: 5px;
-    display: block;
+.text-green {
+    color: #10b981;
 }
 
-.text-primary-bold {
-    color: var(--primary-color);
+.text-blue {
+    color: #3b82f6;
+}
+
+.text-white {
+    color: #ffffff;
+}
+
+.text-muted {
+    color: #94a3b8;
+}
+
+.bold {
     font-weight: 800;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.center {
+    text-align: center;
+}
+
+.right {
+    text-align: right;
+}
+
+.left {
+    text-align: left;
 }
 
 .small {
     font-size: 0.85rem;
     line-height: 1.2;
-}
-
-.font-weight-500 {
-    font-weight: 500;
-    color: #334155;
-}
-
-.font-weight-700 {
-    font-weight: 700;
-}
-
-.font-weight-800 {
-    font-weight: 800;
-}
-
-.search-term-highlight {
-    color: var(--error);
 }
 
 /* Label y valor */
@@ -1634,15 +1627,14 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* =====================================================================
-   SWITCHES UNIVERSALES (Interruptores)
+   SWITCHES UNIVERSALES LIMPIOS
    ===================================================================== */
-
 /* 1. Ocultar el checkbox nativo */
-input[type="checkbox"].switch-input {
+.switch-input {
     display: none !important;
 }
 
-/* 2. Diseño base del contenedor (Estado Inactivo/Apagado) */
+/* 2. Diseño base del contenedor */
 .switch-wrapper {
     display: inline-flex;
     align-items: center;
@@ -1650,7 +1642,7 @@ input[type="checkbox"].switch-input {
     padding: 6px 16px;
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 50px; /* Diseño tipo píldora */
+    border-radius: 50px;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -1663,7 +1655,7 @@ input[type="checkbox"].switch-input {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* 3. El circulito indicador (Apagado = gris y vacío) */
+/* 3. Círculo indicador (Gris por defecto) */
 .switch-wrapper .switch-circle {
     width: 16px;
     height: 16px;
@@ -1674,7 +1666,7 @@ input[type="checkbox"].switch-input {
     flex-shrink: 0;
 }
 
-/* 4. Texto del switch */
+/* 4. Texto */
 .switch-wrapper .switch-text {
     font-weight: 600;
     color: #475569;
@@ -1683,69 +1675,98 @@ input[type="checkbox"].switch-input {
     white-space: nowrap;
 }
 
-
 /* ==========================================
-   VARIANTES DE COLOR (Estado Activo/Encendido)
+   VARIANTES SIMPLES (Gris apagado -> Color encendido)
    ========================================== */
-
-/* --- SUCCESS (Verde) --- */
-.switch-input.switch-success:checked + .switch-wrapper {
+/* Verde */
+.switch-green:checked + .switch-wrapper {
     background-color: #f0fdf4;
     border-color: #86efac;
 }
 
-.switch-input.switch-success:checked + .switch-wrapper .switch-circle {
+.switch-green:checked + .switch-wrapper .switch-circle {
     background-color: #10b981;
     border-color: #10b981;
 }
 
-.switch-input.switch-success:checked + .switch-wrapper .switch-text {
+.switch-green:checked + .switch-wrapper .switch-text {
     color: #065f46;
 }
 
-/* --- DANGER (Rojo) --- */
-.switch-input.switch-danger:checked + .switch-wrapper {
+/* Rojo */
+.switch-red:checked + .switch-wrapper {
     background-color: #fef2f2;
     border-color: #fca5a5;
 }
 
-.switch-input.switch-danger:checked + .switch-wrapper .switch-circle {
+.switch-red:checked + .switch-wrapper .switch-circle {
     background-color: #ef4444;
     border-color: #ef4444;
 }
 
-.switch-input.switch-danger:checked + .switch-wrapper .switch-text {
+.switch-red:checked + .switch-wrapper .switch-text {
     color: #991b1b;
 }
 
-/* --- PRIMARY (Azul) --- */
-.switch-input.switch-primary:checked + .switch-wrapper {
+/* Azul */
+.switch-blue:checked + .switch-wrapper {
     background-color: #eff6ff;
     border-color: #93c5fd;
 }
 
-.switch-input.switch-primary:checked + .switch-wrapper .switch-circle {
+.switch-blue:checked + .switch-wrapper .switch-circle {
     background-color: #3b82f6;
     border-color: #3b82f6;
 }
 
-.switch-input.switch-primary:checked + .switch-wrapper .switch-text {
+.switch-blue:checked + .switch-wrapper .switch-text {
     color: #1e40af;
 }
 
-/* --- WARNING (Amarillo/Naranja) --- */
-.switch-input.switch-warning:checked + .switch-wrapper {
+/* Amarillo */
+.switch-yellow:checked + .switch-wrapper {
     background-color: #fffbeb;
     border-color: #fde047;
 }
 
-.switch-input.switch-warning:checked + .switch-wrapper .switch-circle {
+.switch-yellow:checked + .switch-wrapper .switch-circle {
     background-color: #f59e0b;
     border-color: #f59e0b;
 }
 
-.switch-input.switch-warning:checked + .switch-wrapper .switch-text {
+.switch-yellow:checked + .switch-wrapper .switch-text {
     color: #92400e;
+}
+
+/* ==========================================
+   SWITCH ESPECIAL DE RETENCIÓN (Verde apagado -> Rojo encendido)
+   ========================================== */
+.switch-retencion + .switch-wrapper {
+    background-color: #f0fdf4;
+    border-color: #86efac;
+}
+
+.switch-retencion + .switch-wrapper .switch-circle {
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+.switch-retencion + .switch-wrapper .switch-text {
+    color: #065f46;
+}
+
+.switch-retencion:checked + .switch-wrapper {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+}
+
+.switch-retencion:checked + .switch-wrapper .switch-circle {
+    background-color: #ef4444;
+    border-color: #ef4444;
+}
+
+.switch-retencion:checked + .switch-wrapper .switch-text {
+    color: #991b1b;
 }
 
 /* Photo uploader */
@@ -2598,9 +2619,7 @@ table {
 .table-container td {
     padding: 0.32rem 0.75rem;
     vertical-align: middle;
-    text-align: left;
     border-bottom: 1px solid #eef2f5;
-    color: #374151;
     font-size: 0.88rem;
     transition: background 0.18s ease;
 }
@@ -6074,14 +6093,6 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 }
 
 @media (max-width: 480px) {
-    .btn-create-action, .btn-success-action, .btn-views-action,
-    .btn-detail-action, .btn-delete-action, .btn-restore-action,
-    .btn-list-action, .btn-info-action {
-        width: 35px;
-        height: 35px;
-        font-size: 0.80rem;
-    }
-
     .search-box input, .search-box .form-control {
         font-size: 0.9rem;
         padding-left: 2.4rem;
@@ -6205,47 +6216,8 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     font-size: 0.9rem;
 }
 
-/* Forzar tamaño y espaciado iguales en botones de acciones dentro de tablas */
-.table-container td .btn-views-action,
-.table-container td .btn-list-action,
-.table-container td .btn-success-action,
-.table-container td .btn-info-action,
-.table-container td .btn-delete-action {
-    box-sizing: border-box;
-    width: var(--table-btn-size) !important;
-    height: var(--table-btn-size) !important;
-    padding: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    vertical-align: middle !important;
-    margin: 2px 6px !important;
-}
-
 .table-container .personnel-action-table td.actions .actions-wrapper {
     gap: 2px;
-}
-
-.table-container .personnel-action-table td.actions .btn-views-action,
-.table-container .personnel-action-table td.actions .btn-list-action,
-.table-container .personnel-action-table td.actions .btn-success-action,
-.table-container .personnel-action-table td.actions .btn-info-action,
-.table-container .personnel-action-table td.actions .btn-delete-action {
-    margin: 0 !important;
-}
-
-.table-container td .btn-views-action i,
-.table-container td .btn-list-action i,
-.table-container td .btn-success-action i,
-.table-container td .btn-info-action i,
-.table-container td .btn-delete-action i {
-    font-size: var(--table-btn-icon-size) !important;
-    line-height: 1 !important;
-}
-
-/* Asegurar separación mínima entre botones (primero sin margen izquierdo extra) */
-.table-container td .btn-views-action:first-child {
-    margin-left: 4px !important;
 }
 
 .table-container td .btn-info-action:first-child {
@@ -6268,57 +6240,4 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     :root {
         --sidebar-width: 200px; /* Estrechamos un poco el sidebar */
     }
-}
-
-/* =====================================================================
-   SWITCH STYLES (Registro Activo)
-   ===================================================================== */
-.form-switch {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-left: 0;
-}
-
-.form-switch .form-check-input {
-    width: 44px;
-    height: 22px;
-    appearance: none;
-    -webkit-appearance: none;
-    background-color: #cbd5e1; /* Gris apagado */
-    border-radius: 30px;
-    position: relative;
-    cursor: pointer;
-    outline: none;
-    transition: background-color 0.3s ease;
-    margin: 0;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.form-switch .form-check-input::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    background-color: white;
-    border-radius: 50%;
-    transition: transform 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.form-switch .form-check-input:checked {
-    background-color: #3b82f6; /* Azul primario activo */
-}
-
-.form-switch .form-check-input:checked::after {
-    transform: translateX(22px);
-}
-
-.form-switch .form-check-label {
-    font-weight: 600;
-    color: #475569;
-    cursor: pointer;
-    user-select: none;
 }
