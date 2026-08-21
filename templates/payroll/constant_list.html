@@ -9,110 +9,79 @@
 
 {% block content %}
     <div id="payrollApp">
-        <!-- 1. Header (Igual que Personas) -->
+        <!-- 1. Header-->
         <div class="header-card">
             <div>
                 <h1>Configuración de Nómina</h1>
                 <p>Gestión de valores constantes (SBU, Porcentajes IESS, etc.)</p>
             </div>
             {% if perms.payroll.add_payrollconstant %}
-                <button type="button" class="btn btn-create"
-                        onclick="openPayrollModal('{% url 'payroll:constant_create' %}')">
+                <button type="button" class="btn-secondary"
+                        onclick="openAjaxModal('{% url 'payroll:constant_create' %}')">
                     <i class="fas fa-plus"></i> Nueva Constante
                 </button>
             {% endif %}
-        </div>
-
-        <!-- 2. Estadísticas (Simuladas para mantener el estilo visual) -->
-        <div class="stats-row">
-            <div class="stat-card blue-card">
-                <div class="stat-left">
-                    <h3>Total Variables</h3>
-                    <div class="number">{{ constants.count }}</div>
-                </div>
-                <i class="fas fa-calculator stat-icon"></i>
-            </div>
-            <div class="stat-card green-card">
-                <div class="stat-left">
-                    <h3>Activas</h3>
-                    <!-- Asumiendo que todas son activas por ahora -->
-                    <div class="number">{{ constants.count }}</div>
-                </div>
-                <i class="fas fa-check-circle stat-icon"></i>
-            </div>
         </div>
 
         <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
             <div class="content-table">
                 <!-- Controles de Tabla (Buscador) -->
-                <div class="table-controls" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
+                <div class="table-controls">
 
                     <div style="display: flex; justify-content: center;">
-                        <input class="modern-toggle-input" type="checkbox" id="toggleInactiveConstants"
-                               onchange="toggleInactiveConstants(this.checked)">
-
-                        <label class="modern-toggle-wrapper mb-0" for="toggleInactiveConstants">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">Mostrar Constantes Inactivas</span>
+                        <input type="checkbox" class="switch-input switch-blue global-inactive-switch"
+                               id="toggleInactive"
+                               onchange="toggleInactive(this.checked)">
+                        <label class="switch-wrapper mb-0" for="toggleInactive">
+                            <div class="switch-circle"></div>
+                            <span class="switch-text">Mostrar Inactivos</span>
                         </label>
                     </div>
 
-                    <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
+                    <div class="search-box">
 
-                        <input type="text" id="searchInput" class="table-search-input" placeholder="Buscar constante por nombre o código...">
+                        <input type="text" id="searchInput" class="table-search-input"
+                               placeholder="Buscar constante por nombre o código...">
                     </div>
                 </div>
 
                 <!-- Tabla -->
                 <div class="table-container">
-                    <table class="table managed-table exportable-table table-hover" data-page-size="10" data-title="Reporte de Constantes">
+                    <table class="table managed-table exportable-table table-hover" data-page-size="10"
+                           data-title="Reporte de Constantes">
                         <thead>
                         <tr>
-                            <th>Nombre</th>
-                            <th class="text-center">Código</th>
-                            <th class="text-end">Valor</th>
-                            <th>Descripción</th>
-                            <th>Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <th style="width: 40%">Nombre</th>
+                            <th style="width: 15%" class="text-end">Valor</th>
+                            <th style="width: 15%">Estado</th>
+                            <th style="width: 30%" class="text-center">Acciones</th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for c in constants %}
                             <tr>
                                 <td>
-                                    <div class="fw-bold">{{ c.name }}</div>
+                                    {{ c.name }}
                                 </td>
-                                <td class="text-center">
-                                    <span class="payroll-code">{{ c.code }}</span>
-                                </td>
-                                <td class="text-end">
+                                <td>
                                     <span class="payroll-value-badge">{{ c.value }}</span>
-                                </td>
-                                <td class="text-muted small">
-                                    {{ c.description|default:"-"|truncatechars:60 }}
                                 </td>
                                 <td class="text-center">
                                     {% if c.is_active %}
-                                        <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
+                                        <span class="status-badge active"><i
+                                                class="fas fa-check-circle"></i> Activo</span>
                                     {% else %}
                                         <span class="status-badge inactive"><i class="fas fa-times-circle"></i> Inactivo</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-center actions">
                                     <div class="actions-wrapper">
-                                        <button type="button" class="btn-icon btn-views-action" title="Editar"
-                                                onclick="openPayrollModal('{% url 'payroll:constant_update' c.id %}')">
+                                        <button type="button" class="btn-seventh" title="Editar"
+                                                onclick="openAjaxModal('{% url 'payroll:constant_update' c.id %}')">
                                             <i class="fas fa-pen"></i>
                                         </button>
                                     </div>
-                                </td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <i class="fas fa-inbox fa-3x mb-3"></i><br>
-                                    No hay constantes configuradas.
                                 </td>
                             </tr>
                         {% endfor %}
@@ -123,14 +92,17 @@
         </div>
     </div>
 
-    <!-- Contenedor para Modales Dinámicos -->
     <div id="modal-root"></div>
-
     <!-- Token CSRF oculto para JS -->
     {% csrf_token %}
-
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/payroll/payroll_constants.js' %}"></script>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/table-manager.js' %}"></script>
+    <script src="{% static 'js/table-sort.js' %}"></script>
+    <script src="{% static 'js/table-export.js' %}"></script>
+
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}

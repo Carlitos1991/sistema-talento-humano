@@ -362,19 +362,15 @@ class ConstantListView(ListView):
     def get_queryset(self):
         qs = super().get_queryset().order_by('name')
         show_inactive = self.request.GET.get('show_inactive')
-        # Si la migración que añade `is_active` no se aplicó aún, evitar que toda la
-        # página explote: intentamos filtrar por `is_active`, y si la columna no
-        # existe devolvemos el queryset sin filtrar (fallback seguro).
+
         try:
             if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
                 return qs.all()
             return qs.filter(is_active=True)
         except Exception as e:
-            # Fall back a todas las constantes si hay error en la consulta (p.ej. columna faltante)
-            # Registro de consola para ayudar en debugging en desarrollo
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning('Error al filtrar PayrollConstant.is_active, retornando queryset sin filtro: %s', e)
+            logger.warning('Error al filtrar PayrollConstant.is_active: %s', e)
             return qs
 
     def get(self, request, *args, **kwargs):
@@ -676,7 +672,7 @@ class NoveltyMassLoadView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['periods'] = PayrollPeriod.objects.filter(is_closed=False)
-        
+
         context['incomes'] = PayrollRubric.objects.filter(
             rubric_type='INCOME',
             is_active=True,

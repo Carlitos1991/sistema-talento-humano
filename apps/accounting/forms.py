@@ -15,5 +15,5 @@ class AccountForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Automático si se deja en blanco'
             }),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
         }

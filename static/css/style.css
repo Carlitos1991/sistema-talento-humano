@@ -2462,8 +2462,8 @@ table {
 /* Contenedor tabla */
 .table-container {
     width: 100%;
-    min-height: 620px; /* alto de la tabla */
-    max-height: 620px;
+    min-height: 600px; /* alto de la tabla */
+    max-height: 600px;
     overflow-x: auto;
     overflow-y: scroll;
     background-color: var(--white);

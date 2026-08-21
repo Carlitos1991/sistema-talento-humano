@@ -42,13 +42,13 @@
                             {% if form.description %}{{ form.description }}{% endif %}
                         </div>
 
-                        <div class="col-12 form-group mt-4">
-                            <div class="d-flex justify-content-center align-items-center gap-3">
-                                <label class="toggle-switch">
-                                    {{ form.is_active }}
-                                    <span class="toggle-slider"></span>
+                        <div class="col-md-12 form-group mt-3">
+                            <div class="d-flex align-items-center justify-content-center">
+                                {{ form.is_active }}
+                                <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Activo en el Sistema</span>
                                 </label>
-                                <span class="font-weight-600 text-primary-bold" style="font-size: 0.95rem;">Activo en el Sistema</span>
                             </div>
                         </div>
                     </div>

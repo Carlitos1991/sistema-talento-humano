@@ -63,9 +63,9 @@ class PayrollConstantForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Salario Básico'}),
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: SBU'}),
-            'value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'value': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 482,00', 'step': '0.0001'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input mt-2'})
+            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
         }
 
 

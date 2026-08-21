@@ -2,8 +2,6 @@
 {% load static %}
 
 {% block extra_css %}
-    <!-- 1. CSS Global y Específico -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
 {% endblock %}
 
@@ -21,22 +19,17 @@
         </div>
 
         <div class="content-table mt-4">
-
-            <div class="table-controls"
-                 style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem;">
-
+            <div class="table-controls">
                 <div style="display: flex; justify-content: center;">
-                    <!-- 2. Switch Global Limpio (Azul) -->
-                    <input type="checkbox" class="switch-input switch-red" id="toggleInactiveAccounts"
-                           onchange="toggleInactiveAccounts(this.checked)">
-                    <label class="switch-wrapper mb-0" for="toggleInactiveAccounts">
+                    <input type="checkbox" class="switch-input switch-blue global-inactive-switch" id="toggleInactive"
+                           onchange="toggleInactive(this.checked)">
+                    <label class="switch-wrapper mb-0" for="toggleInactive">
                         <div class="switch-circle"></div>
-                        <span class="switch-text">Mostrar Cuentas Inactivas</span>
+                        <span class="switch-text">Mostrar Inactivos</span>
                     </label>
                 </div>
 
-                <div class="search-box"
-                     style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 350px;">
+                <div class="search-box">
                     <input type="text" class="table-search-input" placeholder="Buscar cuenta por código o nombre...">
                 </div>
             </div>
@@ -99,16 +92,9 @@
             </div>
         </div>
     </div>
-
     <div id="modal-root"></div>
 {% endblock content %}
 
 {% block extra_js %}
-    <!-- 4. Inclusión de JS Global (main.js) y gestores de tabla -->
-    <script src="{% static 'js/main.js' %}"></script>
-    <script src="{% static 'js/table-manager.js' %}"></script>
-    <script src="{% static 'js/table-sort.js' %}"></script>
-    <script src="{% static 'js/table-export.js' %}"></script>
-
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}

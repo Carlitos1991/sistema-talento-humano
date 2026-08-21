@@ -1,5 +1,5 @@
 <div class="modal-overlay" id="payrollModal">
-    <div class="modal-container-medium">
+    <div class="modal-container-medium" style="max-width: 550px;">
 
         <div class="modal-header-refined">
             <div class="header-content-group">
@@ -8,7 +8,7 @@
                     {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Constante
                 </h3>
             </div>
-            <button type="button" class="btn-close-modal-refined" onclick="closePayrollModal()">
+            <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -26,7 +26,9 @@
                         <div class="col-md-6 form-group">
                             <label class="form-label">Código</label>
                             {{ form.code }}
-                            <div class="form-text text-muted" style="font-size: 0.8em;">Usado internamente (ej: SBU, IESS). No espacios.</div>
+                            <div class="form-text text-muted" style="font-size: 0.8em;">Usado internamente (ej: SBU,
+                                IESS). No espacios.
+                            </div>
                         </div>
 
                         <div class="col-md-6 form-group">
@@ -39,12 +41,12 @@
                             {{ form.description }}
                         </div>
                         <div class="col-md-12 form-group mt-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <label class="toggle-switch">
-                                    {{ form.is_active }}
-                                    <span class="toggle-slider"></span>
+                            <div class="d-flex align-items-center justify-content-center">
+                                {{ form.is_active }}
+                                <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Activo en el Sistema</span>
                                 </label>
-                                <span class="font-weight-600 text-primary-bold" style="font-size: 0.95rem;">Activo en el Sistema</span>
                             </div>
                         </div>
                     </div>
@@ -52,8 +54,8 @@
             </div>
 
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-cancel" onclick="closePayrollModal()">Cancelar</button>
-                <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-default-outline" onclick="closeAjaxModal()">Cancelar</button>
+                <button type="submit" class="btn-default"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </form>
     </div>
