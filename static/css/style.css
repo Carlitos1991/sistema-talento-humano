@@ -2462,21 +2462,14 @@ table {
 /* Contenedor tabla */
 .table-container {
     width: 100%;
+    min-height: 620px; /* alto de la tabla */
+    max-height: 620px;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: scroll;
     background-color: var(--white);
     border-radius: 14px;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
     border: 1px solid #e8edf4;
-    position: relative;
-    -webkit-overflow-scrolling: touch;
-
-    min-height: 540px;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    margin-bottom: 1rem;
 }
 
 .table-container-has-scroll-helper {
@@ -2571,6 +2564,7 @@ table {
 .table-container table {
     width: 100%;
     min-width: 980px;
+    table-layout: fixed;
     border-collapse: collapse;
     margin-bottom: auto !important;
 }
