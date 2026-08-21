@@ -3,21 +3,19 @@
            data-external-pagination="true" data-external-search="false">
         <thead>
         <tr>
-            <th data-field="employee__person__last_name">Empleado</th>
-            <th data-field="employee__person__document_number">Cédula</th>
-            <th data-field="items__budget_line__budget_group__short_code">Partida P.</th>
+            <th style="width: 25%" data-field="employee__person__last_name">Empleado</th>
+            <th style="width: 25%" data-field="items__budget_line__budget_group__short_code">Partida P.</th>
 
             <!-- Columnas centradas -->
-            <th class="center" data-field="total_income">Ingresos</th>
-            <th class="center" data-field="total_deduction">Egresos</th>
-            <th class="right" data-field="net_pay">A Pagar</th>
+            <th style="width: 8%" data-field="total_income">Ingresos</th>
+            <th style="width: 8%" data-field="total_deduction">Egresos</th>
+            <th style="width: 10%" data-field="net_pay">A Pagar</th>
 
             {% if current_period and not current_period.is_closed %}
-                <!-- Agregamos 'no-sort' para evitar flechas de ordenamiento -->
-                <th class="center no-sort">Retener</th>
-                <th class="center no-sort actions">Acciones</th>
+                <th style="width: 10%" class="center no-sort">Retener</th>
+                <th style="width: 14%" class="center no-sort actions">Acciones</th>
             {% else %}
-                <th class="center no-sort actions">Ver</th>
+                <th style="width: 20%" class="center no-sort actions">Ver</th>
             {% endif %}
         </tr>
         </thead>
@@ -32,18 +30,21 @@
                             <span class="status-badge inactive ms-2">Inactivo</span>
                         {% endif %}
                     </div>
-
-                    <div class="small mt-1 {% if not p.employee.is_active %}text-red{% else %}text-muted{% endif %}">
-                        {{ p.historical_position }}
-                    </div>
-
                     <div class="small {% if not p.employee.is_active %}text-red{% else %}text-muted{% endif %}">
                         {{ p.employee.get_contract_type_display }}
                     </div>
+                    <div class="small mt-1 text-muted">
+                        {{ p.employee.person.document_number }}
+                    </div>
+
                 </td>
-                <td>{{ p.employee.person.document_number }}</td>
-                <td class="text-muted">
-                    {{ p.historical_budget_lines|default:"Sin Partida Registrada" }}
+                <td class="text-muted ">
+                    <div class="bold {% if not p.employee.is_active %}text-red{% endif %}">
+                        {{ p.historical_budget_lines|default:"Sin Partida Registrada" }}
+                    </div>
+                    <div class="small mt-1 {% if not p.employee.is_active %}text-red{% else %}text-muted{% endif %}">
+                        {{ p.historical_position }}
+                    </div>
                 </td>
 
                 <!-- Ingresos y Egresos centrados, en negrita y con sus colores base -->

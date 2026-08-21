@@ -365,7 +365,7 @@ class ConstantListView(ListView):
 
         try:
             if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
-                return qs.all()
+                return qs.filter(is_active=False)
             return qs.filter(is_active=True)
         except Exception as e:
             import logging
@@ -1732,16 +1732,23 @@ def export_negative_balances_report(request, period_id):
 
 class MassUpdateReserveFundsView(View):
     """
-    API para carga masiva de Fondos de Reserva.
+    API para carga masiva de Fondos de Reserva / Décimos.
     Lee un Excel con Cédulas:
     - Los que estén en el Excel pasan a ACUMULAR (False).
     - Los que NO estén pasan a MENSUALIZAR (True) automáticamente.
+
+    ?tipo=decimos → actualiza 'monthly_payment' (Mensualiza Décimos).
+    Sin ese parámetro (o cualquier otro valor) → actualiza 'reserve_funds' (IESS), comportamiento original.
     """
 
     def post(self, request):
         excel_file = request.FILES.get('file')
         if not excel_file:
             return JsonResponse({'status': 'error', 'message': 'No se subió ningún archivo'})
+
+        tipo = request.GET.get('tipo', 'iess')
+        field_name = 'monthly_payment' if tipo == 'decimos' else 'reserve_funds'
+        label = 'Décimos' if tipo == 'decimos' else 'IESS'
 
         try:
             import openpyxl
@@ -1764,7 +1771,6 @@ class MassUpdateReserveFundsView(View):
             with transaction.atomic():
                 for emp in empleados:
                     try:
-                        # Navegamos hasta el perfil económico/nómina del empleado
                         info = emp.person.economic_data.payroll_info
                         if info:
                             cedula = emp.person.document_number
@@ -1772,21 +1778,20 @@ class MassUpdateReserveFundsView(View):
                             # LÓGICA MAESTRA: Si está en el Excel, Acumula (False). Si no, Mensualiza (True).
                             nuevo_estado = False if cedula in cedulas_acumulan else True
 
-                            # Solo lo actualizamos si es diferente a lo que ya tenía, para ahorrar memoria
-                            if getattr(info, 'reserve_funds') != nuevo_estado:
-                                info.reserve_funds = nuevo_estado
+                            if getattr(info, field_name) != nuevo_estado:
+                                setattr(info, field_name, nuevo_estado)
                                 infos_to_update.append(info)
                     except AttributeError:
                         continue
 
                 # 3. Guardado ultra-rápido en base de datos (Bulk Update)
                 if infos_to_update:
-                    ModelClass = type(infos_to_update[0])  # Obtenemos el modelo dinámicamente
-                    ModelClass.objects.bulk_update(infos_to_update, ['reserve_funds'])
+                    ModelClass = type(infos_to_update[0])
+                    ModelClass.objects.bulk_update(infos_to_update, [field_name])
 
             return JsonResponse({
                 'status': 'success',
-                'message': f'¡Proceso exitoso! Se configuraron {len(cedulas_acumulan)} empleados para ACUMULAR en el IESS. El resto mensualizará automáticamente.'
+                'message': f'¡Proceso exitoso! Se configuraron {len(cedulas_acumulan)} empleados para ACUMULAR en {label}. El resto mensualizará automáticamente.'
             })
 
         except Exception as e:

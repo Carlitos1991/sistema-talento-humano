@@ -6,26 +6,37 @@
 {% endblock %}
 
 {% block content %}
-    <div class="header-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #10b981 100%);">
+    <div class="header-card">
         <div>
-            <h1><i class="fas fa-piggy-bank me-2"></i> Fondos de Reserva</h1>
-            <p>Listado de empleados activos con estado de Fondos de Reserva y Mensualiza Décimos.</p>
+            <h1><i class="fas fa-piggy-bank me-2"></i> Fondos de Reserva y Décimos</h1>
+            <p>Configuración de acumulación o mensualización masiva.</p>
+        </div>
+
+        <!-- Botones de Acción integrados en el diseño limpio -->
+        <div class="header-actions">
+
+            <!-- 1. Botón IESS -->
+            <button type="button" class="btn-secondary" onclick="document.getElementById('fileMassReserve').click();">
+                <i class="fas fa-file-excel"></i> Excel IESS
+            </button>
+            <input type="file" id="fileMassReserve" accept=".xlsx, .xls" class="hidden"
+                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}', 'Configurando fondos de reserva...')">
+
+            <!-- 2. Botón Décimos -->
+            <button type="button" class="btn-secondary" onclick="document.getElementById('fileMassTenths').click();">
+                <i class="fas fa-file-excel"></i> Excel Décimos
+            </button>
+            <!-- Nota: Le agregué "?tipo=decimos" a la URL como sugerencia, puedes cambiar la URL a tu nueva vista en Django -->
+            <input type="file" id="fileMassTenths" accept=".xlsx, .xls" class="hidden"
+                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}?tipo=decimos', 'Configurando décimos...')">
+
         </div>
     </div>
 
     <div class="content-table mt-4">
-        <div class="table-controls table-controls-grid">
-            <div>
-                <button type="button" class="btn-header-premium"
-                        style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);"
-                        onclick="document.getElementById('fileMassUpdate').click();">
-                    <i class="fas fa-file-excel me-2"></i> Subir Excel IESS (Acumulan)
-                </button>
-                <input type="file" id="fileMassUpdate" accept=".xlsx, .xls" style="display: none;"
-                       onchange="uploadMassReserveFunds(this)">
-            </div>
-
-            <div class="search-box table-controls-right">
+        <!-- Buscador alineado a la derecha como en el resto del sistema -->
+        <div class="table-controls">
+            <div class="search-box">
                 <input id="reserve-search-input" type="text" class="table-search-input"
                        placeholder="Buscar por nombre o cédula...">
             </div>
@@ -41,66 +52,26 @@
 
 {% block extra_js %}
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
-    <script src="{% static 'js/payroll/reserve_funds.js' %}"></script>
-    <script src="{% static 'js/payroll/reserve_funds_pagination.js' %}"></script>
-
     <script>
-        function uploadMassReserveFunds(input) {
-            if (!input.files || input.files.length === 0) return;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Observador para que funcione incluso si el paginador AJAX recarga la tabla
+            const scrollObserver = new MutationObserver(() => {
+                const topWrapper = document.querySelector('.top-scrollbar-wrapper');
+                const topDummy = document.querySelector('.top-scrollbar-dummy');
+                const tableContainer = document.querySelector('.table-container');
+                const table = document.querySelector('.managed-table');
 
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
+                if (topWrapper && topDummy && tableContainer && table) {
+                    // Sincronizamos el ancho ficticio con el ancho real de la tabla
+                    topDummy.style.width = table.offsetWidth + 'px';
 
-            // Mostrar el spinner moderno de SweetAlert
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Procesando...',
-                    text: 'Configurando acumulación/mensualización de fondos...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-            }
-
-            // Enviar a nuestra nueva API
-            fetch("{% url 'payroll:reserve_funds_mass_update' %}", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    // Efecto espejo bi-direccional
+                    topWrapper.onscroll = () => tableContainer.scrollLeft = topWrapper.scrollLeft;
+                    tableContainer.onscroll = () => topWrapper.scrollLeft = tableContainer.scrollLeft;
                 }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire('¡Éxito!', data.message, 'success').then(() => location.reload());
-                        } else {
-                            alert(data.message);
-                            location.reload();
-                        }
-                    } else {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire('Error', data.message, 'error');
-                        } else {
-                            alert("Error: " + data.message);
-                        }
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', 'Ocurrió un problema de comunicación con el servidor.', 'error');
-                    }
-                })
-                .finally(() => {
-                    // Reiniciar el input para que permita subir el mismo archivo si es necesario corregirlo
-                    input.value = '';
-                });
-        }
+            });
+
+            scrollObserver.observe(document.body, {childList: true, subtree: true});
+        });
     </script>
 {% endblock %}

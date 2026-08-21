@@ -1,22 +1,32 @@
+<!-- Barra de scroll superior sincronizada -->
+<div class="top-scrollbar-wrapper"
+     style="width: 100%; overflow-x: auto; overflow-y: hidden; height: 14px; margin-bottom: 4px;">
+    <div class="top-scrollbar-dummy" style="height: 1px;"></div>
+</div>
+
 <div class="table-container">
-    <table class="table managed-table exportable-table" data-page-size="10" data-title="Fondos de Reserva">
+    <table class="table managed-table exportable-table" data-page-size="10" data-title="Fondos de Reserva"
+           data-external-pagination="true">
         <thead>
-            <tr>
-                <th style="width:5%">N°</th>
-                <th style="width:28%">Apellidos y Nombres</th>
-                <th style="width:12%">Cédula / Documento</th>
-                <th style="width:20%">Cargo</th>
-                <th style="width:15%">Unidad Administrativa</th>
-                <th style="width:10%" class="text-center">Fondos Reserva</th>
-                <th style="width:10%" class="text-center">Mensualiza Décimos</th>
-            </tr>
+        <tr>
+            <th class="no-sort" style="width:5%">N°</th>
+            <th style="width:25%">Empleado</th>
+            <th style="width:20%">Cargo</th>
+            <th style="width:20%">Unidad Administrativa</th>
+            <th style="width:15%" class="text-center no-sort">Fondos Reserva</th>
+            <th style="width:15%" class="text-center no-sort">Mensualiza Décimos</th>
+        </tr>
         </thead>
         <tbody>
         {% for emp in employees %}
             <tr>
-                <td>{% if page_obj %}{{ forloop.counter0|add:page_obj.start_index }}{% else %}{{ forloop.counter }}{% endif %}</td>
-                <td><strong>{{ emp.person.name_and_last_name }}</strong></td>
-                <td style="font-family: monospace;">{{ emp.person.document_number }}</td>
+                <td>{% if page_obj %}{{ forloop.counter0|add:page_obj.start_index }}{% else %}
+                    {{ forloop.counter }}{% endif %}</td>
+                <td><strong>{{ emp.person.name_and_last_name }}</strong>
+                    <div class="small mt-1 text-muted">
+                        {{ emp.person.document_number }}
+                    </div>
+                </td>
                 <td>
                     {% with cb=emp.current_budget_line.first %}
                         {% if cb and cb.position_item %}
@@ -33,38 +43,71 @@
                         <span style="color:#999;">No unit</span>
                     {% endif %}
                 </td>
+
+                <!-- COLUMNA: FONDOS RESERVA -->
                 <td class="text-center">
                     {% if emp.person.economic_data %}
                         {% with pi=emp.person.economic_data.payroll_info %}
-                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="reserve_funds" data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}" {% if pi and pi.reserve_funds %}checked{% endif %}>
-                            <label class="modern-toggle-wrapper {% if pi and pi.reserve_funds %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id|stringformat:"d" }}_reserve">
-                                <div class="modern-toggle-circle"></div>
-                                <span class="modern-toggle-text">{% if pi and pi.reserve_funds %}Mensualiza{% else %}Acumula{% endif %}</span>
-                            </label>
+                            <div class="d-flex align-items-center justify-content-center">
+                                <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve"
+                                       class="switch-input switch-green fr-checkbox" type="checkbox"
+                                       data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="reserve_funds"
+                                       data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}"
+                                       {% if pi and pi.reserve_funds %}checked{% endif %}>
+
+                                <label class="switch-wrapper mb-0"
+                                       for="rf_{{ emp.person.id|stringformat:"d" }}_reserve">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text modern-toggle-text">{% if pi and pi.reserve_funds %}
+                                        Mensualiza{% else %}Acumula{% endif %}</span>
+                                </label>
+                            </div>
                         {% endwith %}
-                        {% else %}
-                        <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
-                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">Acumula</span>
-                        </label>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center">
+                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled"
+                                   class="switch-input switch-green fr-checkbox" type="checkbox" disabled>
+
+                            <label class="switch-wrapper mb-0"
+                                   for="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text modern-toggle-text">Acumula</span>
+                            </label>
+                        </div>
                     {% endif %}
                 </td>
+
+                <!-- COLUMNA: MENSUALIZA DÉCIMOS -->
                 <td class="text-center">
                     {% if emp.person.economic_data %}
                         {% with pi=emp.person.economic_data.payroll_info %}
-                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly" class="modern-toggle-input fr-checkbox" type="checkbox" data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="monthly_payment" data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}" {% if pi and pi.monthly_payment %}checked{% endif %}>
-                            <label class="modern-toggle-wrapper {% if pi and pi.monthly_payment %}modern-toggle-green{% endif %}" for="rf_{{ emp.person.id|stringformat:"d" }}_monthly">
-                                <div class="modern-toggle-circle"></div>
-                                <span class="modern-toggle-text">{% if pi and pi.monthly_payment %}Mensualiza{% else %}Acumula{% endif %}</span>
-                            </label>
+                            <div class="d-flex align-items-center justify-content-center">
+                                <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly"
+                                       class="switch-input switch-blue fr-checkbox" type="checkbox"
+                                       data-person-id="{{ emp.person.id|stringformat:"d" }}"
+                                       data-field="monthly_payment"
+                                       data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}"
+                                       {% if pi and pi.monthly_payment %}checked{% endif %}>
+
+                                <label class="switch-wrapper mb-0"
+                                       for="rf_{{ emp.person.id|stringformat:"d" }}_monthly">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text modern-toggle-text">{% if pi and pi.monthly_payment %}
+                                        Mensualiza{% else %}Acumula{% endif %}</span>
+                                </label>
+                            </div>
                         {% endwith %}
-                        {% else %}
-                        <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled" class="modern-toggle-input fr-checkbox" type="checkbox" disabled>
-                        <label class="modern-toggle-wrapper" for="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">Acumula</span>
-                        </label>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center">
+                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled"
+                                   class="switch-input switch-blue fr-checkbox" type="checkbox" disabled>
+
+                            <label class="switch-wrapper mb-0"
+                                   for="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text modern-toggle-text">Acumula</span>
+                            </label>
+                        </div>
                     {% endif %}
                 </td>
             </tr>
@@ -76,3 +119,41 @@
         </tbody>
     </table>
 </div>
+{% if is_paginated %}
+    <div class="pagination-container" id="js-pagination">
+        <div class="pagination-info" id="page-info">
+            {% if page_obj %}
+                Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+            {% else %}
+                Mostrando 0 de 0
+            {% endif %}
+        </div>
+        <div class="pagination-controls">
+            <button id="btn-first" class="page-btn" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button id="btn-prev" class="page-btn"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" id="page-input" class="page-input" min="1"
+                       value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
+                       data-total="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}">
+                <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}
+                    1{% endif %}</span>
+            </div>
+            <button id="btn-next" class="page-btn"
+                    data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button id="btn-last" class="page-btn"
+                    data-page="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

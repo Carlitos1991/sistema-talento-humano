@@ -1257,3 +1257,85 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSwitches.forEach(btn => btn.checked = true);
     }
 });
+
+/* =================================================================================
+   9. CARGA MASIVA DE EXCEL (UNIVERSAL PARA IESS Y DÉCIMOS)
+   ================================================================================= */
+window.uploadMassExcel = function (input, url, titleMsg) {
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Muestra el spinner
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Procesando...',
+            text: titleMsg || 'Actualizando configuración...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+    }
+
+    // Petición al servidor
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCSRF(),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('¡Éxito!', data.message, 'success').then(() => location.reload());
+                } else {
+                    alert(data.message);
+                    location.reload();
+                }
+            } else {
+                if (typeof Swal !== 'undefined') Swal.fire('Error', data.message, 'error');
+                else alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            if (typeof Swal !== 'undefined') Swal.fire('Error', 'Ocurrió un problema de comunicación.', 'error');
+        })
+        .finally(() => {
+            // Limpia el input para que puedas volver a subir el mismo archivo si te equivocaste
+            input.value = '';
+        });
+};
+
+/* =================================================================================
+   6. SCROLL SUPERIOR SINCRONIZADO (Fondos de Reserva)
+   ================================================================================= */
+window.initReserveFundsScrollSync = function () {
+    const reserveContainer = document.getElementById('reserve-container');
+    if (!reserveContainer) return; // Solo corre en la página de Fondos de Reserva
+
+    const syncScrollbars = () => {
+        const topWrapper = document.querySelector('.top-scrollbar-wrapper');
+        const topDummy = document.querySelector('.top-scrollbar-dummy');
+        const tableContainer = document.querySelector('.table-container');
+        const table = document.querySelector('.managed-table');
+
+        if (topWrapper && topDummy && tableContainer && table) {
+            topDummy.style.width = table.offsetWidth + 'px';
+            topWrapper.onscroll = () => tableContainer.scrollLeft = topWrapper.scrollLeft;
+            tableContainer.onscroll = () => topWrapper.scrollLeft = tableContainer.scrollLeft;
+        }
+    };
+
+    syncScrollbars();
+
+    const scrollObserver = new MutationObserver(syncScrollbars);
+    scrollObserver.observe(reserveContainer, {childList: true, subtree: true});
+};
+
+document.addEventListener('DOMContentLoaded', window.initReserveFundsScrollSync);

@@ -1648,6 +1648,8 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     user-select: none;
     margin: 0;
+    min-width: 132px;
+    justify-content: center;
 }
 
 .switch-wrapper:hover {
