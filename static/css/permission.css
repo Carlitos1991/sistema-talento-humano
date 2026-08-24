@@ -69,9 +69,10 @@
 .custom-table thead {
     background: linear-gradient(90deg, #0f1724 0%, #111827 100%);
 }
+
 .custom-table thead th {
     color: #ffffff !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Regla más específica para asegurar que los th del thead respeten el fondo oscuro */
@@ -79,7 +80,7 @@
     /* Encabezados en tono oscuro con texto blanco */
     background: linear-gradient(90deg, #0f1724 0%, #0b1220 100%) !important;
     color: #ffffff !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Las dos últimas columnas: azul oscuro ligeramente más claro que el encabezado */
@@ -87,7 +88,7 @@
 .table-wrapper .custom-table thead th:nth-last-child(2) {
     background: linear-gradient(90deg, #142534 0%, #0e1b2a 100%) !important;
     color: #ffffff !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Aplicar también en modales que usen .custom-table dentro de modal-body-scrolled */
@@ -95,8 +96,9 @@
     /* Encabezados en modales: usar el mismo estilo que person_list (gradiente claro azul) */
     background: linear-gradient(90deg, #eef2ff 0%, #f4f9ff 100%) !important;
     color: #1e3a8a !important;
-    border-bottom: 1px solid rgba(30,58,138,0.08) !important;
+    border-bottom: 1px solid rgba(30, 58, 138, 0.08) !important;
 }
+
 .modal-body-scrolled .custom-table thead th:nth-last-child(1),
 .modal-body-scrolled .custom-table thead th:nth-last-child(2) {
     background: linear-gradient(90deg, #eef6ff 0%, #f4f9ff 100%) !important;
@@ -109,14 +111,15 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    background: linear-gradient(90deg,#fff 0%, #f1f5f9 100%);
-    border: 1px solid rgba(30,58,138,0.06);
+    background: linear-gradient(90deg, #fff 0%, #f1f5f9 100%);
+    border: 1px solid rgba(30, 58, 138, 0.06);
     color: #0f172a;
     border-radius: 6px;
     font-weight: 700;
     font-size: 0.85rem;
     text-decoration: none;
 }
+
 .btn-pdf-link .pdf-badge i,
 .pdf-badge i {
     color: #e11d48; /* rojo PDF */
@@ -140,11 +143,12 @@
 /* Estilo para botón limpiar dentro de modal */
 #bitacora-list-app .btn.btn-secondary {
     background: transparent;
-    border: 1px dashed rgba(15,23,42,0.08);
+    border: 1px dashed rgba(15, 23, 42, 0.08);
     color: #1f2937;
     padding: 6px 10px;
     border-radius: 6px;
 }
+
 .custom-table td {
     padding: 12px 15px;
     border-bottom: 1px solid #eee;
@@ -160,34 +164,9 @@
 }
 
 /* --- MODAL --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-}
-
-.modal-overlay.hidden {
-    display: none;
-}
-
-/* Overlay específico para el modal de listado de bitácoras: menos oscuro y con efecto borroso */
-#bitacora-list-app .modal-overlay {
-    background-color: rgba(0, 0, 0, 0.18); /* menos opaco */
-    backdrop-filter: blur(4px);
-}
-
 /* Si se quiere forzar visibilidad ligera sobre contenido, evitar sombra demasiado intensa */
 #bitacora-list-app .modal-container-medium {
-    box-shadow: 0 8px 20px rgba(2,6,23,0.08);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
 }
 
 /* También el overlay externo que envuelve el include puede estar visible;
@@ -196,8 +175,9 @@
     background-color: rgba(0, 0, 0, 0.18) !important;
     backdrop-filter: blur(4px) !important;
 }
+
 #bitacoraListModal.modal-overlay .modal-container-medium {
-    box-shadow: 0 8px 20px rgba(2,6,23,0.08) !important;
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.08) !important;
 }
 
 .modal-box {
@@ -461,7 +441,7 @@
     background: #f3f4f6;
     cursor: pointer;
     border: 1px dashed transparent;
-    box-shadow: 0 2px 6px rgba(2,6,23,0.04);
+    box-shadow: 0 2px 6px rgba(2, 6, 23, 0.04);
 }
 
 .file-upload-label:hover {
@@ -491,9 +471,24 @@
 
 /* Right column alignment: colocar el uploader verticalmente alineado al final
    para que su nota "Max: 2MB" coincida con la nota de la izquierda */
-.file-column { display: flex; flex-direction: column; position: relative; }
-.file-column .file-upload-box { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
-.file-column .form-text { margin-bottom: 0; text-align: center; }
+.file-column {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.file-column .file-upload-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.file-column .form-text {
+    margin-bottom: 0;
+    text-align: center;
+}
 
 /* Centrar el título/label del campo Documento PDF en la columna del uploader */
 .file-column > .form-label {

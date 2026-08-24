@@ -4,7 +4,7 @@
 {% block title %}Constantes de Nómina | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}?v=1.4">
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -28,9 +28,8 @@
             <div class="content-table">
                 <!-- Controles de Tabla (Buscador) -->
                 <div class="table-controls">
-
-                    <div style="display: flex; justify-content: center;">
-                        <input type="checkbox" class="switch-input switch-blue global-inactive-switch"
+                    <div>
+                        <input type="checkbox" class="switch-input switch-red global-inactive-switch"
                                id="toggleInactive"
                                onchange="toggleInactive(this.checked)">
                         <label class="switch-wrapper mb-0" for="toggleInactive">
@@ -38,7 +37,6 @@
                             <span class="switch-text">Mostrar Inactivos</span>
                         </label>
                     </div>
-
                     <div class="search-box">
 
                         <input type="text" id="searchInput" class="table-search-input"

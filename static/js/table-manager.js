@@ -531,22 +531,18 @@ class TableManager {
     }
 }
 
-// Auto-inicializar todas las tablas con clase .managed-table al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.managed-table').forEach(t => new TableManager(t));
 });
 
-// Delegado global: asegurar que clicks en th de tablas manejadas siempre invoquen el orden
+
 document.addEventListener('click', (e) => {
     const th = e.target.closest('.managed-table thead th');
     if (!th) return;
-
+    if (th.classList.contains('no-sort')) return;
     const table = th.closest('.managed-table');
     if (!table) return;
 
-    // Evitar que el delegado global gestione ordenamiento para tablas que
-    // usan paginación/búsqueda externa (servidor/Vue) — esas vistas gestionan
-    // su propio comportamiento y evitar esto previene conflictos.
     if (table.dataset.externalPagination === 'true' || table.dataset.externalSearch === 'true') return;
 
     // Determinar índice de la columna

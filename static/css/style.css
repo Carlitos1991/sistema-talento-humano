@@ -1,6 +1,5 @@
 /* =====================================================================
-   SISTEMA DE DISEÑO - RRHH
-   Versión organizada y limpia
+   SISTEMA DE DISEÑO - TALENTO HUMANO
 
    ÍNDICE:
    01. VARIABLES GLOBALES & RESET
@@ -931,10 +930,6 @@ h1, h2, h3, h4, h5, h6 {
     border-color: #e2e8f0 !important;
 }
 
-/* Sombra */
-.shadow-md {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
 
 /* Grid */
 .row {
@@ -2184,13 +2179,11 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     color: #ffffff;
 }
 
-/* Botón Píldora Close */
 .btn-success-login {
-    /* 1. Centrado y tamaño */
     display: flex;
     justify-content: center;
-    width: 100%; /* Hace que ocupe todo el ancho igual que los inputs */
-    margin: 1.5rem auto 0; /* Lo centra y le da un espacio arriba para separarlo del texto de "Olvidaste tu contraseña" */
+    width: 100%;
+    margin: 1.5rem auto 0;
 
     /* 2. Bordes menos redondeados */
     border-radius: 8px; /* Un radio de 8px es el estándar para campos de formularios de login */
@@ -2464,102 +2457,34 @@ table {
 /* Contenedor tabla */
 .table-container {
     width: 100%;
-    min-height: 600px; /* alto de la tabla */
-    max-height: 600px;
-    overflow-x: auto;
-    overflow-y: scroll;
+    min-height: 550px; /*Alto Tabla*/
+    max-height: 550px;
+    overflow-x: hidden;
+    overflow-y: auto;
     background-color: var(--white);
     border-radius: 14px;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
     border: 1px solid #e8edf4;
 }
 
-.table-container-has-scroll-helper {
-    padding-right: 3.15rem;
+.table-hscroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    transform: scaleY(-1);
 }
 
-.table-scroll-helper-group {
-    position: absolute;
-    right: 0.45rem;
-    top: 3.15rem;
-    display: none;
-    flex-direction: column;
-    gap: 0.35rem;
-    z-index: 30;
+.table-hscroll table {
+    transform: scaleY(-1);
 }
 
-.table-scroll-nav-button {
-    width: 30px;
-    height: 30px;
-    border: none;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
-    color: #fff;
-    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.24);
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-}
-
-.table-scroll-nav-start {
-    display: none !important;
-}
-
-.table-scroll-nav-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.28);
-}
-
-.table-scroll-nav-button i {
-    font-size: 0.9rem;
-    line-height: 1;
-    margin: 0;
-    display: block;
-}
-
-/* Override: evitar que el helper de scroll cambie el layout en listados compactos
-   deshabilitamos la aparición visual del helper y anulamos el padding adicional.
-   Esto evita que después de unos segundos el layout se desplace y la columna
-   de acciones quede recortada. Si se requiere, se puede reactivar por vista. */
 .table-container-has-scroll-helper {
     padding-right: 0 !important;
 }
 
-.table-scroll-helper-group {
-    display: none !important;
-}
-
+.table-scroll-helper-group,
+.table-scroll-nav-button,
 .table-scroll-nav-start,
 .table-scroll-nav-end {
-    display: none;
-}
-
-/* Clase para forzar visibilidad del helper en vistas que lo requieren */
-.table-scroll-helper-force-visible .table-scroll-helper-group {
-    display: flex !important;
-}
-
-.table-scroll-helper-force-visible .table-scroll-nav-start {
-    display: none !important;
-}
-
-.table-scroll-helper-force-visible.table-scroll-helper-at-end .table-scroll-nav-start {
-    display: inline-flex !important;
-    background: rgba(14, 165, 233, 0.62);
-    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12);
-    color: #fff;
-}
-
-.table-scroll-helper-force-visible .table-scroll-nav-end {
-    display: inline-flex !important;
-    background: rgba(14, 165, 233, 0.78);
-    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.16);
-    color: #fff;
-}
-
-.table-scroll-helper-force-visible.table-scroll-helper-at-end .table-scroll-nav-end {
     display: none !important;
 }
 
@@ -2690,18 +2615,26 @@ table {
     gap: 4px;
 }
 
-/* Tabla de controles */
-.table-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
-    width: 100%;
-}
-
 .table-controls .search-box {
     margin-left: auto;
+}
+
+/* Fuerza a que el contenido de los encabezados se centre verticalmente */
+.managed-table thead th {
+    vertical-align: middle;
+}
+
+/* Asegura que la flecha inyectada no expanda la altura de la línea ni empuje el texto */
+.managed-table thead th .sort-arrow {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+    margin-left: 5px;
+}
+
+th.no-sort, .no-sort {
+    text-align: center !important;
+    vertical-align: middle !important;
 }
 
 /* Filtros globales reutilizables */
@@ -3120,22 +3053,6 @@ th.sorted-desc .sort-arrow {
         font-size: 0.9rem;
     }
 
-    .table-container-has-scroll-helper {
-        padding-right: 3.35rem;
-    }
-
-    .table-scroll-helper-group {
-        top: 3rem;
-    }
-
-    .table-scroll-nav-button {
-        width: 32px;
-        height: 32px;
-    }
-
-    .table-scroll-nav-button i {
-        font-size: 0.82rem;
-    }
 }
 
 .loader-spinner {
@@ -3476,24 +3393,20 @@ th.sorted-desc .sort-arrow {
     align-items: center;
     justify-content: center;
     z-index: 99999 !important;
-    visibility: visible !important;
-    opacity: 1 !important;
 }
 
-/* Asegurar que la clase 'hidden' oculte overlays aunque exista regla global
-   que fuerce visibilidad. Esto corrige que modales queden siempre visibles
-   después de reorganizaciones de CSS. */
+
 .modal-overlay.hidden {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Contenedores de modal */
-.modal-container,
+.modal-container-small,
 .modal-container-medium,
-.modal-container-xl {
+.modal-container-large {
     position: relative;
     background-color: var(--white);
     border-radius: var(--border-radius);
@@ -3502,10 +3415,10 @@ th.sorted-desc .sort-arrow {
     flex-direction: column;
     box-shadow: var(--shadow-card);
     animation: slideUp 0.3s ease-out;
-    padding: 0 !important;
+    padding: 0;
 }
 
-.modal-container {
+.modal-container-small {
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
@@ -3519,7 +3432,7 @@ th.sorted-desc .sort-arrow {
     min-height: 200px;
 }
 
-.modal-container-xl {
+.modal-container-large {
     width: 200%;
     max-width: 850px;
     max-height: 100vh;
@@ -3625,14 +3538,12 @@ th.sorted-desc .sort-arrow {
     flex: 1;
     overflow-y: scroll !important;
     overflow-x: hidden;
-    padding-right: 1.5rem;
     max-height: calc(90vh - 180px);
 }
 
 .modal-body-scrolled {
     max-height: 65vh;
     overflow-y: auto;
-    padding-right: 15px;
     padding: 1.25rem 2rem !important;
 }
 
@@ -4826,8 +4737,8 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     padding: 8px 2px;
-    flex: 1 1 0%;
-    min-width: 70px; /* Ligeramente más angostos para que entren todos */
+    flex: 1 1 0;
+    min-width: 70px;
     text-decoration: none;
     text-align: center;
     transition: all 0.3s ease;
@@ -6056,11 +5967,6 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     .modal-footer-medium, .modal-footer-spaced {
         flex-direction: column;
         gap: 0.75rem;
-    }
-
-    .btn-cancel, .btn-save {
-        width: 100%;
-        min-width: auto;
     }
 }
 

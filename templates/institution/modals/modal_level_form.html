@@ -1,0 +1,62 @@
+<div class="modal-overlay.hidden" id="levelModal">
+    <div class="modal-container-small">
+        <form action="{{ request.path }}" method="POST" id="levelForm" onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+
+            <div class="modal-header-medium modal-header-gradient">
+                <h3 class="modal-title text-white">
+                    <i class="fa-solid fa-layer-group me-2"></i>
+                    <!-- Lógica condicional de Django en lugar de Vue -->
+                    <span>{% if form.instance.pk %}Editar Nivel{% else %}Nuevo Nivel{% endif %}</span>
+                </h3>
+                <!-- Cerramos con la función nativa -->
+                <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom">
+                <!-- Manejo de errores globales nativo de Django -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in form.non_field_errors %}
+                            <span>{{ error }}</span><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="form-section-card">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nombre del Nivel <span class="text-danger">*</span></label>
+
+                        <!-- Si pasas el formulario desde views.py (Recomendado) -->
+                        {% if form.name %}
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-error">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        {% else %}
+                            <!-- Fallback manual si no estás usando forms.py para este campo -->
+                            <input type="text" name="name" class="form-control"
+                                   value="{{ form.instance.name|default:'' }}" required maxlength="100"
+                                   placeholder="Nombre del Nivel">
+                        {% endif %}
+                    </div>
+
+                    <!-- Mensaje informativo -->
+                    <div class="alert alert-info mt-3 mb-0" style="font-size: 0.85rem;">
+                        <i class="fa-solid fa-circle-info me-2"></i>
+                        El orden jerárquico se asignará automáticamente.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-default-outline" onclick="closeAjaxModal()">Cancelar</button>
+                <button type="submit" class="btn-default">
+                    <i class="fas fa-save me-1"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -8,7 +8,7 @@
                     {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Constante
                 </h3>
             </div>
-            <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
+            <button type="button" class="btn-close-circle" @click="closeModal">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -26,7 +26,7 @@
                         <div class="col-md-6 form-group">
                             <label class="form-label">Código</label>
                             {{ form.code }}
-                            <div class="form-text text-muted" style="font-size: 0.8em;">Usado internamente (ej: SBU,
+                            <div class="form-text text-muted">Usado internamente (ej: SBU,
                                 IESS). No espacios.
                             </div>
                         </div>

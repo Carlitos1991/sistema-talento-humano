@@ -289,38 +289,6 @@
     border-top: 1px solid #e9ecef;
 }
 
-.btn-cancel, .btn-save {
-    padding: 10px 24px;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: transform 0.1s;
-}
-
-.btn-cancel {
-    background: white;
-    border: 1px solid #d1d5db;
-    color: #4b5563;
-}
-
-.btn-cancel:hover {
-    background: #f3f4f6;
-}
-
-.btn-save {
-    background: #1a2e44;
-    border: 1px solid #1a2e44;
-    color: white;
-}
-
-.btn-save:hover {
-    background: #2c3e50;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
 /* =========================================
    ORDENAMIENTO DE TABLA
    ========================================= */
@@ -400,16 +368,6 @@ th.sortable:hover .sort-icon {
 .btn-action i {
     font-size: 0.9rem;
 }
-
-.btn-primary {
-    background: #3b82f6;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #2563eb;
-}
-
 .btn-success {
     background: #10b981;
     color: white;
@@ -436,27 +394,6 @@ th.sortable:hover .sort-icon {
     align-items: center;
     justify-content: center;
     margin: 0 auto;
-}
-
-/* =========================================
-   MODAL DE VACACIONES (overlay)
-   ========================================= */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(2px);
-}
-
-.modal-overlay.hidden {
-    display: none;
 }
 
 /* =========================================

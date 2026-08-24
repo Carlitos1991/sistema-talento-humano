@@ -9,7 +9,7 @@
             <p>Definición de la estructura de mando (Direcciones, Jefaturas, etc).</p>
         </div>
         {% if perms.institution.add_organizationallevel %}
-            <button id="btn-add-level" type="button">
+            <button id="btn-add-level" type="button" class="btn-secondary">
                 <i class="fas fa-plus"></i> Nuevo Nivel
             </button>
         {% endif %}
@@ -17,11 +17,11 @@
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls">
-                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveLevels"
+                <input class="switch-input" type="checkbox" id="toggleInactiveLevels"
                        onchange="toggleInactiveLevels(this.checked)">
-                <label class="toggle-status-red-wrapper" for="toggleInactiveLevels">
-                    <div class="toggle-status-red-circle"></div>
-                    <span class="toggle-status-red-text">Mostrar Niveles Inactivos</span>
+                <label class="switch-wrapper" for="toggleInactiveLevels">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Niveles Inactivos</span>
                 </label>
                 <div class="search-box">
                     <input type="text" class="table-search-input" placeholder="Buscar por nombre">
@@ -31,16 +31,16 @@
                 </div>
             </div>
             <div id="table-content-wrapper">
-                {% include 'institution/levels/partials/partial_level_table.html' %}
+                {% include 'institution/partials/partial_level_table.html' %}
             </div>
         </div>
     </div>
 {% endblock %}
 
 {% block modals %}
-    {% include 'institution/levels/modals/modal_level_form.html' %}
+    {% include 'institution/modals/modal_level_form.html' %}
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/levels.js' %}"></script>
+    <script src="{% static 'js/institution/levels.js' %}"></script>
 {% endblock %}

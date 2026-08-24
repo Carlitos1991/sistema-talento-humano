@@ -1,4 +1,3 @@
-# apps/institution/views.py
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.cache import cache
@@ -11,7 +10,6 @@ from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
-
 from employee.models import Employee
 from .forms import AdministrativeUnitForm, OrganizationalLevelForm, DeliverableForm, OrganigramForm
 from .forms import AssignBossForm
@@ -518,7 +516,7 @@ def get_level_stats():
 # ============================================================
 class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = OrganizationalLevel
-    template_name = 'institution/levels/level_list.html'
+    template_name = 'institution/level_list.html'
     context_object_name = 'levels'
     permission_required = 'institution.view_organizationallevel'
 
@@ -559,7 +557,7 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             self.object_list = self.get_queryset()
             context = self.get_context_data()
             html = render_to_string(
-                'institution/levels/partials/partial_level_table.html',
+                'institution/partials/partial_level_table.html',
                 context,
                 request=request
             )
@@ -575,7 +573,7 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 class LevelCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = OrganizationalLevel
     form_class = OrganizationalLevelForm
-    template_name = 'institution/levels/modals/modal_level_form.html'
+    template_name = 'institution/modals/modal_level_form.html'
     permission_required = 'institution.add_organizationallevel'
 
     def post(self, request, *args, **kwargs):
@@ -604,7 +602,7 @@ class LevelDetailView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class LevelUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = OrganizationalLevel
     form_class = OrganizationalLevelForm
-    template_name = 'institution/levels/modals/modal_level_form.html'
+    template_name = 'institution/modals/modal_level_form.html'
     permission_required = 'institution.change_organizationallevel'
 
     def post(self, request, *args, **kwargs):
@@ -890,7 +888,7 @@ def level_partial_table(request):
     else:
         levels = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')
     context = {'levels': levels}
-    html = render_to_string('institution/levels/partials/partial_level_table.html', context, request=request)
+    html = render_to_string('institution/partials/partial_level_table.html', context, request=request)
     return HttpResponse(html)
 
 
@@ -1005,7 +1003,6 @@ def get_units_context(units_queryset=None):
         ).annotate(
             code_len=Length('code')
         ).order_by('level__level_order', 'code_len', 'code', 'name')
-    # Return minimal context to avoid expensive stats queries
     return {
         'units': units_queryset,
     }

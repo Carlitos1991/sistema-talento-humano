@@ -321,11 +321,6 @@ input[type="checkbox"]#id_is_active {
     display: none;
     z-index: 30;
 }
-
-.hidden {
-    display: none !important;
-}
-
 /* =========================================
    LISTADO NIVEL RAÍZ (ROOT LIST)
    ========================================= */

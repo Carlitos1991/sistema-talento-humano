@@ -899,14 +899,6 @@ body.no-scroll {
     display: flex !important;
 }
 
-.modal-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 1;
-}
-
 .modal-container {
     position: relative;
     background: #fff;
